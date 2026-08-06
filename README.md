@@ -344,6 +344,27 @@ theme      全局主题 + 角色卡驱动主题
 
 **重叠项规则**：模型、正则、世界书、预设 = 默认“跟随全局”，角色页可“本角色覆盖”；主题 = 默认跟随全局，角色卡自动生成配方覆盖，可一键恢复；卡字段 = 只属于角色，主设置不出现。
 
+## 消息操作按钮（官方高频对照 + 图标）
+
+**官方源码确认的消息级操作**：继续生成（mes_continue）、冒充（mes_impersonate）、停止（mes_stop）、重新生成、删除（二次确认）、书签、编辑、滑动切换、复制、TTS 朗读、token 统计；输入区可选快捷「继续 / 冒充」（power-user quick_continue / quick_impersonate）。
+
+| 功能 | 官方出处 | 图标（Phosphor） | 位置 |
+|---|---|---|---|
+| 复制 | hover 按钮 | `Copy` | 最后一条常驻 + 长按菜单 |
+| 重新生成 | option_regenerate | `ArrowsClockwise` | 最后一条常驻 + 长按菜单 |
+| 继续生成 | mes_continue / quick_continue | `CaretDoubleRight` | 最后一条常驻 + 长按菜单 + 输入区快捷（可选） |
+| 删除 | option_delete_mes（二次确认） | `TrashSimple` | 最后一条常驻 + 长按菜单 |
+| 编辑 | hover 按钮 | `PencilSimple` | 长按菜单 / 选中操作条 |
+| 冒充 | mes_impersonate / quick_impersonate | `MaskHappy` | 长按菜单（AI 消息）+ 输入区快捷（可选） |
+| 滑动切换 | swipe | 手势左右滑（菜单可加 `CaretLeft/CaretRight`） | 手势为主 |
+| 书签 | option_new_bookmark | `BookmarkSimple` | 长按菜单 |
+| TTS 朗读 | hover 按钮 | `SpeakerHigh` | 长按菜单 |
+| token 统计 | option_toggle_logprobs | `ChartBar` | 长按菜单 |
+| 更多 | — | `DotsThree` | 卡片/气泡右上角（显式入口） |
+| 停止 | mes_stop | `Square` | 输入区（生成中） |
+
+**规则**：气泡本身无按钮；最后一条 AI 消息常驻 4 键（复制/重生成/继续/删除）；完整操作收长按菜单；图标统一 Phosphor Regular、24dp、`onSurfaceVariant`（激活 `primary`）。
+
 ## 渲染与消息排版（高级渲染）
 
 **官方对照**：核心 = Showdown（Markdown）+ highlight.js（代码高亮）+ DOMPurify（HTML 消毒）；LaTeX / Mermaid 官方靠社区扩展，我们原生覆盖。
