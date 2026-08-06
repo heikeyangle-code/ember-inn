@@ -2,7 +2,21 @@ name: Build
 
 on:
   push:
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/**'
   pull_request:
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/**'
 
 jobs:
   build:
