@@ -155,6 +155,25 @@ theme      全局主题 + 角色卡驱动主题
 7. 生产依赖 M3 1.4.0 稳定版；Expressive 组件（1.5.0-alpha）仅在尝鲜分支启用，不进入主线
 8. 中文字体用屏幕版/轻便版（霞鹜文楷 Screen/Lite），完整版体积过大，作可下载项
 
+### 格调守则（好看、有格调、不花哨）
+
+1. 每张角色卡只贡献 **1 个主色 seed**，其余配色全部由系统生成——禁止多色堆砌
+2. 背景氛围渐变一律**低饱和**（取色后降饱和 30–40%），光晕克制；禁止高饱和霓虹渐变球（2026 已俗）
+3. 玻璃效果只用于浮层 / 输入栏 / 顶栏，**正文区永远干净**；同屏玻璃元素不超过 2–3 处
+4. 每屏只有一个视觉焦点：角色图或聊天内容，不叠加抢眼
+5. 动效 200–300ms，spring 只用于交互反馈；常驻动画仅限生成微光
+6. 深色默认 **tinted 灰**（Android 16 方向），纯黑仅作可选
+7. 排版 2–3 档字号、行高 1.5–1.6、对比度达标
+8. 默认配方保持克制；用户自定义“花哨”是用户自由，但不进默认主题
+9. 默认系统字体；氛围字体（霞鹜文楷等）作可下载可选
+
+### 版本策略（尽量用最新版）
+
+- 生产依赖一律使用**当前最新稳定版**；仅有 alpha/beta 才支持的功能放“尝鲜分支”或功能开关，不进主线
+- 2026-08 实测基线：Compose BOM 最新稳定版 · material3 1.4.0（Expressive 1.5.0-alpha25 仅尝鲜）· MaterialKolor 4.1.x（5.0 为 alpha，不用）· Coil 3.5.0 · Lottie 6.6.x · Palette / Room / DataStore / Navigation 跟最新稳定版
+- 升级流程：Renovate / Dependabot 每周自动 PR → CI 通过自动合 patch/minor → major 人工看 changelog + 全量回归
+- 小库失活预案：直接把开源源码搬进项目（vendoring），不守死库
+
 ## 技术栈
 
 Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose · Room · DataStore · Coil3 · Lottie · Koin · kotlinx.serialization
