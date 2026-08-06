@@ -16,6 +16,9 @@
 - `macros-official.mjs`：从官方 MacroEngine.e2e.js 提取字面用例（基础/参数/嵌套/
   注释/trim/legacy 标记/{{if}}/变量简写运算符/括号边界）生成 fixture。
 - `pick-official.mjs`：用官方 seedrandom@3.0.5（vendor）生成 {{pick}} 确定性基准。
+- `worldinfo-file-official.mjs`：世界书↔角色书互转（convertWorldInfoToCharacterBook /
+  convertCharacterBook）fixture。
+- `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
   读快照，调 Kotlin 引擎，断言一致。
@@ -29,6 +32,8 @@
   宏引擎对拍（环境 name1=User/name2=Character + 变量预置）。
 - `engine/src/test/kotlin/com/emberinn/engine/macros/PickDiffTest.kt`：
   {{pick}} 种子公式/随机数逐位对拍。
+- `engine/src/test/kotlin/com/emberinn/engine/worldinfo/WorldInfoFileDiffTest.kt`：
+  世界书文件/角色书互转对拍。
 
 ## 用法
 
@@ -40,6 +45,8 @@ node scripts/diff/worldinfo-scan-official.mjs
 node scripts/diff/card-png-official.mjs
 node scripts/diff/macros-official.mjs
 node scripts/diff/pick-official.mjs
+node scripts/diff/worldinfo-file-official.mjs
+node scripts/build-presets.mjs
 ```
 
 重新生成快照后，`./gradlew :engine:test` 跑全部对比测试。

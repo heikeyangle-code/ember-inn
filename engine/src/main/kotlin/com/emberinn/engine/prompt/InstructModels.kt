@@ -63,6 +63,7 @@ object StoryStringPosition {
 @Serializable
 data class InstructSettings(
     val enabled: Boolean = false,
+    @SerialName("name")
     val preset: String = "Alpaca",
     @SerialName("input_sequence")
     val inputSequence: String = "### Instruction:",
@@ -113,6 +114,7 @@ data class InstructSettings(
 /** 上下文模板设置（对齐官方 power-user.js power_user.context）。 */
 @Serializable
 data class ContextSettings(
+    @SerialName("name")
     val preset: String = "Default",
     @SerialName("story_string")
     val storyString: String = PromptAssembler.DEFAULT_STORY_STRING,

@@ -16,7 +16,13 @@
 **已覆盖**：instruct（36 例）、world-info matchKeys/getScore/parseDecorators（19 例）、
 regex runRegexScript（13 例）、world-info checkWorldInfo 整体扫描（17 例，含两段扫描
 sticky/cooldown/概率）、PNG 角色卡读写（6 例）、官方宏 e2e（158 例，含变量简写
-全部运算符与括号边界）、{{pick}} 确定性（5 例，seedrandom@3.0.5 逐位一致）。
+全部运算符与括号边界）、{{pick}} 确定性（5 例，seedrandom@3.0.5 逐位一致）、
+世界书↔角色书互转（2 例）。
+
+**预设体系**：官方 default/content/presets 已打包进 engine resources
+（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 /
+sysprompt 13 / reasoning 5，共 127 个），PresetLibrary 可加载；官方发版后
+`node scripts/build-presets.mjs` 重新生成。
 **待覆盖**：宏引擎、slash 解析器、卡片导入导出。
 
 **关键规则**：本地不要编译（用户明确要求），靠 CI `:engine:test` 验证；
