@@ -78,3 +78,36 @@ class MacroEngineTest {
         }
     }
 }
+
+
+    @Test
+    fun `variable macros set get inc dec and shorthand`() {
+        val local = MemoryVariableStore()
+        val env2 = env.copy(local = local)
+
+        assertEquals("", MacroEngine.substitute("{{setvar::hp::100}}", env2))
+        assertEquals("100", MacroEngine.substitute("{{getvar::hp}}", env2))
+        assertEquals("101", MacroEngine.substitute("{{incvar::hp}}", env2))
+        assertEquals("100", MacroEngine.substitute("{{decvar::hp}}", env2))
+        assertEquals("true", MacroEngine.substitute("{{hasvar::hp}}", env2))
+        assertEquals("100", MacroEngine.substitute("{{.hp}}", env2))
+    }
+
+    @Test
+    fun `addvar numeric and string append`() {
+        val local = MemoryVariableStore()
+        val env2 = env.copy(local = local)
+        MacroEngine.substitute("{{setvar::n::5}}", env2)
+        MacroEngine.substitute("{{addvar::n::3}}", env2)
+        assertEquals("8", MacroEngine.substitute("{{getvar::n}}", env2))
+        MacroEngine.substitute("{{addvar::s::ab}}", env2)
+        assertEquals("0ab", MacroEngine.substitute("{{getvar::s}}", env2))
+    }
+
+    @Test
+    fun `if with variable condition`() {
+        val local = MemoryVariableStore()
+        local.set("flag", "true")
+        val env2 = env.copy(local = local)
+        assertEquals("开了", MacroEngine.substitute("{{if .flag}}开了{{else}}关了{{/if}}", env2))
+    }

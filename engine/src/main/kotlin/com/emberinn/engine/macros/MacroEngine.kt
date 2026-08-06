@@ -15,6 +15,8 @@ data class MacroEnv(
     val char: String,
     val chatId: Long = 0,
     val rerollSeed: Long? = null,
+    val local: VariableStore = EmptyVariableStore,
+    val global: VariableStore = EmptyVariableStore,
 )
 
 /**
@@ -34,6 +36,7 @@ object MacroEngine {
     private val elseRegex = Regex("""\{\{else(?:::[^{}]*)?\}\}""")
 
     private val zeroArgMacros = setOf("user", "char", "isotime", "isodate", "time", "date", "weekday")
+    private val variableShorthandRegex = Regex("""\{\{([.\$])([A-Za-z0-9_]+)\}\}""")
     private val spaceArgMacros = setOf("roll", "random", "pick", "time")
     private val falsyValues = setOf("false", "off", "0")
 
@@ -115,8 +118,12 @@ object MacroEngine {
         val inverted = rawCondition.startsWith("!")
         val condition = if (inverted) rawCondition.substring(1).trim() else rawCondition.trim()
         var resolved = replaceInline(condition, env)
-        // 变量简写（.var / $var）：Stage 3 接入变量系统，暂视为空
-        if (Regex("""^[.\$][A-Za-z0-9_]+$""").matches(resolved)) resolved = ""
+        // 变量简写（.var / $var）：对齐官方 getvar / getglobalvar
+        val shorthand = Regex("""^([.\$])([A-Za-z0-9_]+)$""").matchEntire(resolved)
+        if (shorthand != null) {
+            val store = if (shorthand.groupValues[1] == ".") env.local else env.global
+            resolved = store.get(shorthand.groupValues[2]) ?: ""
+        }
         // 单参数宏名（minArgs=0）自动解析
         if (Regex("""^[a-zA-Z_][a-zA-Z0-9_]*$""").matches(resolved) && resolved.lowercase() in zeroArgMacros) {
             resolved = replaceInline("{{$resolved}}", env)
@@ -149,6 +156,13 @@ object MacroEngine {
                 m.value
             }
         }
+        // 变量简写 {{.name}} / {{$name}}（无运算符版）
+        out = variableShorthandRegex.replace(out) { m ->
+            val prefix = m.groupValues[1]
+            val name = m.groupValues[2]
+            val store = if (prefix == ".") env.local else env.global
+            store.get(name) ?: ""
+        }
         // 孤立标记清理
         return out.replace(Regex("""\{\{(?:else|/if)(?:::[^{}]*)?\}\}"""), "")
     }
@@ -166,8 +180,40 @@ object MacroEngine {
             "roll" -> rollMacro(args)
             "pick" -> pickMacro(args, env, offset, raw)
             "if" -> inlineIfMacro(args, env)
+            "getvar" -> env.local.get(args.trim()) ?: ""
+            "hasvar" -> (if (env.local.has(args.trim())) "true" else "false")
+            "deletevar" -> { env.local.delete(args.trim()); "" }
+            "setvar" -> { setVariableArgs(args, env.local); "" }
+            "addvar" -> { addVariableArgs(args, env.local); "" }
+            "incvar" -> incDecVariableArgs(args, env.local, 1)
+            "decvar" -> incDecVariableArgs(args, env.local, -1)
+            "getglobalvar" -> env.global.get(args.trim()) ?: ""
+            "hasglobalvar" -> (if (env.global.has(args.trim())) "true" else "false")
+            "deleteglobalvar" -> { env.global.delete(args.trim()); "" }
+            "setglobalvar" -> { setVariableArgs(args, env.global); "" }
+            "addglobalvar" -> { addVariableArgs(args, env.global); "" }
+            "incglobalvar" -> incDecVariableArgs(args, env.global, 1)
+            "decglobalvar" -> incDecVariableArgs(args, env.global, -1)
             else -> raw
         }
+
+    private fun setVariableArgs(args: String, store: VariableStore) {
+        val sep = args.indexOf("::")
+        if (sep < 0) return
+        store.set(args.substring(0, sep).trim(), args.substring(sep + 2))
+    }
+
+    private fun addVariableArgs(args: String, store: VariableStore) {
+        val sep = args.indexOf("::")
+        if (sep < 0) return
+        addVariable(store, args.substring(0, sep).trim(), args.substring(sep + 2))
+    }
+
+    private fun incDecVariableArgs(args: String, store: VariableStore, delta: Int): String {
+        val name = args.trim()
+        if (name.isEmpty()) return ""
+        return addVariable(store, name, delta.toString())
+    }
 
     private fun inlineIfMacro(args: String, env: MacroEnv): String {
         // 内联形式 {{if 条件::内容}}：2 个参数
