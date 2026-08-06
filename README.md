@@ -21,6 +21,8 @@
 - **提示词组装**：角色字段 + 示例对话 + 世界书 + 作者注释 + 历史消息（与官方 `script.js` 行为一致）
 - **预设 / 人设 / regex 脚本 / tokenizer / SSE 流式**
 
+功能覆盖总清单见 [docs/FEATURES.md](docs/FEATURES.md)（对照官方 release 8172dcd，含优先级与 UI 映射）。本地官方源码：`~/sillytavern-ref`（release 分支，供翻译与回归对照）。
+
 ## 架构
 
 ```
