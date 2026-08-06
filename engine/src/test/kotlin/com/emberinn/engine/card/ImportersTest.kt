@@ -124,6 +124,23 @@ class ImportersTest {
         assertEquals("角色A bg 1", assets.backgrounds[0].filename)
     }
 
+    @Test
+    fun `charx assets extract icon and auxiliary`() {
+        val card = """{"spec":"chara_card_v3","data":{"name":"N","assets":[
+            {"type":"icon","ext":"png","zipPath":"img/icon.png","fileName":"icon.png"},
+            {"type":"background","ext":"jpg","zipPath":"img/bg.jpg","fileName":"bg.jpg"}
+        ]}}"""
+        val zip = zipOf(
+            "card.json" to card,
+            "img/icon.png" to "ICON",
+            "img/bg.jpg" to "BG",
+        )
+        val assets = CharXImporter.extractAssets(zip)
+        assertEquals("ICON", String(assets.icon!!.data, Charsets.UTF_8))
+        assertEquals(2, assets.assets.size)
+        assertEquals("background", assets.assets[1].type)
+    }
+
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zos ->
