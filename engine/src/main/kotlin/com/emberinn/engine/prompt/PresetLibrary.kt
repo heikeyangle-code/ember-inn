@@ -2,6 +2,7 @@ package com.emberinn.engine.prompt
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import com.emberinn.engine.slash.QuickReplyPreset
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -33,6 +34,9 @@ object PresetLibrary {
     fun systemPromptPresets(): List<SamplerPreset> = genericPresets("sysprompt")
 
     fun reasoningPresets(): List<SamplerPreset> = genericPresets("reasoning")
+
+    fun quickRepliesPresets(): List<QuickReplyPreset> =
+        presets("quick-replies").map { json.decodeFromJsonElement(QuickReplyPreset.serializer(), it) }
 
     private fun genericPresets(name: String): List<SamplerPreset> =
         presets(name).map { preset ->

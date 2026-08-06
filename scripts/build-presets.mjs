@@ -40,3 +40,4 @@ write('sampler-novel', loadSamplerDir('novel'));
 write('sampler-kobold', loadSamplerDir('kobold'));
 write('sysprompt', loadSamplerDir('sysprompt'));
 write('reasoning', loadSamplerDir('reasoning'));
+write('quick-replies', loadDir('quick-replies'));
