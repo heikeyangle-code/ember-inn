@@ -35,6 +35,8 @@ object PromptAssembler {
             "user" to params.user,
             "wiBefore" to params.wiBefore,
             "wiAfter" to params.wiAfter,
+            "loreBefore" to params.wiBefore,
+            "loreAfter" to params.wiAfter,
             "mesExamples" to params.mesExamples,
             "mesExamplesRaw" to params.mesExamplesRaw,
             "anchorBefore" to params.anchorBefore,

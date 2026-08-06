@@ -15,7 +15,7 @@ class ExtensionPromptInjectionTest {
                 "2_floating_prompt" to ExtensionPrompt("2_floating_prompt", "system", "作者注释"),
             ),
         )
-        assertEquals(listOf("1_memory", "2_floating_prompt", "3_vectors"), injected.map { it.identifier })
+        assertEquals(listOf("summary", "authorsNote", "vectorsMemory"), injected.map { it.identifier })
     }
 
     @Test

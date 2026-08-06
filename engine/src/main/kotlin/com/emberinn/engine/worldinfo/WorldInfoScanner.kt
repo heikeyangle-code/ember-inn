@@ -145,6 +145,9 @@ class WorldInfoScanner(
 
                 val success = if (!entry.useProbability || entry.probability == 100) {
                     true
+                } else if (timedEffects.isEffectActive("sticky", entry)) {
+                    // 官方 verifyProbability：sticky 条目激活中无需重掷
+                    true
                 } else {
                     val roll = random.nextDouble() * 100
                     if (roll <= entry.probability) true else { failedProbability.add(entry); false }

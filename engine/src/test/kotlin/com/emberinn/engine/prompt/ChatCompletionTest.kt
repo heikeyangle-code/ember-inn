@@ -17,13 +17,41 @@ class ChatCompletionTest {
     }
 
     @Test
-    fun `add decreases budget and overflow marks`() {
+    fun `add decreases budget`() {
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(10, 0)
         cc.add(CompletionMessage("system", "abcde", tokens = 5))
         assertEquals(5, cc.tokenBudget)
-        cc.add(CompletionMessage("system", "1234567890", tokens = 10))
-        assertTrue(cc.overflowed)
+    }
+
+    @Test
+    fun `add throws when budget exceeded`() {
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(10, 0)
+        cc.add(CompletionMessage("system", "abcde", tokens = 5))
+        try {
+            cc.add(CompletionMessage("system", "1234567890", tokens = 10))
+            org.junit.Assert.fail("expected TokenBudgetExceededError")
+        } catch (expected: TokenBudgetExceededError) {
+            // expected
+        }
+        assertEquals(2, cc.messages.size)
+    }
+
+    @Test
+    fun `insert skips empty content and throws on overflow`() {
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(10, 0)
+        cc.add(CompletionMessage("system", "marker", identifier = "marker", tokens = 1))
+        cc.insertAfterIdentifier("marker", CompletionMessage("system", "", identifier = "empty", tokens = 0))
+        assertEquals(1, cc.messages.size)
+        try {
+            cc.insertAfterIdentifier("marker", CompletionMessage("system", "x".repeat(20), tokens = 20))
+            org.junit.Assert.fail("expected TokenBudgetExceededError")
+        } catch (expected: TokenBudgetExceededError) {
+            // expected
+        }
+        assertEquals(1, cc.messages.size)
     }
 
     @Test

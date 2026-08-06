@@ -11,9 +11,20 @@ data class ExtensionPrompt(
 /**
  * 对齐官方 preparePromptsForChatCompletion 的扩展提示注入顺序：
  * summary → 作者注释 → vectors → vectorsDataBank → chromadb → personaDescription → 未知扩展（仅 BEFORE/IN_PROMPT）。
- * 非空内容才注入；unknown 扩展只接受 position=start/end。
+ * 非空内容才注入；标识符对齐官方（1_memory→summary 等）；unknown 扩展只接受 position=start/end。
+ * 边界：injection_position/injection_depth 的 PromptManager 覆盖属于下一阶段。
  */
 object ExtensionPromptInjection {
+
+    /** 官方系统提示标识符映射（preparePromptsForChatCompletion）。 */
+    private val KNOWN_IDENTIFIERS = mapOf(
+        "1_memory" to "summary",
+        "2_floating_prompt" to "authorsNote",
+        "3_vectors" to "vectorsMemory",
+        "4_vectors_data_bank" to "vectorsDataBank",
+        "chromadb" to "smartContext",
+    )
+    private val KNOWN_KEYS = KNOWN_IDENTIFIERS.keys
 
     fun inject(
         systemPrompts: List<PromptMessage>,
@@ -22,12 +33,11 @@ object ExtensionPromptInjection {
         personaInPrompt: Boolean = false,
     ): List<PromptMessage> {
         val out = systemPrompts.toMutableList()
-        val known = setOf("1_memory", "2_floating_prompt", "3_vectors", "4_vectors_data_bank", "chromadb")
 
-        fun push(id: String) {
-            val ext = extensions[id] ?: return
+        fun push(key: String) {
+            val ext = extensions[key] ?: return
             if (ext.content.isBlank()) return
-            out.add(PromptMessage(ext.role, ext.content, identifier = id))
+            out.add(PromptMessage(ext.role, ext.content, identifier = KNOWN_IDENTIFIERS[key] ?: key))
         }
 
         push("1_memory")
@@ -41,7 +51,7 @@ object ExtensionPromptInjection {
         }
 
         for ((key, ext) in extensions) {
-            if (key in known) continue
+            if (key in KNOWN_KEYS) continue
             if (ext.content.isBlank()) continue
             if (ext.position != "start" && ext.position != "end") continue
             out.add(PromptMessage(ext.role, ext.content, identifier = key.replace(Regex("""\W"""), "_")))

@@ -2,16 +2,30 @@ package com.emberinn.engine.prompt
 
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /** 提示项（对齐官方 PromptManager Prompt 核心字段）。 */
+@Serializable
 data class PromptItem(
     val identifier: String,
     val name: String,
     val content: String = "",
     val role: String = "system",
+    @SerialName("system_prompt")
     val systemPrompt: Boolean = true,
     val marker: Boolean = false,
     val enabled: Boolean = true,
+    @SerialName("injection_position")
+    val injectionPosition: Int? = null,
+    @SerialName("injection_depth")
+    val injectionDepth: Int? = null,
+    @SerialName("injection_order")
+    val injectionOrder: Int? = null,
+    @SerialName("injection_trigger")
+    val injectionTrigger: List<String> = emptyList(),
+    @SerialName("forbid_overrides")
+    val forbidOverrides: Boolean = false,
 )
 
 /**
@@ -62,12 +76,6 @@ object PromptCollection {
 
     /** 对齐 preparePromptsForChatCompletion：把系统提示合并进同名 marker。 */
     fun mergeSystemPrompts(collection: List<PromptItem>, systemPrompts: List<PromptMessage>): List<PromptItem> {
-        val map = systemPrompts.filter { it.content.isNotBlank() }.associateBy { it.identifier }
-        return collection.map { item ->
-            val sp = map[item.identifier]
-            if (sp != null && item.marker) {
-                item.copy(content = sp.content, role = sp.role)
-            } else item
-        }
+        return PromptManagerCore.mergeSystemPrompts(PromptItems(collection), systemPrompts).collection
     }
 }

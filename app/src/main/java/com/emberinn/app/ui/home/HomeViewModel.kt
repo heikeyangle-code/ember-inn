@@ -11,6 +11,7 @@ import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
 import com.emberinn.engine.card.CardImporter
+import com.emberinn.engine.card.CharacterCardExporter
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -81,7 +83,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         refresh()
     }
 
-    fun exportJson(record: CharacterRecord): String = record.rawJson
+    /** 导出走官方同款流程：V2 归一（readFromV2/charaFormatData）+ 私有字段清理 + 4 空格缩进。 */
+    fun exportJson(record: CharacterRecord): String =
+        CharacterCardExporter.exportToV2Json(record.rawJson)
 
     fun openChat(characterId: String?, name: String): SessionRecord {
         val session = chatStore.findByCharacter(characterId)

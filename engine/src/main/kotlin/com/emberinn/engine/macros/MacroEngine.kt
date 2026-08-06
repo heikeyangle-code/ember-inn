@@ -1,5 +1,7 @@
 package com.emberinn.engine.macros
 
+import com.emberinn.engine.prompt.ContextSettings
+import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.worldinfo.StringHash
 import java.time.LocalDate
 import java.time.LocalTime
@@ -53,6 +55,7 @@ data class MacroEnv(
     val maxPromptTokens: Int = 0,
     val input: String = "",
     val lastGenerationType: String = "",
+    val original: String = "",
     val firstIncludedMessageId: Int? = null,
     val firstDisplayedMessageId: Int? = null,
     val extensions: Set<String> = emptySet(),
@@ -61,6 +64,11 @@ data class MacroEnv(
     val chatIdHash: Long = 0,
     val rerollSeed: Long? = null,
     val contentHash: Long = 0,
+    val instruct: InstructSettings? = null,
+    val context: ContextSettings? = null,
+    val systemPromptContent: String = "",
+    val systemPromptEnabled: Boolean = true,
+    val preferCharacterPrompt: Boolean = true,
     val local: VariableStore = EmptyVariableStore,
     val global: VariableStore = EmptyVariableStore,
 )
@@ -85,10 +93,13 @@ object MacroEngine {
     private val variableShorthandRegex = Regex("""\{\{([.\$])([A-Za-z0-9_]+)\}\}""")
     private val spaceArgMacros = setOf("roll", "random", "pick", "time")
     private val falsyValues = setOf("false", "off", "0")
+    private val legacyTrimRegex = Regex("""(?:\r?\n)*\{\{trim\}\}(?:\r?\n)*""", RegexOption.IGNORE_CASE)
 
     fun substitute(text: String, env: MacroEnv): String {
         // 对齐官方 MacroEnvBuilder：contentHash = getStringHash(整个被替换文本)，全文档一致
-        return substituteWithEnv(text, env.copy(contentHash = StringHash.get(text)))
+        val result = substituteWithEnv(text, env.copy(contentHash = StringHash.get(text)))
+        // 官方 core:legacy-trim：{{trim}} 及其前后换行在全部宏处理完后移除
+        return result.replace(legacyTrimRegex, "")
     }
 
     private fun substituteWithEnv(text: String, env: MacroEnv): String {
@@ -241,9 +252,42 @@ object MacroEngine {
             "space" -> " "
             "newline" -> "\n"
             "noop" -> ""
-            "trim" -> args.trim()
+            // {{trim::text}} 工具宏；{{trim}} 无参留给 legacy-trim 后处理
+            "trim" -> if (args.isEmpty()) raw else args.trim()
             "reverse" -> args.reversed()
             "//", "comment" -> ""
+            // instruct 模板宏（对齐 macros/definitions/instruct-macros.js）
+            "instructstorystringprefix" -> instructValue(env) { it.storyStringPrefix }
+            "instructstorystringsuffix" -> instructValue(env) { it.storyStringSuffix }
+            "instructuserprefix", "instructinput" -> instructValue(env) { it.inputSequence }
+            "instructusersuffix" -> instructValue(env) { it.inputSuffix }
+            "instructassistantprefix", "instructoutput" -> instructValue(env) { it.outputSequence }
+            "instructassistantsuffix", "instructseparator" -> instructValue(env) { it.outputSuffix }
+            "instructsystemprefix" -> instructValue(env) { it.systemSequence }
+            "instructsystemsuffix" -> instructValue(env) { it.systemSuffix }
+            "instructfirstassistantprefix", "instructfirstoutputprefix" ->
+                instructValue(env) { it.firstOutputSequence.ifEmpty { it.outputSequence } }
+            "instructlastassistantprefix", "instructlastoutputprefix" ->
+                instructValue(env) { it.lastOutputSequence.ifEmpty { it.outputSequence } }
+            "instructstop" -> instructValue(env) { it.stopSequence }
+            "instructuserfiller" -> instructValue(env) { it.userAlignmentMessage }
+            "instructsysteminstructionprefix" -> instructValue(env) { it.lastSystemSequence }
+            "instructfirstuserprefix", "instructfirstinput" ->
+                instructValue(env) { it.firstInputSequence.ifEmpty { it.inputSequence } }
+            "instructlastuserprefix", "instructlastinput" ->
+                instructValue(env) { it.lastInputSequence.ifEmpty { it.inputSequence } }
+            "original" -> env.original
+            "systemprompt" -> if (!env.systemPromptEnabled) {
+                ""
+            } else if (env.preferCharacterPrompt && env.character.charPrompt.isNotEmpty()) {
+                env.character.charPrompt
+            } else {
+                env.systemPromptContent
+            }
+            "defaultsystemprompt", "instructsystem", "instructsystemprompt" ->
+                if (env.systemPromptEnabled) env.systemPromptContent else ""
+            "exampleseparator", "chatseparator" -> env.context?.exampleSeparator ?: ""
+            "chatstart" -> env.context?.chatStart ?: ""
             "input" -> env.input
             "maxprompt", "maxprompttokens" -> env.maxPromptTokens.toString()
             "maxcontext", "maxcontexttokens" -> env.maxContextTokens.toString()
@@ -367,11 +411,21 @@ object MacroEngine {
         return if (!falsy) substituteWithEnv(content, env).trim() else ""
     }
 
+    /** 官方 instruct 宏：仅当 instruct 启用时返回设置值。 */
+    private fun instructValue(env: MacroEnv, selector: (InstructSettings) -> String): String {
+        val settings = env.instruct
+        return if (settings?.enabled == true) selector(settings) else ""
+    }
+
     private val hhMm: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val yyyyMmDd: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val monthDayYear: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.US)
+    private val shortTime: DateTimeFormatter =
+        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.US)
 
     private fun shortLocalTime(): String =
-        LocalTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault()))
+        LocalTime.now().format(shortTime)
 
     private fun timeMacro(args: String): String {
         if (args.isBlank()) return shortLocalTime()
@@ -379,7 +433,7 @@ object MacroEngine {
         if (m == null) return shortLocalTime()
         val offset = m.groupValues[1].toIntOrNull() ?: return shortLocalTime()
         return LocalTime.now(ZoneOffset.ofHours(offset))
-            .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault()))
+            .format(shortTime)
     }
 
     private fun splitList(args: String): List<String> {

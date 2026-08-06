@@ -48,7 +48,10 @@ object StoryStringRenderer {
                 }
                 close -> { sb.append(next.value); i = next.range.last + 1 }
                 plain -> {
-                    sb.append(params[next.groupValues[1]] ?: "")
+                    // 官方 Handlebars：已知字段渲染；未知走 helperMissing → 保留 {{name}} 交给宏引擎
+                    // {{trim}} 同样保留字面量，由 MacroEngine 的 legacy-trim 后处理删除
+                    val key = next.groupValues[1]
+                    sb.append(params[key] ?: next.value)
                     i = next.range.last + 1
                 }
                 else -> { sb.append(text, i, text.length); break }

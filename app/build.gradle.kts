@@ -67,6 +67,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":engine"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -28,16 +28,17 @@ data class CompletionMessage(
     val tokens: Int = 0,
 )
 
+/** 官方 openai.js TokenBudgetExceededError。 */
+class TokenBudgetExceededError(message: String = "") : RuntimeException(message)
+
 /**
  * ChatCompletion 核心：tokenBudget = context - response；
- * add 先查预算、再扣减；overflow 标记；squashSystemMessages 合并连续无名 system。
+ * add/insert 超预算抛 TokenBudgetExceededError（对齐官方）；squashSystemMessages 合并连续无名 system。
  */
 class ChatCompletion(private val handler: TokenHandler) {
 
     val messages = mutableListOf<CompletionMessage>()
     var tokenBudget = 0
-        private set
-    var overflowed = false
         private set
 
     fun setTokenBudget(context: Int, response: Int) {
@@ -53,8 +54,10 @@ class ChatCompletion(private val handler: TokenHandler) {
     fun canAffordAll(messages: List<CompletionMessage>): Boolean =
         messages.sumOf { it.tokens } <= tokenBudget
 
-    /** 插入到指定 identifier 消息之后（对齐 MessageCollection insert 的位置语义）。 */
+    /** 插入到指定 identifier 消息之后（对齐官方 insert：空内容不插入、超预算抛错）。 */
     fun insertAfterIdentifier(identifier: String, message: CompletionMessage) {
+        checkTokenBudget(message)
+        if (message.content.isEmpty()) return
         val idx = messages.indexOfLast { it.identifier == identifier }
         if (idx >= 0) {
             messages.add(idx + 1, message)
@@ -95,6 +98,6 @@ class ChatCompletion(private val handler: TokenHandler) {
     }
 
     private fun checkTokenBudget(message: CompletionMessage) {
-        if (message.tokens > tokenBudget) overflowed = true
+        if (message.tokens > tokenBudget) throw TokenBudgetExceededError(message.identifier ?: "")
     }
 }

@@ -21,12 +21,14 @@ class WorldInfoScannerTest {
         group: String? = null,
         groupOverride: Boolean? = null,
         useGroupScoring: Boolean? = null,
+        useProbability: Boolean = false,
+        probability: Int = 100,
     ) = WorldInfoEntry(
         world = "w", uid = uid, order = order, keys = keys, content = content,
         constant = constant, position = position, selective = selective, keySecondary = keySecondary,
         selectiveLogic = selectiveLogic, sticky = sticky, cooldown = cooldown,
         group = group, groupOverride = groupOverride, useGroupScoring = useGroupScoring,
-        hash = uid.toLong(),
+        useProbability = useProbability, probability = probability, hash = uid.toLong(),
     )
 
     @Test
@@ -103,8 +105,6 @@ class WorldInfoScannerTest {
         assertEquals(1, result.activated.size)
         assertTrue(result.worldInfoBefore.contains("找到了"))
     }
-}
-
 
     @Test
     fun `sticky keeps entry active in next scan without key match`() {
@@ -187,3 +187,24 @@ class WorldInfoScannerTest {
         )
         assertEquals(1, right.activated.size)
     }
+
+    @Test
+    fun `sticky entry does not re-roll probability`() {
+        val e = entry(1, 1, keys = listOf("a"), content = "粘住", sticky = 2)
+        val scanner = WorldInfoScanner(random = RandomProvider { 99.0 }) // 随机必然失败
+        // 第一次无概率检查，激活并建立 sticky
+        val first = scanner.scan(listOf("a"), 100, listOf(e), WorldInfoSettings(budgetPercent = 100))
+        assertTrue(first.timedMetadata.sticky.containsKey("w.1"))
+
+        val eProb = e.copy(useProbability = true, probability = 1)
+        val second = scanner.scan(
+            chat = listOf("x", "y"),
+            maxContext = 100,
+            entries = listOf(eProb),
+            settings = WorldInfoSettings(budgetPercent = 100),
+            timedMetadata = first.timedMetadata,
+        )
+        // sticky 激活中：官方 verifyProbability 直接返回 true，不重掷
+        assertTrue(second.activated.any { it.uid == 1 })
+    }
+}

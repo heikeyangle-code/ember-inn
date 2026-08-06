@@ -1,10 +1,12 @@
 package com.emberinn.engine.card
 
+import java.time.Instant
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -26,7 +28,7 @@ object CharacterCardExporter {
         return pretty.encodeToString(JsonElement.serializer(), element)
     }
 
-    /** 旧版无 spec 卡 → charaFormatData 主字段映射（深度提示等边缘字段后续补）。 */
+    /** 旧版无 spec 卡 → charaFormatData 主字段映射；create_date 缺省用 ISO（对齐 getCharaCardV2）。 */
     private fun legacyToV2(root: JsonObject): String {
         val name = root["name"]?.jsonPrimitive?.contentOrNull() ?: ""
         val tags = root["tags"]?.let {
@@ -34,11 +36,12 @@ object CharacterCardExporter {
             else it.jsonPrimitive.contentOrNull()?.split(',')?.map { t -> t.trim() }?.filter { t -> t.isNotEmpty() } ?: emptyList()
         } ?: emptyList()
         val now = V2Normalizer.humanizedDateTime()
+        val createDate = root["create_date"]?.jsonPrimitive?.contentOrNull() ?: Instant.now().toString()
         return V2Normalizer.buildV2FromLegacy(
             name = name,
             description = root["description"]?.jsonPrimitive?.contentOrNull() ?: "",
             firstMes = root["first_mes"]?.jsonPrimitive?.contentOrNull() ?: "",
-            createDate = root["create_date"]?.jsonPrimitive?.contentOrNull() ?: now,
+            createDate = createDate,
             chat = root["chat"]?.jsonPrimitive?.contentOrNull() ?: "$name - $now",
             creatorComment = root["creatorcomment"]?.jsonPrimitive?.contentOrNull() ?: "",
             personality = root["personality"]?.jsonPrimitive?.contentOrNull() ?: "",
@@ -54,6 +57,9 @@ object CharacterCardExporter {
                 else listOfNotNull(it.jsonPrimitive.contentOrNull())
             } ?: emptyList(),
             fav = root["fav"]?.jsonPrimitive?.let { it.contentOrNull() == "true" } ?: false,
+            depthPromptPrompt = root["depth_prompt_prompt"]?.jsonPrimitive?.contentOrNull() ?: "",
+            depthPromptDepth = root["depth_prompt_depth"]?.jsonPrimitive?.contentOrNull()?.toIntOrNull() ?: 4,
+            depthPromptRole = root["depth_prompt_role"]?.jsonPrimitive?.contentOrNull() ?: "system",
         )
     }
 }

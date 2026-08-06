@@ -65,7 +65,8 @@ object WorldBookEntryParser {
             matchCreatorNotes = boolOf(raw["matchCreatorNotes"], false),
             preventRecursion = boolOf(raw["preventRecursion"] ?: raw["prevent_recursion"], false),
             excludeRecursion = boolOf(raw["excludeRecursion"] ?: raw["exclude_recursion"], false),
-            delayUntilRecursion = raw["delayUntilRecursion"]?.let { intOf(it, 0) } ?: raw["delay_until_recursion"]?.let { intOf(it, 0) } ?: 0,
+            delayUntilRecursion = raw["delayUntilRecursion"]?.let { delayLevelOf(it) }
+                ?: raw["delay_until_recursion"]?.let { delayLevelOf(it) } ?: 0,
             useProbability = raw["useProbability"]?.let { boolOf(it, true) } ?: true,
             probability = raw["probability"]?.let { probabilityOf(it) } ?: 100,
             ignoreBudget = boolOf(raw["ignoreBudget"] ?: raw["ignore_budget"], false),
@@ -107,6 +108,12 @@ object WorldBookEntryParser {
     private fun probabilityOf(el: JsonElement): Int =
         el.jsonPrimitive.let { p ->
             p.intOrNull ?: p.contentOrNull()?.trim()?.removeSuffix("%")?.toDoubleOrNull()?.toInt() ?: 100
+        }
+
+    /** 官方 delayUntilRecursion === true 视为 1。 */
+    private fun delayLevelOf(el: JsonElement): Int =
+        el.jsonPrimitive.let { p ->
+            if (p.booleanOrNull == true) 1 else intOf(el, 0)
         }
 
     private fun boolOf(el: JsonElement?, def: Boolean): Boolean =
