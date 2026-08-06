@@ -1,0 +1,24 @@
+{
+  "source": "README 供应商核实表 + 官方 chat_completion_sources",
+  "providers": [
+    { "id": "openai", "display_name": "OpenAI", "protocol": "openai-compatible", "base_url": "https://api.openai.com/v1", "default_models": ["gpt-4o", "gpt-4o-mini", "gpt-4.1"] },
+    { "id": "anthropic", "display_name": "Anthropic", "protocol": "anthropic", "auth_type": "x-api-key", "base_url": "https://api.anthropic.com", "models_endpoint": "v1/models", "default_models": ["claude-sonnet-4-5", "claude-opus-4-1"] },
+    { "id": "google", "display_name": "Gemini (AI Studio)", "protocol": "google", "base_url": "https://generativelanguage.googleapis.com", "models_endpoint": "v1beta/models", "default_models": ["gemini-2.5-pro", "gemini-2.5-flash"] },
+    { "id": "vertexai", "display_name": "Gemini (Vertex)", "protocol": "google", "base_url": "https://us-central1-aiplatform.googleapis.com", "models_endpoint": "v1/models", "region_variants": ["us-central1", "europe-west4", "asia-southeast1"] },
+    { "id": "deepseek", "display_name": "DeepSeek", "protocol": "openai-compatible", "base_url": "https://api.deepseek.com", "models_endpoint": "models", "default_models": ["deepseek-chat", "deepseek-reasoner"] },
+    { "id": "openrouter", "display_name": "OpenRouter", "protocol": "openai-compatible", "base_url": "https://openrouter.ai/api/v1", "default_models": ["anthropic/claude-sonnet-4.5", "openai/gpt-4o"] },
+    { "id": "groq", "display_name": "Groq", "protocol": "openai-compatible", "base_url": "https://api.groq.com/openai/v1", "default_models": ["llama-3.3-70b-versatile"] },
+    { "id": "ollama", "display_name": "Ollama (本地)", "protocol": "openai-compatible", "base_url": "http://localhost:11434/v1", "requires_key": false },
+    { "id": "mistral", "display_name": "Mistral", "protocol": "openai-compatible", "base_url": "https://api.mistral.ai/v1", "default_models": ["mistral-large-latest"] },
+    { "id": "xai", "display_name": "xAI", "protocol": "openai-compatible", "base_url": "https://api.x.ai/v1", "default_models": ["grok-4"] },
+    { "id": "moonshot", "display_name": "Moonshot", "protocol": "openai-compatible", "base_url": "https://api.moonshot.cn/v1", "default_models": ["kimi-k2"] },
+    { "id": "siliconflow", "display_name": "硅基流动", "protocol": "openai-compatible", "base_url": "https://api.siliconflow.cn/v1", "default_models": ["Qwen/Qwen3-235B-A22B"] },
+    { "id": "zai", "display_name": "Z.AI", "protocol": "openai-compatible", "base_url": "https://api.z.ai/api/paas/v4", "default_models": ["deepseek-chat"] },
+    { "id": "minimax", "display_name": "MiniMax", "protocol": "openai-compatible", "base_url": "https://api.minimax.chat/v1", "region_variants": ["国际", "国内"], "default_models": ["MiniMax-M2.7"] },
+    { "id": "fireworks", "display_name": "Fireworks", "protocol": "openai-compatible", "base_url": "https://api.fireworks.ai/inference/v1", "default_models": ["accounts/fireworks/models/llama-v3p1-405b-instruct"] },
+    { "id": "perplexity", "display_name": "Perplexity", "protocol": "openai-compatible", "base_url": "https://api.perplexity.ai", "models_endpoint": "chat/completions", "default_models": ["sonar-pro"] },
+    { "id": "workers-ai", "display_name": "Cloudflare Workers AI", "protocol": "openai-compatible", "base_url": "https://api.cloudflare.com/client/v4/accounts", "default_models": ["@cf/meta/llama-3.3-70b-instruct"] },
+    { "id": "azure", "display_name": "Azure OpenAI", "protocol": "openai-compatible", "base_url": "https://{resource}.openai.azure.com", "api_version": "2024-10-21", "models_endpoint": "openai/deployments", "requires_key": true },
+    { "id": "custom", "display_name": "自定义", "protocol": "openai-compatible", "base_url": "", "requires_key": false }
+  ]
+}
