@@ -33,6 +33,7 @@ data class ChatMessage(
     val mes: String = "",
     val isUser: Boolean = false,
     val isSystem: Boolean = false,
+    val name: String? = null,
     val swipes: List<String> = emptyList(),
     val swipeId: Int = 0,
 )

@@ -21,9 +21,7 @@ object StoryStringRenderer {
             val next = listOfNotNull(ifOpen, close, plain).minByOrNull { it.range.first }
                 ?: run { sb.append(text, i, text.length); break }
 
-            if (next != ifOpen && next.range.first > i) {
-                sb.append(text, i, next.range.first)
-            }
+            if (next.range.first > i) sb.append(text, i, next.range.first)
             when (next) {
                 ifOpen -> {
                     val name = next.groupValues[1]

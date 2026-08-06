@@ -111,7 +111,7 @@ object PromptAssembler {
             val prefix = when (namesBehavior) {
                 NAMES_NONE, NAMES_COMPLETION -> false
                 NAMES_CONTENT -> true
-                else -> (selectedGroup && name != user) || (m.isUser && name != user && role == "user")
+                else -> selectedGroup && name != user
             }
             if (prefix && name.isNotEmpty()) content = "$name: $content"
             messages += PromptMessage(role, content, name.ifEmpty { null })
