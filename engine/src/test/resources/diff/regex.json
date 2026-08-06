@@ -1,0 +1,133 @@
+{
+  "generated": "2026-08-06T19:49:56.458Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "plain",
+      "args": {
+        "findRegex": "foo",
+        "replaceString": "bar",
+        "raw": "a foo b"
+      },
+      "expected": "a bar b"
+    },
+    {
+      "id": "groups",
+      "args": {
+        "findRegex": "(a)(b)",
+        "replaceString": "$2$1",
+        "raw": "ab"
+      },
+      "expected": "ba"
+    },
+    {
+      "id": "named",
+      "args": {
+        "findRegex": "(?<x>a)b",
+        "replaceString": "$<x>-b",
+        "raw": "ab"
+      },
+      "expected": "a-b"
+    },
+    {
+      "id": "match_macro",
+      "args": {
+        "findRegex": "\\d+",
+        "replaceString": "[{{match}}]",
+        "raw": "x12y"
+      },
+      "expected": "x[12]y"
+    },
+    {
+      "id": "trim",
+      "args": {
+        "findRegex": "(world)",
+        "replaceString": "$1",
+        "trimStrings": [
+          "wor"
+        ],
+        "raw": "hello world"
+      },
+      "expected": "hello ld"
+    },
+    {
+      "id": "trim_macro",
+      "args": {
+        "findRegex": "Alice",
+        "replaceString": "$0",
+        "trimStrings": [
+          "{{user}}"
+        ],
+        "raw": "Alice hi"
+      },
+      "expected": " hi"
+    },
+    {
+      "id": "macro_replace",
+      "args": {
+        "findRegex": "hi",
+        "replaceString": "{{user}} says",
+        "raw": "hi"
+      },
+      "expected": "Alice says"
+    },
+    {
+      "id": "substitute_raw",
+      "args": {
+        "findRegex": "{{user}}",
+        "replaceString": "X",
+        "substituteRegex": 1,
+        "raw": "Alice"
+      },
+      "expected": "X"
+    },
+    {
+      "id": "escaped_dot_hit",
+      "args": {
+        "findRegex": "a.b",
+        "replaceString": "X",
+        "substituteRegex": 2,
+        "raw": "a.b"
+      },
+      "expected": "X"
+    },
+    {
+      "id": "escaped_dot_miss",
+      "args": {
+        "findRegex": "a.b",
+        "replaceString": "X",
+        "substituteRegex": 2,
+        "raw": "axb"
+      },
+      "expected": "axb"
+    },
+    {
+      "id": "disabled",
+      "args": {
+        "findRegex": "foo",
+        "replaceString": "X",
+        "raw": "foo",
+        "disabled": true
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "empty_pattern",
+      "args": {
+        "findRegex": "",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "invalid_regex",
+      "args": {
+        "findRegex": "(",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    }
+  ]
+}
