@@ -67,13 +67,12 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
 
 ## 剩余工作（按顺序）
 1. **CI 恢复后跑** `./gradlew :engine:test :app:assembleDebug`（runner 此前 queued），红灯就修
-2. PromptManager 接入 app：用户顺序编辑/持久化 UI + 角色级 prompt_order
-3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info matchKeys/getScore/parseDecorators（19 例）、
-   checkWorldInfo 整体扫描（17 例）、regex runRegexScript（13 例）、PNG 角色卡读写（6 例）；
-   剩余 slash 解析器、YAML/BYAF/CharX 导入；官方发版时重生成 fixture
-4. 全量 1:1 审计：✅ PromptAssembler bias/override + ChatCompletion 嵌套模型 + populateChatCompletion 核心 + ChatHistory/DialogueExamples 顺序预算；剩余工具预留/continue prefill/in-chat 深度注入（populationInjectionPrompts）、世界书 filterByInclusionGroups 细节
-5. UI 按 README 严谨收尾：聊天 Tab/设置页、真实模型对话（提供商三步配置）、角色详情世界书编辑、人设/预设、全局搜索、真毛玻璃/氛围渐变、CharX/BYAF 资源提取
-6. 推送：等用户说推再推
+2. **App 接线（README 下一步）**：ChatViewModel 接 LlmClient（引擎已就绪）、
+   提供商三步配置 UI、聊天 Tab/设置页、世界书编辑 UI、全局搜索
+3. **引擎边界**：parser flags 完整语义、Claude/Gemini 官方 tokenizer、
+   150+ 斜杠命令（需 App 状态）、人设/群聊持久化
+4. **差分**：官方发版时重跑 scripts/diff/*.mjs + build-presets.mjs 再全量测试
+5. 推送：等用户说推再推
 
 ## 注意
 - 不要本地编译（用户明确要求）；靠 CI 验证
