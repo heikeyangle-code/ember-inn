@@ -154,6 +154,8 @@ object PromptManagerCore {
                 injectionPosition = item?.injectionPosition,
                 injectionDepth = item?.injectionDepth,
                 injectionOrder = item?.injectionOrder,
+                position = item?.position ?: prompt.position,
+                extension = item?.extension ?: prompt.extension,
             )
             val idx = out.index(prompt.identifier)
             if (idx != -1) out.set(merged, idx) else out.add(merged)

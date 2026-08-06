@@ -26,6 +26,8 @@ data class PromptItem(
     val injectionTrigger: List<String> = emptyList(),
     @SerialName("forbid_overrides")
     val forbidOverrides: Boolean = false,
+    val position: String? = null,
+    val extension: Boolean = false,
 )
 
 /**

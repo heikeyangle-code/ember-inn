@@ -19,7 +19,7 @@ class TokenHandler(private val counter: TokenCounter) {
     }
 }
 
-/** 对齐官方 Message（核心字段）。 */
+/** 对齐官方 Message 核心字段。 */
 data class CompletionMessage(
     val role: String,
     val content: String,
@@ -28,25 +28,54 @@ data class CompletionMessage(
     val tokens: Int = 0,
 )
 
+/** 对齐官方 MessageCollection：带 identifier 的消息集合。 */
+class CompletionCollection(val identifier: String) {
+    val items = mutableListOf<CompletionMessage>()
+
+    fun add(message: CompletionMessage) { items += message }
+
+    fun insert(message: CompletionMessage, position: Int) {
+        items.add(position, message)
+    }
+
+    fun insertAtStart(message: CompletionMessage) { items.add(0, message) }
+
+    fun insertAtEnd(message: CompletionMessage) { items += message }
+
+    fun removeLast(): CompletionMessage? =
+        if (items.isEmpty()) null else items.removeAt(items.lastIndex)
+
+    fun getTokens(): Int = items.sumOf { it.tokens }
+}
+
+/** ChatCompletion 根集合中的一项：嵌套集合或扁平消息（squash 后）。 */
+sealed class ChatEntry {
+    data class Collection(val collection: CompletionCollection) : ChatEntry()
+    data class Message(val message: CompletionMessage) : ChatEntry()
+}
+
 /** 官方 openai.js TokenBudgetExceededError。 */
 class TokenBudgetExceededError(message: String = "") : RuntimeException(message)
 
 /**
- * ChatCompletion 核心：tokenBudget = context - response；
- * add/insert 超预算抛 TokenBudgetExceededError（对齐官方）；squashSystemMessages 合并连续无名 system。
+ * 对齐官方 openai.js ChatCompletion：
+ * 根集合按 PromptManager 顺序稀疏放置 MessageCollection；
+ * add/insert 超预算抛 TokenBudgetExceededError；getChat 展平并跳过空消息。
  */
 class ChatCompletion(private val handler: TokenHandler) {
 
-    val messages = mutableListOf<CompletionMessage>()
+    val entries = mutableListOf<ChatEntry?>()
     var tokenBudget = 0
         private set
+    val overriddenPrompts = mutableListOf<String>()
 
     fun setTokenBudget(context: Int, response: Int) {
         tokenBudget = context - response
     }
 
-    fun reserveBudget(message: CompletionMessage) {
-        tokenBudget -= message.tokens
+    fun setOverriddenPrompts(prompts: List<String>) {
+        overriddenPrompts.clear()
+        overriddenPrompts += prompts
     }
 
     fun canAfford(message: CompletionMessage): Boolean = message.tokens <= tokenBudget
@@ -54,31 +83,95 @@ class ChatCompletion(private val handler: TokenHandler) {
     fun canAffordAll(messages: List<CompletionMessage>): Boolean =
         messages.sumOf { it.tokens } <= tokenBudget
 
-    /** 插入到指定 identifier 消息之后（对齐官方 insert：空内容不插入、超预算抛错）。 */
-    fun insertAfterIdentifier(identifier: String, message: CompletionMessage) {
+    /** 对齐官方 add(collection, position)：position 非 null 且非 -1 时按位覆盖，否则追加。 */
+    fun add(collection: CompletionCollection, position: Int? = null): ChatCompletion {
+        checkTokenBudget(collection.getTokens())
+        if (position != null && position != -1) {
+            while (entries.size <= position) entries.add(null)
+            entries[position] = ChatEntry.Collection(collection)
+        } else {
+            entries += ChatEntry.Collection(collection)
+        }
+        tokenBudget -= collection.getTokens()
+        return this
+    }
+
+    fun has(identifier: String): Boolean = findMessageIndex(identifier) != -1
+
+    fun findMessageIndex(identifier: String): Int =
+        entries.indexOfFirst { (it as? ChatEntry.Collection)?.collection?.identifier == identifier }
+
+    /** 对齐官方 insert：先查预算（抛错），空内容不插入。 */
+    fun insert(message: CompletionMessage, identifier: String, position: String = "end") {
         checkTokenBudget(message)
         if (message.content.isEmpty()) return
-        val idx = messages.indexOfLast { it.identifier == identifier }
-        if (idx >= 0) {
-            messages.add(idx + 1, message)
-        } else {
-            messages.add(message)
+        val index = findMessageIndex(identifier)
+        if (index < 0) return
+        val collection = (entries[index] as? ChatEntry.Collection)?.collection ?: return
+        when (position) {
+            "start" -> collection.insertAtStart(message)
+            "end" -> collection.insertAtEnd(message)
+            else -> collection.insert(message, position.toIntOrNull() ?: collection.items.size)
         }
         tokenBudget -= message.tokens
     }
 
-    fun add(message: CompletionMessage): ChatCompletion {
-        checkTokenBudget(message)
-        messages.add(message)
-        tokenBudget -= message.tokens
-        return this
+    fun insertAtStart(message: CompletionMessage, identifier: String) =
+        insert(message, identifier, "start")
+
+    fun insertAtEnd(message: CompletionMessage, identifier: String) =
+        insert(message, identifier, "end")
+
+    /** 对齐 removeLastFrom：弹出集合最后一条并归还预算。 */
+    fun removeLastFrom(identifier: String): CompletionMessage? {
+        val index = findMessageIndex(identifier)
+        if (index < 0) return null
+        val collection = (entries[index] as? ChatEntry.Collection)?.collection ?: return null
+        val message = collection.removeLast() ?: return null
+        tokenBudget += message.tokens
+        return message
     }
 
+    fun reserveBudget(message: CompletionMessage) { tokenBudget -= message.tokens }
+
+    fun reserveBudget(tokens: Int) { tokenBudget -= tokens }
+
+    fun freeBudget(message: CompletionMessage) { tokenBudget += message.tokens }
+
+    fun freeBudget(tokens: Int) { tokenBudget += tokens }
+
+    fun getTokens(): Int = entries.filterNotNull().sumOf { entry ->
+        when (entry) {
+            is ChatEntry.Collection -> entry.collection.getTokens()
+            is ChatEntry.Message -> entry.message.tokens
+        }
+    }
+
+    /** 对齐 getChat：展平、跳过空消息、tool_calls/signature 等字段暂为边界。 */
+    fun getChat(): List<CompletionMessage> {
+        val chat = mutableListOf<CompletionMessage>()
+        for (entry in entries.filterNotNull()) {
+            val messages = when (entry) {
+                is ChatEntry.Collection -> entry.collection.items
+                is ChatEntry.Message -> listOf(entry.message)
+            }
+            chat += messages.filter { it.content.isNotEmpty() }
+        }
+        return chat
+    }
+
+    /** 对齐 squashSystemMessages：展平后合并连续无名 system（排除 newMainChat/newChat/groupNudge）。 */
     fun squashSystemMessages() {
         val exclude = setOf("newMainChat", "newChat", "groupNudge")
-        val out = mutableListOf<CompletionMessage>()
+        val flat = entries.filterNotNull().flatMap { entry ->
+            when (entry) {
+                is ChatEntry.Collection -> entry.collection.items
+                is ChatEntry.Message -> listOf(entry.message)
+            }
+        }
+        val out = mutableListOf<ChatEntry>()
         var last: CompletionMessage? = null
-        for (m in messages) {
+        for (m in flat) {
             if (m.role == "system" && m.content.isEmpty()) continue
             val canSquash = m.role == "system" && m.name == null && m.identifier !in exclude
             if (canSquash && last != null && last.role == "system" && last.name == null && last.identifier !in exclude) {
@@ -86,18 +179,18 @@ class ChatCompletion(private val handler: TokenHandler) {
                     content = last.content + "\n" + m.content,
                     tokens = handler.countAsync(last.content + "\n" + m.content, "prompt"),
                 )
-                out[out.lastIndex] = merged
+                out[out.lastIndex] = ChatEntry.Message(merged)
                 last = merged
             } else {
-                out.add(m)
+                out.add(ChatEntry.Message(m))
                 last = m
             }
         }
-        messages.clear()
-        messages.addAll(out)
+        entries.clear()
+        entries.addAll(out)
     }
 
-    private fun checkTokenBudget(message: CompletionMessage) {
-        if (message.tokens > tokenBudget) throw TokenBudgetExceededError(message.identifier ?: "")
+    private fun checkTokenBudget(tokens: Int) {
+        if (tokens > tokenBudget) throw TokenBudgetExceededError()
     }
 }

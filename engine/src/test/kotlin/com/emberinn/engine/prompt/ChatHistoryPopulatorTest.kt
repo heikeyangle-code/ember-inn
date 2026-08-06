@@ -9,19 +9,55 @@ class ChatHistoryPopulatorTest {
 
     private val env = MacroEnv(user = "玩家", char = "柳春娘")
 
+    private fun prompts() = PromptItems(
+        listOf(PromptItem("chatHistory", "Chat History", marker = true)),
+    )
+
     @Test
-    fun `stops when budget exhausted`() {
+    fun `chat history is chronological with newChat first`() {
         val handler = TokenHandler(TokenCounter { it.length })
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(100, 0)
         val messages = listOf(
-            PromptMessage("user", "一二三四五六七八九十"),   // 10
-            PromptMessage("assistant", "一二三四五六七八九十"), // 10
+            PromptMessage("user", "先"),
+            PromptMessage("assistant", "后"),
         )
-        val added = ChatHistoryPopulator.populate(messages, cc, handler, "新对话", env)
-        // 新对话预留后预算剩 97，两条消息 20，能全加
-        assertEquals(2, added.size)
-        assertEquals(77, cc.tokenBudget)
+        ChatHistoryPopulator.populate(
+            messages = messages,
+            chatCompletion = cc,
+            prompts = prompts(),
+            handler = handler,
+            type = "normal",
+            newChatPrompt = "新对话",
+            env = env,
+        )
+        val chat = cc.getChat()
+        assertEquals(listOf("newMainChat", "chatHistory", "chatHistory"), chat.map { it.identifier })
+        assertEquals(listOf("新对话", "先", "后"), chat.map { it.content })
+        // 100 - 3(预留) - 4(两条消息) + 3(归还) - 3(newChat插入) = 93
+        assertEquals(93, cc.tokenBudget)
+    }
+
+    @Test
+    fun `stops when budget exhausted`() {
+        val handler = TokenHandler(TokenCounter { it.length })
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(20, 0)
+        val messages = listOf(
+            PromptMessage("user", "一二三四五六七八九十"),
+            PromptMessage("assistant", "一二三四五六七八九十"),
+        )
+        ChatHistoryPopulator.populate(
+            messages = messages,
+            chatCompletion = cc,
+            prompts = prompts(),
+            handler = handler,
+            type = "normal",
+            newChatPrompt = "新",
+            env = env,
+        )
+        // 预算 20 - 3 预留 - 1 newChat = 16，第一条 10 放得下，第二条 10 放不下
+        assertEquals(listOf("新", "一二三四五六七八九十"), cc.getChat().map { it.content })
     }
 
     @Test
@@ -29,9 +65,15 @@ class ChatHistoryPopulatorTest {
         val handler = TokenHandler(TokenCounter { it.length })
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(100, 0)
-        val added = ChatHistoryPopulator.populate(emptyList(), cc, handler, "[Start a new Chat] {{char}}", env)
-        assertEquals(0, added.size)
-        // 预留消息后预算扣减 = 宏替换后文本长度
-        assertEquals(100 - "[Start a new Chat] 柳春娘".length, cc.tokenBudget)
+        ChatHistoryPopulator.populate(
+            messages = emptyList(),
+            chatCompletion = cc,
+            prompts = prompts(),
+            handler = handler,
+            type = "normal",
+            newChatPrompt = "[Start a new Chat] {{char}}",
+            env = env,
+        )
+        assertEquals(listOf("[Start a new Chat] 柳春娘"), cc.getChat().map { it.content })
     }
 }

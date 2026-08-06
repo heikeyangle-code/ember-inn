@@ -6,6 +6,8 @@ data class PromptMessage(
     val content: String,
     val name: String? = null,
     val identifier: String? = null,
+    val position: String? = null,
+    val extension: Boolean = false,
 )
 
 /** renderStoryString 参数（对齐官方 storyStringParams）。 */

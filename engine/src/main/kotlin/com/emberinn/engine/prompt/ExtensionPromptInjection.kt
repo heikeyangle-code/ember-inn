@@ -37,7 +37,16 @@ object ExtensionPromptInjection {
         fun push(key: String) {
             val ext = extensions[key] ?: return
             if (ext.content.isBlank()) return
-            out.add(PromptMessage(ext.role, ext.content, identifier = KNOWN_IDENTIFIERS[key] ?: key))
+            val position = ext.position.takeIf { it == "start" || it == "end" }
+            out.add(
+                PromptMessage(
+                    role = ext.role,
+                    content = ext.content,
+                    identifier = KNOWN_IDENTIFIERS[key] ?: key,
+                    position = position,
+                    extension = true,
+                ),
+            )
         }
 
         push("1_memory")
@@ -54,7 +63,15 @@ object ExtensionPromptInjection {
             if (key in KNOWN_KEYS) continue
             if (ext.content.isBlank()) continue
             if (ext.position != "start" && ext.position != "end") continue
-            out.add(PromptMessage(ext.role, ext.content, identifier = key.replace(Regex("""\W"""), "_")))
+            out.add(
+                PromptMessage(
+                    role = ext.role,
+                    content = ext.content,
+                    identifier = key.replace(Regex("""\W"""), "_"),
+                    position = ext.position,
+                    extension = true,
+                ),
+            )
         }
 
         return out

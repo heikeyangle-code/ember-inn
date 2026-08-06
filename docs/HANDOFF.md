@@ -24,6 +24,8 @@
 - **差分验证工具**：scripts/diff/instruct-official.mjs 从官方源码逐字提取函数生成 fixture（36 用例），InstructModeDiffTest 逐用例对比 Kotlin 输出
 - **instruct 模式**：InstructModels（@Serializable + 官方字段名）+ InstructMode（formatChat/StoryString/Examples/Prompt/stoppingSequences/createRawPrompt/formatHistoryItem/ExampleParser）
 - **PromptManager 核心**：PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts role/injection 覆盖）+ PromptItems 集合 + PromptOrderList 持久化模型
+- **ChatCompletion 重构为官方嵌套集合模型**：稀疏根集合 + MessageCollection、insert/insertAtStart/End、reserve/freeBudget、removeLastFrom、getChat 展平、squashSystemMessages 排除 newChat 等
+- **组装管线 ChatCompletionPipeline**：固定顺序提示 + control prompts(impersonate/quiet) + nsfw/jailbreak/用户相对提示 + bias + 相对扩展注入 main + 历史/示例（逆序插入保证时间正序、newChat 最前、群聊 nudge 最后）
 - **修复的确定 bug**：
   - MacroEngine 引用未定义 monthDayYear → 补常量 + 固定 en-US 格式
   - WorldInfoScannerTest 提前闭合类 → 后面 5 个测试从未运行
@@ -39,7 +41,7 @@
 1. **CI 恢复后跑** `./gradlew :engine:test :app:assembleDebug`（runner 此前 queued），红灯就修
 2. PromptManager 接入 app：用户顺序编辑/持久化 UI + 角色级 prompt_order
 3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info 的 matchKeys/getScore/parseDecorators（19 例）、regex runRegexScript（13 例，含 substituteRegex/宏替换/trim）；剩余 checkWorldInfo 整体流程/getSortedEntries/timed effects、宏引擎、slash、卡片导入导出；官方发版时重生成 fixture
-4. 全量 1:1 审计：PromptAssembler（bias/systemPromptOverride/jailbreakOverride）、ChatHistory/DialogueExamples 逐行对照、世界书 filterByInclusionGroups 细节
+4. 全量 1:1 审计：✅ PromptAssembler bias/override + ChatCompletion 嵌套模型 + populateChatCompletion 核心 + ChatHistory/DialogueExamples 顺序预算；剩余工具预留/continue prefill/in-chat 深度注入（populationInjectionPrompts）、世界书 filterByInclusionGroups 细节
 5. UI 按 README 严谨收尾：聊天 Tab/设置页、真实模型对话（提供商三步配置）、角色详情世界书编辑、人设/预设、全局搜索、真毛玻璃/氛围渐变、CharX/BYAF 资源提取
 6. 推送：等用户说推再推
 
