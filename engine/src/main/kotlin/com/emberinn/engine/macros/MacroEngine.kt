@@ -28,6 +28,15 @@ data class CharacterFields(
 /** 系统字段（对齐官方 MacroEnv.system）。 */
 data class SystemFields(val model: String = "")
 
+/** 聊天消息（对齐官方 chat 消息核心字段）。 */
+data class ChatMessage(
+    val mes: String = "",
+    val isUser: Boolean = false,
+    val isSystem: Boolean = false,
+    val swipes: List<String> = emptyList(),
+    val swipeId: Int = 0,
+)
+
 /** 宏环境：对齐 MacroEnv 的核心字段。 */
 data class MacroEnv(
     val user: String,
@@ -37,6 +46,15 @@ data class MacroEnv(
     val notChar: String = "",
     val character: CharacterFields = CharacterFields(),
     val system: SystemFields = SystemFields(),
+    val chat: List<ChatMessage> = emptyList(),
+    val maxContextTokens: Int = 0,
+    val maxResponseTokens: Int = 0,
+    val maxPromptTokens: Int = 0,
+    val input: String = "",
+    val lastGenerationType: String = "",
+    val firstIncludedMessageId: Int? = null,
+    val firstDisplayedMessageId: Int? = null,
+    val extensions: Set<String> = emptySet(),
     val isMobile: Boolean = false,
     val chatId: Long = 0,
     val chatIdHash: Long = 0,
@@ -217,6 +235,27 @@ object MacroEngine {
             "charversion", "version", "char_version" -> env.character.version
             "model" -> env.system.model
             "ismobile" -> (if (env.isMobile) "true" else "false")
+            "space" -> " "
+            "newline" -> "\n"
+            "noop" -> ""
+            "trim" -> args.trim()
+            "reverse" -> args.reversed()
+            "//", "comment" -> ""
+            "input" -> env.input
+            "maxprompt", "maxprompttokens" -> env.maxPromptTokens.toString()
+            "maxcontext", "maxcontexttokens" -> env.maxContextTokens.toString()
+            "maxresponse", "maxresponsetokens" -> env.maxResponseTokens.toString()
+            "lastgenerationtype" -> env.lastGenerationType
+            "haserextension" -> (if (env.extensions.contains(args.trim())) "true" else "false")
+            "lastmessage" -> lastMessageMacro(env)
+            "lastmessageid" -> lastMessageIdMacro(env)?.toString() ?: ""
+            "lastusermessage" -> lastFilteredMessage(env, true)
+            "lastcharmessage" -> lastFilteredMessage(env, false)
+            "allchatrange" -> allChatRangeMacro(env)
+            "firstincludedmessageid" -> (env.firstIncludedMessageId?.toString() ?: "")
+            "firstdisplayedmessageid" -> (env.firstDisplayedMessageId?.toString() ?: "")
+            "lastswipeid" -> lastSwipeIdMacro(env)
+            "currentswipeid" -> currentSwipeIdMacro(env)
             "isotime" -> LocalTime.now().format(hhMm)
             "isodate" -> LocalDate.now().format(yyyyMmDd)
             "time" -> timeMacro(args)
@@ -242,6 +281,43 @@ object MacroEngine {
             "decglobalvar" -> incDecVariableArgs(args, env.global, -1)
             else -> raw
         }
+
+    private fun lastMessageIdMacro(env: MacroEnv): Int? {
+        for (i in env.chat.indices.reversed()) {
+            val m = env.chat[i]
+            if (m.swipes.isNotEmpty() && m.swipeId >= m.swipes.size) continue
+            return i
+        }
+        return null
+    }
+
+    private fun lastMessageMacro(env: MacroEnv): String {
+        val id = lastMessageIdMacro(env) ?: return ""
+        return env.chat[id].mes
+    }
+
+    private fun lastFilteredMessage(env: MacroEnv, wantUser: Boolean): String {
+        for (i in env.chat.indices.reversed()) {
+            val m = env.chat[i]
+            if (m.isSystem) continue
+            if (m.isUser == wantUser) return m.mes
+        }
+        return ""
+    }
+
+    private fun allChatRangeMacro(env: MacroEnv): String =
+        if (env.chat.isEmpty()) "" else "0-${env.chat.size - 1}"
+
+    private fun lastSwipeIdMacro(env: MacroEnv): String {
+        val id = lastMessageIdMacro(env) ?: return ""
+        val swipes = env.chat[id].swipes
+        return if (swipes.isEmpty()) "" else swipes.size.toString()
+    }
+
+    private fun currentSwipeIdMacro(env: MacroEnv): String {
+        val id = lastMessageIdMacro(env) ?: return ""
+        return (env.chat[id].swipeId + 1).toString()
+    }
 
     /** 对齐 parseMesExamples：按 <START> 切分、trim、去空；非 instruct 直接拼接。 */
     private fun formatMesExamples(raw: String): String {

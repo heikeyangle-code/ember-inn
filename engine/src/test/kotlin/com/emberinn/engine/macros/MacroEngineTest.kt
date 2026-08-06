@@ -140,3 +140,36 @@ class MacroEngineTest {
         assertEquals("甲,乙", MacroEngine.substitute("{{group}}", env2))
         assertEquals("乙", MacroEngine.substitute("{{notChar}}", env2))
     }
+
+
+    @Test
+    fun `chat and state macros`() {
+        val chat = listOf(
+            ChatMessage(mes = "你好", isUser = true),
+            ChatMessage(mes = "你好呀", isUser = false, swipes = listOf("第一版", "第二版"), swipeId = 1),
+        )
+        val env2 = env.copy(
+            chat = chat,
+            maxContextTokens = 32000,
+            maxResponseTokens = 1000,
+            maxPromptTokens = 31000,
+            input = "输入中",
+            lastGenerationType = "normal",
+        )
+        assertEquals("你好呀", MacroEngine.substitute("{{lastMessage}}", env2))
+        assertEquals("1", MacroEngine.substitute("{{lastMessageId}}", env2))
+        assertEquals("你好", MacroEngine.substitute("{{lastUserMessage}}", env2))
+        assertEquals("你好呀", MacroEngine.substitute("{{lastCharMessage}}", env2))
+        assertEquals("0-1", MacroEngine.substitute("{{allChatRange}}", env2))
+        assertEquals("2", MacroEngine.substitute("{{lastSwipeId}}", env2))
+        assertEquals("2", MacroEngine.substitute("{{currentSwipeId}}", env2))
+        assertEquals("32000", MacroEngine.substitute("{{maxContextTokens}}", env2))
+        assertEquals("1000", MacroEngine.substitute("{{maxResponseTokens}}", env2))
+        assertEquals("31000", MacroEngine.substitute("{{maxPrompt}}", env2))
+        assertEquals("输入中", MacroEngine.substitute("{{input}}", env2))
+        assertEquals("normal", MacroEngine.substitute("{{lastGenerationType}}", env2))
+        assertEquals(" ", MacroEngine.substitute("{{space}}", env2))
+        assertEquals("\n", MacroEngine.substitute("{{newline}}", env2))
+        assertEquals("alana", MacroEngine.substitute("{{reverse::alana}}", env2))
+        assertEquals("", MacroEngine.substitute("{{// 注释}}", env2))
+    }
