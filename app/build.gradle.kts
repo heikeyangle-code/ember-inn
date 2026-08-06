@@ -23,6 +23,38 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        create("ci") {
+            val keyPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!keyPath.isNullOrBlank()) {
+                storeFile = file(keyPath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "emberinn"
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "emberinn"
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "emberinn"
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = if (System.getenv("ANDROID_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("ci")
+            }
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     buildFeatures {
         compose = true
     }

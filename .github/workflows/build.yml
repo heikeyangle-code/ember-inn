@@ -27,5 +27,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Unit tests + Build debug APK
-        run: chmod +x gradlew && ./gradlew test assembleDebug --no-daemon
+      - name: Create release keystore
+        run: |
+          keytool -genkeypair -v -keystore keystore/release.jks -alias emberinn -keyalg RSA -keysize 2048 -validity 10000 -storepass emberinn -keypass emberinn -dname "CN=EmberInn, OU=CI, O=EmberInn, L=City, S=State, C=CN"
+      - name: Unit tests + Build APKs
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          ANDROID_KEYSTORE_PASSWORD: emberinn
+          ANDROID_KEY_ALIAS: emberinn
+          ANDROID_KEY_PASSWORD: emberinn
+        run: chmod +x gradlew && ./gradlew test assembleDebug assembleRelease --no-daemon
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ember-inn-apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
