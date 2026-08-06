@@ -22,16 +22,17 @@ object ByafImporter {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val macroUser = Regex("""#\{user\}:?""", RegexOption.IGNORE_CASE)
-    private val macroChar = Regex("""#\{character\}:?""", RegexOption.IGNORE_CASE)
-    private val macroUserBare = Regex("""\{user}(?!})""", RegexOption.IGNORE_CASE)
+    // 官方顺序：#\{user\}: → #\{character\}: → {character}(?!}) → {user}(?!})
+    private val macroUserColon = Regex("""#\{user\}:""", RegexOption.IGNORE_CASE)
+    private val macroCharColon = Regex("""#\{character\}:""", RegexOption.IGNORE_CASE)
     private val macroCharBare = Regex("""\{character}(?!})""", RegexOption.IGNORE_CASE)
+    private val macroUserBare = Regex("""\{user}(?!})""", RegexOption.IGNORE_CASE)
 
     fun replaceMacros(str: String?): String {
         if (str == null) return ""
         return macroUserBare.replace(
             macroCharBare.replace(
-                macroChar.replace(macroUser.replace(str) { "{{user}}:" } ) { "{{char}}:" },
+                macroCharColon.replace(macroUserColon.replace(str) { "{{user}}:" }) { "{{char}}:" },
             ) { "{{char}}" },
         ) { "{{user}}" }
     }

@@ -27,5 +27,5 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Build debug APK
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Unit tests + Build debug APK
+        run: chmod +x gradlew && ./gradlew test assembleDebug --no-daemon
