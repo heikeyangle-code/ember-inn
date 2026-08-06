@@ -210,6 +210,8 @@ object MacroEngine {
             val store = if (prefix == ".") env.local else env.global
             store.get(name) ?: ""
         }
+        // 注释宏 {{// ...}} -> ''
+        out = out.replace(Regex("""\{\{//[^{}]*\}\}"""), "")
         // 孤立标记清理
         return out.replace(Regex("""\{\{(?:else|/if)(?:::[^{}]*)?\}\}"""), "")
     }
@@ -246,7 +248,7 @@ object MacroEngine {
             "maxcontext", "maxcontexttokens" -> env.maxContextTokens.toString()
             "maxresponse", "maxresponsetokens" -> env.maxResponseTokens.toString()
             "lastgenerationtype" -> env.lastGenerationType
-            "haserextension" -> (if (env.extensions.contains(args.trim())) "true" else "false")
+            "hasextension" -> (if (env.extensions.contains(args.trim())) "true" else "false")
             "lastmessage" -> lastMessageMacro(env)
             "lastmessageid" -> lastMessageIdMacro(env)?.toString() ?: ""
             "lastusermessage" -> lastFilteredMessage(env, true)

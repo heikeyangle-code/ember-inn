@@ -170,6 +170,6 @@ class MacroEngineTest {
         assertEquals("normal", MacroEngine.substitute("{{lastGenerationType}}", env2))
         assertEquals(" ", MacroEngine.substitute("{{space}}", env2))
         assertEquals("\n", MacroEngine.substitute("{{newline}}", env2))
-        assertEquals("alana", MacroEngine.substitute("{{reverse::alana}}", env2))
+        assertEquals("cba", MacroEngine.substitute("{{reverse::abc}}", env2))
         assertEquals("", MacroEngine.substitute("{{// 注释}}", env2))
     }
