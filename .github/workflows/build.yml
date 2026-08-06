@@ -43,6 +43,7 @@ jobs:
           java-version: '21'
       - name: Create release keystore
         run: |
+          mkdir -p keystore
           keytool -genkeypair -v -keystore keystore/release.jks -alias emberinn -keyalg RSA -keysize 2048 -validity 10000 -storepass emberinn -keypass emberinn -dname "CN=EmberInn, OU=CI, O=EmberInn, L=City, S=State, C=CN"
       - name: Unit tests + Build APKs
         env:
