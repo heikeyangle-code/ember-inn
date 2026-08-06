@@ -477,6 +477,19 @@ theme      全局主题 + 角色卡驱动主题
 | TTS | P3 | services |
 | 记忆 / 总结 | P3 | services |
 
+## UI 交互组件与动效（全部现成）
+
+- **长按菜单**：Material3 `ModalBottomSheet`（底部弹层，微信式）+ `combinedClickable(onLongClick)`——现成组件，无需第三方库
+- **选中操作条**：`AnimatedVisibility` 包一行 `IconButton`（默认隐藏，选中浮现）
+- **下拉菜单 / 弹窗 / 浮层**：`DropdownMenu` / `Dialog` / `Popup`（Material3 现成）
+- **动效**（Compose 内置，全现成）：
+  - 出现/消失：`AnimatedVisibility` + fadeIn/Out、slideIn/Out、expand/shrinkVertically
+  - 颜色过渡：`animateColorAsState`（角色主题切换）
+  - 背景切换：`Crossfade`
+  - 内容过渡：`AnimatedContent`；数值/尺寸：`animateFloatAsState` / `animateDpAsState`
+  - 弹性动效：`spring`（M3 风格）；品牌开场复杂动效：Lottie
+- 需要自己写的只是“编排逻辑”（何时触发/参数/顺序），动画引擎与组件全部现成
+
 ## 技术栈
 
 Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose · Room · DataStore · Coil3 · Lottie · Koin · kotlinx.serialization
