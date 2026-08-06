@@ -34,6 +34,7 @@ object ChatCompletionPipeline {
         cyclePrompt: String = "",
         continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
         continuePrefill: Boolean = false,
+        persona: Persona? = null,
     ) {
         fun addToChatCompletion(source: String) {
             if (!prompts.has(source)) return
@@ -119,7 +120,18 @@ object ChatCompletionPipeline {
 
         // in-chat 深度注入（官方 populationInjectionPrompts）：按 depth 把绝对提示插进聊天
         val absolutePrompts = prompts.collection.filter { it.injectionPosition == PromptInjection.ABSOLUTE }
-        val injectedMessages = injectInChat(messages, absolutePrompts, inChatExtensions)
+        val allInChatExtensions = if (persona != null && persona.position == StoryStringPosition.IN_CHAT) {
+            inChatExtensions + ExtensionPrompt(
+                identifier = "personaDescription",
+                role = persona.role,
+                content = persona.description,
+                position = "in_chat",
+                depth = persona.depth,
+            )
+        } else {
+            inChatExtensions
+        }
+        val injectedMessages = injectInChat(messages, absolutePrompts, allInChatExtensions)
 
         if (pinExamples) {
             DialogueExamplesPopulator.populate(chatCompletion, handler, prompts, messageExamples, newExampleChatPrompt, env)
