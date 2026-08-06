@@ -38,4 +38,14 @@ class SlashEngineTest {
     fun `pass closure resolves value`() {
         assertEquals("test", SlashEngine.execute("/pass {: /echo test :}"))
     }
+
+    @Test
+    fun `var pipe and arg macros resolve in chain`() {
+        assertEquals("Hello", SlashEngine.execute("/let key=greeting Hello || /pass {{var::greeting}}"))
+        assertEquals("b", SlashEngine.execute("/let key=list [\"a\",\"b\",\"c\"] || /pass {{var::list::1}}"))
+        assertEquals("", SlashEngine.execute("/pass {{var::unknown}}"))
+        assertEquals("abc", SlashEngine.execute("/echo abc | /pass {{pipe}}"))
+        assertEquals("world", SlashEngine.execute("/qr-arg hello world || /echo {{arg::hello}}"))
+        assertEquals("", SlashEngine.execute("/let key=test {\"k\":\"v\"} || /pass {{var::test::error}}"))
+    }
 }

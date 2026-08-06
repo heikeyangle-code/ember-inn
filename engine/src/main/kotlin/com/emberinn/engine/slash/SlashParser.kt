@@ -87,26 +87,36 @@ object SlashParser {
         return sb.toString() to i
     }
 
-    /** 官方 list 值 [a|b|c]：拆成多个项。 */
+    /** 官方 list 值：含 | 时拆成多项；否则（JSON 数组）保留为单值。 */
     private fun parseListValue(text: String, from: Int): Pair<List<String>, Int> {
         var i = from + 1
         val sb = StringBuilder()
-        val items = mutableListOf<String>()
         var closed = false
+        var quote: Char? = null
         while (i < text.length) {
             val c = text[i]
-            if (c == ']') { closed = true; i++; break }
-            if (c == '|') {
-                items.add(sb.toString().trim())
-                sb.setLength(0)
+            if (quote != null) {
+                if (c == '\\' && i + 1 < text.length) { sb.append(text[i + 1]); i++ }
+                else {
+                    sb.append(c)
+                    if (c == quote) quote = null
+                }
             } else {
-                if (c == '\\' && i + 1 < text.length) { sb.append(text[i + 1]); i++ } else sb.append(c)
+                when {
+                    c == '"' || c == '\'' -> { quote = c; sb.append(c) }
+                    c == ']' -> { closed = true; i++; break }
+                    else -> sb.append(c)
+                }
             }
             i++
         }
         if (!closed) throw SlashParseException("未闭合的 list 值")
-        items.add(sb.toString().trim())
-        return items.filter { it.isNotEmpty() } to i
+        val inner = sb.toString()
+        return if (inner.contains('|')) {
+            inner.split('|').map { it.trim() }.filter { it.isNotEmpty() } to i
+        } else {
+            listOf("[" + inner + "]") to i
+        }
     }
 
     private fun skipWhitespace(text: String, from: Int): Int? {

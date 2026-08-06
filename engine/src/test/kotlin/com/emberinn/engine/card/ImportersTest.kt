@@ -102,6 +102,28 @@ class ImportersTest {
         assertTrue(lines[3].contains("\"swipe_id\":1"))
     }
 
+    @Test
+    fun `byaf assets extract images and backgrounds`() {
+        val manifest = """{"characters":["chars/a.json"],"scenarios":["s.json"]}"""
+        val character = """{"name":"角色A","images":[{"path":"img/avatar.png","label":"头像"}]}"""
+        val scenario = """{"backgroundImage":"bg.png"}"""
+        val zip = zipOf(
+            "manifest.json" to manifest,
+            "chars/a.json" to character,
+            "chars/img/avatar.png" to "PNGDATA",
+            "s.json" to scenario,
+            "bg.png" to "BG1",
+            "bg2.png" to "BG1",
+        )
+        val assets = ByafImporter.extractAssets(zip)
+        assertEquals(1, assets.images.size)
+        assertEquals("avatar.png", assets.images[0].filename)
+        assertEquals("头像", assets.images[0].label)
+        assertEquals("PNGDATA", String(assets.images[0].data, Charsets.UTF_8))
+        assertEquals(1, assets.backgrounds.size)
+        assertEquals("角色A bg 1", assets.backgrounds[0].filename)
+    }
+
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zos ->

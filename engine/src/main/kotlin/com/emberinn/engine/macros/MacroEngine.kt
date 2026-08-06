@@ -56,6 +56,7 @@ data class MacroEnv(
     val input: String = "",
     val lastGenerationType: String = "",
     val original: String = "",
+    val slash: SlashMacroState? = null,
     val firstIncludedMessageId: Int? = null,
     val firstDisplayedMessageId: Int? = null,
     val extensions: Set<String> = emptySet(),
@@ -435,6 +436,9 @@ object MacroEngine {
             "instructlastuserprefix", "instructlastinput" ->
                 instructValue(env) { it.lastInputSequence.ifEmpty { it.inputSequence } }
             "original" -> env.original
+            "var" -> env.slash?.variable(args.trim()) ?: ""
+            "pipe" -> env.slash?.pipe() ?: ""
+            "arg" -> env.slash?.argument(args.trim()) ?: ""
             "systemprompt" -> if (!env.systemPromptEnabled) {
                 ""
             } else if (env.preferCharacterPrompt && env.character.charPrompt.isNotEmpty()) {
@@ -484,8 +488,9 @@ object MacroEngine {
             "addglobalvar" -> { addVariableArgs(args, env.global); "" }
             "incglobalvar" -> incDecVariableArgs(args, env.global, 1)
             "decglobalvar" -> incDecVariableArgs(args, env.global, -1)
-            // 官方：未知宏保留语法，但嵌套参数已解析
-            else -> if (args.isEmpty()) raw else "{{" + name + "::" + args + "}}"
+            // 自定义宏优先；官方：未知宏保留语法，但嵌套参数已解析
+            else -> MacroRegistry.resolve(name.lowercase(), args, env)
+                ?: if (args.isEmpty()) raw else "{{" + name + "::" + args + "}}"
         }
 
     private fun lastMessageIdMacro(env: MacroEnv): Int? {

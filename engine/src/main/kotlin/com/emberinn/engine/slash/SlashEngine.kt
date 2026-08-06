@@ -1,5 +1,8 @@
 package com.emberinn.engine.slash
 
+import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.macros.MacroEnv
+
 /**
  * 斜杠链式执行引擎，对齐官方 SlashCommandClosure.executeDirect + SlashCommandExecutor：
  * - 单管道 |：前一条命令的输出注入下一条的无名参数（官方 scope.pipe + injectPipe）
@@ -10,20 +13,29 @@ package com.emberinn.engine.slash
  */
 object SlashEngine {
 
-    fun execute(text: String): String {
+    fun execute(text: String, state: SlashState = SlashState()): String {
         val segments = parseChain(text)
-        var pipe: String = ""
         for ((index, segment) in segments.withIndex()) {
             val resolved = resolveClosures(segment.text)
             var invocation = SlashParser.parse(resolved)
             if (index > 0 && segment.inject && invocation.unnamedArgs.isEmpty()) {
-                invocation = invocation.copy(unnamedArgs = listOf(pipe))
+                invocation = invocation.copy(unnamedArgs = listOf(state.pipeValue))
             }
+            invocation = substituteInvocation(invocation, state)
             val def = SlashRegistry.get(invocation.name)
                 ?: throw SlashParseException("未知命令: /${invocation.name}")
-            pipe = def.callback(invocation)
+            state.pipeValue = def.callback(invocation, state)
         }
-        return pipe
+        return state.pipeValue
+    }
+
+    /** 对齐官方：命令参数在执行前过宏替换（{{var}}/{{pipe}}/{{arg}} 等）。 */
+    private fun substituteInvocation(invocation: CommandInvocation, state: SlashState): CommandInvocation {
+        val env = MacroEnv(user = "", char = "", slash = state)
+        return invocation.copy(
+            namedArgs = invocation.namedArgs.mapValues { (_, v) -> MacroEngine.substitute(v, env) },
+            unnamedArgs = invocation.unnamedArgs.map { MacroEngine.substitute(it, env) },
+        )
     }
 
     /** 顶层按 | / || 拆分，引号与闭包内的 | 不算。 */

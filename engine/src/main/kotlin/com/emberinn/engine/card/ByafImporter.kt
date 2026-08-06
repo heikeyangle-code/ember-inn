@@ -155,6 +155,64 @@ object ByafImporter {
         return files
     }
 
+    /** BYAF 资源：头像/背景（对齐 ByafParser.getCharacterImages/getChatBackgrounds）。 */
+    data class ByafAsset(val filename: String, val data: ByteArray, val label: String = "")
+
+    data class ByafAssets(
+        val images: List<ByafAsset>,
+        val backgrounds: List<ByafAsset>,
+    )
+
+    fun extractAssets(zipBytes: ByteArray): ByafAssets {
+        val files = readZip(zipBytes)
+        val manifest = json.parseToJsonElement(String(files["manifest.json"] ?: return ByafAssets(emptyList(), emptyList()), Charsets.UTF_8))
+            .jsonObject
+        val characterPath = manifest["characters"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.content ?: return ByafAssets(emptyList(), emptyList())
+        val character = json.parseToJsonElement(String(files[characterPath] ?: return ByafAssets(emptyList(), emptyList()), Charsets.UTF_8))
+            .jsonObject
+        val characterName = character["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
+        val baseDir = characterPath.substringBeforeLast('/', "")
+
+        // 头像：character.images[]，路径相对角色文件目录
+        val images = mutableListOf<ByafAsset>()
+        character["images"]?.jsonArray?.forEach { imageEl ->
+            val image = imageEl.jsonObject
+            val imagePath = image["path"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: return@forEach
+            val fullPath = joinRelative(baseDir, imagePath)
+            val data = files[fullPath] ?: return@forEach
+            images.add(ByafAsset(filename = imagePath.substringAfterLast('/'), data = data, label = image["label"]?.jsonPrimitive?.content ?: ""))
+        }
+
+        // 背景：scenarios[].backgroundImage，按字节去重
+        val backgrounds = mutableListOf<ByafAsset>()
+        var index = 1
+        manifest["scenarios"]?.jsonArray?.forEach { pathEl ->
+            val path = pathEl.jsonPrimitive.content
+            val scenario = json.parseToJsonElement(String(files[path] ?: return@forEach, Charsets.UTF_8)).jsonObject
+            val bgPath = scenario["backgroundImage"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: return@forEach
+            val data = files[bgPath] ?: return@forEach
+            if (backgrounds.none { it.data.contentEquals(data) }) {
+                backgrounds.add(ByafAsset(filename = "${characterName} bg $index", data = data))
+                index++
+            }
+        }
+
+        return ByafAssets(images = images, backgrounds = backgrounds)
+    }
+
+    private fun joinRelative(baseDir: String, path: String): String {
+        val parts = (if (baseDir.isEmpty()) "" else "$baseDir/") + path
+        val segments = mutableListOf<String>()
+        for (seg in parts.split('/')) {
+            when (seg) {
+                "", "." -> {}
+                ".." -> if (segments.isNotEmpty()) segments.removeAt(segments.lastIndex)
+                else -> segments.add(seg)
+            }
+        }
+        return segments.joinToString("/")
+    }
+
     /**
      * 对齐官方 ByafParser.getChatFromScenario：返回聊天消息列表（jsonl 行）。
      * 含 chat_metadata（模型设置/场景/示例/系统提示）与开场白；human/ai 消息按时间交错重排。

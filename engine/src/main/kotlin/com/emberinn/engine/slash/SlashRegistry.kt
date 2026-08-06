@@ -15,28 +15,79 @@ object SlashRegistry {
     fun execute(line: String): String {
         val invocation = SlashParser.parse(line)
         val def = get(invocation.name) ?: throw SlashParseException("未知命令: /${invocation.name}")
-        return def.callback(invocation)
+        return def.callback(invocation, SlashState())
     }
 
     fun all(): List<SlashCommandDef> = commands.values.distinctBy { it.name }
 
     init {
-        register(SlashCommandDef("help", description = "列出可用命令") {
-            all().joinToString("\n") { "/${it.name} — ${it.description}" }
-        })
-        register(SlashCommandDef("continue", description = "继续生成上一条消息") { "OK:continue" })
-        register(SlashCommandDef("regenerate", description = "重新生成最后一条消息") { "OK:regenerate" })
-        register(SlashCommandDef("swipe", description = "切换回复（可带方向）") { "OK:swipe:${it.unnamedArgs.firstOrNull() ?: ""}" })
-        register(SlashCommandDef("sys", description = "以系统身份发送消息") { "OK:sys:${it.unnamedArgs.joinToString(" ")}" })
-        register(SlashCommandDef("sendas", aliases = listOf("send"), description = "以指定角色发送消息") {
-            "OK:sendas:${it.namedArgs["name"] ?: ""}:${it.unnamedArgs.joinToString(" ")}"
-        })
-        register(SlashCommandDef("echo", description = "原样返回无名参数") { it.unnamedArgs.joinToString(" ") })
-        register(SlashCommandDef("pass", aliases = listOf("return"), description = "把文本传给下一条命令（管道透传）") {
-            it.unnamedArgs.joinToString(" ")
-        })
-        register(SlashCommandDef("persona", description = "切换人设") {
-            "OK:persona:${it.unnamedArgs.joinToString(" ")}:mode=${it.namedArgs["mode"] ?: "all"}"
-        })
+        register(
+            SlashCommandDef(
+                name = "help",
+                description = "列出可用命令",
+                callback = { _, _ -> all().joinToString("\n") { "/${it.name} — ${it.description}" } },
+            ),
+        )
+        register(SlashCommandDef("continue", description = "继续生成上一条消息", callback = { _, _ -> "OK:continue" }))
+        register(SlashCommandDef("regenerate", description = "重新生成最后一条消息", callback = { _, _ -> "OK:regenerate" }))
+        register(
+            SlashCommandDef(
+                "swipe",
+                description = "切换回复（可带方向）",
+                callback = { inv, _ -> "OK:swipe:${inv.unnamedArgs.firstOrNull() ?: ""}" },
+            ),
+        )
+        register(SlashCommandDef("sys", description = "以系统身份发送消息", callback = { inv, _ -> "OK:sys:${inv.unnamedArgs.joinToString(" ")}" }))
+        register(
+            SlashCommandDef(
+                "sendas",
+                aliases = listOf("send"),
+                description = "以指定角色发送消息",
+                callback = { inv, _ -> "OK:sendas:${inv.namedArgs["name"] ?: ""}:${inv.unnamedArgs.joinToString(" ")}" },
+            ),
+        )
+        register(SlashCommandDef("echo", description = "原样返回无名参数", callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") }))
+        register(
+            SlashCommandDef(
+                "pass",
+                aliases = listOf("return"),
+                description = "把文本传给下一条命令（管道透传）",
+                callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "persona",
+                description = "切换人设",
+                callback = { inv, _ -> "OK:persona:${inv.unnamedArgs.joinToString(" ")}:mode=${inv.namedArgs["mode"] ?: "all"}" },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "let",
+                description = "设置作用域变量（对齐官方 /let）",
+                callback = { inv, state ->
+                    val key = inv.namedArgs["key"] ?: inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
+                    val value = if (inv.namedArgs.containsKey("key")) {
+                        inv.unnamedArgs.joinToString(" ")
+                    } else {
+                        inv.unnamedArgs.drop(1).joinToString(" ")
+                    }
+                    state.variables[key] = value
+                    ""
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "qr-arg",
+                description = "设置 {{arg}} 参数（对齐官方 /qr-arg）",
+                callback = { inv, state ->
+                    val name = inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
+                    state.arguments[name] = inv.unnamedArgs.drop(1).joinToString(" ")
+                    ""
+                },
+            ),
+        )
     }
 }
