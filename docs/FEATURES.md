@@ -5,7 +5,8 @@
 ## 1. 角色卡
 - 🔴 导入：PNG V2/V3（tEXt/ccv3）、JSON、CharX
 - 🔴 导出：PNG V3 / JSON / CharX
-- 🔴 字段全量：description / personality / scenario / first_mes / mes_example / system_prompt / post_history_instructions / creator_notes / tags / avatar / alternate_greetings / character_book
+- 🔴 字段全量（V3 全字段）：description / personality / scenario / first_mes / mes_example / system_prompt / post_history_instructions / creator_notes / tags / avatar / alternate_greetings / character_book / creator / character_version / extensions（含 depth_prompt）/ assets（icon / background / voice）/ group_only_greetings / skip_personality / skip_example / skip_system / insert_system / nickname / creator_notes_multilingual / source
+- 🔴 从 URL 导入角色卡（对齐官方 /api/content/importURL）
 - 🔴 头像、标签、文件夹、搜索、排序
 - 🟡 属性合并、批量编辑、重复、重命名
 - 🟡 卡图自动取色主题（自家增强）
@@ -58,6 +59,7 @@
 - 🔴 TTS（多提供商）、STT（语音输入）
 - 🔴 图像生成（SD / NovelAI / Pollinations 等）
 - 🔴 翻译（Google / DeepL / 免费）
+- 🟡 联网搜索（对齐官方 /api/search：SerpAPI / SearXNG / Tavily / Serper / Z.AI 等）
 - 🟡 向量库 / RAG、记忆扩展
 - 🟡 统计、token 计数、表情精灵（expressions）
 - 🟡 regex 脚本、快捷回复、图库、附件

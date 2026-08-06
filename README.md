@@ -13,8 +13,8 @@
 
 ## 兼容目标（以官方行为为基准，回归测试锁定）
 
-- **角色卡**：PNG V2/V3（tEXt/ccv3）、CharX、JSON 导入导出
-- **世界书**：关键词扫描、注入位置（before/after char）、深度、递归、粘性/冷却、分组评分、向量化
+- **角色卡**：PNG V2/V3（tEXt/ccv3）、CharX、JSON 导入导出、从 URL 导入（对齐官方 content-manager）、V3 assets（icon/background/voice）
+- **世界书**：关键词扫描、注入位置（before/after char）、深度、递归、粘性/冷却、分组评分、向量化、全字段（secondary_keys/insertion_order/selective/priority/probability/delay）、三级世界书（全局 / 会话 / 角色）
 - **宏系统**：`{{user}}`、`{{char}}`、`{{random}}`、`{{pick}}`、`{{roll}}`、`{{if}}`、变量宏等（对齐 Macros 2.0）
 - **斜杠命令**：官方常用命令全量，行为一致
 - **群聊**：多角色、多种响应模式
@@ -439,6 +439,7 @@ Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose 
 
 ## 兼容性守则
 
+0. **核心兼容层与官方 1:1，UI 层自由**：数据格式、字段名、注入算法、宏展开、斜杠行为、导入导出文件必须与官方互读互通；界面、交互、主题完全自主。兼容层 1:1 是长期可维护的前提——官方发版时只需对照行为测试，不会伤及 UI。
 1. 每个引擎模块配“官方行为回归测试”：同一输入，官方输出 vs 本项目输出。
 2. 核心引擎不依赖 UI 层。
 3. 服务商注册表只改数据，不改协议代码。
