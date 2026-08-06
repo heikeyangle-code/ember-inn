@@ -9,7 +9,7 @@ package com.emberinn.engine.slash
  */
 object SlashParser {
 
-    fun parse(line: String): CommandInvocation {
+    fun parse(line: String, rawQuotes: Boolean = false): CommandInvocation {
         val text = line.trimStart()
         if (!text.startsWith("/")) throw SlashParseException("不是斜杠命令：$line")
 
@@ -41,7 +41,7 @@ object SlashParser {
                 }
                 index = next
             } else {
-                val (value, next) = parseValue(text, index)
+                val (value, next) = parseValue(text, index, rawQuotes)
                 named[key] = value
                 index = next
             }
@@ -59,7 +59,7 @@ object SlashParser {
                 index = next
                 continue
             }
-            val (value, next) = parseValue(text, index)
+            val (value, next) = parseValue(text, index, rawQuotes)
             unnamed.add(value)
             index = next
         }
@@ -80,9 +80,19 @@ object SlashParser {
     }
 
     /** 解析一个值：引号字符串 或 普通 token（到空白/| 结束）。返回 (值, 新位置)。 */
-    private fun parseValue(text: String, from: Int): Pair<String, Int> {
+    private fun parseValue(text: String, from: Int, rawQuotes: Boolean = false): Pair<String, Int> {
         var i = from
         if (i < text.length && (text[i] == '"' || text[i] == '\'')) {
+            if (rawQuotes) {
+                // 官方 rawQuotes：保留引号原样
+                var j = i + 1
+                while (j < text.length && text[j] != text[i]) {
+                    if (text[j] == '\\' && j + 1 < text.length) j++
+                    j++
+                }
+                if (j >= text.length) throw SlashParseException("未闭合的引号")
+                return text.substring(i, j + 1) to (j + 1)
+            }
             val quote = text[i]; i++
             val sb = StringBuilder()
             while (i < text.length && text[i] != quote) {

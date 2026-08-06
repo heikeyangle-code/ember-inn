@@ -20,6 +20,7 @@ data class SlashCommandDef(
     val aliases: List<String> = emptyList(),
     val description: String = "",
     val callback: (CommandInvocation, SlashState) -> String,
+    val rawQuotes: Boolean = false,
 )
 
 class SlashParseException(message: String) : RuntimeException(message)

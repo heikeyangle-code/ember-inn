@@ -46,7 +46,14 @@ object SlashRegistry {
                 callback = { inv, _ -> "OK:sendas:${inv.namedArgs["name"] ?: ""}:${inv.unnamedArgs.joinToString(" ")}" },
             ),
         )
-        register(SlashCommandDef("echo", description = "原样返回无名参数", callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") }))
+        register(
+            SlashCommandDef(
+                "echo",
+                description = "原样返回无名参数",
+                callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") },
+                rawQuotes = true,
+            ),
+        )
         register(
             SlashCommandDef(
                 "pass",

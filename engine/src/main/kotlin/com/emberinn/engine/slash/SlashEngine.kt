@@ -18,12 +18,19 @@ object SlashEngine {
         for ((index, segment) in segments.withIndex()) {
             val resolved = resolveClosures(segment.text)
             var invocation = SlashParser.parse(resolved)
+            val def = SlashRegistry.get(invocation.name)
+                ?: throw SlashParseException("未知命令: /${invocation.name}")
+            if (def.rawQuotes) {
+                invocation = SlashParser.parse(resolved, rawQuotes = true)
+            }
             if (index > 0 && segment.inject && invocation.unnamedArgs.isEmpty()) {
                 invocation = invocation.copy(unnamedArgs = listOf(state.pipeValue))
             }
             invocation = substituteInvocation(invocation, state)
-            val def = SlashRegistry.get(invocation.name)
-                ?: throw SlashParseException("未知命令: /${invocation.name}")
+            invocation = invocation.copy(
+                namedArgs = invocation.namedArgs.mapValues { (_, v) -> v.replace("\u0001", "") },
+                unnamedArgs = invocation.unnamedArgs.map { it.replace("\u0001", "") },
+            )
             state.pipeValue = def.callback(invocation, state)
         }
         return state.pipeValue
@@ -106,7 +113,8 @@ object SlashEngine {
                 if (end < 0) { sb.append(text, i, text.length); break }
                 val inner = text.substring(i + 2, end)
                 val output = runCatching { execute(inner) }.getOrElse { "" }
-                sb.append('"').append(output.replace("\\", "\\\\").replace("\"", "\\\"")).append('"')
+                // 控制字符占位，避免 rawQuotes 误加引号
+                sb.append('\u0001').append(output).append('\u0001')
                 i = end + 2
             } else {
                 sb.append(text[i]); i++
