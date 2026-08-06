@@ -27,7 +27,15 @@ class ChatRepository(context: Context) {
 
     fun profile(): ConnectionProfile? = store.load()
 
-    fun saveProfile(profile: ConnectionProfile) = store.save(profile)
+    fun profiles(): List<ConnectionProfile> = store.profiles()
+
+    fun activeProfile(): ConnectionProfile? = store.load()
+
+    fun saveProfile(profile: ConnectionProfile, active: Boolean = true) = store.save(profile, active)
+
+    fun setActiveProfile(id: String) = store.setActive(id)
+
+    fun deleteProfile(id: String) = store.delete(id)
 
     suspend fun chat(
         history: List<JsonElement>,

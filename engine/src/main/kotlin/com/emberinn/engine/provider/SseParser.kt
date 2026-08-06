@@ -1,11 +1,13 @@
 package com.emberinn.engine.provider
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** OpenAI Chat Completions SSE 解析：逐块提取 delta.content，忽略非 data 行。 */
+/** SSE 解析：OpenAI Chat Completions / Anthropic Messages / Gemini generateContent 三种格式。 */
 object SseParser {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -15,40 +17,100 @@ object SseParser {
         val done: Boolean,
     )
 
-    /** 解析一段 SSE 文本（可能多行），返回每个 data 事件的内容增量。 */
-    fun parse(raw: String): List<Chunk> {
-        val chunks = mutableListOf<Chunk>()
-        var currentData = StringBuilder()
+    private data class SseEvent(
+        val event: String,
+        val data: String,
+    )
+
+    /** 把一段 SSE 文本切成 (event, data) 事件列表。 */
+    private fun events(raw: String): List<SseEvent> {
+        val out = mutableListOf<SseEvent>()
+        var event = ""
+        val data = StringBuilder()
         var inEvent = false
+
+        fun flush() {
+            if (inEvent && data.isNotEmpty()) {
+                out += SseEvent(event, data.toString())
+            }
+            event = ""
+            data.setLength(0)
+            inEvent = false
+        }
+
         for (line in raw.lineSequence()) {
             when {
-                line == "" -> {
-                    if (inEvent && currentData.isNotEmpty()) {
-                        chunks += parseData(currentData.toString())
-                        currentData = StringBuilder()
-                    }
-                    inEvent = false
+                line.isEmpty() -> flush()
+                line.startsWith("event:") -> {
+                    inEvent = true
+                    event = line.removePrefix("event:").trim()
                 }
                 line.startsWith("data:") -> {
                     inEvent = true
-                    if (currentData.isNotEmpty()) currentData.append('\n')
-                    currentData.append(line.removePrefix("data:").trimStart())
+                    if (data.isNotEmpty()) data.append('\n')
+                    data.append(line.removePrefix("data:").trimStart())
                 }
             }
         }
-        if (inEvent && currentData.isNotEmpty()) {
-            chunks += parseData(currentData.toString())
-        }
-        return chunks
+        flush()
+        return out
     }
 
-    private fun parseData(data: String): Chunk {
-        if (data == "[DONE]") return Chunk(content = "", done = true)
-        return runCatching {
-            val root = json.parseToJsonElement(data).jsonObject
-            val delta = root["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("delta")?.jsonObject
-            val text = delta?.get("content")?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
-            Chunk(content = text, done = false)
-        }.getOrDefault(Chunk(content = "", done = false))
+    /**
+     * 解析一段 SSE 文本（可能多行），返回每个事件的内容增量。
+     * protocol: openai / anthropic / google。
+     */
+    fun parse(raw: String, protocol: String = "openai"): List<Chunk> = when (protocol) {
+        "anthropic" -> events(raw).mapNotNull { ev ->
+            when {
+                ev.event == "message_stop" || ev.data == "[DONE]" -> Chunk(content = "", done = true)
+                ev.event == "content_block_delta" -> runCatching {
+                    val root = json.parseToJsonElement(ev.data).jsonObject
+                    Chunk(
+                        content = root["delta"]?.jsonObject?.get("text")?.asText().orEmpty(),
+                        done = false,
+                    )
+                }.getOrNull()
+                else -> runCatching {
+                    val root = json.parseToJsonElement(ev.data).jsonObject
+                    when (root["type"]?.jsonPrimitive?.content) {
+                        "message_stop" -> Chunk(content = "", done = true)
+                        "content_block_delta" -> Chunk(
+                            content = root["delta"]?.jsonObject?.get("text")?.asText().orEmpty(),
+                            done = false,
+                        )
+                        else -> null
+                    }
+                }.getOrNull()
+            }
+        }
+        "google" -> events(raw).mapNotNull { ev ->
+            runCatching {
+                val root = json.parseToJsonElement(ev.data).jsonObject
+                val text = root["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
+                    ?.get("content")?.jsonObject?.get("parts")?.jsonArray
+                    ?.mapNotNull { it.jsonObject["text"]?.asText() }
+                    ?.joinToString("").orEmpty()
+                Chunk(content = text, done = false)
+            }.getOrNull()
+        }
+        else -> events(raw).mapNotNull { ev ->
+            when {
+                ev.data == "[DONE]" -> Chunk(content = "", done = true)
+                else -> runCatching {
+                    val root = json.parseToJsonElement(ev.data).jsonObject
+                    Chunk(
+                        content = root["choices"]?.jsonArray?.firstOrNull()?.jsonObject
+                            ?.get("delta")?.jsonObject?.get("content")?.asText().orEmpty(),
+                        done = false,
+                    )
+                }.getOrNull()
+            }
+        }
+    }
+
+    private fun JsonElement?.asText(): String? = when (this) {
+        is JsonPrimitive -> if (isString) content else toString()
+        else -> null
     }
 }

@@ -39,6 +39,31 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
   4. 扩展提示注入（summary/AN/vectors/chromadb/persona/未知扩展顺序）
   5. docs/HANDOFF.md
 
+## 最近一轮（2026-08-07：模型/接口联网核实 + 协议路由 + 三步配置 UI）
+
+- **providers.json 更新到 22 家**：按官方 `src/endpoints/backends/chat-completions.js` 逐项核对端点
+  （Moonshot 官方是 api.moonshot.ai、MiniMax 国际 minimax.io/国内 minimaxi.com、DeepSeek 官方 /beta、
+  SiliconFlow/Z.AI/MiniMax 带区域端点映射），并联网核实 2026-08 最新模型：
+  OpenAI gpt-5.5/5.4/5.4-mini、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5 Flash + 3 Pro、
+  DeepSeek v4-flash/v4-pro（旧别名 2026-07-24 停用）、Grok 4.3、Kimi k3/k2.6/k2.7-code、
+  GLM-5.2/5.1、Qwen3.7、豆包 Seed 2.1、MiniMax M3；新增智谱/通义/火山方舟。
+- **ProviderSpec 扩展**：description/icon/region_bases/models_format/models_query/docs_url，纯数据驱动。
+- **LlmClient 协议路由修对**：openai-compatible（/chat/completions）、Anthropic（/v1/messages +
+  x-api-key + anthropic-version）、Gemini（v1beta/models/{model}:generateContent?key=）；响应解析按协议
+  取纯文本（choices[0].message.content / content[0].text / candidates[0].content.parts[].text），
+  修复此前返回原始 JSON 的问题；SSE 三种格式都解析，流结束兜底回调 onDone。
+- **Azure/Workers AI 特殊接口**：Azure 走 /openai/deployments/{部署名}/chat/completions + api-key 头 +
+  api-version（2024-12-01）；Workers AI 走 /{账户ID}/ai/v1/chat/completions，模型列表
+  /ai/models/search（result[].name）。
+- **模型列表拉取**：openai data[].id、google models[].name（过滤 generateContent）、workers result[].name、
+  azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测验证 Key。
+- **多连接档案**：ProviderStore 改 profiles.json（activeId + 列表），旧 connection.json 自动迁移，
+  setActive/delete；App ChatRepository 暴露 profiles()/setActiveProfile()/deleteProfile()。
+- **三步配置 UI 按 README**：提供商网格（图标+名字+一句话+搜索）、档案切换/删除、Key 粘贴自动去空格、
+  测试连接（人话报错：网络不通/Key 不对/429 等）、区域选择、Workers 账户 ID、高级设置（接口地址/API 版本）、
+  模型搜索 + 默认模型兜底、完成后“回聊天即用”。
+- **测试**：`:engine:test` 156 个全通过（新增 Anthropic/Gemini 协议、SSE、模型列表格式、多档案等 9 例）。
+
 ## 已完成（引擎，均有官方源码对照 + 测试）
 - PNG/JSON/CharX/YAML/BYAF 导入、V2 归一、私有字段清理、JSON 导出
 - 世界书全套：buffer/matchKeys/扫描核心/时间效果/分组/角色过滤/装饰器/哈希/多世界合并

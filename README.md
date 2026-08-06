@@ -70,7 +70,15 @@ theme      全局主题 + 角色卡驱动主题
 
 每条记录为数据而非代码：`id / display_name / protocol / auth_type / base_url / region_variants / extra_headers / api_version / models_endpoint / default_models / requires_key`。
 
-已按官方酒馆源码（2026 版）核实：OpenAI、Anthropic、Gemini（AI Studio/Vertex）、DeepSeek、OpenRouter、Groq、Ollama（本地）、Mistral、xAI、Moonshot、SiliconFlow（国内/国际）、Z.AI（通用/编码）、MiniMax（国内/国际 + GroupId）、Fireworks、Perplexity（无 /v1 前缀）、Cloudflare Workers AI、Azure OpenAI（deployment + api-version）。
+注册表现有 22 家（2026-08-07 联网核实 + 官方 `chat_completions.js` 端点对照）：
+OpenAI（gpt-5.5 / 5.4）、Anthropic（claude-opus-5 / sonnet-5 / haiku-4-5）、
+Gemini AI Studio / Vertex（gemini-3.6-flash / 3.5-flash / 3-pro）、DeepSeek（deepseek-v4-flash / pro，官方走 /beta）、
+OpenRouter、Groq、Ollama（本地）、Mistral、xAI（grok-4.3）、Moonshot（kimi-k3）、
+智谱（glm-5.2）、通义 DashScope（qwen3.7）、硅基流动（国内/国际）、Z.AI（通用/编码）、
+MiniMax（国际 minimax.io / 国内 minimaxi.com）、Fireworks、Perplexity（无 /models，走最小对话探测）、
+Cloudflare Workers AI（账户 ID + /ai/v1）、Azure OpenAI（deployment + api-version 2024-12-01）、火山方舟（豆包 Seed 2.1）、自定义。
+模型列表拉取按官方 /status 逻辑实现：openai data[].id、google models[].name（过滤 generateContent）、
+workers result[].name、azure value[].id；拉不到时用 default_models 兜底。
 
 ## UI 与主题
 

@@ -16,12 +16,14 @@ object AnthropicRequestBuilder {
         messages: List<CompletionMessage>,
         maxTokens: Int = 512,
         temperature: Double = 1.0,
+        stream: Boolean = false,
     ): String {
         val system = messages.filter { it.role == "system" }.joinToString("\n") { it.content }
         val body = buildJsonObject {
             put("model", model)
             put("max_tokens", maxTokens)
             put("temperature", temperature)
+            put("stream", stream)
             if (system.isNotEmpty()) put("system", system)
             put("messages", JsonArray(messages.filter { it.role != "system" }.map { m ->
                 buildJsonObject {

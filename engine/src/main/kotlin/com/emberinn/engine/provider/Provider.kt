@@ -12,6 +12,8 @@ data class ProviderSpec(
     val id: String,
     @SerialName("display_name")
     val displayName: String,
+    val description: String = "",
+    val icon: String = "",
     val protocol: String,
     @SerialName("auth_type")
     val authType: String = "bearer",
@@ -19,16 +21,25 @@ data class ProviderSpec(
     val baseUrl: String,
     @SerialName("region_variants")
     val regionVariants: List<String> = emptyList(),
+    @SerialName("region_bases")
+    val regionBases: Map<String, String> = emptyMap(),
     @SerialName("extra_headers")
     val extraHeaders: Map<String, String> = emptyMap(),
     @SerialName("api_version")
     val apiVersion: String = "",
     @SerialName("models_endpoint")
-    val modelsEndpoint: String = "v1/models",
+    val modelsEndpoint: String = "models",
+    /** 模型列表响应格式：openai(data[].id) / google(models[].name) / workers(result[].name) / azure(value[].id)。 */
+    @SerialName("models_format")
+    val modelsFormat: String = "openai",
+    @SerialName("models_query")
+    val modelsQuery: Map<String, String> = emptyMap(),
     @SerialName("default_models")
     val defaultModels: List<String> = emptyList(),
     @SerialName("requires_key")
     val requiresKey: Boolean = true,
+    @SerialName("docs_url")
+    val docsUrl: String = "",
 )
 
 object ProviderRegistry {

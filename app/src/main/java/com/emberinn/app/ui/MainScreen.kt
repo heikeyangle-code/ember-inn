@@ -73,7 +73,7 @@ fun MainScreen() {
                     },
                 )
                 1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
-                else -> PlaceholderScreen("设置", "P0 骨架：外观主题 / 提供商模型 / 语音 / 服务 / 数据与隐私")
+                else -> com.emberinn.app.ui.settings.ProviderSetupScreen()
             }
         }
     }
