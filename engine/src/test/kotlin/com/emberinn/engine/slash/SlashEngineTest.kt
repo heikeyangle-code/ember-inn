@@ -24,6 +24,6 @@ class SlashEngineTest {
 
     @Test
     fun `closure output piped`() {
-        assertEquals("OK:sys:内层", SlashEngine.execute("{: /sys 内层 :} | /echo"))
+        assertEquals("OK:sys:内层", SlashEngine.execute("/echo {: /sys 内层 :} | /echo"))
     }
 }
