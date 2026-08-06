@@ -1,5 +1,26 @@
 # 交接清单（会话上下文耗尽时使用）
 
+## 什么是差分验证（新会话先读这段，别让用户再解释一遍）
+
+**目标**：EmberInn 是酒馆兼容软件，引擎逻辑必须和官方 SillyTavern 1:1。
+“差分验证” = 同一输入，官方 JS 跑一遍、我们 Kotlin 跑一遍，输出必须一致。
+手写期望值的单测只是自证；差分才是“官方说对才算对”的机器验证。
+
+**怎么用**：
+1. `scripts/diff/*-official.mjs` 从 `~/sillytavern-ref`（release 分支）逐字提取官方函数，
+   桩掉 DOM/全局依赖，生成 fixture：`engine/src/test/resources/diff/*.json`
+2. `engine/src/test/.../*DiffTest.kt` 读 fixture，调 Kotlin 引擎逐例对比
+3. 官方发版/我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
+4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
+
+**已覆盖**：instruct（36 例）、world-info matchKeys/getScore/parseDecorators（19 例）、
+regex runRegexScript（13 例）、world-info checkWorldInfo 整体扫描（17 例，含两段扫描
+sticky/cooldown/概率）。
+**待覆盖**：宏引擎、slash 解析器、卡片导入导出。
+
+**关键规则**：本地不要编译（用户明确要求），靠 CI `:engine:test` 验证；
+runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug`。
+
 ## 仓库
 - 项目：`ember-inn`（已公开，github.com/heikeyangle-code/ember-inn）
 - 本地：`/data/data/com.termux/files/home/ember-inn`
@@ -40,7 +61,9 @@
 ## 剩余工作（按顺序）
 1. **CI 恢复后跑** `./gradlew :engine:test :app:assembleDebug`（runner 此前 queued），红灯就修
 2. PromptManager 接入 app：用户顺序编辑/持久化 UI + 角色级 prompt_order
-3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info 的 matchKeys/getScore/parseDecorators（19 例）、regex runRegexScript（13 例，含 substituteRegex/宏替换/trim）；剩余 checkWorldInfo 整体流程/getSortedEntries/timed effects、宏引擎、slash、卡片导入导出；官方发版时重生成 fixture
+3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info matchKeys/getScore/parseDecorators（19 例）、
+   checkWorldInfo 整体扫描（17 例）、regex runRegexScript（13 例，含 substituteRegex/宏替换/trim）；
+   剩余宏引擎、slash、卡片导入导出；官方发版时重生成 fixture
 4. 全量 1:1 审计：✅ PromptAssembler bias/override + ChatCompletion 嵌套模型 + populateChatCompletion 核心 + ChatHistory/DialogueExamples 顺序预算；剩余工具预留/continue prefill/in-chat 深度注入（populationInjectionPrompts）、世界书 filterByInclusionGroups 细节
 5. UI 按 README 严谨收尾：聊天 Tab/设置页、真实模型对话（提供商三步配置）、角色详情世界书编辑、人设/预设、全局搜索、真毛玻璃/氛围渐变、CharX/BYAF 资源提取
 6. 推送：等用户说推再推

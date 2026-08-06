@@ -9,11 +9,15 @@
   用桩环境跑纯函数，生成标准答案 fixture。
 - `worldinfo-official.mjs`：世界书纯逻辑（WorldInfoBuffer.matchKeys/getScore、
   parseDecorators、parseRegexFromString/escapeRegex）生成 fixture。
+- `worldinfo-scan-official.mjs`：checkWorldInfo 全流程（关键词/常驻/递归/预算/
+  min activations/分组/角色标签过滤/sticky/cooldown/delay/概率）生成 fixture。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
   读快照，调 Kotlin 引擎，断言一致。
 - `engine/src/test/kotlin/com/emberinn/engine/worldinfo/WorldInfoDiffTest.kt`：
   世界书对拍。
+- `engine/src/test/kotlin/com/emberinn/engine/worldinfo/WorldInfoScanDiffTest.kt`：
+  世界书整体扫描对拍。
 
 ## 用法
 
@@ -21,6 +25,7 @@
 # 官方源码路径默认 ../sillytavern-ref，可用 OFFICIAL_REF 覆盖
 node scripts/diff/instruct-official.mjs
 node scripts/diff/worldinfo-official.mjs
+node scripts/diff/worldinfo-scan-official.mjs
 ```
 
 重新生成快照后，`./gradlew :engine:test` 跑全部对比测试。
