@@ -55,7 +55,7 @@ fun MainScreen() {
             contentAlignment = Alignment.Center,
         ) {
             when (selectedTab) {
-                0 -> PlaceholderScreen("角色", "P0 骨架：角色列表 / 导入角色卡（PNG / JSON / CharX / YAML / BYAF）")
+                0 -> com.emberinn.app.ui.home.CharactersScreen()
                 1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
                 else -> PlaceholderScreen("设置", "P0 骨架：外观主题 / 提供商模型 / 语音 / 服务 / 数据与隐私")
             }
