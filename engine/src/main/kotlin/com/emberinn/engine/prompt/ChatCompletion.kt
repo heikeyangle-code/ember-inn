@@ -44,6 +44,12 @@ class ChatCompletion(private val handler: TokenHandler) {
         tokenBudget = context - response
     }
 
+    fun reserveBudget(message: CompletionMessage) {
+        tokenBudget -= message.tokens
+    }
+
+    fun canAfford(message: CompletionMessage): Boolean = message.tokens <= tokenBudget
+
     fun add(message: CompletionMessage): ChatCompletion {
         checkTokenBudget(message)
         messages.add(message)

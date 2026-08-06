@@ -199,7 +199,7 @@ object MacroEngine {
         out = spaceArgsRegex.replace(out) { m ->
             val name = m.groupValues[1].lowercase()
             if (name in spaceArgMacros && !m.value.contains("::")) {
-                resolve(name, m.groupValues[2], env, offset, m.value)
+                resolve(name, m.groupValues[2], env, m.range.first, m.value)
             } else {
                 m.value
             }
