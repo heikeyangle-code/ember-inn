@@ -82,12 +82,14 @@ theme      全局主题 + 角色卡驱动主题
 ### 背景系统（敲定）
 
 - **默认 = 氛围渐变**：从卡图取 2–4 个颜色 → 低饱和 Mesh Gradient + 光晕（**不是主图**，是主图的光），浅色/深色下都干净
+  - 实现：官方 `androidx.compose.ui.graphics.MeshGradient`（已入 Compose UI，无需第三方库）；动画版参考 ComposeMeshGradient
 - **可选 = 卡图玻璃背景**：主图 + 模糊 + 遮罩（深色叠 60–75% 暗色，浅色叠 25–35% 白/纸色），保证文字可读
 - 每张卡独立记忆，可随时切换 / 关闭
 
 ### 玻璃表面（2026 液态玻璃方向）
 
 - 顶栏 / 输入栏 / 浮层 / 对话框：`blur` + 半透明 + 1px 高光描边 + 轻微内阴影
+  - 实现：**skydoves/Cloudy**（KMP 模糊 + 液态玻璃，GPU 加速 + 旧设备 CPU 降级）；备选 Haze（可调降采样）、miuix-blur（自适应降采样）
 - **正文区保持干净，不全屏玻璃**（可读性优先）
 - 依据：iOS 26 Liquid Glass 引发全行业跟进，国产安卓 2026 年集体上新玻璃 UI；安卓官方暂不跟进 → 第三方 App 的差异化机会
 
@@ -130,13 +132,15 @@ theme      全局主题 + 角色卡驱动主题
 
 | 用途 | 组件 | 坐标 |
 |---|---|---|
-| 主题框架 | Material3（Expressive） | `androidx.compose.material3:material3` |
-| 种子色 → M3 配色 | MaterialKolor | `com.jordond.materialkolor:*` |
+| 主题框架 | Material3 基线 1.4.0 稳定版（Expressive 组件在 1.5.0-alpha，等稳定后再启用） | `androidx.compose.material3:material3` |
+| 种子色 → M3 配色 | MaterialKolor **4.1.x 稳定版**（勿用 5.0 alpha） | `com.jordond.materialkolor:*` |
+| 氛围渐变 | 官方 MeshGradient（动画版参考 ComposeMeshGradient） | `androidx.compose.ui.graphics.MeshGradient` |
+| 玻璃 / 模糊 | **skydoves/Cloudy**（GPU + CPU 降级）；备选 Haze、miuix-blur | `dev.skydoves.cloudy:*` |
 | 卡图取色 | Palette / landscapist-palette | `androidx.palette:palette` |
 | 图片加载 | Coil 3 | `io.coil-kt.coil3:coil-compose` |
 | 动效 | Lottie | `com.airbnb.android:lottie-compose` |
 | 图标 | Material Symbols | `androidx.compose.material:material-icons-extended` |
-| 模糊 | Compose `Modifier.blur()` | 内置 |
+| 中文字体（可下载） | 霞鹜文楷 Screen/Lite、霞鹜新晰黑（OFL 开源） | 可下载字体包 / Google Fonts Provider |
 | 主题切换动画 | `animateColorAsState` + Crossfade | 内置 |
 | 持久化 | Room + DataStore | androidx |
 
@@ -147,6 +151,9 @@ theme      全局主题 + 角色卡驱动主题
 3. 所有背景上的文字必须叠遮罩（浅色卡图 + 白字 = 灾难）
 4. 主题数据（seed / 背景 / 形状 / 字体）跟随角色卡导入导出
 5. 设置页做实时预览（选主题直接看到效果）
+6. MaterialKolor 已移除 Expressive 支持（4.0+）：配色走基线 M3，Expressive 只做组件/动效层，两者不冲突
+7. 生产依赖 M3 1.4.0 稳定版；Expressive 组件（1.5.0-alpha）仅在尝鲜分支启用，不进入主线
+8. 中文字体用屏幕版/轻便版（霞鹜文楷 Screen/Lite），完整版体积过大，作可下载项
 
 ## 技术栈
 
