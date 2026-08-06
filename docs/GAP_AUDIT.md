@@ -20,16 +20,17 @@
 - 🟡 动态宏注册 API、宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）未做
 
 ## 斜杠
-- ✅ 解析（命名/无名/引号/转义/list 值）、管道/闭包/双管道、/pass
-- 🟡 rawQuotes、命名参数 list 值（存为展开字符串）、parser flags（REPLACE_GETVAR 等）未做
-- ❌ 150+ 官方命令（多数要接 App 状态）、/let + {{var}}/{{pipe}}/{{arg}} 联动宏
+- ✅ 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
+  /pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器
+- 🟡 parser flags（REPLACE_GETVAR 等）、150+ 官方命令（多数要接 App 状态）
 
 ## 提示词组装
 - ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
 - 🟡 工具预分配 token、媒体内联、推理签名、多模态
-- ❌ 群聊完整调度、人设 IN_CHAT 注入（管线待接）
+- ✅ continue prefill/nudge、人设 IN_CHAT 注入、作者注释组合（ANWithWI）
+- ❌ 群聊完整调度（队列 UI）、工具预分配 token/媒体/推理
 
 ## 正则
 - ✅ 引擎 + substituteRegex/宏替换 + 13 例差分
@@ -37,7 +38,7 @@
 
 ## 预设
 - ✅ 官方 context 34 / instruct 38 / sampler openai1 textgen6 novel24 kobold6 / sysprompt13 / reasoning5 = 127
-- 🟡 quick-replies（UI 脚本）、moving-ui（界面预设）未打包
+- ✅ quick-replies 打包+执行器；moving-ui（界面预设）未打包
 
 ## 聊天
 - ✅ jsonl 基础 + BYAF 聊天导入 + continue nudge
@@ -45,7 +46,8 @@
 
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
-- ❌ 人设管理（数据模型/选择/注入位置深度）、作者注释完整逻辑、快捷回复、群聊调度
+- ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型+注入、作者注释、快捷回复、聊天元数据模型
+- ❌ 人设管理（选择/持久化，App 层）、多模型 tokenizer、服务层
 - ❌ 服务层：TTS/STT/图像/翻译/向量（路线图 P3/P4）
 
 ## 差分覆盖总数

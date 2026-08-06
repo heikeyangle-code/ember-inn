@@ -1,5 +1,7 @@
 package com.emberinn.engine.worldinfo
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
@@ -17,3 +19,13 @@ object ChatJsonl {
             .map { json.parseToJsonElement(it) }
             .toList()
 }
+
+/** 聊天元数据（对齐官方 chat_metadata 核心字段：背景/书签）。 */
+@Serializable
+data class ChatMetadata(
+    val background: String = "",
+    @SerialName("custom_background")
+    val customBackground: String = "",
+    @SerialName("bookmark_message_ids")
+    val bookmarkMessageIds: List<Int> = emptyList(),
+)
