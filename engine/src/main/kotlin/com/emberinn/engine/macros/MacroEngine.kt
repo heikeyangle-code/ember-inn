@@ -18,26 +18,139 @@ data class MacroEnv(
 )
 
 /**
- * 核心宏引擎（Stage 1）：{{user}} {{char}} {{time}} {{date}} {{weekday}} {{isotime}} {{isodate}}
- * {{random::a::b}} {{roll::NdM}} {{pick::a::b}}，语义对齐官方 macros/definitions。
- * 注意：if/变量宏、seedrandom 逐位一致、chatIdHash/contentHash 精确取值属于 Stage 2（配合提示词组装）。
- * 未实现的宏原样保留，不吞内容。
+ * 核心宏引擎（Stage 2）：
+ * {{user}} {{char}} {{time}} {{date}} {{weekday}} {{isotime}} {{isodate}}
+ * {{random::a::b}} {{roll::NdM}} {{pick::a::b}}
+ * {{if 条件}}then{{else}}other{{/if}}（嵌套/取反/falsy/顶层 else/只解析选中分支，对齐官方 core-macros.js if 宏）
+ * 未实现的宏原样保留；变量宏（getvar 等）与 seedrandom 逐位一致属 Stage 3。
  */
 object MacroEngine {
 
     private val macroRegex = Regex("""\{\{([a-zA-Z_]+)(?:::(.*?))?\}\}""")
-    private val hhMm: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    private val yyyyMmDd: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val spaceArgsRegex = Regex("""\{\{([a-zA-Z_]+)\s+([^{}]*?)\}\}""")
+    private val scopedIfRegex = Regex("""\{\{if\s+([\s\S]*?)\}\}""")
+    private val closingIfRegex = Regex("""\{\{/if\}\}""")
+    private val openingIfScan = Regex("""\{\{if\s""")
+    private val elseRegex = Regex("""\{\{else(?:::[^{}]*)?\}\}""")
+
+    private val zeroArgMacros = setOf("user", "char", "isotime", "isodate", "time", "date", "weekday")
+    private val spaceArgMacros = setOf("roll", "random", "pick", "time")
+    private val falsyValues = setOf("false", "off", "0")
 
     fun substitute(text: String, env: MacroEnv): String {
+        val withoutScoped = replaceScopedIf(text, env)
+        return replaceInline(withoutScoped, env)
+    }
+
+    // ---------- 作用域 if 块 ----------
+    private fun replaceScopedIf(text: String, env: MacroEnv): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            val open = scopedIfRegex.find(text, i) ?: break
+            sb.append(text, i, open.range.first)
+            val bodyStart = open.range.last + 1
+            val close = findMatchingClose(text, bodyStart)
+            if (close == null) {
+                sb.append(open.value)
+                i = open.range.last + 1
+                continue
+            }
+            val inner = text.substring(bodyStart, close.range.first)
+            val condition = open.groupValues[1].trim()
+            val evaluated = evaluateCondition(condition, env)
+            val split = splitTopLevelElse(inner)
+            val chosen = if (!evaluated) split.first else split.second
+            val result = if (chosen != null) substitute(chosen, env).trim() else ""
+            sb.append(result)
+            i = close.range.last + 1
+        }
+        if (i < text.length) sb.append(text, i, text.length)
+        return sb.toString()
+    }
+
+    private fun findMatchingClose(text: String, start: Int): MatchResult? {
+        var depth = 1
+        var pos = start
+        while (pos < text.length) {
+            val o = openingIfScan.find(text, pos)
+            val c = closingIfRegex.find(text, pos)
+            val next = when {
+                o == null && c == null -> null
+                o == null -> c
+                c == null -> o
+                else -> if (o.range.first < c.range.first) o else c
+            } ?: break
+            val isOpen = o != null && next.range.first == o.range.first
+            if (isOpen) depth++ else depth--
+            pos = next.range.last + 1
+            if (depth == 0) return next
+        }
+        return null
+    }
+
+    private fun splitTopLevelElse(inner: String): Pair<String, String?> {
+        var depth = 0
+        var pos = 0
+        while (pos < inner.length) {
+            val o = openingIfScan.find(inner, pos)
+            val c = closingIfRegex.find(inner, pos)
+            val e = elseRegex.find(inner, pos)
+            val next = listOfNotNull(o, c, e).minByOrNull { it.range.first } ?: break
+            val isOpen = o != null && next.range.first == o.range.first
+            val isClose = c != null && next.range.first == c.range.first
+            when {
+                isOpen -> depth++
+                isClose -> depth--
+                depth == 0 -> return inner.substring(0, next.range.first) to
+                    inner.substring(next.range.last + 1)
+            }
+            pos = next.range.last + 1
+        }
+        return inner to null
+    }
+
+    /** 返回 isFalsy（已含取反处理）。 */
+    private fun evaluateCondition(rawCondition: String, env: MacroEnv): Boolean {
+        val inverted = rawCondition.startsWith("!")
+        val condition = if (inverted) rawCondition.substring(1).trim() else rawCondition.trim()
+        var resolved = replaceInline(condition, env)
+        // 变量简写（.var / $var）：Stage 3 接入变量系统，暂视为空
+        if (Regex("""^[.\$][A-Za-z0-9_]+$""").matches(resolved)) resolved = ""
+        // 单参数宏名（minArgs=0）自动解析
+        if (Regex("""^[a-zA-Z_][a-zA-Z0-9_]*$""").matches(resolved) && resolved.lowercase() in zeroArgMacros) {
+            resolved = replaceInline("{{$resolved}}", env)
+        }
+        var falsy = resolved.isEmpty() || isFalseBoolean(resolved)
+        if (inverted) falsy = !falsy
+        return falsy
+    }
+
+    private fun isFalseBoolean(value: String): Boolean =
+        value.trim().lowercase() in falsyValues
+
+    // ---------- 行内宏 ----------
+    private fun replaceInline(text: String, env: MacroEnv): String {
         var offset = 0
-        return macroRegex.replace(text) { m ->
+        var out = macroRegex.replace(text) { m ->
             val name = m.groupValues[1]
             val args = m.groupValues[2]
-            val result = resolve(name, args, env, offset, m.value)
+            val raw = m.value
+            val result = resolve(name, args, env, offset, raw)
             offset += 1
             result
         }
+        // 旧式空格参数：{{roll 1d20}} {{random a,b}} {{pick a,b}} {{time UTC+2}}
+        out = spaceArgsRegex.replace(out) { m ->
+            val name = m.groupValues[1].lowercase()
+            if (name in spaceArgMacros && !m.value.contains("::")) {
+                resolve(name, m.groupValues[2], env, offset, m.value)
+            } else {
+                m.value
+            }
+        }
+        // 孤立标记清理
+        return out.replace(Regex("""\{\{(?:else|/if)(?:::[^{}]*)?\}\}"""), "")
     }
 
     private fun resolve(name: String, args: String, env: MacroEnv, offset: Int, raw: String): String =
@@ -52,15 +165,29 @@ object MacroEngine {
             "random" -> randomMacro(args)
             "roll" -> rollMacro(args)
             "pick" -> pickMacro(args, env, offset, raw)
+            "if" -> inlineIfMacro(args, env)
             else -> raw
         }
+
+    private fun inlineIfMacro(args: String, env: MacroEnv): String {
+        // 内联形式 {{if 条件::内容}}：2 个参数
+        val sep = args.indexOf("::")
+        if (sep < 0) return ""
+        val condition = args.substring(0, sep).trim()
+        val content = args.substring(sep + 2)
+        val falsy = evaluateCondition(condition, env)
+        return if (!falsy) substitute(content, env).trim() else ""
+    }
+
+    private val hhMm: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val yyyyMmDd: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
     private fun shortLocalTime(): String =
         LocalTime.now().format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault()))
 
     private fun timeMacro(args: String): String {
         if (args.isBlank()) return shortLocalTime()
-        val m = Regex("^UTC([+-]\\d+)$").matchEntire(args.trim())
+        val m = Regex("""^UTC([+-]\d+)$""").matchEntire(args.trim())
         if (m == null) return shortLocalTime()
         val offset = m.groupValues[1].toIntOrNull() ?: return shortLocalTime()
         return LocalTime.now(ZoneOffset.ofHours(offset))
@@ -82,7 +209,7 @@ object MacroEngine {
 
     private fun rollMacro(args: String): String {
         val formula = args.trim()
-        val m = Regex("^(\\d*)d(\\d+)([+-]\\d+)?$", RegexOption.IGNORE_CASE).matchEntire(formula)
+        val m = Regex("""^(\d*)d(\d+)([+-]\d+)?$""", RegexOption.IGNORE_CASE).matchEntire(formula)
         if (m != null) {
             val count = m.groupValues[1].toIntOrNull()?.coerceAtLeast(1) ?: 1
             val sides = m.groupValues[2].toIntOrNull() ?: return ""

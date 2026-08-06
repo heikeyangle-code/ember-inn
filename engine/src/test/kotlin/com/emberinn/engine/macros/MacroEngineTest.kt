@@ -45,6 +45,36 @@ class MacroEngineTest {
 
     @Test
     fun `unknown macro stays as-is`() {
-        assertEquals("{{if x}}保留{{/if}}", MacroEngine.substitute("{{if x}}保留{{/if}}", env))
+        assertEquals("{{unknownmacro::x}}", MacroEngine.substitute("{{unknownmacro::x}}", env))
+    }
+
+    @Test
+    fun `scoped if truthy and else branch`() {
+        assertEquals("有用户", MacroEngine.substitute("{{if user}}有用户{{else}}没有{{/if}}", env))
+        assertEquals("没有", MacroEngine.substitute("{{if 0}}有{{else}}没有{{/if}}", env))
+    }
+
+    @Test
+    fun `scoped if inverted`() {
+        assertEquals("有", MacroEngine.substitute("{{if !user}}没有{{else}}有{{/if}}", env))
+    }
+
+    @Test
+    fun `nested scoped if`() {
+        assertEquals("ABC", MacroEngine.substitute("{{if user}}A{{if char}}B{{/if}}C{{/if}}", env))
+    }
+
+    @Test
+    fun `inline if macro`() {
+        assertEquals("你好", MacroEngine.substitute("{{if user::你好}}", env))
+        assertEquals("", MacroEngine.substitute("{{if 0::你好}}", env))
+    }
+
+    @Test
+    fun `space form roll works`() {
+        repeat(20) {
+            val v = MacroEngine.substitute("{{roll 1d6}}", env).toInt()
+            assertTrue(v in 1..6)
+        }
     }
 }
