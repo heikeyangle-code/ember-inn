@@ -4,7 +4,7 @@ import android.content.Context
 import java.io.File
 import kotlinx.serialization.json.Json
 
-/** 角色卡文件存储：characters/*.json + avatars/*.png（内部存储，无权限要求）。 */
+/** 角色卡文件存储：characters 目录（*.json）+ avatars 目录（*.png）（内部存储，无权限要求）。 */
 class CharacterStore(private val context: Context) {
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }

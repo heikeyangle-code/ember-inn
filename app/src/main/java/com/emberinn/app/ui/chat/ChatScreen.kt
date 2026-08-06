@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -83,8 +84,8 @@ fun ChatScreen(sessionId: String, name: String, onBack: () -> Unit) {
             items(messages, key = { it.toString().hashCode().toString() }) { element ->
                 val msg = element.jsonObject
                 val isUser = msg["is_user"]?.jsonPrimitive?.booleanOrNull == true
-                val content = msg["mes"]?.jsonPrimitive?.contentOrNull()
-                    ?: msg["content"]?.jsonPrimitive?.contentOrNull() ?: ""
+                val content = msg["mes"]?.jsonPrimitive?.contentOrNull
+                    ?: msg["content"]?.jsonPrimitive?.contentOrNull ?: ""
                 MessageBubble(isUser = isUser, content = content)
             }
         }

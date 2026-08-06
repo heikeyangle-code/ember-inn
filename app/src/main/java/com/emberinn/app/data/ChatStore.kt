@@ -19,7 +19,7 @@ data class SessionRecord(
     val updatedAt: Long = System.currentTimeMillis(),
 )
 
-/** 聊天会话存储：sessions/*.json + chats/*.jsonl（对齐官方 jsonl：每行一条消息 JSON）。 */
+/** 聊天会话存储：sessions 目录（*.json）+ chats 目录（*.jsonl）（对齐官方 jsonl：每行一条消息 JSON）。 */
 class ChatStore(private val context: Context) {
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
