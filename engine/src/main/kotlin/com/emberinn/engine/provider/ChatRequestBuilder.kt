@@ -5,10 +5,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /** 采样参数（对齐官方 OpenAI 请求体字段）。 */
+@Serializable
 data class SamplerParams(
     val temperature: Double = 1.0,
     val topP: Double = 1.0,
