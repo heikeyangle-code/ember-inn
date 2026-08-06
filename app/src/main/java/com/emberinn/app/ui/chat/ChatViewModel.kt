@@ -2,6 +2,7 @@ package com.emberinn.app.ui.chat
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ChatRepository
