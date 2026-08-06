@@ -31,6 +31,7 @@ object SlashRegistry {
         register(SlashCommandDef("sendas", aliases = listOf("send"), description = "以指定角色发送消息") {
             "OK:sendas:${it.namedArgs["name"] ?: ""}:${it.unnamedArgs.joinToString(" ")}"
         })
+        register(SlashCommandDef("echo", description = "原样返回无名参数") { it.unnamedArgs.joinToString(" ") })
         register(SlashCommandDef("persona", description = "切换人设") {
             "OK:persona:${it.unnamedArgs.joinToString(" ")}:mode=${it.namedArgs["mode"] ?: "all"}"
         })
