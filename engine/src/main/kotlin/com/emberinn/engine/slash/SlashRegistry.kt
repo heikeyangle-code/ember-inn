@@ -68,7 +68,10 @@ object SlashRegistry {
                 description = "设置作用域变量（对齐官方 /let）",
                 callback = { inv, state ->
                     val key = inv.namedArgs["key"] ?: inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
-                    val value = if (inv.namedArgs.containsKey("key")) {
+                    val value = if (inv.namedLists.containsKey("key")) {
+                        // 官方：list 值存为 JSON 数组，供 {{var::key::index}}
+                        "[" + inv.namedLists["key"]!!.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
+                    } else if (inv.namedArgs.containsKey("key")) {
                         inv.unnamedArgs.joinToString(" ")
                     } else {
                         inv.unnamedArgs.drop(1).joinToString(" ")

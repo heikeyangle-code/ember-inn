@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 data class CommandInvocation(
     val name: String,
     val namedArgs: Map<String, String>,
+    val namedLists: Map<String, List<String>> = emptyMap(),
     val unnamedArgs: List<String>,
     val raw: String,
 )

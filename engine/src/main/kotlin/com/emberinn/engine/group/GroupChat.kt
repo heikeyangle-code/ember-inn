@@ -43,3 +43,22 @@ object GroupScheduler {
         }
     }
 }
+
+/** 群聊队列（对齐官方 groupChatQueueOrder：队首发言，发言后排到队尾）。 */
+class GroupQueue(initial: List<String>) {
+    private val queue = ArrayDeque<String>()
+
+    init {
+        queue.addAll(initial)
+    }
+
+    fun next(): String? {
+        val head = queue.removeFirstOrNull() ?: return null
+        queue.addLast(head)
+        return head
+    }
+
+    fun peek(): String? = queue.firstOrNull()
+
+    fun toList(): List<String> = queue.toList()
+}

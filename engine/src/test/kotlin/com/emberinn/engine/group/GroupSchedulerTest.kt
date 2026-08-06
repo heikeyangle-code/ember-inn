@@ -36,4 +36,14 @@ class GroupSchedulerTest {
     fun `empty group returns null`() {
         assertNull(GroupScheduler.nextSpeaker(group.copy(members = emptyList()), null))
     }
+
+    @Test
+    fun `group queue rotates`() {
+        val queue = GroupQueue(listOf("甲", "乙", "丙"))
+        assertEquals("甲", queue.next())
+        assertEquals("乙", queue.next())
+        assertEquals("丙", queue.next())
+        assertEquals("甲", queue.next())
+        assertEquals(listOf("乙", "丙", "甲"), queue.toList())
+    }
 }

@@ -24,15 +24,27 @@ object SlashParser {
 
         // 命名参数：name=value
         val named = linkedMapOf<String, String>()
+        val namedLists = linkedMapOf<String, List<String>>()
         while (index < text.length && text[index] != '|') {
             val eq = findEquals(text, index)
             if (eq < 0 || eq == index) break
             val key = text.substring(index, eq)
             if (!key.all { it.isLetterOrDigit() || it == '_' }) break
             index = eq + 1
-            val (value, next) = parseValue(text, index)
-            named[key] = value
-            index = next
+            if (text[index] == '[') {
+                val (items, next) = parseListValue(text, index)
+                if (items.size == 1 && items[0].startsWith("[")) {
+                    named[key] = items[0]
+                } else {
+                    namedLists[key] = items
+                    named[key] = items.joinToString("|")
+                }
+                index = next
+            } else {
+                val (value, next) = parseValue(text, index)
+                named[key] = value
+                index = next
+            }
             skipWhitespace(text, index)?.let { index = it }
         }
 
@@ -55,6 +67,7 @@ object SlashParser {
         return CommandInvocation(
             name = name.toString().lowercase(),
             namedArgs = named,
+            namedLists = namedLists,
             unnamedArgs = unnamed,
             raw = text,
         )

@@ -34,6 +34,7 @@ object SlashEngine {
         val env = MacroEnv(user = "", char = "", slash = state)
         return invocation.copy(
             namedArgs = invocation.namedArgs.mapValues { (_, v) -> MacroEngine.substitute(v, env) },
+            namedLists = invocation.namedLists.mapValues { (_, v) -> v.map { MacroEngine.substitute(it, env) } },
             unnamedArgs = invocation.unnamedArgs.map { MacroEngine.substitute(it, env) },
         )
     }
@@ -44,6 +45,7 @@ object SlashEngine {
         val sb = StringBuilder()
         var quote: Char? = null
         var closureDepth = 0
+        var bracketDepth = 0
         var nextInject = true
         var i = 0
         while (i < text.length) {
@@ -58,7 +60,9 @@ object SlashEngine {
                 c == '"' || c == '\'' -> { quote = c; sb.append(c) }
                 text.startsWith("{:", i) -> { closureDepth++; sb.append("{:"); i += 2; continue }
                 text.startsWith(":}", i) -> { closureDepth--; sb.append(":}"); i += 2; continue }
-                c == '|' && closureDepth == 0 -> {
+                c == '[' -> { bracketDepth++; sb.append(c) }
+                c == ']' && bracketDepth > 0 -> { bracketDepth--; sb.append(c) }
+                c == '|' && closureDepth == 0 && bracketDepth == 0 -> {
                     val inject = !text.startsWith("||", i)
                     segments.add(PipeSegment(sb.toString(), nextInject))
                     sb.setLength(0)
