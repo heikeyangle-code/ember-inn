@@ -1,7 +1,6 @@
 package com.emberinn.engine.card
 
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.time.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -71,7 +70,7 @@ object ByafImporter {
             val key = item["key"]?.jsonPrimitive?.contentOrNull() ?: ""
             val value = item["value"]?.jsonPrimitive?.contentOrNull() ?: ""
             entries += buildJsonObject {
-                put("keys", JsonArray(key.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { JsonPrimitive(it) }))
+                put("keys", JsonArray(replaceMacros(key).split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { JsonPrimitive(it) }))
                 put("content", JsonPrimitive(replaceMacros(value)))
                 put("extensions", JsonObject(emptyMap()))
                 put("enabled", JsonPrimitive(true))
@@ -115,7 +114,7 @@ object ByafImporter {
         return buildJsonObject {
             put("spec", JsonPrimitive("chara_card_v2"))
             put("spec_version", JsonPrimitive("2.0"))
-            put("create_date", JsonPrimitive(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
+            put("create_date", JsonPrimitive(Instant.now().toString()))
             put("data", buildJsonObject {
                 put("name", JsonPrimitive(name))
                 put("description", JsonPrimitive(replaceMacros(character["persona"]?.jsonPrimitive?.contentOrNull())))

@@ -39,11 +39,11 @@ object V2Normalizer {
             put("fav", JsonPrimitive(fav))
             put("tags", data["tags"] ?: kotlinx.serialization.json.JsonArray(emptyList()))
             put("chat", JsonPrimitive(chat))
-            root.forEach { (k, v) -> if (k !in setOf("data", "chat")) put(k, v) }
+            root.forEach { (k, v) -> if (k !in setOf("data", "chat", "json_data")) put(k, v) }
         }.toString()
     }
 
-    /** 官方 legacy convertToV2：YAML/旧字段 → V2 卡（含 spec）。 */
+    /** 官方 charaFormatData + convertToV2：YAML/旧字段 → V2 卡（完整字段，1:1）。 */
     fun buildV2FromLegacy(
         name: String,
         description: String,
@@ -56,11 +56,28 @@ object V2Normalizer {
         talkativeness: Double = 0.5,
         creator: String = "",
         tags: List<String> = emptyList(),
+        systemPrompt: String = "",
+        postHistoryInstructions: String = "",
+        characterVersion: String = "",
+        alternateGreetings: List<String> = emptyList(),
+        world: String = "",
+        fav: Boolean = false,
     ): String = buildJsonObject {
         put("spec", JsonPrimitive("chara_card_v2"))
         put("spec_version", JsonPrimitive("2.0"))
         put("create_date", JsonPrimitive(createDate))
         put("chat", JsonPrimitive(chat))
+        put("name", JsonPrimitive(name))
+        put("description", JsonPrimitive(description))
+        put("personality", JsonPrimitive(personality))
+        put("scenario", JsonPrimitive(scenario))
+        put("first_mes", JsonPrimitive(firstMes))
+        put("mes_example", JsonPrimitive(""))
+        put("creatorcomment", JsonPrimitive(creatorComment))
+        put("avatar", JsonPrimitive("none"))
+        put("talkativeness", JsonPrimitive(talkativeness))
+        put("fav", JsonPrimitive(fav))
+        put("tags", kotlinx.serialization.json.JsonArray(tags.map { JsonPrimitive(it) }))
         put("data", buildJsonObject {
             put("name", JsonPrimitive(name))
             put("description", JsonPrimitive(description))
@@ -69,10 +86,17 @@ object V2Normalizer {
             put("first_mes", JsonPrimitive(firstMes))
             put("mes_example", JsonPrimitive(""))
             put("creator_notes", JsonPrimitive(creatorComment))
-            put("talkativeness", JsonPrimitive(talkativeness))
-            put("fav", JsonPrimitive(false))
-            put("creator", JsonPrimitive(creator))
+            put("system_prompt", JsonPrimitive(systemPrompt))
+            put("post_history_instructions", JsonPrimitive(postHistoryInstructions))
             put("tags", kotlinx.serialization.json.JsonArray(tags.map { JsonPrimitive(it) }))
+            put("creator", JsonPrimitive(creator))
+            put("character_version", JsonPrimitive(characterVersion))
+            put("alternate_greetings", kotlinx.serialization.json.JsonArray(alternateGreetings.map { JsonPrimitive(it) }))
+            put("extensions", buildJsonObject {
+                put("talkativeness", JsonPrimitive(talkativeness))
+                put("fav", JsonPrimitive(fav))
+                put("world", JsonPrimitive(world))
+            })
         })
     }.toString()
 
