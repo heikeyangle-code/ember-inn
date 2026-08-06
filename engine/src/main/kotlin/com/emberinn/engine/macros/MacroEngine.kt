@@ -9,10 +9,35 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.random.Random
 
+/** 角色卡字段（对齐官方 MacroEnv.character）。 */
+data class CharacterFields(
+    val charPrompt: String = "",
+    val charInstruction: String = "",
+    val description: String = "",
+    val personality: String = "",
+    val scenario: String = "",
+    val persona: String = "",
+    val mesExamplesRaw: String = "",
+    val charDepthPrompt: String = "",
+    val creatorNotes: String = "",
+    val firstMessage: String = "",
+    val alternateGreetings: List<String> = emptyList(),
+    val version: String = "",
+)
+
+/** 系统字段（对齐官方 MacroEnv.system）。 */
+data class SystemFields(val model: String = "")
+
 /** 宏环境：对齐 MacroEnv 的核心字段。 */
 data class MacroEnv(
     val user: String,
     val char: String,
+    val group: String = "",
+    val groupNotMuted: String = "",
+    val notChar: String = "",
+    val character: CharacterFields = CharacterFields(),
+    val system: SystemFields = SystemFields(),
+    val isMobile: Boolean = false,
     val chatId: Long = 0,
     val chatIdHash: Long = 0,
     val rerollSeed: Long? = null,
@@ -175,6 +200,23 @@ object MacroEngine {
         when (name.lowercase()) {
             "user" -> env.user
             "char" -> env.char
+            "group", "charifnotgroup" -> env.group
+            "groupnotmuted" -> env.groupNotMuted
+            "notchar" -> env.notChar
+            "charprompt" -> env.character.charPrompt
+            "charinstruction" -> env.character.charInstruction
+            "chardescription", "description" -> env.character.description
+            "charpersonality", "personality" -> env.character.personality
+            "charscenario", "scenario" -> env.character.scenario
+            "persona" -> env.character.persona
+            "mesexamplesraw" -> env.character.mesExamplesRaw
+            "mesexamples" -> formatMesExamples(env.character.mesExamplesRaw)
+            "chardepthprompt" -> env.character.charDepthPrompt
+            "charcreatornotes", "creatornotes" -> env.character.creatorNotes
+            "charfirstmessage", "greeting" -> greetingMacro(args, env.character)
+            "charversion", "version", "char_version" -> env.character.version
+            "model" -> env.system.model
+            "ismobile" -> (if (env.isMobile) "true" else "false")
             "isotime" -> LocalTime.now().format(hhMm)
             "isodate" -> LocalDate.now().format(yyyyMmDd)
             "time" -> timeMacro(args)
@@ -200,6 +242,23 @@ object MacroEngine {
             "decglobalvar" -> incDecVariableArgs(args, env.global, -1)
             else -> raw
         }
+
+    /** 对齐 parseMesExamples：按 <START> 切分、trim、去空；非 instruct 直接拼接。 */
+    private fun formatMesExamples(raw: String): String {
+        if (raw.isEmpty()) return ""
+        val parsed = raw.split(Regex("""<START>""", RegexOption.IGNORE_CASE))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (parsed.isEmpty()) return ""
+        return parsed.joinToString("")
+    }
+
+    /** 对齐 charFirstMessage：0=主开场白，1+ 取备选开场白。 */
+    private fun greetingMacro(args: String, character: CharacterFields): String {
+        val index = args.trim().toIntOrNull() ?: 0
+        if (index == 0) return character.firstMessage
+        return character.alternateGreetings.getOrNull(index - 1) ?: ""
+    }
 
     private fun setVariableArgs(args: String, store: VariableStore) {
         val sep = args.indexOf("::")

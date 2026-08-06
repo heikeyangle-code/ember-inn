@@ -111,3 +111,32 @@ class MacroEngineTest {
         val env2 = env.copy(local = local)
         assertEquals("开了", MacroEngine.substitute("{{if .flag}}开了{{else}}关了{{/if}}", env2))
     }
+
+
+    @Test
+    fun `character field macros with aliases`() {
+        val fields = CharacterFields(
+            description = "描述A",
+            personality = "性格B",
+            scenario = "场景C",
+            creatorNotes = "备注D",
+            version = "v3.6",
+            firstMessage = "开场",
+            alternateGreetings = listOf("备选1", "备选2"),
+            mesExamplesRaw = "\n<START>\n示例一\n<START>\n示例二\n",
+            charPrompt = "主提示",
+        )
+        val env2 = env.copy(character = fields, group = "甲,乙", notChar = "乙")
+        assertEquals("描述A", MacroEngine.substitute("{{description}}", env2))
+        assertEquals("性格B", MacroEngine.substitute("{{personality}}", env2))
+        assertEquals("场景C", MacroEngine.substitute("{{scenario}}", env2))
+        assertEquals("备注D", MacroEngine.substitute("{{creatorNotes}}", env2))
+        assertEquals("v3.6", MacroEngine.substitute("{{charVersion}}", env2))
+        assertEquals("主提示", MacroEngine.substitute("{{charPrompt}}", env2))
+        assertEquals("开场", MacroEngine.substitute("{{greeting}}", env2))
+        assertEquals("备选1", MacroEngine.substitute("{{greeting::1}}", env2))
+        assertEquals("备选2", MacroEngine.substitute("{{greeting::2}}", env2))
+        assertEquals("示例一示例二", MacroEngine.substitute("{{mesExamples}}", env2))
+        assertEquals("甲,乙", MacroEngine.substitute("{{group}}", env2))
+        assertEquals("乙", MacroEngine.substitute("{{notChar}}", env2))
+    }
