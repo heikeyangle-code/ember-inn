@@ -15,7 +15,7 @@
 
 **已覆盖**：instruct（36 例）、world-info matchKeys/getScore/parseDecorators（19 例）、
 regex runRegexScript（13 例）、world-info checkWorldInfo 整体扫描（17 例，含两段扫描
-sticky/cooldown/概率）。
+sticky/cooldown/概率）、PNG 角色卡读写（6 例）。
 **待覆盖**：宏引擎、slash 解析器、卡片导入导出。
 
 **关键规则**：本地不要编译（用户明确要求），靠 CI `:engine:test` 验证；
@@ -62,8 +62,8 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
 1. **CI 恢复后跑** `./gradlew :engine:test :app:assembleDebug`（runner 此前 queued），红灯就修
 2. PromptManager 接入 app：用户顺序编辑/持久化 UI + 角色级 prompt_order
 3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info matchKeys/getScore/parseDecorators（19 例）、
-   checkWorldInfo 整体扫描（17 例）、regex runRegexScript（13 例，含 substituteRegex/宏替换/trim）；
-   剩余宏引擎、slash、卡片导入导出；官方发版时重生成 fixture
+   checkWorldInfo 整体扫描（17 例）、regex runRegexScript（13 例）、PNG 角色卡读写（6 例）；
+   剩余宏引擎、slash、YAML/BYAF/CharX 导入；官方发版时重生成 fixture
 4. 全量 1:1 审计：✅ PromptAssembler bias/override + ChatCompletion 嵌套模型 + populateChatCompletion 核心 + ChatHistory/DialogueExamples 顺序预算；剩余工具预留/continue prefill/in-chat 深度注入（populationInjectionPrompts）、世界书 filterByInclusionGroups 细节
 5. UI 按 README 严谨收尾：聊天 Tab/设置页、真实模型对话（提供商三步配置）、角色详情世界书编辑、人设/预设、全局搜索、真毛玻璃/氛围渐变、CharX/BYAF 资源提取
 6. 推送：等用户说推再推

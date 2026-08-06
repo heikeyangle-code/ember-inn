@@ -1,0 +1,45 @@
+{
+  "generated": "2026-08-06T20:09:24.334Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "write_v3_card",
+      "fn": "write",
+      "data": "{\"name\":\"测试\",\"description\":\"新卡\",\"data\":{\"extensions\":{\"fav\":true}}}",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAAElFTkSuQmCC",
+      "expected": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAanRFWHRjaGFyYQBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDE5FsDT1gAAAKV0RVh0Y2N2MwBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDBzSW5Od1pXTWlPaUpqYUdGeVlWOWpZWEprWDNZeklpd2ljM0JsWTE5MlpYSnphVzl1SWpvaU15NHdJbjA9OQbkpgAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "write_removes_old_chunks",
+      "fn": "write",
+      "data": "{\"name\":\"测试\",\"description\":\"新卡\",\"data\":{\"extensions\":{\"fav\":true}}}",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAADnRFWHRjaGFyYQBiMnhrTFhZeeHlhwAAAAANdEVYdGNjdjMAYjJ4a0xYWXqNZLIaAAAAAElFTkSuQmCC",
+      "expected": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAanRFWHRjaGFyYQBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDE5FsDT1gAAAKV0RVh0Y2N2MwBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDBzSW5Od1pXTWlPaUpqYUdGeVlWOWpZWEprWDNZeklpd2ljM0JsWTE5MlpYSnphVzl1SWpvaU15NHdJbjA9OQbkpgAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "write_non_json_only_chara",
+      "fn": "write",
+      "data": "not-json",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAAElFTkSuQmCC",
+      "expected": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAEnRFWHRjaGFyYQBibTkwTFdwemIyND2fynLeAAAAAElFTkSuQmCC"
+    },
+    {
+      "id": "read_v3_precedence",
+      "fn": "read",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAADnRFWHRjaGFyYQBiMnhrTFhZeeHlhwAAAAANdEVYdGNjdjMAYjJ4a0xYWXqNZLIaAAAAAElFTkSuQmCC",
+      "expected": "old-v3"
+    },
+    {
+      "id": "read_chara_only",
+      "fn": "read",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAWnRFWHRjaGFyYQBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWw2ZmxqYUVpTENKemNHVmpJam9pWTJoaGNtRmZZMkZ5WkY5Mk1pSjkBDdptAAAAAElFTkSuQmCC",
+      "expected": "{\"name\":\"测试\",\"description\":\"旧卡\",\"spec\":\"chara_card_v2\"}"
+    },
+    {
+      "id": "roundtrip",
+      "fn": "read",
+      "inputPng": "iVBORw0KGgoAAAANSUhEUgAAAAAAAAAAAAAAAAAukGgPAAAAA0lEQVQBAgNTNxetAAAAanRFWHRjaGFyYQBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDE5FsDT1gAAAKV0RVh0Y2N2MwBleUp1WVcxbElqb2k1cldMNksrVklpd2laR1Z6WTNKcGNIUnBiMjRpT2lMbWxyRGxqYUVpTENKa1lYUmhJanA3SW1WNGRHVnVjMmx2Ym5NaU9uc2labUYySWpwMGNuVmxmWDBzSW5Od1pXTWlPaUpqYUdGeVlWOWpZWEprWDNZeklpd2ljM0JsWTE5MlpYSnphVzl1SWpvaU15NHdJbjA9OQbkpgAAAABJRU5ErkJggg==",
+      "expected": "{\"name\":\"测试\",\"description\":\"新卡\",\"data\":{\"extensions\":{\"fav\":true}},\"spec\":\"chara_card_v3\",\"spec_version\":\"3.0\"}"
+    }
+  ]
+}

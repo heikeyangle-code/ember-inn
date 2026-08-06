@@ -11,6 +11,8 @@
   parseDecorators、parseRegexFromString/escapeRegex）生成 fixture。
 - `worldinfo-scan-official.mjs`：checkWorldInfo 全流程（关键词/常驻/递归/预算/
   min activations/分组/角色标签过滤/sticky/cooldown/delay/概率）生成 fixture。
+- `card-png-official.mjs`：PNG 角色卡 write/read（chara/ccv3 双写、旧块清理、
+  ccv3 优先、往返）生成 fixture。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
   读快照，调 Kotlin 引擎，断言一致。
@@ -18,6 +20,8 @@
   世界书对拍。
 - `engine/src/test/kotlin/com/emberinn/engine/worldinfo/WorldInfoScanDiffTest.kt`：
   世界书整体扫描对拍。
+- `engine/src/test/kotlin/com/emberinn/engine/card/CardPngDiffTest.kt`：
+  PNG 角色卡读写对拍。
 
 ## 用法
 
@@ -26,6 +30,7 @@
 node scripts/diff/instruct-official.mjs
 node scripts/diff/worldinfo-official.mjs
 node scripts/diff/worldinfo-scan-official.mjs
+node scripts/diff/card-png-official.mjs
 ```
 
 重新生成快照后，`./gradlew :engine:test` 跑全部对比测试。
