@@ -82,66 +82,78 @@ data class MacroEnv(
  */
 object MacroEngine {
 
-    private val macroRegex = Regex("""\{\{([a-zA-Z_]+)(?:::(.*?))?\}\}""")
-    private val spaceArgsRegex = Regex("""\{\{([a-zA-Z_]+)\s+([^{}]*?)\}\}""")
-    private val scopedIfRegex = Regex("""\{\{if\s+([\s\S]*?)\}\}""")
     private val closingIfRegex = Regex("""\{\{/if\}\}""")
-    private val openingIfScan = Regex("""\{\{if\s""")
+    private val openingIfScan = Regex("""\{\{if(?:\s|::)""")
     private val elseRegex = Regex("""\{\{else(?:::[^{}]*)?\}\}""")
 
-    private val zeroArgMacros = setOf("user", "char", "isotime", "isodate", "time", "date", "weekday")
-    private val variableShorthandRegex = Regex("""\{\{([.\$])([A-Za-z0-9_]+)\}\}""")
-    private val spaceArgMacros = setOf("roll", "random", "pick", "time")
     private val falsyValues = setOf("false", "off", "0")
     private val legacyTrimRegex = Regex("""(?:\r?\n)*\{\{trim\}\}(?:\r?\n)*""", RegexOption.IGNORE_CASE)
+    private val shorthandOpRegex = Regex(
+        """^([.\$])([A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*)(?:\s*(\|\|=|\?\?=|\|\||\?\?|==|!=|>=|<=|\+=|-=|\+\+|--|[=<>])\s*(.*))?$""",
+        RegexOption.DOT_MATCHES_ALL,
+    )
 
     fun substitute(text: String, env: MacroEnv): String {
         // 对齐官方 MacroEnvBuilder：contentHash = getStringHash(整个被替换文本)，全文档一致
-        val result = substituteWithEnv(text, env.copy(contentHash = StringHash.get(text)))
+        // 官方 core:legacy-markers：<USER>/<BOT>/<CHAR>/<GROUP>/<CHARIFNOTGROUP> → 宏
+        val preprocessed = text
+            .replace(Regex("""<USER>""", RegexOption.IGNORE_CASE), "{{user}}")
+            .replace(Regex("""<BOT>""", RegexOption.IGNORE_CASE), "{{char}}")
+            .replace(Regex("""<CHAR>""", RegexOption.IGNORE_CASE), "{{char}}")
+            .replace(Regex("""<GROUP>""", RegexOption.IGNORE_CASE), "{{group}}")
+            .replace(Regex("""<CHARIFNOTGROUP>""", RegexOption.IGNORE_CASE), "{{charIfNotGroup}}")
+        val result = substituteWithEnv(preprocessed, env.copy(contentHash = StringHash.get(text)))
         // 官方 core:legacy-trim：{{trim}} 及其前后换行在全部宏处理完后移除
         return result.replace(legacyTrimRegex, "")
     }
 
     private fun substituteWithEnv(text: String, env: MacroEnv): String {
-        val withoutScoped = replaceScopedIf(text, env)
-        return replaceInline(withoutScoped, env)
+        val withoutScopedTrim = replaceScopedTrim(text, env)
+        // 作用域 if 在 replaceInline 内按文档顺序处理（setvar 等先执行）
+        return replaceInline(withoutScopedTrim, env)
     }
 
-    // ---------- 作用域 if 块 ----------
-    private fun replaceScopedIf(text: String, env: MacroEnv): String {
+    // ---------- 作用域 {{trim}}...{{/trim}} ----------
+    private fun replaceScopedTrim(text: String, env: MacroEnv): String {
         val sb = StringBuilder()
         var i = 0
         while (i < text.length) {
-            val open = scopedIfRegex.find(text, i) ?: break
+            val open = Regex("""\{\{trim\}\}""").find(text, i) ?: break
             sb.append(text, i, open.range.first)
-            val bodyStart = open.range.last + 1
-            val close = findMatchingClose(text, bodyStart)
+            val close = findMatchingTagClose(text, open.range.last + 1, "trim")
             if (close == null) {
-                // 无闭合标签：尝试内联 {{if 条件::内容}}，否则原样保留
-                val body = open.value.removePrefix("{{if").removeSuffix("}}").trim()
-                val sep = body.indexOf("::")
-                if (sep > 0) {
-                    val condition = body.substring(0, sep).trim()
-                    val content = body.substring(sep + 2)
-                    val falsy = evaluateCondition(condition, env)
-                    sb.append(if (!falsy) substituteWithEnv(content, env).trim() else "")
-                } else {
-                    sb.append(open.value)
-                }
+                sb.append(open.value)
                 i = open.range.last + 1
                 continue
             }
-            val inner = text.substring(bodyStart, close.range.first)
-            val condition = open.groupValues[1].trim()
-            val evaluated = evaluateCondition(condition, env)
-            val split = splitTopLevelElse(inner)
-            val chosen = if (!evaluated) split.first else split.second
-            val result = if (chosen != null) substituteWithEnv(chosen, env).trim() else ""
-            sb.append(result)
+            val body = text.substring(open.range.last + 1, close.range.first)
+            sb.append(substituteWithEnv(replaceScopedTrim(body, env), env).trim())
             i = close.range.last + 1
         }
         if (i < text.length) sb.append(text, i, text.length)
         return sb.toString()
+    }
+
+    private fun findMatchingTagClose(text: String, start: Int, tag: String): MatchResult? {
+        val openRe = Regex("""\{\{$tag\}\}""")
+        val closeRe = Regex("""\{\{/$tag\}\}""")
+        var depth = 1
+        var pos = start
+        while (pos < text.length) {
+            val o = openRe.find(text, pos)
+            val c = closeRe.find(text, pos)
+            val next = when {
+                o == null && c == null -> null
+                o == null -> c
+                c == null -> o
+                else -> if (o.range.first < c.range.first) o else c
+            } ?: break
+            val isOpen = o != null && next.range.first == o.range.first
+            if (isOpen) depth++ else depth--
+            pos = next.range.last + 1
+            if (depth == 0) return next
+        }
+        return null
     }
 
     private fun findMatchingClose(text: String, start: Int): MatchResult? {
@@ -196,9 +208,10 @@ object MacroEngine {
             val store = if (shorthand.groupValues[1] == ".") env.local else env.global
             resolved = store.get(shorthand.groupValues[2]) ?: ""
         }
-        // 单参数宏名（minArgs=0）自动解析
-        if (Regex("""^[a-zA-Z_][a-zA-Z0-9_]*$""").matches(resolved) && resolved.lowercase() in zeroArgMacros) {
-            resolved = replaceInline("{{$resolved}}", env)
+        // 条件为单个宏名：已注册宏解析（noop→空、char→名字）；未注册保持字面量
+        if (Regex("""^[a-zA-Z_][a-zA-Z0-9_]*$""").matches(resolved)) {
+            val attempted = replaceInline("{{$resolved}}", env)
+            if (attempted != "{{$resolved}}") resolved = attempted
         }
         var falsy = resolved.isEmpty() || isFalseBoolean(resolved)
         if (inverted) falsy = !falsy
@@ -210,32 +223,158 @@ object MacroEngine {
 
     // ---------- 行内宏 ----------
     private fun replaceInline(text: String, env: MacroEnv): String {
-        var out = macroRegex.replace(text) { m ->
-            val name = m.groupValues[1]
-            val args = m.groupValues[2]
-            val raw = m.value
-            resolve(name, args, env, m.range.first, raw)
-        }
-        // 旧式空格参数：{{roll 1d20}} {{random a,b}} {{pick a,b}} {{time UTC+2}}
-        out = spaceArgsRegex.replace(out) { m ->
-            val name = m.groupValues[1].lowercase()
-            if (name in spaceArgMacros && !m.value.contains("::")) {
-                resolve(name, m.groupValues[2], env, m.range.first, m.value)
-            } else {
-                m.value
+        val sb = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            val open = text.indexOf("{{", i)
+            if (open < 0) { sb.append(text, i, text.length); break }
+            sb.append(text, i, open)
+            val macroClose = findMacroClose(text, open + 2)
+            if (macroClose < 0) { sb.append(text, open, text.length); break }
+            val inner = text.substring(open + 2, macroClose)
+            val raw = text.substring(open, macroClose + 2)
+
+            if (inner.startsWith("//")) {
+                i = macroClose + 2
+                continue
             }
-        }
-        // 变量简写 {{.name}} / {{$name}}（无运算符版）
-        out = variableShorthandRegex.replace(out) { m ->
-            val prefix = m.groupValues[1]
-            val name = m.groupValues[2]
-            val store = if (prefix == ".") env.local else env.global
-            store.get(name) ?: ""
+            val shortInner = inner.trimStart()
+            if (shortInner.startsWith(".") || shortInner.startsWith("$")) {
+                val m = shorthandOpRegex.matchEntire(shortInner)
+                if (m == null) {
+                    sb.append(raw)
+                    i = macroClose + 2
+                    continue
+                }
+                val store = if (m.groupValues[1] == ".") env.local else env.global
+                val name = m.groupValues[2]
+                val op = m.groupValues[3]
+                val rawValue = m.groupValues[4].trim()
+                val value = if (rawValue.contains("{{")) substituteWithEnv(rawValue, env) else rawValue
+                when (op) {
+                    "" -> sb.append(store.get(name) ?: "")
+                    "=" -> store.set(name, value)
+                    "+=" -> addVariable(store, name, value)
+                    "-=" -> addVariable(store, name, "-$value")
+                    "++" -> sb.append(addVariable(store, name, "1"))
+                    "--" -> sb.append(addVariable(store, name, "-1"))
+                    "||" -> {
+                        val current = store.get(name)
+                        if (current == null || current.isEmpty() || isFalseBoolean(current)) {
+                            sb.append(value)
+                        } else {
+                            sb.append(current)
+                        }
+                    }
+                    "??" -> sb.append(store.get(name) ?: value)
+                    "||=" -> {
+                        val current = store.get(name)
+                        if (current == null || current.isEmpty() || isFalseBoolean(current)) {
+                            store.set(name, value)
+                            sb.append(value)
+                        } else {
+                            sb.append(current)
+                        }
+                    }
+                    "??=" -> {
+                        val current = store.get(name)
+                        if (current == null) {
+                            store.set(name, value)
+                            sb.append(value)
+                        } else {
+                            sb.append(current)
+                        }
+                    }
+                    "==" -> sb.append(if ((store.get(name) ?: "") == value) "true" else "false")
+                    "!=" -> sb.append(if ((store.get(name) ?: "") != value) "true" else "false")
+                    ">", ">=", "<", "<=" -> {
+                        val cmp = compareNumeric(store.get(name), value)
+                        val result = cmp != null && when (op) {
+                            ">" -> cmp > 0
+                            ">=" -> cmp >= 0
+                            "<" -> cmp < 0
+                            else -> cmp <= 0
+                        }
+                        sb.append(if (result) "true" else "false")
+                    }
+                }
+                i = macroClose + 2
+                continue
+            }
+            if (inner.startsWith("/") || inner.startsWith("else")) {
+                sb.append(raw)
+                i = macroClose + 2
+                continue
+            }
+
+            val (name, args, hasSep) = parseMacroHead(inner)
+            if (name.isEmpty()) { sb.append(raw); i = macroClose + 2; continue }
+
+            // 作用域 {{if 条件}}...{{/if}}：按文档顺序求值（嵌套宏条件已完整捕获）
+            if (
+                name.equals("if", ignoreCase = true) && hasSep &&
+                ((inner.length > 2 && inner[2].isWhitespace()) || inner.startsWith("if::"))
+            ) {
+                val ifClose = findMatchingClose(text, macroClose + 2)
+                if (ifClose != null) {
+                    val conditionRaw = args
+                    val innerText = text.substring(macroClose + 2, ifClose.range.first)
+                    val evaluated = evaluateCondition(conditionRaw, env)
+                    val split = splitTopLevelElse(innerText)
+                    val chosen = if (!evaluated) split.first else split.second
+                    sb.append(if (chosen != null) substituteWithEnv(chosen, env).trim() else "")
+                    i = ifClose.range.last + 1
+                    continue
+                }
+            }
+
+            // 官方：嵌套宏先内层后外层（inside-out）
+            val resolvedArgs = if (hasSep && args.contains("{{")) substituteWithEnv(args, env) else args
+            sb.append(resolve(name, resolvedArgs, env, open, raw))
+            i = macroClose + 2
         }
         // 注释宏 {{// ...}} -> ''
-        out = out.replace(Regex("""\{\{//[^{}]*\}\}"""), "")
+        val out = sb.toString().replace(Regex("""\{\{//[^{}]*\}\}"""), "")
         // 孤立标记清理
         return out.replace(Regex("""\{\{(?:else|/if)(?:::[^{}]*)?\}\}"""), "")
+    }
+
+    /** 找到与 {{ 配对的 }}，支持嵌套 {{...}}。 */
+    private fun findMacroClose(text: String, from: Int): Int {
+        var depth = 1
+        var i = from
+        while (i < text.length) {
+            if (text.startsWith("{{", i)) { depth++; i += 2; continue }
+            if (text.startsWith("}}", i)) {
+                depth--
+                if (depth == 0) return i
+                i += 2
+                continue
+            }
+            i++
+        }
+        return -1
+    }
+
+    /** 解析 {{name...}} 内部：名字 + 分隔符（:: / : / 空格）+ 参数。 */
+    private fun parseMacroHead(inner: String): Triple<String, String, Boolean> {
+        var j = 0
+        while (j < inner.length && (inner[j].isLetterOrDigit() || inner[j] == '_')) j++
+        val name = inner.substring(0, j)
+        if (j >= inner.length) return Triple(name, "", false)
+        return when {
+            inner.startsWith("::", j) -> Triple(name, inner.substring(j + 2), true)
+            inner[j] == ':' -> Triple(name, inner.substring(j + 1), true)
+            inner[j].isWhitespace() -> Triple(name, inner.substring(j + 1).trim(), true)
+            else -> Triple(name, "", false)
+        }
+    }
+
+    /** 数值比较：两侧都可解析为数字时比较，否则 null（恒假）。 */
+    private fun compareNumeric(left: String?, right: String): Int? {
+        val l = left?.trim()?.toDoubleOrNull()
+        val r = right.trim().toDoubleOrNull()
+        return if (l != null && r != null) l.compareTo(r) else null
     }
 
     private fun resolve(name: String, args: String, env: MacroEnv, offset: Int, raw: String): String =
@@ -336,7 +475,8 @@ object MacroEngine {
             "addglobalvar" -> { addVariableArgs(args, env.global); "" }
             "incglobalvar" -> incDecVariableArgs(args, env.global, 1)
             "decglobalvar" -> incDecVariableArgs(args, env.global, -1)
-            else -> raw
+            // 官方：未知宏保留语法，但嵌套参数已解析
+            else -> if (args.isEmpty()) raw else "{{" + name + "::" + args + "}}"
         }
 
     private fun lastMessageIdMacro(env: MacroEnv): Int? {

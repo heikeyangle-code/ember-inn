@@ -32,6 +32,9 @@ object SlashRegistry {
             "OK:sendas:${it.namedArgs["name"] ?: ""}:${it.unnamedArgs.joinToString(" ")}"
         })
         register(SlashCommandDef("echo", description = "原样返回无名参数") { it.unnamedArgs.joinToString(" ") })
+        register(SlashCommandDef("pass", aliases = listOf("return"), description = "把文本传给下一条命令（管道透传）") {
+            it.unnamedArgs.joinToString(" ")
+        })
         register(SlashCommandDef("persona", description = "切换人设") {
             "OK:persona:${it.unnamedArgs.joinToString(" ")}:mode=${it.namedArgs["mode"] ?: "all"}"
         })

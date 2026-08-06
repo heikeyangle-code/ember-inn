@@ -26,4 +26,16 @@ class SlashEngineTest {
     fun `closure output piped`() {
         assertEquals("OK:sys:内层", SlashEngine.execute("/echo {: /sys 内层 :} | /echo"))
     }
+
+    @Test
+    fun `pass forwards unnamed args and pipe value`() {
+        assertEquals("Hello World", SlashEngine.execute("/pass Hello World"))
+        assertEquals("abc", SlashEngine.execute("/echo abc | /pass"))
+        assertEquals("", SlashEngine.execute("/pass"))
+    }
+
+    @Test
+    fun `pass closure resolves value`() {
+        assertEquals("test", SlashEngine.execute("/pass {: /echo test :}"))
+    }
 }
