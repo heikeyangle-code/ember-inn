@@ -390,6 +390,37 @@ theme      全局主题 + 角色卡驱动主题
 - **上游跟进（我们是重写，不是 git 合并官方）**：官方发版 → 对照 CHANGELOG + 官方行为回归测试 → 翻译/移植新功能到对应模块 → CI 全量验证；按版本节奏（每月/每大版）例行执行
 - **分层纪律**：engine 不依赖 UI；data 不依赖 engine；provider 只做协议；新增功能先落接口再落实现
 
+## 架构可扩展原则（一切为改 / 合并 / 升级 / 加功能服务）
+
+1. **单向依赖**：`app → engine / data / provider / services / theme`；engine 不依赖 UI，data 不依赖 engine，provider 只做协议——依赖只朝一个方向
+2. **先接口后实现**：所有可变点（LlmProvider / CardParser / WorldBookScanner / MacroEngine / SlashParser / PromptAssembler / TTS / ImageGen / VectorStore / Translator / ThemeSource）先定接口再写实现；新增功能 = 新实现 + 注册，不侵入核心
+3. **数据驱动注册表**：供应商、主题预设、默认模型 = JSON 数据表；加新条目不改代码
+4. **接口/事件通信**：模块之间通过接口与事件通信，不互相 import 具体实现类
+5. **功能开关**：新功能一律带 feature flag，可灰度、可回滚
+6. **依赖版本目录**：组件版本全部收进 `gradle/libs.versions.toml` + Renovate 自动 PR
+7. **上游跟进**：官方发版 → CHANGELOG + 官方行为回归测试 → 翻译/移植到对应模块 → CI 全量验证（重写项目不是 git 合并）
+8. **回归测试锁行为**：每个引擎模块配官方行为对照测试，任何改动不得破坏兼容
+
+## 社区需求 → 路线图映射
+
+| 社区需求（官方 issue） | 优先级 | 落点 |
+|---|---|---|
+| 每条消息滑动切回复 #1731 | P1 | 聊天页消息流（每条消息可滑） |
+| 聊天历史分块裁剪 #1278 | P2 | 引擎：上下文管理 / tokenizer |
+| RAG / 知识库 #1671 | P3 | services：向量库 |
+| 快捷回复全屏编辑器 #2285 | P3 | 快捷回复管理页 |
+| 一键生成聊天背景 #937 | P4 | 主题：背景生成（接图像服务） |
+| 内置代理 #831 | P5 | services：网络代理 |
+| 无障碍 / 读屏 #2694 | P0 贯穿 | 所有页面验收标准 |
+| 世界书负深度 #3344 | P2 | 世界书引擎 |
+| 聊天内单独显示角色名 #4357 | P1 | 聊天显示 |
+| 世界书注入改进 / 激活组 / Freeze to History #5655 #3762 #5852 | P2 | 世界书引擎 |
+| Persona 并入 Character + 每角色模型 #3139 | P0 / P2 | 数据模型 + 模型覆盖 |
+| 表情精灵 | P4 | 主题 / 消息头像 |
+| 视觉小说模式 | 远期 | — |
+| TTS | P3 | services |
+| 记忆 / 总结 | P3 | services |
+
 ## 技术栈
 
 Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose · Room · DataStore · Coil3 · Lottie · Koin · kotlinx.serialization
