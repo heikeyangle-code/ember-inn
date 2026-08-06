@@ -373,6 +373,23 @@ theme      全局主题 + 角色卡驱动主题
 - 角色卡驱动主题（每卡一套观感）——无一家做到位
 - 人性化细节（设置搜索 / 空状态引导 / 人话报错 / 可撤销）——开源项目普遍缺失
 
+## 连接与模型设置（供应商三步完成）
+
+> 目标：**选供应商 → 粘贴 API Key → 完成**。参考旧项目 `ProviderSetting`（3 协议类型 + DEFAULT_PROVIDERS 预填）与官方对比：官方是“每个厂商一整个表单页”，我们只让用户填一个 Key。
+
+1. **选供应商**：网格列表（图标 + 名字 + 一句话说明 + 搜索），预填 20+ 家（OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter / Groq / Ollama / Mistral / xAI / Kimi / 智谱 / 通义 / 硅基流动 / MiniMax / Fireworks / Perplexity / 火山 / Azure / 自定义……），base_url、认证方式、模型端点全部预填（数据来自官方源码核实表）
+2. **粘贴 API Key**：唯一必填；粘贴自动去空格；旁边「测试连接」一键验证（复用官方 /status 逻辑），成功自动拉取模型列表并选中默认模型
+3. **完成**：可展开「高级」改 base_url / 采样参数 / 自定义请求头 / 代理 / 思维链；模型拉不到时用预填 default_models 兜底
+
+**连接档案**：可建多个（命名、切换）、全局默认 + 每角色可选覆盖（呼应官方 EPIC #3139）；扫码导入导出分享（沿用旧项目概念）
+
+## 上游跟进与扩展策略
+
+- **供应商 = 数据 + 3 个协议类**：openai-compatible / anthropic / google，加新厂商只改注册表 JSON，不动协议代码
+- **可扩展接口**：LlmProvider / CardParser / WorldBookScanner / MacroEngine / SlashParser / PromptAssembler / TTS / ImageGen / VectorStore / Translator / ThemeSource——新功能按接口插，不侵入核心
+- **上游跟进（我们是重写，不是 git 合并官方）**：官方发版 → 对照 CHANGELOG + 官方行为回归测试 → 翻译/移植新功能到对应模块 → CI 全量验证；按版本节奏（每月/每大版）例行执行
+- **分层纪律**：engine 不依赖 UI；data 不依赖 engine；provider 只做协议；新增功能先落接口再落实现
+
 ## 技术栈
 
 Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose · Room · DataStore · Coil3 · Lottie · Koin · kotlinx.serialization
