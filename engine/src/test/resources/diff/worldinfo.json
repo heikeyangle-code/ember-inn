@@ -1,0 +1,259 @@
+{
+  "generated": "2026-08-06T19:46:30.612Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "mk_plain_ci",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "Hello World",
+        "needle": "world",
+        "messages": [
+          "Hello World"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_case_sensitive",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "Hello World",
+        "needle": "world",
+        "messages": [
+          "Hello World"
+        ],
+        "caseSensitive": true
+      },
+      "expected": false
+    },
+    {
+      "id": "mk_whole_word_single",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "x,y",
+        "needle": "y",
+        "messages": [
+          "x,y"
+        ],
+        "matchWholeWords": true
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_whole_word_no_match",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "x,yz",
+        "needle": "y",
+        "messages": [
+          "x,yz"
+        ],
+        "matchWholeWords": true
+      },
+      "expected": false
+    },
+    {
+      "id": "mk_whole_word_multi",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "xx hello world yy",
+        "needle": "hello world",
+        "messages": [
+          "xx hello world yy"
+        ],
+        "matchWholeWords": true
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_regex_i",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "FOO bar",
+        "needle": "/foo/i",
+        "messages": [
+          "FOO bar"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_regex_escaped_slash",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "a/b",
+        "needle": "/a\\/b/",
+        "messages": [
+          "a/b"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_multiword_plain",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "hello world",
+        "needle": "hello",
+        "messages": [
+          "hello world"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "score_primary_count",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a b"
+        ],
+        "key": [
+          "a",
+          "b"
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "id": "score_and_all_full",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a b c"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b",
+          "c"
+        ],
+        "selectiveLogic": 3
+      },
+      "expected": 3
+    },
+    {
+      "id": "score_and_all_partial",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a b"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b",
+          "c"
+        ],
+        "selectiveLogic": 3
+      },
+      "expected": 1
+    },
+    {
+      "id": "score_and_any",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a c"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b",
+          "c"
+        ],
+        "selectiveLogic": 0
+      },
+      "expected": 2
+    },
+    {
+      "id": "score_no_keys",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a"
+        ],
+        "key": []
+      },
+      "expected": 0
+    },
+    {
+      "id": "dec_plain",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "hello"
+      },
+      "expected": [
+        [],
+        "hello"
+      ]
+    },
+    {
+      "id": "dec_activate",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate\nbody"
+      },
+      "expected": [
+        [
+          "@@activate"
+        ],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_dont",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@dont_activate\nx"
+      },
+      "expected": [
+        [
+          "@@dont_activate"
+        ],
+        "x"
+      ]
+    },
+    {
+      "id": "dec_triple_skipped",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@@activate\nbody"
+      },
+      "expected": [
+        [],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_unknown_then_known",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@bogus\n@@activate\nbody"
+      },
+      "expected": [
+        [
+          "@@activate"
+        ],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_blank_line",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate\n\nbody"
+      },
+      "expected": [
+        [
+          "@@activate"
+        ],
+        "\nbody"
+      ]
+    }
+  ]
+}

@@ -71,13 +71,20 @@ object PromptAssembler {
         quietPrompt: String = "",
         groupNudge: String = DEFAULT_GROUP_NUDGE,
         impersonationPrompt: String = "",
+        bias: String = "",
+        personalityFormat: String = DEFAULT_PERSONALITY_FORMAT,
+        scenarioFormat: String = DEFAULT_SCENARIO_FORMAT,
     ): List<PromptMessage> {
         val env = MacroEnv(user = user, char = char)
-        val personalityText = if (charPersonality.isNotEmpty() && DEFAULT_PERSONALITY_FORMAT.isNotEmpty()) {
-            MacroEngine.substitute(DEFAULT_PERSONALITY_FORMAT, env)
+        // 官方 substituteParams 的 env 来自活动角色卡：{{personality}}/{{scenario}} 解析到传入文本
+        val cardEnv = env.copy(
+            character = env.character.copy(personality = charPersonality, scenario = scenario),
+        )
+        val personalityText = if (charPersonality.isNotEmpty() && personalityFormat.isNotEmpty()) {
+            MacroEngine.substitute(personalityFormat, cardEnv)
         } else charPersonality
-        val scenarioText = if (scenario.isNotEmpty() && DEFAULT_SCENARIO_FORMAT.isNotEmpty()) {
-            MacroEngine.substitute(DEFAULT_SCENARIO_FORMAT, env)
+        val scenarioText = if (scenario.isNotEmpty() && scenarioFormat.isNotEmpty()) {
+            MacroEngine.substitute(scenarioFormat, cardEnv)
         } else scenario
         val groupNudgeText = if (groupNudge.isNotEmpty()) MacroEngine.substitute(groupNudge, env) else ""
 
@@ -90,11 +97,92 @@ object PromptAssembler {
             PromptMessage("system", impersonationPrompt, identifier = "impersonate"),
             PromptMessage("system", quietPrompt, identifier = "quietPrompt"),
             PromptMessage("system", groupNudgeText, identifier = "groupNudge"),
+            PromptMessage("assistant", bias, identifier = "bias"),
         )
         val withPersona = if (persona.isNotEmpty()) {
             prompts + PromptMessage("system", persona, identifier = "personaDescription")
         } else prompts
         return withPersona.filter { it.content.isNotBlank() }
+    }
+
+    /**
+     * 对齐 openai.js preparePromptsForChatCompletion 纯逻辑：
+     * 系统提示 + 扩展注入 → PromptManager 集合合并 → main/jailbreak override。
+     * 边界：PromptManager 的 injection_position/depth 真正插入聊天属于后续阶段。
+     */
+    fun preparePromptsForChatCompletion(
+        scenario: String,
+        charPersonality: String,
+        name2: String,
+        worldInfoBefore: String,
+        worldInfoAfter: String,
+        charDescription: String,
+        quietPrompt: String,
+        bias: String,
+        extensionPrompts: Map<String, ExtensionPrompt>,
+        systemPromptOverride: String,
+        jailbreakPromptOverride: String,
+        type: String,
+        userOrder: List<PromptOrderEntry>,
+        userPrompts: List<PromptItem>,
+        env: MacroEnv,
+        personaDescription: String = "",
+        personaInPrompt: Boolean = false,
+        impersonationPrompt: String = "",
+        personalityFormat: String = DEFAULT_PERSONALITY_FORMAT,
+        scenarioFormat: String = DEFAULT_SCENARIO_FORMAT,
+        groupNudge: String = DEFAULT_GROUP_NUDGE,
+    ): PromptItems {
+        val base = buildSystemPrompts(
+            charDescription = charDescription,
+            charPersonality = charPersonality,
+            scenario = scenario,
+            worldInfoBefore = worldInfoBefore,
+            worldInfoAfter = worldInfoAfter,
+            char = name2,
+            user = env.user,
+            persona = "",
+            quietPrompt = quietPrompt,
+            groupNudge = groupNudge,
+            impersonationPrompt = impersonationPrompt,
+            bias = bias,
+            personalityFormat = personalityFormat,
+            scenarioFormat = scenarioFormat,
+        )
+        val systemPrompts = ExtensionPromptInjection.inject(
+            base,
+            extensionPrompts,
+            personaDescription = personaDescription,
+            personaInPrompt = personaInPrompt,
+        )
+
+        val collection = PromptManagerCore.getCollection(userOrder, userPrompts, type, env)
+        val merged = PromptManagerCore.mergeSystemPrompts(collection, systemPrompts)
+
+        val order = userOrder.ifEmpty { PromptManagerCore.DEFAULT_ORDER_ENTRIES }
+        val mainEnabled = order.firstOrNull { it.identifier == "main" }?.enabled ?: true
+        val jailbreakEnabled = order.firstOrNull { it.identifier == "jailbreak" }?.enabled ?: true
+
+        applyPromptOverride(merged, "main", systemPromptOverride, mainEnabled, env)
+        applyPromptOverride(merged, "jailbreak", jailbreakPromptOverride, jailbreakEnabled, env)
+        return merged
+    }
+
+    /** 对齐官方 override：原始内容作为 {{original}}，替换后标记 overriddenPrompts。 */
+    private fun applyPromptOverride(
+        collection: PromptItems,
+        identifier: String,
+        override: String,
+        enabled: Boolean,
+        env: MacroEnv,
+    ) {
+        if (override.isEmpty() || !enabled) return
+        val item = collection.get(identifier) ?: return
+        if (item.forbidOverrides) return
+        val original = item.content
+        val replacement = PromptManagerCore.prepare(item.copy(content = override), env, original = original)
+        val idx = collection.index(identifier)
+        if (idx != -1) collection.override(replacement, idx)
     }
 
     /** 对齐 setOpenAIMessages：chat → OpenAI 消息（names_behavior 前缀）。 */

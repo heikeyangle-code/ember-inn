@@ -38,7 +38,7 @@
 ## 剩余工作（按顺序）
 1. **CI 恢复后跑** `./gradlew :engine:test :app:assembleDebug`（runner 此前 queued），红灯就修
 2. PromptManager 接入 app：用户顺序编辑/持久化 UI + 角色级 prompt_order
-3. **差分验证扩展到其它模块**：world-info（checkWorldInfo/getSortedEntries/timed effects）、宏引擎、regex、slash、卡片导入导出；官方发版时重生成 fixture
+3. **差分验证扩展到其它模块**：✅ 已覆盖 world-info 的 matchKeys/getScore/parseDecorators（WorldInfoDiffTest，19 例）；剩余 checkWorldInfo 整体流程/getSortedEntries/timed effects、宏引擎、regex、slash、卡片导入导出；官方发版时重生成 fixture
 4. 全量 1:1 审计：PromptAssembler（bias/systemPromptOverride/jailbreakOverride）、ChatHistory/DialogueExamples 逐行对照、世界书 filterByInclusionGroups 细节
 5. UI 按 README 严谨收尾：聊天 Tab/设置页、真实模型对话（提供商三步配置）、角色详情世界书编辑、人设/预设、全局搜索、真毛玻璃/氛围渐变、CharX/BYAF 资源提取
 6. 推送：等用户说推再推

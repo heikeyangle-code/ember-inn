@@ -93,20 +93,24 @@ class WorldInfoBuffer(
     }
 
     private fun parseRegexFromString(text: String): Regex? {
-        val m = Regex("^/(.*)/([a-z]*)$", RegexOption.DOT_MATCHES_ALL).matchEntire(text) ?: return null
-        val pattern = m.groupValues[1]
+        // 对齐官方 parseRegexFromString：gimsuy、拒绝未转义斜杠、反转义 \/
+        val m = Regex("""^/([\w\W]+?)/([gimsuy]*)$""").matchEntire(text) ?: return null
+        var pattern = m.groupValues[1]
+        if (Regex("""(^|[^\\])/""").containsMatchIn(pattern)) return null
+        pattern = pattern.replace("\\/", "/")
         val flags = m.groupValues[2]
         val options = buildSet {
             if ('i' in flags) add(RegexOption.IGNORE_CASE)
             if ('m' in flags) add(RegexOption.MULTILINE)
             if ('s' in flags) add(RegexOption.DOT_MATCHES_ALL)
+            // 边界：u/y 在 Kotlin Regex 无直接等价；g 的 lastIndex 状态语义官方也依赖外部 reset
         }
         return runCatching { Regex(pattern, options) }.getOrNull()
     }
 
     private fun escapeRegex(s: String): String = buildString {
         for (c in s) {
-            if (c in "\\^$.|?*+()[]{}") append('\\')
+            if (c in """/-\^$*+?.()|[]{}""") append('\\')
             append(c)
         }
     }
