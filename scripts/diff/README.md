@@ -14,7 +14,8 @@
 - `card-png-official.mjs`：PNG 角色卡 write/read（chara/ccv3 双写、旧块清理、
   ccv3 优先、往返）生成 fixture。
 - `macros-official.mjs`：从官方 MacroEngine.e2e.js 提取字面用例（基础/参数/嵌套/
-  注释/trim/legacy 标记/{{if}}/变量简写运算符）生成 fixture。
+  注释/trim/legacy 标记/{{if}}/变量简写运算符/括号边界）生成 fixture。
+- `pick-official.mjs`：用官方 seedrandom@3.0.5（vendor）生成 {{pick}} 确定性基准。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
   读快照，调 Kotlin 引擎，断言一致。
@@ -26,6 +27,8 @@
   PNG 角色卡读写对拍。
 - `engine/src/test/kotlin/com/emberinn/engine/macros/MacroDiffTest.kt`：
   宏引擎对拍（环境 name1=User/name2=Character + 变量预置）。
+- `engine/src/test/kotlin/com/emberinn/engine/macros/PickDiffTest.kt`：
+  {{pick}} 种子公式/随机数逐位对拍。
 
 ## 用法
 
@@ -36,6 +39,7 @@ node scripts/diff/worldinfo-official.mjs
 node scripts/diff/worldinfo-scan-official.mjs
 node scripts/diff/card-png-official.mjs
 node scripts/diff/macros-official.mjs
+node scripts/diff/pick-official.mjs
 ```
 
 重新生成快照后，`./gradlew :engine:test` 跑全部对比测试。

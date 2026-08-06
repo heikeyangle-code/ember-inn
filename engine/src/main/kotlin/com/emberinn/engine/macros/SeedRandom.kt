@@ -60,11 +60,13 @@ class SeedRandom(seed: String) {
             // 官方：空 key [] 视为 [0]
             val keyArr = if (key.isEmpty()) intArrayOf(0) else key
             val keyLen = keyArr.size
+            // 官方 KSA 用局部 j（me.j 保持 0，g 从 0 开始）
+            var ksaJ = 0
             for (k in 0 until WIDTH) {
-                j = MASK and (j + keyArr[k % keyLen] + s[k])
                 val t = s[k]
-                s[k] = s[j]
-                s[j] = t
+                ksaJ = MASK and (ksaJ + keyArr[k % keyLen] + t)
+                s[k] = s[ksaJ]
+                s[ksaJ] = t
             }
             g(WIDTH) // RC4-drop[256]
         }

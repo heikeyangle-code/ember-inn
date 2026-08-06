@@ -15,8 +15,8 @@
 
 **已覆盖**：instruct（36 例）、world-info matchKeys/getScore/parseDecorators（19 例）、
 regex runRegexScript（13 例）、world-info checkWorldInfo 整体扫描（17 例，含两段扫描
-sticky/cooldown/概率）、PNG 角色卡读写（6 例）、官方宏 e2e（142 例，含变量简写
-全部运算符 ==/!=/>/>=/</<=/=/+=/-=/++/--/||/??/||=/??=）。
+sticky/cooldown/概率）、PNG 角色卡读写（6 例）、官方宏 e2e（158 例，含变量简写
+全部运算符与括号边界）、{{pick}} 确定性（5 例，seedrandom@3.0.5 逐位一致）。
 **待覆盖**：宏引擎、slash 解析器、卡片导入导出。
 
 **关键规则**：本地不要编译（用户明确要求），靠 CI `:engine:test` 验证；

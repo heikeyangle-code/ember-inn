@@ -1,0 +1,36 @@
+{
+  "generated": "2026-08-06T21:08:52.952Z",
+  "source": "sillytavern-ref seedrandom@3.0.5",
+  "cases": [
+    {
+      "id": "two_picks_different_offsets",
+      "chatIdHash": 123456,
+      "input": "Choices: {{pick::red::green::blue}}, {{pick::red::green::blue}}.",
+      "expected": "Choices: red, green."
+    },
+    {
+      "id": "chinese_pick",
+      "chatIdHash": 123456,
+      "input": "选择：{{pick::甲::乙::丙}}",
+      "expected": "选择：乙"
+    },
+    {
+      "id": "two_options",
+      "chatIdHash": 123456,
+      "input": "{{pick::a::b}}",
+      "expected": "a"
+    },
+    {
+      "id": "mixed_pick_lists",
+      "chatIdHash": 123456,
+      "input": "{{pick::x::y::z}} {{pick::1::2::3}}",
+      "expected": "z 1"
+    },
+    {
+      "id": "single_option",
+      "chatIdHash": 123456,
+      "input": "{{pick::only}}",
+      "expected": "only"
+    }
+  ]
+}

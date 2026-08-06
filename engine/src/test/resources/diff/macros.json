@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T20:56:28.751Z",
+  "generated": "2026-08-06T21:07:46.065Z",
   "source": "sillytavern-ref tests/frontend/MacroEngine.e2e.js",
   "cases": [
     {
@@ -167,6 +167,118 @@
       "id": "MacroEngine/Legacy compatibility :: should support legacy <GROUP> and <CHARIFNOTGROUP> markers via pre-processing (non-group fallback)",
       "input": "Group: <GROUP>, CharIfNotGroup: <CHARIFNOTGROUP>.",
       "expected": "Group: Character, CharIfNotGroup: Character.",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single opening brace inside macro arguments",
+      "input": "Test§ {{reverse::my { test}}",
+      "expected": "Test§ tset { ym",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single closing brace inside macro arguments",
+      "input": "Test§ {{reverse::my } test}}",
+      "expected": "Test§ tset } ym",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should treat dangling macro start as text and still evaluate subsequent macro",
+      "input": "Test {{ hehe {{user}}",
+      "expected": "Test {{ hehe User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should ignore invalid macro start but still evaluate following valid macro",
+      "input": "Test {{&& hehe {{user}}",
+      "expected": "Test {{&& hehe User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single opening brace immediately before a macro",
+      "input": "{{{char}}",
+      "expected": "{Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single closing brace immediately after a macro",
+      "input": "{{char}}}",
+      "expected": "Character}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single braces around a macro",
+      "input": "{{{char}}}",
+      "expected": "{Character}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double opening braces immediately before a macro",
+      "input": "{{{{char}}",
+      "expected": "{{Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double closing braces immediately after a macro",
+      "input": "{{char}}}}",
+      "expected": "Character}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double braces around a macro",
+      "input": "{{{{char}}}}",
+      "expected": "{{Character}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should resolve nested macro inside argument with surrounding braces",
+      "input": "Result: {{reverse::pre-{ {{user}} }-post}}",
+      "expected": "Result: tsop-} resU {-erp",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle adjacent macros with no separator",
+      "input": "{{char}}{{user}}",
+      "expected": "CharacterUser",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle macros separated only by surrounding braces",
+      "input": "{{char}}{ {{user}} }",
+      "expected": "Character{ User }",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle Windows newlines with braces near macros",
+      "input": "Line1 {{char}}\r\n{Line2}",
+      "expected": "Line1 Character\r\n{Line2}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should keep stray closing braces and still evaluate following macro",
+      "input": "Foo }} {{user}}",
+      "expected": "Foo }} User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle stray closing braces before macros as plain text",
+      "input": "Foo {{user}} }}",
+      "expected": "Foo User }}",
       "local": null,
       "global": null
     },

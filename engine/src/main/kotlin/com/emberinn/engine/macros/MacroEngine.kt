@@ -230,7 +230,12 @@ object MacroEngine {
             if (open < 0) { sb.append(text, i, text.length); break }
             sb.append(text, i, open)
             val macroClose = findMacroClose(text, open + 2)
-            if (macroClose < 0) { sb.append(text, open, text.length); break }
+            if (macroClose < 0) {
+                // 未闭合：按单个 '{' 推进，后续合法宏仍可解析（官方括号边界行为）
+                sb.append('{')
+                i = open + 1
+                continue
+            }
             val inner = text.substring(open + 2, macroClose)
             val raw = text.substring(open, macroClose + 2)
 
@@ -308,7 +313,11 @@ object MacroEngine {
             }
 
             val (name, args, hasSep) = parseMacroHead(inner)
-            if (name.isEmpty()) { sb.append(raw); i = macroClose + 2; continue }
+            if (name.isEmpty()) {
+                sb.append('{')
+                i = open + 1
+                continue
+            }
 
             // 作用域 {{if 条件}}...{{/if}}：按文档顺序求值（嵌套宏条件已完整捕获）
             if (

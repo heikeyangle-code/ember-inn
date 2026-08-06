@@ -26,6 +26,7 @@ const WHITELIST = [
     'MacroEngine/{{if}} conditional macro',
     'MacroEngine/Variable Shorthand Syntax',
     'MacroEngine/Variable Macros (hasvar, deletevar)',
+    'MacroEngine/Bracket handling around macros',
 ];
 
 function unescapeJs(str) {
