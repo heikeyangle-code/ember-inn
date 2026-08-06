@@ -47,8 +47,14 @@
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
 - ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型+注入、作者注释、快捷回复、聊天元数据模型
+- ✅ 数据驱动服务商注册表（18 家）+ OpenAI/Anthropic/Google 三协议请求体 + SSE 流式解析
 - ❌ 人设管理（选择/持久化，App 层）、多模型 tokenizer、服务层
 - ❌ 服务层：TTS/STT/图像/翻译/向量（路线图 P3/P4）
+
+## 下一步（README App 层）
+- 提供商三步配置 UI + OkHttp 真实对话（引擎请求体/SSE 已就绪）
+- 聊天 Tab / 设置页 / 世界书编辑 UI / 全局搜索
+- 角色卡资源入库（BYAF/CharX 提取已就绪）
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
