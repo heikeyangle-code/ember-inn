@@ -14,5 +14,6 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.snakeyaml)
+    implementation(libs.jtokkit)
     testImplementation(libs.junit)
 }

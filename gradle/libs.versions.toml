@@ -12,6 +12,7 @@ material3 = "1.4.0"
 coil = "3.5.0"
 lifecycleViewmodelCompose = "2.11.0"
 palette = "1.0.0"
+jtokkit = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,6 +32,7 @@ androidx-material-icons-core = { group = "androidx.compose.material", name = "ma
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 snakeyaml = { group = "org.yaml", name = "snakeyaml", version.ref = "snakeyaml" }
+jtokkit = { group = "com.knuddels", name = "jtokkit", version.ref = "jtokkit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
