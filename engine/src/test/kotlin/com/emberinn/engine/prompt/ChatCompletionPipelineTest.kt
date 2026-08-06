@@ -113,4 +113,63 @@ class ChatCompletionPipelineTest {
         assertTrue(hist.last().identifier == "groupNudge")
         assertTrue(hist.last().content.startsWith("[Write the next reply only as 柳春娘.]"))
     }
+
+    @Test
+    fun `in-chat injection inserts absolute prompts by depth`() {
+        val messages = listOf(
+            PromptMessage("user", "A"),
+            PromptMessage("assistant", "B"),
+            PromptMessage("user", "C"),
+        )
+        val absolute = listOf(
+            PromptItem("p1", "P1", content = "S1", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 1, injectionOrder = 100),
+            PromptItem("p2", "P2", content = "U1", role = "user", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 2, injectionOrder = 50),
+        )
+        val out = ChatCompletionPipeline.injectInChat(messages, absolute, emptyList())
+        assertEquals(listOf("A", "S1", "B", "U1", "C"), out.map { it.content })
+        assertTrue(out.all { !it.injected } || out.filter { it.injected }.size == 2)
+    }
+
+    @Test
+    fun `in-chat injection sorts orders descending and merges extensions at 100`() {
+        val absolute = listOf(
+            PromptItem("p1", "P1", content = "LOW", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 0, injectionOrder = 100),
+            PromptItem("p2", "P2", content = "HIGH", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 0, injectionOrder = 200),
+        )
+        val ext = listOf(ExtensionPrompt("x", "system", "EXT", position = "in_chat", depth = 0, order = 100))
+        val out = ChatCompletionPipeline.injectInChat(
+            listOf(PromptMessage("user", "M")),
+            absolute,
+            ext,
+        )
+        assertEquals("HIGH", out[0].content)
+        assertEquals("LOW\nEXT", out[1].content)
+    }
+
+    @Test
+    fun `continue nudge moves last message and appends nudge`() {
+        val handler = TokenHandler(TokenCounter { it.length })
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(10000, 0)
+        val prompts = PromptItems(
+            listOf(PromptItem("chatHistory", "Chat History", marker = true)),
+        )
+        ChatHistoryPopulator.populate(
+            messages = listOf(
+                PromptMessage("user", "问"),
+                PromptMessage("assistant", "旧回复"),
+            ),
+            chatCompletion = cc,
+            prompts = prompts,
+            handler = handler,
+            type = "continue",
+            newChatPrompt = "[新]",
+            env = env,
+            cyclePrompt = "旧回复",
+            continueNudgePrompt = "[继续：{{lastChatMessage}}]",
+        )
+        val chat = cc.getChat().map { it.content }
+        // 历史里只剩用户消息 + newChat；末尾集合 = 旧回复 + nudge
+        assertEquals(listOf("[新]", "问", "旧回复", "[继续：旧回复]"), chat)
+    }
 }

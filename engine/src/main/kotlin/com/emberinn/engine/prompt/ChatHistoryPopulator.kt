@@ -21,9 +21,47 @@ object ChatHistoryPopulator {
         env: MacroEnv,
         selectedGroup: Boolean = false,
         sendIfEmpty: String = "",
+        cyclePrompt: String = "",
+        continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
+        continuePrefill: Boolean = false,
+        canUseTools: Boolean = false,
     ) {
         if (!prompts.has("chatHistory")) return
         chatCompletion.add(CompletionCollection("chatHistory"), prompts.index("chatHistory"))
+
+        // 官方 continue nudge：把最后一条非注入消息移到末尾集合，并追加 nudge 提示
+        val historyMessages = messages.toMutableList()
+        var continueCollection: CompletionCollection? = null
+        if (type == "continue" && cyclePrompt.isNotEmpty() && !continuePrefill) {
+            val collection = CompletionCollection("continueNudge")
+            val lastIndex = historyMessages.indexOfLast { !it.injected }
+            if (lastIndex >= 0) {
+                val last = historyMessages.removeAt(lastIndex)
+                collection.add(
+                    CompletionMessage(
+                        role = last.role,
+                        content = last.content,
+                        name = last.name,
+                        identifier = "continueMessage",
+                        tokens = handler.countAsync(last.content, "conversation"),
+                    ),
+                )
+            }
+            val nudgeText = MacroEngine.substitute(
+                continueNudgePrompt.replace("{{lastChatMessage}}", cyclePrompt.trim()),
+                env,
+            )
+            collection.add(
+                CompletionMessage(
+                    role = "system",
+                    content = nudgeText,
+                    identifier = "continueNudge",
+                    tokens = handler.countAsync(nudgeText, "nudge"),
+                ),
+            )
+            chatCompletion.reserveBudget(collection.getTokens())
+            continueCollection = collection
+        }
 
         val newChatText = MacroEngine.substitute(newChatPrompt, env)
         val newChatMessage = CompletionMessage(
@@ -50,7 +88,7 @@ object ChatHistoryPopulator {
         }
 
         // 最后一条是 assistant 且配置了空输入时，补一个空用户消息
-        val lastChatPrompt = messages.lastOrNull()
+        val lastChatPrompt = historyMessages.lastOrNull()
         if (lastChatPrompt?.role == "assistant" && sendIfEmpty.isNotEmpty()) {
             val message = CompletionMessage(
                 role = "user",
@@ -64,7 +102,34 @@ object ChatHistoryPopulator {
         }
 
         // 逆序插入（insertAtStart 后最终为时间正序）
-        for (m in messages.asReversed()) {
+        for (m in historyMessages.asReversed()) {
+            // 对齐官方：工具调用消息 → tool_call + tool 结果消息
+            val invocations = m.toolInvocations
+            if (canUseTools && invocations != null && invocations.isNotEmpty()) {
+                val toolCallMessage = CompletionMessage(
+                    role = "assistant",
+                    content = "",
+                    identifier = "toolCall-chatHistory",
+                    tokens = handler.countAsync(invocations.joinToString { it.name + it.parameters }, "conversation"),
+                    toolCalls = invocations.map { ToolCall(id = it.id, name = it.name, arguments = it.parameters) },
+                )
+                val toolResultMessages = invocations.asReversed().map { inv ->
+                    CompletionMessage(
+                        role = "tool",
+                        content = inv.result.ifEmpty { "[No content]" },
+                        identifier = inv.id,
+                        toolCallId = inv.id,
+                        tokens = handler.countAsync(inv.result, "conversation"),
+                    )
+                }
+                if (chatCompletion.canAffordAll(listOf(toolCallMessage) + toolResultMessages)) {
+                    toolResultMessages.forEach { chatCompletion.insertAtStart(it, "chatHistory") }
+                    chatCompletion.insertAtStart(toolCallMessage, "chatHistory")
+                } else {
+                    break
+                }
+                continue
+            }
             val chatMessage = CompletionMessage(
                 role = m.role,
                 content = m.content,
@@ -85,6 +150,12 @@ object ChatHistoryPopulator {
         if (selectedGroup && groupNudgeMessage != null) {
             chatCompletion.freeBudget(groupNudgeMessage)
             chatCompletion.insertAtEnd(groupNudgeMessage, "chatHistory")
+        }
+
+        // continue nudge 集合追加到末尾（官方 add(collection, -1)）
+        if (continueCollection != null) {
+            chatCompletion.freeBudget(continueCollection!!.getTokens())
+            chatCompletion.add(continueCollection!!)
         }
     }
 }

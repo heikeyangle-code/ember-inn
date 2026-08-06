@@ -8,6 +8,16 @@ data class PromptMessage(
     val identifier: String? = null,
     val position: String? = null,
     val extension: Boolean = false,
+    val injected: Boolean = false,
+    val toolInvocations: List<ToolInvocation>? = null,
+)
+
+/** 对齐官方 ToolInvocation 核心字段（id/name/parameters/result）。 */
+data class ToolInvocation(
+    val id: String,
+    val name: String,
+    val parameters: String,
+    val result: String,
 )
 
 /** renderStoryString 参数（对齐官方 storyStringParams）。 */

@@ -40,6 +40,13 @@ object SlashParser {
         val unnamed = mutableListOf<String>()
         while (index < text.length && text[index] != '|') {
             if (text[index].isWhitespace()) { index++; continue }
+            if (text[index] == '[') {
+                // 官方 list 值 [a|b|c]：拆成多个无名参数
+                val (items, next) = parseListValue(text, index)
+                unnamed.addAll(items)
+                index = next
+                continue
+            }
             val (value, next) = parseValue(text, index)
             unnamed.add(value)
             index = next
@@ -73,8 +80,33 @@ object SlashParser {
             return sb.toString() to (i + 1)
         }
         val sb = StringBuilder()
-        while (i < text.length && !text[i].isWhitespace() && text[i] != '|') { sb.append(text[i]); i++ }
+        while (i < text.length && !text[i].isWhitespace() && text[i] != '|') {
+            // 官方转义：\x 按字面字符
+            if (text[i] == '\\' && i + 1 < text.length) { sb.append(text[i + 1]); i += 2 } else { sb.append(text[i]); i++ }
+        }
         return sb.toString() to i
+    }
+
+    /** 官方 list 值 [a|b|c]：拆成多个项。 */
+    private fun parseListValue(text: String, from: Int): Pair<List<String>, Int> {
+        var i = from + 1
+        val sb = StringBuilder()
+        val items = mutableListOf<String>()
+        var closed = false
+        while (i < text.length) {
+            val c = text[i]
+            if (c == ']') { closed = true; i++; break }
+            if (c == '|') {
+                items.add(sb.toString().trim())
+                sb.setLength(0)
+            } else {
+                if (c == '\\' && i + 1 < text.length) { sb.append(text[i + 1]); i++ } else sb.append(c)
+            }
+            i++
+        }
+        if (!closed) throw SlashParseException("未闭合的 list 值")
+        items.add(sb.toString().trim())
+        return items.filter { it.isNotEmpty() } to i
     }
 
     private fun skipWhitespace(text: String, from: Int): Int? {

@@ -6,6 +6,8 @@ data class ExtensionPrompt(
     val role: String = "system",
     val content: String = "",
     val position: String = "end", // start / end / in_chat
+    val depth: Int = 0,
+    val order: Int? = null,
 )
 
 /**

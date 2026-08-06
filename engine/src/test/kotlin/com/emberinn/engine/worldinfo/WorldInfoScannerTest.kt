@@ -207,4 +207,20 @@ class WorldInfoScannerTest {
         // sticky 激活中：官方 verifyProbability 直接返回 true，不重掷
         assertTrue(second.activated.any { it.uid == 1 })
     }
+
+    @Test
+    fun `regex transformer applies to chat and content`() {
+        val scanner = WorldInfoScanner(
+            messageTransformer = { it.replace("钥匙", "锁") },
+            contentTransformer = { it.replace("宝藏", "秘宝") },
+        )
+        val result = scanner.scan(
+            chat = listOf("钥匙"),
+            maxContext = 100,
+            entries = listOf(entry(1, 1, keys = listOf("锁"), content = "宝藏")),
+            settings = WorldInfoSettings(budgetPercent = 100),
+        )
+        assertEquals(1, result.activated.size)
+        assertTrue(result.worldInfoBefore.contains("秘宝"))
+    }
 }

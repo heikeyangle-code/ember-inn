@@ -76,4 +76,39 @@ class ChatHistoryPopulatorTest {
         )
         assertEquals(listOf("[Start a new Chat] 柳春娘"), cc.getChat().map { it.content })
     }
+
+    @Test
+    fun `tool invocations become tool calls and results`() {
+        val handler = TokenHandler(TokenCounter { it.length })
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(10000, 0)
+        ChatHistoryPopulator.populate(
+            messages = listOf(
+                PromptMessage(
+                    role = "assistant",
+                    content = "",
+                    toolInvocations = listOf(
+                        ToolInvocation("call_1", "getWeather", "{\"city\":\"北京\"}", "晴"),
+                        ToolInvocation("call_2", "getTime", "{}", "12:00"),
+                    ),
+                ),
+                PromptMessage("user", "后来"),
+            ),
+            chatCompletion = cc,
+            prompts = prompts(),
+            handler = handler,
+            type = "normal",
+            newChatPrompt = "新",
+            env = env,
+            canUseTools = true,
+        )
+        val chat = cc.getChat()
+        val toolMsg = chat.first { it.toolCalls != null }
+        assertEquals(2, toolMsg.toolCalls!!.size)
+        assertEquals("getWeather", toolMsg.toolCalls!![0].name)
+        assertEquals("call_1", toolMsg.toolCalls!![0].id)
+        assertEquals("晴", chat.first { it.role == "tool" }.content)
+        assertEquals("call_1", chat.first { it.role == "tool" }.toolCallId)
+        assertEquals("后来", chat.last { it.role == "user" }.content)
+    }
 }

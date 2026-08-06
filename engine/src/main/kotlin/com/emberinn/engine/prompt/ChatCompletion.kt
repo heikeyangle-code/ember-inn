@@ -26,6 +26,16 @@ data class CompletionMessage(
     val name: String? = null,
     val identifier: String? = null,
     val tokens: Int = 0,
+    val toolCalls: List<ToolCall>? = null,
+    val toolCallId: String? = null,
+)
+
+/** 对齐官方 tool_calls（id/type/function.name/arguments）。 */
+data class ToolCall(
+    val id: String,
+    val name: String,
+    val arguments: String,
+    val type: String = "function",
 )
 
 /** 对齐官方 MessageCollection：带 identifier 的消息集合。 */
@@ -104,7 +114,8 @@ class ChatCompletion(private val handler: TokenHandler) {
     /** 对齐官方 insert：先查预算（抛错），空内容不插入。 */
     fun insert(message: CompletionMessage, identifier: String, position: String = "end") {
         checkTokenBudget(message)
-        if (message.content.isEmpty()) return
+        // 官方：content 或 tool_calls 任一存在即插入
+        if (message.content.isEmpty() && message.toolCalls == null) return
         val index = findMessageIndex(identifier)
         if (index < 0) return
         val collection = (entries[index] as? ChatEntry.Collection)?.collection ?: return
@@ -155,7 +166,7 @@ class ChatCompletion(private val handler: TokenHandler) {
                 is ChatEntry.Collection -> entry.collection.items
                 is ChatEntry.Message -> listOf(entry.message)
             }
-            chat += messages.filter { it.content.isNotEmpty() }
+            chat += messages.filter { it.content.isNotEmpty() || it.toolCalls != null }
         }
         return chat
     }

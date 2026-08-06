@@ -11,6 +11,8 @@ class WorldInfoScanner(
     private val tokenCounter: TokenCounter = TokenCounter { it.length },
     private val random: RandomProvider = RandomProvider { kotlin.random.Random.nextDouble() },
     private val substitute: MacroSubstituter = MacroSubstituter { it },
+    private val messageTransformer: (String) -> String = { it },
+    private val contentTransformer: (String) -> String = { it },
 ) {
 
     fun scan(
@@ -22,7 +24,8 @@ class WorldInfoScanner(
         timedMetadata: TimedEffectsMetadata = TimedEffectsMetadata(),
         isDryRun: Boolean = false,
     ): WorldInfoResult {
-        val buffer = WorldInfoBuffer(chat, global, settings)
+        // 官方：聊天消息先过正则（getRegexedString），再进世界书扫描
+        val buffer = WorldInfoBuffer(chat.map(messageTransformer), global, settings)
 
         var scanState = WorldInfoConstants.STATE_INITIAL
         var tokenBudgetOverflowed = false
@@ -155,7 +158,8 @@ class WorldInfoScanner(
                 }
                 if (!success) continue
 
-                val content = substitute.substitute(entry.content)
+            // 官方预算按 substitute 后内容计数；正则（getRegexedString）在 BUILD 阶段应用
+            val content = substitute.substitute(entry.content)
                 newContent += "$content\n"
 
                 if (!entry.ignoreBudget && (textToScanTokens + tokenCounter.count(newContent)) >= budget) {
@@ -301,7 +305,8 @@ class WorldInfoScanner(
         val outlet = linkedMapOf<String, MutableList<String>>()
 
         activated.sortedWith(compareByDescending { it.order }).forEach { entry ->
-            val content = entry.content
+            // 对齐官方 BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO, ...)
+            val content = contentTransformer(entry.content)
             if (content.isEmpty()) return@forEach
             when (entry.position) {
                 WorldInfoConstants.POSITION_BEFORE -> before.add(0, content)
