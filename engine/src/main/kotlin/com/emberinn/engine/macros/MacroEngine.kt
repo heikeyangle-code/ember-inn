@@ -14,7 +14,9 @@ data class MacroEnv(
     val user: String,
     val char: String,
     val chatId: Long = 0,
+    val chatIdHash: Long = 0,
     val rerollSeed: Long? = null,
+    val contentHash: Long = 0,
     val local: VariableStore = EmptyVariableStore,
     val global: VariableStore = EmptyVariableStore,
 )
@@ -138,14 +140,11 @@ object MacroEngine {
 
     // ---------- 行内宏 ----------
     private fun replaceInline(text: String, env: MacroEnv): String {
-        var offset = 0
         var out = macroRegex.replace(text) { m ->
             val name = m.groupValues[1]
             val args = m.groupValues[2]
             val raw = m.value
-            val result = resolve(name, args, env, offset, raw)
-            offset += 1
-            result
+            resolve(name, args, env, m.range.first, raw)
         }
         // 旧式空格参数：{{roll 1d20}} {{random a,b}} {{pick a,b}} {{time UTC+2}}
         out = spaceArgsRegex.replace(out) { m ->
@@ -174,8 +173,8 @@ object MacroEngine {
             "isotime" -> LocalTime.now().format(hhMm)
             "isodate" -> LocalDate.now().format(yyyyMmDd)
             "time" -> timeMacro(args)
-            "date" -> LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(Locale.getDefault()))
-            "weekday" -> LocalDate.now().dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault())
+            "date" -> LocalDate.now().format(monthDayYear)
+            "weekday" -> LocalDate.now().dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH)
             "random" -> randomMacro(args)
             "roll" -> rollMacro(args)
             "pick" -> pickMacro(args, env, offset, raw)
@@ -270,15 +269,17 @@ object MacroEngine {
     private fun pickMacro(args: String, env: MacroEnv, offset: Int, raw: String): String {
         val list = splitList(args)
         if (list.isEmpty()) return ""
-        val contentHash = StringHash.get(raw)
+        // 官方：combinedSeedString = [chatIdHash, contentHash, offset, rerollSeed].filter(!null).join('-')
         val seedParts = buildList {
-            add(env.chatId.toString())
-            add(contentHash.toString())
+            add(env.chatIdHash.toString())
+            add(env.contentHash.toString())
             add(offset.toString())
             env.rerollSeed?.let { add(it.toString()) }
         }
-        val seed = StringHash.get(seedParts.joinToString("-"))
-        val index = (seed % list.size).toInt()
-        return list[index]
+        val finalSeed = StringHash.get(seedParts.joinToString("-"))
+        // 官方：seedrandom(String(finalSeed))；randomIndex = Math.floor(rng() * list.length)
+        val rng = SeedRandom(finalSeed.toString())
+        val randomIndex = Math.floor(rng.nextDouble() * list.size).toInt()
+        return list[randomIndex]
     }
 }
