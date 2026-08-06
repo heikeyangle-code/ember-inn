@@ -25,6 +25,15 @@ class ImportersTest {
     }
 
     @Test
+    fun `yaml import sanitizes name and uses iso create date`() {
+        val yaml = "name: a/b:c\ncontext: 背景\n"
+        val json = YamlImporter.import(yaml.toByteArray())
+        assertTrue(json.contains("\"name\":\"a_b_c\""))
+        assertTrue(json.contains("\"create_date\":\"2"), json)
+        assertTrue(Regex("""\"create_date\":\"\d{4}-\d{2}-\d{2}T""").containsMatchIn(json))
+    }
+
+    @Test
     fun `byaf import maps macros lore and greetings`() {
         val manifest = """{"characters":["character.json"],"scenarios":["s1.json","s2.json"],"author":{"name":"作者","backyardURL":"https://by"}}"""
         val character = """{"name":"角色A","displayName":"显示名","persona":"#{user}:与#{character}:以及{user}","isNSFW":true,"loreItems":[{"key":"地点, 人物","value":"#{user}:在这里"}]}"""
@@ -53,6 +62,17 @@ class ImportersTest {
         assertTrue(out.contains("\"name\":\"N\""))
         assertTrue(out.contains("\"talkativeness\":0.7"))
         assertTrue(out.contains("\"fav\":true"))
+    }
+
+    @Test
+    fun `charx import normalizes cleans and stamps create date`() {
+        val card = """{"spec":"chara_card_v3","data":{"name":"N","description":"D","extensions":{"fav":true}},"chat":[]}"""
+        val zip = zipOf("card.json" to card)
+        val json = CharXImporter.cardJson(zip)
+        assertTrue(json.contains("\"fav\":false"))
+        assertTrue(!json.contains("\"chat\""))
+        assertTrue(json.contains("\"create_date\":\"2"))
+        assertTrue(json.contains("\"data\""))
     }
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {

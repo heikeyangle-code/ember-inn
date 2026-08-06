@@ -1,5 +1,6 @@
 package com.emberinn.engine.card
 
+import java.time.Instant
 import org.yaml.snakeyaml.Yaml
 
 /**
@@ -12,13 +13,13 @@ object YamlImporter {
         val text = String(data, Charsets.UTF_8)
         @Suppress("UNCHECKED_CAST")
         val yaml = Yaml().load<Map<String, Any?>>(text) ?: error("YAML 为空")
-        val name = yaml["name"]?.toString() ?: ""
+        val name = CardSanitize.sanitizeName(yaml["name"]?.toString() ?: "")
         val now = V2Normalizer.humanizedDateTime()
         return V2Normalizer.buildV2FromLegacy(
             name = name,
             description = yaml["context"]?.toString() ?: "",
             firstMes = yaml["greeting"]?.toString() ?: "",
-            createDate = now,
+            createDate = Instant.now().toString(),
             chat = "$name - $now",
             creatorComment = "",
             personality = "",
