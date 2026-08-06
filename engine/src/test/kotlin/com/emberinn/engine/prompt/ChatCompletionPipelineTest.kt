@@ -172,4 +172,31 @@ class ChatCompletionPipelineTest {
         // 历史里只剩用户消息 + newChat；末尾集合 = 旧回复 + nudge
         assertEquals(listOf("[新]", "问", "旧回复", "[继续：旧回复]"), chat)
     }
+
+    @Test
+    fun `persona in chat injects at depth`() {
+        val handler = TokenHandler(TokenCounter { it.length })
+        val cc = ChatCompletion(handler)
+        cc.setTokenBudget(10000, 0)
+        val prompts = PromptItems(
+            listOf(PromptItem("chatHistory", "Chat History", marker = true)),
+        )
+        ChatHistoryPopulator.populate(
+            messages = listOf(PromptMessage("user", "你好"), PromptMessage("assistant", "回应")),
+            chatCompletion = cc,
+            prompts = prompts,
+            handler = handler,
+            type = "normal",
+            newChatPrompt = "[新]",
+            env = env,
+        )
+        val injected = ChatCompletionPipeline.injectInChat(
+            messages = listOf(PromptMessage("user", "你好"), PromptMessage("assistant", "回应")),
+            absolutePrompts = emptyList(),
+            inChatExtensions = listOf(
+                ExtensionPrompt("personaDescription", "system", "人设文本", position = "in_chat", depth = 1),
+            ),
+        )
+        assertEquals(listOf("你好", "人设文本", "回应"), injected.map { it.content })
+    }
 }

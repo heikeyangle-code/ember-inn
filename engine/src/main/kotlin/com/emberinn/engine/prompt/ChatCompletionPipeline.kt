@@ -35,6 +35,7 @@ object ChatCompletionPipeline {
         continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
         continuePrefill: Boolean = false,
         persona: Persona? = null,
+        assistantPrefill: String = "",
     ) {
         fun addToChatCompletion(source: String) {
             if (!prompts.has(source)) return
@@ -148,6 +149,7 @@ object ChatCompletionPipeline {
                 cyclePrompt = cyclePrompt,
                 continueNudgePrompt = continueNudgePrompt,
                 continuePrefill = continuePrefill,
+                assistantPrefill = assistantPrefill,
             )
         } else {
             ChatHistoryPopulator.populate(
@@ -163,6 +165,7 @@ object ChatCompletionPipeline {
                 cyclePrompt = cyclePrompt,
                 continueNudgePrompt = continueNudgePrompt,
                 continuePrefill = continuePrefill,
+                assistantPrefill = assistantPrefill,
             )
             DialogueExamplesPopulator.populate(chatCompletion, handler, prompts, messageExamples, newExampleChatPrompt, env)
         }
@@ -196,7 +199,10 @@ object ChatCompletionPipeline {
                 continue
             }
             val roleMessages = mutableListOf<PromptMessage>()
+            // 官方 orderGroups 预置 100 组，保证仅扩展提示时也能处理
             val orderGroups = depthPrompts.groupBy { it.injectionOrder ?: 100 }
+                .toMutableMap()
+                .apply { putIfAbsent(100, emptyList()) }
             for (order in orderGroups.keys.sortedDescending()) {
                 for (role in listOf("system", "user", "assistant")) {
                     val parts = orderGroups[order].orEmpty()

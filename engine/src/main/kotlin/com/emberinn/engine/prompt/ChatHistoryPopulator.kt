@@ -25,6 +25,7 @@ object ChatHistoryPopulator {
         continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
         continuePrefill: Boolean = false,
         canUseTools: Boolean = false,
+        assistantPrefill: String = "",
     ) {
         if (!prompts.has("chatHistory")) return
         chatCompletion.add(CompletionCollection("chatHistory"), prompts.index("chatHistory"))
@@ -102,7 +103,7 @@ object ChatHistoryPopulator {
         }
 
         // 逆序插入（insertAtStart 后最终为时间正序）
-        for (m in historyMessages.asReversed()) {
+        for ((poolIndex, m) in historyMessages.asReversed().withIndex()) {
             // 对齐官方：工具调用消息 → tool_call + tool 结果消息
             val invocations = m.toolInvocations
             if (canUseTools && invocations != null && invocations.isNotEmpty()) {
@@ -130,12 +131,20 @@ object ChatHistoryPopulator {
                 }
                 continue
             }
+            val content = if (
+                poolIndex == 0 && type == "continue" && continuePrefill && m.role != "user"
+            ) {
+                // 官方：continue_prefill 时给最后一条 assistant 加预填
+                listOf(assistantPrefill, m.content).filter { it.isNotEmpty() }.joinToString("\n\n")
+            } else {
+                m.content
+            }
             val chatMessage = CompletionMessage(
                 role = m.role,
-                content = m.content,
+                content = content,
                 name = m.name,
                 identifier = "chatHistory",
-                tokens = handler.countAsync(m.content, "conversation"),
+                tokens = handler.countAsync(content, "conversation"),
             )
             if (chatCompletion.canAfford(chatMessage)) {
                 chatCompletion.insertAtStart(chatMessage, "chatHistory")
