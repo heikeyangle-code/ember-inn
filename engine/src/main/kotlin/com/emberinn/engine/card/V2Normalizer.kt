@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -120,11 +121,11 @@ object V2Normalizer {
         if (name.isBlank()) humanizedDateTime() else "$name - ${humanizedDateTime()}"
 
     private fun parseDouble(el: JsonElement): Double =
-        el.jsonPrimitive.let { p -> p.contentOrNull()?.trim()?.toDoubleOrNull() ?: 0.5 }
+        el.jsonPrimitive.content.toDoubleOrNull() ?: 0.5
 
     private fun parseBool(el: JsonElement): Boolean =
         el.jsonPrimitive.let { p ->
-            p.booleanOrNull ?: (p.contentOrNull()?.lowercase() == "true")
+            p.booleanOrNull ?: (p.content.lowercase() == "true")
         }
 
     private fun kotlinx.serialization.json.JsonPrimitive.contentOrNull(): String? =

@@ -44,9 +44,12 @@ class PromptAssemblerTest {
             char = "C",
             user = "U",
         )
-        assertEquals(listOf("worldInfoBefore", "charDescription", "charPersonality", "scenario"), prompts.map { it.identifier })
+        assertEquals(
+            listOf("worldInfoBefore", "charDescription", "charPersonality", "scenario", "groupNudge"),
+            prompts.map { it.identifier },
+        )
         assertEquals("前置", prompts.first().content)
-        assertEquals("C's personality: 性格", prompts[2].content)
+        assertEquals("性格", prompts[2].content)
     }
 
     @Test

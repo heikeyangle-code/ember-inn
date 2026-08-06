@@ -193,4 +193,6 @@ class ChatCompletion(private val handler: TokenHandler) {
     private fun checkTokenBudget(tokens: Int) {
         if (tokens > tokenBudget) throw TokenBudgetExceededError()
     }
+
+    private fun checkTokenBudget(message: CompletionMessage) = checkTokenBudget(message.tokens)
 }

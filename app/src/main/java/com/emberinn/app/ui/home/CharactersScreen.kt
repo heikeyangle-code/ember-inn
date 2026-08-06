@@ -387,15 +387,15 @@ private fun CharacterFieldsSheet(record: CharacterRecord) {
             val root = json.parseToJsonElement(record.rawJson).jsonObject
             val data = root["data"]?.jsonObject ?: root
             listOf(
-                "名字" to (data["name"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "描述" to (data["description"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "性格" to (data["personality"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "场景" to (data["scenario"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "开场白" to (data["first_mes"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "示例对话" to (data["mes_example"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "系统提示" to (data["system_prompt"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "剧情后指令" to (data["post_history_instructions"]?.jsonPrimitive?.contentOrNull() ?: ""),
-                "创作者备注" to (data["creator_notes"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "名字" to (data["name"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "描述" to (data["description"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "性格" to (data["personality"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "场景" to (data["scenario"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "开场白" to (data["first_mes"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "示例对话" to (data["mes_example"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "系统提示" to (data["system_prompt"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "剧情后指令" to (data["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "创作者备注" to (data["creator_notes"]?.jsonPrimitive?.contentOrNull ?: ""),
             ).filter { it.second.isNotBlank() }
         }.getOrDefault(emptyList())
     }

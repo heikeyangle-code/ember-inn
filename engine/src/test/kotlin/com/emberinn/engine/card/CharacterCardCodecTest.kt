@@ -1,7 +1,7 @@
 package com.emberinn.engine.card
 
-import com.emberinn.engine.card.png.PngChunk
 import com.emberinn.engine.card.png.PngChunkCodec
+import com.emberinn.engine.card.png.PngChunk
 import com.emberinn.engine.card.png.PngText
 import java.util.Base64
 import org.junit.Assert.assertEquals
@@ -9,17 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CharacterCardCodecTest {
-
-    private fun minimalPng(): ByteArray {
-        val idat = byteArrayOf(0x08, 0x1D.toByte(), 0x63, 0x60, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01)
-        return PngChunkCodec.encode(
-            listOf(
-                PngChunk("IHDR", byteArrayOf(0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0)),
-                PngChunk("IDAT", idat),
-                PngChunk("IEND", byteArrayOf()),
-            ),
-        )
-    }
 
     @Test
     fun `write then read keeps json and adds both chunks before IEND`() {
@@ -34,18 +23,28 @@ class CharacterCardCodecTest {
         assertEquals("IEND", chunks.last().type)
 
         val read = CharacterCardCodec.readFromPng(png)
-        assertTrue(read.contains(""name":"测试""))
+        assertTrue(read.contains("\"name\":\"测试\""))
         val ccv3Json = String(Base64.getDecoder().decode(text[1].second), Charsets.UTF_8)
-        assertTrue(ccv3Json.contains(""spec":"chara_card_v3""))
-        assertTrue(ccv3Json.contains(""spec_version":"3.0""))
+        assertTrue(ccv3Json.contains("\"spec\":\"chara_card_v3\""))
+        assertTrue(ccv3Json.contains("\"spec_version\":\"3.0\""))
     }
 
     @Test
     fun `clean private fields matches official`() {
         val json = """{"name":"A","fav":true,"chat":[],"data":{"extensions":{"fav":true,"depth_prompt":{"p":"x"}}}}"""
         val cleaned = CharacterCardCodec.cleanPrivateFields(json)
-        assertTrue(cleaned.contains(""fav":false"))
-        assertTrue(cleaned.contains(""data":{"extensions":{"fav":false"))
-        assertTrue(!cleaned.contains(""chat""))
+        assertTrue(cleaned.contains("\"fav\":false"))
+        assertTrue(cleaned.contains("\"data\":{\"extensions\":{\"fav\":false"))
+        assertTrue(!cleaned.contains("\"chat\""))
+    }
+
+    private fun minimalPng(): ByteArray {
+        return PngChunkCodec.encode(
+            listOf(
+                PngChunk("IHDR", ByteArray(13)),
+                PngChunk("IDAT", byteArrayOf(1, 2, 3)),
+                PngChunk("IEND", ByteArray(0)),
+            ),
+        )
     }
 }

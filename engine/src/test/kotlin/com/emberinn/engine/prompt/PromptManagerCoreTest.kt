@@ -54,12 +54,15 @@ class PromptManagerCoreTest {
         val normal = PromptManagerCore.getCollection(
             listOf(PromptOrderEntry("main")), listOf(userPrompt), "normal", env,
         )
-        assertFalse(normal.has("main"))
+        // 官方：main 触发条件不满足时仍保留空占位（相对插入依赖）
+        assertTrue(normal.has("main"))
+        assertEquals("", normal.get("main")?.content)
 
         val impersonate = PromptManagerCore.getCollection(
             listOf(PromptOrderEntry("main")), listOf(userPrompt), "impersonate", env,
         )
         assertTrue(impersonate.has("main"))
+        assertEquals("只能冒充", impersonate.get("main")?.content)
     }
 
     @Test

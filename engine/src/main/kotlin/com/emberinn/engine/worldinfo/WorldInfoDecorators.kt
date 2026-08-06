@@ -6,7 +6,7 @@ object WorldInfoDecorators {
     private val KNOWN = listOf("@@activate", "@@dont_activate")
 
     fun parse(content: String): Pair<List<String>, String> {
-        if (!content.startsWith("@@")) return emptyList() to content
+        if (!content.startsWith("@@")) return emptyList<String>() to content
 
         val lines = content.split("\n")
         val decorators = mutableListOf<String>()

@@ -44,7 +44,8 @@ object ExtensionPromptInjection {
                     content = ext.content,
                     identifier = KNOWN_IDENTIFIERS[key] ?: key,
                     position = position,
-                    extension = true,
+                    // 官方已知扩展不带 extension 标记（未知扩展才带）
+                    extension = false,
                 ),
             )
         }

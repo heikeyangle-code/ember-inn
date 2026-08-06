@@ -30,36 +30,36 @@ object CharacterCardExporter {
 
     /** 旧版无 spec 卡 → charaFormatData 主字段映射；create_date 缺省用 ISO（对齐 getCharaCardV2）。 */
     private fun legacyToV2(root: JsonObject): String {
-        val name = root["name"]?.jsonPrimitive?.contentOrNull() ?: ""
+        val name = root["name"]?.jsonPrimitive?.contentOrNull ?: ""
         val tags = root["tags"]?.let {
-            if (it is kotlinx.serialization.json.JsonArray) it.mapNotNull { e -> e.jsonPrimitive.contentOrNull() }
-            else it.jsonPrimitive.contentOrNull()?.split(',')?.map { t -> t.trim() }?.filter { t -> t.isNotEmpty() } ?: emptyList()
+            if (it is kotlinx.serialization.json.JsonArray) it.mapNotNull { e -> e.jsonPrimitive.contentOrNull }
+            else it.jsonPrimitive.contentOrNull?.split(',')?.map { t -> t.trim() }?.filter { t -> t.isNotEmpty() } ?: emptyList()
         } ?: emptyList()
         val now = V2Normalizer.humanizedDateTime()
-        val createDate = root["create_date"]?.jsonPrimitive?.contentOrNull() ?: Instant.now().toString()
+        val createDate = root["create_date"]?.jsonPrimitive?.contentOrNull ?: Instant.now().toString()
         return V2Normalizer.buildV2FromLegacy(
             name = name,
-            description = root["description"]?.jsonPrimitive?.contentOrNull() ?: "",
-            firstMes = root["first_mes"]?.jsonPrimitive?.contentOrNull() ?: "",
+            description = root["description"]?.jsonPrimitive?.contentOrNull ?: "",
+            firstMes = root["first_mes"]?.jsonPrimitive?.contentOrNull ?: "",
             createDate = createDate,
-            chat = root["chat"]?.jsonPrimitive?.contentOrNull() ?: "$name - $now",
-            creatorComment = root["creatorcomment"]?.jsonPrimitive?.contentOrNull() ?: "",
-            personality = root["personality"]?.jsonPrimitive?.contentOrNull() ?: "",
-            scenario = root["scenario"]?.jsonPrimitive?.contentOrNull() ?: "",
-            talkativeness = root["talkativeness"]?.jsonPrimitive?.let { it.contentOrNull()?.toDoubleOrNull() } ?: 0.5,
-            creator = root["creator"]?.jsonPrimitive?.contentOrNull() ?: "",
+            chat = root["chat"]?.jsonPrimitive?.contentOrNull ?: "$name - $now",
+            creatorComment = root["creatorcomment"]?.jsonPrimitive?.contentOrNull ?: "",
+            personality = root["personality"]?.jsonPrimitive?.contentOrNull ?: "",
+            scenario = root["scenario"]?.jsonPrimitive?.contentOrNull ?: "",
+            talkativeness = root["talkativeness"]?.jsonPrimitive?.let { it.contentOrNull?.toDoubleOrNull() } ?: 0.5,
+            creator = root["creator"]?.jsonPrimitive?.contentOrNull ?: "",
             tags = tags,
-            systemPrompt = root["system_prompt"]?.jsonPrimitive?.contentOrNull() ?: "",
-            postHistoryInstructions = root["post_history_instructions"]?.jsonPrimitive?.contentOrNull() ?: "",
-            characterVersion = root["character_version"]?.jsonPrimitive?.contentOrNull() ?: "",
+            systemPrompt = root["system_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
+            postHistoryInstructions = root["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: "",
+            characterVersion = root["character_version"]?.jsonPrimitive?.contentOrNull ?: "",
             alternateGreetings = root["alternate_greetings"]?.let {
-                if (it is kotlinx.serialization.json.JsonArray) it.mapNotNull { e -> e.jsonPrimitive.contentOrNull() }
-                else listOfNotNull(it.jsonPrimitive.contentOrNull())
+                if (it is kotlinx.serialization.json.JsonArray) it.mapNotNull { e -> e.jsonPrimitive.contentOrNull }
+                else listOfNotNull(it.jsonPrimitive.contentOrNull)
             } ?: emptyList(),
-            fav = root["fav"]?.jsonPrimitive?.let { it.contentOrNull() == "true" } ?: false,
-            depthPromptPrompt = root["depth_prompt_prompt"]?.jsonPrimitive?.contentOrNull() ?: "",
-            depthPromptDepth = root["depth_prompt_depth"]?.jsonPrimitive?.contentOrNull()?.toIntOrNull() ?: 4,
-            depthPromptRole = root["depth_prompt_role"]?.jsonPrimitive?.contentOrNull() ?: "system",
+            fav = root["fav"]?.jsonPrimitive?.let { it.contentOrNull == "true" } ?: false,
+            depthPromptPrompt = root["depth_prompt_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
+            depthPromptDepth = root["depth_prompt_depth"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 4,
+            depthPromptRole = root["depth_prompt_role"]?.jsonPrimitive?.contentOrNull ?: "system",
         )
     }
 }

@@ -10,7 +10,8 @@ class SeedRandom(seed: String) {
         const val MASK = WIDTH - 1
         const val CHUNKS = 6
         const val DIGITS = 52
-        val START_DENOM: Double = WIDTH.toDouble() / (WIDTH + 1).toDouble()
+        // 官方 v3：startdenom = width ^ chunks = 256^6 = 2^48
+        val START_DENOM: Double = Math.pow(WIDTH.toDouble(), CHUNKS.toDouble())
         val SIGNIFICANCE: Double = Math.pow(2.0, DIGITS.toDouble())
         val OVERFLOW: Double = SIGNIFICANCE * 2.0
     }
@@ -56,7 +57,8 @@ class SeedRandom(seed: String) {
 
         init {
             for (k in 0 until WIDTH) s[k] = k
-            val keyArr = if (key.isEmpty()) intArrayOf(1) else key
+            // 官方：空 key [] 视为 [0]
+            val keyArr = if (key.isEmpty()) intArrayOf(0) else key
             val keyLen = keyArr.size
             for (k in 0 until WIDTH) {
                 j = MASK and (j + keyArr[k % keyLen] + s[k])

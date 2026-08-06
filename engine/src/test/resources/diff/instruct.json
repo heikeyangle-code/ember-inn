@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T19:30:52.594Z",
+  "generated": "2026-08-06T20:46:18.655Z",
   "source": "sillytavern-ref release",
   "cases": [
     {
@@ -1671,23 +1671,21 @@
       "args": {
         "prompt": [
           {
-            "role": "system",
-            "content": "You are a cat.\n"
-          },
-          {
             "role": "user",
-            "content": "### Instruction:\nHello\n\n"
+            "content": "Hello"
           },
           {
             "role": "assistant",
-            "content": "### Response:\nHi\n\n"
+            "content": "Hi"
           }
         ],
         "api": "textgenerationwebui",
         "instructOverride": false,
         "quietToLoud": false,
         "systemPrompt": "You are a cat.",
-        "prefill": ""
+        "prefill": "",
+        "name1": "User",
+        "name2": "Char"
       },
       "expected": "You are a cat.\n### Instruction:\nHello\n\n### Response:\nHi\n\n### Response:\n"
     },
@@ -1735,19 +1733,17 @@
       "args": {
         "prompt": [
           {
-            "role": "system",
-            "content": "You are a cat.\n"
-          },
-          {
             "role": "user",
-            "content": "### Instruction:\nHello\n\n"
+            "content": "Hello"
           }
         ],
         "api": "textgenerationwebui",
         "instructOverride": false,
         "quietToLoud": false,
         "systemPrompt": "You are a cat.",
-        "prefill": "Sure"
+        "prefill": "Sure",
+        "name1": "User",
+        "name2": "Char"
       },
       "expected": "You are a cat.\n### Instruction:\nHello\n\n### Response:\nSure\n"
     },
@@ -1795,23 +1791,21 @@
       "args": {
         "prompt": [
           {
-            "role": "system",
-            "content": "<|im_start|>system\nYou are a cat.<|im_end|>\n"
-          },
-          {
             "role": "user",
-            "content": "<|im_start|>user\nHello<|im_end|>\n"
+            "content": "Hello"
           },
           {
             "role": "assistant",
-            "content": "<|im_start|>assistant\nHi<|im_end|>\n"
+            "content": "Hi"
           }
         ],
         "api": "textgenerationwebui",
         "instructOverride": false,
         "quietToLoud": false,
         "systemPrompt": "You are a cat.",
-        "prefill": ""
+        "prefill": "",
+        "name1": "User",
+        "name2": "Char"
       },
       "expected": "<|im_start|>system\nYou are a cat.<|im_end|>\n<|im_start|>user\nHello<|im_end|>\n<|im_start|>assistant\nHi<|im_end|>\n<|im_start|>assistant\n"
     },
@@ -1859,23 +1853,17 @@
       "args": {
         "prompt": [
           {
-            "role": "system",
-            "content": "You are a cat."
-          },
-          {
             "role": "user",
             "content": "Hello"
-          },
-          {
-            "role": "assistant",
-            "content": "Sure"
           }
         ],
         "api": "openai",
         "instructOverride": false,
         "quietToLoud": false,
         "systemPrompt": "You are a cat.",
-        "prefill": "Sure"
+        "prefill": "Sure",
+        "name1": "User",
+        "name2": "Char"
       },
       "expected": [
         {
@@ -1936,19 +1924,17 @@
       "args": {
         "prompt": [
           {
-            "role": "system",
-            "content": "You are a cat."
-          },
-          {
             "role": "user",
-            "content": "User: Hello"
+            "content": "Hello"
           }
         ],
         "api": "textgenerationwebui",
         "instructOverride": true,
         "quietToLoud": false,
         "systemPrompt": "You are a cat.",
-        "prefill": ""
+        "prefill": "",
+        "name1": "User",
+        "name2": "Char"
       },
       "expected": "You are a cat.\nUser: Hello\n"
     }

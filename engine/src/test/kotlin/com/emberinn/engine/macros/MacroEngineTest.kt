@@ -77,9 +77,7 @@ class MacroEngineTest {
             assertTrue(v in 1..6)
         }
     }
-}
-
-
+    
     @Test
     fun `variable macros set get inc dec and shorthand`() {
         val local = MemoryVariableStore()
@@ -173,3 +171,4 @@ class MacroEngineTest {
         assertEquals("cba", MacroEngine.substitute("{{reverse::abc}}", env2))
         assertEquals("", MacroEngine.substitute("{{// 注释}}", env2))
     }
+}

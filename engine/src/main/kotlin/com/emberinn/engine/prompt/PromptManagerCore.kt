@@ -142,10 +142,11 @@ object PromptManagerCore {
     ): PromptItems {
         val out = PromptItems(collection.collection.toList())
         for (prompt in systemPrompts) {
-            val item = out.get(prompt.identifier)
+            val id = prompt.identifier ?: continue
+            val item = out.get(id)
             val merged = PromptItem(
-                identifier = prompt.identifier,
-                name = item?.name ?: prompt.identifier,
+                identifier = id,
+                name = item?.name ?: id,
                 content = prompt.content,
                 role = item?.role ?: prompt.role,
                 systemPrompt = item?.systemPrompt ?: true,
@@ -157,7 +158,7 @@ object PromptManagerCore {
                 position = item?.position ?: prompt.position,
                 extension = item?.extension ?: prompt.extension,
             )
-            val idx = out.index(prompt.identifier)
+            val idx = out.index(id)
             if (idx != -1) out.set(merged, idx) else out.add(merged)
         }
         return out

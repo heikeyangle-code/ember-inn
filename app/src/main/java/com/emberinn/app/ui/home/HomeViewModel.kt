@@ -49,8 +49,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val cardJson = CardImporter.import(bytes, format)
                 val root = json.parseToJsonElement(cardJson).jsonObject
                 val data = root["data"]?.jsonObject ?: root
-                val name = data["name"]?.jsonPrimitive?.contentOrNull() ?: "未命名角色"
-                val description = data["description"]?.jsonPrimitive?.contentOrNull() ?: ""
+                val name = data["name"]?.jsonPrimitive?.contentOrNull ?: "未命名角色"
+                val description = data["description"]?.jsonPrimitive?.contentOrNull ?: ""
                 val id = UUID.randomUUID().toString()
                 val avatarPath = if (format == CardFormat.PNG) store.saveAvatar(id, bytes) else null
                 val seedColor = if (format == CardFormat.PNG) extractSeed(bytes) else null

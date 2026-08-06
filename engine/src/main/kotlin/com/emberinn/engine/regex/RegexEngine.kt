@@ -40,7 +40,7 @@ object RegexEngine {
         val regex = parseRegex(regexString) ?: return raw
 
         return regex.replace(raw) { mr ->
-            var replace = matchMacro.replace(script.replaceString, "$0")
+            var replace = matchMacro.replace(script.replaceString) { "$0" }
             replace = groupToken.replace(replace) { token ->
                 val num = token.groupValues[1]
                 val name = token.groupValues[2]

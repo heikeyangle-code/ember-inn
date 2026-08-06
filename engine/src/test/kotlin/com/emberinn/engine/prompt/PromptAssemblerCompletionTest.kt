@@ -36,7 +36,7 @@ class PromptAssemblerCompletionTest {
         val persona = merged.collection.first { it.identifier == "charPersonality" }
         assertEquals("前置", wi.content)
         assertEquals("描述", desc.content)
-        assertEquals("柳春娘's personality: 性格", persona.content)
+        assertEquals("性格", persona.content)
         assertEquals("bias", merged.collection.first { it.identifier == "bias" }.identifier)
         assertEquals("assistant", merged.collection.first { it.identifier == "bias" }.role)
         assertEquals("预填充", merged.collection.first { it.identifier == "bias" }.content)

@@ -117,7 +117,17 @@ object MacroEngine {
             val bodyStart = open.range.last + 1
             val close = findMatchingClose(text, bodyStart)
             if (close == null) {
-                sb.append(open.value)
+                // 无闭合标签：尝试内联 {{if 条件::内容}}，否则原样保留
+                val body = open.value.removePrefix("{{if").removeSuffix("}}").trim()
+                val sep = body.indexOf("::")
+                if (sep > 0) {
+                    val condition = body.substring(0, sep).trim()
+                    val content = body.substring(sep + 2)
+                    val falsy = evaluateCondition(condition, env)
+                    sb.append(if (!falsy) substituteWithEnv(content, env).trim() else "")
+                } else {
+                    sb.append(open.value)
+                }
                 i = open.range.last + 1
                 continue
             }
@@ -232,7 +242,7 @@ object MacroEngine {
         when (name.lowercase()) {
             "user" -> env.user
             "char" -> env.char
-            "group", "charifnotgroup" -> env.group
+            "group", "charifnotgroup" -> env.group.ifEmpty { env.char }
             "groupnotmuted" -> env.groupNotMuted
             "notchar" -> env.notChar
             "charprompt" -> env.character.charPrompt

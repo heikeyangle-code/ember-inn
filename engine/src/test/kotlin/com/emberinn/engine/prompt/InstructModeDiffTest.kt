@@ -6,9 +6,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -158,9 +160,9 @@ class InstructModeDiffTest {
     }
 
     private fun argStr(args: JsonObject, key: String): String =
-        args[key]?.jsonPrimitive?.contentOrNull() ?: ""
+        args[key]?.jsonPrimitive?.contentOrNull ?: ""
 
-    private fun argBool(args: JsonObject, key: String, def: Boolean): Boolean =
+    private fun argBool(args: JsonObject, key: String, def: Boolean = false): Boolean =
         args[key]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } ?: def
 
     private fun argInt(args: JsonObject, key: String): Int =

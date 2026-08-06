@@ -62,7 +62,7 @@ object SlashParser {
     /** 解析一个值：引号字符串 或 普通 token（到空白/| 结束）。返回 (值, 新位置)。 */
     private fun parseValue(text: String, from: Int): Pair<String, Int> {
         var i = from
-        if (i < text.length && (text[i] == '"' || text[i] == ''')) {
+        if (i < text.length && (text[i] == '"' || text[i] == '\'')) {
             val quote = text[i]; i++
             val sb = StringBuilder()
             while (i < text.length && text[i] != quote) {

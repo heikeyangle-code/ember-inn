@@ -7,8 +7,9 @@ import com.knuddels.jtokkit.api.EncodingType
 class OpenAiTokenCounter(private val model: String = "gpt-4o") : TokenCounter {
 
     private val registry = Encodings.newDefaultEncodingRegistry()
-    private val encoding = runCatching { registry.getEncodingForModel(model) }
-        .getOrElse { registry.getEncoding(EncodingType.CL100K_BASE) }
+    private val encoding = runCatching { registry.getEncodingForModel(model).orElse(null) }
+        .getOrNull()
+        ?: registry.getEncoding(EncodingType.CL100K_BASE)
 
     override fun count(text: String): Int = encoding.countTokens(text)
 }

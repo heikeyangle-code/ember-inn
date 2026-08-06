@@ -60,18 +60,19 @@ class WorldInfoScanner(
 
                 if (entry.triggers.isNotEmpty() && entry.triggers.none { it == global.trigger }) continue
 
-                entry.characterFilter?.let { filter ->
+                val filter = entry.characterFilter
+                if (filter != null) {
                     // 对齐官方：names.includes(当前角色名)；exclude 取反
                     if (filter.names.isNotEmpty()) {
                         val nameIncluded = filter.names.any { it == global.characterName }
                         val filteredOut = if (filter.isExclude) nameIncluded else !nameIncluded
-                        if (filteredOut) return@let
+                        if (filteredOut) continue
                     }
                     // 对齐官方：tagMap 与排除表相交
                     if (filter.tags.isNotEmpty()) {
                         val includesTag = filter.tags.any { tag -> global.characterTags.contains(tag) }
                         val filteredOut = if (filter.isExclude) includesTag else !includesTag
-                        if (filteredOut) return@let
+                        if (filteredOut) continue
                     }
                 }
 
@@ -247,14 +248,16 @@ class WorldInfoScanner(
         for ((key, group) in grouped) {
             if (!settings.useGroupScoring && group.none { it.useGroupScoring == true }) continue
             if (hasStickyMap[key] == true) continue
-            val scores = group.map { buffer.getScore(it, scanState) }
+            val scores = group.map { buffer.getScore(it, scanState) }.toMutableList()
             val maxScore = scores.maxOrNull() ?: 0
+            println("DBG group=$key scores=$scores max=$maxScore size=${group.size}")
             var i = 0
             while (i < group.size) {
                 val isScored = group[i].useGroupScoring ?: settings.useGroupScoring
                 if (isScored && scores[i] < maxScore) {
                     removeEntry(group[i])
                     group.removeAt(i)
+                    scores.removeAt(i)
                     i--
                 }
                 i++

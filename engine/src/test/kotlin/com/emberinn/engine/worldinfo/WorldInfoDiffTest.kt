@@ -5,6 +5,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -39,7 +41,7 @@ class WorldInfoDiffTest {
                     val (decorators, content) = WorldInfoDecorators.parse(
                         args.getValue("content").jsonPrimitive.content,
                     )
-                    JsonArray(decorators.map { JsonPrimitive(it) } + JsonPrimitive(content))
+                    JsonArray(listOf(JsonArray(decorators.map { JsonPrimitive(it) }), JsonPrimitive(content)))
                 }
                 else -> error("unknown fn: $fn")
             }

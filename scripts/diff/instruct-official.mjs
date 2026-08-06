@@ -255,34 +255,42 @@ const moduleText = stub + funcs + createRawPrompt + `
 const __cases = ${JSON.stringify(cases)};
 const __out = [];
 for (const c of __cases) {
-    name1 = c.args.name1 ?? 'User';
-    name2 = c.args.name2 ?? 'Char';
-    selected_group = c.args.selectedGroup ? 'group' : null;
+    const a = JSON.parse(JSON.stringify(c.args)); // 深拷贝：官方 createRawPrompt 会原地改输入
+    name1 = a.name1 ?? 'User';
+    name2 = a.name2 ?? 'Char';
+    selected_group = a.selectedGroup ? 'group' : null;
     setSettings(c.instruct, c.context);
     let value;
     switch (c.fn) {
         case 'formatChat':
-            value = formatInstructModeChat(c.args.name, c.args.mes, c.args.isUser, c.args.isNarrator, c.args.forceAvatar, c.args.name1, c.args.name2, c.args.forceOutputSequence);
+            value = formatInstructModeChat(a.name, a.mes, a.isUser, a.isNarrator, a.forceAvatar, a.name1, a.name2, a.forceOutputSequence);
             break;
         case 'formatStoryString':
-            value = formatInstructModeStoryString(c.args.storyString);
+            value = formatInstructModeStoryString(a.storyString);
             break;
         case 'formatExamples':
-            value = formatInstructModeExamples(c.args.mesExamplesArray, c.args.name1, c.args.name2);
+            value = formatInstructModeExamples(a.mesExamplesArray, a.name1, a.name2);
             break;
         case 'formatPrompt':
-            value = formatInstructModePrompt(c.args.name, c.args.isImpersonate, c.args.promptBias, c.args.name1, c.args.name2, c.args.isQuiet, c.args.isQuietToLoud);
+            value = formatInstructModePrompt(a.name, a.isImpersonate, a.promptBias, a.name1, a.name2, a.isQuiet, a.isQuietToLoud);
             break;
         case 'stoppingSequences':
             value = getInstructStoppingSequences();
             break;
         case 'createRawPrompt':
-            value = createRawPrompt(c.args.prompt, c.args.api, c.args.instructOverride, c.args.quietToLoud, c.args.systemPrompt, c.args.prefill);
+            value = createRawPrompt(a.prompt, a.api, a.instructOverride, a.quietToLoud, a.systemPrompt, a.prefill);
             break;
         default:
             throw new Error('unknown fn ' + c.fn);
     }
-    __out.push({ id: c.id, fn: c.fn, instruct: c.instruct, context: c.context, args: c.args, expected: value });
+    __out.push({
+        id: c.id,
+        fn: c.fn,
+        instruct: c.instruct,
+        context: c.context,
+        args: c.fn === 'createRawPrompt' ? { ...c.args, name1, name2 } : c.args,
+        expected: value,
+    });
 }
 return __out;
 `;

@@ -3,6 +3,7 @@ package com.emberinn.engine.card
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,7 +30,6 @@ class ImportersTest {
         val yaml = "name: a/b:c\ncontext: 背景\n"
         val json = YamlImporter.import(yaml.toByteArray())
         assertTrue(json.contains("\"name\":\"a_b_c\""))
-        assertTrue(json.contains("\"create_date\":\"2"), json)
         assertTrue(Regex("""\"create_date\":\"\d{4}-\d{2}-\d{2}T""").containsMatchIn(json))
     }
 
@@ -73,6 +73,33 @@ class ImportersTest {
         assertTrue(!json.contains("\"chat\""))
         assertTrue(json.contains("\"create_date\":\"2"))
         assertTrue(json.contains("\"data\""))
+    }
+
+    @Test
+    fun `byaf chat import interleaves human and ai messages with swipes`() {
+        val scenario = """
+            {"narrative":"叙事","formattingInstructions":"指令",
+             "firstMessages":[{"text":"开场"}],
+             "messages":[
+               {"type":"ai","createdAt":"1000","outputs":[
+                 {"text":"回复A","activeTimestamp":"1000"},
+                 {"text":"回复B","activeTimestamp":"2000"}]},
+               {"type":"human","createdAt":"3000","text":"你好"}
+             ]}
+        """.trimIndent()
+        val chat = ByafImporter.chatFromScenario(
+            Json.parseToJsonElement(scenario),
+            userName = "玩家",
+            characterName = "角色",
+        )
+        val lines = chat.map { it.toString() }
+        assertTrue(lines[0].contains("\"user_name\":\"unused\""))
+        assertTrue(lines[0].contains("\"byaf_model_settings\""))
+        assertTrue(lines[1].contains("\"mes\":\"开场\""))
+        // 相等数量 → 按 human/ai 交错重排
+        assertTrue(lines[2].contains("\"mes\":\"你好\""))
+        assertTrue(lines[3].contains("\"mes\":\"回复B\""))
+        assertTrue(lines[3].contains("\"swipe_id\":1"))
     }
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {

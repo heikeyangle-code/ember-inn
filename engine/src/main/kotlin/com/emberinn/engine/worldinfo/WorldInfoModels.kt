@@ -126,7 +126,7 @@ data class WorldInfoResult(
     val depthEntries: List<DepthEntry>,
     val outletEntries: Map<String, List<String>>,
     val activated: List<WorldInfoEntry>,
-    val timedMetadata: TimedEffectsMetadata,
+    val timedMetadata: TimedEffectsMetadata = TimedEffectsMetadata(),
 )
 
 fun interface TokenCounter { fun count(text: String): Int }

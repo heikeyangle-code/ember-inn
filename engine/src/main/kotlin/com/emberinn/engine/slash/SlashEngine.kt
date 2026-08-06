@@ -32,6 +32,7 @@ object SlashEngine {
         val sb = StringBuilder()
         var quote: Char? = null
         var closureDepth = 0
+        var nextInject = true
         var i = 0
         while (i < text.length) {
             val c = text[i]
@@ -47,8 +48,9 @@ object SlashEngine {
                 text.startsWith(":}", i) -> { closureDepth--; sb.append(":}"); i += 2; continue }
                 c == '|' && closureDepth == 0 -> {
                     val inject = !text.startsWith("||", i)
-                    segments.add(PipeSegment(sb.toString(), inject))
+                    segments.add(PipeSegment(sb.toString(), nextInject))
                     sb.setLength(0)
+                    nextInject = inject
                     i += if (inject) 1 else 2
                     continue
                 }
@@ -56,7 +58,7 @@ object SlashEngine {
             }
             i++
         }
-        if (sb.isNotBlank()) segments.add(PipeSegment(sb.toString(), true))
+        if (sb.isNotBlank()) segments.add(PipeSegment(sb.toString(), nextInject))
         return segments
     }
 
