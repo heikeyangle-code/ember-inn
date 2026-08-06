@@ -39,7 +39,7 @@ class ImportersTest {
         val json = ByafImporter.import(zip)
         assertTrue(json.contains("\"name\":\"角色A\""))
         assertTrue(json.contains("\"display_name\":\"显示名\""))
-        assertTrue(json.contains("\"description\":\"{{user}}:与{{char}}:以及{user}\""))
+        assertTrue(json.contains("\"description\":\"{{user}}:与{{char}}:以及{{user}}\""))
         assertTrue(json.contains("\"first_mes\":\"第一开场\""))
         assertTrue(json.contains("\"第二开场\""))
         assertTrue(json.contains("\"keys\":[\"地点\",\"人物\"]"))
