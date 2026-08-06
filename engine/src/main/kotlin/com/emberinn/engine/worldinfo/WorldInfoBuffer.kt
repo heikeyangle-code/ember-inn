@@ -74,9 +74,11 @@ class WorldInfoBuffer(
         val m = Regex("^/(.*)/([a-z]*)$", RegexOption.DOT_MATCHES_ALL).matchEntire(text) ?: return null
         val pattern = m.groupValues[1]
         val flags = m.groupValues[2]
-        var options = RegexOption.IGNORE_CASE.takeIf { 'i' in flags } ?: RegexOption.LITERAL
-        options = if ('m' in flags) options or RegexOption.MULTILINE else options
-        options = if ('s' in flags) options or RegexOption.DOT_MATCHES_ALL else options
+        val options = buildSet {
+            if ('i' in flags) add(RegexOption.IGNORE_CASE)
+            if ('m' in flags) add(RegexOption.MULTILINE)
+            if ('s' in flags) add(RegexOption.DOT_MATCHES_ALL)
+        }
         return runCatching { Regex(pattern, options) }.getOrNull()
     }
 

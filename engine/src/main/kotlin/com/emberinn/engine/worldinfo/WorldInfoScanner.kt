@@ -95,10 +95,7 @@ class WorldInfoScanner(
                 if (matched) activatedNow.add(entry)
             }
 
-            val newEntries = activatedNow.sortedWith(
-                compareBy<WorldInfoEntry> { if (false) 0 else 0 }
-                    .thenBy { sortedEntries.indexOf(it) },
-            )
+            val newEntries = activatedNow.sortedWith(compareBy { sortedEntries.indexOf(it) })
 
             var newContent = ""
             val textToScanTokens = tokenCounter.count(allActivatedText)
