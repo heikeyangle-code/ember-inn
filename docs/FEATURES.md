@@ -3,8 +3,8 @@
 目标：覆盖官方核心功能。优先级：🔴 核心（第一版必须有）· 🟡 进阶（第二版）· ⚪ 远期。
 
 ## 1. 角色卡
-- 🔴 导入：PNG V2/V3（tEXt/ccv3）、JSON、CharX
-- 🔴 导出：PNG V3 / JSON / CharX
+- 🔴 导入：PNG V2/V3（tEXt/ccv3）、JSON、CharX、YAML/YML、BYAF（5 种全支持）
+- 🔴 导出：PNG（chara+ccv3 双写）/ JSON（V2 结构）；CharX 官方仅导入（对齐现状）
 - 🔴 字段全量（V3 全字段）：description / personality / scenario / first_mes / mes_example / system_prompt / post_history_instructions / creator_notes / tags / avatar / alternate_greetings / character_book / creator / character_version / extensions（含 depth_prompt）/ assets（icon / background / voice）/ group_only_greetings / skip_personality / skip_example / skip_system / insert_system / nickname / creator_notes_multilingual / source
 - 🔴 从 URL 导入角色卡（对齐官方 /api/content/importURL）
 - 🔴 头像、标签、文件夹、搜索、排序
