@@ -99,5 +99,28 @@ object SlashRegistry {
                 },
             ),
         )
+        register(
+            SlashCommandDef(
+                "setvar",
+                description = "设置作用域变量（{{getvar}} 可读）",
+                callback = { inv, state ->
+                    val key = inv.namedArgs["key"] ?: inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
+                    val value = if (inv.namedArgs.containsKey("key")) {
+                        inv.unnamedArgs.joinToString(" ")
+                    } else {
+                        inv.unnamedArgs.drop(1).joinToString(" ")
+                    }
+                    state.variables[key] = value
+                    ""
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "parser-flag",
+                description = "解析器标志（引擎侧为无操作，参数保留）",
+                callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") },
+            ),
+        )
     }
 }

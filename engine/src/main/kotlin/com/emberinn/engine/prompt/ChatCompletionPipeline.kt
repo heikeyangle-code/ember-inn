@@ -36,6 +36,7 @@ object ChatCompletionPipeline {
         continuePrefill: Boolean = false,
         persona: Persona? = null,
         assistantPrefill: String = "",
+        reserveToolTokens: Int = 0,
     ) {
         fun addToChatCompletion(source: String) {
             if (!prompts.has(source)) return
@@ -56,6 +57,7 @@ object ChatCompletionPipeline {
 
         // 官方：每次回复都以 <|start|>assistant<|message|> 预留 3 token
         chatCompletion.reserveBudget(3)
+        if (reserveToolTokens > 0) chatCompletion.reserveBudget(reserveToolTokens)
 
         FIXED_ORDER.forEach(::addToChatCompletion)
         chatCompletion.setOverriddenPrompts(prompts.overriddenPrompts)

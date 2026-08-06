@@ -48,4 +48,10 @@ class SlashEngineTest {
         assertEquals("world", SlashEngine.execute("/qr-arg hello world || /echo {{arg::hello}}"))
         assertEquals("", SlashEngine.execute("/let key=test {\"k\":\"v\"} || /pass {{var::test::error}}"))
     }
+
+    @Test
+    fun `echo keeps raw quotes per official`() {
+        assertEquals("\"hello world\"", SlashEngine.execute("/echo \"hello world\""))
+        assertEquals("OK:sys:hello world", SlashEngine.execute("/sys \"hello world\""))
+    }
 }

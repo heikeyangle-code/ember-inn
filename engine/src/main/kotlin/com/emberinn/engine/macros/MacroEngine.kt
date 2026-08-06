@@ -474,7 +474,7 @@ object MacroEngine {
             "roll" -> rollMacro(args)
             "pick" -> pickMacro(args, env, offset, raw)
             "if" -> inlineIfMacro(args, env)
-            "getvar" -> env.local.get(args.trim()) ?: ""
+            "getvar" -> env.slash?.variable(args.trim()) ?: env.local.get(args.trim()) ?: ""
             "hasvar" -> (if (env.local.has(args.trim())) "true" else "false")
             "deletevar" -> { env.local.delete(args.trim()); "" }
             "setvar" -> { setVariableArgs(args, env.local); "" }
