@@ -50,6 +50,20 @@ class ChatCompletion(private val handler: TokenHandler) {
 
     fun canAfford(message: CompletionMessage): Boolean = message.tokens <= tokenBudget
 
+    fun canAffordAll(messages: List<CompletionMessage>): Boolean =
+        messages.sumOf { it.tokens } <= tokenBudget
+
+    /** 插入到指定 identifier 消息之后（对齐 MessageCollection insert 的位置语义）。 */
+    fun insertAfterIdentifier(identifier: String, message: CompletionMessage) {
+        val idx = messages.indexOfLast { it.identifier == identifier }
+        if (idx >= 0) {
+            messages.add(idx + 1, message)
+        } else {
+            messages.add(message)
+        }
+        tokenBudget -= message.tokens
+    }
+
     fun add(message: CompletionMessage): ChatCompletion {
         checkTokenBudget(message)
         messages.add(message)
