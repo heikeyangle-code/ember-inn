@@ -14,8 +14,8 @@ object CardImporter : CharacterCardImporter {
         CardFormat.PNG -> CharacterCardCodec.readFromPng(data)
         CardFormat.JSON -> String(data, Charsets.UTF_8)
         CardFormat.CHARX -> CharXImporter.cardJson(data)
-        CardFormat.YAML, CardFormat.BYAF ->
-            error("YAML/BYAF 导入按官方 importFromYaml / byaf.js 映射实现（docs/FORMATS.md），下一步完成")
+        CardFormat.YAML -> YamlImporter.import(data)
+        CardFormat.BYAF -> ByafImporter.import(data)
     }
 }
 
