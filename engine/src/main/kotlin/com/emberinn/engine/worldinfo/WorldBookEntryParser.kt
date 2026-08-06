@@ -80,7 +80,20 @@ object WorldBookEntryParser {
             groupWeight = raw["groupWeight"]?.let { intOf(it, 100) } ?: raw["group_weight"]?.let { intOf(it, 100) },
             groupOverride = raw["groupOverride"]?.let { boolOf(it, false) } ?: raw["group_override"]?.let { boolOf(it, false) },
             useGroupScoring = raw["useGroupScoring"]?.let { boolOf(it, false) } ?: raw["use_group_scoring"]?.let { boolOf(it, false) },
+            characterFilter = parseCharacterFilter(raw),
         )
+    }
+
+    private fun parseCharacterFilter(raw: Map<String, JsonElement>): CharacterFilter? {
+        val obj = raw["characterFilter"]?.jsonObject
+        val names = obj?.let { stringArray(it["names"]) }
+            ?: stringArray(raw["characterFilterNames"])
+        val tags = obj?.let { stringArray(it["tags"]) }
+            ?: stringArray(raw["characterFilterTags"])
+        val exclude = obj?.let { boolOf(it["isExclude"], false) }
+            ?: boolOf(raw["characterFilterExclude"], false)
+        if (names.isEmpty() && tags.isEmpty()) return null
+        return CharacterFilter(names = names, tags = tags, isExclude = exclude)
     }
 
     private fun strOf(el: JsonElement?, def: String): String =

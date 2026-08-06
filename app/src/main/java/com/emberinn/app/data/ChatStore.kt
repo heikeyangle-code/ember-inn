@@ -49,12 +49,16 @@ class ChatStore(private val context: Context) {
         return ChatJsonl.import(file.readText())
     }
 
-    fun append(sessionId: String, role: String, content: String) {
+    /** 消息字段对齐官方 script.js：name / is_user / is_system / send_date / mes / extra。 */
+    fun append(sessionId: String, isUser: Boolean, content: String, name: String) {
         val list = messages(sessionId).toMutableList()
         list += buildJsonObject {
-            put("role", JsonPrimitive(role))
-            put("content", JsonPrimitive(content))
-            put("timestamp", JsonPrimitive(System.currentTimeMillis()))
+            put("name", JsonPrimitive(name))
+            put("is_user", JsonPrimitive(isUser))
+            put("is_system", JsonPrimitive(false))
+            put("send_date", JsonPrimitive(java.time.Instant.now().toString()))
+            put("mes", JsonPrimitive(content))
+            put("extra", JsonObject(emptyMap()))
         }
         File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }

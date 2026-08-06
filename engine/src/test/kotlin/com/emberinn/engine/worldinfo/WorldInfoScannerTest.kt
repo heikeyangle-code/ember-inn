@@ -164,3 +164,26 @@ class WorldInfoScannerTest {
         assertEquals(1, result.activated.size)
         assertTrue(result.activated.first().uid == 1)
     }
+
+
+    @Test
+    fun `character filter excludes non-matching character`() {
+        val e = entry(1, 1, keys = listOf("门"), content = "X").copy(
+            characterFilter = CharacterFilter(names = listOf("柳春娘"), isExclude = false),
+        )
+        val scanner = WorldInfoScanner()
+
+        val wrong = scanner.scan(
+            listOf("门"), 100, listOf(e),
+            WorldInfoSettings(budgetPercent = 100),
+            global = GlobalScanData(characterName = "关东"),
+        )
+        assertTrue(wrong.activated.isEmpty())
+
+        val right = scanner.scan(
+            listOf("门"), 100, listOf(e),
+            WorldInfoSettings(budgetPercent = 100),
+            global = GlobalScanData(characterName = "柳春娘"),
+        )
+        assertEquals(1, right.activated.size)
+    }

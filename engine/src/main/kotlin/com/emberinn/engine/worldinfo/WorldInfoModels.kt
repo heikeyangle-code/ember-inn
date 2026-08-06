@@ -51,6 +51,8 @@ data class GlobalScanData(
     val scenario: String = "",
     val creatorNotes: String = "",
     val trigger: String = "normal",
+    val characterName: String? = null,
+    val characterTags: List<String> = emptyList(),
 )
 
 /** 世界书条目（字段对齐官方 WIScanEntry 在本阶段使用的部分）。 */
@@ -95,6 +97,13 @@ data class WorldInfoEntry(
     val groupWeight: Int? = null,
     val groupOverride: Boolean? = null,
     val useGroupScoring: Boolean? = null,
+    val characterFilter: CharacterFilter? = null,
+)
+
+data class CharacterFilter(
+    val names: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
+    val isExclude: Boolean = false,
 )
 
 data class EmEntry(val position: Int, val content: String)

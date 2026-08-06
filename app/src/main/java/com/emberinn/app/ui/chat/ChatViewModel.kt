@@ -20,10 +20,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     val accentColor: Long? = characterId?.let { id -> charStore.list().firstOrNull { it.id == id }?.seedColor }
 
-    fun send(text: String) {
+    fun send(text: String, userName: String = "User") {
         if (text.isBlank()) return
-        chatStore.append(sessionId, "user", text)
-        chatStore.append(sessionId, "assistant", "（模型接入前，这是占位回复。下一步接入提供商配置。）")
+        val charName = chatStore.get(sessionId)?.name ?: "Assistant"
+        chatStore.append(sessionId, true, text, userName)
+        chatStore.append(sessionId, false, "（模型接入前，这是占位回复。下一步接入提供商配置。）", charName)
         _messages.value = chatStore.messages(sessionId)
     }
 }

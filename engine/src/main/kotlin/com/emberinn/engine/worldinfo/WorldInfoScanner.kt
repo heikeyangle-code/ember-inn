@@ -60,6 +60,21 @@ class WorldInfoScanner(
 
                 if (entry.triggers.isNotEmpty() && entry.triggers.none { it == global.trigger }) continue
 
+                entry.characterFilter?.let { filter ->
+                    // 对齐官方：names.includes(当前角色名)；exclude 取反
+                    if (filter.names.isNotEmpty()) {
+                        val nameIncluded = filter.names.any { it == global.characterName }
+                        val filteredOut = if (filter.isExclude) nameIncluded else !nameIncluded
+                        if (filteredOut) return@let
+                    }
+                    // 对齐官方：tagMap 与排除表相交
+                    if (filter.tags.isNotEmpty()) {
+                        val includesTag = filter.tags.any { tag -> global.characterTags.contains(tag) }
+                        val filteredOut = if (filter.isExclude) includesTag else !includesTag
+                        if (filteredOut) return@let
+                    }
+                }
+
                 val isSticky = timedEffects.isEffectActive("sticky", entry)
                 val isCooldown = timedEffects.isEffectActive("cooldown", entry)
                 val isDelay = timedEffects.isEffectActive("delay", entry)

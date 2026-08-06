@@ -82,9 +82,10 @@ fun ChatScreen(sessionId: String, name: String, onBack: () -> Unit) {
         ) {
             items(messages, key = { it.toString().hashCode().toString() }) { element ->
                 val msg = element.jsonObject
-                val role = msg["role"]?.jsonPrimitive?.contentOrNull() ?: "assistant"
-                val content = msg["content"]?.jsonPrimitive?.contentOrNull() ?: ""
-                MessageBubble(role = role, content = content)
+                val isUser = msg["is_user"]?.jsonPrimitive?.booleanOrNull == true
+                val content = msg["mes"]?.jsonPrimitive?.contentOrNull()
+                    ?: msg["content"]?.jsonPrimitive?.contentOrNull() ?: ""
+                MessageBubble(isUser = isUser, content = content)
             }
         }
 
@@ -115,8 +116,7 @@ fun ChatScreen(sessionId: String, name: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun MessageBubble(role: String, content: String) {
-    val isUser = role == "user"
+private fun MessageBubble(isUser: Boolean, content: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
