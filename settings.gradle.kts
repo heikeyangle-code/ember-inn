@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "EmberInn"
 include(":app")
+include(":engine")
