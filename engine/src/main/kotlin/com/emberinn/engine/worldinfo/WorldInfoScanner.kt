@@ -40,8 +40,10 @@ class WorldInfoScanner(
         timedEffects.checkTimedEffects()
 
         val delayLevels = sortedEntries
-            .filter { it.delayUntilRecursion == true }
-            .map { 1 }
+            .filter { it.delayUntilRecursion > 0 }
+            .map { it.delayUntilRecursion }
+            .distinct()
+            .sorted()
             .toMutableList()
         var currentDelayLevel = delayLevels.firstOrNull() ?: 0
 
@@ -54,7 +56,7 @@ class WorldInfoScanner(
 
             for (entry in sortedEntries) {
                 if (failedProbability.contains(entry) || allActivated.containsKey("${entry.world}.${entry.uid}")) continue
-                if (!entry.enabled) continue
+                if (entry.disable) continue
 
                 if (entry.triggers.isNotEmpty() && entry.triggers.none { it == global.trigger }) continue
 
@@ -65,9 +67,9 @@ class WorldInfoScanner(
                 if (isDelay) continue
                 if (isCooldown && !isSticky) continue
 
-                if (entry.delayUntilRecursion == true) {
+                if (entry.delayUntilRecursion > 0) {
                     if (scanState != WorldInfoConstants.STATE_RECURSION && !isSticky) continue
-                    if (scanState == WorldInfoConstants.STATE_RECURSION && currentDelayLevel < 1 && !isSticky) continue
+                    if (scanState == WorldInfoConstants.STATE_RECURSION && entry.delayUntilRecursion > currentDelayLevel && !isSticky) continue
                 }
                 if (scanState == WorldInfoConstants.STATE_RECURSION && settings.recursive && entry.excludeRecursion && !isSticky) continue
 
