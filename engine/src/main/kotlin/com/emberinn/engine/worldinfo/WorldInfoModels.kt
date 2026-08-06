@@ -39,6 +39,7 @@ data class WorldInfoSettings(
     val caseSensitive: Boolean = false,
     val matchWholeWords: Boolean = false,
     val maxRecursionSteps: Int = 0,
+    val useGroupScoring: Boolean = false,
 )
 
 /** 与聊天无关的扫描文本（人设/角色字段等），对齐 WIGlobalScanData。 */
@@ -86,10 +87,26 @@ data class WorldInfoEntry(
     val triggers: List<String> = emptyList(),
     val decorators: List<String> = emptyList(),
     val outletName: String? = null,
+    val hash: Long = 0,
+    val sticky: Int? = null,
+    val cooldown: Int? = null,
+    val delay: Int? = null,
+    val group: String? = null,
+    val groupWeight: Int? = null,
+    val groupOverride: Boolean? = null,
+    val useGroupScoring: Boolean? = null,
 )
 
 data class EmEntry(val position: Int, val content: String)
 data class DepthEntry(val depth: Int, val role: String, val entries: List<String>)
+
+data class TimedEffect(val hash: Long, val start: Int, val end: Int, val protected: Boolean)
+
+/** chat_metadata.timedWorldInfo 的持久化结构（sticky/cooldown）。 */
+class TimedEffectsMetadata {
+    val sticky = mutableMapOf<String, TimedEffect>()
+    val cooldown = mutableMapOf<String, TimedEffect>()
+}
 
 data class WorldInfoResult(
     val worldInfoBefore: String,
@@ -100,6 +117,7 @@ data class WorldInfoResult(
     val depthEntries: List<DepthEntry>,
     val outletEntries: Map<String, List<String>>,
     val activated: List<WorldInfoEntry>,
+    val timedMetadata: TimedEffectsMetadata,
 )
 
 fun interface TokenCounter { fun count(text: String): Int }

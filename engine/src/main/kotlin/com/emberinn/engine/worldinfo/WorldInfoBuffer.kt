@@ -70,6 +70,28 @@ class WorldInfoBuffer(
         return false
     }
 
+    /** 对齐官方 getScore：主/次关键词计数（用于分组评分）。 */
+    fun getScore(entry: WorldInfoEntry, scanState: Int): Int {
+        val bufferState = get(entry, scanState)
+        var primaryScore = 0
+        var secondaryScore = 0
+        for (key in entry.keys) {
+            if (matchKeys(bufferState, key, entry)) primaryScore++
+        }
+        for (key in entry.keySecondary) {
+            if (matchKeys(bufferState, key, entry)) secondaryScore++
+        }
+        if (entry.keys.isEmpty()) return 0
+        if (entry.keySecondary.isNotEmpty()) {
+            when (entry.selectiveLogic ?: WorldInfoConstants.AND_ANY) {
+                WorldInfoConstants.AND_ANY -> return primaryScore + secondaryScore
+                WorldInfoConstants.AND_ALL ->
+                    return if (secondaryScore == entry.keySecondary.size) primaryScore + secondaryScore else primaryScore
+            }
+        }
+        return primaryScore
+    }
+
     private fun parseRegexFromString(text: String): Regex? {
         val m = Regex("^/(.*)/([a-z]*)$", RegexOption.DOT_MATCHES_ALL).matchEntire(text) ?: return null
         val pattern = m.groupValues[1]

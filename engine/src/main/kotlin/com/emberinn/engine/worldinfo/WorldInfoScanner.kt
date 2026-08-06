@@ -19,6 +19,8 @@ class WorldInfoScanner(
         entries: List<WorldInfoEntry>,
         settings: WorldInfoSettings = WorldInfoSettings(),
         global: GlobalScanData = GlobalScanData(),
+        timedMetadata: TimedEffectsMetadata = TimedEffectsMetadata(),
+        isDryRun: Boolean = false,
     ): WorldInfoResult {
         val buffer = WorldInfoBuffer(chat, global, settings)
 
@@ -34,6 +36,8 @@ class WorldInfoScanner(
 
         // 对齐 getSortedEntries 的 sortFn：order 降序
         val sortedEntries = entries.sortedWith(compareByDescending { it.order })
+        val timedEffects = WorldInfoTimedEffects(chat.size, sortedEntries, timedMetadata, isDryRun)
+        timedEffects.checkTimedEffects()
 
         val delayLevels = sortedEntries
             .filter { it.delayUntilRecursion == true }
@@ -54,16 +58,24 @@ class WorldInfoScanner(
 
                 if (entry.triggers.isNotEmpty() && entry.triggers.none { it == global.trigger }) continue
 
+                val isSticky = timedEffects.isEffectActive("sticky", entry)
+                val isCooldown = timedEffects.isEffectActive("cooldown", entry)
+                val isDelay = timedEffects.isEffectActive("delay", entry)
+
+                if (isDelay) continue
+                if (isCooldown && !isSticky) continue
+
                 if (entry.delayUntilRecursion == true) {
-                    if (scanState != WorldInfoConstants.STATE_RECURSION) continue
-                    if (scanState == WorldInfoConstants.STATE_RECURSION && currentDelayLevel < 1) continue
+                    if (scanState != WorldInfoConstants.STATE_RECURSION && !isSticky) continue
+                    if (scanState == WorldInfoConstants.STATE_RECURSION && currentDelayLevel < 1 && !isSticky) continue
                 }
-                if (scanState == WorldInfoConstants.STATE_RECURSION && settings.recursive && entry.excludeRecursion) continue
+                if (scanState == WorldInfoConstants.STATE_RECURSION && settings.recursive && entry.excludeRecursion && !isSticky) continue
 
                 if ("@@activate" in entry.decorators) { activatedNow.add(entry); continue }
                 if ("@@dont_activate" in entry.decorators) continue
 
                 if (entry.constant) { activatedNow.add(entry); continue }
+                if (isSticky) { activatedNow.add(entry); continue }
 
                 if (entry.keys.isEmpty()) continue
 
@@ -95,7 +107,14 @@ class WorldInfoScanner(
                 if (matched) activatedNow.add(entry)
             }
 
-            val newEntries = activatedNow.sortedWith(compareBy { sortedEntries.indexOf(it) })
+            val newEntries = activatedNow
+                .sortedWith(
+                    compareBy<WorldInfoEntry> { if (timedEffects.isEffectActive("sticky", it)) 0 else 1 }
+                        .thenBy { sortedEntries.indexOf(it) },
+                )
+                .toMutableList()
+
+            filterByInclusionGroups(newEntries, allActivated, buffer, scanState, timedEffects, settings, random)
 
             var newContent = ""
             val textToScanTokens = tokenCounter.count(allActivatedText)
@@ -162,7 +181,91 @@ class WorldInfoScanner(
             }
         }
 
-        return assemble(allActivated.values.toList())
+        timedEffects.setTimedEffects(allActivated.values.toList())
+        timedEffects.cleanUp()
+        return assemble(allActivated.values.toList()).copy(timedMetadata = timedMetadata)
+    }
+
+    /** 对齐官方 filterByInclusionGroups + filterGroupsByTimedEffects + filterGroupsByScoring。 */
+    private fun filterByInclusionGroups(
+        newEntries: MutableList<WorldInfoEntry>,
+        allActivated: Map<String, WorldInfoEntry>,
+        buffer: WorldInfoBuffer,
+        scanState: Int,
+        timedEffects: WorldInfoTimedEffects,
+        settings: WorldInfoSettings,
+        random: RandomProvider,
+    ) {
+        val grouped = linkedMapOf<String, MutableList<WorldInfoEntry>>()
+        newEntries.filter { !it.group.isNullOrBlank() }.forEach { item ->
+            item.group!!.split(Regex(""",\s*""")).filter { it.isNotEmpty() }.forEach { group ->
+                grouped.getOrPut(group) { mutableListOf() }.add(item)
+            }
+        }
+        if (grouped.isEmpty()) return
+
+        fun removeEntry(entry: WorldInfoEntry) { newEntries.removeAll { it === entry } }
+        fun removeAllBut(group: List<WorldInfoEntry>, chosen: WorldInfoEntry?) {
+            for (entry in group) {
+                if (entry === chosen) continue
+                removeEntry(entry)
+            }
+        }
+
+        val hasStickyMap = linkedMapOf<String, Boolean>()
+        for ((key, group) in grouped) {
+            hasStickyMap[key] = false
+            val stickyEntries = group.filter { timedEffects.isEffectActive("sticky", it) }
+            if (stickyEntries.isNotEmpty()) {
+                group.filterNot { stickyEntries.contains(it) }.forEach { removeEntry(it) }
+                hasStickyMap[key] = true
+            }
+            group.filter { timedEffects.isEffectActive("cooldown", it) }.forEach { removeEntry(it) }
+            group.filter { timedEffects.isEffectActive("delay", it) }.forEach { removeEntry(it) }
+        }
+
+        for ((key, group) in grouped) {
+            if (!settings.useGroupScoring && group.none { it.useGroupScoring == true }) continue
+            if (hasStickyMap[key] == true) continue
+            val scores = group.map { buffer.getScore(it, scanState) }
+            val maxScore = scores.maxOrNull() ?: 0
+            var i = 0
+            while (i < group.size) {
+                val isScored = group[i].useGroupScoring ?: settings.useGroupScoring
+                if (isScored && scores[i] < maxScore) {
+                    removeEntry(group[i])
+                    group.removeAt(i)
+                    i--
+                }
+                i++
+            }
+        }
+
+        for ((key, group) in grouped) {
+            if (hasStickyMap[key] == true) continue
+            if (allActivated.values.any { it.group == key }) {
+                removeAllBut(group, null)
+                continue
+            }
+            if (group.size <= 1) continue
+
+            val prios = group.filter { it.groupOverride == true }.sortedWith(compareByDescending { it.order })
+            if (prios.isNotEmpty()) {
+                removeAllBut(group, prios.first())
+                continue
+            }
+
+            val totalWeight = group.sumOf { it.groupWeight ?: 100 }
+            val rollValue = random.nextDouble() * totalWeight
+            var currentWeight = 0
+            var winner: WorldInfoEntry? = null
+            for (entry in group) {
+                currentWeight += entry.groupWeight ?: 100
+                if (rollValue <= currentWeight) { winner = entry; break }
+            }
+            if (winner == null) continue
+            removeAllBut(group, winner)
+        }
     }
 
     private fun assemble(activated: List<WorldInfoEntry>): WorldInfoResult {

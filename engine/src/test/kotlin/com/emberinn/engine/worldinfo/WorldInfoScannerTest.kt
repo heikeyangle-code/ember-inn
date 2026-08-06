@@ -16,10 +16,17 @@ class WorldInfoScannerTest {
         selective: Boolean = false,
         keySecondary: List<String> = emptyList(),
         selectiveLogic: Int? = null,
+        sticky: Int? = null,
+        cooldown: Int? = null,
+        group: String? = null,
+        groupOverride: Boolean? = null,
+        useGroupScoring: Boolean? = null,
     ) = WorldInfoEntry(
         world = "w", uid = uid, order = order, keys = keys, content = content,
         constant = constant, position = position, selective = selective, keySecondary = keySecondary,
-        selectiveLogic = selectiveLogic,
+        selectiveLogic = selectiveLogic, sticky = sticky, cooldown = cooldown,
+        group = group, groupOverride = groupOverride, useGroupScoring = useGroupScoring,
+        hash = uid.toLong(),
     )
 
     @Test
@@ -97,3 +104,63 @@ class WorldInfoScannerTest {
         assertTrue(result.worldInfoBefore.contains("找到了"))
     }
 }
+
+
+    @Test
+    fun `sticky keeps entry active in next scan without key match`() {
+        val e = entry(1, 1, keys = listOf("a"), content = "粘住", sticky = 2)
+        val scanner = WorldInfoScanner()
+        val first = scanner.scan(listOf("a"), 100, listOf(e), WorldInfoSettings(budgetPercent = 100))
+        assertTrue(first.timedMetadata.sticky.containsKey("w.1"))
+
+        val second = scanner.scan(
+            chat = listOf("x", "b"),
+            maxContext = 100,
+            entries = listOf(e),
+            settings = WorldInfoSettings(budgetPercent = 100),
+            timedMetadata = first.timedMetadata,
+        )
+        assertTrue(second.activated.any { it.uid == 1 })
+    }
+
+    @Test
+    fun `cooldown suppresses entry during its window`() {
+        val e = entry(1, 1, keys = listOf("a"), content = "冷", cooldown = 3)
+        val scanner = WorldInfoScanner()
+        val first = scanner.scan(listOf("a"), 100, listOf(e), WorldInfoSettings(budgetPercent = 100))
+        assertTrue(first.timedMetadata.cooldown.containsKey("w.1"))
+
+        val second = scanner.scan(
+            chat = listOf("a", "b"),
+            maxContext = 100,
+            entries = listOf(e),
+            settings = WorldInfoSettings(budgetPercent = 100),
+            timedMetadata = first.timedMetadata,
+        )
+        assertTrue(second.activated.isEmpty())
+    }
+
+    @Test
+    fun `inclusion group override picks highest order`() {
+        val e1 = entry(1, 1, keys = listOf("门"), content = "A", group = "g", groupOverride = true)
+        val e2 = entry(2, 5, keys = listOf("门"), content = "B", group = "g", groupOverride = true)
+        val scanner = WorldInfoScanner()
+        val result = scanner.scan(
+            listOf("门"), 100, listOf(e1, e2), WorldInfoSettings(budgetPercent = 100),
+        )
+        assertEquals(1, result.activated.size)
+        assertTrue(result.activated.first().uid == 2)
+    }
+
+    @Test
+    fun `group scoring keeps highest key score`() {
+        val e1 = entry(1, 1, keys = listOf("a", "b"), content = "高", group = "g", useGroupScoring = true)
+        val e2 = entry(2, 2, keys = listOf("a"), content = "低", group = "g", useGroupScoring = true)
+        val scanner = WorldInfoScanner()
+        val result = scanner.scan(
+            listOf("a b"), 100, listOf(e1, e2),
+            WorldInfoSettings(budgetPercent = 100, useGroupScoring = true),
+        )
+        assertEquals(1, result.activated.size)
+        assertTrue(result.activated.first().uid == 1)
+    }
