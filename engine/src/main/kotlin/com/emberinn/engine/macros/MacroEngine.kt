@@ -43,6 +43,11 @@ object MacroEngine {
     private val falsyValues = setOf("false", "off", "0")
 
     fun substitute(text: String, env: MacroEnv): String {
+        // 对齐官方 MacroEnvBuilder：contentHash = getStringHash(整个被替换文本)，全文档一致
+        return substituteWithEnv(text, env.copy(contentHash = StringHash.get(text)))
+    }
+
+    private fun substituteWithEnv(text: String, env: MacroEnv): String {
         val withoutScoped = replaceScopedIf(text, env)
         return replaceInline(withoutScoped, env)
     }
@@ -66,7 +71,7 @@ object MacroEngine {
             val evaluated = evaluateCondition(condition, env)
             val split = splitTopLevelElse(inner)
             val chosen = if (!evaluated) split.first else split.second
-            val result = if (chosen != null) substitute(chosen, env).trim() else ""
+            val result = if (chosen != null) substituteWithEnv(chosen, env).trim() else ""
             sb.append(result)
             i = close.range.last + 1
         }
@@ -221,7 +226,7 @@ object MacroEngine {
         val condition = args.substring(0, sep).trim()
         val content = args.substring(sep + 2)
         val falsy = evaluateCondition(condition, env)
-        return if (!falsy) substitute(content, env).trim() else ""
+        return if (!falsy) substituteWithEnv(content, env).trim() else ""
     }
 
     private val hhMm: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

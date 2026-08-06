@@ -56,9 +56,10 @@ class SeedRandom(seed: String) {
 
         init {
             for (k in 0 until WIDTH) s[k] = k
-            val keyLen = if (key.isEmpty()) 1 else key.size
+            val keyArr = if (key.isEmpty()) intArrayOf(1) else key
+            val keyLen = keyArr.size
             for (k in 0 until WIDTH) {
-                j = MASK and (j + key[k % keyLen] + s[k])
+                j = MASK and (j + keyArr[k % keyLen] + s[k])
                 val t = s[k]
                 s[k] = s[j]
                 s[j] = t
