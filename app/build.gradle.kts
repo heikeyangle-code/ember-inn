@@ -80,5 +80,6 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.palette)
     debugImplementation(libs.androidx.ui.tooling)
 }

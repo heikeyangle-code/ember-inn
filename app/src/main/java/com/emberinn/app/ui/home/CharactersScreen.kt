@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,16 +29,27 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,7 +62,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -58,16 +70,28 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
+import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
 import java.io.File
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
-fun CharactersScreen(vm: HomeViewModel = viewModel()) {
+fun CharactersScreen(
+    onOpenChat: (SessionRecord) -> Unit,
+    vm: HomeViewModel = viewModel(),
+) {
     val characters by vm.characters.collectAsState()
+    val recentSessions by vm.recentSessions.collectAsState()
     val message by vm.message.collectAsState()
     val context = LocalContext.current
 
     var query by rememberSaveable { mutableStateOf("") }
+    var menuRecord by remember { mutableStateOf<CharacterRecord?>(null) }
+    var detailRecord by remember { mutableStateOf<CharacterRecord?>(null) }
+    var deleteTarget by remember { mutableStateOf<CharacterRecord?>(null) }
+
     val filtered = remember(characters, query) {
         if (query.isBlank()) characters
         else characters.filter { it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }
@@ -80,14 +104,13 @@ fun CharactersScreen(vm: HomeViewModel = viewModel()) {
         }
     }
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             runCatching {
                 val name = displayName(context, it)
                 val mime = context.contentResolver.getType(it)
                 val format = detectFormat(name, mime)
-                val bytes = context.contentResolver.openInputStream(it)?.use { s -> s.readBytes() }
-                    ?: return@let
+                val bytes = context.contentResolver.openInputStream(it)?.use { s -> s.readBytes() } ?: return@let
                 vm.importCard(bytes, format)
             }.onFailure { e ->
                 Toast.makeText(context, "导入失败：${e.message}", Toast.LENGTH_SHORT).show()
@@ -95,55 +118,152 @@ fun CharactersScreen(vm: HomeViewModel = viewModel()) {
         }
     }
 
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let { u ->
+            val record = menuRecord
+            if (record != null) {
+                runCatching {
+                    context.contentResolver.openOutputStream(u)?.use { it.write(vm.exportJson(record).toByteArray()) }
+                    Toast.makeText(context, "已导出：${record.name}.json", Toast.LENGTH_SHORT).show()
+                }.onFailure { e ->
+                    Toast.makeText(context, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (characters.isEmpty() && query.isBlank()) {
             EmptyHome(
-                onImport = { launcher.launch(arrayOf("*/*")) },
-                onDirectChat = { Toast.makeText(context, "AI 对话：聊天页下一步开发", Toast.LENGTH_SHORT).show() },
+                onImport = { importLauncher.launch(arrayOf("*/*")) },
+                onDirectChat = { onOpenChat(vm.openChat(null, "AI 对话")) },
             )
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = { Text("搜索角色…") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    HomeTopBar(query = query, onQueryChange = { query = it })
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    AiChatCard(onClick = { Toast.makeText(context, "AI 对话：聊天页下一步开发", Toast.LENGTH_SHORT).show() })
+                    AiChatCard(onClick = { onOpenChat(vm.openChat(null, "AI 对话")) })
+                }
+                if (recentSessions.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text("最近聊过", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(recentSessions, key = { it.id }) { session ->
+                                RecentChatCard(session) { onOpenChat(session) }
+                            }
+                        }
+                    }
                 }
                 if (filtered.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = "我的角色",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
+                        Text("我的角色", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
                     items(filtered, key = { it.id }) { record ->
-                        CharacterCard(record = record, onClick = {
-                            Toast.makeText(context, "${record.name}：聊天页下一步开发", Toast.LENGTH_SHORT).show()
-                        })
+                        CharacterCard(
+                            record = record,
+                            onClick = { onOpenChat(vm.openChat(record.id, record.name)) },
+                            onMenu = { menuRecord = record },
+                        )
                     }
                 }
             }
         }
 
         FloatingActionButton(
-            onClick = { launcher.launch(arrayOf("*/*")) },
+            onClick = { importLauncher.launch(arrayOf("*/*")) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
             Icon(Icons.Filled.Add, contentDescription = "导入角色卡")
+        }
+    }
+
+    menuRecord?.let { record ->
+        ModalBottomSheet(onDismissRequest = { menuRecord = null }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    record.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                MenuRow(Icons.Filled.Star, if (record.pinned) "取消置顶" else "置顶") {
+                    vm.togglePin(record); menuRecord = null
+                }
+                MenuRow(Icons.Filled.Add, "新会话") {
+                    onOpenChat(vm.openChat(record.id, record.name)); menuRecord = null
+                }
+                MenuRow(Icons.Filled.Edit, "查看 / 编辑字段") {
+                    detailRecord = record; menuRecord = null
+                }
+                MenuRow(Icons.Filled.Share, "导出 JSON") {
+                    exportLauncher.launch("${record.name}.json")
+                }
+                MenuRow(Icons.Filled.Delete, "删除角色", danger = true) {
+                    deleteTarget = record; menuRecord = null
+                }
+            }
+        }
+    }
+
+    detailRecord?.let { record ->
+        ModalBottomSheet(onDismissRequest = { detailRecord = null }, sheetState = rememberModalBottomSheetState()) {
+            CharacterFieldsSheet(record)
+        }
+    }
+
+    deleteTarget?.let { record ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("删除「${record.name}」？") },
+            text = { Text("角色和它的聊天记录都会被删除，此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.delete(record); deleteTarget = null
+                    Toast.makeText(context, "已删除：${record.name}", Toast.LENGTH_SHORT).show()
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun HomeTopBar(query: String, onQueryChange: (String) -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "✦ 余烬酒馆",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("搜索角色 / 会话 / 世界书 / 设置") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -155,52 +275,52 @@ private fun AiChatCard(onClick: () -> Unit) {
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-        ) {
-            Text(
-                text = "✦",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text("✦", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.size(12.dp))
             Column {
                 Text("AI 对话", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "不用角色卡，直接聊天",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("不用角色卡，直接聊天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
 @Composable
-private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit) {
+private fun RecentChatCard(session: SessionRecord, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Text(session.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text("继续聊天 →", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit, onMenu: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onMenu),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column {
-            if (record.avatarPath != null && File(record.avatarPath).exists()) {
-                AsyncImage(
-                    model = File(record.avatarPath),
-                    contentDescription = record.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .background(
+        Box {
+            Column {
+                if (record.avatarPath != null && File(record.avatarPath).exists()) {
+                    AsyncImage(
+                        model = File(record.avatarPath),
+                        contentDescription = record.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(
                             Brush.linearGradient(
                                 listOf(
                                     MaterialTheme.colorScheme.primaryContainer,
@@ -208,32 +328,84 @@ private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit) {
                                 ),
                             ),
                         ),
-                    contentAlignment = Alignment.Center,
-                ) {
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(record.name.take(1).ifBlank { "?" }, style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            record.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (record.pinned) {
+                            Icon(Icons.Filled.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                        }
+                        IconButton(onClick = onMenu, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "更多", modifier = Modifier.size(16.dp))
+                        }
+                    }
                     Text(
-                        text = record.name.take(1).ifBlank { "?" },
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        record.description.ifBlank { "暂无简介" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = record.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = record.description.ifBlank { "暂无简介" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        }
+    }
+}
+
+@Composable
+private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, danger: Boolean = false, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.size(12.dp))
+        Text(label, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun CharacterFieldsSheet(record: CharacterRecord) {
+    val json = remember { Json { ignoreUnknownKeys = true } }
+    val fields = remember(record.rawJson) {
+        runCatching {
+            val root = json.parseToJsonElement(record.rawJson).jsonObject
+            val data = root["data"]?.jsonObject ?: root
+            listOf(
+                "名字" to (data["name"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "描述" to (data["description"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "性格" to (data["personality"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "场景" to (data["scenario"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "开场白" to (data["first_mes"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "示例对话" to (data["mes_example"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "系统提示" to (data["system_prompt"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "剧情后指令" to (data["post_history_instructions"]?.jsonPrimitive?.contentOrNull() ?: ""),
+                "创作者备注" to (data["creator_notes"]?.jsonPrimitive?.contentOrNull() ?: ""),
+            ).filter { it.second.isNotBlank() }
+        }.getOrDefault(emptyList())
+    }
+    Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+        Text("角色字段", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
+        fields.forEach { (label, value) ->
+            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 5, overflow = TextOverflow.Ellipsis)
             }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        }
+        if (fields.isEmpty()) {
+            Text("该卡暂无可用字段", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -245,19 +417,11 @@ private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = "✦",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        Text("✦", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(8.dp))
         Text("欢迎来到余烬酒馆", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
-        Text(
-            text = "导入第一张角色卡，开始你的故事",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Text("导入第一张角色卡，开始你的故事", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(20.dp))
         Button(onClick = onImport) { Text("导入角色卡") }
         Spacer(Modifier.height(8.dp))
@@ -265,13 +429,11 @@ private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
     }
 }
 
-private fun displayName(context: Context, uri: Uri): String? {
-    return runCatching {
-        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getString(0) else null
-        }
-    }.getOrNull()
-}
+private fun displayName(context: Context, uri: Uri): String? = runCatching {
+    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) c.getString(0) else null
+    }
+}.getOrNull()
 
 private fun detectFormat(name: String?, mime: String?): CardFormat = when {
     name?.endsWith(".png", ignoreCase = true) == true -> CardFormat.PNG

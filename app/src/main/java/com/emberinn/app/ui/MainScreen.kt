@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,6 +36,16 @@ private val Tabs = listOf(
 @Composable
 fun MainScreen() {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var openSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var openName by rememberSaveable { mutableStateOf("") }
+
+    val sessionId = openSessionId
+    if (sessionId != null) {
+        com.emberinn.app.ui.chat.ChatScreen(sessionId = sessionId, name = openName) {
+            openSessionId = null
+        }
+        return
+    }
 
     Scaffold(
         bottomBar = {
@@ -55,7 +66,12 @@ fun MainScreen() {
             contentAlignment = Alignment.Center,
         ) {
             when (selectedTab) {
-                0 -> com.emberinn.app.ui.home.CharactersScreen()
+                0 -> com.emberinn.app.ui.home.CharactersScreen(
+                    onOpenChat = { session ->
+                        openSessionId = session.id
+                        openName = session.name
+                    },
+                )
                 1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
                 else -> PlaceholderScreen("设置", "P0 骨架：外观主题 / 提供商模型 / 语音 / 服务 / 数据与隐私")
             }

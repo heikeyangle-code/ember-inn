@@ -10,4 +10,6 @@ data class CharacterRecord(
     val rawJson: String,
     val avatarPath: String? = null,
     val importedAt: Long = System.currentTimeMillis(),
+    val pinned: Boolean = false,
+    val seedColor: Long? = null,
 )

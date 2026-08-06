@@ -13,14 +13,21 @@ class CharacterStore(private val context: Context) {
 
     fun list(): List<CharacterRecord> =
         charactersDir.listFiles { f -> f.extension == "json" }
-            ?.sortedByDescending { it.lastModified() }
             ?.mapNotNull { file ->
                 runCatching { json.decodeFromString<CharacterRecord>(file.readText()) }.getOrNull()
-            } ?: emptyList()
+            }
+            ?.sortedWith(compareByDescending<CharacterRecord> { it.pinned }.thenByDescending { it.importedAt })
+            ?: emptyList()
+
+    fun get(id: String): CharacterRecord? = list().firstOrNull { it.id == id }
 
     fun save(record: CharacterRecord) {
-        val file = File(charactersDir, "${record.id}.json")
-        file.writeText(json.encodeToString(CharacterRecord.serializer(), record))
+        File(charactersDir, "${record.id}.json").writeText(json.encodeToString(CharacterRecord.serializer(), record))
+    }
+
+    fun delete(id: String) {
+        File(charactersDir, "$id.json").delete()
+        File(avatarsDir, "$id.png").delete()
     }
 
     fun saveAvatar(id: String, bytes: ByteArray): String {
