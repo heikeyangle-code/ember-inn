@@ -7,3 +7,6 @@
 - `package.json` / `package-lock.json`：`yaml@2.8.3` 与 `sanitize-filename@1.6.3`，
   均为官方 release 依赖的同版本（见 sillytavern-ref/package-lock.json）。
   安装：`cd scripts/diff/vendor && npm ci`（node_modules 不入库）。
+
+- `jszip-3.10.1.min.js`：官方 public/lib/jszip.min.js（JSZip v3.10.1，MIT），
+  用于 CharX 差分 fixture 生成/读取 ZIP。

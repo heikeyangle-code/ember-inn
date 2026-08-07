@@ -127,8 +127,8 @@ class ImportersTest {
     @Test
     fun `charx assets extract icon and auxiliary`() {
         val card = """{"spec":"chara_card_v3","data":{"name":"N","assets":[
-            {"type":"icon","ext":"png","zipPath":"img/icon.png","fileName":"icon.png"},
-            {"type":"background","ext":"jpg","zipPath":"img/bg.jpg","fileName":"bg.jpg"}
+            {"type":"icon","name":"main.png","ext":"png","uri":"embeded://img/icon.png"},
+            {"type":"background","name":"bg.jpg","ext":"jpg","uri":"embedded://img/bg.jpg"}
         ]}}"""
         val zip = zipOf(
             "card.json" to card,
@@ -136,9 +136,10 @@ class ImportersTest {
             "img/bg.jpg" to "BG",
         )
         val assets = CharXImporter.extractAssets(zip)
-        assertEquals("ICON", String(assets.icon!!.data, Charsets.UTF_8))
-        assertEquals(2, assets.assets.size)
-        assertEquals("background", assets.assets[1].type)
+        assertEquals("ICON", String(assets.icon!!.data!!, Charsets.UTF_8))
+        assertEquals(1, assets.assets.size)
+        assertEquals("background", assets.assets[0].type)
+        assertEquals("bg", assets.assets[0].baseName)
     }
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray {
