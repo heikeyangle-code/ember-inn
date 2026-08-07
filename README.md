@@ -13,7 +13,7 @@
 
 ## 兼容目标（以官方行为为基准，回归测试锁定）
 
-- **角色卡**：PNG V2/V3（tEXt/ccv3）、CharX、JSON 导入导出、从 URL 导入（对齐官方 content-manager）、V3 assets（icon/background/voice）
+- **角色卡**：PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（对齐官方：官方只导出 PNG/JSON）、CharX/YAML/BYAF 导入、从 URL 导入（对齐官方 content-manager）、V3 assets（icon/background/voice）
 - **世界书**：关键词扫描、注入位置（before/after char）、深度、递归、粘性/冷却、分组评分、向量化、全字段（secondary_keys/insertion_order/selective/priority/probability/delay）、三级世界书（全局 / 会话 / 角色）
 - **宏系统**：`{{user}}`、`{{char}}`、`{{random}}`、`{{pick}}`、`{{roll}}`、`{{if}}`、变量宏等（对齐 Macros 2.0）
 - **斜杠命令**：官方常用命令全量，行为一致

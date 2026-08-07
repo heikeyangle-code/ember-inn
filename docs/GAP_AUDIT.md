@@ -4,8 +4,8 @@
 ✅=已实现且有测试/差分　🟡=部分/边界　❌=未做
 
 ## 角色卡
-- ✅ PNG/JSON/CharX/YAML/BYAF 导入导出、V2 归一、私有字段清理、PNG 字节差分（6 例）
-- 🟡 CharX/BYAF 资源提取（头像/背景/语音）未做（App 层）
+- ✅ PNG/JSON 导入导出（官方也只导出 PNG/JSON）+ CharX/YAML/BYAF 导入（对齐官方）、V2 归一（官方差分 5 例）、私有字段清理、PNG 字节差分（6 例）
+- ✅ CharX 资源提取（引擎 CharXImporter.CharXAssets：icon/assets）；🟡 BYAF 资源提取未实现；App 层资源入库未做
 - ❌ URL 导入（App 层）
 
 ## 世界书
@@ -18,12 +18,12 @@
 ## 宏
 - ✅ 核心宏 + 官方 e2e 差分 158 例 + {{pick}} seedrandom 逐位一致（5 例）
 - ✅ 变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数
-- 🟡 动态宏注册 API、宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）未做
+- ✅ MacroRegistry 动态注册/注销/解析；🟡 宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）边界
 
 ## 斜杠
 - ✅ 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
   /pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器
-- 🟡 parser flags（REPLACE_GETVAR 等）、150+ 官方命令（多数要接 App 状态）
+- ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；🟡 REPLACE_GETVAR/STRICT_ESCAPING 语义、150+ 官方命令（多数要接 App 状态）
 
 ## 提示词组装
 - ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override
@@ -31,7 +31,7 @@
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
 - 🟡 工具预分配 token、媒体内联、推理签名、多模态
 - ✅ continue prefill/nudge、人设 IN_CHAT 注入、作者注释组合（ANWithWI）
-- ❌ 群聊完整调度（队列 UI）、工具预分配 token/媒体/推理
+- 🟡 群聊调度核心已实现（SWAP/APPEND/队列），完整调度（App 联动）待做；工具预分配 token/媒体内联/推理签名边界
 
 ## 正则
 - ✅ 引擎 + substituteRegex/宏替换 + 13 例差分

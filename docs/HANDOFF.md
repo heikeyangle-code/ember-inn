@@ -71,8 +71,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 ## 3. 引擎进度（对照官方 release）
 
 ### 3.1 角色卡 ✅
-PNG V2/V3（tEXt/ccv3）、CharX、JSON、YAML、BYAF 导入；V2 归一（readFromV2）、私有字段清理（charaFormatData）、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-🟡 CharX/BYAF 资源（头像/背景/语音）提取到 App 层未做；URL 导入未做（App 层）。
+PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；V2 归一（readFromV2，官方差分 5 例）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
+✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；🟡 BYAF 资源提取未实现；App 层资源入库/URL 导入未做。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
