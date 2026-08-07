@@ -21,7 +21,7 @@ object CardImporter : CharacterCardImporter {
 
     override fun import(data: ByteArray, format: CardFormat): String = when (format) {
         CardFormat.PNG -> CharacterCardCodec.readFromPng(data)
-        CardFormat.JSON -> String(data, Charsets.UTF_8)
+        CardFormat.JSON -> JsonImporter.import(data)
         CardFormat.CHARX -> CharXImporter.cardJson(data)
         CardFormat.YAML -> YamlImporter.import(data)
         CardFormat.BYAF -> ByafImporter.import(data)

@@ -1,0 +1,213 @@
+{
+  "source": "characters.js importFromJson",
+  "cases": [
+    {
+      "id": "v3",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v3\",\"spec_version\":\"3.0\",\"data\":{\"name\":\"测试/角色:名\",\"description\":\"描述\",\"extensions\":{\"fav\":true,\"talkativeness\":0.7}},\"chat\":[\"旧\"],\"json_data\":\"x\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "spec_version": "3.0",
+          "data": {
+            "name": "测试角色名",
+            "description": "描述",
+            "extensions": {
+              "fav": false,
+              "talkativeness": 0.7
+            }
+          },
+          "fav": false,
+          "name": "测试角色名",
+          "description": "描述",
+          "talkativeness": 0.7,
+          "chat": "测试角色名 - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "测试角色名",
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v2",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v2\",\"name\":\"旧卡\",\"description\":\"描述\",\"personality\":\"性格\",\"scenario\":\"场景\",\"first_mes\":\"你好\",\"mes_example\":\"示例\",\"talkativeness\":0.8,\"fav\":true,\"chat\":\"会话\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v2",
+          "name": "旧卡",
+          "description": "描述",
+          "personality": "性格",
+          "scenario": "场景",
+          "first_mes": "你好",
+          "mes_example": "示例",
+          "fav": false,
+          "data": {
+            "extensions": {
+              "fav": false
+            }
+          },
+          "chat": "旧卡 - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "旧卡",
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v1",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"旧版/角色\",\"description\":\"旧描述\",\"personality\":\"旧性格\",\"first_mes\":\"开场\",\"scenario\":\"旧场景\",\"mes_example\":\"旧示例\",\"creator_notes\":\"Creator's notes go here.备注\",\"talkativeness\":0.6,\"fav\":true,\"tags\":\"a, b\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "旧版角色",
+          "description": "旧描述",
+          "creatorcomment": "备注",
+          "personality": "旧性格",
+          "first_mes": "开场",
+          "avatar": "none",
+          "chat": "旧版角色 - 2026-08-08@00h00m00s000ms",
+          "mes_example": "旧示例",
+          "scenario": "旧场景",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.6,
+          "creator": "",
+          "tags": [
+            "a",
+            "b"
+          ],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "旧版角色",
+            "description": "旧描述",
+            "personality": "旧性格",
+            "scenario": "旧场景",
+            "first_mes": "开场",
+            "mes_example": "旧示例",
+            "creator_notes": "备注",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [
+              "a",
+              "b"
+            ],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.6,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "旧版角色",
+        "risuRun": false
+      }
+    },
+    {
+      "id": "gradio",
+      "args": {
+        "body": {
+          "json": "{\"char_name\":\"渐变角色\",\"char_persona\":\"人设\",\"char_greeting\":\"问候\",\"example_dialogue\":\"示例对话\",\"creator_notes\":\"Creator's notes go here.\",\"world_scenario\":\"场景\",\"personality\":\"性格\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "渐变角色",
+          "description": "人设",
+          "creatorcomment": "",
+          "personality": "",
+          "first_mes": "问候",
+          "avatar": "none",
+          "chat": "undefined - 2026-08-08@00h00m00s000ms",
+          "mes_example": "示例对话",
+          "scenario": "场景",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.5,
+          "creator": "",
+          "tags": [],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "渐变角色",
+            "description": "人设",
+            "personality": "",
+            "scenario": "场景",
+            "first_mes": "问候",
+            "mes_example": "示例对话",
+            "creator_notes": "",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.5,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "渐变角色",
+        "risuRun": false
+      }
+    },
+    {
+      "id": "preserved",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v3\",\"data\":{\"name\":\"Preserved卡\",\"description\":\"d\"}}",
+          "preservedFileName": "keep.json"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "Preserved卡",
+            "description": "d",
+            "extensions": {
+              "fav": false
+            }
+          },
+          "fav": false,
+          "name": "Preserved卡",
+          "description": "d",
+          "chat": "Preserved卡 - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "keep.json",
+        "risuRun": true
+      }
+    }
+  ]
+}

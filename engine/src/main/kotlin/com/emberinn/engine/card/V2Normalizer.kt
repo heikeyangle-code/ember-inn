@@ -34,8 +34,17 @@ object V2Normalizer {
         val extensions = data["extensions"]?.jsonObject ?: JsonObject(emptyMap())
         // 官方 readFromV2：talkativeness/fav 原值透传（不转换类型）；
         // 缺失时官方 defaultValue 回填会被随后的 char[field]=v2Value(undefined) 覆盖 → 实际不写入，差分已证实
-        extensions["talkativeness"]?.let { root["talkativeness"] = it }
-        extensions["fav"]?.let { root["fav"] = it }
+        // 官方 readFromV2：talkativeness/fav 缺失时最终被 undefined 赋值覆盖 → 根字段删除
+        if (extensions.containsKey("talkativeness")) {
+            root["talkativeness"] = extensions.getValue("talkativeness")
+        } else {
+            root.remove("talkativeness")
+        }
+        if (extensions.containsKey("fav")) {
+            root["fav"] = extensions.getValue("fav")
+        } else {
+            root.remove("fav")
+        }
 
         // 官方 fieldMappings：data 有值才覆盖
         listOf("name", "description", "personality", "scenario", "first_mes", "mes_example", "tags")
@@ -43,7 +52,8 @@ object V2Normalizer {
 
         // 官方：char.chat = char.chat ?? `${char.name} - ${humanizedDateTime()}`
         if (root["chat"] == null) {
-            val name = data["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
+            val name = data["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() }
+                ?: root["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
             root["chat"] = JsonPrimitive(defaultChatName(name, now))
         }
 
@@ -55,6 +65,7 @@ object V2Normalizer {
         name: String,
         description: String,
         firstMes: String,
+        mesExample: String = "",
         createDate: String,
         chat: String,
         creatorComment: String = "",
@@ -83,7 +94,7 @@ object V2Normalizer {
         put("personality", JsonPrimitive(personality))
         put("scenario", JsonPrimitive(scenario))
         put("first_mes", JsonPrimitive(firstMes))
-        put("mes_example", JsonPrimitive(""))
+        put("mes_example", JsonPrimitive(mesExample))
         put("creatorcomment", JsonPrimitive(creatorComment))
         put("avatar", JsonPrimitive("none"))
         put("talkativeness", JsonPrimitive(talkativeness))
@@ -96,7 +107,7 @@ object V2Normalizer {
             put("personality", JsonPrimitive(personality))
             put("scenario", JsonPrimitive(scenario))
             put("first_mes", JsonPrimitive(firstMes))
-            put("mes_example", JsonPrimitive(""))
+            put("mes_example", JsonPrimitive(mesExample))
             put("creator_notes", JsonPrimitive(creatorComment))
             put("system_prompt", JsonPrimitive(systemPrompt))
             put("post_history_instructions", JsonPrimitive(postHistoryInstructions))
