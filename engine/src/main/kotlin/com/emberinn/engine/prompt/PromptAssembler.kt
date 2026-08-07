@@ -58,7 +58,7 @@ object PromptAssembler {
         }
     }
 
-    /** 对齐 preparePromptsForChatCompletion 的 systemPrompts 基础列表（只保留非空内容）。 */
+    /** 对齐 preparePromptsForChatCompletion 的 systemPrompts 基础列表（官方空内容也保留）。 */
     fun buildSystemPrompts(
         charDescription: String,
         charPersonality: String,
@@ -74,6 +74,7 @@ object PromptAssembler {
         bias: String = "",
         personalityFormat: String = DEFAULT_PERSONALITY_FORMAT,
         scenarioFormat: String = DEFAULT_SCENARIO_FORMAT,
+        wiFormat: String = DEFAULT_WI_FORMAT,
     ): List<PromptMessage> {
         val env = MacroEnv(user = user, char = char)
         // 官方 substituteParams 的 env 来自活动角色卡：{{personality}}/{{scenario}} 解析到传入文本
@@ -87,22 +88,22 @@ object PromptAssembler {
             MacroEngine.substitute(scenarioFormat, cardEnv)
         } else scenario
         val groupNudgeText = if (groupNudge.isNotEmpty()) MacroEngine.substitute(groupNudge, env) else ""
+        val impersonationText = if (impersonationPrompt.isNotEmpty()) MacroEngine.substitute(impersonationPrompt, env) else ""
 
         val prompts = listOf(
-            PromptMessage("system", formatWorldInfo(worldInfoBefore), identifier = "worldInfoBefore"),
-            PromptMessage("system", formatWorldInfo(worldInfoAfter), identifier = "worldInfoAfter"),
+            PromptMessage("system", formatWorldInfo(worldInfoBefore, wiFormat), identifier = "worldInfoBefore"),
+            PromptMessage("system", formatWorldInfo(worldInfoAfter, wiFormat), identifier = "worldInfoAfter"),
             PromptMessage("system", charDescription, identifier = "charDescription"),
             PromptMessage("system", personalityText, identifier = "charPersonality"),
             PromptMessage("system", scenarioText, identifier = "scenario"),
-            PromptMessage("system", impersonationPrompt, identifier = "impersonate"),
+            PromptMessage("system", impersonationText, identifier = "impersonate"),
             PromptMessage("system", quietPrompt, identifier = "quietPrompt"),
             PromptMessage("system", groupNudgeText, identifier = "groupNudge"),
             PromptMessage("assistant", bias, identifier = "bias"),
         )
-        val withPersona = if (persona.isNotEmpty()) {
+        return if (persona.isNotEmpty()) {
             prompts + PromptMessage("system", persona, identifier = "personaDescription")
         } else prompts
-        return withPersona.filter { it.content.isNotBlank() }
     }
 
     /**
@@ -132,6 +133,7 @@ object PromptAssembler {
         personalityFormat: String = DEFAULT_PERSONALITY_FORMAT,
         scenarioFormat: String = DEFAULT_SCENARIO_FORMAT,
         groupNudge: String = DEFAULT_GROUP_NUDGE,
+        wiFormat: String = DEFAULT_WI_FORMAT,
     ): PromptItems {
         val base = buildSystemPrompts(
             charDescription = charDescription,
@@ -148,6 +150,7 @@ object PromptAssembler {
             bias = bias,
             personalityFormat = personalityFormat,
             scenarioFormat = scenarioFormat,
+            wiFormat = wiFormat,
         )
         val systemPrompts = ExtensionPromptInjection.inject(
             base,
@@ -157,7 +160,7 @@ object PromptAssembler {
         )
 
         val collection = PromptManagerCore.getCollection(userOrder, userPrompts, type, env)
-        val merged = PromptManagerCore.mergeSystemPrompts(collection, systemPrompts)
+        val merged = PromptManagerCore.mergeSystemPrompts(collection, systemPrompts, env)
 
         val order = userOrder.ifEmpty { PromptManagerCore.DEFAULT_ORDER_ENTRIES }
         val mainEnabled = order.firstOrNull { it.identifier == "main" }?.enabled ?: true

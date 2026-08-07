@@ -87,20 +87,26 @@ object PromptManagerCore {
         return generationType in prompt.injectionTrigger
     }
 
-    /** 对齐 preparePrompt：内容做宏替换；marker 不替换；original/groupOverride 走 MacroEnv。 */
+    /** 对齐官方 preparePrompt：无条件宏替换（marker 也一样）；original/groupOverride 走 MacroEnv。 */
     fun prepare(
         prompt: PromptItem,
         env: MacroEnv,
         original: String? = null,
         groupOverride: String? = null,
     ): PromptItem {
-        if (prompt.marker) return prompt
         val prepared = env.copy(
             original = original ?: env.original,
             group = groupOverride ?: env.group,
             groupNotMuted = groupOverride ?: env.groupNotMuted,
         )
-        return prompt.copy(content = MacroEngine.substitute(prompt.content, prepared))
+        // 官方 preparePrompt 走 new Prompt(prompt)：marker/enabled 不复制（语义上等同 false/true）
+        return prompt.copy(
+            content = MacroEngine.substitute(prompt.content, prepared),
+            marker = false,
+            enabled = true,
+            // 官方 new Prompt() 构造函数：injection_order 缺省 100
+            injectionOrder = prompt.injectionOrder ?: PromptInjection.DEFAULT_ORDER,
+        )
     }
 
     /**
@@ -113,6 +119,8 @@ object PromptManagerCore {
         generationType: String,
         env: MacroEnv,
     ): PromptItems {
+        // 对齐官方 getPromptCollection：generationType 归一（空→normal、小写、去空白）
+        val normalizedType = generationType.ifBlank { "normal" }.lowercase().trim()
         val order = userOrder.ifEmpty { DEFAULT_ORDER_ENTRIES }
         val collection = PromptItems()
         val defaults = PromptCollection.DEFAULT_PROMPTS.associateBy { it.identifier }
@@ -122,7 +130,7 @@ object PromptManagerCore {
                 ?: defaults[entry.identifier]
                 ?: continue
 
-            val allowed = entry.enabled && shouldTrigger(prompt, generationType)
+            val allowed = entry.enabled && shouldTrigger(prompt, normalizedType)
             if (allowed) {
                 collection.add(prepare(prompt, env))
             } else if (entry.identifier == "main") {
@@ -136,9 +144,16 @@ object PromptManagerCore {
      * 对齐 preparePromptsForChatCompletion 的合并：把系统提示内容写入同名 marker，
      * 并应用 PromptManager 的 role / injection_position / injection_depth / injection_order 覆盖。
      */
+    /**
+     * 对齐 preparePromptsForChatCompletion 的合并：
+     * 官方 new Prompt(systemPrompt) 只继承系统提示自身字段，仅 role/injection_position/
+     * injection_depth/injection_order 来自 PromptManager 集合项；随后 preparePrompt 宏替换。
+     * system_prompt 官方为 undefined（语义等同 system，Kotlin 用 true 表示）。
+     */
     fun mergeSystemPrompts(
         collection: PromptItems,
         systemPrompts: List<PromptMessage>,
+        env: MacroEnv = MacroEnv(user = "", char = ""),
     ): PromptItems {
         val out = PromptItems(collection.collection.toList())
         for (prompt in systemPrompts) {
@@ -149,17 +164,20 @@ object PromptManagerCore {
                 name = item?.name ?: id,
                 content = prompt.content,
                 role = item?.role ?: prompt.role,
-                systemPrompt = item?.systemPrompt ?: true,
-                marker = item?.marker ?: false,
-                enabled = item?.enabled ?: true,
+                systemPrompt = true,
+                marker = false,
+                enabled = true,
                 injectionPosition = item?.injectionPosition,
                 injectionDepth = item?.injectionDepth,
-                injectionOrder = item?.injectionOrder,
-                position = item?.position ?: prompt.position,
-                extension = item?.extension ?: prompt.extension,
+                injectionOrder = item?.injectionOrder ?: PromptInjection.DEFAULT_ORDER,
+                injectionTrigger = emptyList(),
+                forbidOverrides = false,
+                position = prompt.position,
+                extension = prompt.extension,
             )
+            val prepared = prepare(merged, env)
             val idx = out.index(id)
-            if (idx != -1) out.set(merged, idx) else out.add(merged)
+            if (idx != -1) out.set(prepared, idx) else out.add(prepared)
         }
         return out
     }

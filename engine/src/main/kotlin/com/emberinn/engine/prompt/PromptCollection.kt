@@ -21,7 +21,7 @@ data class PromptItem(
     @SerialName("injection_depth")
     val injectionDepth: Int? = null,
     @SerialName("injection_order")
-    val injectionOrder: Int? = null,
+    val injectionOrder: Int? = 100,
     @SerialName("injection_trigger")
     val injectionTrigger: List<String> = emptyList(),
     @SerialName("forbid_overrides")
@@ -63,10 +63,8 @@ object PromptCollection {
     )
 
     /** preparePrompt：内容做宏替换（含 original/groupOverride 的基础版）。 */
-    fun prepare(prompt: PromptItem, env: MacroEnv): PromptItem {
-        val content = if (prompt.marker) prompt.content else MacroEngine.substitute(prompt.content, env)
-        return prompt.copy(content = content)
-    }
+    fun prepare(prompt: PromptItem, env: MacroEnv): PromptItem =
+        PromptManagerCore.prepare(prompt, env)
 
     /** 按默认顺序返回已 prepare 的集合（只含 enabled）。 */
     fun getCollection(env: MacroEnv): List<PromptItem> {

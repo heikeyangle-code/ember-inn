@@ -19,6 +19,7 @@
 - `worldinfo-file-official.mjs`：世界书↔角色书互转（convertWorldInfoToCharacterBook /
   convertCharacterBook）fixture。
 - `yaml-import-official.mjs`：逐字提取官方 characters.js importFromYaml + convertToV2 + charaFormatData（yaml/sanitize-filename 用官方同版本 npm 包，已声明在 vendor/package.json）。
+- `prepare-prompts-official.mjs`：逐字提取官方 public/scripts/openai.js preparePromptsForChatCompletion（oai_settings/substituteParams/promptManager 按官方语义打桩）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -51,6 +52,7 @@ node scripts/diff/macros-official.mjs
 node scripts/diff/pick-official.mjs
 node scripts/diff/worldinfo-file-official.mjs
 node scripts/diff/yaml-import-official.mjs
+node scripts/diff/prepare-prompts-official.mjs
 node scripts/build-presets.mjs
 ```
 

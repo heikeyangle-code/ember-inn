@@ -26,7 +26,9 @@ object ExtensionPromptInjection {
         "4_vectors_data_bank" to "vectorsDataBank",
         "chromadb" to "smartContext",
     )
-    private val KNOWN_KEYS = KNOWN_IDENTIFIERS.keys
+    private val KNOWN_KEYS = KNOWN_IDENTIFIERS.keys + setOf("PERSONA_DESCRIPTION", "QUIET_PROMPT", "DEPTH_PROMPT")
+    /** 官方固定 role 的已知扩展（3_vectors/smartContext 恒为 system，忽略扩展自带 role）。 */
+    private val FIXED_SYSTEM_ROLE = setOf("3_vectors", "chromadb")
 
     fun inject(
         systemPrompts: List<PromptMessage>,
@@ -42,7 +44,7 @@ object ExtensionPromptInjection {
             val position = ext.position.takeIf { it == "start" || it == "end" }
             out.add(
                 PromptMessage(
-                    role = ext.role,
+                    role = if (key in FIXED_SYSTEM_ROLE) "system" else ext.role,
                     content = ext.content,
                     identifier = KNOWN_IDENTIFIERS[key] ?: key,
                     position = position,

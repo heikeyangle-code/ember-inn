@@ -34,7 +34,7 @@ class PromptAssemblerTest {
     }
 
     @Test
-    fun `system prompts ordered and non-empty only`() {
+    fun `system prompts ordered and empty entries kept as official`() {
         val prompts = PromptAssembler.buildSystemPrompts(
             charDescription = "描述",
             charPersonality = "性格",
@@ -45,11 +45,14 @@ class PromptAssemblerTest {
             user = "U",
         )
         assertEquals(
-            listOf("worldInfoBefore", "charDescription", "charPersonality", "scenario", "groupNudge"),
+            listOf(
+                "worldInfoBefore", "worldInfoAfter", "charDescription", "charPersonality",
+                "scenario", "impersonate", "quietPrompt", "groupNudge", "bias",
+            ),
             prompts.map { it.identifier },
         )
         assertEquals("前置", prompts.first().content)
-        assertEquals("性格", prompts[2].content)
+        assertEquals("性格", prompts[3].content)
     }
 
     @Test
