@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（16 组，共 324 例官方基准，全部通过）**：
+**已覆盖（17 组，共 329 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -65,8 +65,9 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 作用域宏内容裁剪 | macro-trim-official.mjs | MacroTrimDiffTest | 7 |
 | Anthropic 请求体 | anthropic-body-official.mjs | AnthropicBodyDiffTest | 12 |
 | Gemini 请求体 | gemini-body-official.mjs | GeminiBodyDiffTest | 11 |
+| 聊天历史填充 | chat-history-pop-official.mjs | ChatHistoryPopDiffTest | 5 |
 
-**尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、CharX/YAML/BYAF 导入（官方依赖 JSZip/文件系统，手写单测）、PromptAssembler 各 populator（依赖 tokenHandler/全局状态，单测 + 源码对照）。
+**尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、CharX/YAML/BYAF 导入（官方依赖 JSZip/文件系统，手写单测）、populateDialogueExamples / preparePromptsForChatCompletion（populateChatHistory 已差分 5 例；其余 populator 依赖全局状态，单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
 作用域宏配对逻辑（官方 MacroCstWalker 依赖 chevrotain CST 与 MacroRegistry，无法逐字提取；其中 trimScopedContent 纯函数已差分 7 例）。
 
@@ -196,6 +197,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 11（2026-08-08：populateChatHistory 官方差分 + 两处真 bug 修复）
+
+- chat-history-pop-official.mjs：逐字提取官方 populateChatHistory，Message/PromptManager/预算/ToolManager 打桩，输出重建后的最终集合结构（集合名 + 消息序列），5 例 fixture 全过
+- 差分抓出并修 2 个真 bug：
+  1. 历史消息 identifier 官方为动态编号 chatHistory-N（正序）——原来固定 "chatHistory"
+  2. continue 模式移出的最后一条消息也要过 preparePrompt 宏替换——原来原样插入
+- 官方基准 324 → 329；引擎 197 测全绿
+
 ## 最近一轮 10（2026-08-08：Anthropic/Gemini 请求体 1:1 差分 + 历史消息 preparePrompt + 应用图标）
 
 - AnthropicRequestBuilder 1:1：thinking（adaptive/enabled+预算）、tools/tool_choice、json_schema、web_search、beta headers（tools/cache/effort）、采样限制、verbosity、no-prefill assistant→user；官方差分 12 例（逐字提取 sendClaudeRequest 构造段，convertClaudeMessages/预算打桩）
@@ -271,7 +280,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 16 个脚本 + 324 例 fixture
+- 差分工具 17 个脚本 + 329 例 fixture
 
 ## 7. 注意事项
 

@@ -32,7 +32,7 @@ class ChatHistoryPopulatorTest {
             env = env,
         )
         val chat = cc.getChat()
-        assertEquals(listOf("newMainChat", "chatHistory", "chatHistory"), chat.map { it.identifier })
+        assertEquals(listOf("newMainChat", "chatHistory-1", "chatHistory-2"), chat.map { it.identifier })
         assertEquals(listOf("新对话", "先", "后"), chat.map { it.content })
         // 100 - 3(预留) - 2(两条消息) + 3(归还) - 3(newChat插入) = 95
         assertEquals(95, cc.tokenBudget)

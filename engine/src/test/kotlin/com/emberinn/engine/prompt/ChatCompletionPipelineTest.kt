@@ -58,7 +58,7 @@ class ChatCompletionPipelineTest {
             listOf(
                 "main", "summary", "worldInfoBefore", "charDescription",
                 "newChat", "dialogueExamples 0-0",
-                "newMainChat", "chatHistory", "chatHistory",
+                "newMainChat", "chatHistory-1", "chatHistory-2",
                 "bias",
             ),
             chat.map { it.identifier },

@@ -41,10 +41,10 @@ object ChatHistoryPopulator {
                 collection.add(
                     CompletionMessage(
                         role = last.role,
-                        content = last.content,
+                        content = MacroEngine.substitute(last.content, env),
                         name = last.name,
-                        identifier = "continueMessage",
-                        tokens = handler.countAsync(last.content, "conversation"),
+                        identifier = last.identifier ?: "",
+                        tokens = handler.countAsync(MacroEngine.substitute(last.content, env), "conversation"),
                     ),
                 )
             }
@@ -145,7 +145,8 @@ object ChatHistoryPopulator {
                 role = m.role,
                 content = content,
                 name = m.name,
-                identifier = "chatHistory",
+                // 对齐官方 populateChatHistory：identifier = chatHistory-{正序位置}
+                identifier = "chatHistory-${historyMessages.size - poolIndex}",
                 tokens = handler.countAsync(content, "conversation"),
             )
             if (chatCompletion.canAfford(chatMessage)) {
