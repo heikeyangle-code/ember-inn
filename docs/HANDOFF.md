@@ -73,7 +73,7 @@ PNG V2/V3（tEXt/ccv3）、CharX、JSON、YAML、BYAF 导入；V2 归一（readF
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
 ✅ 扩展字段已全接上（数据全量透传 + 行为）：
-   - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容 + 内存实现）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
+   - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容）；**FileVectorStore 磁盘持久化对齐官方 vectra.LocalIndex**（目录 root/source/collection/model + items.json，重启不丢；InMemoryVectorStore 仅测试/临时）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
    - automationId → 快捷回复自动执行：WorldInfoAutoExecute.resolve + AutoExecuteHandler（对齐 quick-reply AutoExecuteHandler，prevent 栈；选择逻辑 4 例官方差分）
    - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
    - addMemo → 官方核心从未读取，仅透传
@@ -176,8 +176,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - displayIndex：WorldInfoEditorSort（custom/priority/default/length，secondary order 降序 + tertiary uid 升序）
 - WorldInfoEntry 强类型补 4 字段 + 解析（顶层/extensions 双格式）
 - 新增官方差分 2 组 10 例：editor-sort（sortWorldInfoEntries 逐字提取，6 例）、auto-execute（handleWIActivation 选择逻辑，4 例）；差分抓出 length 方向 bug 已修
-- RAG 全链路无法做纯函数差分（官方依赖 ChromaDB/浏览器 API），采用逐行对照源码 + 单测锁行为，已在文档标注
-- 引擎 171 测全绿
+- 官方持久化核实：vectra LocalIndex 落盘 data/{user}/vectors/{source}/{collectionId}/{model}；已实现 FileVectorStore 对齐（items.json + upsert + 全局 topK 查询），内存库降级测试用
+- 修正多集合查询语义：官方 multiQueryCollection 为全局 topK（合并→降序→阈值→topK→分组），InMemory/File 两实现都已对齐
+- RAG 全链路无法做纯函数差分（官方依赖 vectra/嵌入服务/浏览器 API），采用逐行对照源码 + 单测锁行为，已在文档标注
+- 引擎 172 测全绿
 
 ## 6. 最近工作日志
 

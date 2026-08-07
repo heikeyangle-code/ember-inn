@@ -1,5 +1,6 @@
 package com.emberinn.engine.worldinfo
 
+import java.io.File
 import kotlin.math.sqrt
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -46,7 +47,10 @@ fun interface EmbeddingProvider {
     fun embed(texts: List<String>): List<List<Double>>
 }
 
-/** 向量库接口（对齐官方 /api/vector/query 返回）。 */
+/**
+ * 向量库接口。query 对齐官方 multiQueryCollection：各集合先取 topK → 合并按分数降序 →
+ * 过滤 threshold → 取全局 topK → 按 collectionId 分组返回。
+ */
 interface VectorStore {
     fun getSavedHashes(collectionId: String): Set<Long>
     fun insert(collectionId: String, items: List<VectorItem>)
@@ -125,15 +129,17 @@ class InMemoryVectorStore(
     ): Map<String, VectorQueryResult> {
         if (collectionIds.isEmpty() || queryText.isBlank()) return emptyMap()
         val queryVector = embeddings.embed(listOf(queryText)).firstOrNull() ?: return emptyMap()
-        return collectionIds.associateWith { cid ->
-            val scored = collections[cid].orEmpty()
-                .map { it to cosine(queryVector, it.vector) }
-                .filter { it.second >= threshold }
-                .sortedByDescending { it.second }
-                .take(topK)
+        // 对齐官方 multiQueryCollection：合并 → 分数降序 → 阈值 → 全局 topK → 分组
+        val scored = collectionIds.flatMap { cid ->
+            collections[cid].orEmpty().map { Triple(cid, it, cosine(queryVector, it.vector)) }
+        }
+            .filter { it.third >= threshold }
+            .sortedByDescending { it.third }
+            .take(topK)
+        return scored.groupBy { it.first }.mapValues { (_, rows) ->
             VectorQueryResult(
-                hashes = scored.map { it.first.hash },
-                metadata = scored.map { (stored, score) ->
+                hashes = rows.map { it.second.hash },
+                metadata = rows.map { (_, stored, score) ->
                     buildJsonObject {
                         put("hash", JsonPrimitive(stored.hash))
                         put("text", JsonPrimitive(stored.text))
@@ -157,6 +163,146 @@ class InMemoryVectorStore(
         }
         if (na == 0.0 || nb == 0.0) return 0.0
         return dot / (sqrt(na) * sqrt(nb))
+    }
+}
+
+/**
+ * 磁盘持久化向量库（对齐官方 vectra.LocalIndex 落盘语义）：
+ * 目录 `{root}/{source}/{collectionId}/{model}`，每集合一个 items.json：[{hash,text,index,vector}]。
+ * insert 为 upsert（按 hash，对齐 vectra upsertItem）；query 全局 topK 语义见 VectorStore。
+ * 重启不丢；内存库仅测试/临时用途。
+ */
+class FileVectorStore(
+    private val rootDir: File,
+    private val embeddings: EmbeddingProvider,
+    private val source: String = "local",
+    private val model: String = "",
+) : VectorStore {
+
+    private data class StoredItem(
+        val hash: Long,
+        val text: String,
+        val index: Int,
+        val vector: List<Double>,
+    )
+
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+    private val cache = mutableMapOf<String, MutableList<StoredItem>>()
+
+    private fun collectionDir(collectionId: String): File {
+        val dir = File(rootDir, sanitize(source)).resolve(sanitize(collectionId)).resolve(sanitize(model))
+        dir.mkdirs()
+        return dir
+    }
+
+    private fun itemsFile(collectionId: String): File = File(collectionDir(collectionId), "items.json")
+
+    private fun load(collectionId: String): MutableList<StoredItem> {
+        cache[collectionId]?.let { return it }
+        val file = itemsFile(collectionId)
+        val list = if (file.exists()) {
+            runCatching {
+                val root = json.parseToJsonElement(file.readText()).jsonObject
+                root["items"]?.jsonArray?.map { it.jsonObject }.orEmpty().map { obj ->
+                    StoredItem(
+                        hash = obj["hash"]!!.jsonPrimitive.content.toLong(),
+                        text = obj["text"]!!.jsonPrimitive.content,
+                        index = obj["index"]!!.jsonPrimitive.content.toInt(),
+                        vector = obj["vector"]!!.jsonArray.mapNotNull { it.jsonPrimitive.content.toDoubleOrNull() },
+                    )
+                }.toMutableList()
+            }.getOrDefault(mutableListOf())
+        } else {
+            mutableListOf()
+        }
+        cache[collectionId] = list
+        return list
+    }
+
+    private fun save(collectionId: String) {
+        val list = cache[collectionId] ?: return
+        val root = buildJsonObject {
+            put("items", JsonArray(list.map { item ->
+                buildJsonObject {
+                    put("hash", JsonPrimitive(item.hash))
+                    put("text", JsonPrimitive(item.text))
+                    put("index", JsonPrimitive(item.index))
+                    put("vector", JsonArray(item.vector.map { JsonPrimitive(it) }))
+                }
+            }))
+        }
+        itemsFile(collectionId).writeText(json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), root))
+    }
+
+    override fun getSavedHashes(collectionId: String): Set<Long> =
+        load(collectionId).map { it.hash }.toSet()
+
+    override fun insert(collectionId: String, items: List<VectorItem>) {
+        if (items.isEmpty()) return
+        val list = load(collectionId)
+        val vectors = embeddings.embed(items.map { it.text })
+        items.zip(vectors).forEach { (item, vector) ->
+            val existing = list.indexOfFirst { it.hash == item.hash }
+            val stored = StoredItem(item.hash, item.text, item.index, vector)
+            if (existing >= 0) list[existing] = stored else list += stored
+        }
+        save(collectionId)
+    }
+
+    override fun delete(collectionId: String, hashes: List<Long>) {
+        if (hashes.isEmpty()) return
+        val list = load(collectionId)
+        val before = list.size
+        list.removeAll { it.hash in hashes }
+        if (list.size != before) save(collectionId)
+    }
+
+    override fun query(
+        collectionIds: List<String>,
+        queryText: String,
+        topK: Int,
+        threshold: Double,
+    ): Map<String, VectorQueryResult> {
+        if (collectionIds.isEmpty() || queryText.isBlank()) return emptyMap()
+        val queryVector = embeddings.embed(listOf(queryText)).firstOrNull() ?: return emptyMap()
+        val scored = collectionIds.flatMap { cid ->
+            load(cid).map { Triple(cid, it, cosine(queryVector, it.vector)) }
+        }
+            .filter { it.third >= threshold }
+            .sortedByDescending { it.third }
+            .take(topK)
+        return scored.groupBy { it.first }.mapValues { (_, rows) ->
+            VectorQueryResult(
+                hashes = rows.map { it.second.hash },
+                metadata = rows.map { (_, stored, score) ->
+                    buildJsonObject {
+                        put("hash", JsonPrimitive(stored.hash))
+                        put("text", JsonPrimitive(stored.text))
+                        put("index", JsonPrimitive(stored.index))
+                        put("score", JsonPrimitive(score))
+                    }
+                },
+            )
+        }
+    }
+
+    private fun cosine(a: List<Double>, b: List<Double>): Double {
+        if (a.size != b.size || a.isEmpty()) return 0.0
+        var dot = 0.0
+        var na = 0.0
+        var nb = 0.0
+        for (i in a.indices) {
+            dot += a[i] * b[i]
+            na += a[i] * a[i]
+            nb += b[i] * b[i]
+        }
+        if (na == 0.0 || nb == 0.0) return 0.0
+        return dot / (sqrt(na) * sqrt(nb))
+    }
+
+    private fun sanitize(name: String): String {
+        val cleaned = name.replace(Regex("""[\\/:*?"<>|]"""), "_").trim()
+        return cleaned.ifEmpty { "_" }
     }
 }
 

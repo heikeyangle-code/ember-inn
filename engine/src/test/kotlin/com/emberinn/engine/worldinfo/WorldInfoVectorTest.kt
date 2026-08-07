@@ -1,5 +1,6 @@
 package com.emberinn.engine.worldinfo
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -108,4 +109,36 @@ class WorldInfoVectorTest {
         val a = entry(1, "篝火旁的余烬")
         assertEquals(emptyList<WorldInfoEntry>(), WorldInfoVectorActivation.run(listOf("篝火"), listOf(a), store))
     }
+    @Test
+    fun `file vector store persists across instances`() {
+        val dir = File(System.getProperty("java.io.tmpdir"), "file-vector-test-${System.nanoTime()}")
+        val a = entry(1, "篝火旁的余烬")
+        val b = entry(2, "abcdefghijklmnopqrstuvwxyz unrelated")
+
+        // 第一次写入
+        val store1 = FileVectorStore(dir, KeywordEmbedding(), source = "openai", model = "test-embed")
+        store1.insert("world_1", listOf(VectorItem(StringHash.get(a.content), a.content, a.uid)))
+        store1.insert("world_1", listOf(VectorItem(StringHash.get(b.content), b.content, b.uid)))
+        assertEquals(
+            setOf(StringHash.get(a.content), StringHash.get(b.content)),
+            store1.getSavedHashes("world_1"),
+        )
+
+        // 新实例重新加载（模拟重启），数据还在
+        val store2 = FileVectorStore(dir, KeywordEmbedding(), source = "openai", model = "test-embed")
+        assertEquals(
+            setOf(StringHash.get(a.content), StringHash.get(b.content)),
+            store2.getSavedHashes("world_1"),
+        )
+        val result = store2.query(listOf("world_1"), "今晚的篝火旁，余烬还在", topK = 5, threshold = 0.25)
+        assertEquals(listOf(StringHash.get(a.content)), result.getValue("world_1").hashes)
+
+        // 删除后落盘
+        store2.delete("world_1", listOf(StringHash.get(b.content)))
+        val store3 = FileVectorStore(dir, KeywordEmbedding(), source = "openai", model = "test-embed")
+        assertEquals(setOf(StringHash.get(a.content)), store3.getSavedHashes("world_1"))
+        dir.deleteRecursively()
+    }
+
+
 }
