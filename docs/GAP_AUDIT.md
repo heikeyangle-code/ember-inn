@@ -25,7 +25,7 @@
 - 🟡 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
   /pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；
   偏差：官方惰性闭包（传给命令对象）与 () 即时执行被统一为即时求值；命令数远少于官方
-- ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；🟡 REPLACE_GETVAR/STRICT_ESCAPING 语义、150+ 官方命令（多数要接 App 状态）
+- ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；✅ STRICT_ESCAPING 转义判定（SlashEscape，10 例差分）；🟡 REPLACE_GETVAR 完整语义、150+ 官方命令（多数要接 App 状态）
 
 ## 提示词组装
 - ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；populateChatHistory 5 例 + populateDialogueExamples 4 例官方差分
@@ -71,4 +71,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 + 表情分类预处理 8 + 群聊激活 10 + 群聊角色卡 6 + 群聊深度提示 5 + 精灵存储 7 + 角色卡字段 6 + JSON 导入 5 + BYAF 完整导入 4 = 464 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 + 表情分类预处理 8 + 群聊激活 10 + 群聊角色卡 6 + 群聊深度提示 5 + 精灵存储 7 + 角色卡字段 6 + JSON 导入 5 + BYAF 完整导入 4 + 斜杠转义 10 = 474 例官方基准（全部通过）。
