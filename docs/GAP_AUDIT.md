@@ -12,7 +12,7 @@
 - ✅ 扫描/注入/递归/预算/分组/时间效果/过滤；整体扫描差分 17 例 + 纯逻辑 19 例
 - ✅ 世界书文件导入导出（WorldInfoFileCodec）、世界书↔角色书互转（2 例差分）
 - ✅ 正则在 BUILD 阶段接入扫描器（contentTransformer）
-- ✅ vectorized/addMemo/displayIndex/automationId 数据全量透传（rawEntries/extensions + 转换器显式写回）；官方核心扫描不消费这 4 个字段——vectorized 只被 vectors 扩展(RAG)读、automationId 只被 quick-reply 自动执行读、displayIndex 只用于编辑器排序、addMemo 官方核心未读取 → 不构成核心 1:1 缺口，等扩展层(RAG/自动化)再做行为
+- ✅ vectorized/addMemo/displayIndex/automationId 已进强类型 + 扩展行为全接上（RAG 强制激活 / 快捷回复自动执行 / 编辑器排序）；编辑器排序与自动执行选择有官方差分（10 例）
 
 ## 宏
 - ✅ 核心宏 + 官方 e2e 差分 158 例 + {{pick}} seedrandom 逐位一致（5 例）
@@ -59,4 +59,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 = 256 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 = 266 例官方基准（全部通过）。
