@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（35 组，共 474 例官方基准，全部通过）**：
+**已覆盖（36 组，共 483 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -84,6 +84,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 5 |
 | BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 4 |
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 10 |
+| 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 
 **尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -117,7 +118,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
 
 ### 3.5 提示词组装 ✅（核心）
-PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）；CharacterCardFieldsEngine（角色卡字段聚合，含群聊/chat_metadata/prefer 覆盖）官方差分 6 例。
+PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils（collapseNewlines/parseMesExamples）官方差分 9 例。
 ✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior（COMPLETION 名字清理）已接：PromptNameSanitizer 对齐 isValidName/sanitizeName（28 例差分），ChatHistoryPopulator 在 COMPLETION 模式清理 name，常量改为官方 NONE=-1/DEFAULT=0/COMPLETION=1/CONTENT=2；🟡 工具预分配 token、媒体内联、推理签名、多模态缺失。
 
 ### 3.6 正则 ✅
@@ -156,7 +157,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 211 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊/精灵存储/角色卡字段/斜杠转义）
+- 引擎测试 212 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊/精灵存储/角色卡字段/斜杠转义/提示词工具）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略（NATURAL/LIST/POOLED/MANUAL/SWIPE/IMPERSONATE）官方差分 10 例（GroupActivationEngine）；✅ APPEND 群聊角色卡合并（GroupCharacterCardsEngine）官方差分 6 例；✅ 群聊深度提示（GroupDepthPromptsEngine）官方差分 5 例；🟡 完整生成循环（多人回复拼接/组提示/nudge 链）仍待做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -220,6 +221,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 30（2026-08-08：提示词工具官方差分）
+
+- prompt-utils-official.mjs：官方 collapseNewlines/parseMesExamples，9 例 fixture 全过
+- PromptUtils：连续换行压缩；示例块解析（<START> 归一、openai/instruct 表头、自定义 separator）
+- 官方基准 474 → 483；引擎 212 测全绿
 
 ## 最近一轮 29（2026-08-08：斜杠转义判定官方差分）
 
@@ -439,7 +446,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 35 个脚本 + 474 例 fixture
+- 差分工具 36 个脚本 + 483 例 fixture
 
 ## 7. 注意事项
 

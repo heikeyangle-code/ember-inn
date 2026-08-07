@@ -1,0 +1,119 @@
+{
+  "source": "script.js prompt utils",
+  "cases": [
+    {
+      "id": "collapse-basic",
+      "args": {
+        "body": {
+          "method": "collapse",
+          "text": "a\n\n\nb\nc"
+        }
+      },
+      "expected": "a\nb\nc"
+    },
+    {
+      "id": "collapse-empty",
+      "args": {
+        "body": {
+          "method": "collapse",
+          "text": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "collapse-mixed",
+      "args": {
+        "body": {
+          "method": "collapse",
+          "text": "a\r\n\r\nb"
+        }
+      },
+      "expected": "a\r\n\r\nb"
+    },
+    {
+      "id": "examples-empty",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": ""
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "examples-start-only",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": "<START>"
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "examples-plain",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": "hello\nworld"
+        }
+      },
+      "expected": [
+        "<START>\nhello\nworld\n"
+      ]
+    },
+    {
+      "id": "examples-multi",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": "<START>first\n<START>second"
+        }
+      },
+      "expected": [
+        "<START>\nfirst\n",
+        "<START>\nsecond\n"
+      ]
+    },
+    {
+      "id": "examples-separator",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": "<START>first\n<START>second",
+          "power_user": {
+            "context": {
+              "example_separator": "=== Example ==="
+            }
+          },
+          "main_api": "kobold"
+        }
+      },
+      "expected": [
+        "=== Example ===\nfirst\n",
+        "=== Example ===\nsecond\n"
+      ]
+    },
+    {
+      "id": "examples-instruct",
+      "args": {
+        "body": {
+          "method": "parseExamples",
+          "text": "<START>first\n<START>second",
+          "power_user": {
+            "context": {
+              "example_separator": "=== Example ==="
+            }
+          },
+          "main_api": "kobold",
+          "isInstruct": true
+        }
+      },
+      "expected": [
+        "<START>\nfirst\n",
+        "<START>\nsecond\n"
+      ]
+    }
+  ]
+}
