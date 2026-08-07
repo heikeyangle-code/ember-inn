@@ -13,6 +13,7 @@
 - ✅ 世界书文件导入导出（WorldInfoFileCodec）、世界书↔角色书互转（2 例差分）
 - ✅ 正则在 BUILD 阶段接入扫描器（contentTransformer）
 - ✅ vectorized/addMemo/displayIndex/automationId 已进强类型 + 扩展行为全接上（RAG 强制激活 / 快捷回复自动执行 / 编辑器排序）；编辑器排序与自动执行选择有官方差分（10 例）
+- ✅ 向量扩展全量（引擎层）：世界书 RAG（同步/检索/强制激活）+ 聊天历史重排（rearrangeChat）+ 文件/DataBank 向量化（processFiles 系列）；FileVectorStore 磁盘持久化（对齐 vectra）；splitRecursive/overlap/trim 工具 1:1
 
 ## 宏
 - ✅ 核心宏 + 官方 e2e 差分 158 例 + {{pick}} seedrandom 逐位一致（5 例）
@@ -50,7 +51,7 @@
 - ✅ 数据驱动服务商注册表（22 家，2026-08 联网核实最新模型）+ OpenAI/Anthropic/Google 三协议请求体 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
 - ✅ LLM 客户端（OpenAI 兼容：非流式 + SSE 流式，OkHttp + MockWebServer 验证）+ 连接档案存储
 - ❌ 人设管理（选择/持久化，App 层）、多模型 tokenizer、服务层
-- ❌ 服务层：TTS/STT/图像/翻译/向量（路线图 P3/P4）
+- 🟡 向量服务引擎已齐（RAG/聊天重排/文件向量化 + 持久化）；App 层配置/调用未接线；TTS/STT/图像/翻译 仍 P3/P4
 
 ## 下一步（README App 层）
 - 已完成：提供商管理 UI（列表+详情，参照命理2）、设置主页六分组+搜索、预设主题实时预览、真实对话接线（非流式）
