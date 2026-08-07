@@ -4,6 +4,13 @@
 
 > ember（余烬/炉火）+ inn（酒馆）：每一个角色都是一炉火，故事在余烬里继续。
 
+## 为什么重写（决策记录）
+
+- **放弃 RikkaHub fork 路线**：酒馆格式属于“重实现”，与官方行为持续漂移，上游合并代价高，历史包袱重。
+- **否决“官方服务端当引擎”**：源码实证——SillyTavern 的兼容内核（世界书扫描、宏展开、斜杠、提示词组装、群聊）全部位于**前端 JS**（`public/scripts/world-info.js`、`macros/engine/`、`slash-commands/`、`script.js`），与 DOM 焊死；Node 服务端只是存储 + API 转发层。只保留服务端并不能白拿兼容性。
+- **否决 WebView 壳**：要求真原生客户端与全新 UI，不套官方网页。
+- **最终路线**：新项目、Kotlin + Compose、参考官方源码**翻译 + 重写**酒馆逻辑层；官方 Node 服务端仅作为可选的存储/API 辅助进程（无浏览器界面）。
+
 ## 兼容目标（以官方行为为基准，回归测试锁定）
 
 - **角色卡**：PNG V2/V3（tEXt/ccv3）、CharX、JSON 导入导出、从 URL 导入（对齐官方 content-manager）、V3 assets（icon/background/voice）
@@ -12,7 +19,7 @@
 - **斜杠命令**：官方常用命令全量，行为一致
 - **群聊**：多角色、多种响应模式
 - **提示词组装**：角色字段 + 示例对话 + 世界书 + 作者注释 + 历史消息（与官方 `script.js` 行为一致）
-- **预设 / 人设 / regex 脚本 / tokenizer / SSE 流式**；正则明确区分作用位置：用户输入 / AI 输出 / 仅显示 / 仅发送给 AI
+- **预设 / 人设 / regex 脚本 / tokenizer / SSE 流式**
 
 组件清单见 [docs/COMPONENTS.md](docs/COMPONENTS.md)（有现成/没现成分表）。官方数据格式总表见 [docs/FORMATS.md](docs/FORMATS.md)（5 种导入/导出对齐现状）。PNG 卡片内嵌规范见 [docs/PNG_FORMAT.md](docs/PNG_FORMAT.md)（官方 1:1）。功能覆盖总清单见 [docs/FEATURES.md](docs/FEATURES.md)（对照官方 release 8172dcd，含优先级与 UI 映射）。本地官方源码：`~/sillytavern-ref`（release 分支，供翻译与回归对照）。
 
@@ -417,16 +424,6 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 - **规范**：24dp 网格 · 统一字重（全 App 只用一种字重档）· 圆角端点 · 默认 `onSurfaceVariant`，激活 `primary`，警示 `error` · 状态图标（命中灯）用小圆点自绘，不用图标代替
 - **品牌 Logo**：单独设计“余烬火花”mark（四角星/火花形），用于启动页、空状态、AI 对话默认头像，不复用通用机器人图标
 
-## 竞品与差异化定位
-
-| 项目 | 形态 | 完成度/关键点 |
-|---|---|---|
-| NativeTavern | Flutter + Rust，GPL-3.0 | 功能完成度约 98%，**扩展系统尚未实现**——这是我们的差异化关键 |
-| PocketTavern | source-available | 非纯 GPL，仅作参考 |
-| SillyTavern-Android | WebView 套壳 | 非原生重写，不作为参考对象 |
-
-差异化锚点：真原生 + 中文界面 + 角色卡驱动主题 + 上下文透明度（世界书命中灯/占比胶囊）+ RAG 向量扩展（NativeTavern 未实现）。研究同类项目源码与完成度后再做选型与功能排期。
-
 ## 社区需求与市场缺口（2026-08 调研）
 
 **官方仓库呼声最高的功能（GitHub issue 评论数排序）：**
@@ -526,7 +523,7 @@ Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose 
 - **P2 引擎**：世界书扫描注入、宏引擎、提示词组装、tokenizer
 - **P3 功能**：斜杠、群聊、预设、人设、作者注释、regex
 - **P4 主题**：角色卡取色驱动、模糊背景、毛玻璃、预设主题完成
-- **P5 服务**：TTS/STT/图像/翻译、服务商注册表完善；**向量/RAG 引擎层已完成**（世界书 RAG + 聊天历史重排 + 文件/DataBank 向量化，嵌入源 OpenAI 兼容 / 本地 Ollama，分块与查询语义对齐官方 vectors 扩展），App 层配置接线待做
+- **P5 服务**：TTS/STT/图像/翻译/向量、服务商注册表完善
 - **P6 扩展**：自有插件 API + 官方行为回归测试体系
 
 ## 兼容性守则
