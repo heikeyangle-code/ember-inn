@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（13 组，共 294 例官方基准，全部通过）**：
+**已覆盖（14 组，共 301 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -62,6 +62,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 向量工具函数 | vector-utils-official.mjs | VectorUtilsDiffTest | 14 |
 | 角色卡 V2 归一 | char-v2-official.mjs | CharV2DiffTest | 5 |
 | 世界书正则解析 | regex-parse-official.mjs | RegexParseDiffTest | 9 |
+| 作用域宏内容裁剪 | macro-trim-official.mjs | MacroTrimDiffTest | 7 |
 
 **尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、CharX/YAML/BYAF 导入（官方依赖 JSZip/文件系统，手写单测）、PromptAssembler 各 populator（依赖 tokenHandler/全局状态，单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -83,7 +84,8 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
    - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
    - addMemo → 官方核心从未读取，仅透传
 
-### 3.3 宏 ✅
+### 3.3 宏 ✅（含作用域宏）
+通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例；!?~> flags 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
 🟡 动态宏注册 API、宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）未做。
 
@@ -104,7 +106,7 @@ RegexEngine + substituteRegex/宏替换 + 13 例差分；聊天消息正则已�
 
 ### 3.8 聊天 🟡
 jsonl 基础 + BYAF 聊天导入 + continue nudge。
-❌ 聊天元数据（背景/书签/快照）、chat v2 迁移。
+❌ 聊天元数据（背景/书签/快照）（注：官方无 chat v2，此前审计有误已删）。
 
 ### 3.9 提供商 / LLM 客户端 ✅
 - providers.json 数据驱动 **22 家**（含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
@@ -172,7 +174,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊完整调度 + 人设管理 UI；chat v2 迁移、聊天元数据
+9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
 10. Vertex AI 服务账号认证；工具预分配 token / 媒体内联 / 推理签名
 
 **P3/P4（服务与扩展）**
@@ -182,6 +184,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **差分跟进**
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
+
+## 最近一轮 9（2026-08-08：作用域宏补齐 + trimScopedContent 差分）
+
+- 通用作用域宏：{{setvar::x}}content{{/setvar}} → {{setvar::x::content}}（content 默认先求值嵌套宏再 trim+dedent；{{#}} 保留空白；嵌套最外层先处理；未配对 closing 原样），对齐官方 MacroCstWalker.processScopedMacros
+- replaceInline 支持宏 flags 前缀剥离（!?~#>），{{#setvar}} 等可正常执行
+- trimScopedContent 对齐官方（trimIndent 参数、一致缩进去缩进），官方差分 7 例
+- 修复过程抓出 3 个实现 bug（scoped 正则要求 {{ 开头、closing 偏移转全局、宏前文本重复 append）
+- 官方基准 294 → 301；引擎 189 测全绿
+- 配对逻辑（processScopedMacros）依赖 chevrotain CST 无法逐字差分，源码对照 + 单测
 
 ## 最近一轮 8（2026-08-08：差分补课——readFromV2 + parseRegexFromString）
 
@@ -242,7 +253,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 13 个脚本 + 294 例 fixture
+- 差分工具 14 个脚本 + 301 例 fixture
 
 ## 7. 注意事项
 
