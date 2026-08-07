@@ -70,7 +70,7 @@ PNG V2/V3（tEXt/ccv3）、CharX、JSON、YAML、BYAF 导入；V2 归一（readF
 
 ### 3.2 世界书 ✅
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
-🟡 vectorized/addMemo/displayIndex/automationId 只保留在 raw JSON，未进强类型；RAG 未消费。
+✅ vectorized/addMemo/displayIndex/automationId 数据全量透传（rawEntries/extensions + 转换器写回）；官方核心扫描不消费这些字段（vectorized=RAG 扩展、automationId=快捷回复自动执行、displayIndex=编辑器排序、addMemo=官方核心未读取），不属于核心 1:1 缺口，等扩展层做行为。
 
 ### 3.3 宏 ✅
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。

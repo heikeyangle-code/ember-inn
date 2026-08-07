@@ -12,7 +12,7 @@
 - ✅ 扫描/注入/递归/预算/分组/时间效果/过滤；整体扫描差分 17 例 + 纯逻辑 19 例
 - ✅ 世界书文件导入导出（WorldInfoFileCodec）、世界书↔角色书互转（2 例差分）
 - ✅ 正则在 BUILD 阶段接入扫描器（contentTransformer）
-- 🟡 vectorized/addMemo/displayIndex/automationId 保留在 raw JSON，未进强类型；RAG 未消费
+- ✅ vectorized/addMemo/displayIndex/automationId 数据全量透传（rawEntries/extensions + 转换器显式写回）；官方核心扫描不消费这 4 个字段——vectorized 只被 vectors 扩展(RAG)读、automationId 只被 quick-reply 自动执行读、displayIndex 只用于编辑器排序、addMemo 官方核心未读取 → 不构成核心 1:1 缺口，等扩展层(RAG/自动化)再做行为
 
 ## 宏
 - ✅ 核心宏 + 官方 e2e 差分 158 例 + {{pick}} seedrandom 逐位一致（5 例）
