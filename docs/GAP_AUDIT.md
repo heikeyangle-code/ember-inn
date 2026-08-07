@@ -18,7 +18,8 @@
 ## 宏
 - ✅ 核心宏 + 官方 e2e 差分 158 例 + {{pick}} seedrandom 逐位一致（5 例）
 - ✅ 变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数
-- ✅ MacroRegistry 动态注册/注销/解析；🟡 宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）边界
+- ✅ 通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例
+- ✅ MacroRegistry 动态注册/注销/解析；🟡 宏 flags 的 !?~> 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）；完整 MacroEnv（聊天/角色/系统状态）边界
 
 ## 斜杠
 - ✅ 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
@@ -43,7 +44,7 @@
 
 ## 聊天
 - ✅ jsonl 基础 + BYAF 聊天导入 + continue nudge
-- 🟡 聊天元数据（背景/书签/快照）、chat v2 迁移
+- 🟡 聊天元数据（背景/书签/快照）（注：官方无 “chat v2”，此前审计有误已删）
 
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
@@ -60,4 +61,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 = 294 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 = 301 例官方基准（全部通过）。

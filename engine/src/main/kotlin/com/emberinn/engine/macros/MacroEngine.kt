@@ -109,9 +109,115 @@ object MacroEngine {
     }
 
     private fun substituteWithEnv(text: String, env: MacroEnv): String {
-        val withoutScopedTrim = replaceScopedTrim(text, env)
+        val withScoped = replaceScopedMacros(text, env)
+        val withoutScopedTrim = replaceScopedTrim(withScoped, env)
         // 作用域 if 在 replaceInline 内按文档顺序处理（setvar 等先执行）
         return replaceInline(withoutScopedTrim, env)
+    }
+
+    // ---------- 通用作用域宏（对齐官方 MacroCstWalker.processScopedMacros） ----------
+    // {{setvar::name}}content{{/setvar}} → {{setvar::name::content}}
+    // content 默认先求值嵌套宏再 trim+去缩进；{{#setvar::name}} 保留空白
+    private val scopedMacroNames = setOf("setvar", "setglobalvar", "addvar", "addglobalvar", "incvar", "decvar")
+    // inner 是 {{ 与 }} 之间的内容，正则应从 inner 开头匹配
+    private val scopedOpenRegex = Regex("""^([!?~>#/]*)\s*([A-Za-z0-9_-]+)""")
+    private val scopedCloseRegex = Regex("""^/\s*([A-Za-z0-9_-]+)\s*$""")
+
+    private fun replaceScopedMacros(text: String, env: MacroEnv): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            val open = text.indexOf("{{", i)
+            if (open < 0) { sb.append(text, i, text.length); break }
+            sb.append(text, i, open)
+            val macroClose = findMacroClose(text, open + 2)
+            if (macroClose < 0) { sb.append(text, open, text.length); break }
+            val inner = text.substring(open + 2, macroClose)
+            val m = scopedOpenRegex.find(inner) ?: run {
+                sb.append(text, open, macroClose + 2)
+                i = macroClose + 2
+                continue
+            }
+            val flags = m.groupValues[1]
+            val name = m.groupValues[2].lowercase()
+            val preserveWhitespace = '#' in flags
+            // 只处理白名单变量宏；if/trim 有专用路径；closing 宏跳过
+            if (name !in scopedMacroNames || flags.contains('/')) {
+                sb.append(text, open, macroClose + 2)
+                i = macroClose + 2
+                continue
+            }
+            val close = findMatchingScopedClose(text, macroClose + 2, name)
+            if (close == null) {
+                sb.append(text, open, macroClose + 2)
+                i = macroClose + 2
+                continue
+            }
+            val body = text.substring(macroClose + 2, close.first)
+            val value = if (preserveWhitespace) {
+                // 官方 #：仍求值嵌套宏，但跳过 trim
+                substituteWithEnv(body, env)
+            } else {
+                trimScopedContent(substituteWithEnv(body, env))
+            }
+            // 对齐官方：content 作为最后一个 unnamed 参数追加
+            sb.append("{{").append(inner.trim()).append("::").append(value).append("}}")
+            // close.second 是 closing 第一个 } 的索引，跳过两个 } 
+            i = close.second + 2
+        }
+        return sb.toString()
+    }
+
+    private fun findMatchingScopedClose(text: String, start: Int, name: String): Pair<Int, Int>? {
+        var depth = 1
+        var pos = start
+        while (pos < text.length) {
+            val open = text.indexOf("{{", pos)
+            if (open < 0) return null
+            val macroClose = findMacroClose(text, open + 2) ?: return null
+            val inner = text.substring(open + 2, macroClose)
+            val closeM = scopedCloseRegex.find(inner)
+            if (closeM != null) {
+                if (closeM.groupValues[1].lowercase() != name) {
+                    pos = macroClose + 2
+                    continue
+                }
+                depth--
+                if (depth == 0) {
+                    // closing 全局范围：open..macroClose
+                    return open to macroClose
+                }
+                pos = macroClose + 2
+                continue
+            }
+            val openM = scopedOpenRegex.find(inner)
+            if (openM != null && openM.groupValues[2].lowercase() == name && '/' !in openM.groupValues[1]) {
+                depth++
+            }
+            pos = macroClose + 2
+        }
+        return null
+    }
+
+    /** 对齐官方 MacroEngine.trimScopedContent：trim + 一致缩进去缩进。 */
+    internal fun trimScopedContent(content: String, trimIndent: Boolean = true): String {
+        if (content.isEmpty()) return ""
+        // 对齐官方 trimIndent=false：只做基础 trim
+        if (!trimIndent) return content.trim()
+        val lines = content.split("\n".toRegex())
+        var baseIndent = 0
+        for (line in lines) {
+            if (line.trim().isNotEmpty()) {
+                baseIndent = line.takeWhile { it == ' ' || it == '\t' }.length
+                break
+            }
+        }
+        if (baseIndent == 0) return content.trim()
+        val dedented = lines.joinToString("\n") { line ->
+            val lineIndent = line.takeWhile { it == ' ' || it == '\t' }.length
+            if (lineIndent >= baseIndent) line.drop(baseIndent) else line.trimStart()
+        }
+        return dedented.trim()
     }
 
     // ---------- 作用域 {{trim}}...{{/trim}} ----------
@@ -239,12 +345,14 @@ object MacroEngine {
             }
             val inner = text.substring(open + 2, macroClose)
             val raw = text.substring(open, macroClose + 2)
+            // 对齐官方 MacroFlags：剥离 !?~#> 前缀（/ 是 closing 不剥离），如 {{#setvar::x::v}} → setvar
+            val flagStripped = inner.trimStart().dropWhile { it in "!?~#>" }.trimStart()
 
             if (inner.startsWith("//")) {
                 i = macroClose + 2
                 continue
             }
-            val shortInner = inner.trimStart()
+            val shortInner = flagStripped
             if (shortInner.startsWith(".") || shortInner.startsWith("$")) {
                 val m = shorthandOpRegex.matchEntire(shortInner)
                 if (m == null) {
@@ -307,13 +415,13 @@ object MacroEngine {
                 i = macroClose + 2
                 continue
             }
-            if (inner.startsWith("/") || inner.startsWith("else")) {
+            if (flagStripped.startsWith("/") || flagStripped.startsWith("else")) {
                 sb.append(raw)
                 i = macroClose + 2
                 continue
             }
 
-            val (name, args, hasSep) = parseMacroHead(inner)
+            val (name, args, hasSep) = parseMacroHead(flagStripped)
             if (name.isEmpty()) {
                 sb.append('{')
                 i = open + 1
@@ -323,7 +431,7 @@ object MacroEngine {
             // 作用域 {{if 条件}}...{{/if}}：按文档顺序求值（嵌套宏条件已完整捕获）
             if (
                 name.equals("if", ignoreCase = true) && hasSep &&
-                ((inner.length > 2 && inner[2].isWhitespace()) || inner.startsWith("if::"))
+                ((flagStripped.length > 2 && flagStripped[2].isWhitespace()) || flagStripped.startsWith("if::"))
             ) {
                 val ifClose = findMatchingClose(text, macroClose + 2)
                 if (ifClose != null) {
