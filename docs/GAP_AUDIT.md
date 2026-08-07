@@ -22,12 +22,14 @@
 - ✅ MacroRegistry 动态注册/注销/解析；🟡 宏 flags 的 !?~> 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）；完整 MacroEnv（聊天/角色/系统状态）边界
 
 ## 斜杠
-- ✅ 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
-  /pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器
+- 🟡 解析（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、
+  /pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；
+  偏差：官方惰性闭包（传给命令对象）与 () 即时执行被统一为即时求值；命令数远少于官方
 - ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；🟡 REPLACE_GETVAR/STRICT_ESCAPING 语义、150+ 官方命令（多数要接 App 状态）
 
 ## 提示词组装
-- ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override
+- ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；
+  🟡 偏差：官方每条历史消息过 preparePrompt（宏替换/names_behavior），我们直接插入原消息（宏只在 newChat/nudge 替换）
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
 - 🟡 工具预分配 token、媒体内联、推理签名、多模态
@@ -48,8 +50,9 @@
 
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
-- ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型+注入、作者注释、快捷回复、聊天元数据模型
-- ✅ 数据驱动服务商注册表（22 家，2026-08 联网核实最新模型）+ OpenAI/Anthropic/Google 三协议请求体 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
+- 🟡 群聊仅实现选人/队列策略（SWAP/APPEND/队列）+ 模型；官方完整生成流程（多人回复拼接/组提示/nudge 链）未做
+- ✅ 数据驱动服务商注册表（22 家）+ 三协议基础路由 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
+  🟡 偏差：Anthropic/Gemini 请求体只含基础参数（缺 thinking/beta headers/工具/完整 generationConfig：stopSequences/topK/responseSchema 等）；OpenAI 兼容请求体较完整
 - ✅ LLM 客户端（OpenAI 兼容：非流式 + SSE 流式，OkHttp + MockWebServer 验证）+ 连接档案存储
 - ❌ 人设管理（选择/持久化，App 层）、多模型 tokenizer、服务层
 - 🟡 向量服务引擎已齐（RAG/聊天重排/文件向量化 + 持久化）；App 层配置/调用未接线；TTS/STT/图像/翻译 仍 P3/P4

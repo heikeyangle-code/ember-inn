@@ -91,12 +91,13 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；🟡 完整 MacroEnv（聊天/角色/系统状态）边界；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
-SlashParser（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器。
+SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器。
+🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似）；命令数远少于官方。
 ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）。
-🟡 工具预分配 token、媒体内联、推理签名、多模态；群聊完整调度（队列核心有，UI 无）。
+🟡 偏差：官方每条历史消息过 preparePrompt（宏替换/names_behavior），我们直接插入原消息（宏只在 newChat/nudge 替换）；工具预分配 token、媒体内联、推理签名、多模态缺失。
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 13 例差分；聊天消息正则已在扫描器接入（messageTransformer）。
@@ -116,7 +117,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
-🟡 Vertex AI 服务账号认证未做（UI 上明确标注）；Claude/Gemini tokenizer 仍是回退 cl100k（官方 web tokenizer 未实现）。
+🟡 偏差：Anthropic/Gemini 请求体只含基础参数（缺 thinking/beta headers/工具/完整 generationConfig）；Vertex AI 服务账号认证未做；Claude/Gemini tokenizer 仍是回退 cl100k。
 
 ### 3.11 向量扩展（RAG 全量）✅（引擎层）
 - 世界书 RAG（vectorized 同步/检索/强制激活）
@@ -129,7 +130,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 引擎测试 189 全绿（含重排/文件/分块/工具函数/作用域宏）
 
 ### 3.10 其它
-- ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型 + 注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
+- 🟡 群聊仅选人/队列策略（SWAP/APPEND/队列）+ 模型；完整生成流程（多人回复拼接/组提示/nudge 链）未做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
 - ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
 
 ## 4. App / UI 进度

@@ -5,7 +5,7 @@ package com.emberinn.engine.slash
  * - 命令名：/ 后到空白或命令结束（| 或行尾）
  * - 命名参数：name=value（官方 testNamedArgument 规则 \w+=），值支持引号
  * - 无名参数：按空白分词，引号内整体保留
- * - 管道 / 闭包 / 转义等高级语法暂未实现（Stage 2）
+ * - 管道 / 闭包 / 双管道由 SlashEngine.parseChain/resolveClosures 实现（本文件只解析单命令）
  */
 object SlashParser {
 
