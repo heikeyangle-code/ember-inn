@@ -1,0 +1,324 @@
+{
+  "source": "group-chats.js getGroupDepthPrompts",
+  "cases": [
+    {
+      "id": "swap",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 0,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": []
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "append-basic",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b",
+                "c"
+              ],
+              "disabled_members": []
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "text": "Alice深度 Alice",
+          "depth": 6,
+          "role": "user"
+        },
+        {
+          "text": "Bob深度",
+          "depth": 8,
+          "role": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "disabled-current",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [
+                "a"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "text": "Alice深度 Alice",
+          "depth": 6,
+          "role": "user"
+        },
+        {
+          "text": "Bob深度",
+          "depth": 8,
+          "role": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "disabled-other",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 1,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [
+                "a"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "text": "Bob深度",
+          "depth": 8,
+          "role": "assistant"
+        }
+      ]
+    },
+    {
+      "id": "missing",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "missing"
+              ],
+              "disabled_members": []
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "text": "Alice深度 Alice",
+          "depth": 6,
+          "role": "user"
+        }
+      ]
+    }
+  ]
+}
