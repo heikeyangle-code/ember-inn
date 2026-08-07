@@ -1,0 +1,141 @@
+{
+  "source": "characters.js readFromV2",
+  "cases": [
+    {
+      "id": "v3-full",
+      "args": {
+        "char": {
+          "name": "OldName",
+          "chat": "OldChat",
+          "json_data": "{\"foreign\":1}",
+          "data": {
+            "name": "新名字",
+            "description": "描述",
+            "personality": "性格",
+            "scenario": "场景",
+            "first_mes": "开场",
+            "mes_example": "示例",
+            "tags": [
+              "t1",
+              "t2"
+            ],
+            "extensions": {
+              "talkativeness": 0.7,
+              "fav": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "name": "新名字",
+        "chat": "OldChat",
+        "data": {
+          "name": "新名字",
+          "description": "描述",
+          "personality": "性格",
+          "scenario": "场景",
+          "first_mes": "开场",
+          "mes_example": "示例",
+          "tags": [
+            "t1",
+            "t2"
+          ],
+          "extensions": {
+            "talkativeness": 0.7,
+            "fav": true
+          }
+        },
+        "description": "描述",
+        "personality": "性格",
+        "scenario": "场景",
+        "first_mes": "开场",
+        "mes_example": "示例",
+        "talkativeness": 0.7,
+        "fav": true,
+        "tags": [
+          "t1",
+          "t2"
+        ]
+      }
+    },
+    {
+      "id": "v3-no-ext",
+      "args": {
+        "char": {
+          "name": "A",
+          "chat": "C",
+          "data": {
+            "name": "B",
+            "description": "D"
+          }
+        }
+      },
+      "expected": {
+        "name": "B",
+        "chat": "C",
+        "data": {
+          "name": "B",
+          "description": "D"
+        },
+        "description": "D"
+      }
+    },
+    {
+      "id": "v1-no-data",
+      "args": {
+        "char": {
+          "name": "Legacy",
+          "description": "旧卡",
+          "chat": "C1"
+        }
+      },
+      "expected": {
+        "name": "Legacy",
+        "description": "旧卡",
+        "chat": "C1"
+      }
+    },
+    {
+      "id": "with-json-data",
+      "args": {
+        "char": {
+          "name": "X",
+          "chat": "C",
+          "json_data": "{\"x\":1}",
+          "data": {
+            "name": "Y"
+          }
+        }
+      },
+      "expected": {
+        "name": "Y",
+        "chat": "C",
+        "data": {
+          "name": "Y"
+        }
+      }
+    },
+    {
+      "id": "no-chat",
+      "args": {
+        "char": {
+          "name": "N",
+          "json_data": "{}",
+          "data": {
+            "name": "N2",
+            "description": "D"
+          }
+        }
+      },
+      "expected": {
+        "name": "N2",
+        "data": {
+          "name": "N2",
+          "description": "D"
+        },
+        "description": "D",
+        "chat": "N2 - 2026-08-08@00h00m00s000ms"
+      }
+    }
+  ]
+}

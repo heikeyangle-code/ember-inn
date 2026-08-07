@@ -1,0 +1,86 @@
+{
+  "source": "world-info.js parseRegexFromString",
+  "cases": [
+    {
+      "id": "basic-i",
+      "args": {
+        "input": "/abc/i"
+      },
+      "expected": {
+        "source": "abc",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "basic-m",
+      "args": {
+        "input": "/a b/m"
+      },
+      "expected": {
+        "source": "a b",
+        "flags": "m"
+      }
+    },
+    {
+      "id": "basic-s",
+      "args": {
+        "input": "/x.y/s"
+      },
+      "expected": {
+        "source": "x.y",
+        "flags": "s"
+      }
+    },
+    {
+      "id": "combined",
+      "args": {
+        "input": "/foo/ims"
+      },
+      "expected": {
+        "source": "foo",
+        "flags": "ims"
+      }
+    },
+    {
+      "id": "no-flags",
+      "args": {
+        "input": "/plain/"
+      },
+      "expected": {
+        "source": "plain",
+        "flags": ""
+      }
+    },
+    {
+      "id": "invalid-no-close",
+      "args": {
+        "input": "/abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "unescaped-slash",
+      "args": {
+        "input": "/a/b/i"
+      },
+      "expected": null
+    },
+    {
+      "id": "escaped-slash",
+      "args": {
+        "input": "/a\\/b/i"
+      },
+      "expected": {
+        "source": "a\\/b",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "empty-pattern",
+      "args": {
+        "input": "//"
+      },
+      "expected": null
+    }
+  ]
+}

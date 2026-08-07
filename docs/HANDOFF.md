@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（11 组，共 280 例官方基准，全部通过）**：
+**已覆盖（13 组，共 294 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -60,8 +60,10 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 编辑器排序 | editor-sort-official.mjs | EditorSortDiffTest | 6 |
 | 快捷回复自动执行选择 | auto-execute-official.mjs | AutoExecuteDiffTest | 4 |
 | 向量工具函数 | vector-utils-official.mjs | VectorUtilsDiffTest | 14 |
+| 角色卡 V2 归一 | char-v2-official.mjs | CharV2DiffTest | 5 |
+| 世界书正则解析 | regex-parse-official.mjs | RegexParseDiffTest | 9 |
 
-**尚未做差分的**：斜杠解析器（目前是手写单测）、JSON/CharX/YAML/BYAF 导入导出（除 PNG 外是手写单测）、PromptAssembler 各 populator（单测 + 官方源码对照，暂无 fixture）。
+**尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、CharX/YAML/BYAF 导入（官方依赖 JSZip/文件系统，手写单测）、PromptAssembler 各 populator（依赖 tokenHandler/全局状态，单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
 
 **预设体系**：官方 `default/content/presets` 已打包进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127 个），PresetLibrary 可加载；quick-replies 也打包。官方发版后跑 `node scripts/build-presets.mjs`。
@@ -181,6 +183,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
+## 最近一轮 8（2026-08-08：差分补课——readFromV2 + parseRegexFromString）
+
+- char-v2-official.mjs：逐字提取官方 characters.js readFromV2（lodash/humanizedDateTime 打桩），5 例 fixture，CharV2DiffTest 全过
+- regex-parse-official.mjs：逐字提取官方 world-info.js parseRegexFromString，9 例 fixture，RegexParseDiffTest 全过
+- 差分抓出 3 处真差异并修复：
+  1. talkativeness/fav 缺失时官方最终不写入（默认值被后续 undefined 赋值覆盖）——原实现错误回填 0.5/false，已改为透传缺失即不写
+  2. humanizedDateTime 官方格式为 YYYY-MM-DD@HHhMMmSSsMSms（毫秒3位）——原实现是 "yyyy-MM-dd HH:mm"，已对齐
+  3. JS RegExp.source 将 / 序列化为 \/ —— 测试端做 JS 风格转义（语义一致）
+- V2Normalizer 旧单测期望（回填 0.5/false）被差分推翻，已按官方行为修正
+- 官方基准 280 → 294；引擎 182 测全绿
+
 ## 最近一轮 7（2026-08-08：向量扩展补齐——聊天历史重排 + 文件/DataBank 向量化）
 
 - VectorChatExtensions.kt：rearrange（对齐 rearrangeChat）、processFiles/ingestDataBank/injectDataBankChunks/retrieveFileChunks/vectorizeFile（对齐 vectors/index.js）、splitRecursive/trimToStartSentence/trimToEndSentence/overlapChunks（对齐 utils.js）
@@ -229,7 +242,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 11 个脚本 + 280 例 fixture
+- 差分工具 13 个脚本 + 294 例 fixture
 
 ## 7. 注意事项
 

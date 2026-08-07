@@ -31,11 +31,12 @@ class V2NormalizerTest {
     }
 
     @Test
-    fun `normalize backfills defaults and chat when missing`() {
+    fun `normalize does not write missing talkativeness fav and backfills chat`() {
+        // 官方差分证实：readFromV2 缺失 talkativeness/fav 时 defaultValue 被后续赋值覆盖，最终不写入
         val input = """{"spec":"chara_card_v3","data":{"name":"新卡","description":"d"}}"""
         val out = json.parseToJsonElement(V2Normalizer.normalize(input)).jsonObject
-        assertEquals(0.5, out["talkativeness"]?.jsonPrimitive?.content?.toDouble() ?: 0.0, 0.001)
-        assertEquals("false", out["fav"]?.jsonPrimitive?.content)
+        assertFalse(out.containsKey("talkativeness"))
+        assertFalse(out.containsKey("fav"))
         assertTrue(out["chat"]?.jsonPrimitive?.content?.startsWith("新卡 - ") == true)
     }
 

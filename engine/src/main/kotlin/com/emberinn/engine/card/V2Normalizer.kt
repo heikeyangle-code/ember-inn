@@ -24,7 +24,7 @@ object V2Normalizer {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun normalize(charJson: String): String {
+    fun normalize(charJson: String, now: String = humanizedDateTime()): String {
         val root = json.parseToJsonElement(charJson).jsonObject.toMutableMap()
         val data = root["data"]?.jsonObject
             ?: return charJson // 没有 data = 已是 V2（官方 warn 后原样返回）
@@ -32,19 +32,19 @@ object V2Normalizer {
         root.remove("json_data")
 
         val extensions = data["extensions"]?.jsonObject ?: JsonObject(emptyMap())
-        val talkativeness = extensions["talkativeness"]?.let { parseDouble(it) } ?: 0.5
-        val fav = extensions["fav"]?.let { parseBool(it) } ?: false
+        // 官方 readFromV2：talkativeness/fav 原值透传（不转换类型）；
+        // 缺失时官方 defaultValue 回填会被随后的 char[field]=v2Value(undefined) 覆盖 → 实际不写入，差分已证实
+        extensions["talkativeness"]?.let { root["talkativeness"] = it }
+        extensions["fav"]?.let { root["fav"] = it }
 
-        // 官方 fieldMappings：data 有值才覆盖；talkativeness/fav 缺省回填
+        // 官方 fieldMappings：data 有值才覆盖
         listOf("name", "description", "personality", "scenario", "first_mes", "mes_example", "tags")
             .forEach { field -> data[field]?.let { root[field] = it } }
-        root["talkativeness"] = JsonPrimitive(talkativeness)
-        root["fav"] = JsonPrimitive(fav)
 
         // 官方：char.chat = char.chat ?? `${char.name} - ${humanizedDateTime()}`
         if (root["chat"] == null) {
             val name = data["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
-            root["chat"] = JsonPrimitive(defaultChatName(name))
+            root["chat"] = JsonPrimitive(defaultChatName(name, now))
         }
 
         return JsonObject(root).toString()
@@ -115,10 +115,16 @@ object V2Normalizer {
         })
     }.toString()
 
-    fun humanizedDateTime(): String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+    /** 对齐官方 util.js humanizedDateTime：YYYY-MM-DD@HHhMMmSSsMSms（毫秒 3 位，其余 2 位）。 */
+    fun humanizedDateTime(now: java.time.LocalDateTime = java.time.LocalDateTime.now()): String {
+        val dt = now
+        fun pad(v: Int, len: Int) = v.toString().padStart(len, '0')
+        return "${pad(dt.year, 4)}-${pad(dt.monthValue, 2)}-${pad(dt.dayOfMonth, 2)}@" +
+            "${pad(dt.hour, 2)}h${pad(dt.minute, 2)}m${pad(dt.second, 2)}s${pad(dt.nano / 1_000_000, 3)}ms"
+    }
 
-    fun defaultChatName(name: String): String =
-        if (name.isBlank()) humanizedDateTime() else "$name - ${humanizedDateTime()}"
+    fun defaultChatName(name: String, now: String = humanizedDateTime()): String =
+        if (name.isBlank()) now else "$name - $now"
 
     private fun parseDouble(el: JsonElement): Double =
         el.jsonPrimitive.content.toDoubleOrNull() ?: 0.5
