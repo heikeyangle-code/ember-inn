@@ -50,7 +50,8 @@
 
 ## 表情精灵
 - ✅ ExpressionEngine：标签提取/图片元数据/分组排序/chooseSprite（fallback/多立绘/reroll/override），官方差分 14 例
-- 🟡 分类（本地 BERT/LLM/WebLLM）、DOM 显示/动画/上传 UI 属 App/服务层
+- ✅ sampleClassifyText 文本预处理（句尾/首尾裁剪/LLM trim），官方差分 8 例
+- 🟡 分类（本地 BERT/LLM/WebLLM 的请求与 Fuse 模糊匹配）、DOM 显示/动画/上传 UI 属 App/服务层
 
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
@@ -68,4 +69,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 = 413 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 + 表情分类预处理 8 = 421 例官方基准（全部通过）。

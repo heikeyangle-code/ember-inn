@@ -1,5 +1,8 @@
 package com.emberinn.engine.expression
 
+import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.worldinfo.VectorTextUtils
 import kotlin.random.Random
 
 /**
@@ -36,6 +39,26 @@ object ExpressionEngine {
         val rerollIfSame: Boolean = false,
         val customLabels: Set<String> = emptySet(),
     )
+
+    /**
+     * 对齐 expressions sampleClassifyText：
+     * 去宏/引号/星号，短文本裁到句尾；长文本取首尾各 250 字符后拼接；LLM 模式只 trim。
+     */
+    fun sampleClassifyText(text: String, useLlm: Boolean = false): String? {
+        if (text.isEmpty()) return text
+        var result = MacroEngine.substitute(text, MacroEnv(user = "", char = "")).replace(Regex("""[*"]"""), "")
+        if (useLlm) return result.trim()
+
+        val threshold = 500
+        val half = threshold / 2
+        result = if (text.length < threshold) {
+            VectorTextUtils.trimToEndSentence(result)
+        } else {
+            VectorTextUtils.trimToEndSentence(result.take(half)) + " " +
+                VectorTextUtils.trimToStartSentence(result.takeLast(half))
+        }
+        return result.trim()
+    }
 
     /** 对齐 sprites.js GET /get：filename 转小写后提取主标签（joy / joy-1 / joy.expressive → joy）。 */
     fun labelFromFilename(fileName: String): String {

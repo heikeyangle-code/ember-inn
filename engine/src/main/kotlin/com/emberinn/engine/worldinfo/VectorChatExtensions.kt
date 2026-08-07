@@ -149,7 +149,12 @@ object VectorTextUtils {
         if (p3 > 0 && p3 < first) first = p3
         if (p4 > 0 && p4 < first) { first = p4; skip1 = true }
         if (first > 0) {
-            return if (skip1) input.substring(first + 1) else input.substring(first + 2)
+            // JS substring 会自动钳制到字符串长度，Kotlin 需要显式 coerce
+            return if (skip1) {
+                input.substring((first + 1).coerceAtMost(input.length))
+            } else {
+                input.substring((first + 2).coerceAtMost(input.length))
+            }
         }
         return input
     }
