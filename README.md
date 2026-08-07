@@ -4,14 +4,6 @@
 
 > ember（余烬/炉火）+ inn（酒馆）：每一个角色都是一炉火，故事在余烬里继续。
 
-## 为什么重写（决策记录）
-
-- **放弃 RikkaHub fork 路线**：酒馆格式属于“重实现”，与官方行为持续漂移，上游合并代价高，历史包袱重。
-- **否决“官方服务端当引擎”**：源码实证——SillyTavern 的兼容内核（世界书扫描、宏展开、斜杠、提示词组装、群聊）全部位于**前端 JS**（`public/scripts/world-info.js`、`macros/engine/`、`slash-commands/`、`script.js`），与 DOM 焊死；Node 服务端只是存储 + API 转发层。只保留服务端并不能白拿兼容性。
-- **否决 WebView 壳**：要求真原生客户端与全新 UI，不套官方网页。
-- **最终路线**：新项目、Kotlin + Compose、参考官方源码**翻译 + 重写**酒馆逻辑层；官方 Node 服务端仅作为可选的存储/API 辅助进程（无浏览器界面）。
-- **技术栈（按项目提示词文档的备选路线落地）**：项目启动提示词《酒馆兼容App项目提示词》给出“首选 Flutter / 备选 Kotlin+Compose”，本仓库从立项即走备选路线 Kotlin + Jetpack Compose（原生质感、Material3 直接、Termux/arm64 下无需 Flutter 交叉编译链）；性能敏感层（PNG/CharX、本地推理）用 Kotlin/JVM + 可插拔接口而非 Rust FFI（避免双语言构建链）；本地存储用 Room（后续迁 DataStore 与 SQLite 能力）。文档要求“Termux 下评估交叉编译、必要时 CI 远程构建替代”——已按此落地：开发机无 Android SDK，**本地只跑引擎测试，App 构建靠 GitHub Actions CI**。文档其余核心诉求均已执行：原生非 WebView、ST 数据格式逐字段兼容、Provider 三协议抽象、动态主题、AGPL-3.0、QuickJS 扩展远期方案。
-
 ## 兼容目标（以官方行为为基准，回归测试锁定）
 
 - **角色卡**：PNG V2/V3（tEXt/ccv3）、CharX、JSON 导入导出、从 URL 导入（对齐官方 content-manager）、V3 assets（icon/background/voice）
