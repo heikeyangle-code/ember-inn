@@ -2,8 +2,10 @@ package com.emberinn.app.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,22 +17,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,54 +44,86 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.emberinn.app.ui.theme.ThemeMode
+import com.emberinn.app.ui.theme.ThemePreset
 
-/** 设置入口：主页分组 + 提供商列表/详情（参照命理2，底层仍走酒馆 1:1 引擎）。 */
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, ABOUT }
+
+/** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
-fun SettingsScreen(vm: ProviderViewModel = viewModel()) {
-    var showProviders by rememberSaveable { mutableStateOf(false) }
-    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
+fun SettingsScreen(
+    themeMode: ThemeMode,
+    themePreset: ThemePreset,
+    onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
+    vm: ProviderViewModel = viewModel(),
+) {
+    var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
+    var providerId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    when {
-        detailId != null -> ProviderDetailScreen(
+    when (page) {
+        SettingsPage.PROVIDERS -> ProviderListScreen(
             vm = vm,
-            providerId = detailId!!,
-            onBack = { detailId = null },
+            onOpenDetail = { id ->
+                providerId = id
+                page = SettingsPage.PROVIDER_DETAIL
+            },
+            onBack = { page = SettingsPage.HOME },
         )
-        showProviders -> ProviderListScreen(
+        SettingsPage.PROVIDER_DETAIL -> {
+            val id = providerId
+            if (id != null) {
+                ProviderDetailScreen(vm = vm, providerId = id, onBack = { page = SettingsPage.PROVIDERS })
+            }
+        }
+        SettingsPage.APPEARANCE -> AppearanceScreen(
+            themeMode = themeMode,
+            themePreset = themePreset,
+            onThemeChanged = onThemeChanged,
+            onBack = { page = SettingsPage.HOME },
+        )
+        SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
+        else -> SettingsHome(
             vm = vm,
-            onOpenDetail = { detailId = it },
-            onBack = { showProviders = false },
+            themeMode = themeMode,
+            themePreset = themePreset,
+            onOpenProviders = { page = SettingsPage.PROVIDERS },
+            onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenAbout = { page = SettingsPage.ABOUT },
         )
-        else -> SettingsHome(vm, onOpenProviders = { showProviders = true })
     }
 }
 
-private data class SettingRow(
+private data class QuickAction(
     val title: String,
-    val subtitle: String,
     val icon: ImageVector,
-    val onClick: (() -> Unit)? = null,
-)
-
-private data class SettingGroup(
-    val title: String,
-    val rows: List<SettingRow>,
+    val onClick: () -> Unit,
 )
 
 @Composable
-private fun SettingsHome(vm: ProviderViewModel, onOpenProviders: () -> Unit) {
+private fun SettingsHome(
+    vm: ProviderViewModel,
+    themeMode: ThemeMode,
+    themePreset: ThemePreset,
+    onOpenProviders: () -> Unit,
+    onOpenAppearance: () -> Unit,
+    onOpenAbout: () -> Unit,
+) {
     val profiles by vm.profiles.collectAsState()
     val activeId by vm.activeId.collectAsState()
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
+    var showLicense by remember { mutableStateOf(false) }
 
     val activeProfile = profiles.firstOrNull { it.id == activeId }
-    val activeSummary = activeProfile?.let { p ->
+    val providerSummary = activeProfile?.let { p ->
         val spec = vm.providers.firstOrNull { it.id == p.providerId }
         buildString {
             append(spec?.displayName ?: p.providerId)
@@ -95,59 +131,66 @@ private fun SettingsHome(vm: ProviderViewModel, onOpenProviders: () -> Unit) {
         }
     } ?: "未配置"
 
+    val themeSummary = "${themePreset.name} · ${themeMode.label}"
+
+    val quickActions = listOf(
+        QuickAction("主题", Icons.Filled.Star, onOpenAppearance),
+        QuickAction("模型", Icons.Filled.Settings, onOpenProviders),
+        QuickAction("语音", Icons.Filled.Notifications, { openComingSoon(context) }),
+        QuickAction("备份", Icons.Filled.Refresh, { openComingSoon(context) }),
+    )
+
     val groups = listOf(
-        SettingGroup(
+        SettingsGroup(
             "外观与主题",
-            listOf(SettingRow("主题模式", "跟随系统", Icons.Filled.Star)),
-        ),
-        SettingGroup(
-            "提供商与模型",
             listOf(
-                SettingRow("提供商与模型", activeSummary, Icons.Filled.Settings, onOpenProviders),
-                SettingRow("默认采样参数", "开发中", Icons.Filled.Build),
+                SettingRow("主题", themeSummary, Color.Unspecified, onOpenAppearance),
+                SettingRow("字体 / 圆角 / 密度", "开发中", Color.Unspecified),
             ),
         ),
-        SettingGroup(
+        SettingsGroup(
+            "提供商与模型",
+            listOf(
+                SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders),
+                SettingRow("默认采样参数", "开发中", Color.Unspecified),
+            ),
+        ),
+        SettingsGroup(
             "语音",
-            listOf(SettingRow("语音输入与朗读", "开发中", Icons.Filled.Notifications)),
+            listOf(SettingRow("语音输入与朗读", "开发中", Color.Unspecified)),
         ),
-        SettingGroup(
+        SettingsGroup(
             "服务",
-            listOf(SettingRow("翻译 · 图像 · 向量", "开发中", Icons.Filled.Face)),
+            listOf(SettingRow("翻译 · 图像 · 向量", "开发中", Color.Unspecified)),
         ),
-        SettingGroup(
+        SettingsGroup(
             "数据与隐私",
-            listOf(SettingRow("备份与导出", "开发中", Icons.Filled.Lock)),
+            listOf(
+                SettingRow("数据仅保存在本地", "存储位置见关于页", Color.Unspecified),
+                SettingRow("备份与导出", "开发中", Color.Unspecified),
+            ),
         ),
-        SettingGroup(
+        SettingsGroup(
             "关于",
             listOf(
-                SettingRow("版本", "0.1.0", Icons.Filled.Info),
-                SettingRow(
-                    "开源仓库",
-                    "github.com/heikeyangle-code/ember-inn",
-                    Icons.Filled.Share,
-                    onClick = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
-                            )
-                        }
-                    },
-                ),
+                SettingRow("版本", "0.1.0", Color.Unspecified),
+                SettingRow("开源仓库", "GitHub", Color.Unspecified) {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
+                        )
+                    }
+                },
+                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified) { showLicense = true },
             ),
         ),
     )
 
-    val visible = remember(groups, query) {
+    val visibleGroups = remember(groups, query) {
         val q = query.trim()
         groups.mapNotNull { group ->
-            val rows = if (q.isBlank()) {
-                group.rows
-            } else {
-                group.rows.filter {
-                    it.title.contains(q, ignoreCase = true) || it.subtitle.contains(q, ignoreCase = true)
-                }
+            val rows = if (q.isBlank()) group.rows else group.rows.filter {
+                it.title.contains(q, ignoreCase = true) || it.subtitle.contains(q, ignoreCase = true)
             }
             if (rows.isNotEmpty()) group.copy(rows = rows) else null
         }
@@ -156,34 +199,137 @@ private fun SettingsHome(vm: ProviderViewModel, onOpenProviders: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text("设置", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("搜索设置") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+            Column {
+                Text("设置", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "外观、模型、语音与数据都在这里",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("搜索设置") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Search, contentDescription = "清除")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                )
+            }
         }
-        items(visible, key = { it.title }) { group ->
-            SettingGroupCard(group)
+        if (query.isBlank()) {
+            item {
+                QuickActionsCard(quickActions)
+            }
+        }
+        items(visibleGroups, key = { it.title }) { group ->
+            SettingsGroupCard(group)
+        }
+    }
+
+    if (showLicense) {
+        AlertDialog(
+            onDismissRequest = { showLicense = false },
+            title = { Text("开源许可") },
+            text = { Text("本软件基于 AGPL-3.0 发布：参考/翻译 SillyTavern 源码，派生义务；分发必须开源。") },
+            confirmButton = {
+                TextButton(onClick = { showLicense = false }) { Text("知道了") }
+            },
+        )
+    }
+}
+
+private fun openComingSoon(context: android.content.Context) {
+    android.widget.Toast.makeText(context, "开发中", android.widget.Toast.LENGTH_SHORT).show()
+}
+
+@Composable
+private fun QuickActionsCard(actions: List<QuickAction>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Text(
+                "常用",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            actions.chunked(2).forEach { row ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    row.forEach { action ->
+                        QuickActionCell(action, modifier = Modifier.weight(1f))
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SettingGroupCard(group: SettingGroup) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun QuickActionCell(action: QuickAction, modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClick = action.onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(34.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                action.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(action.title, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+private data class SettingRow(
+    val title: String,
+    val subtitle: String,
+    val dot: Color,
+    val onClick: (() -> Unit)? = null,
+)
+
+private data class SettingsGroup(
+    val title: String,
+    val rows: List<SettingRow>,
+)
+
+@Composable
+private fun SettingsGroupCard(group: SettingsGroup) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Column {
             Text(
                 group.title,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
             group.rows.forEachIndexed { index, row ->
                 if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -200,15 +346,14 @@ private fun SettingRowView(row: SettingRow) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = row.onClick != null, onClick = { row.onClick?.invoke() })
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
-        Icon(
-            row.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(Modifier.width(14.dp))
+        if (row.dot != Color.Unspecified) {
+            Box(
+                modifier = Modifier.size(10.dp).clip(CircleShape).background(row.dot),
+            )
+            Spacer(Modifier.width(14.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(row.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (row.subtitle.isNotBlank()) {
@@ -222,13 +367,79 @@ private fun SettingRowView(row: SettingRow) {
             }
         }
         if (row.onClick != null) {
-            Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
             Text(
-                "开发中",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                "›",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
+    }
+}
+
+/** 关于页：版本 / 许可 / 仓库 / 本地数据声明。 */
+@Composable
+private fun AboutScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    Column(modifier = Modifier.fillMaxSize()) {
+        SettingsTopBar(title = "关于", onBack = onBack)
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        ) {
+            Text("余烬酒馆", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "EmberInn · 以 SillyTavern 兼容为核心的原生 Android 酒馆客户端",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Card(
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InfoLine("版本", "0.1.0")
+                    InfoLine("开源许可", "AGPL-3.0")
+                    InfoLine("数据", "默认只保存在本机")
+                    InfoLine("仓库", "github.com/heikeyangle-code/ember-inn")
+                }
+            }
+            TextButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
+                        )
+                    }
+                },
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text("访问开源仓库")
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** 设置子页通用顶栏。 */
+@Composable
+fun SettingsTopBar(title: String, onBack: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+        }
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
     }
 }

@@ -39,6 +39,20 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
   4. 扩展提示注入（summary/AN/vectors/chromadb/persona/未知扩展顺序）
   5. docs/HANDOFF.md
 
+## 最近一轮 3（2026-08-07：设置视觉按 README 升级 + 全局预设主题落地）
+
+- **设置主页重做**：大标题 + 副标题、设置搜索（可过滤所有分组条目）、“常用”快捷区（主题/模型/语音/备份）、
+  分组卡片统一 extraLarge 圆角 + surfaceContainerLow 容器（外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于）。
+- **外观与主题子页（README 第一层主题）**：主题模式（跟随系统/浅色/深色）+ 六套预设主题
+  （墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），点选立即全局生效（实时预览），SharedPreferences 持久化；
+  字体/圆角/背景模糊标“开发中”。
+- **主题引擎**：ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成整套 M3 ColorScheme
+  （含 surfaceContainer 系列，浅色低饱和容器、深色提亮主色）；MainActivity 持有 themeMode/preset 状态，
+  MainScreen → SettingsScreen → AppearanceScreen 贯通；旧 Color.kt 常量退役。
+- **关于页做实**：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库可跳转。
+- **提供商页视觉升级**：卡片 extraLarge 圆角 + 状态 pill（已配置/未配置）+ 顶栏副标题。
+- 引擎零改动，酒馆 1:1 不变；CI 全绿后推送。
+
 ## 最近一轮 2（2026-08-07：设置页按 README 分组 + 提供商 UI 按命理2重构）
 
 - **设置主页 SettingsScreen**：按 README 信息架构分组——外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于，顶部设置搜索可过滤条目；提供商行显示当前激活档案摘要；未实现项明确标“开发中”，不再只有一个裸页面。

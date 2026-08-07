@@ -34,7 +34,11 @@ private val Tabs = listOf(
 )
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    themeMode: com.emberinn.app.ui.theme.ThemeMode = com.emberinn.app.ui.theme.ThemeMode.SYSTEM,
+    themePreset: com.emberinn.app.ui.theme.ThemePreset = com.emberinn.app.ui.theme.ThemePresets.first(),
+    onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit = { _, _ -> },
+) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var openSessionId by rememberSaveable { mutableStateOf<String?>(null) }
     var openName by rememberSaveable { mutableStateOf("") }
@@ -73,7 +77,11 @@ fun MainScreen() {
                     },
                 )
                 1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
-                else -> com.emberinn.app.ui.settings.SettingsScreen()
+                else -> com.emberinn.app.ui.settings.SettingsScreen(
+                    themeMode = themeMode,
+                    themePreset = themePreset,
+                    onThemeChanged = onThemeChanged,
+                )
             }
         }
     }

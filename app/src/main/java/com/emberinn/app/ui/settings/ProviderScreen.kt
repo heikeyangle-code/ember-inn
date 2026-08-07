@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -82,7 +83,7 @@ fun ProviderListScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "提供商与模型", onBack = onBack)
+        TopBar(title = "提供商与模型", subtitle = "22 家服务商，点卡片配置", onBack = onBack)
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
@@ -169,12 +170,16 @@ private fun ProviderCard(
     configured: Boolean,
     onClick: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            ProviderIcon(spec.icon, spec.displayName, modifier = Modifier.size(40.dp))
+            ProviderIcon(spec.icon, spec.displayName, modifier = Modifier.size(42.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -185,15 +190,25 @@ private fun ProviderCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (configured) "已配置" else "未配置",
-                        style = MaterialTheme.typography.labelSmall,
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
                         color = if (configured) {
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            MaterialTheme.colorScheme.outline
+                            MaterialTheme.colorScheme.surfaceVariant
                         },
-                    )
+                    ) {
+                        Text(
+                            if (configured) "已配置" else "未配置",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (configured) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        )
+                    }
                 }
                 Text(
                     spec.description,
@@ -481,6 +496,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
 private fun TopBar(
     title: String,
     onBack: () -> Unit,
+    subtitle: String? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -490,13 +506,18 @@ private fun TopBar(
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
         }
-        Text(
-            title,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         trailing?.invoke()
     }
 }
