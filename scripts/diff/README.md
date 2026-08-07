@@ -25,6 +25,7 @@
 - `byaf-chat-official.mjs`：逐字提取官方 src/byaf.js getChatFromScenario（Date/encodeURI 打桩）。
 - `byaf-card-official.mjs`：逐字提取官方 src/byaf.js getCharacterCard（含 isNSFW 原始真值语义）。
 - `prompt-name-official.mjs`：官方 PromptManager isValidName/sanitizeName（COMPLETION 名字清理）。
+- `expression-engine-official.mjs`：官方表情精灵纯逻辑（标签/分组/选图）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -63,6 +64,7 @@ node scripts/diff/byaf-macros-official.mjs
 node scripts/diff/byaf-chat-official.mjs
 node scripts/diff/byaf-card-official.mjs
 node scripts/diff/prompt-name-official.mjs
+node scripts/diff/expression-engine-official.mjs
 node scripts/build-presets.mjs
 ```
 
