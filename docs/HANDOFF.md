@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（28 组，共 431 例官方基准，全部通过）**：
+**已覆盖（29 组，共 437 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -77,6 +77,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 表情精灵引擎 | expression-engine-official.mjs | ExpressionEngineDiffTest | 14 |
 | 表情分类文本预处理 | expression-classify-official.mjs | ExpressionClassifyDiffTest | 8 |
 | 群聊成员激活 | group-activation-official.mjs | GroupActivationDiffTest | 10 |
+| 群聊角色卡合并 | group-cards-official.mjs | GroupCardsDiffTest | 6 |
 
 **尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、BYAF 完整导入流程（文件系统/聊天落盘依赖，手写单测；纯逻辑 14 例 + 聊天 5 例 + 角色卡组装 4 例已差分）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -149,10 +150,10 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 204 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF/名字规则/表情精灵/分类预处理/群聊激活）
+- 引擎测试 205 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF/名字规则/表情精灵/分类预处理/群聊激活/群聊角色卡）
 
 ### 3.10 其它
-- ✅ 群聊成员激活策略（NATURAL/LIST/POOLED/MANUAL/SWIPE/IMPERSONATE）官方差分 10 例（GroupActivationEngine）；🟡 完整生成流程（多人回复拼接/组提示/nudge 链）仍待做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
+- ✅ 群聊成员激活策略（NATURAL/LIST/POOLED/MANUAL/SWIPE/IMPERSONATE）官方差分 10 例（GroupActivationEngine）；✅ APPEND 群聊角色卡合并（GroupCharacterCardsEngine：collectField/prefix/suffix/disabled/override）官方差分 6 例；🟡 完整生成循环（多人回复拼接/组提示/nudge 链）仍待做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
 - ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
 
 ## 4. App / UI 进度
@@ -213,6 +214,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 23（2026-08-08：群聊角色卡合并官方差分）
+
+- group-cards-official.mjs：照官方 getGroupCharacterCardsLazy（customTransform/replaceAndPrepareForJoin/collectField）生成 6 例 fixture
+- GroupCharacterCardsEngine：APPEND/APPEND_DISABLED 合并多人描述/性格/场景/示例；prefix/suffix/<FIELDNAME>；disabled_members 与当前角色豁免；scenario/mes_example override 优先
+- 官方基准 431 → 437；引擎 205 测全绿
 
 ## 最近一轮 22（2026-08-08：群聊成员激活策略官方差分）
 
@@ -386,7 +393,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 28 个脚本 + 431 例 fixture
+- 差分工具 29 个脚本 + 437 例 fixture
 
 ## 7. 注意事项
 

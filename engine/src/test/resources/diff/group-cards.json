@@ -1,0 +1,288 @@
+{
+  "source": "group-chats.js getGroupCharacterCardsLazy",
+  "cases": [
+    {
+      "id": "swap-null",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 0,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "append-basic",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "爱丽丝描述\n鲍勃描述 Bob",
+        "personality": "开朗\n沉稳",
+        "scenario": "森林\n海边",
+        "mesExamples": "<START>\n示例A\n<START>\\n示例B"
+      }
+    },
+    {
+      "id": "append-prefix-suffix",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "<FIELDNAME>: ",
+              "generation_mode_join_suffix": ";"
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "Description: 爱丽丝描述;\nDescription: 鲍勃描述 Bob;",
+        "personality": "Personality: 开朗;\nPersonality: 沉稳;",
+        "scenario": "Scenario: 森林;\nScenario: 海边;",
+        "mesExamples": "Example Messages: <START>\n示例A;\nExample Messages: <START>\\n示例B;"
+      }
+    },
+    {
+      "id": "append-disabled",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 1,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 2,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [
+                "a"
+              ],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "爱丽丝描述\n鲍勃描述 Bob",
+        "personality": "开朗\n沉稳",
+        "scenario": "森林\n海边",
+        "mesExamples": "<START>\n示例A\n<START>\\n示例B"
+      }
+    },
+    {
+      "id": "overrides",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {
+            "scenario": "覆盖场景 {{char}}",
+            "mes_example": "覆盖示例"
+          }
+        }
+      },
+      "expected": {
+        "description": "爱丽丝描述\n鲍勃描述 Bob",
+        "personality": "开朗\n沉稳",
+        "scenario": "覆盖场景 ",
+        "mesExamples": "覆盖示例"
+      }
+    },
+    {
+      "id": "missing-member",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "missing",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "爱丽丝描述\n鲍勃描述 Bob",
+        "personality": "开朗\n沉稳",
+        "scenario": "森林\n海边",
+        "mesExamples": "<START>\n示例A\n<START>\\n示例B"
+      }
+    }
+  ]
+}
