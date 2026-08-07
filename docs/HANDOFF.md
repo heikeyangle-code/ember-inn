@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（30 组，共 442 例官方基准，全部通过）**：
+**已覆盖（31 组，共 449 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -79,6 +79,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 群聊成员激活 | group-activation-official.mjs | GroupActivationDiffTest | 10 |
 | 群聊角色卡合并 | group-cards-official.mjs | GroupCardsDiffTest | 6 |
 | 群聊深度提示 | group-depth-official.mjs | GroupDepthDiffTest | 5 |
+| 精灵存储/Risu 导入 | sprites-storage-official.mjs | SpriteStorageDiffTest | 7 |
 
 **尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、BYAF 完整导入流程（文件系统/聊天落盘依赖，手写单测；纯逻辑 14 例 + 聊天 5 例 + 角色卡组装 4 例已差分）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -140,7 +141,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ### 3.12 表情精灵 ✅（引擎层纯逻辑）
 - ExpressionEngine：文件名→标签（joy/joy-1/joy.expressive→joy）、图片元数据（fileName/title/imageSrc/isCustom）、分组排序（主文件优先、附加标记 additional）、chooseSpriteForExpression（fallback、多立绘随机、rerollIfSame、overrideSpriteFile）
 - sampleClassifyText：去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim（8 例差分）
-- 官方差分 14+8 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；DOM 显示/动画/LLM 分类 API 属 App/服务层
+- 官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage 覆盖 spritesPath（含子目录/sanitize）与 importRisuSprites（提取/去重/删除字段）；DOM 显示/动画/LLM 分类 API 属 App/服务层
 - 差分顺带修 VectorTextUtils.trimToStartSentence：JS substring 自动钳制长度，Kotlin 需 coerceAtMost（原实现会越界）
 
 ## 3.11 向量扩展（RAG 全量）✅（引擎层）
@@ -151,7 +152,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 206 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF/名字规则/表情精灵/分类预处理/群聊）
+- 引擎测试 207 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF/名字规则/表情精灵/分类预处理/群聊/精灵存储）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略（NATURAL/LIST/POOLED/MANUAL/SWIPE/IMPERSONATE）官方差分 10 例（GroupActivationEngine）；✅ APPEND 群聊角色卡合并（GroupCharacterCardsEngine）官方差分 6 例；✅ 群聊深度提示（GroupDepthPromptsEngine）官方差分 5 例；🟡 完整生成循环（多人回复拼接/组提示/nudge 链）仍待做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -215,6 +216,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 25（2026-08-08：精灵存储/RisuAI 导入官方差分）
+
+- sprites-storage-official.mjs：照官方 sprites.js getSpritesPath/importRisuSprites 生成 7 例 fixture
+- SpriteStorage：spritesPath（sanitize/子目录）、extractRisuSprites（additionalAssets+emotions 合并、label 去重、删除导入字段、空/无名称时原卡不变）
+- 官方基准 442 → 449；引擎 207 测全绿
 
 ## 最近一轮 24（2026-08-08：群聊深度提示官方差分）
 
@@ -400,7 +407,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 30 个脚本 + 442 例 fixture
+- 差分工具 31 个脚本 + 449 例 fixture
 
 ## 7. 注意事项
 

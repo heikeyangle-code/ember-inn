@@ -30,6 +30,7 @@
 - `group-activation-official.mjs`：官方群聊成员激活策略（自然/列表/池化/滑动/冒充）。
 - `group-cards-official.mjs`：官方 APPEND 群聊角色卡合并。
 - `group-depth-official.mjs`：官方群聊成员深度提示收集。
+- `sprites-storage-official.mjs`：官方精灵存储路径 + RisuAI 精灵导入。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -73,6 +74,7 @@ node scripts/diff/expression-classify-official.mjs
 node scripts/diff/group-activation-official.mjs
 node scripts/diff/group-cards-official.mjs
 node scripts/diff/group-depth-official.mjs
+node scripts/diff/sprites-storage-official.mjs
 node scripts/build-presets.mjs
 ```
 
