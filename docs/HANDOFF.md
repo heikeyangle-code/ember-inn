@@ -1,6 +1,6 @@
 # 交接清单（会话上下文耗尽时使用）
 
-> 最后更新：2026-08-07。接手的 Agent 先读第 1、2 节，再读 3–5 节，最后看第 6 节工作日志。
+> 最后更新：2026-08-08。接手的 Agent 先读第 1、2 节，再读 3–5 节，最后看第 6 节工作日志。
 
 ## 1. 项目与常用命令
 
@@ -66,6 +66,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 **尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、CharX/YAML/BYAF 导入（官方依赖 JSZip/文件系统，手写单测）、PromptAssembler 各 populator（依赖 tokenHandler/全局状态，单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
+作用域宏配对逻辑（官方 MacroCstWalker 依赖 chevrotain CST 与 MacroRegistry，无法逐字提取；其中 trimScopedContent 纯函数已差分 7 例）。
 
 **预设体系**：官方 `default/content/presets` 已打包进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127 个），PresetLibrary 可加载；quick-replies 也打包。官方发版后跑 `node scripts/build-presets.mjs`。
 
@@ -79,7 +80,7 @@ PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）�
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
 ✅ 扩展字段已全接上（数据全量透传 + 行为）：
    - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容）；**FileVectorStore 磁盘持久化对齐官方 vectra.LocalIndex**（目录 root/source/collection/model + items.json，重启不丢；InMemoryVectorStore 仅测试/临时）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
-- 向量扩展补齐：**VectorChatRearranger**（聊天历史重排，对齐 rearrangeChat：protect 保留最近 N 条、insert 条数、模板 Past events:{{text}}、position 映射 BEFORE_PROMPT→start/IN_PROMPT→end）+ **文件/Data Bank 向量化**（对齐 processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile：分块 splitRecursive、overlap、chunk 检索注入）+ VectorTextUtils（splitRecursive/trimToEndSentence/trimToStartSentence/overlapChunks 官方 1:1）
+   - 向量扩展补齐：**VectorChatRearranger**（聊天历史重排，对齐 rearrangeChat：protect 保留最近 N 条、insert 条数、模板 Past events:{{text}}、position 映射 BEFORE_PROMPT→start/IN_PROMPT→end）+ **文件/Data Bank 向量化**（对齐 processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile：分块 splitRecursive、overlap、chunk 检索注入）+ VectorTextUtils（splitRecursive/trimToEndSentence/trimToStartSentence/overlapChunks 官方 1:1）
    - automationId → 快捷回复自动执行：WorldInfoAutoExecute.resolve + AutoExecuteHandler（对齐 quick-reply AutoExecuteHandler，prevent 栈；选择逻辑 4 例官方差分）
    - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
    - addMemo → 官方核心从未读取，仅透传
@@ -87,11 +88,11 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ### 3.3 宏 ✅（含作用域宏）
 通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例；!?~> flags 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
-🟡 动态宏注册 API、宏 flags（{{#}}）、完整 MacroEnv（聊天/角色/系统状态）未做。
+✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；🟡 完整 MacroEnv（聊天/角色/系统状态）边界；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）、管道/闭包/双管道、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器。
-❌ parser flags（REPLACE_GETVAR 等）完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；slash 无差分 fixture。
+✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）。
@@ -125,11 +126,11 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 179 全绿（重排/文件/分块/工具函数）
+- 引擎测试 189 全绿（含重排/文件/分块/工具函数/作用域宏）
 
 ### 3.10 其它
 - ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型 + 注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
-- ❌ 服务层：TTS / STT / 图像 / 翻译 / 向量（路线图 P3/P4）
+- ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
 
 ## 4. App / UI 进度
 
@@ -185,6 +186,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
+## 6. 最近工作日志
+
 ## 最近一轮 9（2026-08-08：作用域宏补齐 + trimScopedContent 差分）
 
 - 通用作用域宏：{{setvar::x}}content{{/setvar}} → {{setvar::x::content}}（content 默认先求值嵌套宏再 trim+dedent；{{#}} 保留空白；嵌套最外层先处理；未配对 closing 原样），对齐官方 MacroCstWalker.processScopedMacros
@@ -226,8 +229,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 修正多集合查询语义：官方 multiQueryCollection 为全局 topK（合并→降序→阈值→topK→分组），InMemory/File 两实现都已对齐
 - RAG 全链路无法做纯函数差分（官方依赖 vectra/嵌入服务/浏览器 API），采用逐行对照源码 + 单测锁行为，已在文档标注
 - 引擎 172 测全绿
-
-## 6. 最近工作日志
 
 ### 轮 5（11e33e4，2026-08-07）：返回手势按 README 守则修复
 - 聊天页 BackHandler：系统返回键/侧滑返回 = 回角色列表（此前直接退出 App）
