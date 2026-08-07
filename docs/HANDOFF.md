@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（10 组，共 266 例官方基准，全部通过）**：
+**已覆盖（11 组，共 280 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -59,8 +59,10 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | {{pick}} 确定性 | pick-official.mjs | PickDiffTest | 5 |
 | 编辑器排序 | editor-sort-official.mjs | EditorSortDiffTest | 6 |
 | 快捷回复自动执行选择 | auto-execute-official.mjs | AutoExecuteDiffTest | 4 |
+| 向量工具函数 | vector-utils-official.mjs | VectorUtilsDiffTest | 14 |
 
 **尚未做差分的**：斜杠解析器（目前是手写单测）、JSON/CharX/YAML/BYAF 导入导出（除 PNG 外是手写单测）、PromptAssembler 各 populator（单测 + 官方源码对照，暂无 fixture）。
+聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
 
 **预设体系**：官方 `default/content/presets` 已打包进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127 个），PresetLibrary 可加载；quick-replies 也打包。官方发版后跑 `node scripts/build-presets.mjs`。
 
@@ -186,6 +188,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 扩展提示接入：3_vectors→vectorsMemory、4_vectors_data_bank→vectorsDataBank，position 映射 BEFORE_PROMPT(2)→start / IN_PROMPT(0)→end / IN_CHAT(1)→in_chat
 - 边界标注：substituteParams 由宏替换器注入（App 层接 MacroEngine）；summarize/translate_files 未做（P3，官方默认关）；emoji 判定码点近似
 - 引擎 179 测全绿；App 接线未动（用户要求引擎先完美）
+- 差分补课：vector-utils-official.mjs 提取官方 utils.js 三个纯函数（splitRecursive/trimToEndSentence/trimToStartSentence）生成 14 例 fixture，VectorUtilsDiffTest 全过（含 emoji 用例）；官方基准 266 → 280；引擎 180 测全绿
 
 ## 最近一轮 6（2026-08-08：世界书扩展行为全接上 + 差分补课）
 
@@ -226,7 +229,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 10 个脚本 + 266 例 fixture
+- 差分工具 11 个脚本 + 280 例 fixture
 
 ## 7. 注意事项
 
