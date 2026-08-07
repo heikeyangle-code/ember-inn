@@ -33,6 +33,7 @@
 - `sprites-storage-official.mjs`：官方精灵存储路径 + RisuAI 精灵导入。
 - `character-fields-official.mjs`：官方角色卡字段聚合。
 - `json-import-official.mjs`：官方 JSON 角色卡导入（V2/V3/V1/Gradio）。
+- `byaf-import-official.mjs`：官方 BYAF 完整导入流程（计划输出）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -79,6 +80,7 @@ node scripts/diff/group-depth-official.mjs
 node scripts/diff/sprites-storage-official.mjs
 node scripts/diff/character-fields-official.mjs
 node scripts/diff/json-import-official.mjs
+node scripts/diff/byaf-import-official.mjs
 node scripts/build-presets.mjs
 ```
 

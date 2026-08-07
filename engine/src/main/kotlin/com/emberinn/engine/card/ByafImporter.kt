@@ -156,6 +156,135 @@ object ByafImporter {
         }.toString()
     }
 
+    /** BYAF 完整导入计划（对齐 importFromByaf；App 层按计划落盘）。 */
+    data class ByafChatPlan(val filePath: String, val fileName: String, val content: String)
+    data class ByafBackgroundPlan(val filePath: String, val data: ByteArray)
+    data class ByafIconPlan(val filePath: String, val data: ByteArray)
+
+    data class ByafImportPlan(
+        val fileName: String,
+        val cardJson: String,
+        val avatar: ByteArray?,
+        val chats: List<ByafChatPlan>,
+        val backgrounds: List<ByafBackgroundPlan>,
+        val icons: List<ByafIconPlan>,
+    )
+
+    fun importPlan(
+        zipBytes: ByteArray,
+        userName: String,
+        now: String = Instant.now().toString(),
+        chatNow: String = V2Normalizer.humanizedDateTime(),
+        preservedFileName: String? = null,
+        existingFiles: Set<String> = emptySet(),
+    ): ByafImportPlan {
+        val files = readZip(zipBytes)
+        val manifest = json.parseToJsonElement(String(files["manifest.json"] ?: error("BYAF: manifest.json not found"), Charsets.UTF_8)).jsonObject
+        val characters = manifest["characters"]?.jsonArray ?: error("Invalid BYAF file: missing characters array")
+        val characterPath = characters.first().jsonPrimitive.content
+        val character = json.parseToJsonElement(String(files[characterPath] ?: error("BYAF: character JSON not found: $characterPath"), Charsets.UTF_8)).jsonObject
+        val scenarios = mutableListOf<JsonObject>()
+        manifest["scenarios"]?.jsonArray?.forEach { pathElement ->
+            val path = pathElement.jsonPrimitive.content
+            val scenarioJson = files[path] ?: return@forEach
+            scenarios += json.parseToJsonElement(String(scenarioJson, Charsets.UTF_8)).jsonObject
+        }
+        val author = manifest["author"]?.jsonObject ?: JsonObject(emptyMap())
+
+        var cardJson = V2Normalizer.normalize(buildCard(author, character, scenarios, now), now = chatNow)
+        val parsedCard = json.parseToJsonElement(cardJson).jsonObject
+        val cardName = parsedCard["name"]?.jsonPrimitive?.content ?: ""
+        val displayName = character["displayName"]?.jsonPrimitive?.content ?: ""
+        val fileName = preservedFileName ?: sanitizeReplacement(displayName.ifEmpty { cardName })
+        val fileNameBase = fileName.substringAfterLast('/')
+
+        val chats = mutableListOf<ByafChatPlan>()
+        val backgroundPlans = mutableListOf<ByafBackgroundPlan>()
+        val iconPlans = mutableListOf<ByafIconPlan>()
+
+        if (preservedFileName == null) {
+            // 背景：按数据去重，名称 = {fileName}_bg + 唯一后缀
+            val updatedBackgrounds = mutableListOf<ByafChatBackground>()
+            val seenData = mutableListOf<ByteArray>()
+            for (scenario in scenarios) {
+                val bgPath = scenario["backgroundImage"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: continue
+                val data = files[bgPath] ?: continue
+                if (seenData.any { it.contentEquals(data) }) continue
+                seenData += data
+                val ext = if (bgPath.contains('.')) bgPath.substringAfterLast('.') else "png"
+                val base = "${fileNameBase}_bg"
+                val unique = uniqueName(base) { candidate -> "$candidate.$ext" in existingFiles || backgroundPlans.any { it.filePath.endsWith("/$candidate.$ext") } }
+                val newFile = "$unique.$ext"
+                val filePath = "/images/$fileNameBase/$newFile"
+                backgroundPlans += ByafBackgroundPlan(filePath, data)
+                updatedBackgrounds += ByafChatBackground(name = filePath, paths = listOf(bgPath))
+            }
+
+            for (scenario in scenarios) {
+                val title = scenario["title"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: cardName
+                val chatName = sanitizeReplacement("$title - $chatNow imported.jsonl")
+                val filePath = "/chats/$fileNameBase/$chatName"
+                val content = chatFromScenario(scenario, userName, cardName, updatedBackgrounds, now).joinToString("\n") { it.toString() }
+                chats += ByafChatPlan(filePath = filePath, fileName = chatName, content = content)
+            }
+
+            if (chats.isNotEmpty()) {
+                val firstChat = chats.first().fileName
+                val chatBase = firstChat.substringBeforeLast('.')
+                cardJson = json.parseToJsonElement(cardJson).jsonObject.toMutableMap().apply {
+                    put("chat", JsonPrimitive(chatBase))
+                }.let { JsonObject(it).toString() }
+            }
+
+            // 备用图标（第一张是头像，其余按 label 唯一名写入角色目录）
+            val assets = extractAssets(zipBytes)
+            for (icon in assets.images.drop(1)) {
+                val ext = if (icon.filename.contains('.')) icon.filename.substringAfterLast('.') else "png"
+                val label = sanitizeReplacement(icon.label).ifEmpty { "alt" }
+                val folder = "/chars/${sanitizeReplacement(cardName)}"
+                val unique = uniqueName(label) { candidate -> "$candidate.$ext" in existingFiles || iconPlans.any { it.filePath.endsWith("/$candidate.$ext") } }
+                iconPlans += ByafIconPlan(filePath = "$folder/$unique.$ext", data = icon.data)
+            }
+        }
+
+        val assets = extractAssets(zipBytes)
+        val avatar = assets.images.firstOrNull()?.data
+        return ByafImportPlan(
+            fileName = fileName,
+            cardJson = cardJson,
+            avatar = avatar,
+            chats = chats,
+            backgrounds = backgroundPlans,
+            icons = iconPlans,
+        )
+    }
+
+    private fun uniqueName(base: String, exists: (String) -> Boolean): String {
+        var name = base
+        var i = 1
+        while (exists(name)) {
+            name = "$base (${i++})"
+        }
+        return name
+    }
+
+    /** 对齐 sanitize-filename replacement='_'：非法/控制字符替换为 _，保留名/去尾部点空格/255 字节截断。 */
+    private fun sanitizeReplacement(name: String): String {
+        val forbidden = "\\\\/?<>\\\\:*|\\\"".toSet()
+        val removed = buildString {
+            for (c in name) {
+                val code = c.code
+                if (c in forbidden || code in 0..31 || code in 0x80..0x9f) append('_') else append(c)
+            }
+        }
+        val noReserved = when {
+            removed.all { it == '.' } -> ""
+            Regex("""^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$""", RegexOption.IGNORE_CASE).matches(removed) -> ""
+            else -> removed
+        }
+        return noReserved.trimEnd('.', ' ').take(255)
+    }
+
     private fun readZip(zipBytes: ByteArray): Map<String, ByteArray> {
         val files = linkedMapOf<String, ByteArray>()
         java.util.zip.ZipInputStream(zipBytes.inputStream()).use { zis ->
