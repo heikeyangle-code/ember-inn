@@ -62,6 +62,7 @@ object V2Normalizer {
         scenario: String = "",
         talkativeness: Double = 0.5,
         creator: String = "",
+        includeRootCreator: Boolean = false,
         tags: List<String> = emptyList(),
         systemPrompt: String = "",
         postHistoryInstructions: String = "",
@@ -86,6 +87,7 @@ object V2Normalizer {
         put("creatorcomment", JsonPrimitive(creatorComment))
         put("avatar", JsonPrimitive("none"))
         put("talkativeness", JsonPrimitive(talkativeness))
+        if (includeRootCreator) put("creator", JsonPrimitive(creator))
         put("fav", JsonPrimitive(fav))
         put("tags", JsonArray(tags.map { JsonPrimitive(it) }))
         put("data", buildJsonObject {

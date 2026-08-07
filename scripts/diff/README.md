@@ -18,6 +18,7 @@
 - `pick-official.mjs`：用官方 seedrandom@3.0.5（vendor）生成 {{pick}} 确定性基准。
 - `worldinfo-file-official.mjs`：世界书↔角色书互转（convertWorldInfoToCharacterBook /
   convertCharacterBook）fixture。
+- `yaml-import-official.mjs`：逐字提取官方 characters.js importFromYaml + convertToV2 + charaFormatData（yaml/sanitize-filename 用官方同版本 npm 包，已声明在 vendor/package.json）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -38,6 +39,9 @@
 ## 用法
 
 ```sh
+# yaml-import 首次使用先装 vendor 依赖（yaml/sanitize-filename 官方同版本）
+cd scripts/diff/vendor && npm ci && cd ../..
+
 # 官方源码路径默认 ../sillytavern-ref，可用 OFFICIAL_REF 覆盖
 node scripts/diff/instruct-official.mjs
 node scripts/diff/worldinfo-official.mjs
@@ -46,6 +50,7 @@ node scripts/diff/card-png-official.mjs
 node scripts/diff/macros-official.mjs
 node scripts/diff/pick-official.mjs
 node scripts/diff/worldinfo-file-official.mjs
+node scripts/diff/yaml-import-official.mjs
 node scripts/build-presets.mjs
 ```
 

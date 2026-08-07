@@ -1,0 +1,158 @@
+{
+  "source": "characters.js importFromYaml",
+  "cases": [
+    {
+      "id": "minimal",
+      "args": {
+        "body": {
+          "yaml": "name: 测试角色\n"
+        }
+      },
+      "expected": {
+        "name": "测试角色",
+        "description": "",
+        "first_mes": "",
+        "create_date": "2026-08-08T00:00:00.000Z",
+        "chat": "测试角色 - 2026-08-08@00h00m00s000ms",
+        "personality": "",
+        "creatorcomment": "",
+        "avatar": "none",
+        "mes_example": "",
+        "scenario": "",
+        "talkativeness": 0.5,
+        "creator": "",
+        "tags": [],
+        "fav": false,
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "测试角色",
+          "description": "",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "alternate_greetings": [],
+          "extensions": {
+            "talkativeness": 0.5,
+            "fav": false,
+            "world": "",
+            "depth_prompt": {
+              "prompt": "",
+              "depth": 4,
+              "role": "system"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "full",
+      "args": {
+        "body": {
+          "yaml": "name: 完整/角色:名\ncontext: 一段描述\ngreeting: 你好呀\nfirst_mes: 备用开场\nscenario: 场景\npersonality: 性格\nmes_example: 示例\ncreator_notes: 备注\ntags: a, b\ndepth_prompt_prompt: 深度提示\ndepth_prompt_depth: 6\ndepth_prompt_role: assistant"
+        }
+      },
+      "expected": {
+        "name": "完整角色名",
+        "description": "一段描述",
+        "first_mes": "你好呀",
+        "create_date": "2026-08-08T00:00:00.000Z",
+        "chat": "完整角色名 - 2026-08-08@00h00m00s000ms",
+        "personality": "",
+        "creatorcomment": "",
+        "avatar": "none",
+        "mes_example": "",
+        "scenario": "",
+        "talkativeness": 0.5,
+        "creator": "",
+        "tags": [],
+        "fav": false,
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "完整角色名",
+          "description": "一段描述",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "你好呀",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "alternate_greetings": [],
+          "extensions": {
+            "talkativeness": 0.5,
+            "fav": false,
+            "world": "",
+            "depth_prompt": {
+              "prompt": "",
+              "depth": 4,
+              "role": "system"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "creators-and-fav",
+      "args": {
+        "body": {
+          "yaml": "name: Alice\ncontext: 背景\ngreeting: Hi\ncreator: 作者\ncharacter_version: 1.0\nfav: true\ntalkativeness: 0.8"
+        }
+      },
+      "expected": {
+        "name": "Alice",
+        "description": "背景",
+        "first_mes": "Hi",
+        "create_date": "2026-08-08T00:00:00.000Z",
+        "chat": "Alice - 2026-08-08@00h00m00s000ms",
+        "personality": "",
+        "creatorcomment": "",
+        "avatar": "none",
+        "mes_example": "",
+        "scenario": "",
+        "talkativeness": 0.5,
+        "creator": "",
+        "tags": [],
+        "fav": false,
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "Alice",
+          "description": "背景",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "Hi",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "alternate_greetings": [],
+          "extensions": {
+            "talkativeness": 0.5,
+            "fav": false,
+            "world": "",
+            "depth_prompt": {
+              "prompt": "",
+              "depth": 4,
+              "role": "system"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

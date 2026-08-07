@@ -48,6 +48,7 @@ object CharacterCardExporter {
             scenario = root["scenario"]?.jsonPrimitive?.contentOrNull ?: "",
             talkativeness = root["talkativeness"]?.jsonPrimitive?.let { it.contentOrNull?.toDoubleOrNull() } ?: 0.5,
             creator = root["creator"]?.jsonPrimitive?.contentOrNull ?: "",
+            includeRootCreator = root.containsKey("creator"),
             tags = tags,
             systemPrompt = root["system_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
             postHistoryInstructions = root["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: "",

@@ -29,7 +29,7 @@ class ImportersTest {
     fun `yaml import sanitizes name and uses iso create date`() {
         val yaml = "name: a/b:c\ncontext: 背景\n"
         val json = YamlImporter.import(yaml.toByteArray())
-        assertTrue(json.contains("\"name\":\"a_b_c\""))
+        assertTrue(json.contains("\"name\":\"abc\""))
         assertTrue(Regex("""\"create_date\":\"\d{4}-\d{2}-\d{2}T""").containsMatchIn(json))
     }
 
