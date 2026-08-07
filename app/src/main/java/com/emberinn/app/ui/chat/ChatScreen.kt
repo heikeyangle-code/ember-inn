@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.chat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,6 +57,9 @@ fun ChatScreen(sessionId: String, name: String, onBack: () -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
+
+    // README 手势守则：系统返回键/侧滑返回 = 回到列表（与左上角返回一致，不退出 App）
+    BackHandler(onBack = onBack)
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)

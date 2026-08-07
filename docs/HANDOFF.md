@@ -39,6 +39,12 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
   4. 扩展提示注入（summary/AN/vectors/chromadb/persona/未知扩展顺序）
   5. docs/HANDOFF.md
 
+## 最近一轮 4（2026-08-07：返回手势按 README 守则修复）
+
+- 聊天页：BackHandler 接入，系统返回键/侧滑返回 = 回角色列表（此前直接退出 App，违反 README 手势守则）。
+- 设置子页：系统返回逐级回退（提供商详情 → 列表 → 设置主页）。
+- Manifest 开启 enableOnBackInvokedCallback（Android 13+ 预测性返回手势动画）。
+
 ## 最近一轮 3（2026-08-07：设置视觉按 README 升级 + 全局预设主题落地）
 
 - **设置主页重做**：大标题 + 副标题、设置搜索（可过滤所有分组条目）、“常用”快捷区（主题/模型/语音/备份）、

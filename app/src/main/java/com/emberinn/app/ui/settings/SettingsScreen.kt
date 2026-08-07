@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,6 +68,14 @@ fun SettingsScreen(
 ) {
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
     var providerId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // 系统返回：子页逐级返回（详情 → 列表 → 设置主页），主页返回交给系统退出
+    BackHandler(enabled = page != SettingsPage.HOME) {
+        page = when (page) {
+            SettingsPage.PROVIDER_DETAIL -> SettingsPage.PROVIDERS
+            else -> SettingsPage.HOME
+        }
+    }
 
     when (page) {
         SettingsPage.PROVIDERS -> ProviderListScreen(
