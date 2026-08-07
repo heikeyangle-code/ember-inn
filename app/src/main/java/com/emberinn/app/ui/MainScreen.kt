@@ -73,7 +73,7 @@ fun MainScreen() {
                     },
                 )
                 1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
-                else -> com.emberinn.app.ui.settings.ProviderSetupScreen()
+                else -> com.emberinn.app.ui.settings.SettingsScreen()
             }
         }
     }

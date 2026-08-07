@@ -440,13 +440,14 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 - 角色卡驱动主题（每卡一套观感）——无一家做到位
 - 人性化细节（设置搜索 / 空状态引导 / 人话报错 / 可撤销）——开源项目普遍缺失
 
-## 连接与模型设置（供应商三步完成）
+## 连接与模型设置（提供商管理）
 
-> 目标：**选供应商 → 粘贴 API Key → 完成**。参考旧项目 `ProviderSetting`（3 协议类型 + DEFAULT_PROVIDERS 预填）与官方对比：官方是“每个厂商一整个表单页”，我们只让用户填一个 Key。
+> 交互参照命理2（RikkaHub Plus）`SettingProviderPage` / `ProviderConfigure`：**卡片列表 → 详情编辑**，不是向导。
+> 底层协议与接口仍按酒馆官方 1:1（见“服务商注册表”），UI 层自由。
 
-1. **选供应商**：网格列表（图标 + 名字 + 一句话说明 + 搜索），预填 20+ 家（OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter / Groq / Ollama / Mistral / xAI / Kimi / 智谱 / 通义 / 硅基流动 / MiniMax / Fireworks / Perplexity / 火山 / Azure / 自定义……），base_url、认证方式、模型端点全部预填（数据来自官方源码核实表）
-2. **粘贴 API Key**：唯一必填；粘贴自动去空格；旁边「测试连接」一键验证（复用官方 /status 逻辑），成功自动拉取模型列表并选中默认模型
-3. **完成**：可展开「高级」改 base_url / 采样参数 / 自定义请求头 / 代理 / 思维链；模型拉不到时用预填 default_models 兜底
+1. **提供商列表**：品牌 SVG 头像（`assets/icons`，参照命理2 AutoAIIcon；无品牌图标的厂商用首字母圆形兜底）+ 名称 + 一句话说明 + 已配置/未配置状态；顶部搜索，已保存连接可快速切换/删除
+2. **详情编辑**：名称 / API Key（密码遮罩 + 显示切换，粘贴自动去空格）/ 接口地址 / 区域（硅基流动、Z.AI、MiniMax）/ Workers 账户 ID / Azure API 版本 / 默认模型（底部弹层 + 搜索选择）
+3. **测试连接**：一键验证（复用官方 /status 模型列表逻辑；无模型列表端点的厂商走最小对话探测），成功自动拉取模型列表；拉不到用预填 default_models 兜底
 
 **连接档案**：可建多个（命名、切换）、全局默认 + 每角色可选覆盖（呼应官方 EPIC #3139）；扫码导入导出分享（沿用旧项目概念）
 

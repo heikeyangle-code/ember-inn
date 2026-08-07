@@ -39,6 +39,14 @@ runner 恢复后第一件事就是跑 `./gradlew :engine:test :app:assembleDebug
   4. 扩展提示注入（summary/AN/vectors/chromadb/persona/未知扩展顺序）
   5. docs/HANDOFF.md
 
+## 最近一轮 2（2026-08-07：设置页按 README 分组 + 提供商 UI 按命理2重构）
+
+- **设置主页 SettingsScreen**：按 README 信息架构分组——外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于，顶部设置搜索可过滤条目；提供商行显示当前激活档案摘要；未实现项明确标“开发中”，不再只有一个裸页面。
+- **提供商管理 ProviderScreen（参照命理2）**：列表页 = 搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置状态 + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索选择）/ 测试连接 / 保存 / 删除确认。
+- **品牌头像 ProviderIcon**：25 个 lobehub 品牌 SVG 拷入 app/assets/icons（openai/anthropic/gemini/deepseek/grok/kimi/glm/qwen/豆包/siliconflow/minimax 等），providers.json icon 字段改为文件名，无图标用首字母圆形兜底；新增 coil-svg 依赖。
+- **文案精简**：去掉“粘贴自动去空格”“免 Key 可留空”“拉不到模型自动兜底”等啰嗦说明，只保留字段本身 + 必要的人话报错。
+- **删除旧三步向导** ProviderSetupScreen/ProviderSetupViewModel，MainScreen 改接 SettingsScreen；引擎层零改动，酒馆 1:1 不变。
+
 ## 最近一轮（2026-08-07：模型/接口联网核实 + 协议路由 + 三步配置 UI）
 
 - **providers.json 更新到 22 家**：按官方 `src/endpoints/backends/chat-completions.js` 逐项核对端点
