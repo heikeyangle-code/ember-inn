@@ -84,8 +84,22 @@ object WorldBookEntryParser {
             groupOverride = raw["groupOverride"]?.let { boolOf(it, false) } ?: raw["group_override"]?.let { boolOf(it, false) },
             useGroupScoring = raw["useGroupScoring"]?.let { boolOf(it, false) } ?: raw["use_group_scoring"]?.let { boolOf(it, false) },
             characterFilter = parseCharacterFilter(raw),
+            vectorized = boolOf(raw["vectorized"], false) || extBool(raw, "vectorized", false),
+            addMemo = boolOf(raw["addMemo"], false),
+            automationId = strOf(raw["automationId"], "")?.ifEmpty { extStr(raw, "automation_id") ?: "" }?.ifEmpty { null },
+            displayIndex = intOf(raw["displayIndex"] ?: raw["display_index"] ?: extObj(raw)["display_index"], -1)
+                ?.takeIf { it >= 0 },
         )
     }
+
+    private fun extObj(raw: Map<String, JsonElement>): JsonObject =
+        raw["extensions"]?.jsonObject ?: JsonObject(emptyMap())
+
+    private fun extBool(raw: Map<String, JsonElement>, key: String, def: Boolean): Boolean =
+        boolOf(extObj(raw)[key], def)
+
+    private fun extStr(raw: Map<String, JsonElement>, key: String): String? =
+        strOf(extObj(raw)[key], "").ifEmpty { null }
 
     private fun parseCharacterFilter(raw: Map<String, JsonElement>): CharacterFilter? {
         val obj = raw["characterFilter"]?.jsonObject

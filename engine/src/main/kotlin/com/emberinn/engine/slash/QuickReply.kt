@@ -3,12 +3,16 @@ package com.emberinn.engine.slash
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** 快捷回复槽（对齐官方 quick-replies：mes=斜杠链 / label / enabled）。 */
+/** 快捷回复槽（对齐官方 quick-replies：mes=斜杠链 / label / enabled / automationId / preventAutoExecute）。 */
 @Serializable
 data class QuickReplySlot(
     val mes: String,
     val label: String,
     val enabled: Boolean = true,
+    @SerialName("automationId")
+    val automationId: String = "",
+    @SerialName("preventAutoExecute")
+    val preventAutoExecute: Boolean = false,
 )
 
 /** 快捷回复预设（对齐官方 quick-replies 文件）。 */

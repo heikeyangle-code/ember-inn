@@ -18,6 +18,9 @@ import kotlinx.serialization.json.put
  * 世界书 ↔ 角色书互转，逐字段对齐官方：
  * - toCharacterBook：characters.js convertWorldInfoToCharacterBook
  * - toWorldEntries：world-info.js convertCharacterBook
+ *
+ * 注意：vectorized / automationId / displayIndex / addMemo 在这里必须继续透传（写回 extensions 或顶层字段），
+ * 官方核心不消费它们，消费方是 RAG / 快捷回复自动化 / 编辑器（见 WorldInfoFile.kt 契约与 HANDOFF 待接清单）。
  */
 object WorldInfoConverter {
 

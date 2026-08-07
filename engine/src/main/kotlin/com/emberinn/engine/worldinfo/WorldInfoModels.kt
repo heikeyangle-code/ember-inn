@@ -98,6 +98,13 @@ data class WorldInfoEntry(
     val groupOverride: Boolean? = null,
     val useGroupScoring: Boolean? = null,
     val characterFilter: CharacterFilter? = null,
+    // 扩展字段（官方核心不消费，透传 + 扩展行为消费）：
+    // vectorized —— RAG/向量库（vectors 扩展）；automationId —— 快捷回复自动执行；
+    // displayIndex —— 编辑器排序；addMemo —— 官方核心未读取
+    val vectorized: Boolean = false,
+    val addMemo: Boolean = false,
+    val automationId: String? = null,
+    val displayIndex: Int? = null,
 )
 
 data class CharacterFilter(

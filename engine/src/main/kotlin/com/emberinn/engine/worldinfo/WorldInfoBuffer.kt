@@ -17,12 +17,27 @@ class WorldInfoBuffer(
     private val recurseBuffer = mutableListOf<String>()
     private val injectBuffer = mutableListOf<String>()
     private var skew = 0
+    private val externalActivations = mutableMapOf<String, WorldInfoEntry>()
 
     fun addRecurse(message: String) { recurseBuffer.add(message) }
     fun addInject(message: String) { injectBuffer.add(message) }
     fun hasRecurse(): Boolean = recurseBuffer.isNotEmpty()
     fun advanceScan() { skew++ }
     fun getDepth(): Int = settings.depth + skew
+
+    /** 对齐官方 WorldInfoBuffer.externalActivations（RAG/外部扩展强制激活，key=world.uid）。 */
+    fun addExternalActivation(entry: WorldInfoEntry) {
+        externalActivations[entry.world + "." + entry.uid] = entry
+    }
+
+    /** 对齐官方 getExternallyActivated：返回外部强制激活版本（可能覆盖原条目），无则 null。 */
+    fun getExternallyActivated(entry: WorldInfoEntry): WorldInfoEntry? =
+        externalActivations[entry.world + "." + entry.uid]
+
+    /** 对齐官方 resetExternalEffects：扫描结束后清空。 */
+    fun resetExternalEffects() {
+        externalActivations.clear()
+    }
 
     fun get(entry: WorldInfoEntry, scanState: Int): String {
         var depth = entry.scanDepth ?: getDepth()

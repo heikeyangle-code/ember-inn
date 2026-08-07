@@ -23,9 +23,12 @@ class WorldInfoScanner(
         global: GlobalScanData = GlobalScanData(),
         timedMetadata: TimedEffectsMetadata = TimedEffectsMetadata(),
         isDryRun: Boolean = false,
+        // 外部强制激活（对齐官方 WorldInfoBuffer.externalActivations，RAG/向量检索喂到这里）
+        externalActivations: Map<String, WorldInfoEntry> = emptyMap(),
     ): WorldInfoResult {
         // 官方：聊天消息先过正则（getRegexedString），再进世界书扫描
         val buffer = WorldInfoBuffer(chat.map(messageTransformer), global, settings)
+        externalActivations.forEach { (_, entry) -> buffer.addExternalActivation(entry) }
 
         var scanState = WorldInfoConstants.STATE_INITIAL
         var tokenBudgetOverflowed = false
@@ -94,6 +97,12 @@ class WorldInfoScanner(
 
                 if ("@@activate" in entry.decorators) { activatedNow.add(entry); continue }
                 if ("@@dont_activate" in entry.decorators) continue
+
+                // 对齐官方：外部强制激活（RAG 等）在 constant 之前生效，跳过关键词/概率
+                buffer.getExternallyActivated(entry)?.let {
+                    activatedNow.add(it)
+                    continue
+                }
 
                 if (entry.constant) { activatedNow.add(entry); continue }
                 if (isSticky) { activatedNow.add(entry); continue }
@@ -208,6 +217,7 @@ class WorldInfoScanner(
 
         timedEffects.setTimedEffects(allActivated.values.toList())
         timedEffects.cleanUp()
+        buffer.resetExternalEffects()
         return assemble(allActivated.values.toList()).copy(timedMetadata = timedMetadata)
     }
 
