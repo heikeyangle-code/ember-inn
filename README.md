@@ -10,6 +10,7 @@
 - **否决“官方服务端当引擎”**：源码实证——SillyTavern 的兼容内核（世界书扫描、宏展开、斜杠、提示词组装、群聊）全部位于**前端 JS**（`public/scripts/world-info.js`、`macros/engine/`、`slash-commands/`、`script.js`），与 DOM 焊死；Node 服务端只是存储 + API 转发层。只保留服务端并不能白拿兼容性。
 - **否决 WebView 壳**：要求真原生客户端与全新 UI，不套官方网页。
 - **最终路线**：新项目、Kotlin + Compose、参考官方源码**翻译 + 重写**酒馆逻辑层；官方 Node 服务端仅作为可选的存储/API 辅助进程（无浏览器界面）。
+- **技术栈决策（对照备选方案）**：UI 用 Kotlin + Jetpack Compose 而非 Flutter（Termux/arm64 下 Flutter 交叉编译链不成熟，Compose 原生质感与 Material3 更直接）；性能敏感层（PNG/CharX、本地推理）用 Kotlin/JVM + 可插拔接口而非 Rust FFI（避免双语言构建链）；本地存储用 Room（后续迁 DataStore 与 SQLite 能力）。开发机 Termux 无 Android SDK，**本地只跑引擎测试，App 构建靠 GitHub Actions CI**（远程交叉编译替代方案已落地）。
 
 ## 兼容目标（以官方行为为基准，回归测试锁定）
 
@@ -19,7 +20,7 @@
 - **斜杠命令**：官方常用命令全量，行为一致
 - **群聊**：多角色、多种响应模式
 - **提示词组装**：角色字段 + 示例对话 + 世界书 + 作者注释 + 历史消息（与官方 `script.js` 行为一致）
-- **预设 / 人设 / regex 脚本 / tokenizer / SSE 流式**
+- **预设 / 人设 / regex 脚本 / tokenizer / SSE 流式**；正则明确区分作用位置：用户输入 / AI 输出 / 仅显示 / 仅发送给 AI
 
 组件清单见 [docs/COMPONENTS.md](docs/COMPONENTS.md)（有现成/没现成分表）。官方数据格式总表见 [docs/FORMATS.md](docs/FORMATS.md)（5 种导入/导出对齐现状）。PNG 卡片内嵌规范见 [docs/PNG_FORMAT.md](docs/PNG_FORMAT.md)（官方 1:1）。功能覆盖总清单见 [docs/FEATURES.md](docs/FEATURES.md)（对照官方 release 8172dcd，含优先级与 UI 映射）。本地官方源码：`~/sillytavern-ref`（release 分支，供翻译与回归对照）。
 
@@ -64,7 +65,13 @@ theme      全局主题 + 角色卡驱动主题
 | `CardParser` | V2 / V3 / CharX，为未来 V4 留口子 |
 | `TtsProvider` / `ImageGenProvider` / `VectorStoreProvider` / `TranslatorProvider` | 后端可插拔 |
 | `ThemeSource` | 全局预设 / 角色卡取色 |
-| 扩展执行层 | 先做自己的插件 API；ST 前端扩展兼容为远期方案（QuickJS+API shim 或兼容模式），不承诺 |
+| 扩展执行层 | 先做自己的插件 API；ST 前端扩展兼容按三分类分级推进（见下），不承诺全兼容 |
+
+**ST 扩展兼容三分类（对照社区扩展调研后分级）**：
+1. **纯逻辑类**（regex 脚本、宏计算、部分记忆/摘要逻辑，不碰 DOM）：QuickJS 沙箱 + ST 全局 API shim（`getContext()` / `eventSource` / `chat` / `generateRaw()`），目标“自动可跑”
+2. **轻量 UI 类**（只在设置抽屉加开关/滑块的插件）：逻辑复用 QuickJS，UI 原生重绘，为每个目标插件写设置读写适配层（非自动兼容）
+3. **结构性不兼容**（依赖 ST Node 服务端插件、ST-Extras Python 服务、复杂 DOM 交互如拖拽面板/节点编辑器）：明确排除，必要时提供原生重实现替代
+开发顺序：先对官方及社区扩展做 DOM 依赖/服务端依赖分类统计，按占比定投入优先级。
 
 ### 服务商注册表（数据驱动）
 
@@ -79,6 +86,8 @@ MiniMax（国际 minimax.io / 国内 minimaxi.com）、Fireworks、Perplexity（
 Cloudflare Workers AI（账户 ID + /ai/v1）、Azure OpenAI（deployment + api-version 2024-12-01）、火山方舟（豆包 Seed 2.1）、自定义。
 模型列表拉取按官方 /status 逻辑实现：openai data[].id、google models[].name（过滤 generateContent）、
 workers result[].name、azure value[].id；拉不到时用 default_models 兜底。
+
+远期：注册表可做成远程可更新（版本号 + 增量拉取），新厂商无需发版。
 
 ## UI 与主题
 
@@ -416,6 +425,16 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 - **规范**：24dp 网格 · 统一字重（全 App 只用一种字重档）· 圆角端点 · 默认 `onSurfaceVariant`，激活 `primary`，警示 `error` · 状态图标（命中灯）用小圆点自绘，不用图标代替
 - **品牌 Logo**：单独设计“余烬火花”mark（四角星/火花形），用于启动页、空状态、AI 对话默认头像，不复用通用机器人图标
 
+## 竞品与差异化定位
+
+| 项目 | 形态 | 完成度/关键点 |
+|---|---|---|
+| NativeTavern | Flutter + Rust，GPL-3.0 | 功能完成度约 98%，**扩展系统尚未实现**——这是我们的差异化关键 |
+| PocketTavern | source-available | 非纯 GPL，仅作参考 |
+| SillyTavern-Android | WebView 套壳 | 非原生重写，不作为参考对象 |
+
+差异化锚点：真原生 + 中文界面 + 角色卡驱动主题 + 上下文透明度（世界书命中灯/占比胶囊）+ RAG 向量扩展（NativeTavern 未实现）。研究同类项目源码与完成度后再做选型与功能排期。
+
 ## 社区需求与市场缺口（2026-08 调研）
 
 **官方仓库呼声最高的功能（GitHub issue 评论数排序）：**
@@ -515,7 +534,7 @@ Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose 
 - **P2 引擎**：世界书扫描注入、宏引擎、提示词组装、tokenizer
 - **P3 功能**：斜杠、群聊、预设、人设、作者注释、regex
 - **P4 主题**：角色卡取色驱动、模糊背景、毛玻璃、预设主题完成
-- **P5 服务**：TTS/STT/图像/翻译/向量、服务商注册表完善
+- **P5 服务**：TTS/STT/图像/翻译、服务商注册表完善；**向量/RAG 引擎层已完成**（世界书 RAG + 聊天历史重排 + 文件/DataBank 向量化，嵌入源 OpenAI 兼容 / 本地 Ollama，分块与查询语义对齐官方 vectors 扩展），App 层配置接线待做
 - **P6 扩展**：自有插件 API + 官方行为回归测试体系
 
 ## 兼容性守则
@@ -529,3 +548,5 @@ Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose 
 ## 许可
 
 AGPL-3.0（参考/翻译 SillyTavern 源码，派生义务；分发必须开源）。
+
+**分发渠道**：以 GitHub Release APK + F-Droid 为主（App 本身不生成内容，内容由用户自带模型 API 生成；上架 Google Play 前需单独确认 BYOK 角色扮演类客户端政策边界）。
