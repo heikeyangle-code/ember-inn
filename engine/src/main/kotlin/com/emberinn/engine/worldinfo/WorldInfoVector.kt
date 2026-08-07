@@ -61,6 +61,14 @@ interface VectorStore {
         topK: Int,
         threshold: Double,
     ): Map<String, VectorQueryResult>
+
+    /** 对齐官方 queryCollection：单集合 topK；hashes 不过滤阈值，metadata 按 score>=threshold 过滤。 */
+    fun querySingle(
+        collectionId: String,
+        queryText: String,
+        topK: Int,
+        threshold: Double,
+    ): VectorQueryResult
 }
 
 /** OpenAI 兼容 /embeddings（官方 vectors 的 openai/other sources 通用协议）。 */
@@ -92,6 +100,23 @@ class OpenAiCompatibleEmbeddingProvider(
                 item.jsonObject["embedding"]?.jsonArray?.mapNotNull { it.jsonPrimitive.content.toDoubleOrNull() }.orEmpty()
             }.orEmpty()
         }
+    }
+}
+
+/** 本地离线嵌入：字符 + 二元组词袋（确定性、无需联网、语义较弱，适合无 API 时的本地 RAG 演示）。 */
+class BagOfGramsEmbedding(
+    private val dimensions: Int = 256,
+) : EmbeddingProvider {
+
+    override fun embed(texts: List<String>): List<List<Double>> = texts.map { text ->
+        val vec = DoubleArray(dimensions)
+        val grams = text.map { it.toString() } + text.windowed(2)
+        for (g in grams) {
+            val idx = Math.floorMod(g.hashCode(), dimensions)
+            vec[idx] += 1.0
+        }
+        val norm = sqrt(vec.sumOf { it * it })
+        vec.map { if (norm > 0.0) it / norm else 0.0 }
     }
 }
 
@@ -149,6 +174,33 @@ class InMemoryVectorStore(
                 },
             )
         }
+    }
+
+    override fun querySingle(
+        collectionId: String,
+        queryText: String,
+        topK: Int,
+        threshold: Double,
+    ): VectorQueryResult {
+        if (queryText.isBlank()) return VectorQueryResult(emptyList())
+        val queryVector = embeddings.embed(listOf(queryText)).firstOrNull() ?: return VectorQueryResult(emptyList())
+        val scored = collections[collectionId].orEmpty()
+            .map { it to cosine(queryVector, it.vector) }
+            .sortedByDescending { it.second }
+            .take(topK)
+        return VectorQueryResult(
+            hashes = scored.map { it.first.hash },
+            metadata = scored
+                .filter { it.second >= threshold }
+                .map { (stored, score) ->
+                    buildJsonObject {
+                        put("hash", JsonPrimitive(stored.hash))
+                        put("text", JsonPrimitive(stored.text))
+                        put("index", JsonPrimitive(stored.index))
+                        put("score", JsonPrimitive(score))
+                    }
+                },
+        )
     }
 
     private fun cosine(a: List<Double>, b: List<Double>): Double {
@@ -284,6 +336,33 @@ class FileVectorStore(
                 },
             )
         }
+    }
+
+    override fun querySingle(
+        collectionId: String,
+        queryText: String,
+        topK: Int,
+        threshold: Double,
+    ): VectorQueryResult {
+        if (queryText.isBlank()) return VectorQueryResult(emptyList())
+        val queryVector = embeddings.embed(listOf(queryText)).firstOrNull() ?: return VectorQueryResult(emptyList())
+        val scored = load(collectionId)
+            .map { it to cosine(queryVector, it.vector) }
+            .sortedByDescending { it.second }
+            .take(topK)
+        return VectorQueryResult(
+            hashes = scored.map { it.first.hash },
+            metadata = scored
+                .filter { it.second >= threshold }
+                .map { (stored, score) ->
+                    buildJsonObject {
+                        put("hash", JsonPrimitive(stored.hash))
+                        put("text", JsonPrimitive(stored.text))
+                        put("index", JsonPrimitive(stored.index))
+                        put("score", JsonPrimitive(score))
+                    }
+                },
+        )
     }
 
     private fun cosine(a: List<Double>, b: List<Double>): Double {

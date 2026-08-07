@@ -74,6 +74,7 @@ PNG V2/V3（tEXt/ccv3）、CharX、JSON、YAML、BYAF 导入；V2 归一（readF
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
 ✅ 扩展字段已全接上（数据全量透传 + 行为）：
    - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容）；**FileVectorStore 磁盘持久化对齐官方 vectra.LocalIndex**（目录 root/source/collection/model + items.json，重启不丢；InMemoryVectorStore 仅测试/临时）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
+- 向量扩展补齐：**VectorChatRearranger**（聊天历史重排，对齐 rearrangeChat：protect 保留最近 N 条、insert 条数、模板 Past events:{{text}}、position 映射 BEFORE_PROMPT→start/IN_PROMPT→end）+ **文件/Data Bank 向量化**（对齐 processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile：分块 splitRecursive、overlap、chunk 检索注入）+ VectorTextUtils（splitRecursive/trimToEndSentence/trimToStartSentence/overlapChunks 官方 1:1）
    - automationId → 快捷回复自动执行：WorldInfoAutoExecute.resolve + AutoExecuteHandler（对齐 quick-reply AutoExecuteHandler，prevent 栈；选择逻辑 4 例官方差分）
    - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
    - addMemo → 官方核心从未读取，仅透传
@@ -109,6 +110,16 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
 🟡 Vertex AI 服务账号认证未做（UI 上明确标注）；Claude/Gemini tokenizer 仍是回退 cl100k（官方 web tokenizer 未实现）。
+
+### 3.11 向量扩展（RAG 全量）✅（引擎层）
+- 世界书 RAG（vectorized 同步/检索/强制激活）
+- 聊天历史向量重排（enabled_chats / rearrangeChat）
+- 文件 / Data Bank 向量化（enabled_files：分块、overlap、检索注入）
+- 向量库：FileVectorStore（磁盘持久化，对齐 vectra 目录）+ InMemoryVectorStore（测试）；EmbeddingProvider：OpenAI 兼容 + BagOfGramsEmbedding（本地离线）
+- 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
+- ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
+- 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
+- 引擎测试 179 全绿（重排/文件/分块/工具函数）
 
 ### 3.10 其它
 - ✅ 群聊调度核心（SWAP/APPEND/队列）、人设模型 + 注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -167,6 +178,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **差分跟进**
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
+
+## 最近一轮 7（2026-08-08：向量扩展补齐——聊天历史重排 + 文件/DataBank 向量化）
+
+- VectorChatExtensions.kt：rearrange（对齐 rearrangeChat）、processFiles/ingestDataBank/injectDataBankChunks/retrieveFileChunks/vectorizeFile（对齐 vectors/index.js）、splitRecursive/trimToStartSentence/trimToEndSentence/overlapChunks（对齐 utils.js）
+- VectorStore 新增 querySingle（对齐官方 queryCollection：hashes=topK 不过滤阈值，metadata 按 score>=threshold）
+- 扩展提示接入：3_vectors→vectorsMemory、4_vectors_data_bank→vectorsDataBank，position 映射 BEFORE_PROMPT(2)→start / IN_PROMPT(0)→end / IN_CHAT(1)→in_chat
+- 边界标注：substituteParams 由宏替换器注入（App 层接 MacroEngine）；summarize/translate_files 未做（P3，官方默认关）；emoji 判定码点近似
+- 引擎 179 测全绿；App 接线未动（用户要求引擎先完美）
 
 ## 最近一轮 6（2026-08-08：世界书扩展行为全接上 + 差分补课）
 
