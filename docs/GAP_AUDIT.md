@@ -29,6 +29,7 @@
 
 ## 提示词组装
 - ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；populateChatHistory 5 例 + populateDialogueExamples 4 例官方差分
+- ✅ CharacterCardFieldsEngine 角色卡字段聚合官方差分 6 例（群聊/chat_metadata/prefer 覆盖）
   ✅ preparePromptsForChatCompletion 官方差分 7 例（wi_format/impersonation/role/injection/override/trigger 全核对）；✅ names_behavior COMPLETION 名字清理（PromptNameSanitizer 28 例差分 + ChatHistoryPopulator 接线）
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
@@ -70,4 +71,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 + 表情分类预处理 8 + 群聊激活 10 + 群聊角色卡 6 + 群聊深度提示 5 + 精灵存储 7 = 449 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 14 + 表情分类预处理 8 + 群聊激活 10 + 群聊角色卡 6 + 群聊深度提示 5 + 精灵存储 7 + 角色卡字段 6 = 455 例官方基准（全部通过）。
