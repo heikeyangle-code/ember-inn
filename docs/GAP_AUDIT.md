@@ -51,8 +51,8 @@
 ## 其它
 - 🟡 TokenCounterFactory：OpenAI 精确（JTokkit），Claude/Gemini/Llama 用官方 web tokenizer 未实现
 - 🟡 群聊仅实现选人/队列策略（SWAP/APPEND/队列）+ 模型；官方完整生成流程（多人回复拼接/组提示/nudge 链）未做
-- ✅ 数据驱动服务商注册表（22 家）+ 三协议基础路由 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
-  🟡 偏差：Anthropic/Gemini 请求体只含基础参数（缺 thinking/beta headers/工具/完整 generationConfig：stopSequences/topK/responseSchema 等）；OpenAI 兼容请求体较完整
+- ✅ 数据驱动服务商注册表（22 家）+ 三协议路由 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
+- ✅ Anthropic/Gemini 请求体 1:1 + 官方差分（12+11 例）；边界：消息转换/预算计算/安全设置由调用方桩传参
 - ✅ LLM 客户端（OpenAI 兼容：非流式 + SSE 流式，OkHttp + MockWebServer 验证）+ 连接档案存储
 - ❌ 人设管理（选择/持久化，App 层）、多模型 tokenizer、服务层
 - 🟡 向量服务引擎已齐（RAG/聊天重排/文件向量化 + 持久化）；App 层配置/调用未接线；TTS/STT/图像/翻译 仍 P3/P4
@@ -64,4 +64,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 = 301 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 = 324 例官方基准（全部通过）。

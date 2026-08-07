@@ -131,13 +131,15 @@ object ChatHistoryPopulator {
                 }
                 continue
             }
+            // 对齐官方 preparePrompt：每条历史消息 content 过宏替换（{{char}}/{{user}} 等）
+            val substitutedContent = MacroEngine.substitute(m.content, env)
             val content = if (
                 poolIndex == 0 && type == "continue" && continuePrefill && m.role != "user"
             ) {
                 // 官方：continue_prefill 时给最后一条 assistant 加预填
-                listOf(assistantPrefill, m.content).filter { it.isNotEmpty() }.joinToString("\n\n")
+                listOf(assistantPrefill, substitutedContent).filter { it.isNotEmpty() }.joinToString("\n\n")
             } else {
-                m.content
+                substitutedContent
             }
             val chatMessage = CompletionMessage(
                 role = m.role,

@@ -183,16 +183,20 @@ class LlmClient(
         when (provider.protocol) {
             "anthropic" -> {
                 val url = base.trimEnd('/') + "/messages"
-                val body = AnthropicRequestBuilder.build(
+                val request = AnthropicRequestBuilder.build(
                     model = profile.model,
                     messages = messages,
                     maxTokens = profile.sampler.maxTokens,
                     temperature = profile.sampler.temperature,
                     stream = stream,
+                    topP = profile.sampler.topP,
                 )
-                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
+                builder.url(url).post(request.body.toRequestBody("application/json".toMediaType()))
                 builder.header("x-api-key", profile.apiKey)
                 builder.header("anthropic-version", "2023-06-01")
+                if (request.betaHeaders.isNotEmpty()) {
+                    builder.header("anthropic-beta", request.betaHeaders.joinToString(","))
+                }
             }
             "google" -> {
                 val apiVersion = provider.apiVersion.ifBlank { "v1beta" }

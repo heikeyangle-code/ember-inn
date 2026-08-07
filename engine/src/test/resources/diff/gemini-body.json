@@ -1,0 +1,656 @@
+{
+  "source": "chat-completions.js sendMakerSuiteRequest getGeminiBody",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": []
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "sysprompt",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [
+            "你是助手"
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        },
+        "systemInstruction": {
+          "parts": [
+            {
+              "text": "你是助手"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "stop-seed",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [
+            "END"
+          ],
+          "seed": 42,
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": []
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "stopSequences": [
+            "END"
+          ],
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "seed": 42,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "thinking-budget",
+      "args": {
+        "body": {
+          "model": "gemini-3-pro",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "high",
+          "include_reasoning": true,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [],
+          "reasoningBudget": 2048
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": true,
+            "thinkingBudget": 2048
+          }
+        }
+      }
+    },
+    {
+      "id": "thinking-level",
+      "args": {
+        "body": {
+          "model": "gemini-2.5-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": true,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [],
+          "reasoningBudget": "low"
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": true,
+            "thinkingLevel": "low"
+          }
+        }
+      }
+    },
+    {
+      "id": "tools",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "auto"
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        },
+        "tools": [
+          {
+            "function_declarations": [
+              {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            ]
+          }
+        ],
+        "toolConfig": {
+          "functionCallingConfig": {
+            "mode": "AUTO"
+          }
+        }
+      }
+    },
+    {
+      "id": "tool-choice-specific",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "f",
+                "description": "d"
+              }
+            }
+          ],
+          "tool_choice": {
+            "function": {
+              "name": "f"
+            }
+          }
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        },
+        "tools": [
+          {
+            "function_declarations": [
+              {
+                "name": "f",
+                "description": "d"
+              }
+            ]
+          }
+        ],
+        "toolConfig": {
+          "functionCallingConfig": {
+            "mode": "ANY",
+            "allowedFunctionNames": [
+              "f"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "web-search",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": true,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": []
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        },
+        "tools": [
+          {
+            "google_search": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "image-modality",
+      "args": {
+        "body": {
+          "model": "gemini-3-pro-image-preview",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": true,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "1:1",
+          "request_image_resolution": "1024x1024",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": []
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "responseModalities": [
+            "text",
+            "image"
+          ],
+          "imageConfig": {
+            "imageSize": "1024x1024",
+            "aspectRatio": "1:1"
+          },
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "no-sysprompt-gemma",
+      "args": {
+        "body": {
+          "model": "gemma-3-27b",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [
+            "x"
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1
+        }
+      }
+    },
+    {
+      "id": "json-schema",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "systemInstructionParts": [],
+          "json_schema": {
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "responseMimeType": "application/json",
+          "responseSchema": {
+            "type": "object"
+          },
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    }
+  ]
+}

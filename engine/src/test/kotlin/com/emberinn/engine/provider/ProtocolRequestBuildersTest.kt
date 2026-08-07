@@ -4,6 +4,7 @@ import com.emberinn.engine.prompt.CompletionMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,8 +19,8 @@ class ProtocolRequestBuildersTest {
 
     @Test
     fun `anthropic body splits system and roles`() {
-        val root = Json.parseToJsonElement(AnthropicRequestBuilder.build("claude-sonnet-4-5", messages)).jsonObject
-        assertEquals("系统", root["system"]?.toString()?.trim('"'))
+        val root = Json.parseToJsonElement(AnthropicRequestBuilder.build("claude-sonnet-5", messages).body).jsonObject
+        assertEquals("系统", root["system"]?.jsonArray?.get(0)?.jsonPrimitive?.content)
         assertEquals("user", root["messages"]!!.jsonArray[0].jsonObject["role"]?.toString()?.trim('"'))
         assertEquals("assistant", root["messages"]!!.jsonArray[1].jsonObject["role"]?.toString()?.trim('"'))
     }
