@@ -1,0 +1,360 @@
+{
+  "source": "world-info.js sortWorldInfoEntries",
+  "cases": [
+    {
+      "id": "custom-basic",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "b",
+            "content": "x"
+          },
+          {
+            "uid": 2,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "a",
+            "content": "y"
+          },
+          {
+            "uid": 3,
+            "order": 9,
+            "displayIndex": 1,
+            "constant": false,
+            "disable": false,
+            "name": "c",
+            "content": "z"
+          },
+          {
+            "uid": 4,
+            "order": 1,
+            "displayIndex": 4,
+            "constant": true,
+            "disable": false,
+            "name": "d",
+            "content": "w"
+          },
+          {
+            "uid": 5,
+            "order": 2,
+            "displayIndex": 3,
+            "constant": false,
+            "disable": true,
+            "name": "e",
+            "content": "v"
+          }
+        ],
+        "customSort": {
+          "sortField": "uid",
+          "sortOrder": "asc",
+          "sortRule": "custom"
+        }
+      },
+      "expected": [
+        3,
+        1,
+        2,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "priority-basic",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "b",
+            "content": "x"
+          },
+          {
+            "uid": 2,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "a",
+            "content": "y"
+          },
+          {
+            "uid": 3,
+            "order": 9,
+            "displayIndex": 1,
+            "constant": false,
+            "disable": false,
+            "name": "c",
+            "content": "z"
+          },
+          {
+            "uid": 4,
+            "order": 1,
+            "displayIndex": 4,
+            "constant": true,
+            "disable": false,
+            "name": "d",
+            "content": "w"
+          },
+          {
+            "uid": 5,
+            "order": 2,
+            "displayIndex": 3,
+            "constant": false,
+            "disable": true,
+            "name": "e",
+            "content": "v"
+          }
+        ],
+        "customSort": {
+          "sortField": "uid",
+          "sortOrder": "asc",
+          "sortRule": "priority"
+        }
+      },
+      "expected": [
+        4,
+        3,
+        1,
+        2,
+        5
+      ]
+    },
+    {
+      "id": "default-order-asc",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "b",
+            "content": "x"
+          },
+          {
+            "uid": 2,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "a",
+            "content": "y"
+          },
+          {
+            "uid": 3,
+            "order": 9,
+            "displayIndex": 1,
+            "constant": false,
+            "disable": false,
+            "name": "c",
+            "content": "z"
+          },
+          {
+            "uid": 4,
+            "order": 1,
+            "displayIndex": 4,
+            "constant": true,
+            "disable": false,
+            "name": "d",
+            "content": "w"
+          },
+          {
+            "uid": 5,
+            "order": 2,
+            "displayIndex": 3,
+            "constant": false,
+            "disable": true,
+            "name": "e",
+            "content": "v"
+          }
+        ],
+        "customSort": {
+          "sortField": "order",
+          "sortOrder": "asc",
+          "sortRule": "default"
+        }
+      },
+      "expected": [
+        4,
+        5,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "default-order-desc",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "b",
+            "content": "x"
+          },
+          {
+            "uid": 2,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "a",
+            "content": "y"
+          },
+          {
+            "uid": 3,
+            "order": 9,
+            "displayIndex": 1,
+            "constant": false,
+            "disable": false,
+            "name": "c",
+            "content": "z"
+          },
+          {
+            "uid": 4,
+            "order": 1,
+            "displayIndex": 4,
+            "constant": true,
+            "disable": false,
+            "name": "d",
+            "content": "w"
+          },
+          {
+            "uid": 5,
+            "order": 2,
+            "displayIndex": 3,
+            "constant": false,
+            "disable": true,
+            "name": "e",
+            "content": "v"
+          }
+        ],
+        "customSort": {
+          "sortField": "order",
+          "sortOrder": "desc",
+          "sortRule": "default"
+        }
+      },
+      "expected": [
+        3,
+        1,
+        2,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "default-uid-asc",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "b",
+            "content": "x"
+          },
+          {
+            "uid": 2,
+            "order": 5,
+            "displayIndex": 2,
+            "constant": false,
+            "disable": false,
+            "name": "a",
+            "content": "y"
+          },
+          {
+            "uid": 3,
+            "order": 9,
+            "displayIndex": 1,
+            "constant": false,
+            "disable": false,
+            "name": "c",
+            "content": "z"
+          },
+          {
+            "uid": 4,
+            "order": 1,
+            "displayIndex": 4,
+            "constant": true,
+            "disable": false,
+            "name": "d",
+            "content": "w"
+          },
+          {
+            "uid": 5,
+            "order": 2,
+            "displayIndex": 3,
+            "constant": false,
+            "disable": true,
+            "name": "e",
+            "content": "v"
+          }
+        ],
+        "customSort": {
+          "sortField": "uid",
+          "sortOrder": "asc",
+          "sortRule": "default"
+        }
+      },
+      "expected": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "length-desc",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "order": 1,
+            "name": "abc",
+            "content": ""
+          },
+          {
+            "uid": 2,
+            "order": 2,
+            "name": "abcdef",
+            "content": ""
+          },
+          {
+            "uid": 3,
+            "order": 3,
+            "name": "a",
+            "content": ""
+          }
+        ],
+        "customSort": {
+          "sortField": "name",
+          "sortOrder": "desc",
+          "sortRule": "length"
+        }
+      },
+      "expected": [
+        2,
+        1,
+        3
+      ]
+    }
+  ]
+}

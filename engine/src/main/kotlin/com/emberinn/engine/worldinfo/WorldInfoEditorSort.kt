@@ -21,7 +21,10 @@ object WorldInfoEditorSort {
         val primary: Comparator<WorldInfoEntry> = when (rule) {
             "custom" -> compareBy { it.displayIndex ?: it.uid }
             "priority" -> compareBy { if (it.disable) 2 else if (it.constant) 0 else 1 }
-            "length" -> compareBy { it.name.length }
+            "length" -> {
+                val base: Comparator<WorldInfoEntry> = compareBy { it.name.length }
+                if (orderSign < 0) base.reversed() else base
+            }
             else -> {
                 val base: Comparator<WorldInfoEntry> = when (field) {
                     "order" -> compareBy { it.order }
