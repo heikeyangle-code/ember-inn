@@ -27,6 +27,7 @@
 - `prompt-name-official.mjs`：官方 PromptManager isValidName/sanitizeName（COMPLETION 名字清理）。
 - `expression-engine-official.mjs`：官方表情精灵纯逻辑（标签/分组/选图）。
 - `expression-classify-official.mjs`：官方表情分类文本预处理 sampleClassifyText。
+- `group-activation-official.mjs`：官方群聊成员激活策略（自然/列表/池化/滑动/冒充）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -67,6 +68,7 @@ node scripts/diff/byaf-card-official.mjs
 node scripts/diff/prompt-name-official.mjs
 node scripts/diff/expression-engine-official.mjs
 node scripts/diff/expression-classify-official.mjs
+node scripts/diff/group-activation-official.mjs
 node scripts/build-presets.mjs
 ```
 
