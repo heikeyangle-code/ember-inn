@@ -4,7 +4,7 @@
 ✅=已实现且有测试/差分　🟡=部分/边界　❌=未做
 
 ## 角色卡
-- ✅ PNG/JSON 导入导出（官方也只导出 PNG/JSON）+ CharX/YAML/BYAF 导入（对齐官方）；YAML 导入官方差分 3 例、CharX 导入官方差分 5 例（SFX/嵌套/资源映射/图标/baseName）；V2 归一（官方差分 5 例）、私有字段清理、PNG 字节差分（6 例）
+- ✅ PNG/JSON 导入导出（官方也只导出 PNG/JSON）+ CharX/YAML/BYAF 导入（对齐官方）；YAML 导入官方差分 3 例、CharX 导入官方差分 5 例（SFX/嵌套/资源映射/图标/baseName）、BYAF 纯逻辑官方差分 14 例（宏/示例/备选开场/角色书）；V2 归一（官方差分 5 例）、私有字段清理、PNG 字节差分（6 例）
 - ✅ CharX 资源提取（引擎 CharXImporter.CharXAssets：icon/assets，官方差分覆盖 uri 映射/storageCategory/baseName）；🟡 BYAF 资源提取未实现；App 层资源入库未做
 - ❌ URL 导入（App 层）
 
@@ -64,4 +64,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 = 348 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 3 + 提示词组装合并 7 + CharX 导入 5 + BYAF 纯逻辑 14 = 362 例官方基准（全部通过）。

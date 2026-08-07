@@ -21,6 +21,7 @@
 - `yaml-import-official.mjs`：逐字提取官方 characters.js importFromYaml + convertToV2 + charaFormatData（yaml/sanitize-filename 用官方同版本 npm 包，已声明在 vendor/package.json）。
 - `prepare-prompts-official.mjs`：逐字提取官方 public/scripts/openai.js preparePromptsForChatCompletion（oai_settings/substituteParams/promptManager 按官方语义打桩）。
 - `charx-import-official.mjs`：逐字提取官方 src/charx.js CharXParser + characters.js importFromCharX（JSZip v3.10.1 vendor 等价打桩 yauzl）。
+- `byaf-macros-official.mjs`：逐字提取官方 src/byaf.js 纯逻辑（replaceMacros/示例/备选开场/角色书转换）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -55,6 +56,7 @@ node scripts/diff/worldinfo-file-official.mjs
 node scripts/diff/yaml-import-official.mjs
 node scripts/diff/prepare-prompts-official.mjs
 node scripts/diff/charx-import-official.mjs
+node scripts/diff/byaf-macros-official.mjs
 node scripts/build-presets.mjs
 ```
 

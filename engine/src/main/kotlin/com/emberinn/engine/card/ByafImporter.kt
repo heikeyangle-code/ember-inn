@@ -38,19 +38,19 @@ object ByafImporter {
         ) { "{{user}}" }
     }
 
-    private fun formatExampleMessages(examples: JsonElement?): String {
+    internal fun formatExampleMessages(examples: JsonElement?): String {
         if (examples !is JsonArray) return ""
         val sb = StringBuilder()
         for (example in examples) {
             val text = example.jsonObject["text"]?.jsonPrimitive?.contentOrNull() ?: continue
-            if (text.isBlank()) continue
+            if (text.isEmpty()) continue
             sb.append("<START>\n").append(replaceMacros(text)).append("\n")
         }
         // 官方 formattedExamples += ...; return formattedExamples.trimEnd()
         return sb.toString().trimEnd()
     }
 
-    private fun formatAlternateGreetings(scenarios: List<JsonObject>): List<String> {
+    internal fun formatAlternateGreetings(scenarios: List<JsonObject>): List<String> {
         if (scenarios.size <= 1) return emptyList()
         val firstScenarioFirst: String? = scenarios[0]["firstMessages"]?.jsonArray?.firstOrNull()
             ?.jsonObject?.get("text")?.jsonPrimitive?.contentOrNull()
@@ -66,7 +66,7 @@ object ByafImporter {
         return greetings.toList()
     }
 
-    private fun convertCharacterBook(items: JsonElement?): JsonObject? {
+    internal fun convertCharacterBook(items: JsonElement?): JsonObject? {
         if (items !is JsonArray || items.isEmpty()) return null
         val entries = mutableListOf<JsonElement>()
         items.forEachIndexed { index, item ->

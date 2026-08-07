@@ -1,0 +1,268 @@
+{
+  "source": "src/byaf.js 纯逻辑",
+  "cases": [
+    {
+      "id": "replaceMacros-1",
+      "args": {
+        "body": {
+          "method": "replaceMacros",
+          "args": [
+            "#{user}: #{character}: {character} {user}"
+          ]
+        }
+      },
+      "expected": "{{user}}: {{char}}: {{char}} {{user}}"
+    },
+    {
+      "id": "replaceMacros-2",
+      "args": {
+        "body": {
+          "method": "replaceMacros",
+          "args": [
+            "UPPER #{USER}: #{CHARACTER}: {CHARACTER} {USER}"
+          ]
+        }
+      },
+      "expected": "UPPER {{user}}: {{char}}: {{char}} {{user}}"
+    },
+    {
+      "id": "replaceMacros-3",
+      "args": {
+        "body": {
+          "method": "replaceMacros",
+          "args": [
+            "{characteristic} {userland} #{user}x"
+          ]
+        }
+      },
+      "expected": "{characteristic} {userland} #{{user}}x"
+    },
+    {
+      "id": "replaceMacros-4",
+      "args": {
+        "body": {
+          "method": "replaceMacros",
+          "args": [
+            null
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "replaceMacros-5",
+      "args": {
+        "body": {
+          "method": "replaceMacros",
+          "args": [
+            ""
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "formatExampleMessages-6",
+      "args": {
+        "body": {
+          "method": "formatExampleMessages",
+          "args": [
+            [
+              {
+                "text": "你好 #{user}"
+              },
+              {
+                "text": "回复 {character}"
+              },
+              {
+                "text": ""
+              },
+              {
+                "text": "   "
+              },
+              {
+                "text": "正常"
+              }
+            ]
+          ]
+        }
+      },
+      "expected": "<START>\n你好 #{{user}}\n<START>\n回复 {{char}}\n<START>\n   \n<START>\n正常"
+    },
+    {
+      "id": "formatExampleMessages-7",
+      "args": {
+        "body": {
+          "method": "formatExampleMessages",
+          "args": [
+            []
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "formatExampleMessages-8",
+      "args": {
+        "body": {
+          "method": "formatExampleMessages",
+          "args": [
+            null
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "formatAlternateGreetings-9",
+      "args": {
+        "body": {
+          "method": "formatAlternateGreetings",
+          "args": [
+            [
+              {
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ]
+              },
+              {
+                "firstMessages": [
+                  {
+                    "text": "开场B"
+                  }
+                ]
+              },
+              {
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ]
+              },
+              {
+                "firstMessages": []
+              },
+              {
+                "firstMessages": [
+                  {
+                    "text": "开场C {user}"
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      },
+      "expected": [
+        "开场B",
+        "开场C {{user}}"
+      ]
+    },
+    {
+      "id": "formatAlternateGreetings-10",
+      "args": {
+        "body": {
+          "method": "formatAlternateGreetings",
+          "args": [
+            []
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "formatAlternateGreetings-11",
+      "args": {
+        "body": {
+          "method": "formatAlternateGreetings",
+          "args": [
+            null
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "convertCharacterBook-12",
+      "args": {
+        "body": {
+          "method": "convertCharacterBook",
+          "args": [
+            [
+              {
+                "key": "地点, 人物",
+                "value": "#{user}:在{character}旁"
+              },
+              {
+                "key": "事件",
+                "value": ""
+              },
+              {
+                "key": "",
+                "value": "无名"
+              },
+              null
+            ]
+          ]
+        }
+      },
+      "expected": {
+        "entries": [
+          {
+            "keys": [
+              "地点",
+              "人物"
+            ],
+            "content": "{{user}}:在{{char}}旁",
+            "extensions": {},
+            "enabled": true,
+            "insertion_order": 0
+          },
+          {
+            "keys": [
+              "事件"
+            ],
+            "content": "",
+            "extensions": {},
+            "enabled": true,
+            "insertion_order": 1
+          },
+          {
+            "keys": [],
+            "content": "无名",
+            "extensions": {},
+            "enabled": true,
+            "insertion_order": 2
+          }
+        ],
+        "extensions": {}
+      }
+    },
+    {
+      "id": "convertCharacterBook-13",
+      "args": {
+        "body": {
+          "method": "convertCharacterBook",
+          "args": [
+            []
+          ]
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "convertCharacterBook-14",
+      "args": {
+        "body": {
+          "method": "convertCharacterBook",
+          "args": [
+            null
+          ]
+        }
+      },
+      "expected": null
+    }
+  ]
+}
