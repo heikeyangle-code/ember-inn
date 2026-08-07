@@ -114,7 +114,7 @@ object ByafImporter {
         val isNsfw = character["isNSFW"]?.jsonPrimitive?.let { p ->
             p.booleanOrNull ?: (p.content == "true")
         } == true
-        val firstMessages = scenario["firstMessages"]?.jsonArray
+        val firstMessages = arrayOrNull(scenario["firstMessages"])
         val firstMes = firstMessages?.firstOrNull()?.jsonObject?.get("text")?.jsonPrimitive?.contentOrNull() ?: ""
 
         return buildJsonObject {
@@ -213,84 +213,103 @@ object ByafImporter {
         return segments.joinToString("/")
     }
 
+    /** BYAF 聊天背景（对齐官方 getChatFromScenario 的 chatBackgrounds 参数）。 */
+    data class ByafChatBackground(val name: String, val paths: List<String>)
+
     /**
      * 对齐官方 ByafParser.getChatFromScenario：返回聊天消息列表（jsonl 行）。
      * 含 chat_metadata（模型设置/场景/示例/系统提示）与开场白；human/ai 消息按时间交错重排。
-     * 边界：聊天背景图提取属于资源层。
      */
     fun chatFromScenario(
         scenarioJson: JsonElement?,
         userName: String,
         characterName: String,
+        chatBackgrounds: List<ByafChatBackground> = emptyList(),
+        now: String = Instant.now().toString(),
     ): List<JsonElement> {
-        val scenario = scenarioJson?.jsonObject ?: JsonObject(emptyMap())
-        val messages = scenario["messages"]?.jsonArray
-        val chatStartDate: JsonElement = if (messages == null || messages.isEmpty()) {
-            JsonPrimitive(Instant.now().toString())
-        } else {
-            messages.firstOrNull { it.jsonObject["createdAt"] != null }
+        val scenario = scenarioJson as? JsonObject ?: JsonObject(emptyMap())
+        val messages = arrayOrNull(scenario["messages"])
+
+        // 官方：空数组→现在；null→undefined（开场白不写 send_date）；否则取首个带 createdAt 的原始值
+        val chatStartDate: JsonElement? = when {
+            messages != null && messages.isEmpty() -> JsonPrimitive(now)
+            messages != null -> messages.firstOrNull { it.jsonObject.containsKey("createdAt") }
                 ?.jsonObject?.get("createdAt")
-                ?.let { sendDateElement(it) }
-                ?: JsonPrimitive(Instant.now().toString())
+            else -> null
         }
+
+        val backgroundImage = scenario["backgroundImage"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: ""
+        val chatBackground = chatBackgrounds.firstOrNull { backgroundImage in it.paths }?.name ?: ""
 
         val chat = mutableListOf<JsonElement>()
         chat += buildJsonObject {
             put("user_name", JsonPrimitive("unused"))
             put("character_name", JsonPrimitive("unused"))
             put("chat_metadata", buildJsonObject {
-                put("scenario", JsonPrimitive(replaceMacros(scenario["narrative"]?.jsonPrimitive?.contentOrNull())))
+                // 官方 scenario 不做宏替换；system_prompt 做
+                put("scenario", JsonPrimitive(scenario["narrative"]?.jsonPrimitive?.contentOrNull() ?: ""))
                 put("mes_example", JsonPrimitive(formatExampleMessages(scenario["exampleMessages"])))
                 put("system_prompt", JsonPrimitive(replaceMacros(scenario["formattingInstructions"]?.jsonPrimitive?.contentOrNull())))
-                put("mes_examples_optional", JsonPrimitive(
-                    scenario["canDeleteExampleMessages"]?.jsonPrimitive?.let { p ->
-                        p.booleanOrNull ?: (p.content == "true")
-                    } ?: false,
-                ))
+                put("mes_examples_optional", scenario["canDeleteExampleMessages"] ?: JsonPrimitive(false))
                 put("byaf_model_settings", buildJsonObject {
-                    put("model", JsonPrimitive(scenario["model"]?.jsonPrimitive?.contentOrNull() ?: ""))
-                    put("temperature", JsonPrimitive(doubleOf(scenario["temperature"], 1.2)))
-                    put("top_k", JsonPrimitive(intOf(scenario["topK"], 40)))
-                    put("top_p", JsonPrimitive(doubleOf(scenario["topP"], 0.9)))
-                    put("min_p", JsonPrimitive(doubleOf(scenario["minP"], 0.1)))
-                    put("min_p_enabled", JsonPrimitive(
-                        scenario["minPEnabled"]?.jsonPrimitive?.let { p ->
-                            p.booleanOrNull ?: (p.content == "true")
-                        } ?: true,
-                    ))
-                    put("repeat_penalty", JsonPrimitive(doubleOf(scenario["repeatPenalty"], 1.05)))
-                    put("repeat_penalty_tokens", JsonPrimitive(intOf(scenario["repeatLastN"], 256)))
-                    put("by_prompt_template", JsonPrimitive(scenario["promptTemplate"]?.jsonPrimitive?.contentOrNull() ?: "general"))
-                    put("grammar", scenario["grammar"]?.jsonPrimitive?.let { JsonPrimitive(it.content) } ?: JsonNull)
+                    put("model", scenario["model"] ?: JsonPrimitive(""))
+                    put("temperature", scenario["temperature"] ?: JsonPrimitive(1.2))
+                    put("top_k", scenario["topK"] ?: JsonPrimitive(40))
+                    put("top_p", scenario["topP"] ?: JsonPrimitive(0.9))
+                    put("min_p", scenario["minP"] ?: JsonPrimitive(0.1))
+                    put("min_p_enabled", scenario["minPEnabled"] ?: JsonPrimitive(true))
+                    put("repeat_penalty", scenario["repeatPenalty"] ?: JsonPrimitive(1.05))
+                    put("repeat_penalty_tokens", scenario["repeatLastN"] ?: JsonPrimitive(256))
+                    put("by_prompt_template", scenario["promptTemplate"] ?: JsonPrimitive("general"))
+                    put("grammar", scenario["grammar"] ?: JsonNull)
                 })
-                put("chat_backgrounds", JsonArray(emptyList()))
-                put("custom_background", JsonPrimitive(""))
+                put("chat_backgrounds", if (chatBackground.isEmpty()) JsonArray(emptyList()) else JsonArray(listOf(JsonPrimitive(chatBackground))))
+                put("custom_background", if (chatBackground.isEmpty()) JsonPrimitive("") else JsonPrimitive("url(\"${encodeUri(chatBackground)}\")"))
             })
         }
 
-        // 开场白
-        val firstMessages = scenario["firstMessages"]?.jsonArray
+        // 开场白（官方仅在 text 非空时加入）
+        val firstMessages = arrayOrNull(scenario["firstMessages"])
         if (!firstMessages.isNullOrEmpty()) {
             val firstText = firstMessages.first().jsonObject["text"]?.jsonPrimitive?.contentOrNull()
-            if (firstText?.isNotEmpty() == true) {
+            if (!firstText.isNullOrEmpty()) {
                 chat += buildJsonObject {
                     put("name", JsonPrimitive(characterName))
                     put("is_user", JsonPrimitive(false))
-                    put("send_date", chatStartDate)
+                    if (chatStartDate != null) put("send_date", chatStartDate)
                     put("mes", JsonPrimitive(firstText))
                 }
             }
         }
 
         fun newestOutput(ai: JsonObject): JsonObject {
-            val outputs = ai["outputs"]?.jsonArray ?: return JsonObject(emptyMap())
-            val best = outputs.maxByOrNull { it.jsonObject["activeTimestamp"]?.jsonPrimitive?.contentOrNull() ?: "" }
-            return best?.jsonObject ?: JsonObject(emptyMap())
+            val outputs = arrayOrNull(ai["outputs"]) ?: return JsonObject(emptyMap())
+            // 官方 reduce：Date(activeTimestamp) 比较，相等保留前一个
+            val best = outputs.fold<JsonElement, JsonObject?>(null) { acc, el ->
+                val obj = el.jsonObject
+                if (acc == null) obj
+                else {
+                    val a = obj["activeTimestamp"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: Double.NaN
+                    val b = acc["activeTimestamp"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: Double.NaN
+                    if (a >= b) obj else acc
+                }
+            }
+            return best ?: JsonObject(emptyMap())
         }
 
         fun swipes(ai: JsonObject): List<String> =
-            ai["outputs"]?.jsonArray?.map { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull() ?: "" }
+            arrayOrNull(ai["outputs"])?.map { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull() ?: "" }
                 ?: emptyList()
+
+        fun sendDate(el: JsonElement?): JsonElement {
+            val content = el?.jsonPrimitive?.content ?: return JsonNull
+            val n = content.toLongOrNull()
+            return if (n != null) JsonPrimitive(n) else JsonNull
+        }
+
+        fun putMessageText(builder: kotlinx.serialization.json.JsonObjectBuilder, text: String?) {
+            if (text != null) builder.put("mes", JsonPrimitive(text))
+        }
 
         val userMessages = messages?.filter { it.jsonObject["type"]?.jsonPrimitive?.content == "human" } ?: emptyList()
         val characterMessages = messages?.filter { it.jsonObject["type"]?.jsonPrimitive?.content == "ai" } ?: emptyList()
@@ -300,8 +319,8 @@ object ByafImporter {
                 chat += buildJsonObject {
                     put("name", JsonPrimitive(userName))
                     put("is_user", JsonPrimitive(true))
-                    put("send_date", sendDateElement(userMessages[i].jsonObject["createdAt"]))
-                    put("mes", JsonPrimitive(userMessages[i].jsonObject["text"]?.jsonPrimitive?.contentOrNull() ?: ""))
+                    put("send_date", sendDate(userMessages[i].jsonObject["createdAt"]))
+                    putMessageText(this, userMessages[i].jsonObject["text"]?.jsonPrimitive?.contentOrNull())
                 }
                 val ai = characterMessages[i].jsonObject
                 val newest = newestOutput(ai)
@@ -309,8 +328,8 @@ object ByafImporter {
                 chat += buildJsonObject {
                     put("name", JsonPrimitive(characterName))
                     put("is_user", JsonPrimitive(false))
-                    put("send_date", sendDateElement(newest["createdAt"]))
-                    put("mes", JsonPrimitive(newest["text"]?.jsonPrimitive?.contentOrNull() ?: ""))
+                    put("send_date", sendDate(newest["createdAt"]))
+                    putMessageText(this, newest["text"]?.jsonPrimitive?.contentOrNull())
                     put("swipes", JsonArray(aiSwipes.map { JsonPrimitive(it) }))
                     put("swipe_id", JsonPrimitive(aiSwipes.indexOf(newest["text"]?.jsonPrimitive?.contentOrNull() ?: "")))
                 }
@@ -319,15 +338,16 @@ object ByafImporter {
             for (m in messages) {
                 val obj = m.jsonObject
                 val isUser = obj["type"]?.jsonPrimitive?.content == "human"
+                val aiMessage = if (!isUser) newestOutput(obj) else null
                 chat += buildJsonObject {
                     put("name", JsonPrimitive(if (isUser) userName else characterName))
                     put("is_user", JsonPrimitive(isUser))
-                    put("send_date", sendDateElement(if (isUser) obj["createdAt"] else newestOutput(obj)["createdAt"]))
-                    put("mes", JsonPrimitive(if (isUser) obj["text"]?.jsonPrimitive?.contentOrNull() ?: "" else newestOutput(obj)["text"]?.jsonPrimitive?.contentOrNull() ?: ""))
-                    if (!isUser) {
+                    put("send_date", sendDate(if (isUser) obj["createdAt"] else aiMessage?.get("createdAt")))
+                    putMessageText(this, if (isUser) obj["text"]?.jsonPrimitive?.contentOrNull() else aiMessage?.get("text")?.jsonPrimitive?.contentOrNull())
+                    if (!isUser && aiMessage != null) {
                         val aiSwipes = swipes(obj)
                         put("swipes", JsonArray(aiSwipes.map { JsonPrimitive(it) }))
-                        put("swipe_id", JsonPrimitive(aiSwipes.indexOf(newestOutput(obj)["text"]?.jsonPrimitive?.contentOrNull() ?: "")))
+                        put("swipe_id", JsonPrimitive(aiSwipes.indexOf(aiMessage["text"]?.jsonPrimitive?.contentOrNull() ?: "")))
                     }
                 }
             }
@@ -335,6 +355,23 @@ object ByafImporter {
 
         return chat
     }
+
+    /** JS encodeURI：保留未保留字符与 ;,/?:@&=+$#，其余按 UTF-8 百分号编码。 */
+    private fun encodeUri(value: String): String {
+        val sb = StringBuilder()
+        for (b in value.toByteArray(Charsets.UTF_8)) {
+            val c = b.toInt() and 0xff
+            val keep = c in 'A'.code..'Z'.code || c in 'a'.code..'z'.code || c in '0'.code..'9'.code ||
+                c in "-_.!~*'();,/?:@&=+$#".map { it.code }
+            if (keep) sb.append(c.toChar()) else sb.append('%').append(HEX[c ushr 4]).append(HEX[c and 0x0f])
+        }
+        return sb.toString()
+    }
+
+    private val HEX = "0123456789ABCDEF"
+
+    private fun arrayOrNull(el: JsonElement?): JsonArray? =
+        if (el == null || el is JsonNull) null else el.jsonArray
 
     private fun sendDateElement(el: JsonElement?): JsonElement {
         val p = el?.jsonPrimitive ?: return JsonNull
