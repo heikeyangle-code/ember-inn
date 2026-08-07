@@ -212,8 +212,9 @@ object PromptAssembler {
         return messages
     }
 
-    const val NAMES_NONE = 0
-    const val NAMES_DEFAULT = 1
+    // 官方 character_names_behavior：NONE=-1 / DEFAULT=0 / COMPLETION=1 / CONTENT=2
+    const val NAMES_NONE = -1
+    const val NAMES_DEFAULT = 0
+    const val NAMES_COMPLETION = 1
     const val NAMES_CONTENT = 2
-    const val NAMES_COMPLETION = 3
 }

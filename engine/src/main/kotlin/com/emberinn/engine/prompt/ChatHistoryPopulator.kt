@@ -26,6 +26,7 @@ object ChatHistoryPopulator {
         continuePrefill: Boolean = false,
         canUseTools: Boolean = false,
         assistantPrefill: String = "",
+        namesBehavior: Int = PromptAssembler.NAMES_DEFAULT,
     ) {
         if (!prompts.has("chatHistory")) return
         chatCompletion.add(CompletionCollection("chatHistory"), prompts.index("chatHistory"))
@@ -141,10 +142,15 @@ object ChatHistoryPopulator {
             } else {
                 substitutedContent
             }
+            val effectiveName = if (namesBehavior == PromptAssembler.NAMES_COMPLETION && m.name != null) {
+                PromptNameSanitizer.sanitizeName(m.name)
+            } else {
+                m.name
+            }
             val chatMessage = CompletionMessage(
                 role = m.role,
                 content = content,
-                name = m.name,
+                name = effectiveName,
                 // 对齐官方 populateChatHistory：identifier = chatHistory-{正序位置}
                 identifier = "chatHistory-${historyMessages.size - poolIndex}",
                 tokens = handler.countAsync(content, "conversation"),

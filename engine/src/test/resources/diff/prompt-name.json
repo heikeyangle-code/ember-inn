@@ -1,0 +1,285 @@
+{
+  "source": "public/scripts/PromptManager.js isValidName/sanitizeName",
+  "cases": [
+    {
+      "id": "isValidName-1",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "Alice"
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "sanitizeName-2",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "Alice"
+        }
+      },
+      "expected": "Alice"
+    },
+    {
+      "id": "isValidName-3",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "alice_01"
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "sanitizeName-4",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "alice_01"
+        }
+      },
+      "expected": "alice_01"
+    },
+    {
+      "id": "isValidName-5",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "张三"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-6",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "张三"
+        }
+      },
+      "expected": "__"
+    },
+    {
+      "id": "isValidName-7",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "a b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-8",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "a b"
+        }
+      },
+      "expected": "a_b"
+    },
+    {
+      "id": "isValidName-9",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "a/b:c"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-10",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "a/b:c"
+        }
+      },
+      "expected": "a_b_c"
+    },
+    {
+      "id": "isValidName-11",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "!@#"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-12",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "!@#"
+        }
+      },
+      "expected": "___"
+    },
+    {
+      "id": "isValidName-13",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": ""
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-14",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "isValidName-15",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "sanitizeName-16",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "isValidName-17",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "sanitizeName-18",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "isValidName-19",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-20",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "isValidName-21",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "名字_123"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-22",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "名字_123"
+        }
+      },
+      "expected": "___123"
+    },
+    {
+      "id": "isValidName-23",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "a-b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-24",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "a-b"
+        }
+      },
+      "expected": "a_b"
+    },
+    {
+      "id": "isValidName-25",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "a.b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-26",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "a.b"
+        }
+      },
+      "expected": "a_b"
+    },
+    {
+      "id": "isValidName-27",
+      "args": {
+        "body": {
+          "method": "isValidName",
+          "name": "a,b"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "sanitizeName-28",
+      "args": {
+        "body": {
+          "method": "sanitizeName",
+          "name": "a,b"
+        }
+      },
+      "expected": "a_b"
+    }
+  ]
+}
