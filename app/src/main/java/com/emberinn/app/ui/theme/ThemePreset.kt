@@ -77,7 +77,7 @@ val ThemePresets: List<ThemePreset> = listOf(
     ),
 )
 
-fun ThemePreset.byId(id: String): ThemePreset = ThemePresets.firstOrNull { it.id == id } ?: ThemePresets.first()
+fun List<ThemePreset>.byId(id: String): ThemePreset = firstOrNull { it.id == id } ?: first()
 
 /** 主题模式：跟随系统 / 浅色 / 深色（README 默认浅色，深色跟随系统可选）。 */
 enum class ThemeMode(val id: String, val label: String) {
