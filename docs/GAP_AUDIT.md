@@ -28,8 +28,8 @@
 - ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；🟡 REPLACE_GETVAR/STRICT_ESCAPING 语义、150+ 官方命令（多数要接 App 状态）
 
 ## 提示词组装
-- ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；populateChatHistory 官方差分 5 例（含 continue/群聊/空输入）
-  🟡 偏差：names_behavior（COMPLETION 名字清理）待接；DialogueExamples/preparePrompts 无差分
+- ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；populateChatHistory 5 例 + populateDialogueExamples 4 例官方差分
+  🟡 偏差：names_behavior（COMPLETION 名字清理）待接；preparePromptsForChatCompletion 无差分
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
 - 🟡 工具预分配 token、媒体内联、推理签名、多模态
@@ -64,4 +64,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 = 329 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 = 333 例官方基准（全部通过）。
