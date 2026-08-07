@@ -88,7 +88,7 @@ object ByafImporter {
         }
     }
 
-    fun import(zipBytes: ByteArray): String {
+    fun import(zipBytes: ByteArray, now: String = Instant.now().toString()): String {
         val files = readZip(zipBytes)
         val manifestJson = files["manifest.json"] ?: error("BYAF: manifest.json not found")
         val manifest = json.parseToJsonElement(String(manifestJson, Charsets.UTF_8)).jsonObject
@@ -105,22 +105,35 @@ object ByafImporter {
             val scenarioJson = files[path] ?: return@forEach
             scenarios += json.parseToJsonElement(String(scenarioJson, Charsets.UTF_8)).jsonObject
         }
+        return buildCard(manifest["author"]?.jsonObject ?: JsonObject(emptyMap()), character, scenarios, now)
+    }
+
+    /** 对齐官方 ByafParser.getCharacterCard：manifest/character/scenarios → V2 卡 JSON。 */
+    internal fun buildCard(
+        manifest: JsonObject,
+        character: JsonObject,
+        scenarios: List<JsonObject>,
+        now: String,
+    ): String {
         val scenario = scenarios.firstOrNull() ?: JsonObject(emptyMap())
-        val author = manifest["author"]?.jsonObject ?: JsonObject(emptyMap())
 
         val name = character["name"]?.jsonPrimitive?.contentOrNull()
             ?: character["displayName"]?.jsonPrimitive?.contentOrNull() ?: ""
         val displayName = character["displayName"]?.jsonPrimitive?.contentOrNull()
-        val isNsfw = character["isNSFW"]?.jsonPrimitive?.let { p ->
-            p.booleanOrNull ?: (p.content == "true")
-        } == true
+        // 官方 getCharacterCard：character?.isNSFW 原始真值（字符串 "false" 也是 true）
+        val isNsfwRaw = character["isNSFW"]
+        val isNsfw = when {
+            isNsfwRaw == null || isNsfwRaw is JsonNull -> false
+            isNsfwRaw is JsonPrimitive && isNsfwRaw.isString -> true
+            else -> isNsfwRaw.jsonPrimitive.content != "false"
+        }
         val firstMessages = arrayOrNull(scenario["firstMessages"])
         val firstMes = firstMessages?.firstOrNull()?.jsonObject?.get("text")?.jsonPrimitive?.contentOrNull() ?: ""
 
         return buildJsonObject {
             put("spec", JsonPrimitive("chara_card_v2"))
             put("spec_version", JsonPrimitive("2.0"))
-            put("create_date", JsonPrimitive(Instant.now().toString()))
+            put("create_date", JsonPrimitive(now))
             put("data", buildJsonObject {
                 put("name", JsonPrimitive(name))
                 put("description", JsonPrimitive(replaceMacros(character["persona"]?.jsonPrimitive?.contentOrNull())))
@@ -128,13 +141,13 @@ object ByafImporter {
                 put("scenario", JsonPrimitive(replaceMacros(scenario["narrative"]?.jsonPrimitive?.contentOrNull())))
                 put("first_mes", JsonPrimitive(replaceMacros(firstMes)))
                 put("mes_example", JsonPrimitive(formatExampleMessages(scenario["exampleMessages"])))
-                put("creator_notes", JsonPrimitive(author["backyardURL"]?.jsonPrimitive?.contentOrNull() ?: ""))
+                put("creator_notes", JsonPrimitive(manifest["backyardURL"]?.jsonPrimitive?.contentOrNull() ?: ""))
                 put("system_prompt", JsonPrimitive(replaceMacros(scenario["formattingInstructions"]?.jsonPrimitive?.contentOrNull())))
                 put("post_history_instructions", JsonPrimitive(""))
                 put("alternate_greetings", JsonArray(formatAlternateGreetings(scenarios).map { JsonPrimitive(it) }))
                 convertCharacterBook(character["loreItems"])?.let { put("character_book", it) }
                 put("tags", JsonArray(if (isNsfw) listOf(JsonPrimitive("nsfw")) else emptyList()))
-                put("creator", JsonPrimitive(author["name"]?.jsonPrimitive?.contentOrNull() ?: ""))
+                put("creator", JsonPrimitive(manifest["name"]?.jsonPrimitive?.contentOrNull() ?: ""))
                 put("character_version", JsonPrimitive(""))
                 put("extensions", buildJsonObject {
                     if (displayName != null) put("display_name", JsonPrimitive(displayName))

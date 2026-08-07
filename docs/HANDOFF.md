@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（23 组，共 367 例官方基准，全部通过）**：
+**已覆盖（24 组，共 371 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -72,8 +72,9 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | CharX 角色卡导入 | charx-import-official.mjs | CharXImportDiffTest | 5 |
 | BYAF 纯逻辑 | byaf-macros-official.mjs | ByafMacrosDiffTest | 14 |
 | BYAF 聊天导入 | byaf-chat-official.mjs | ByafChatDiffTest | 5 |
+| BYAF 角色卡组装 | byaf-card-official.mjs | ByafCardDiffTest | 4 |
 
-**尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、BYAF 完整导入流程（文件系统/聊天落盘依赖，手写单测；纯逻辑 14 例 + getChatFromScenario 5 例已差分）。
+**尚未做差分的**：斜杠解析器（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；手写单测 + 源码对照）、BYAF 完整导入流程（文件系统/聊天落盘依赖，手写单测；纯逻辑 14 例 + 聊天 5 例 + 角色卡组装 4 例已差分）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
 作用域宏配对逻辑（官方 MacroCstWalker 依赖 chevrotain CST 与 MacroRegistry，无法逐字提取；其中 trimScopedContent 纯函数已差分 7 例）。
 
@@ -82,7 +83,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 ## 3. 引擎进度（对照官方 release）
 
 ### 3.1 角色卡 ✅
-PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；YAML 导入官方差分 3 例、CharX 导入官方差分 5 例（含 SFX 前缀/嵌套 card.json/资源 uri 映射/图标/基础名）、BYAF 纯逻辑官方差分 14 例（宏替换/示例/备选开场/角色书）+ getChatFromScenario 官方差分 5 例（背景/原始类型/交错重排/无消息）；V2 归一（readFromV2，官方差分 5 例）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
+PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；YAML 导入官方差分 3 例、CharX 导入官方差分 5 例（含 SFX 前缀/嵌套 card.json/资源 uri 映射/图标/基础名）、BYAF 纯逻辑官方差分 14 例 + getChatFromScenario 5 例 + getCharacterCard 4 例；V2 归一（readFromV2，官方差分 5 例）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
 ✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；🟡 BYAF 资源提取未实现；App 层资源入库/URL 导入未做。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
@@ -138,7 +139,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 199 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF）
+- 引擎测试 200 全绿（含重排/文件/分块/工具函数/作用域宏/YAML 导入/提示词组装合并/CharX/BYAF）
 
 ### 3.10 其它
 - 🟡 群聊仅选人/队列策略（SWAP/APPEND/队列）+ 模型；完整生成流程（多人回复拼接/组提示/nudge 链）未做。✅ 人设模型+注入、作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -202,6 +203,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 18（2026-08-08：BYAF getCharacterCard 官方差分）
+
+- byaf-card-official.mjs：逐字提取 src/byaf.js getCharacterCard + 依赖的 4 个纯逻辑方法，Date 打桩，4 例 fixture 全过
+- 差分抓出并修 1 处真差异：isNSFW 官方按原始真值判断（字符串 "false" 也是 true）——原实现解析成布尔
+- ByafImporter 抽出 buildCard(manifest/character/scenarios/now) 供差分直测，import 复用同一实现
+- 官方基准 367 → 371；引擎 200 测全绿
 
 ## 最近一轮 17（2026-08-08：BYAF getChatFromScenario 官方差分）
 
@@ -340,7 +348,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 23 个脚本 + 367 例 fixture
+- 差分工具 24 个脚本 + 371 例 fixture
 
 ## 7. 注意事项
 

@@ -23,6 +23,7 @@
 - `charx-import-official.mjs`：逐字提取官方 src/charx.js CharXParser + characters.js importFromCharX（JSZip v3.10.1 vendor 等价打桩 yauzl）。
 - `byaf-macros-official.mjs`：逐字提取官方 src/byaf.js 纯逻辑（replaceMacros/示例/备选开场/角色书转换）。
 - `byaf-chat-official.mjs`：逐字提取官方 src/byaf.js getChatFromScenario（Date/encodeURI 打桩）。
+- `byaf-card-official.mjs`：逐字提取官方 src/byaf.js getCharacterCard（含 isNSFW 原始真值语义）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -59,6 +60,7 @@ node scripts/diff/prepare-prompts-official.mjs
 node scripts/diff/charx-import-official.mjs
 node scripts/diff/byaf-macros-official.mjs
 node scripts/diff/byaf-chat-official.mjs
+node scripts/diff/byaf-card-official.mjs
 node scripts/build-presets.mjs
 ```
 
