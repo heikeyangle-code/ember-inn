@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（8 组，共 256 例官方基准，全部通过）**：
+**已覆盖（10 组，共 266 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -57,6 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | PNG 角色卡 | card-png-official.mjs | CardPngDiffTest | 6 |
 | 宏 e2e | macros-official.mjs | MacroDiffTest | 158 |
 | {{pick}} 确定性 | pick-official.mjs | PickDiffTest | 5 |
+| 编辑器排序 | editor-sort-official.mjs | EditorSortDiffTest | 6 |
+| 快捷回复自动执行选择 | auto-execute-official.mjs | AutoExecuteDiffTest | 4 |
 
 **尚未做差分的**：斜杠解析器（目前是手写单测）、JSON/CharX/YAML/BYAF 导入导出（除 PNG 外是手写单测）、PromptAssembler 各 populator（单测 + 官方源码对照，暂无 fixture）。
 
@@ -68,9 +70,13 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 PNG V2/V3（tEXt/ccv3）、CharX、JSON、YAML、BYAF 导入；V2 归一（readFromV2）、私有字段清理（charaFormatData）、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
 🟡 CharX/BYAF 资源（头像/背景/语音）提取到 App 层未做；URL 导入未做（App 层）。
 
-### 3.2 世界书 ✅
+### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
-✅ vectorized/addMemo/displayIndex/automationId 数据全量透传（rawEntries/extensions + 转换器写回）；官方核心扫描不消费这些字段（vectorized=RAG 扩展、automationId=快捷回复自动执行、displayIndex=编辑器排序、addMemo=官方核心未读取），不属于核心 1:1 缺口，等扩展层做行为。
+✅ 扩展字段已全接上（数据全量透传 + 行为）：
+   - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容 + 内存实现）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
+   - automationId → 快捷回复自动执行：WorldInfoAutoExecute.resolve + AutoExecuteHandler（对齐 quick-reply AutoExecuteHandler，prevent 栈；选择逻辑 4 例官方差分）
+   - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
+   - addMemo → 官方核心从未读取，仅透传
 
 ### 3.3 宏 ✅
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
@@ -162,6 +168,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
+## 最近一轮 6（2026-08-08：世界书扩展行为全接上 + 差分补课）
+
+- vectorized/RAG：WorldInfoVector.kt（VectorSettings/VectorItem/VectorStore/EmbeddingProvider/InMemoryVectorStore/OpenAiCompatibleEmbeddingProvider/WorldInfoVectorActivation），对齐官方 vectors activateWorldInfo（按 world 分组同步、hash 去重、最近 query 条消息查询、threshold 0.25、max_entries 5、强制激活）
+- Scanner 接入 externalActivations：WorldInfoBuffer.getExternallyActivated（对齐官方 buffer），强制激活跳过关键词/概率，扫描结束 reset
+- automationId：QuickReplySlot 补 automationId/preventAutoExecute；WorldInfoAutoExecute.resolve + AutoExecuteHandler（prevent 栈）
+- displayIndex：WorldInfoEditorSort（custom/priority/default/length，secondary order 降序 + tertiary uid 升序）
+- WorldInfoEntry 强类型补 4 字段 + 解析（顶层/extensions 双格式）
+- 新增官方差分 2 组 10 例：editor-sort（sortWorldInfoEntries 逐字提取，6 例）、auto-execute（handleWIActivation 选择逻辑，4 例）；差分抓出 length 方向 bug 已修
+- RAG 全链路无法做纯函数差分（官方依赖 ChromaDB/浏览器 API），采用逐行对照源码 + 单测锁行为，已在文档标注
+- 引擎 171 测全绿
+
 ## 6. 最近工作日志
 
 ### 轮 5（11e33e4，2026-08-07）：返回手势按 README 守则修复
@@ -188,7 +205,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 8 个脚本 + 256 例 fixture
+- 差分工具 10 个脚本 + 266 例 fixture
 
 ## 7. 注意事项
 
