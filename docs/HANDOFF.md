@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（51 组，共 823 例官方基准，全部通过）**：
+**已覆盖（52 组，共 829 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -99,6 +99,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
 | 媒体 token 成本 | media-cost-official.mjs | MediaCostDiffTest | 18 |
 | 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
+| OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -296,6 +297,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 54（2026-08-08：OpenAI 文本补全路由 + 官方差分 6 例）
+
+- TEXT_COMPLETION_MODELS（官方 src/endpoints/tokenizers.js 29 个模型）+ TextCompletionRequestBuilder
+- LlmClient：模型命中列表且非 OpenRouter 时走 /completions + prompt（convertTextCompletionPrompt），响应解析兼容 choices[].text
+- text-completion-body-official.mjs：逐字提取官方 isTextCompletion requestBody 构造段 + 真 convertTextCompletionPrompt，6 例 fixture 全过
+- 差分抓出 1 个真差异：convertTextCompletionPrompt 官方 JS 拼接缺失 content 输出 "undefined"（null→"null"），原移植用空串——已按 JS 语义修正
+- 官方基准 823 → 829；引擎 248 → 249 测全绿
 
 ## 最近一轮 53（2026-08-08：特殊协议请求体官方差分 23 例）
 

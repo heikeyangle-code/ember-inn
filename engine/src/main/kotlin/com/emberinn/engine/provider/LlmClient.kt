@@ -286,6 +286,7 @@ class LlmClient(
                 if (provider.id == "vertexai") {
                     error("Vertex AI 需要服务账号与项目配置，请使用 Gemini (AI Studio) 或自定义地址。")
                 }
+                val isTextCompletion = profile.model in TEXT_COMPLETION_MODELS && provider.id != "openrouter"
                 val url = when (provider.id) {
                     "azure" -> {
                         val apiVersion = profile.apiVersionOverride.ifBlank { provider.apiVersion }.ifBlank { "2024-12-01" }
@@ -300,9 +301,12 @@ class LlmClient(
                         }
                         base.trimEnd('/') + "/" + account + "/ai/v1/chat/completions"
                     }
-                    else -> base.trimEnd('/') + "/chat/completions"
+                    else -> base.trimEnd('/') + (if (isTextCompletion) "/completions" else "/chat/completions")
                 }
-                val body = if (provider.id == "openrouter") {
+                val body = if (isTextCompletion) {
+                    val prompt = ProviderConverters.convertTextCompletionPrompt(JsonArray(chatML(messages)))
+                    TextCompletionRequestBuilder.build(profile.model, prompt, profile.sampler.copy(stream = stream))
+                } else if (provider.id == "openrouter") {
                     val chatMl = chatML(messages).toMutableList()
                     ProviderConverters.addOpenRouterSignatures(chatMl, profile.model)
                     ProviderConverters.embedOpenRouterMedia(chatMl, audio = true, video = true)
@@ -483,8 +487,10 @@ class LlmClient(
                     else -> message["tool_plan"]?.asText().orEmpty()
                 }
             }
-            else -> root["choices"]?.jsonArray?.firstOrNull()?.jsonObject
-                ?.get("message")?.jsonObject?.get("content")?.asText().orEmpty()
+            else -> root["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.let { choice ->
+                choice["message"]?.jsonObject?.get("content")?.asText()
+                    ?: choice["text"]?.asText()
+            }.orEmpty()
         }
     }.getOrDefault("")
 

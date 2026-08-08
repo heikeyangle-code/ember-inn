@@ -49,6 +49,7 @@
 - `media-inline-official.mjs`：官方 OpenAI 媒体内联内容结构。
 - `media-cost-official.mjs`：官方媒体 token 成本估算（getImageTokenCost + 视频 263/秒 + 音频 32/秒）。
 - `special-bodies-official.mjs`：官方特殊协议请求体（Mistral/xAI/AI21/Cohere 的 requestBody 构造段，真 convert*Messages）。
+- `text-completion-body-official.mjs`：官方 OpenAI 文本补全请求体（isTextCompletion 分支，真 convertTextCompletionPrompt）。
 - `media-convert-official.mjs`：官方 prompt-converters.js Claude/Gemini 内容块转换（含 media_resolution_low/high、JS split 边缘）。
 - `prompt-converters-official.mjs`：官方 prompt-converters.js 全部纯转换函数（Claude/Gemini 整链、Cohere/AI21/Mistral/xAI、mergeMessages、postProcess、预算、OpenRouter 缓存/媒体/签名）逐字提取。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。

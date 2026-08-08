@@ -429,7 +429,12 @@ object ProviderConverters {
             val obj = m.jsonObject
             val role = obj.role()
             val name = obj.name()
-            val content = obj.str("content").orEmpty()
+            // 官方 JS 字符串拼接：缺失 content → "undefined"、null → "null"
+            val content = when (val el = obj["content"]) {
+                null -> "undefined"
+                is JsonPrimitive -> el.content
+                else -> el.toString()
+            }
             if (role == "system" && name == null) "System: $content"
             else if (role == "system") "$name: $content"
             else "$role: $content"
