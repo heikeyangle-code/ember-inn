@@ -228,6 +228,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 现状补充：键盘适配（adjustResize + imePadding）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
 2026-08-09 流式体验修复：自动滚底改为“贴底跟随 + 上滑暂停 + 回底恢复”，滚动用即时 scrollToItem 到流式项末尾（正文变长不跳顶）；新消息即时滚底；思考过程在空正文场景独立成卡（ReasoningOnly）不再消失；模型只回思考无正文时给明确提示。
 2026-08-09 继续修复：流中断/错误也保留思考过程并给人话提示；上下文占比分母改为 ConnectionProfile.contextWindow（设置页可配，默认官方 8192）；世界书状态从 pill+Toast 升级为命中面板（名字/键/常驻/位置/token，README 指示灯形态）；AI 消息文本确认无任何 maxLines/限高。
+2026-08-09 引擎 SSE 差分 15→16 例：新增 openai-delta-array-text（官方同样 Unknown event data format，锁死非差异）；LlmClient.executeStream 事件级 catch 扩为 Exception（官方 SmoothEventSourceStream 整事件 try/catch，坏事件只跳过不中断流），新增 MockWebServer 回归测试（思考后坏事件+正文仍到达）；聊天页源层上下留白加最小安全值（顶栏 64dp/输入栏 96dp），浮层实测前不遮消息尾。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
 全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。

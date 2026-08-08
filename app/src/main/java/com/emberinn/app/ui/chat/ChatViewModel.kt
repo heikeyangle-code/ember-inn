@@ -420,16 +420,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 onError = {
                     if (streamActive) {
                         streamActive = false
-                        // 中断也保留已流出的思考过程，不静默吞掉
+                        // 中断也保留已流出的思考过程，不静默吞掉；状态必须全部复位，避免卡“生成中”
                         if (_streamingReasoning.value.isNotBlank()) {
                             _lastReasoning.value = _streamingReasoning.value
                         }
                         if (_streamingText.value.isBlank()) {
+                            _isStreaming.value = false
+                            _isImpersonating.value = false
+                            _streamingReasoning.value = ""
                             _notice.value = "（请求中断，请检查网络或 API Key 后重试。）"
                         } else {
                             finalizeStream(streamContinueMode)
                         }
-                        _streamingReasoning.value = ""
                         onFinished?.invoke()
                     }
                 },
@@ -478,7 +480,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         when {
             wasImpersonating -> {
                 // 官方：冒充结果进输入框，不写历史
-                if (reply.isNotBlank()) _impersonated.value = reply
+                if (reply.isNotBlank()) {
+                    _impersonated.value = reply
+                } else {
+                    _lastReasoning.value = _streamingReasoning.value.takeIf { it.isNotBlank() }
+                    _notice.value = if (_streamingReasoning.value.isNotBlank()) {
+                        "（模型只返回了思考，没有生成冒充内容。）"
+                    } else {
+                        "（冒充没有生成内容，请重试。）"
+                    }
+                }
                 _isImpersonating.value = false
             }
             continueMode && reply.isNotBlank() -> {

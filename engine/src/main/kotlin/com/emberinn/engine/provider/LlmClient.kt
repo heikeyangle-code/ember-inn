@@ -231,8 +231,9 @@ class LlmClient(
                             onDelta(chunk.chunk)
                         }
                     }
-                } catch (e: IllegalStateException) {
-                    // 对齐官方平滑流：parseStreamData 抛 Unknown/Not primary → catch 后跳过该事件
+                } catch (e: Exception) {
+                    // 对齐官方 SmoothEventSourceStream：整个事件处理 try/catch，
+                    // JSON 解析失败/未知格式/其它异常都只跳过该事件，绝不中断整条流
                 }
             }
         }

@@ -483,6 +483,31 @@
       ]
     },
     {
+      "id": "openai-delta-array-text",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "hi"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
       "id": "openai-message-content",
       "args": {
         "body": {

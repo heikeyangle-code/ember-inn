@@ -261,8 +261,9 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .padding(top = topBarPad)
-                .padding(bottom = inputBarPad),
+                // 最小安全留白：浮层实测高度未就绪（首帧/键盘变化）时也不会盖住消息
+                .padding(top = maxOf(topBarPad, 64.dp))
+                .padding(bottom = maxOf(inputBarPad, 96.dp)),
         ) {
             if (!providerConfigured) {
                 UnconfiguredBanner(onOpenSettings = onOpenSettings)

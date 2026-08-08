@@ -82,6 +82,7 @@ await add('content', { content: 'cd', object: 'completion' });
 await add('choices-text', { choices: [{ index: 0, text: 'xy' }] });
 await add('gemini-tool-call', { candidates: [{ index: 0, content: { parts: [{ functionCall: { name: 'x' } }] } }] });
 await add('openai-delta-array-thinking', { choices: [{ index: 0, delta: { content: [{ thinking: [{ text: 're' }] }] } }] });
+await add('openai-delta-array-text', { choices: [{ index: 0, delta: { content: [{ type: 'text', text: 'hi' }] } }] });
 await add('openai-message-content', { choices: [{ index: 0, message: { content: 'hi' } }] });
 await add('not-primary', { choices: [{ index: 1, delta: { content: 'x' } }] });
 

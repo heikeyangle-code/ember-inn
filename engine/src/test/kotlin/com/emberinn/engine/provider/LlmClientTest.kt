@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -264,6 +265,56 @@ class LlmClientTest {
         )
         assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS))
         assertEquals("你好", text.toString())
+        assertEquals("想", reasoning.toString())
+        server.close()
+    }
+
+
+    @Test
+    fun streamingSurvivesMalformedEventsMidStream() {
+        // 官方 SmoothEventSourceStream：整个事件 try/catch，坏事件只跳过，不中断整条流
+        val server = MockWebServer()
+        server.start()
+        val sse = """data: {"choices":[{"delta":{"reasoning_content":"想"}}]}
+
+data: this-is-not-json
+
+data: {"choices":[{"delta":{"unexpected":"x"}}]}
+
+data: {"choices":[{"delta":{"content":"正文"}}]}
+
+data: [DONE]
+
+"""
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .addHeader("Content-Type", "text/event-stream")
+                .body(sse)
+                .build(),
+        )
+        val client = LlmClient()
+        val text = StringBuilder()
+        val reasoning = StringBuilder()
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var error: Throwable? = null
+        client.streamChatCompletionsAsync(
+            provider,
+            ConnectionProfile(
+                providerId = "openai",
+                apiKey = "sk-test",
+                model = "gpt-4o",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+            onDelta = { text.append(it) },
+            onDone = { latch.countDown() },
+            onError = { error = it; latch.countDown() },
+            onReasoning = { reasoning.append(it) },
+        )
+        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        assertNull(error)
+        assertEquals("正文", text.toString())
         assertEquals("想", reasoning.toString())
         server.close()
     }
