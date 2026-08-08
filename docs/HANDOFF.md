@@ -8,6 +8,7 @@
 - 本地：`/data/data/com.termux/files/home/ember-inn`
 - 远程：github.com/heikeyangle-code/ember-inn（分支 main，公开）
 - 官方源码参照：`/data/data/com.termux/files/home/sillytavern-ref`（release 分支）
+- **官方基线版本**：release `8172dcd`（2026-07-07），SillyTavern **1.18.0**；以后酒馆更新时，用 `git -C ~/sillytavern-ref pull` 拉新 release，重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，红的就是需要移植/修正的差异
 - 架构：`app`（Compose UI）→ `engine`（纯 Kotlin 领域引擎，不依赖 UI）；引擎与官方 1:1，UI 层自由
 
 常用命令：
@@ -143,6 +144,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 聊天元数据（背景/书签/快照）（注：官方无 chat v2，此前审计有误已删）。
 
 ### 3.9 提供商 / LLM 客户端 ✅
+- ❌ 媒体内联（MediaAttachment 模型已有纯逻辑，但 **extra.media 解析、OpenAI/Anthropic/Gemini 请求体内联、App 渲染都没有做**）
 - OpenAiParamsBuilder：createGenerationParameters 全厂商 21 例差分（OpenAI/Azure/OpenRouter/Groq/XAI/Cohere/DeepSeek/Workers AI/Moonshot/Custom/Perplexity/Mistral/Chutes/ZAI/MiniMax/NanoGPT/Vertex/ElectronHub/SiliconFlow/o1）
 - providers.json 数据驱动 **22 家**（含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
 - LlmClient 三协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages + x-api-key + anthropic-version）、Gemini（v1beta/models/{model}:generateContent?key=）
