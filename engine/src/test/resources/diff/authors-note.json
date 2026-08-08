@@ -1,0 +1,135 @@
+{
+  "source": "authors-note.js + world-info.js ANWithWI",
+  "cases": [
+    {
+      "id": "resolve-defaults",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {},
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 1,
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-overrides",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "备注",
+            "interval": 3,
+            "position": 2,
+            "depth": 7,
+            "role": 2
+          },
+          "defaults": {
+            "default": "默认",
+            "defaultInterval": 1,
+            "defaultPosition": 1,
+            "defaultDepth": 4,
+            "defaultRole": 0
+          }
+        }
+      },
+      "expected": {
+        "prompt": "备注",
+        "interval": 3,
+        "position": 2,
+        "depth": 7,
+        "role": 2
+      }
+    },
+    {
+      "id": "resolve-partial-defaults",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P"
+          },
+          "defaults": {
+            "defaultInterval": 5,
+            "defaultPosition": 0,
+            "defaultDepth": 9,
+            "defaultRole": 1
+          }
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": 5,
+        "position": 0,
+        "depth": 9,
+        "role": 1
+      }
+    },
+    {
+      "id": "compose-empty",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": "note"
+        }
+      },
+      "expected": "note"
+    },
+    {
+      "id": "compose-top",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a",
+            "b"
+          ],
+          "bottom": [],
+          "original": "note"
+        }
+      },
+      "expected": "a\nb\nnote"
+    },
+    {
+      "id": "compose-both",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a"
+          ],
+          "bottom": [
+            "c",
+            "d"
+          ],
+          "original": "note"
+        }
+      },
+      "expected": "a\nnote\nc\nd"
+    },
+    {
+      "id": "compose-empty-original",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a"
+          ],
+          "bottom": [
+            "c"
+          ],
+          "original": ""
+        }
+      },
+      "expected": "a\n\nc"
+    }
+  ]
+}

@@ -39,6 +39,7 @@
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
+- `authors-note-official.mjs`：官方导演备注默认值 + ANWithWI。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -91,6 +92,7 @@ node scripts/diff/prompt-utils-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs
+node scripts/diff/authors-note-official.mjs
 node scripts/build-presets.mjs
 ```
 
