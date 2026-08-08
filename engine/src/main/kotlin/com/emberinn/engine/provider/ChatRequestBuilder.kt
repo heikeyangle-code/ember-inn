@@ -142,8 +142,13 @@ object ChatRequestBuilder {
                         put("name", call.name)
                         put("arguments", call.arguments)
                     })
+                    // 对齐官方 serializeMessages：tool_calls 条目透传 signature
+                    call.signature?.let { put("signature", it) }
                 }
             }))
         }
+        // 对齐官方 serializeMessages：message.signature / message.reasoning 透传（推理链/OpenRouter/Custom）
+        message.signature?.let { put("signature", it) }
+        message.reasoning?.let { put("reasoning", it) }
     }
 }

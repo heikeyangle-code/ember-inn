@@ -83,6 +83,7 @@ const stub = [
     'class Message {',
     '    constructor(role, content, name = null, identifier = null) {',
     '        this.role = role; this.content = content; this.name = name; this.identifier = identifier; this.tokens = 0;',
+    '        this.media = []; this.signature = null; this.reasoning = null; this.tool_calls = null;',
     '    }',
     '    static async fromPromptAsync(p) { if (!p) return null;',
     "        const m = new Message(p.role, p.content ?? '', p.name ?? null, p.identifier ?? null);",
@@ -95,6 +96,34 @@ const stub = [
     "        m.tokens = tokenHandler.countAsync(content, 'conversation');",
     '        return m;',
     '    }',
+    '    async addImage(image) {',
+    "        if (typeof image !== 'string' || !image.startsWith('data:')) return;",
+    "        this.media.push({ type: 'image_url', url: image });",
+    "        const c = request.body.mediaTokenCosts && request.body.mediaTokenCosts[image] != null ? request.body.mediaTokenCosts[image] : 85;",
+    '        this.tokens += c;',
+    '    }',
+    '    async addVideo(video) {',
+    "        if (typeof video !== 'string' || !video.startsWith('data:')) return;",
+    "        this.media.push({ type: 'video_url', url: video });",
+    "        const c = request.body.mediaTokenCosts && request.body.mediaTokenCosts[video] != null ? request.body.mediaTokenCosts[video] : 263 * 40;",
+    '        this.tokens += c;',
+    '    }',
+    '    async addAudio(audio) {',
+    "        if (typeof audio !== 'string' || !audio.startsWith('data:')) return;",
+    "        this.media.push({ type: 'audio_url', url: audio });",
+    "        const c = request.body.mediaTokenCosts && request.body.mediaTokenCosts[audio] != null ? request.body.mediaTokenCosts[audio] : 32 * 300;",
+    '        this.tokens += c;',
+    '    }',
+    '    async setToolCalls(invocations, includeSignature, includeReasoning = false) {',
+    '        this.tool_calls = invocations.map(i => ({',
+    "            id: i.id, type: 'function',",
+    "            function: { arguments: i.parameters, name: i.name },",
+    "            ...(includeSignature && i.signature ? { signature: i.signature } : {}),",
+    '        }));',
+    "        const fallbackReasoning = invocations.find(i => typeof i.reasoning === 'string' && i.reasoning.length > 0)?.reasoning || null;",
+    '        this.reasoning = includeReasoning ? fallbackReasoning : null;',
+    "        this.tokens = tokenHandler.countAsync(JSON.stringify({ role: this.role, tool_calls: JSON.stringify(this.tool_calls), ...(this.reasoning ? { reasoning: this.reasoning } : {}) }));",
+    '    }',,
     '}',
     'class ChatCompletion {',
     '    constructor() { this.entries = []; this.tokenBudget = 0; this.overriddenPrompts = []; }',
@@ -151,7 +180,7 @@ const stub = [
     '    getChat() {',
     '        return this.entries.filter(Boolean).flatMap(e => e.collection)',
     '            .filter(m => m.content || m.tool_calls)',
-    '            .map(m => ({ role: m.role, content: m.content, name: m.name ?? null }));',
+    '            .map(m => ({ role: m.role, content: m.content ?? \'\', name: m.name ?? null }));',
     '    }',
     '}',
     // ---- 环境打桩 ----
@@ -161,7 +190,7 @@ const stub = [
     "        const t = typeof text === 'string' ? text : (text?.content ?? '');",
     '        const n = Math.max(1, Math.ceil(t.length / 4));',
     '        return n;',
-    '    },',
+    '    }',,
     '};',
     'const promptManager = {',
     '    serviceSettings: { openai_max_context: request.body.maxContextTokens ?? 8192, openai_max_tokens: request.body.maxTokens ?? 256 },',
@@ -189,13 +218,13 @@ const stub = [
     '};',
     'const character_names_behavior = { NONE: -1, DEFAULT: 0, COMPLETION: 1, CONTENT: 2 };',
     'const INJECTION_POSITION = { RELATIVE: 0, ABSOLUTE: 1 };',
-    'const ToolManager = { canPerformToolCalls: () => false, isToolCallingSupported: () => false, registerFunctionToolsOpenAI: async () => {} };',
+    'const ToolManager = { canPerformToolCalls: () => request.body.canUseTools ?? false, isToolCallingSupported: () => request.body.canUseTools ?? false, registerFunctionToolsOpenAI: async () => {} };',
     'const chat_completion_sources = { CLAUDE: \'claude\' };',
     'const getExtensionPromptMaxDepth = () => 4;',
     'const extension_prompt_roles = { SYSTEM: 0, USER: 1, ASSISTANT: 2 };',
     'const extension_prompt_types = { IN_CHAT: 2 };',
     'const getExtensionPrompt = async () => \'\';',
-    'const isImageInliningSupported = () => false;',
+    'const isImageInliningSupported = () => request.body.imageInlining ?? false;',
     'const substituteParams = (t) => String(t);',
     'const substituteParamsExtended = (template, vars) => {',
     '    let out = String(template);',
@@ -213,12 +242,12 @@ const stub = [
     'const console = { log: () => {}, warn: () => {}, error: (...a) => globalThis.console.error(...a), debug: () => {} };',
     'const TokenBudgetExceededError = class extends Error {};',
     'const InvalidCharacterNameError = class extends Error {};',
-    "const tool_reasoning_modes = { DISABLED: 'disabled' };",
-    'const interleaved_reasoning_providers = [];',
-    "const getEffectiveToolReasoningMode = () => 'disabled';",
-    'const isVideoInliningSupported = () => false;',
-    'const isAudioInliningSupported = () => false;',
-    'const isReasoningSignatureSupported = () => false;',
+    "const tool_reasoning_modes = { DISABLED: 'disabled', SINCE_LAST_USER: 'since_last_user', ACTIVE_CHAIN: 'active_chain' };",
+    'const interleaved_reasoning_providers = [\'openrouter\', \'custom\'];',
+    "const getEffectiveToolReasoningMode = () => request.body.toolReasoningMode ?? 'disabled';",
+    'const isVideoInliningSupported = () => request.body.videoInlining ?? false;',
+    'const isAudioInliningSupported = () => request.body.audioInlining ?? false;',
+    'const isReasoningSignatureSupported = () => request.body.includeSignature ?? false;',
     "const MEDIA_TYPE = { IMAGE: 'image', VIDEO: 'video', AUDIO: 'audio' };",
     "const MEDIA_DISPLAY = { LIST: 'list', GALLERY: 'gallery' };",
     // ---- preparePromptsForChatCompletion 打桩（注入相同集合；该函数本身另有差分） ----
@@ -239,7 +268,7 @@ const runCode = fns + '\n' + stub + '\n' + [
     '    const b = request.body;',
     "    const mesExamplesArray = parseMesExamples(b.mesExamples ?? '', false);",
     '    const oaiMessageExamples = setOpenAIMessageExamples(mesExamplesArray);',
-    "    const messages = (b.messages ?? []).map(m => ({ role: m.role, content: m.content, name: m.name ?? null, identifier: m.identifier ?? 'chatHistory' }));",
+    "    const messages = (b.messages ?? []).map(m => ({ role: m.role, content: m.content, name: m.name ?? null, identifier: m.identifier ?? 'chatHistory', media: m.media, mediaDisplay: m.mediaDisplay, mediaIndex: m.mediaIndex, invocations: m.invocations, signature: m.signature, reasoning: m.reasoning }));",
     '    const [chat] = await prepareOpenAIMessages({',
     '        name2,',
     "        charDescription: b.charDescription ?? '',",
@@ -265,6 +294,8 @@ const runCase = new Function('request', runCode);
 
 const cases = [];
 async function add(id, body) {
+    // 官方 stub：canUseTools 时 registerFunctionToolsOpenAI({}) 预留 1 token（Kotlin 侧读同一字段）
+    if (body.canUseTools) body.toolBudgetReserve = 1;
     delete globalThis.__ccEntries; delete globalThis.__ccInserts; delete globalThis.__ccCreate; delete globalThis.__ccGetChat;
     const expected = await runCase({ body: structuredClone(body) });
     cases.push({ id, args: { body }, expected });
@@ -352,6 +383,117 @@ await add('send-if-empty', {
 });
 await add('squash-off', { ...base, squashSystemMessages: false });
 await add('budget-tight', { ...base, maxContextTokens: 40, maxTokens: 16 });
+
+// ---- 2026-08-09 补分支：工具调用历史 / 推理链 / 签名 / 媒体内联 ----
+await add('tool-history-disabled', {
+    ...base,
+    canUseTools: true,
+    toolReasoningMode: 'disabled',
+    messages: [
+        { role: 'user', content: '查一下天气' },
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_1', name: 'getWeather', parameters: '{"city":"Beijing"}', result: 'Sunny', reasoning: '用户想查天气', signature: 'sig-1' },
+            { id: 'call_2', name: 'getTime', parameters: '{}', result: '12:00' },
+        ]},
+    ],
+});
+await add('tool-active-chain-fallback', {
+    ...base,
+    canUseTools: true,
+    includeSignature: true,
+    toolReasoningMode: 'active_chain',
+    chatCompletionSource: 'openrouter',
+    messages: [
+        { role: 'user', content: '第一条' },
+        { role: 'assistant', content: '我先想想', reasoning: '思考A' },
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_1', name: 'getWeather', parameters: '{}', result: 'Sunny' },
+        ]},
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_2', name: 'getTime', parameters: '{}', result: '12:00', reasoning: '自带思考', signature: 'sig-2' },
+        ]},
+    ],
+});
+await add('tool-since-last-user', {
+    ...base,
+    canUseTools: true,
+    includeSignature: true,
+    toolReasoningMode: 'since_last_user',
+    chatCompletionSource: 'custom',
+    messages: [
+        { role: 'user', content: '开始' },
+        { role: 'assistant', content: '没有思考的第一段' },
+        { role: 'assistant', content: '有思考的第二段', reasoning: '思考B' },
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_3', name: 'getWeather', parameters: '{"city":"Shanghai"}', result: 'Rain' },
+        ]},
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_4', name: 'getTime', parameters: '{}', result: '13:00', signature: 'sig-4' },
+        ]},
+    ],
+});
+await add('tool-budget-tight', {
+    ...base,
+    canUseTools: true,
+    toolReasoningMode: 'disabled',
+    maxContextTokens: 80,
+    maxTokens: 16,
+    messages: [
+        { role: 'user', content: '一二三四五六七八九十' },
+        { role: 'assistant', content: '', invocations: [
+            { id: 'call_x', name: 'longToolNameForBudget', parameters: '{"longParameter":"long value"}', result: 'some tool result text' },
+        ]},
+        { role: 'user', content: '收尾消息' },
+    ],
+});
+await add('signature-history', {
+    ...base,
+    includeSignature: true,
+    messages: [
+        { role: 'user', content: '问' },
+        { role: 'assistant', content: '答', signature: 'thought-sig-1' },
+    ],
+});
+await add('media-list-inline', {
+    ...base,
+    imageInlining: true,
+    videoInlining: true,
+    audioInlining: true,
+    mediaTokenCosts: {
+        'data:image/png;base64,AA==': 85,
+        'data:video/mp4;base64,BB==': 263 * 40,
+        'data:audio/mp3;base64,CC==': 32 * 300,
+    },
+    messages: [
+        { role: 'user', content: '看图', media: [
+            { type: 'image', url: 'data:image/png;base64,AA==' },
+            { type: 'video', url: 'data:video/mp4;base64,BB==' },
+            { type: 'audio', url: 'data:audio/mp3;base64,CC==' },
+        ], mediaDisplay: 'list' },
+        { role: 'assistant', content: '收到' },
+    ],
+});
+await add('media-gallery-index', {
+    ...base,
+    imageInlining: true,
+    mediaTokenCosts: {
+        'data:image/png;base64,AA==': 85,
+        'data:image/jpeg;base64,DD==': 170,
+    },
+    messages: [
+        { role: 'user', content: '第二张', media: [
+            { type: 'image', url: 'data:image/png;base64,AA==' },
+            { type: 'image', url: 'data:image/jpeg;base64,DD==' },
+        ], mediaDisplay: 'gallery', mediaIndex: 1 },
+    ],
+});
+await add('media-disabled-skip', {
+    ...base,
+    messages: [
+        { role: 'user', content: '不内联', media: [{ type: 'image', url: 'data:image/png;base64,AA==' }], mediaDisplay: 'list' },
+        { role: 'user', content: '外链跳过', media: [{ type: 'image', url: 'https://example.com/a.png' }], mediaDisplay: 'list' },
+    ],
+});
 
 writeFileSync(outFile, JSON.stringify({ source: 'openai.js prepareOpenAIMessages + populateChatCompletion 整链', cases }, null, 2));
 console.log('prepare-messages:', cases.length, 'cases ->', outFile);

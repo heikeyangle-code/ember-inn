@@ -1,6 +1,7 @@
 package com.emberinn.engine.prompt
 
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.worldinfo.TokenCounter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -66,6 +67,28 @@ class PromptPipelineDiffTest {
                 content = obj["content"]?.jsonPrimitive?.content ?: "",
                 name = obj["name"]?.takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.content,
                 identifier = obj["identifier"]?.jsonPrimitive?.content ?: "chatHistory",
+                toolInvocations = obj["invocations"]?.jsonArray?.map { inv ->
+                    val io = inv.jsonObject
+                    ToolInvocation(
+                        id = io["id"]?.jsonPrimitive?.content ?: "",
+                        name = io["name"]?.jsonPrimitive?.content ?: "",
+                        parameters = io["parameters"]?.jsonPrimitive?.content ?: "",
+                        result = io["result"]?.jsonPrimitive?.content ?: "",
+                        reasoning = io["reasoning"]?.jsonPrimitive?.content,
+                        signature = io["signature"]?.jsonPrimitive?.content,
+                    )
+                },
+                media = obj["media"]?.jsonArray?.map { me ->
+                    val mo = me.jsonObject
+                    MediaAttachment(
+                        type = mo["type"]?.jsonPrimitive?.content ?: "",
+                        url = mo["url"]?.jsonPrimitive?.content ?: "",
+                    )
+                },
+                mediaDisplay = obj["mediaDisplay"]?.jsonPrimitive?.content,
+                mediaIndex = obj["mediaIndex"]?.jsonPrimitive?.content?.toIntOrNull(),
+                signature = obj["signature"]?.jsonPrimitive?.content,
+                reasoning = obj["reasoning"]?.jsonPrimitive?.content,
             )
         } ?: emptyList()
         val rawExamples = body["mesExamples"]?.jsonPrimitive?.content ?: ""
@@ -97,6 +120,16 @@ class PromptPipelineDiffTest {
             assistantPrefill = body["assistantPrefill"]?.jsonPrimitive?.content ?: "",
             chatCompletionSource = body["chatCompletionSource"]?.jsonPrimitive?.content ?: "openai",
             pinExamples = body["pinExamples"]?.jsonPrimitive?.content == "true",
+            canUseTools = body["canUseTools"]?.jsonPrimitive?.content == "true",
+            toolBudgetReserve = body["toolBudgetReserve"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+            includeSignature = body["includeSignature"]?.jsonPrimitive?.content == "true",
+            toolReasoningMode = body["toolReasoningMode"]?.jsonPrimitive?.content ?: "disabled",
+            imageInlining = body["imageInlining"]?.jsonPrimitive?.content == "true",
+            videoInlining = body["videoInlining"]?.jsonPrimitive?.content == "true",
+            audioInlining = body["audioInlining"]?.jsonPrimitive?.content == "true",
+            mediaTokenCosts = body["mediaTokenCosts"]?.jsonObject
+                ?.mapValues { (_, v) -> v.jsonPrimitive.content.toIntOrNull() ?: 0 }
+                ?: emptyMap(),
             selectedGroup = selectedGroup,
             namesBehavior = body["namesBehavior"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
             sendIfEmpty = body["sendIfEmpty"]?.jsonPrimitive?.content ?: "",

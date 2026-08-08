@@ -32,14 +32,17 @@ data class CompletionMessage(
     val media: List<MediaAttachment>? = null,
     /** Gemini 2.5/3 思考签名（对齐官方 message.signature，Gemini 转换时注入 thoughtSignature）。 */
     val signature: String? = null,
+    /** 助手思考文本（对齐官方 message.reasoning，工具推理链 fallback 用）。 */
+    val reasoning: String? = null,
 )
 
-/** 对齐官方 tool_calls（id/type/function.name/arguments）。 */
+/** 对齐官方 tool_calls（id/type/function.name/arguments + 推理签名）。 */
 data class ToolCall(
     val id: String,
     val name: String,
     val arguments: String,
     val type: String = "function",
+    val signature: String? = null,
 )
 
 /** 对齐官方 MessageCollection：带 identifier 的消息集合。 */

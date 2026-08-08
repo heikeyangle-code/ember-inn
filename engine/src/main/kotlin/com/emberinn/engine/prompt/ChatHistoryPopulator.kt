@@ -2,6 +2,15 @@ package com.emberinn.engine.prompt
 
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.media.MediaDisplay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * populateChatHistory（对齐官方 openai.js 核心，不含工具/媒体/推理/continue nudge）：
@@ -10,6 +19,11 @@ import com.emberinn.engine.macros.MacroEnv
  * 最后 newChat 放最前、群聊 nudge 放最后，均归还预算。
  */
 object ChatHistoryPopulator {
+
+    /** 对齐官方 tool_reasoning_modes。 */
+    const val TOOL_REASONING_DISABLED = "disabled"
+    const val TOOL_REASONING_SINCE_LAST_USER = "since_last_user"
+    const val TOOL_REASONING_ACTIVE_CHAIN = "active_chain"
 
     fun populate(
         messages: List<PromptMessage>,
@@ -27,6 +41,12 @@ object ChatHistoryPopulator {
         canUseTools: Boolean = false,
         assistantPrefill: String = "",
         namesBehavior: Int = PromptAssembler.NAMES_DEFAULT,
+        includeSignature: Boolean = false,
+        toolReasoningMode: String = TOOL_REASONING_DISABLED,
+        imageInlining: Boolean = false,
+        videoInlining: Boolean = false,
+        audioInlining: Boolean = false,
+        mediaTokenCosts: Map<String, Int> = emptyMap(),
     ) {
         if (!prompts.has("chatHistory")) return
         chatCompletion.add(CompletionCollection("chatHistory"), prompts.index("chatHistory"))
@@ -103,19 +123,115 @@ object ChatHistoryPopulator {
             }
         }
 
+        // 官方 lastUserIdx：原始消息里最后一个 user 的位置（工具推理链 eligibility 用）
+        val lastUserIdx = historyMessages.indexOfLast { it.role == "user" }
+
         // 逆序插入（insertAtStart 后最终为时间正序）
         for ((poolIndex, m) in historyMessages.asReversed().withIndex()) {
-            // 对齐官方：工具调用消息 → tool_call + tool 结果消息
+            val chatIdentifier = "chatHistory-${historyMessages.size - poolIndex}"
+
+            // 对齐官方 preparePrompt：每条历史消息 content 过宏替换（{{char}}/{{user}} 等）
+            val substitutedContent = MacroEngine.substitute(m.content, env)
+            val content = if (
+                poolIndex == 0 && type == "continue" && continuePrefill && m.role != "user"
+            ) {
+                // 官方：continue_prefill 时给最后一条 assistant 加预填
+                listOf(assistantPrefill, substitutedContent).filter { it.isNotEmpty() }.joinToString("\n\n")
+            } else {
+                substitutedContent
+            }
+            val effectiveName = if (namesBehavior == PromptAssembler.NAMES_COMPLETION && m.name != null) {
+                PromptNameSanitizer.sanitizeName(m.name)
+            } else {
+                m.name
+            }
+
+            // 官方 inlineMediaAttachment：LIST 逐个 / GALLERY 按 mediaIndex；
+            // 非 data: URL 在 fixture 语义下视为抓取失败跳过（官方 fetch 分支）；类型缺省按 IMAGE
+            var mediaTokens = 0
+            val inlinedMedia = mutableListOf<MediaAttachment>()
+            val rawMedia = m.media.orEmpty()
+            if (rawMedia.isNotEmpty()) {
+                val chosen = if (m.mediaDisplay == MediaDisplay.GALLERY) {
+                    listOfNotNull(rawMedia.getOrNull(m.mediaIndex ?: 0))
+                } else {
+                    rawMedia
+                }
+                for (media in chosen) {
+                    if (media.url.isBlank() || !media.url.startsWith("data:")) continue
+                    val mediaType = media.type.ifBlank { "image" }
+                    val canInline = when (mediaType) {
+                        "image" -> imageInlining
+                        "video" -> videoInlining
+                        "audio" -> audioInlining
+                        else -> false
+                    }
+                    if (canInline) {
+                        inlinedMedia += MediaAttachment(type = mediaType, url = media.url, title = media.title)
+                        mediaTokens += mediaTokenCosts[media.url] ?: defaultMediaCost(mediaType)
+                    }
+                }
+            }
+
+            // 对齐官方：工具调用消息 → tool_call + tool 结果消息（推理链模式/签名按官方 openai.js）
             val invocations = m.toolInvocations
             if (canUseTools && invocations != null && invocations.isNotEmpty()) {
+                val promptIdx = historyMessages.size - 1 - poolIndex
+                val reasoningEligible = toolReasoningMode != TOOL_REASONING_DISABLED && promptIdx > lastUserIdx
+                var previousAssistantReasoning = ""
+                if (reasoningEligible) {
+                    when (toolReasoningMode) {
+                        TOOL_REASONING_ACTIVE_CHAIN -> {
+                            var idx = promptIdx - 1
+                            while (idx > lastUserIdx) {
+                                val candidate = historyMessages[idx]
+                                if (candidate.role == "tool") { idx--; continue }
+                                if (candidate.role == "assistant" && !candidate.toolInvocations.isNullOrEmpty()) { idx--; continue }
+                                val hasAssistantText = candidate.role == "assistant" &&
+                                    candidate.toolInvocations.isNullOrEmpty() &&
+                                    candidate.content.trim().isNotEmpty()
+                                if (hasAssistantText) previousAssistantReasoning = candidate.reasoning ?: ""
+                                break
+                            }
+                        }
+                        TOOL_REASONING_SINCE_LAST_USER -> {
+                            var idx = promptIdx - 1
+                            while (idx > lastUserIdx) {
+                                val candidate = historyMessages[idx]
+                                val hasAssistantText = candidate.role == "assistant" &&
+                                    candidate.toolInvocations.isNullOrEmpty() &&
+                                    candidate.content.trim().isNotEmpty()
+                                if (!hasAssistantText) { idx--; continue }
+                                val candidateReasoning = candidate.reasoning ?: ""
+                                if (candidateReasoning.isNotEmpty()) {
+                                    previousAssistantReasoning = candidateReasoning
+                                    break
+                                }
+                                idx--
+                            }
+                        }
+                    }
+                }
+                val processed = invocations.map { inv ->
+                    val reasoning = when {
+                        !reasoningEligible -> null
+                        previousAssistantReasoning.isNotEmpty() && inv.reasoning.isNullOrEmpty() -> previousAssistantReasoning
+                        else -> inv.reasoning
+                    }
+                    inv.copy(reasoning = reasoning)
+                }
+                val includeToolReasoning = toolReasoningMode != TOOL_REASONING_DISABLED
                 val toolCallMessage = CompletionMessage(
-                    role = "assistant",
+                    role = m.role,
                     content = "",
-                    identifier = "toolCall-chatHistory",
-                    tokens = handler.countAsync(invocations.joinToString { it.name + it.parameters }, "conversation"),
-                    toolCalls = invocations.map { ToolCall(id = it.id, name = it.name, arguments = it.parameters) },
+                    identifier = "toolCall-$chatIdentifier",
+                    tokens = toolCallTokens(m.role, processed, includeSignature, includeToolReasoning, handler),
+                    toolCalls = processed.map {
+                        ToolCall(id = it.id, name = it.name, arguments = it.parameters, signature = if (includeSignature) it.signature else null)
+                    },
+                    reasoning = if (includeToolReasoning) processed.firstOrNull { !it.reasoning.isNullOrEmpty() }?.reasoning else null,
                 )
-                val toolResultMessages = invocations.asReversed().map { inv ->
+                val toolResultMessages = processed.asReversed().map { inv ->
                     CompletionMessage(
                         role = "tool",
                         content = inv.result.ifEmpty { "[No content]" },
@@ -132,28 +248,17 @@ object ChatHistoryPopulator {
                 }
                 continue
             }
-            // 对齐官方 preparePrompt：每条历史消息 content 过宏替换（{{char}}/{{user}} 等）
-            val substitutedContent = MacroEngine.substitute(m.content, env)
-            val content = if (
-                poolIndex == 0 && type == "continue" && continuePrefill && m.role != "user"
-            ) {
-                // 官方：continue_prefill 时给最后一条 assistant 加预填
-                listOf(assistantPrefill, substitutedContent).filter { it.isNotEmpty() }.joinToString("\n\n")
-            } else {
-                substitutedContent
-            }
-            val effectiveName = if (namesBehavior == PromptAssembler.NAMES_COMPLETION && m.name != null) {
-                PromptNameSanitizer.sanitizeName(m.name)
-            } else {
-                m.name
-            }
+
             val chatMessage = CompletionMessage(
                 role = m.role,
                 content = content,
                 name = effectiveName,
                 // 对齐官方 populateChatHistory：identifier = chatHistory-{正序位置}
-                identifier = "chatHistory-${historyMessages.size - poolIndex}",
-                tokens = handler.countAsync(content, "conversation"),
+                identifier = chatIdentifier,
+                tokens = handler.countAsync(content, "conversation") + mediaTokens,
+                media = inlinedMedia.takeIf { it.isNotEmpty() },
+                // 官方：仅 includeSignature 且消息带 signature 时透传（Gemini thoughtSignature）
+                signature = if (includeSignature) m.signature?.takeIf { it.isNotEmpty() } else null,
             )
             if (chatCompletion.canAfford(chatMessage)) {
                 chatCompletion.insertAtStart(chatMessage, "chatHistory")
@@ -176,4 +281,44 @@ object ChatHistoryPopulator {
             chatCompletion.add(continueCollection!!)
         }
     }
+
+    /** 官方 Message.addImage/addVideo/addAudio 失败回退的成本（MediaTokenCost 差分覆盖精确分支）。 */
+    private fun defaultMediaCost(type: String): Int = when (type) {
+        "image" -> 85
+        "video" -> 263 * 40
+        "audio" -> 32 * 300
+        else -> 0
+    }
+
+    /** 官方 setToolCalls：tokens = countAsync(JSON.stringify({role, tool_calls, reasoning?}))。 */
+    private fun toolCallTokens(
+        role: String,
+        invocations: List<ToolInvocation>,
+        includeSignature: Boolean,
+        includeReasoning: Boolean,
+        handler: TokenHandler,
+    ): Int {
+        val calls = invocations.map { inv ->
+            buildJsonObject {
+                put("id", inv.id)
+                put("type", "function")
+                put("function", buildJsonObject {
+                    put("arguments", inv.parameters)
+                    put("name", inv.name)
+                })
+                if (includeSignature && !inv.signature.isNullOrEmpty()) put("signature", inv.signature)
+            }
+        }
+        val fallbackReasoning = if (includeReasoning) {
+            invocations.firstOrNull { !it.reasoning.isNullOrEmpty() }?.reasoning
+        } else null
+        val obj = buildJsonObject {
+            put("role", role)
+            put("tool_calls", JsonPrimitive(TOOL_JSON.encodeToString(JsonElement.serializer(), JsonArray(calls))))
+            if (!fallbackReasoning.isNullOrEmpty()) put("reasoning", fallbackReasoning)
+        }
+        return handler.countAsync(TOOL_JSON.encodeToString(JsonObject.serializer(), obj), "conversation")
+    }
+
+    private val TOOL_JSON = Json { encodeDefaults = false }
 }

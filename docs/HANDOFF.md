@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（54 组，共 846 例官方基准，全部通过）**：
+**已覆盖（54 组，共 854 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -101,7 +101,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
 | OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
 | BYAF 资源提取 | byaf-assets-official.mjs | ByafAssetsDiffTest | 6 |
-| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion） | prepare-messages-official.mjs | PromptPipelineDiffTest | 11 |
+| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion，含工具/媒体/推理签名分支） | prepare-messages-official.mjs | PromptPipelineDiffTest | 19 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -109,7 +109,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
-- prepare-messages（总装整链）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；历史工具调用/媒体内联/推理签名分支 canUseTools=false（工具转换由 ChatHistoryPopulator 差分与单测覆盖，端到端未覆盖）；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖（11 例）。
+- prepare-messages（总装整链，19 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**，打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。
+- **仍绕过 fixture 的部分**：prepareOpenAIMessages 的 chat→messages 构造循环（names_behavior 内容前缀、isSameModel 签名/推理过滤、media/invocations 从 extra 提取）由 fixture 直接注入消息对象绕过；Kotlin 侧由 App 的 ChatPromptFactory（JSONL → PromptMessage）按官方同名逻辑实现，接线点见 4.7/4.9。
 - 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
 
 **尚未做差分的**：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 请求体与响应解析用 MockWebServer 单测锁行为，转换器本身已逐字差分）；斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
@@ -249,7 +250,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 引擎能力 | 官方源码位置 | App 接线点 |
 |---|---|---|
 | 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
-| 提示词组装 | `public/scripts/openai.js` prepareOpenAIMessages + populateChatCompletion + `public/scripts/script.js` generate | ✅ 引擎已接：PromptPipeline.prepare 一个入口出最终消息（世界书/宏/人设/AN/示例/历史/控制提示/squash，整链差分 5 例）；App 发送前调它 + 按协议走 ChatRequestBuilder / Anthropic / Google |
+| 提示词组装 | `public/scripts/openai.js` prepareOpenAIMessages + populateChatCompletion + `public/scripts/script.js` generate | ✅ 引擎已接：PromptPipeline.prepare 一个入口出最终消息（世界书/宏/人设/AN/示例/历史/控制提示/工具调用/媒体/推理签名/squash，整链差分 19 例）；App 发送前调它 + 按协议走 ChatRequestBuilder / Anthropic / Google |
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
@@ -285,7 +286,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 | 官方行为 | 官方源码位置 | 引擎函数 | App 调用点 | 验证 |
 |---|---|---|---|---|
-| 流式发送（角色卡/世界书/示例/历史总装） | `public/scripts/openai.js` prepareOpenAIMessages + `public/scripts/script.js` generate | PromptPipeline.prepare（整链差分 11 例）+ LlmClient.streamChatCompletionsAsync | ChatPromptFactory.prepare → ChatRepository.streamPrepared → ChatViewModel.startStream → ChatScreen StreamingRow | 差分✅ / CI 编译✅ / 真机待测 |
+| 流式发送（角色卡/世界书/示例/历史总装） | `public/scripts/openai.js` prepareOpenAIMessages + `public/scripts/script.js` generate | PromptPipeline.prepare（整链差分 19 例）+ LlmClient.streamChatCompletionsAsync | ChatPromptFactory.prepare → ChatRepository.streamPrepared → ChatViewModel.startStream → ChatScreen StreamingRow | 差分✅ / CI 编译✅ / 真机待测 |
 | SSE 逐 token 解析 | `public/scripts/sse-stream.js` | SseParser（差分 11 例） | LlmClient.executeStream → onDelta → ViewModel 增量 | 差分✅ / CI 编译✅ |
 | 停止生成（保留已生成部分） | 官方 abortController + mes_stop | StreamSession.cancel | ChatViewModel.stop → 部分落盘 | 差分✅ / CI 编译✅ / 真机待测 |
 | 重新生成 | option_regenerate | —（复用最后用户消息重新请求） | ChatViewModel.regenerate | CI 编译✅ / 真机待测 |
@@ -332,6 +333,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 60（2026-08-09：总装整链补工具/媒体/推理签名分支差分 8 例 + App 聊天链路 CI 全绿）
+
+- prepare-messages-official.mjs 补 8 例：tool-history-disabled、tool-active-chain-fallback、tool-since-last-user、tool-budget-tight、signature-history、media-list-inline、media-gallery-index、media-disabled-skip
+- 引擎补齐官方分支：ChatHistoryPopulator 工具推理链（active_chain / since_last_user 官方循环 + 上一助手思考 fallback + includeSignature + setToolCalls 的 JSON token 近似）、媒体内联（list/gallery、data URL、开关、token 记账）、per-message signature 透传；ToolInvocation/PromptMessage/CompletionMessage/ToolCall 增加 reasoning/signature/media 字段；ChatRequestBuilder 透传 message.signature/reasoning 与 tool_calls.signature（对齐官方 serializeMessages）
+- 打桩登记（脚本头部）：工具预算预分配恒 1 token、setToolCalls tokens=JSON.stringify 长度/4、getChat content 归一 ''、媒体仅 data: URL 且只记账（content 数组由 MediaInliner/MediaConvert 差分覆盖）
+- 官方基准 846 → 854；引擎 259 测全绿
+- App 层：聊天页总装流式 + 停止/重新生成/继续/删除 + Markdown；聊天 Tab 会话列表/新建对话/置顶/导出；修复 ChatPromptFactory contentOrNull() 误调用（CI 编译错误）；CI 全绿（engine-test + assembleDebug/Release APK）
 
 ## 最近一轮 59（2026-08-09：聊天页总装流式接线 + 聊天 Tab 会话列表）
 
