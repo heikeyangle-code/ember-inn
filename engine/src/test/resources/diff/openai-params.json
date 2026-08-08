@@ -1,0 +1,383 @@
+{
+  "source": "openai.js createGenerationParameters 核心",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ]
+          },
+          "model": "gpt-4o",
+          "type": "normal",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "quiet",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ]
+          },
+          "model": "gpt-4o",
+          "type": "quiet",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "quiet",
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "azure",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "azure_openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "azureBaseUrl": "https://x",
+            "azureDeploymentName": "dep",
+            "azureApiVersion": "2024-12-01"
+          },
+          "model": "gpt-4o",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "azure_openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "azure_base_url": "https://x",
+        "azure_deployment_name": "dep",
+        "azure_api_version": "2024-12-01"
+      }
+    },
+    {
+      "id": "seed",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": 42,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ]
+          },
+          "model": "gpt-4o",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "seed": 42
+      }
+    },
+    {
+      "id": "vision",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": true,
+            "stopStrings": [
+              "END"
+            ]
+          },
+          "model": "gpt-4o-vision",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "gpt-4o-vision",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "chat_completion_source": "openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "o1",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "openai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ]
+          },
+          "model": "o1",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "o1",
+        "stream": false,
+        "chat_completion_source": "openai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "max_completion_tokens": 512
+      }
+    }
+  ]
+}
