@@ -124,7 +124,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 ### 3.1 角色卡 ✅
 PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；JSON 导入 5 例 + JSON 导出 4 例（getCharaCardV2+unsetPrivateFields）、YAML 3 例、CharX 5 例、BYAF 14+5+4+4 例；V2 归一（readFromV2，官方差分 5 例 + 多轮补真 bug）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；App 层资源入库/URL 导入未做。
+✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord；URL 导入未做）。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
@@ -356,6 +356,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 75（2026-08-09：CharX 角色卡资产 App 入库）
+
+- HomeViewModel.importCard：CHARX 格式用引擎 extractAssets 取 icon→头像（+Palette seed）、background/voice 落盘 filesDir/assets/<id>-<type>.<ext>，路径记入 CharacterRecord.backgroundPath/voicePath（旧 JSON 兼容）
+- 官方参照：src/endpoints/characters.js persist auxiliary assets；引擎 CharXAssets 差分已覆盖提取
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 74（2026-08-09：媒体官方行为补齐 + 审计修正）
 
