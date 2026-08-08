@@ -204,7 +204,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val iconBytes = assets.icon?.data
         val avatarPath = iconBytes?.let { store.saveAvatar(id, it) }
         val seedColor = iconBytes?.let { extractSeedBlocking(it) }
-        val assetsDir = File(application.filesDir, "assets").apply { mkdirs() }
+        val assetsDir = File(getApplication<Application>().filesDir, "assets").apply { mkdirs() }
         var backgroundPath: String? = null
         var voicePath: String? = null
         assets.assets.forEach { asset ->
