@@ -34,16 +34,16 @@ cd ~/ember-inn && ./gradlew :engine:test
 node scripts/diff/*.mjs
 node scripts/build-presets.mjs
 
-# 推送（本机已 gh auth setup-git；网络不稳失败就重试；push 会自动触发 CI）
+# 推送（本机已 gh auth setup-git；网络不稳失败就重试）
 git push origin main
 
-# 手工触发 CI（一般不需要，push 自动跑）
-gh workflow run 328789880 --ref main
-# 看结果
+# 看 CI：只有改 app/engine/gradle/工作流才自动触发；纯文档改动不会跑 CI
 gh run list --limit 3
+# 需要手工跑（比如只想验证一次）：
+gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。当前以 `gh run list` 为准。引擎本地 **267 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **267 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -61,7 +61,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 54 组 / 801 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-|---|---|---|---|
+> 注：脚本数 54 个（prompt-converters 一行脚本覆盖三行范围）；合计 801 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
