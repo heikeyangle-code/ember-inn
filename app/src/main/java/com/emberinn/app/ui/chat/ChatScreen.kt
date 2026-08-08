@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.MoreVert
@@ -156,6 +157,8 @@ fun ChatScreen(
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
+    var showQuickBar by remember { mutableStateOf(false) }
+    var showCharacterInfo by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
@@ -343,6 +346,17 @@ fun ChatScreen(
             pendingMedia = pendingMedia,
             onRemoveMedia = { index -> vm.removePendingMedia(index) },
             isStreaming = isStreaming,
+            canQuickContinue = !isStreaming && lastAiIndex >= 0,
+            quickBarOpen = showQuickBar,
+            onToggleQuickBar = { showQuickBar = !showQuickBar },
+            onQuickContinue = {
+                showQuickBar = false
+                vm.continueGeneration()
+            },
+            onQuickImpersonate = {
+                showQuickBar = false
+                vm.impersonate()
+            },
             onSend = {
                 val text = input.trim()
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
@@ -446,6 +460,12 @@ fun ChatScreen(
         )
     }
 
+    vm.character?.let { character ->
+        if (showCharacterInfo) {
+            CharacterInfoSheet(character = character, onDismiss = { showCharacterInfo = false })
+        }
+    }
+
     if (showMore) {
         ModalBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
@@ -456,6 +476,12 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
+                if (vm.character != null) {
+                    MenuRow(Icons.Filled.Person, "角色详情") {
+                        showMore = false
+                        showCharacterInfo = true
+                    }
+                }
                 MenuRow(Icons.Filled.Share, "导出聊天（JSONL）") {
                     showMore = false
                     exportChatLauncher.launch("$name-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
@@ -796,6 +822,46 @@ private fun formatTokens(n: Int): String = if (n >= 1000) {
     n.toString()
 }
 
+/** 角色详情弹层（聊天页 ⋮ → 角色详情；字段解析对齐角色列表弹层）。 */
+@Composable
+private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord, onDismiss: () -> Unit) {
+    val json = remember { kotlinx.serialization.json.Json { ignoreUnknownKeys = true } }
+    val fields = remember(character.rawJson) {
+        runCatching {
+            val root = json.parseToJsonElement(character.rawJson).jsonObject
+            val data = root["data"]?.jsonObject ?: root
+            listOf(
+                "名字" to (data["name"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "描述" to (data["description"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "性格" to (data["personality"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "场景" to (data["scenario"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "开场白" to (data["first_mes"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "示例对话" to (data["mes_example"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "系统提示" to (data["system_prompt"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "剧情后指令" to (data["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: ""),
+                "创作者备注" to (data["creator_notes"]?.jsonPrimitive?.contentOrNull ?: ""),
+            ).filter { it.second.isNotBlank() }
+        }.getOrDefault(emptyList())
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp).fillMaxWidth(),
+        ) {
+            Text("角色详情", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
+            fields.forEach { (label, value) ->
+                Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 8, overflow = TextOverflow.Ellipsis)
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            }
+            if (fields.isEmpty()) {
+                Text("该卡暂无可用字段", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
 /** 输入区待发附件缩略图（可移除）。 */
 @Composable
 private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
@@ -1007,6 +1073,11 @@ private fun ChatInputBar(
     pendingMedia: List<MediaAttachment>,
     onRemoveMedia: (Int) -> Unit,
     isStreaming: Boolean,
+    canQuickContinue: Boolean,
+    quickBarOpen: Boolean,
+    onToggleQuickBar: () -> Unit,
+    onQuickContinue: () -> Unit,
+    onQuickImpersonate: () -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
     onAttach: () -> Unit,
@@ -1035,6 +1106,19 @@ private fun ChatInputBar(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
+            if (quickBarOpen) {
+                Column(modifier = Modifier.padding(end = 4.dp)) {
+                    TextButton(onClick = onQuickContinue, enabled = canQuickContinue, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                        Text("继续", style = MaterialTheme.typography.labelSmall)
+                    }
+                    TextButton(onClick = onQuickImpersonate, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                        Text("冒充", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+            IconButton(onClick = onToggleQuickBar, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Filled.MenuBook, contentDescription = "快捷工具盘")
+            }
             IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
                 Icon(Icons.Filled.Add, contentDescription = "附件 / 语音")
             }

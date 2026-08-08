@@ -95,7 +95,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var currentUserName = "User"
 
     val characterId: String? = chatStore.get(sessionId)?.characterId
-    private val character: CharacterRecord? =
+    val character: CharacterRecord? =
         characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
 
     val accentColor: Long? = character?.seedColor
