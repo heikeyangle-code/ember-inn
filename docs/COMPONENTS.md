@@ -8,7 +8,7 @@
 | 类别 | 组件 | 版本 / 坐标 | 为什么选它 | App 接入点 | 官方源码位置 |
 |---|---|---|---|---|---|
 | UI 框架 | Jetpack Compose + Material3 | Compose BOM 2026.06.01；material3 **1.4.0 稳定**（1.5.0 是 Expressive alpha，不推荐进主线） | 官方 M3 组件全家桶，主题三件套现成 | 全部页面 | 官方是 Bootstrap/jQuery，UI 层我们自由（README 守则） |
-| 导航 | Navigation Compose 2.9.x | androidx.navigation:navigation-compose | 单 Activity + 返回栈 | 底部三 Tab、二级设置页、聊天页 | UI 层自由 |
+| 导航 | Navigation Compose 2.9.x（备选：Navigation3 1.1.5，KMP 类型安全，纯 Android 暂不启用） | androidx.navigation:navigation-compose | 单 Activity + 返回栈 | 底部三 Tab、二级设置页、聊天页 | UI 层自由 |
 | 返回手势 | activity-compose **1.13.0** + `PredictiveBackHandler`；Compose MPP 1.10 用 `NavigationBackHandler` | androidx.activity:activity-compose（项目已有） | Android 13+ 预测性返回动画，微信式侧滑 | 聊天页/设置子页逐级回退（已接 BackHandler，P0 换官方预测性 API 美化） | UI 层自由（README 守则 7：手势符合直觉） |
 | 消息 Markdown | **multiplatform-markdown-renderer 0.43.0**（2026-07-27，Compose Multiplatform + Coil3） | com.mikepenz:multiplatform-markdown-renderer | 社区最强 KMP Markdown 渲染，表格/任务列表/代码块/图片全支持，和 Coil3 原生集成 | 聊天气泡、角色详情字段预览、世界书内容预览 | 官方 Showdown + highlight.js + DOMPurify（我们原生渲染替代） |
 | 图片加载 | Coil3 **3.5.0**（项目已有）+ **coil-gif** | io.coil-kt.coil3:coil-compose / coil-gif | KMP 图片加载事实标准，支持 GIF/网络/本地/占位 | 角色头像、卡图、消息图片、GIF 表情、世界书条目图 | 官方 `<img>` + 头像路径逻辑（`public/scripts/characters.js`） |
@@ -24,12 +24,12 @@
 | 网格渐变 | 官方 MeshGradient | androidx.compose.ui.graphics.MeshGradient（已入 Compose UI，无需第三方） | 背景氛围渐变（2–4 色低饱和） | 聊天背景、卡片背景 | UI 层自由 |
 | 取色 | androidx.palette | androidx.palette:palette | 卡图取色 seed | 角色卡 → theme_seed（已实现） | UI 层自由 |
 | 种子色 → M3 配色 | MaterialKolor 4.1.x | com.jordond.materialkolor（5.0 是 alpha，不用） | 一套 seed 生成整套 M3 ColorScheme | 主题引擎 Theme.kt（已实现） | UI 层自由 |
-| 图标 | Phosphor Icons（主推）/ Material Symbols Rounded（备选） | Compose 移植包 | 圆头现代，配“余烬/炉火”美学 | 全 App 图标（README 图标系统节） | UI 层自由 |
+| 图标 | Phosphor Icons（主推）/ Material Symbols Rounded（备选）/ Lucide（内容级备选，旧项目用过） | Compose 移植包 | 圆头现代，配“余烬/炉火”美学 | 全 App 图标（README 图标系统节） | UI 层自由 |
 | 文件选择 | SAF / PhotoPicker | 系统 API | 导入卡（PNG/JSON/CharX）、附件、背景 | FAB 导入、附件面板 | 官方文件上传是 `<input type=file>`（`public/scripts/characters.js`） |
 | 启动页 | SplashScreen API | androidx.core:core-splashscreen | Android 12+ 原生品牌启动 | MainActivity | UI 层自由 |
 | QR | ZXing | com.google.zxing | 连接档案扫码导入导出 | 提供商设置页 | UI 层自由 |
 | 拖拽排序 | Calvin-LL/Reorderable | sh.calvin.reorderable | 列表重排（世界书条目/快捷回复） | 世界书编辑页、快捷回复页 | 官方 jQuery UI sortable，我们原生替代 |
-| HTTP | OkHttp 5.4.0（项目已有） | com.squareup.okhttp3:okhttp | 引擎已在用，自带代理支持、MockWebServer 测试 | LlmClient、模型列表、URL 导入、RAG 嵌入 | 官方 fetch / express（协议 1:1 在 engine） |
+| HTTP | OkHttp 5.4.0（项目已有；备选：Ktor 3.5.1，KMP 跨端再考虑） | com.squareup.okhttp3:okhttp | 引擎已在用，自带代理支持、MockWebServer 测试 | LlmClient、模型列表、URL 导入、RAG 嵌入 | 官方 fetch / express（协议 1:1 在 engine） |
 | OpenAI tokenizer | JTokkit 1.1.0 | com.knuddels:jtokkit | 精确 OpenAI cl100k/o200k | TokenCounterFactory（已接）；Claude/Gemini 回退待换官方 web tokenizer | 官方 `src/tokenizers.js` |
 | 向量检索 | sqlite-vector（SQLite 扩展） | sqliteai/sqlite-vector | 本地 RAG 向量库，随 Android SQLite 走 | 世界书 RAG / 聊天重排 / 文件 Data Bank（引擎 FileVectorStore 对齐 vectra 目录，App 落盘） | 官方 vectra LocalIndex（`src/endpoints/vectors.js`） |
 | STT / TTS | Android SpeechRecognizer / android.speech.tts | 系统 API + 各厂商 HTTP | 语音输入/朗读 | 输入区 🎤、消息朗读 | 官方 SillyTavern-Extras / 社区扩展，UI 层自由 |
