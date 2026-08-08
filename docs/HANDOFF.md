@@ -263,6 +263,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 聊天消息 `extra.media` 解析（官方消息 JSON 里的媒体字段 → CompletionMessage.media）
 - 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer）、附件上传/URL 导入
 - 发送时把用户选择的附件挂到消息的 media 上
+- 🟡 **媒体 token 成本估算未移植**（官方 addImage/addVideo/addAudio：图片走 getImageTokenCost（失败回退 tokensPerImage）、视频 263 tokens/秒（时长失败回退 263×40）、音频 32 tokens/秒（失败回退 32×300））——引擎目前只有媒体内容结构，没有成本估算；App 做上下文占比前需要补
 
 ## 5. 剩余工作（按优先级）
 
@@ -280,7 +281,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
+10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）+ 媒体 token 成本估算（官方 263/32 每秒规则）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
