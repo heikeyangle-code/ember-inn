@@ -148,21 +148,33 @@ RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s
 jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 聊天元数据（背景/书签/快照）（注：官方无 chat v2，此前审计有误已删）。
 
-### 3.9 提供商 / LLM 客户端 ✅
-- ❌ 媒体内联（MediaAttachment 模型已有纯逻辑，但 **extra.media 解析、OpenAI/Anthropic/Gemini 请求体内联、App 渲染都没有做**）
-- OpenAiParamsBuilder：createGenerationParameters 全厂商 21 例差分（OpenAI/Azure/OpenRouter/Groq/XAI/Cohere/DeepSeek/Workers AI/Moonshot/Custom/Perplexity/Mistral/Chutes/ZAI/MiniMax/NanoGPT/Vertex/ElectronHub/SiliconFlow/o1）
+### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
+
+**一句话结论**：请求体参数（OpenAI 兼容全厂商 21 例差分）、Anthropic/Gemini 请求体与消息转换、SSE 三格式、模型列表、OpenAI 媒体内联都已完成并差分；**但 LlmClient 只路由 openai-compatible / anthropic / google 三个协议**，Mistral / xAI / Cohere / AI21 / OpenRouter 专项转换器已差分移植却**未接进请求链路**，Vertex 服务账号认证未做。App 接线前先补“已差分未接线”项。
+
+| 提供商 | 协议路由 | 请求体 | 消息转换 | 媒体 | 预算/缓存/签名 | 模型列表 | 状态 |
+|---|---|---|---|---|---|---|---|
+| OpenAI | ✅ `/chat/completions` | ✅ 全厂商参数 21 例差分 | ✅ | ✅ MediaInliner 7 例差分 | — | ✅ `data[].id` | ✅ |
+| Azure OpenAI | ✅ `deployments/{model}/chat/completions?api-version=2024-12-01` + api-key 头 | ✅ 同全厂商参数 | ✅ | ✅ | — | ✅ `value[].id` | ✅ |
+| DeepSeek | ✅ `/beta/chat/completions` | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| Groq / Moonshot / MiniMax / 智谱 / 通义 / 硅基流动 / Z.AI / Fireworks / Perplexity / Custom / NanoGPT / Chutes / ElectronHub / SiliconFlow / o1 / Ollama | ✅ openai-compatible | ✅（各自厂商参数分支） | ✅ | ✅（OpenAI 媒体数组） | — | ✅ `data[].id` / 无端点时最小对话探测 | ✅ |
+| Workers AI | ✅ `{account}/ai/v1/chat/completions` | ✅ | ✅ | ✅ | — | ✅ `result[].name` | ✅ |
+| Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | 🟡 `calculateClaudeBudgetTokens` 已差分移植但**未接线**（builder 由调用方传 reasoningBudget） | 🟡 官方不发模型列表请求，用默认模型 | 🟡 差预算自动推导 + tokenizer |
+| Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | 🟡 `calculateGoogleBudgetTokens` 已差分移植但**未接线** | ✅ `models[].name`（过滤 generateContent） | 🟡 差预算自动推导 + tokenizer |
+| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支，含 Referer/X-Title） | ✅ | 🟡 `embedOpenRouterMedia` 已差分移植未接线 | 🟡 `cachingAtDepthForOpenRouterClaude` / `cachingSystemPromptForOpenRouter` / `addOpenRouterSignatures` / `addReasoningContentToToolCalls`（DeepSeek reasoner）已差分移植未接线 | ✅ | 🟡 专项未接请求链路 |
+| Mistral | ✅ openai-compatible | ✅（mistral 参数分支） | 🟡 `convertMistralMessages` 已差分未接线 | — | — | ✅ | 🟡 |
+| xAI | ✅ openai-compatible | ✅（xai 参数分支） | 🟡 `convertXaiMessages` 已差分未接线 | — | — | ✅ | 🟡 |
+| Cohere | ❌ 无专用路由（官方是独立 `/v2/chat` 端点 + 独立响应解析，不是 openai-compatible） | ✅（cohere 参数分支差分） | 🟡 `convertCohereMessages` 已差分未接线 | — | — | ❌ | 🟡 |
+| AI21 | 🟡 官方是 `studio/v1/chat/completions`，目前落 openai-compatible 通用路由 | 🟡 参数分支有限 | 🟡 `convertAi21Messages` 已差分未接线 | — | — | ❌ | 🟡 |
+| Vertex AI | ❌ LlmClient 明确拒绝（需服务账号/项目配置） | 🟡 vertex 参数分支已差分 | Gemini 转换可复用 | ✅ | — | ❌ | ❌ 服务账号认证未做 |
+
+其余要点：
 - providers.json 数据驱动 **22 家**（含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
-- LlmClient 三协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages + x-api-key + anthropic-version）、Gemini（v1beta/models/{model}:generateContent?key=）
-- 响应解析按协议取纯文本；SSE 三种格式（OpenAI delta / Anthropic content_block_delta / Gemini candidates.parts）都支持，流结束兜底 onDone
-- Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
+- LlmClient 三协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages + x-api-key + anthropic-version）、Gemini（v1beta/models/{model}:generateContent?key=）；SSE 三种格式（OpenAI delta / Anthropic content_block_delta / Gemini candidates.parts）都支持，流结束兜底 onDone
+- 响应解析按协议取纯文本；Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
-✅ Anthropic/Gemini 请求体已 1:1 + 官方差分（12+11 例）：thinking（adaptive/enabled+预算）、tools/tool_choice、web_search、json_schema、beta headers、采样限制、verbosity、图像模态、systemInstruction、toolConfig 等；
-✅ 媒体内容块转换（Claude/Gemini）官方差分 25 例（image_url/text/video/audio → Claude image/text 块、Gemini inlineData，含 media_resolution_low/high 与 JS split 边缘语义）；
-✅ convertClaudeMessages + convertGooglePrompt 整链官方差分 41 例 + cachingAtDepthForClaude 4 例（system 提取 length>1 语义、名字前缀、图片搬移、prefill、同角色合并、tool 块、Gemini 思考签名/分辨率、JS Number 规范化 1.0→1）；已接入 Anthropic/Gemini 请求体（body 差分 17+16 例，system 为官方对象数组形态）；
-✅ 其余纯转换函数官方差分 61 例：Cohere/AI21/Mistral/xAI 转换器、mergeMessages/postProcessPrompt/addAssistantPrefix、convertTextCompletionPrompt、calculateClaudeBudgetTokens/calculateGoogleBudgetTokens、OpenRouter 缓存/媒体嵌入/推理签名（ProviderConverters）；
-   边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）；convertClaudePrompt 遗留旧函数（仅 token 计数用）未移植。
-🟡 Vertex AI 服务账号认证未做；Claude/Gemini tokenizer 仍是回退 cl100k。
+- 边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）；`convertClaudePrompt` 遗留旧函数（仅 token 计数用）未移植；Claude/Gemini tokenizer 仍是回退 cl100k
 
 ### 3.12 表情精灵 ✅（引擎层纯逻辑）
 - ExpressionEngine：文件名→标签（joy/joy-1/joy.expressive→joy）、图片元数据（fileName/title/imageSrc/isCustom）、分组排序（主文件优先、附加标记 additional）、chooseSpriteForExpression（fallback、多立绘随机、rerollIfSame、overrideSpriteFile）
@@ -215,6 +227,43 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 角色卡 characters/*.json + avatars/*.png、会话 sessions/*.json + chats/*.jsonl、提供商 profiles.json、主题 SharedPreferences（README 计划是 DataStore，未迁移）。
 ❌ Room 未引入。
 
+### 4.7 App 接线时官方行为怎么接（源码对照，新会话先读这里）
+
+> 原则：App 接线只做“调用引擎 + 渲染结果”，不再重写一遍逻辑。每项都注明官方源码位置，接 UI 时照官方行为实现交互，引擎函数已经 1:1。
+
+| 引擎能力 | 官方源码位置 | App 接线点 |
+|---|---|---|
+| 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
+| 提示词组装 | `public/scripts/openai.js` preparePromptsForChatCompletion / populateChatCompletion + `public/scripts/script.js` generate | 发送前：PromptAssembler / ChatCompletionPipelinePlan 出消息列表 → PromptManager 宏替换 → 按协议走 ChatRequestBuilder（OpenAI）/ AnthropicRequestBuilder / GoogleRequestBuilder；**现在 App 直接发历史消息，是 P0 缺口** |
+| 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | 已封装在 AnthropicRequestBuilder / GoogleRequestBuilder 内部；Mistral/xAI/Cohere/AI21/OpenRouter 转换器在 ProviderConverters，LlmClient 路由扩展时调用 |
+| 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | 在 LlmClient 按模型/effort 调 ProviderConverters 两个预算函数，把结果传进 builder 的 reasoningBudget，代替现在的固定值 |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；HTML 消息开关默认关，开启走本地 WebView + 消毒（对齐 power-user HTML 设置） |
+| 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；**extra.media 解析与渲染组件还没接** |
+| 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
+| 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
+| 正则 | `public/scripts/regex/` | 消息编辑/发送扫描接入 RegexPipelineEngine（placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth）；设置页做 global/preset/scoped 分桶 |
+| 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
+| 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → Lottie/sprite 动画渲染到消息头像区；分类 API 接 LLM 或本地模型 |
+| 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
+| 人设 | `public/scripts/personas.js` | 进聊天前 PersonaEngine.resolve 出当前人设 → 描述符注入提示词组装 |
+| 作者注释 | `public/scripts/authors-note.js` | AuthorsNoteEngine.resolve 每 N 条消息刷新，ANWithWI 合并世界书结果后注入 |
+| tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
+| 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
+
+### 4.8 媒体这轮覆盖盘点（引擎已做 / App 待做）
+
+**引擎已做（差分全过）**：
+- MediaEngine 17 例：media type / display / index 纯逻辑（含越界、NaN、null 回退）
+- MediaInliner 7 例：OpenAI 消息 content 文本→数组、image_url/video_url/audio_url + detail 质量
+- MediaConverter 25 例：Claude/Gemini 内容块转换（image/text/video/audio → Claude image/text、Gemini inlineData，media_resolution_low/high、JS split 边缘）
+- 消息转换整链 41 例：convertClaudeMessages / convertGooglePrompt（媒体随消息走）
+- 已接入请求体：OpenAI（ChatRequestBuilder）、Anthropic/Gemini（builder 内 toChatMLJson → 转换器）
+
+**App 层待做（引擎已完成，缺 UI/IO）**：
+- 聊天消息 `extra.media` 解析（官方消息 JSON 里的媒体字段 → CompletionMessage.media）
+- 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer）、附件上传/URL 导入
+- 发送时把用户选择的附件挂到消息的 media 上
+
 ## 5. 剩余工作（按优先级）
 
 **P0（“打开即聊”体验短板）**
@@ -231,7 +280,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；工具预分配 token / 媒体内联 / 推理签名
+10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -242,6 +291,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 47（2026-08-08：提供商审计 + App 接线源码对照 + 组件选型文档）
+
+- CI 确认全绿（3 条最新 workflow runs completed success；HEAD 86ae555 已推送）
+- HANDOFF 3.9 重写为**逐提供商审计表**：OpenAI/Azure/DeepSeek/其余 openai-compatible/Workers AI 全绿；Anthropic/Gemini 缺预算自动推导；OpenRouter/Mistral/xAI/Cohere/AI21 转换器已差分未接线；Vertex 认证未做
+- 新增 HANDOFF 4.7：**App 接线时官方行为怎么接**（每个引擎能力 → 官方源码位置 → App 接线点：流式/提示词组装/消息转换/预算/渲染/世界书/宏/正则/群聊/表情/快捷回复/人设/作者注释/tokenizer/提供商）
+- 新增 HANDOFF 4.8：媒体这轮覆盖盘点（引擎 17+7+25+41 例差分全过并接入三协议请求体；App 待做 extra.media 解析 + Coil3/Media3 渲染 + 附件上传）
+- docs/COMPONENTS.md 补齐最强现成件与版本（mikepenz 0.43.0 / Coil 3.5.0 / Media3 1.10.0 / Lottie 6.7.1 / DataStore 1.2.1 / PredictiveBack / M3 1.4.0）+ 每个组件的 App 接入点 + 官方源码位置
+- README 技术栈与版本基线更新（Lottie 6.7.1、media3 1.10.0、markdown 0.43.0、datastore 1.2.1、activity-compose 1.13.0）
+- 官方基准 782 例 / 引擎 227 测全绿（本轮只改文档，未动引擎）
 
 ## 最近一轮 46（2026-08-08：媒体内联官方差分 + OpenAI 请求体接入）
 

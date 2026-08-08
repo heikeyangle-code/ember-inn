@@ -95,7 +95,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 - **Material 3 Expressive** + 动态取色 + 移动优先分层导航
 - **信息架构**：底部导航（角色 / 聊天 / 设置）+ 独立二级设置页；不照搬 ST 桌面多面板
 - **大屏自适应**：手机单栏底部导航；平板 / 折叠屏双栏（列表 + 聊天）
-- **渲染**：Markdown（mikepenz renderer）、LaTeX（huarangmeng/latex）、代码高亮（Highlights）、Mermaid / 复杂 HTML 用局部 WebView 兜底、流式消息增量渲染
+- **渲染**：Markdown（mikepenz renderer 0.43.0）、LaTeX（huarangmeng/latex）、代码高亮（Highlights）、图片/GIF（Coil3 + coil-gif）、音视频附件（Media3 ExoPlayer 1.10.0）、Mermaid / 复杂 HTML 用局部 WebView 兜底、流式消息增量渲染
 
 ### 主题系统三层结构
 
@@ -233,7 +233,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 ### 版本策略（尽量用最新版）
 
 - 生产依赖一律使用**当前最新稳定版**；仅有 alpha/beta 才支持的功能放“尝鲜分支”或功能开关，不进主线
-- 2026-08 实测基线：Compose BOM 最新稳定版 · material3 1.4.0（Expressive 1.5.0-alpha25 仅尝鲜）· MaterialKolor 4.1.x（5.0 为 alpha，不用）· Coil 3.5.0 · Lottie 6.6.x · Palette / Room / DataStore / Navigation 跟最新稳定版
+- 2026-08 实测基线：Compose BOM 2026.06.01 · Kotlin 2.4.10 · material3 1.4.0（Expressive 1.5.0-alpha25 仅尝鲜）· MaterialKolor 4.1.x（5.0 为 alpha，不用）· Coil 3.5.0（+coil-gif）· Lottie 6.7.1 · Media3 1.10.0 · DataStore 1.2.1 · activity-compose 1.13.0 · OkHttp 5.4.0 · multiplatform-markdown-renderer 0.43.0 · Palette / Room / Navigation 跟最新稳定版
 - 升级流程：Renovate / Dependabot 每周自动 PR → CI 通过自动合 patch/minor → major 人工看 changelog + 全量回归
 - 小库失活预案：直接把开源源码搬进项目（vendoring），不守死库
 
@@ -394,6 +394,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 - **图表**：Mermaid → 局部 WebView 兜底（离线渲染）
 - **HTML 消息**：可选开关（默认关），开启后用本地 WebView + 消毒渲染，对齐官方 power-user HTML 设置
 - **流式渲染**：增量解析 + 增量排版，不逐 token 全量重渲染；长消息 LazyColumn 虚拟化
+- **音视频附件**：消息里的 audio/video 用 Media3 ExoPlayer（官方消息 extra.media → 引擎 MediaEngine 判定 → Media3 渲染）；图片/GIF 用 Coil3
 
 ## 世界书实时状态（命中指示灯）
 
@@ -510,11 +511,15 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
   - 弹性动效：`spring`（M3 风格）；品牌开场复杂动效：Lottie
 - 需要自己写的只是“编排逻辑”（何时触发/参数/顺序），动画引擎与组件全部现成
 
-## 技术栈
+## 技术栈与组件选型
 
-Kotlin · Jetpack Compose · Material3（含 Expressive）· Navigation Compose · Room · DataStore · Coil3 · Lottie · Koin · kotlinx.serialization
+**引擎层（1:1 官方）**：纯 Kotlin，不依赖任何 UI 组件；官方 JS 逻辑全部翻译在 engine（角色卡 / 世界书 / 宏 / 斜杠 / 提示词组装 / 提供商转换器 / 媒体 / 群聊 / 表情）。
 
-渲染与主题：multiplatform-markdown-renderer · latex-renderer · Highlights/KodeView · androidx.palette · MaterialKolor
+**App 层（自由选型）**：Kotlin · Jetpack Compose · Material3（1.4.0 稳定）· Navigation Compose · Room · DataStore 1.2.1 · Coil3 3.5.0 · Lottie 6.7.1 · Media3 1.10.0 · OkHttp 5.4.0 · Koin · kotlinx.serialization
+
+渲染与主题：multiplatform-markdown-renderer 0.43.0 · latex-renderer · Highlights/KodeView · androidx.palette · MaterialKolor · MeshGradient · Cloudy
+
+**接线纪律**：App 只“调用引擎 + 渲染结果”，逻辑不重写；每个引擎能力对应的官方源码位置和 App 接线点见 [docs/HANDOFF.md](docs/HANDOFF.md) 4.7。完整组件清单（版本 / 为什么选 / 接入点 / 官方源码位置）见 [docs/COMPONENTS.md](docs/COMPONENTS.md)。
 
 ## 路线图
 
