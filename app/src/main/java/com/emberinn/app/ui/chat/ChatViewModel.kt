@@ -92,6 +92,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var streamSession: LlmClient.StreamSession? = null
     @Volatile
     private var streamActive = false
+    private var streamStartedAt: String = java.time.Instant.now().toString()
     private var streamContinueMode = false
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
@@ -177,7 +178,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 }
                 else -> {
-                    chatStore.append(sessionId, false, partial, currentCharName)
+                    appendAiReply(partial)
                     refreshMessages()
                 }
             }
@@ -353,6 +354,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         mediaInlining: Boolean = false,
         onFinished: (() -> Unit)? = null,
     ) {
+        streamStartedAt = java.time.Instant.now().toString()
         _streamingText.value = ""
         _streamingReasoning.value = ""
         _lastReasoning.value = null
@@ -451,18 +453,34 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 // 思考过程保留 + 正常追加回复
                 _lastReasoning.value = _streamingReasoning.value
                 if (reply.isNotBlank()) {
-                    chatStore.append(sessionId, false, reply, currentCharName)
+                    appendAiReply(reply)
                     refreshMessages()
                 }
             }
             reply.isNotBlank() -> {
-                chatStore.append(sessionId, false, reply, currentCharName)
+                appendAiReply(reply)
                 refreshMessages()
             }
         }
         _streamingText.value = ""
         _streamingReasoning.value = ""
         streamContinueMode = false
+    }
+
+    /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning）。 */
+    private fun appendAiReply(reply: String) {
+        val profile = chatRepository.profile()
+        chatStore.append(
+            sessionId = sessionId,
+            isUser = false,
+            content = reply,
+            name = currentCharName,
+            api = profile?.providerId,
+            model = profile?.model,
+            genStarted = streamStartedAt,
+            genFinished = java.time.Instant.now().toString(),
+            reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+        )
     }
 
     private fun refreshMessages() {

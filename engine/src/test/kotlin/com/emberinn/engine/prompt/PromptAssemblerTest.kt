@@ -56,6 +56,21 @@ class PromptAssemblerTest {
     }
 
     @Test
+    fun `openai messages keeps system flagged messages`() {
+        val chat = listOf(
+            ChatMessage(mes = "旁白", isUser = false, name = "旁白", isSystem = true),
+            ChatMessage(mes = "问", isUser = true, name = "User"),
+            ChatMessage(mes = "答", isUser = false, name = "Char"),
+        )
+        val out = PromptAssembler.toOpenAiMessages(chat)
+        assertEquals(3, out.size)
+        // 官方：is_system 不跳过；角色仍按 is_user 判定（narrator 才转 system）
+        assertEquals("assistant", out[0].role)
+        assertEquals("user", out[1].role)
+        assertEquals("assistant", out[2].role)
+    }
+
+    @Test
     fun `openai messages prefix per names behavior`() {
         val chat = listOf(
             ChatMessage(mes = "你好", isUser = true, name = "玩家"),

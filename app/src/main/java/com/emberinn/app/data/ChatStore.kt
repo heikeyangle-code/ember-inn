@@ -58,12 +58,21 @@ class ChatStore(private val context: Context) {
     }
 
     /** 消息字段对齐官方 script.js：name / is_user / is_system / send_date / mes / extra。 */
-    fun append(sessionId: String, isUser: Boolean, content: String, name: String, media: List<MediaAttachment> = emptyList()) {
+    fun append(
+        sessionId: String,
+        isUser: Boolean,
+        content: String,
+        name: String,
+        media: List<MediaAttachment> = emptyList(),
+        api: String? = null,
+        model: String? = null,
+        genStarted: String? = null,
+        genFinished: String? = null,
+        reasoning: String? = null,
+    ) {
         val list = messages(sessionId).toMutableList()
-        val extra = if (media.isEmpty()) {
-            JsonObject(emptyMap())
-        } else {
-            buildJsonObject {
+        val extra = buildJsonObject {
+            if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
                 put("inline_image", JsonPrimitive(true))
                 put(
@@ -78,12 +87,22 @@ class ChatStore(private val context: Context) {
                     }),
                 )
             }
+            // 官方消息 extra 字段：api / model / reasoning（导出对齐官方 jsonl）
+            if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))
+            if (!model.isNullOrBlank()) put("model", JsonPrimitive(model))
+            if (!reasoning.isNullOrBlank()) put("reasoning", JsonPrimitive(reasoning))
         }
+        val now = java.time.Instant.now().toString()
         list += buildJsonObject {
             put("name", JsonPrimitive(name))
             put("is_user", JsonPrimitive(isUser))
             put("is_system", JsonPrimitive(false))
-            put("send_date", JsonPrimitive(java.time.Instant.now().toString()))
+            put("send_date", JsonPrimitive(now))
+            if (!isUser) {
+                // 官方 AI 消息：gen_started / gen_finished
+                put("gen_started", JsonPrimitive(genStarted ?: now))
+                put("gen_finished", JsonPrimitive(genFinished ?: now))
+            }
             put("mes", JsonPrimitive(content))
             put("extra", extra)
         }

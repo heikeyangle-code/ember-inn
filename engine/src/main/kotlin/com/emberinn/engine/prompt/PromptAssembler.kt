@@ -197,7 +197,7 @@ object PromptAssembler {
     ): List<PromptMessage> {
         val messages = mutableListOf<PromptMessage>()
         for (m in chat) {
-            if (m.isSystem) continue
+            // 官方 setOpenAIMessages：is_system 消息不跳过（仅 narrator extra.type 才转 system，角色按 is_user 判定）
             val role = if (m.isUser) "user" else "assistant"
             val name = m.name ?: (if (m.isUser) user else "")
             var content = m.mes.replace("\r", "")
