@@ -103,7 +103,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
 
-**尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
+**尚未做差分的**：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 请求体与响应解析用 MockWebServer 单测锁行为，转换器本身已逐字差分）；斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
 作用域宏配对逻辑（官方 MacroCstWalker 依赖 chevrotain CST 与 MacroRegistry，无法逐字提取；其中 trimScopedContent 纯函数已差分 7 例）。
 
@@ -151,7 +151,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
-**一句话结论**：请求体参数（OpenAI 兼容全厂商 21 例差分）、Anthropic/Gemini 请求体与消息转换、SSE 三格式、模型列表、OpenAI 媒体内联、Claude/Gemini 预算自动推导都已完成并差分；**但 LlmClient 只路由 openai-compatible / anthropic / google 三个协议**，Mistral / xAI / Cohere / AI21 / OpenRouter 专项转换器已差分移植却**未接进请求链路**，Vertex 服务账号认证未做。App 接线前先补“已差分未接线”项。
+**一句话结论**：OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、xAI、Cohere、AI21 路由全部接完（转换器均已差分移植，网络层用 MockWebServer 单测锁行为）；OpenRouter 已接媒体嵌入/推理签名/reasoning exclude，缓存标记待设置项；只剩 Vertex 服务账号认证未做。
 
 | 提供商 | 协议路由 | 请求体 | 消息转换 | 媒体 | 预算/缓存/签名 | 模型列表 | 状态 |
 |---|---|---|---|---|---|---|---|
@@ -162,16 +162,16 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 | Workers AI | ✅ `{account}/ai/v1/chat/completions` | ✅ | ✅ | ✅ | — | ✅ `result[].name` | ✅ |
 | Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | ✅ `calculateClaudeBudgetTokens` 已接入 LlmClient（SamplerParams.reasoningEffort 默认 auto；adaptive→effort 字符串/auto→不加 thinking） | 🟡 官方不发模型列表请求，用默认模型 | ✅ 差 tokenizer |
 | Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | ✅ `calculateGoogleBudgetTokens` 已接入 LlmClient（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | ✅ `models[].name`（过滤 generateContent） | ✅ 差 tokenizer |
-| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支，含 Referer/X-Title） | ✅ | 🟡 `embedOpenRouterMedia` 已差分移植未接线 | 🟡 `cachingAtDepthForOpenRouterClaude` / `cachingSystemPromptForOpenRouter` / `addOpenRouterSignatures` / `addReasoningContentToToolCalls`（DeepSeek reasoner）已差分移植未接线 | ✅ | 🟡 专项未接请求链路 |
-| Mistral | ✅ openai-compatible | ✅（mistral 参数分支） | 🟡 `convertMistralMessages` 已差分未接线 | — | — | ✅ | 🟡 |
-| xAI | ✅ openai-compatible | ✅（xai 参数分支） | 🟡 `convertXaiMessages` 已差分未接线 | — | — | ✅ | 🟡 |
-| Cohere | ❌ 无专用路由（官方是独立 `/v2/chat` 端点 + 独立响应解析，不是 openai-compatible） | ✅（cohere 参数分支差分） | 🟡 `convertCohereMessages` 已差分未接线 | — | — | ❌ | 🟡 |
-| AI21 | 🟡 官方是 `studio/v1/chat/completions`，目前落 openai-compatible 通用路由 | 🟡 参数分支有限 | 🟡 `convertAi21Messages` 已差分未接线 | — | — | ❌ | 🟡 |
+| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支 + transforms/plugins/reasoning.exclude） | ✅ | ✅ `embedOpenRouterMedia`（audio+video）已接线 | 🟡 `addOpenRouterSignatures` 已接线；`addReasoningContentToToolCalls` / `cachingAtDepthForOpenRouterClaude` / `cachingSystemPromptForOpenRouter` 已差分移植，等设置项（缓存开关/深度/TTL） | ✅ | 🟡 差缓存设置项 |
+| Mistral | ✅ 专用路由 `/chat/completions` | ✅（官方 sendMistralAIRequest 字段） | ✅ `convertMistral` 已接线 | — | — | ✅ | ✅ |
+| xAI | ✅ 专用路由 `/chat/completions` | ✅（官方 sendXAIRequest 字段，reasoning_effort high→high/其它→low） | ✅ `convertXAI` 已接线 | — | — | ✅ | ✅ |
+| Cohere | ✅ 专用路由 `/v2/chat`（官方 API_COHERE_V2） | ✅（官方 sendCohereRequest 字段：documents/tools/p/frequency/presence） | ✅ `convertCohere` 已接线 | — | — | ❌（无 models 端点，默认模型 command-r-plus） | ✅ |
+| AI21 | ✅ 专用路由 `studio/v1/chat/completions` | ✅（官方 sendAI21Request 字段） | ✅ `convertAI21` 已接线 | — | — | ❌（无 models 端点，默认模型 jamba-large） | ✅ |
 | Vertex AI | ❌ LlmClient 明确拒绝（需服务账号/项目配置） | 🟡 vertex 参数分支已差分 | Gemini 转换可复用 | ✅ | — | ❌ | ❌ 服务账号认证未做 |
 
 其余要点：
-- providers.json 数据驱动 **22 家**（含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
-- LlmClient 三协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages + x-api-key + anthropic-version）、Gemini（v1beta/models/{model}:generateContent?key=）；SSE 三种格式（OpenAI delta / Anthropic content_block_delta / Gemini candidates.parts）都支持，流结束兜底 onDone
+- providers.json 数据驱动 **24 家**（新增 Cohere/AI21 专用协议条目；含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
+- LlmClient 七协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages）、Gemini（generateContent）、Mistral / xAI / AI21（/chat/completions）、Cohere（/v2/chat）；SSE 四格式（OpenAI delta 也覆盖 Mistral/xAI/AI21、Anthropic content_block_delta、Gemini candidates.parts、Cohere content-delta），流结束兜底 onDone
 - 响应解析按协议取纯文本；Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
@@ -236,7 +236,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|---|
 | 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
 | 提示词组装 | `public/scripts/openai.js` preparePromptsForChatCompletion / populateChatCompletion + `public/scripts/script.js` generate | 发送前：PromptAssembler / ChatCompletionPipelinePlan 出消息列表 → PromptManager 宏替换 → 按协议走 ChatRequestBuilder（OpenAI）/ AnthropicRequestBuilder / GoogleRequestBuilder；**现在 App 直接发历史消息，是 P0 缺口** |
-| 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | 已封装在 AnthropicRequestBuilder / GoogleRequestBuilder 内部；Mistral/xAI/Cohere/AI21/OpenRouter 转换器在 ProviderConverters，LlmClient 路由扩展时调用 |
+| 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
 | Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；HTML 消息开关默认关，开启走本地 WebView + 消毒（对齐 power-user HTML 设置） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；**extra.media 解析与渲染组件还没接** |
@@ -282,7 +282,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + OpenRouter 缓存/媒体嵌入/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
+10. Vertex AI 服务账号认证；OpenRouter 缓存标记（cachingAtDepth/cachingSystemPrompt，需设置项）+ addReasoningContentToToolCalls 接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -293,6 +293,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 50（2026-08-08：Mistral/xAI/Cohere/AI21 协议路由 + OpenRouter 专项接线）
+
+- providers.json +2：cohere（protocol=cohere，api.cohere.ai/v2，默认 command-r-plus）/ ai21（protocol=ai21，api.ai21.com/studio/v1，默认 jamba-large）；mistral/xai 协议从 openai-compatible 改为专用
+- LlmClient 七协议路由：Mistral（convertMistral + 官方字段）、xAI（convertXAI + reasoning_effort high/low）、AI21（convertAI21）、Cohere（convertCohere + /v2/chat + 独立响应解析 message.content 块/tool_plan）
+- OpenRouter：openai-compatible 分支先 addOpenRouterSignatures + embedOpenRouterMedia(audio+video)，body 补 transforms/plugins/reasoning.exclude；Referer/X-Title 由 providers.json extra_headers 提供（项目身份）
+- SseParser +cohere：content-delta/message.content.text/tool_plan、message-end/stream-end 结束
+- LlmClientTest +11（mistral/xai/ai21/cohere 请求、cohere 响应块、openrouter 头与 body、cohere SSE）；ProviderRegistryTest 协议集合更新
+- 引擎 239 测全绿；官方基准 800 例不变（转换器差分已覆盖，路由/网络层属 MockWebServer 单测）
 
 ## 最近一轮 49（2026-08-08：Claude/Gemini 预算自动推导接进 LlmClient）
 

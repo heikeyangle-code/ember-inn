@@ -36,16 +36,28 @@ object ChatRequestBuilder {
         model: String,
         messages: List<CompletionMessage>,
         params: SamplerParams = SamplerParams(),
+    ): String = buildOpenAiCompatibleFromChatML(model, messages.map { messageJson(it) }, params)
+
+    /**
+     * 直接吃官方 ChatML 消息（供 OpenRouter 等先做签名/缓存/媒体处理，再序列化）。
+     * extra 额外请求体字段（如 OpenRouter 的 transforms/plugins/reasoning）。
+     */
+    fun buildOpenAiCompatibleFromChatML(
+        model: String,
+        messages: List<JsonObject>,
+        params: SamplerParams = SamplerParams(),
+        extra: JsonObject? = null,
     ): String {
         val body = buildJsonObject {
             put("model", model)
-            put("messages", JsonArray(messages.map { messageJson(it) }))
+            put("messages", JsonArray(messages))
             put("temperature", params.temperature)
             put("top_p", params.topP)
             put("max_tokens", params.maxTokens)
             put("presence_penalty", params.presencePenalty)
             put("frequency_penalty", params.frequencyPenalty)
             put("stream", params.stream)
+            if (extra != null) extra.forEach { (k, v) -> put(k, v) }
         }
         return body.toString()
     }

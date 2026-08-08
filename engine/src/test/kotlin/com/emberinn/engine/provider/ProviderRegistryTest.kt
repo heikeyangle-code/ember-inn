@@ -18,7 +18,7 @@ class ProviderRegistryTest {
         assertEquals("https://api.openai.com/v1", openai.baseUrl)
         assertEquals("openai-compatible", openai.protocol)
         assertTrue(ProviderRegistry.get("ollama")!!.requiresKey == false)
-        assertEquals(setOf("openai-compatible", "anthropic", "google"), providers.map { it.protocol }.toSet())
+        assertEquals(setOf("openai-compatible", "anthropic", "google", "mistral", "xai", "cohere", "ai21"), providers.map { it.protocol }.toSet())
     }
 
     @Test

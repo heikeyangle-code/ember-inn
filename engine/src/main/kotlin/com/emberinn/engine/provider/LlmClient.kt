@@ -6,11 +6,15 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -102,6 +106,8 @@ class LlmClient(
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    private fun chatML(messages: List<CompletionMessage>): List<JsonObject> = messages.map { it.toChatMLJson() }
 
     /** 非流式对话：返回纯文本回复（按协议解析官方响应体）。 */
     fun chatCompletions(
@@ -234,6 +240,74 @@ class LlmClient(
                 )
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
             }
+            "mistral" -> {
+                val url = base.trimEnd('/') + "/chat/completions"
+                val converted = ProviderConverters.convertMistral(chatML(messages), PromptNames())
+                val body = buildJsonObject {
+                    put("model", JsonPrimitive(profile.model))
+                    put("messages", JsonArray(converted))
+                    put("temperature", profile.sampler.temperature)
+                    put("top_p", profile.sampler.topP)
+                    put("frequency_penalty", profile.sampler.frequencyPenalty)
+                    put("presence_penalty", profile.sampler.presencePenalty)
+                    put("max_tokens", profile.sampler.maxTokens)
+                    put("stream", stream)
+                }
+                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, profile, anthropicVersion = false)
+            }
+            "xai" -> {
+                val url = base.trimEnd('/') + "/chat/completions"
+                val converted = ProviderConverters.convertXAI(chatML(messages), PromptNames())
+                val effort = profile.sampler.reasoningEffort
+                val body = buildJsonObject {
+                    put("model", JsonPrimitive(profile.model))
+                    put("messages", JsonArray(converted))
+                    put("temperature", profile.sampler.temperature)
+                    put("max_tokens", profile.sampler.maxTokens)
+                    put("stream", stream)
+                    put("presence_penalty", profile.sampler.presencePenalty)
+                    put("frequency_penalty", profile.sampler.frequencyPenalty)
+                    put("top_p", profile.sampler.topP)
+                    if (effort.isNotEmpty() && effort != "auto") {
+                        put("reasoning_effort", if (effort == "high") "high" else "low")
+                    }
+                }
+                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, profile, anthropicVersion = false)
+            }
+            "ai21" -> {
+                val url = base.trimEnd('/') + "/chat/completions"
+                val converted = ProviderConverters.convertAI21(chatML(messages), PromptNames())
+                val body = buildJsonObject {
+                    put("messages", JsonArray(converted))
+                    put("model", JsonPrimitive(profile.model))
+                    put("max_tokens", profile.sampler.maxTokens)
+                    put("temperature", profile.sampler.temperature)
+                    put("top_p", profile.sampler.topP)
+                    put("stream", stream)
+                }
+                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, profile, anthropicVersion = false)
+            }
+            "cohere" -> {
+                val url = base.trimEnd('/') + "/chat"
+                val converted = ProviderConverters.convertCohere(chatML(messages), PromptNames())
+                val body = buildJsonObject {
+                    put("stream", stream)
+                    put("model", JsonPrimitive(profile.model))
+                    put("messages", JsonArray(converted))
+                    put("temperature", profile.sampler.temperature)
+                    put("max_tokens", profile.sampler.maxTokens)
+                    put("p", profile.sampler.topP)
+                    put("frequency_penalty", profile.sampler.frequencyPenalty)
+                    put("presence_penalty", profile.sampler.presencePenalty)
+                    put("documents", JsonArray(emptyList()))
+                    put("tools", JsonArray(emptyList()))
+                }
+                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, profile, anthropicVersion = false)
+            }
             else -> {
                 if (provider.id == "vertexai") {
                     error("Vertex AI 需要服务账号与项目配置，请使用 Gemini (AI Studio) 或自定义地址。")
@@ -254,15 +328,35 @@ class LlmClient(
                     }
                     else -> base.trimEnd('/') + "/chat/completions"
                 }
-                val body = ChatRequestBuilder.buildOpenAiCompatible(
-                    model = profile.model,
-                    messages = messages,
-                    params = profile.sampler.copy(stream = stream),
-                )
+                val body = if (provider.id == "openrouter") {
+                    val chatMl = chatML(messages).toMutableList()
+                    ProviderConverters.addOpenRouterSignatures(chatMl, profile.model)
+                    ProviderConverters.embedOpenRouterMedia(chatMl, audio = true, video = true)
+                    val extra = buildJsonObject {
+                        put("transforms", JsonArray(emptyList()))
+                        put("plugins", JsonArray(emptyList()))
+                        put("reasoning", buildJsonObject {
+                            put("exclude", !profile.sampler.includeReasoning)
+                        })
+                    }
+                    ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
+                        model = profile.model,
+                        messages = chatMl,
+                        params = profile.sampler.copy(stream = stream),
+                        extra = extra,
+                    )
+                } else {
+                    ChatRequestBuilder.buildOpenAiCompatible(
+                        model = profile.model,
+                        messages = messages,
+                        params = profile.sampler.copy(stream = stream),
+                    )
+                }
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
         }
+        // OpenRouter 的 HTTP-Referer / X-Title 由 providers.json extra_headers 提供（项目身份）
         provider.extraHeaders.forEach { (k, v) -> builder.header(k, v) }
         return builder.build()
     }
@@ -339,6 +433,16 @@ class LlmClient(
                 ?.get("content")?.jsonObject?.get("parts")?.jsonArray
                 ?.mapNotNull { it.jsonObject["text"]?.asText() }
                 ?.joinToString("").orEmpty()
+            "cohere" -> {
+                val message = root["message"]?.jsonObject ?: return ""
+                when (val content = message["content"]) {
+                    is JsonPrimitive -> content.content
+                    is JsonArray -> content.mapNotNull { part ->
+                        (part as? JsonObject)?.get("text")?.asText()
+                    }.joinToString("")
+                    else -> message["tool_plan"]?.asText().orEmpty()
+                }
+            }
             else -> root["choices"]?.jsonArray?.firstOrNull()?.jsonObject
                 ?.get("message")?.jsonObject?.get("content")?.asText().orEmpty()
         }

@@ -3,6 +3,7 @@ package com.emberinn.engine.provider
 import com.emberinn.engine.prompt.CompletionMessage
 import java.io.File
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -417,6 +418,184 @@ class LlmClientTest {
         val thinking = body["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
         assertEquals(null, thinking?.get("thinkingLevel"))
         assertEquals(null, thinking?.get("thinkingBudget"))
+        server.close()
+    }
+
+    @Test
+    fun `mistral chat uses converted messages and openai-style response`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"你好"}}]}""")
+                .build(),
+        )
+        val mistral = ProviderRegistry.get("mistral")!!
+        val out = LlmClient().chatCompletions(
+            mistral,
+            ConnectionProfile(
+                providerId = "mistral",
+                apiKey = "sk-m",
+                model = "mistral-large-latest",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val request = server.takeRequest()
+        assertEquals("/chat/completions", request.url.encodedPath)
+        assertEquals("Bearer sk-m", request.headers["Authorization"])
+        val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
+        assertEquals("hi", body["messages"]?.jsonArray?.get(0)?.jsonObject?.get("content")?.toString()?.trim('"'))
+        assertEquals("你好", out)
+        server.close()
+    }
+
+    @Test
+    fun `xai chat maps reasoning effort to high or low`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val xai = ProviderRegistry.get("xai")!!
+        LlmClient().chatCompletions(
+            xai,
+            ConnectionProfile(
+                providerId = "xai",
+                apiKey = "sk-x",
+                model = "grok-4.3",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(reasoningEffort = "medium"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("low", body["reasoning_effort"]?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `ai21 chat uses studio chat completions endpoint`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val ai21 = ProviderRegistry.get("ai21")!!
+        LlmClient().chatCompletions(
+            ai21,
+            ConnectionProfile(
+                providerId = "ai21",
+                apiKey = "sk-a",
+                model = "jamba-large",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val request = server.takeRequest()
+        assertEquals("/chat/completions", request.url.encodedPath)
+        val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
+        assertEquals("jamba-large", body["model"]?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `cohere chat uses v2 chat endpoint and parses message blocks`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"message":{"role":"assistant","content":[{"type":"text","text":"你好"}]}}""")
+                .build(),
+        )
+        val cohere = ProviderRegistry.get("cohere")!!
+        val out = LlmClient().chatCompletions(
+            cohere,
+            ConnectionProfile(
+                providerId = "cohere",
+                apiKey = "sk-c",
+                model = "command-r-plus",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val request = server.takeRequest()
+        assertEquals("/chat", request.url.encodedPath)
+        assertEquals("Bearer sk-c", request.headers["Authorization"])
+        assertEquals("你好", out)
+        server.close()
+    }
+
+    @Test
+    fun `openrouter sends referer headers and reasoning exclude`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val openrouter = ProviderRegistry.get("openrouter")!!
+        LlmClient().chatCompletions(
+            openrouter,
+            ConnectionProfile(
+                providerId = "openrouter",
+                apiKey = "sk-or",
+                model = "anthropic/claude-sonnet-5",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val request = server.takeRequest()
+        assertEquals("https://github.com/heikeyangle-code/ember-inn", request.headers["HTTP-Referer"])
+        assertEquals("EmberInn", request.headers["X-Title"])
+        val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
+        assertEquals(true, body["reasoning"]?.jsonObject?.get("exclude")?.toString()?.toBoolean())
+        assertEquals(0, body["transforms"]?.jsonArray?.size)
+        server.close()
+    }
+
+    @Test
+    fun `cohere sse parses content delta chunks`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .setHeader("Content-Type", "text/event-stream")
+                .body(
+                    "data: {\"type\":\"content-delta\",\"delta\":{\"message\":{\"content\":{\"text\":\"你\"}}}}\n\n" +
+                        "data: {\"type\":\"content-delta\",\"delta\":{\"message\":{\"content\":{\"text\":\"好\"}}}}\n\n" +
+                        "data: {\"type\":\"message-end\"}\n\n",
+                )
+                .build(),
+        )
+        val cohere = ProviderRegistry.get("cohere")!!
+        val deltas = mutableListOf<String>()
+        var done = false
+        LlmClient().streamChatCompletions(
+            cohere,
+            ConnectionProfile(
+                providerId = "cohere",
+                apiKey = "sk-c",
+                model = "command-r-plus",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+            onDelta = { deltas += it },
+            onDone = { done = true },
+        )
+        assertEquals(listOf("你", "好"), deltas)
+        assertTrue(done)
         server.close()
     }
 }

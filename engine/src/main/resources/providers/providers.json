@@ -160,7 +160,7 @@
       "display_name": "Mistral",
       "description": "Mistral 官方（Medium / Small / Large）",
       "icon": "mistral-color.svg",
-      "protocol": "openai-compatible",
+      "protocol": "mistral",
       "auth_type": "bearer",
       "base_url": "https://api.mistral.ai/v1",
       "models_endpoint": "models",
@@ -178,7 +178,7 @@
       "display_name": "xAI",
       "description": "Grok 系列（4.3 / 4 / Fast）",
       "icon": "xai.svg",
-      "protocol": "openai-compatible",
+      "protocol": "xai",
       "auth_type": "bearer",
       "base_url": "https://api.x.ai/v1",
       "models_endpoint": "models",
@@ -424,6 +424,48 @@
       "default_models": [],
       "requires_key": false,
       "docs_url": ""
+    },
+    {
+      "id": "cohere",
+      "display_name": "Cohere",
+      "description": "Command R+ / Aya 系列（官方独立 /v2/chat 协议）",
+      "icon": "cohere-color.svg",
+      "protocol": "cohere",
+      "auth_type": "bearer",
+      "base_url": "https://api.cohere.ai/v2",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [
+        "command-r-plus"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.cohere.com/reference/chat"
+    },
+    {
+      "id": "ai21",
+      "display_name": "AI21",
+      "description": "Jamba 系列（官方 studio/v1/chat/completions）",
+      "icon": "",
+      "protocol": "ai21",
+      "auth_type": "bearer",
+      "base_url": "https://api.ai21.com/studio/v1",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [
+        "jamba-large"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.ai21.com/docs/jamba-chat"
     }
   ]
 }

@@ -94,6 +94,25 @@ object SseParser {
                 Chunk(content = text, done = false)
             }.getOrNull()
         }
+        "cohere" -> events(raw).mapNotNull { ev ->
+            when {
+                ev.data == "[DONE]" -> Chunk(content = "", done = true)
+                else -> runCatching {
+                    val root = json.parseToJsonElement(ev.data).jsonObject
+                    when (root["type"]?.jsonPrimitive?.content) {
+                        "message-end", "stream-end" -> Chunk(content = "", done = true)
+                        else -> {
+                            val message = root["delta"]?.jsonObject?.get("message")?.jsonObject
+                            Chunk(
+                                content = message?.get("content")?.jsonObject?.get("text")?.asText()
+                                    ?: message?.get("tool_plan")?.asText().orEmpty(),
+                                done = false,
+                            )
+                        }
+                    }
+                }.getOrNull()
+            }
+        }
         else -> events(raw).mapNotNull { ev ->
             when {
                 ev.data == "[DONE]" -> Chunk(content = "", done = true)
