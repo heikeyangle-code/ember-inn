@@ -5,10 +5,10 @@
 **已差分：43 组 / 608 例官方基准，全部通过；引擎 219 测全绿。**
 
 ### 覆盖充分的模块
-- 宏（158）、世界书（19+17+2）、正则（20+9）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、SSE（8）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（14）
+- 宏（158）、世界书（19+17+2）、正则（20+10）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、OpenAI 请求体全厂商（21）、SSE（11）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（16）
 
 ### 覆盖不足 / 只有手写测试或源码对照
-- LlmClient 网络层、OpenAI 厂商专用分支（OpenRouter/Groq/XAI 等，核心已差分）、ChatCompletionPipeline 整体、官方 tokenizer、向量库持久化、斜杠完整 parser、快捷回复/预设库、作用域宏配对（chevrotain CST）
+- LlmClient 网络层、ChatCompletionPipeline 整体、官方 tokenizer、向量库持久化、斜杠完整 parser、快捷回复/预设库、作用域宏配对（chevrotain CST）
 
 ### 已知边界与潜在风险（后续优先补）
 - 正则：JS 特有 flags x/X/u/U/A/J 未实现；trimStrings characterOverride 已接（官方差分覆盖）；RegexPipeline 宏替换已透传，App 层需接 MacroEngine
@@ -83,8 +83,8 @@
 - ✅ 数据驱动服务商注册表（22 家）+ 三协议路由 + SSE 流式解析（三种格式）+ 模型列表四种响应格式 + 多连接档案
 - ✅ Anthropic/Gemini 请求体 1:1 + 官方差分（12+11 例）；边界：消息转换/预算计算/安全设置由调用方桩传参
 - ✅ LLM 客户端（OpenAI 兼容：非流式 + SSE 流式，OkHttp + MockWebServer 验证）+ 连接档案存储
-- ✅ SSE 流解析 parseStreamData 官方差分 8 例（OpenAI/Anthropic/Gemini/token/content）
-- ✅ PersonaEngine 状态/临时锁/连接/按聊天解析官方差分 14 例；🟡 人设持久化与管理 UI（App 层）、多模型 tokenizer、服务层
+- ✅ SSE 流解析 parseStreamData 官方差分 11 例（OpenAI/Anthropic/Gemini/token/content/thinking/message/not-primary）
+- ✅ PersonaEngine 状态/临时锁/连接/按聊天解析官方差分 16 例；🟡 人设持久化与管理 UI（App 层）、多模型 tokenizer、服务层
 - 🟡 向量服务引擎已齐（RAG/聊天重排/文件向量化 + 持久化）；App 层配置/调用未接线；TTS/STT/图像/翻译 仍 P3/P4
 
 ## 下一步（README App 层）
