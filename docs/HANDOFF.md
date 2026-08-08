@@ -337,6 +337,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 68（2026-08-09：发送卡顿修复——总装挪后台线程）
+
+- 根因：send() 在主线程同步做 PromptPipeline 总装（世界书/宏/历史/JTokkit token 计数）→ UI 顿 ~1s 才开始发
+- 修复：startStream 用 viewModelScope.launch(Dispatchers.Default) 调 streamPrepared，先置“生成中”再异步组装+建请求；组装期间点停止会取消刚建好的请求；streamSession/streamActive 加 @Volatile
+- 无引擎改动；App 编译待 CI
+
 ## 最近一轮 67（2026-08-09：聊天页滚动/消息完整显示/思考过程折叠）
 
 - 流式滚动：只在用户贴底时跟随，且流式用 scrollToItem（逐 token animate 会造成上下跳）

@@ -2,6 +2,7 @@ package com.emberinn.app.ui.chat
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
@@ -9,8 +10,10 @@ import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -68,7 +71,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     private fun isProviderConfigured(): Boolean = ProviderState.isConfigured()
 
+    @Volatile
     private var streamSession: LlmClient.StreamSession? = null
+    @Volatile
     private var streamActive = false
     private var streamContinueMode = false
     private var currentCharName = "Assistant"
@@ -246,45 +251,55 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
         streamActive = true
-        streamSession = chatRepository.streamPrepared(
-            characterRawJson = character?.rawJson,
-            history = history,
-            userName = currentUserName,
-            charName = currentCharName,
-            onDelta = { delta ->
-                if (streamActive) _streamingText.value += delta
-            },
-            onReasoning = { text ->
-                if (streamActive) _streamingReasoning.value += text
-            },
-            onDone = {
-                if (streamActive) {
-                    streamActive = false
-                    finalizeStream(streamContinueMode)
-                    onFinished?.invoke()
-                }
-            },
-            onError = {
-                if (streamActive) {
-                    streamActive = false
-                    if (_streamingText.value.isBlank()) {
-                        _notice.value = "（请求失败，请检查网络或 API Key 后重试。）"
-                    } else {
+        // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
+        // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
+        viewModelScope.launch(Dispatchers.Default) {
+            val session = chatRepository.streamPrepared(
+                characterRawJson = character?.rawJson,
+                history = history,
+                userName = currentUserName,
+                charName = currentCharName,
+                onDelta = { delta ->
+                    if (streamActive) _streamingText.value += delta
+                },
+                onReasoning = { text ->
+                    if (streamActive) _streamingReasoning.value += text
+                },
+                onDone = {
+                    if (streamActive) {
+                        streamActive = false
                         finalizeStream(streamContinueMode)
+                        onFinished?.invoke()
                     }
-                    onFinished?.invoke()
+                },
+                onError = {
+                    if (streamActive) {
+                        streamActive = false
+                        if (_streamingText.value.isBlank()) {
+                            _notice.value = "（请求失败，请检查网络或 API Key 后重试。）"
+                        } else {
+                            finalizeStream(streamContinueMode)
+                        }
+                        onFinished?.invoke()
+                    }
+                },
+                type = type,
+                continuePrefill = continuePrefill,
+                cyclePrompt = cyclePrompt,
+            )
+            if (streamActive) {
+                streamSession = session
+                if (session == null) {
+                    streamActive = false
+                    _isStreaming.value = false
+                    _isImpersonating.value = false
+                    _streamingReasoning.value = ""
+                    _notice.value = "（未配置模型，请先选一个模型。）"
                 }
-            },
-            type = type,
-            continuePrefill = continuePrefill,
-            cyclePrompt = cyclePrompt,
-        )
-        if (streamSession == null) {
-            streamActive = false
-            _isStreaming.value = false
-            _isImpersonating.value = false
-            _streamingReasoning.value = ""
-            _notice.value = "（未配置模型，请先选一个模型。）"
+            } else {
+                // 组装期间用户点了停止：直接取消刚建好的请求
+                session?.cancel()
+            }
         }
     }
 
