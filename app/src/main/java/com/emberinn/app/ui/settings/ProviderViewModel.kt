@@ -7,6 +7,7 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.provider.ConnectionProfile
+import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.ProviderSpec
@@ -63,6 +64,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _contextWindow = MutableStateFlow(8192)
     val contextWindow: StateFlow<Int> = _contextWindow
 
+    private val _maxTokens = MutableStateFlow(512)
+    val maxTokens: StateFlow<Int> = _maxTokens
+
     private val _testing = MutableStateFlow(false)
     val testing: StateFlow<Boolean> = _testing
 
@@ -70,6 +74,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     val message: StateFlow<String?> = _message
 
     private var editingId: String? = null
+    private var editingSampler: SamplerParams = SamplerParams()
 
     fun provider(): ProviderSpec? = ProviderRegistry.get(_providerId.value)
 
@@ -77,6 +82,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         val spec = ProviderRegistry.get(id) ?: return
         val existing = _profiles.value.firstOrNull { it.providerId == id }
         editingId = existing?.id
+        editingSampler = existing?.sampler ?: SamplerParams()
         _providerId.value = id
         _profileName.value = existing?.name?.ifBlank { spec.displayName } ?: spec.displayName
         _apiKey.value = existing?.apiKey.orEmpty()
@@ -85,6 +91,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _accountId.value = existing?.accountId.orEmpty()
         _apiVersion.value = existing?.apiVersionOverride.orEmpty()
         _contextWindow.value = existing?.contextWindow ?: 8192
+        _maxTokens.value = existing?.sampler?.maxTokens ?: spec.defaultMaxTokens ?: 512
         val list = spec.defaultModels.toMutableList()
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
@@ -123,6 +130,12 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setContextWindow(value: String) {
         val n = value.filter { it.isDigit() }.toIntOrNull()
         _contextWindow.value = (n ?: 8192).coerceIn(256, 2_000_000)
+    }
+
+    /** 最大回复 tokens：推理模型思考会占额度，512 太小正文常被掐空。 */
+    fun setMaxTokens(value: String) {
+        val n = value.filter { it.isDigit() }.toIntOrNull()
+        _maxTokens.value = (n ?: 512).coerceIn(64, 262_144)
     }
 
     fun selectModel(model: String) {
@@ -205,6 +218,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             accountId = _accountId.value,
             apiVersionOverride = _apiVersion.value,
             contextWindow = _contextWindow.value,
+            sampler = editingSampler.copy(maxTokens = _maxTokens.value),
         )
     }
 

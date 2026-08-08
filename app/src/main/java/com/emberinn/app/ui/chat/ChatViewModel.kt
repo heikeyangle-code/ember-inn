@@ -511,7 +511,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     appendAiReply(reply)
                     refreshMessages()
                 } else {
-                    _notice.value = "（模型只返回了思考过程，没有生成正文。请重试，或换个模型/关闭思考模式。）"
+                    _notice.value = "（模型只返回了思考过程，没有生成正文——多半是“最大回复 tokens”太小被思考占满。去 设置→提供商→最大回复 tokens 调大（如 8192），或关闭思考模式。）"
                 }
             }
             reply.isNotBlank() -> {

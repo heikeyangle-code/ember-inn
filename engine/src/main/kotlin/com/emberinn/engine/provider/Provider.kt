@@ -36,6 +36,9 @@ data class ProviderSpec(
     val modelsQuery: Map<String, String> = emptyMap(),
     @SerialName("default_models")
     val defaultModels: List<String> = emptyList(),
+    /** 建议的最大回复 tokens（推理模型思考会占额度，512 太小正文常被掐空）；用户可改。 */
+    @SerialName("default_max_tokens")
+    val defaultMaxTokens: Int? = null,
     @SerialName("requires_key")
     val requiresKey: Boolean = true,
     @SerialName("docs_url")
