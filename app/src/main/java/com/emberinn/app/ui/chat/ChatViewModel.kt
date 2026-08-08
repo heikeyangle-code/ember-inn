@@ -37,6 +37,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
 
+    /** 冒充生成中（官方 type=impersonate：结果进输入框，不落历史）。 */
+    private val _isImpersonating = MutableStateFlow(false)
+    val isImpersonating: StateFlow<Boolean> = _isImpersonating
+
+    /** 冒充完成的草稿文本（由聊天页放进输入框后调用 consumeImpersonation）。 */
+    private val _impersonated = MutableStateFlow<String?>(null)
+    val impersonated: StateFlow<String?> = _impersonated
+
     private val _providerConfigured = MutableStateFlow(chatRepository.profile() != null)
     val providerConfigured: StateFlow<Boolean> = _providerConfigured
 
@@ -67,6 +75,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         currentCharName = charName
         currentUserName = userName
         _notice.value = null
+        _impersonated.value = null
         chatStore.append(sessionId, true, text, userName)
         refreshMessages()
 
@@ -84,10 +93,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamSession = null
         streamActive = false
         val partial = _streamingText.value
+        val wasImpersonating = _isImpersonating.value
         _isStreaming.value = false
+        _isImpersonating.value = false
         if (partial.isNotBlank()) {
-            chatStore.append(sessionId, false, partial, currentCharName)
-            refreshMessages()
+            if (wasImpersonating) {
+                _impersonated.value = partial
+            } else {
+                chatStore.append(sessionId, false, partial, currentCharName)
+                refreshMessages()
+            }
         }
         _streamingText.value = ""
     }
@@ -142,6 +157,34 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
     }
 
+    /** 编辑消息（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI 接线）。 */
+    fun editMessage(index: Int, newText: String) {
+        if (_isStreaming.value) return
+        val text = newText.trim()
+        if (text.isEmpty()) return
+        chatStore.updateMessage(sessionId, index, text)
+        refreshMessages()
+    }
+
+    /** 冒充（官方 Generate('impersonate')）：模型以 {{user}} 视角写下一句，流式草稿进输入框，不落历史。 */
+    fun impersonate() {
+        if (_isStreaming.value) return
+        _notice.value = null
+        if (!_providerConfigured.value) {
+            _notice.value = "（未配置模型，请先选一个模型再冒充。）"
+            return
+        }
+        startStream(
+            history = chatStore.messages(sessionId),
+            type = "impersonate",
+            impersonation = true,
+        )
+    }
+
+    fun consumeImpersonation() {
+        _impersonated.value = null
+    }
+
     fun clearSession() {
         if (_isStreaming.value) stop()
         chatStore.replace(sessionId, emptyList())
@@ -156,10 +199,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         history: List<JsonElement>,
         type: String = "generate",
         continuePrefill: Boolean = false,
+        impersonation: Boolean = false,
         onFinished: (() -> Unit)? = null,
     ) {
         _streamingText.value = ""
         _isStreaming.value = true
+        _isImpersonating.value = impersonation
         streamActive = true
         streamSession = chatRepository.streamPrepared(
             characterRawJson = character?.rawJson,
@@ -193,6 +238,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (streamSession == null) {
             streamActive = false
             _isStreaming.value = false
+            _isImpersonating.value = false
             _notice.value = "（未配置模型，请先选一个模型。）"
         }
     }
@@ -201,7 +247,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isStreaming.value = false
         streamSession = null
         val reply = _streamingText.value
-        if (reply.isNotBlank()) {
+        if (_isImpersonating.value) {
+            // 官方：冒充结果进输入框，不写历史
+            if (reply.isNotBlank()) _impersonated.value = reply
+            _isImpersonating.value = false
+        } else if (reply.isNotBlank()) {
             chatStore.append(sessionId, false, reply, currentCharName)
             refreshMessages()
         }

@@ -68,6 +68,7 @@ class ChatRepository(context: Context) {
         options: ProviderRequestOptions = ProviderRequestOptions(),
         type: String = "generate",
         continuePrefill: Boolean = false,
+        impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
@@ -79,6 +80,7 @@ class ChatRepository(context: Context) {
             model = profile.model,
             type = type,
             continuePrefill = continuePrefill,
+            impersonationPrompt = impersonationPrompt,
         )
         return client.streamChatCompletionsAsync(
             provider = provider,

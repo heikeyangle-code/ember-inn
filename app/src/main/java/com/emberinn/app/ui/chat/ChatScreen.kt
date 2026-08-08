@@ -32,8 +32,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
@@ -114,10 +116,14 @@ fun ChatScreen(
     val isStreaming by vm.isStreaming.collectAsState()
     val providerConfigured by vm.providerConfigured.collectAsState()
     val notice by vm.notice.collectAsState()
+    val isImpersonating by vm.isImpersonating.collectAsState()
+    val impersonated by vm.impersonated.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var editIndex by remember { mutableStateOf<Int?>(null) }
+    var editDraft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -130,6 +136,14 @@ fun ChatScreen(
         }
     }
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
+
+    // 冒充草稿进输入框（官方：冒充结果落到发送框，用户可改可发）
+    LaunchedEffect(impersonated) {
+        impersonated?.let {
+            input = it
+            vm.consumeImpersonation()
+        }
+    }
 
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
@@ -196,6 +210,7 @@ fun ChatScreen(
                         name = name,
                         avatarPath = vm.avatarPath,
                         accent = accent,
+                        impersonating = isImpersonating,
                     )
                 }
             }
@@ -252,7 +267,13 @@ fun ChatScreen(
                         Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                         menuMessageIndex = null
                     }
+                    MenuRow(Icons.Filled.Edit, "编辑这条消息") {
+                        editIndex = index; editDraft = text; menuMessageIndex = null
+                    }
                     if (!isUserMsg) {
+                        MenuRow(Icons.Filled.Person, "冒充（让模型替你说）") {
+                            vm.impersonate(); menuMessageIndex = null
+                        }
                         MenuRow(Icons.Filled.Refresh, "重新生成") {
                             vm.regenerate(); menuMessageIndex = null
                         }
@@ -266,6 +287,31 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    editIndex?.let { index ->
+        AlertDialog(
+            onDismissRequest = { editIndex = null },
+            title = { Text("编辑消息") },
+            text = {
+                OutlinedTextField(
+                    value = editDraft,
+                    onValueChange = { editDraft = it },
+                    minLines = 3,
+                    maxLines = 8,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.editMessage(index, editDraft)
+                    editIndex = null
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editIndex = null }) { Text("取消") }
+            },
+        )
     }
 
     if (showClearConfirm) {
@@ -468,7 +514,13 @@ private fun MessageRow(
 }
 
 @Composable
-private fun StreamingRow(text: String, name: String, avatarPath: String?, accent: Color) {
+private fun StreamingRow(
+    text: String,
+    name: String,
+    avatarPath: String?,
+    accent: Color,
+    impersonating: Boolean = false,
+) {
     val transition = rememberInfiniteTransition(label = "caret")
     val alpha by transition.animateFloat(
         initialValue = 0.35f,
@@ -480,13 +532,13 @@ private fun StreamingRow(text: String, name: String, avatarPath: String?, accent
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
     ) {
-        RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 28)
+        RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 28)
         Spacer(Modifier.size(8.dp))
         Column(modifier = Modifier.widthIn(max = 300.dp)) {
             Text(
-                text = name,
+                text = if (impersonating) "冒充草稿 · 我" else name,
                 style = MaterialTheme.typography.labelMedium,
-                color = accent,
+                color = if (impersonating) MaterialTheme.colorScheme.secondary else accent,
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.size(3.dp))

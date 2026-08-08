@@ -6,6 +6,7 @@ import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -64,6 +65,18 @@ class ChatStore(private val context: Context) {
             put("mes", JsonPrimitive(content))
             put("extra", JsonObject(emptyMap()))
         }
+        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
+    /** 编辑消息：更新文本并清空 extra.bias（对齐官方 updateMessage 的 AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）。 */
+    fun updateMessage(sessionId: String, index: Int, content: String) {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return
+        val el = list[index].jsonObject
+        val oldExtra = el["extra"] as? JsonObject
+        val newExtra = JsonObject((oldExtra?.toMap() ?: emptyMap()) + ("bias" to JsonNull))
+        list[index] = JsonObject(el + ("mes" to JsonPrimitive(content)) + ("extra" to newExtra))
         File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }

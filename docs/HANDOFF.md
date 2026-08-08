@@ -218,8 +218,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线）
-消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → 设置页；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。
-❌ 滑动切回复、编辑消息、冒充（impersonate）、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）。
+消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → 设置页；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。
+❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
 全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。
@@ -302,7 +302,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **P0（“打开即聊”体验短板）**
 1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
-2. ~~流式/停止/重新生成/继续/复制/删除/提示词总装~~ → 已做；剩编辑消息、冒充、滑动切回复
+2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装~~ → 已做；剩滑动切回复（需要 swipes 数据模型）
 3. ~~全局搜索~~ → 首页搜索已接角色/会话/世界书/设置；设置结果深链到具体子页未做（目前跳设置 Tab）
 
 **P1（功能完整）**
@@ -333,6 +333,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 62（2026-08-09：聊天页补编辑消息 + 冒充）
+
+- ChatStore.updateMessage：编辑文本 + extra.bias=null（官方 updateMessage AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）
+- ChatViewModel：editMessage（流式中禁编辑）、impersonate（type=impersonate，草稿进 _impersonated 不落历史，停止保留草稿）、consumeImpersonation
+- ChatPromptFactory/ChatRepository：impersonationPrompt 透传（默认官方 default_impersonation_prompt）
+- ChatScreen：长按菜单加“编辑”（弹窗改文本保存）与“冒充”（AI 消息）；冒充流式气泡标“冒充草稿 · 我”，完成后草稿自动进输入框可改可发
+- 无引擎改动 → 无新差分；App 编译待 CI 验证；Claude assistant_impersonation（默认空）排 P2
 
 ## 最近一轮 61（2026-08-09：首页全局搜索——角色/会话/世界书/设置）
 

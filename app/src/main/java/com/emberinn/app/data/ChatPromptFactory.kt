@@ -29,6 +29,12 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class ChatPromptFactory {
 
+    /** 对齐官方 openai.js default_impersonation_prompt。 */
+    companion object {
+        const val DEFAULT_IMPERSONATION_PROMPT =
+            "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
+    }
+
     private val json = Json { ignoreUnknownKeys = true }
 
     data class Prepared(
@@ -46,6 +52,7 @@ class ChatPromptFactory {
         maxTokens: Int = 512,
         type: String = "generate",
         continuePrefill: Boolean = false,
+        impersonationPrompt: String = DEFAULT_IMPERSONATION_PROMPT,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(parsed?.source)
@@ -98,6 +105,7 @@ class ChatPromptFactory {
                 tokenCounter = tokenCounter,
                 type = type,
                 continuePrefill = continuePrefill,
+                impersonationPrompt = impersonationPrompt,
             ),
         )
         return Prepared(result.messages, wiResult.activated)
