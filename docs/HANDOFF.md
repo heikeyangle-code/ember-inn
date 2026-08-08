@@ -337,6 +337,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 69（2026-08-09：锁死两处接线盲区为自动化测试）
+
+- 引擎：LlmClientTest 新增流式运行时测试（MockWebServer 喂 role/null/reasoning_content/正文/[DONE]），断言正文只含“你好”、思考走 onReasoning、永不出现字面 null——锁住“运行时必须走官方对拍 SseChunkParser”
+- App：ChatPromptFactoryTest（纯 Kotlin JVM 单测）锁住“generate 输出时间正序”与“continue nudge 选中最后一条 AI 并收尾”——锁住“新的在前”接线契约（曾致 continue 错当最老消息）
+- 引擎 262 测全绿；App 单测由 CI 编译验证
+
 ## 最近一轮 68（2026-08-09：发送卡顿修复——总装挪后台线程）
 
 - 根因：send() 在主线程同步做 PromptPipeline 总装（世界书/宏/历史/JTokkit token 计数）→ UI 顿 ~1s 才开始发

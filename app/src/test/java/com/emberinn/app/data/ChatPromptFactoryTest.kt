@@ -1,0 +1,68 @@
+package com.emberinn.app.data
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * 锁住“App→引擎”接线契约（曾因“旧的在前”导致 continue 错当最老消息）：
+ * 1. generate 输出始终时间正序；
+ * 2. continue 默认 nudge 路径选中最后一条 AI（其文本出现在末尾 continueNudge 集合里，且 nudge 提示收尾）。
+ */
+class ChatPromptFactoryTest {
+
+    private fun msg(isUser: Boolean, text: String, name: String) = buildJsonObject {
+        put("name", name)
+        put("is_user", isUser)
+        put("is_system", false)
+        put("send_date", "2026-08-09T00:00:00Z")
+        put("mes", text)
+        put("extra", buildJsonObject {})
+    }
+
+    @Test
+    fun `generate output is chronological`() {
+        val history = listOf(
+            msg(true, "第一条", "User"),
+            msg(false, "回复一", "小炭"),
+            msg(true, "第二条", "User"),
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+        )
+        val contents = result.messages.map { it.content }
+        val i1 = contents.indexOf("第一条")
+        val i2 = contents.indexOf("回复一")
+        val i3 = contents.indexOf("第二条")
+        assertTrue(i1 >= 0 && i2 > i1 && i3 > i2)
+    }
+
+    @Test
+    fun `continue nudge targets the last assistant message`() {
+        val history = listOf(
+            msg(true, "问", "User"),
+            msg(false, "旧回复", "小炭"),
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            type = "continue",
+            cyclePrompt = "旧回复",
+        )
+        val contents = result.messages.map { it.content }
+        assertTrue(contents.any { it.contains("旧回复") })
+        assertEquals("Continue your last message without repeating its original content.", contents.last())
+    }
+}

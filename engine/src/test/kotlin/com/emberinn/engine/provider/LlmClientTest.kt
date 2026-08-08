@@ -227,6 +227,48 @@ class LlmClientTest {
     }
 
     @Test
+    fun `streaming runtime skips null chunks and routes reasoning separately`() {
+        val server = MockWebServer()
+        server.start()
+        val sse =
+            "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"}}]}\n\n" +
+            "data: {\"choices\":[{\"delta\":{\"content\":null}}]}\n\n" +
+            "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"想\"}}]}\n\n" +
+            "data: {\"choices\":[{\"delta\":{\"content\":\"你\"}}]}\n\n" +
+            "data: {\"choices\":[{\"delta\":{\"content\":\"好\"}}]}\n\n" +
+            "data: [DONE]\n\n"
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .addHeader("Content-Type", "text/event-stream")
+                .body(sse)
+                .build(),
+        )
+        val client = LlmClient()
+        val text = StringBuilder()
+        val reasoning = StringBuilder()
+        val latch = java.util.concurrent.CountDownLatch(1)
+        client.streamChatCompletionsAsync(
+            provider,
+            ConnectionProfile(
+                providerId = "openai",
+                apiKey = "sk-test",
+                model = "gpt-4o",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+            onDelta = { text.append(it) },
+            onDone = { latch.countDown() },
+            onError = { latch.countDown() },
+            onReasoning = { reasoning.append(it) },
+        )
+        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        assertEquals("你好", text.toString())
+        assertEquals("想", reasoning.toString())
+        server.close()
+    }
+
+    @Test
     fun `anthropic sse parses content block deltas`() {
         val chunks = listOf(
             SseChunkParser.parse("""{"type":"content_block_delta","delta":{"type":"text_delta","text":"你"}}"""),
