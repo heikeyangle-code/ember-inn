@@ -1,5 +1,6 @@
 package com.emberinn.app.ui
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -9,10 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,9 +33,9 @@ import com.emberinn.engine.card.CardFormat
 private data class TabSpec(val label: String, val icon: ImageVector)
 
 private val Tabs = listOf(
-    TabSpec("角色", Icons.Filled.Person),
-    TabSpec("聊天", Icons.AutoMirrored.Filled.List),
-    TabSpec("设置", Icons.Filled.Settings),
+    TabSpec("角色", PhosphorIcons.Person),
+    TabSpec("聊天", PhosphorIcons.List),
+    TabSpec("设置", PhosphorIcons.Settings),
 )
 
 @Composable

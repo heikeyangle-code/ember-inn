@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.sessions
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,13 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -154,7 +148,7 @@ fun SessionsScreen(
             onClick = { showNewSheet = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "新建对话")
+            Icon(PhosphorIcons.Plus, contentDescription = "新建对话")
         }
     }
 
@@ -184,13 +178,13 @@ fun SessionsScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                SheetRow(Icons.Filled.Star, if (session.pinned) "取消置顶" else "置顶") {
+                SheetRow(PhosphorIcons.Star, if (session.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(session); menuSession = null
                 }
-                SheetRow(Icons.Filled.Share, "导出聊天（JSONL）") {
+                SheetRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
                     exportLauncher.launch("${session.name}-${timeStamp(session.updatedAt)}.jsonl")
                 }
-                SheetRow(Icons.Filled.Delete, "删除会话", danger = true) {
+                SheetRow(PhosphorIcons.Delete, "删除会话", danger = true) {
                     deleteTarget = session; menuSession = null
                 }
             }
@@ -246,7 +240,7 @@ private fun SessionRow(
                     if (session.pinned) {
                         Spacer(Modifier.width(6.dp))
                         Icon(
-                            Icons.Filled.Star,
+                            PhosphorIcons.Star,
                             contentDescription = "置顶",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp),
@@ -269,7 +263,7 @@ private fun SessionRow(
                 color = MaterialTheme.colorScheme.outline,
             )
             IconButton(onClick = onMenu, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
+                Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -322,7 +316,7 @@ private fun NewChatSheet(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
             HorizontalDivider()
-            SheetRow(Icons.Filled.Person, "AI 对话", subtitle = "不用角色卡，直接聊", onClick = { onPick(null) })
+            SheetRow(PhosphorIcons.Person, "AI 对话", subtitle = "不用角色卡，直接聊", onClick = { onPick(null) })
             if (characters.isNotEmpty()) {
                 Text(
                     text = "选择一个角色",
@@ -351,7 +345,7 @@ private fun NewChatSheet(
                 }
             }
             HorizontalDivider(modifier = Modifier.padding(top = 10.dp))
-            SheetRow(Icons.Filled.Add, "新建群聊", subtitle = "勾选已有角色（开发中）", onClick = onGroup)
+            SheetRow(PhosphorIcons.Plus, "新建群聊", subtitle = "勾选已有角色（开发中）", onClick = onGroup)
         }
     }
 }

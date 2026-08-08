@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.home
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -34,14 +35,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -206,7 +199,7 @@ fun CharactersScreen(
             onClick = { importLauncher.launch(arrayOf("*/*")) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "导入角色卡")
+            Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡")
         }
     }
 
@@ -220,19 +213,19 @@ fun CharactersScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(Icons.Filled.Star, if (record.pinned) "取消置顶" else "置顶") {
+                MenuRow(PhosphorIcons.Star, if (record.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(record); menuRecord = null
                 }
-                MenuRow(Icons.Filled.Add, "新会话") {
+                MenuRow(PhosphorIcons.Plus, "新会话") {
                     onOpenChat(vm.openChat(record.id, record.name)); menuRecord = null
                 }
-                MenuRow(Icons.Filled.Edit, "查看 / 编辑字段") {
+                MenuRow(PhosphorIcons.Edit, "查看 / 编辑字段") {
                     detailRecord = record; menuRecord = null
                 }
-                MenuRow(Icons.Filled.Share, "导出 JSON") {
+                MenuRow(PhosphorIcons.Share, "导出 JSON") {
                     exportLauncher.launch("${record.name}.json")
                 }
-                MenuRow(Icons.Filled.Delete, "删除角色", danger = true) {
+                MenuRow(PhosphorIcons.Delete, "删除角色", danger = true) {
                     deleteTarget = record; menuRecord = null
                 }
             }
@@ -494,7 +487,7 @@ private fun HomeTopBar(query: String, onQueryChange: (String) -> Unit) {
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = { Text("搜索角色 / 会话 / 世界书 / 设置") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -578,10 +571,10 @@ private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit, onMenu: 
                             modifier = Modifier.weight(1f),
                         )
                         if (record.pinned) {
-                            Icon(Icons.Filled.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                            Icon(PhosphorIcons.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         }
                         IconButton(onClick = onMenu, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "更多", modifier = Modifier.size(16.dp))
+                            Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(16.dp))
                         }
                     }
                     Text(
@@ -657,7 +650,7 @@ private fun CharacterFieldsSheet(record: CharacterRecord, onSave: (String, Map<S
                         color = if (value.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Icon(Icons.Filled.Edit, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(PhosphorIcons.Edit, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
             HorizontalDivider()
         }

@@ -170,11 +170,11 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 | 主题框架 | Material3 基线 1.4.0 稳定版（Expressive 组件在 1.5.0-alpha，等稳定后再启用） | `androidx.compose.material3:material3` |
 | 种子色 → M3 配色 | MaterialKolor **4.1.x 稳定版**（勿用 5.0 alpha） | `com.jordond.materialkolor:*` |
 | 氛围渐变 | 官方 MeshGradient（动画版参考 ComposeMeshGradient） | `androidx.compose.ui.graphics.MeshGradient` |
-| 玻璃 / 模糊 | **skydoves/Cloudy**（GPU + CPU 降级）；备选 Haze、miuix-blur | `dev.skydoves.cloudy:*` |
+| 玻璃 / 模糊 | **skydoves/Cloudy** 0.7.1 稳定版（GPU + 旧设备 CPU 降级）；备选 Haze、miuix-blur | `com.github.skydoves:cloudy:0.7.1` |
 | 卡图取色 | Palette / landscapist-palette | `androidx.palette:palette` |
 | 图片加载 | Coil 3 | `io.coil-kt.coil3:coil-compose` |
 | 动效 | Lottie | `com.airbnb.android:lottie-compose` |
-| 图标 | Material Symbols | `androidx.compose.material:material-icons-extended` |
+| 图标 | Phosphor Icons（内置官方路径，见 scripts/gen-phosphor-icons.mjs） | `app/.../ui/icons/PhosphorIcons.kt` |
 | 中文字体（可下载） | 霞鹜文楷 Screen/Lite、霞鹜新晰黑（OFL 开源） | 可下载字体包 / Google Fonts Provider |
 | 主题切换动画 | `animateColorAsState` + Crossfade | 内置 |
 | 持久化 | Room + DataStore | androidx |

@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,11 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,7 +78,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
             }
             Column {
                 Text("数据与隐私", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -95,7 +91,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             DataRow(
-                icon = Icons.Filled.Description,
+                icon = PhosphorIcons.FileText,
                 title = "导出全部数据（备份）",
                 subtitle = "角色卡 / 聊天记录 / 会话 / 头像 / 提供商配置 → 一个 zip",
                 enabled = !exporting,
@@ -103,14 +99,14 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                 onClick = { exportLauncher.launch("EmberInn-备份-${System.currentTimeMillis().toString().takeLast(10)}.zip") },
             )
             DataRow(
-                icon = Icons.Filled.Folder,
+                icon = PhosphorIcons.Folder,
                 title = "数据存储位置",
                 subtitle = context.filesDir.absolutePath + "\n数据仅保存在本机，不上传任何服务器",
                 enabled = false,
                 onClick = {},
             )
             DataRow(
-                icon = Icons.Filled.Delete,
+                icon = PhosphorIcons.Delete,
                 title = "清除全部数据",
                 subtitle = "删除所有角色、聊天、会话与提供商配置，不可撤销",
                 danger = true,

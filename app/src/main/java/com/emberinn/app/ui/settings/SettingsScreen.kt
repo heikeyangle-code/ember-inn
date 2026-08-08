@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import android.net.Uri
@@ -19,13 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -161,10 +155,10 @@ private fun SettingsHome(
     val themeSummary = "${themePreset.name} · ${themeMode.label}"
 
     val quickActions = listOf(
-        QuickAction("主题", Icons.Filled.Star, onOpenAppearance),
-        QuickAction("模型", Icons.Filled.Settings, onOpenProviders),
-        QuickAction("语音", Icons.Filled.Notifications, { openComingSoon(context) }),
-        QuickAction("备份", Icons.Filled.Refresh, { openComingSoon(context) }),
+        QuickAction("主题", PhosphorIcons.Star, onOpenAppearance),
+        QuickAction("模型", PhosphorIcons.Settings, onOpenProviders),
+        QuickAction("语音", PhosphorIcons.Bell, { openComingSoon(context) }),
+        QuickAction("备份", PhosphorIcons.Refresh, { openComingSoon(context) }),
     )
 
     val groups = listOf(
@@ -240,11 +234,11 @@ private fun SettingsHome(
                     value = query,
                     onValueChange = { query = it },
                     placeholder = { Text("搜索设置") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Filled.Search, contentDescription = "清除")
+                                Icon(PhosphorIcons.Search, contentDescription = "清除")
                             }
                         }
                     },
@@ -465,7 +459,7 @@ fun SettingsTopBar(title: String, onBack: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+            Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
         }
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
     }

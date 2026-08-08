@@ -20,11 +20,11 @@
 | 序列化 | kotlinx.serialization 1.11.x | org.jetbrains.kotlinx | Kotlin 原生 JSON，引擎已在用 | 引擎出入参、设置、连接档案 | UI 层自由 |
 | 代码高亮 | Highlights / KodeView | dev.snipme:highlights / KodeView | Kotlin 原生语法高亮 | Markdown 代码块 | 官方 highlight.js |
 | LaTeX | huarangmeng/latex-renderer | io.github.huarangmeng:latex-renderer | 社区 KMP 公式渲染 | 消息公式（官方靠社区扩展，我们原生覆盖） | 官方社区扩展 |
-| 模糊 / 玻璃 | **skydoves/Cloudy**（KMP 模糊 + 液态玻璃，GPU + 旧设备 CPU 降级）；备选 Haze 2.0.0-alpha03 | dev.skydoves.cloudy | 2026 液态玻璃方向，顶栏/输入栏/浮层用（正文区干净） | 毛玻璃顶栏、输入栏、BottomSheet、对话框 | UI 层自由（README 玻璃表面节） |
+| 模糊 / 玻璃 | **skydoves/Cloudy 0.7.1 稳定版**（KMP 模糊 + 液态玻璃，GPU + 旧设备 CPU 降级；1.0.0-alpha01 是 alpha 不用）；备选 Haze 2.0.0-alpha03 | com.github.skydoves:cloudy | 2026 液态玻璃方向，顶栏/输入栏/浮层用（正文区干净） | 毛玻璃顶栏、输入栏、BottomSheet、对话框（聊天页顶栏/输入栏已接） | UI 层自由（README 玻璃表面节） |
 | 网格渐变 | 官方 MeshGradient | androidx.compose.ui.graphics.MeshGradient（已入 Compose UI，无需第三方） | 背景氛围渐变（2–4 色低饱和） | 聊天背景、卡片背景 | UI 层自由 |
 | 取色 | androidx.palette | androidx.palette:palette | 卡图取色 seed | 角色卡 → theme_seed（已实现） | UI 层自由 |
 | 种子色 → M3 配色 | MaterialKolor 4.1.x | com.jordond.materialkolor（5.0 是 alpha，不用） | 一套 seed 生成整套 M3 ColorScheme | 主题引擎 Theme.kt（已实现） | UI 层自由 |
-| 图标 | Phosphor Icons（主推）/ Material Symbols Rounded（备选）/ Lucide（内容级备选，旧项目用过） | Compose 移植包 | 圆头现代，配“余烬/炉火”美学 | 全 App 图标（README 图标系统节） | UI 层自由 |
+| 图标 | Phosphor Icons（主推，Regular 字重；Maven 的 Compose 移植包缺 Android jar 不可用，已内置 32 枚官方路径，scripts/gen-phosphor-icons.mjs 生成）/ Material Symbols Rounded（备选）/ Lucide（内容级备选） | 内置 PhosphorIcons.kt（零第三方依赖） | 圆头现代，配“余烬/炉火”美学 | 全 App 图标（README 图标系统节） | UI 层自由 |
 | 文件选择 | SAF / PhotoPicker | 系统 API | 导入卡（PNG/JSON/CharX）、附件、背景 | FAB 导入、附件面板 | 官方文件上传是 `<input type=file>`（`public/scripts/characters.js`） |
 | 启动页 | SplashScreen API | androidx.core:core-splashscreen | Android 12+ 原生品牌启动 | MainActivity | UI 层自由 |
 | QR | ZXing | com.google.zxing | 连接档案扫码导入导出 | 提供商设置页 | UI 层自由 |

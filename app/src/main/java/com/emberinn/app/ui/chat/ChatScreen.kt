@@ -2,6 +2,12 @@
 
 package com.emberinn.app.ui.chat
 
+import com.emberinn.app.ui.icons.PhosphorIcons
+import com.skydoves.cloudy.sky
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.cloudy
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -38,22 +44,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -230,115 +220,136 @@ fun ChatScreen(
         }
     }
 
-    Column(
+    val sky = rememberSky()
+    val density = LocalDensity.current
+    var topBarHeight by remember { mutableStateOf(0) }
+    var inputBarHeight by remember { mutableStateOf(0) }
+    val topBarPad = with(density) { topBarHeight.toDp() }
+    val inputBarPad = with(density) { inputBarHeight.toDp() }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
             .imePadding()
             .background(MaterialTheme.colorScheme.background),
     ) {
+        // 源层：消息列表作为模糊来源，上下留出浮层高度
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .sky(sky)
+                .padding(top = topBarPad)
+                .padding(bottom = inputBarPad),
+        ) {
+            if (!providerConfigured) {
+                UnconfiguredBanner(onOpenSettings = onOpenSettings)
+            }
+
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                if (items.isEmpty()) {
+                    item { EmptyChat(name = name, accent = accent) }
+                }
+                itemsIndexed(items, key = { _, item -> when (item) {
+                    is ChatItem.Message -> "m-${item.index}"
+                    ChatItem.Streaming -> "streaming"
+                } }) { _, item ->
+                    when (item) {
+                        is ChatItem.Message -> {
+                            val el = item.element
+                            val isUserMsg = isUser(el)
+                            val text = textOf(el)
+                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg
+                            val dateLabel = if (item.index == 0) {
+                                dateLabelOf(el)
+                            } else {
+                                val prev = dateLabelOf(messages[item.index - 1])
+                                val cur = dateLabelOf(el)
+                                if (prev == cur) null else cur
+                            }
+                            MessageRow(
+                                isUser = isUserMsg,
+                                text = text,
+                                media = mediaOf(el),
+                                reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
+                                name = nameOf(el, isUserMsg),
+                                time = timeOf(el),
+                                dateLabel = dateLabel,
+                                avatarPath = if (isUserMsg) null else vm.avatarPath,
+                                accent = accent,
+                                showActions = showActions,
+                                onCopy = {
+                                    clipboard.setText(AnnotatedString(text))
+                                    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                                },
+                                onRegenerate = { vm.regenerate() },
+                                onContinue = { vm.continueGeneration() },
+                                onDelete = { vm.deleteMessage(item.index) },
+                                onLongPress = { menuMessageIndex = item.index },
+                            )
+                        }
+                        ChatItem.Streaming -> StreamingRow(
+                            text = streamingText,
+                            reasoning = streamingReasoning,
+                            name = name,
+                            avatarPath = vm.avatarPath,
+                            accent = accent,
+                            impersonating = isImpersonating,
+                        )
+                    }
+                }
+                notice?.let { n ->
+                    item(key = "notice") {
+                        Text(
+                            text = n,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        )
+                    }
+                }
+            }
+
+            if (!isStreaming && (contextUsage != null || worldHits.isNotEmpty())) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    contextUsage?.let { (used, max) ->
+                        StatusPill("上下文 ${formatTokens(used)}/${formatTokens(max)}")
+                    }
+                    if (worldHits.isNotEmpty()) {
+                        StatusPill("世界书 ×${worldHits.size}") {
+                            Toast.makeText(
+                                context,
+                                "命中：" + worldHits.take(5).joinToString("、"),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+
         ChatTopBar(
             name = name,
             avatarPath = vm.avatarPath,
             accent = accent,
             onBack = onBack,
             onMenu = { showMore = true },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .onSizeChanged { topBarHeight = it.height }
+                .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)),
         )
-
-        if (!providerConfigured) {
-            UnconfiguredBanner(onOpenSettings = onOpenSettings)
-        }
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (items.isEmpty()) {
-                item { EmptyChat(name = name, accent = accent) }
-            }
-            itemsIndexed(items, key = { _, item -> when (item) {
-                is ChatItem.Message -> "m-${item.index}"
-                ChatItem.Streaming -> "streaming"
-            } }) { _, item ->
-                when (item) {
-                    is ChatItem.Message -> {
-                        val el = item.element
-                        val isUserMsg = isUser(el)
-                        val text = textOf(el)
-                        val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg
-                        val dateLabel = if (item.index == 0) {
-                            dateLabelOf(el)
-                        } else {
-                            val prev = dateLabelOf(messages[item.index - 1])
-                            val cur = dateLabelOf(el)
-                            if (prev == cur) null else cur
-                        }
-                        MessageRow(
-                            isUser = isUserMsg,
-                            text = text,
-                            media = mediaOf(el),
-                            reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
-                            name = nameOf(el, isUserMsg),
-                            time = timeOf(el),
-                            dateLabel = dateLabel,
-                            avatarPath = if (isUserMsg) null else vm.avatarPath,
-                            accent = accent,
-                            showActions = showActions,
-                            onCopy = {
-                                clipboard.setText(AnnotatedString(text))
-                                Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
-                            },
-                            onRegenerate = { vm.regenerate() },
-                            onContinue = { vm.continueGeneration() },
-                            onDelete = { vm.deleteMessage(item.index) },
-                            onLongPress = { menuMessageIndex = item.index },
-                        )
-                    }
-                    ChatItem.Streaming -> StreamingRow(
-                        text = streamingText,
-                        reasoning = streamingReasoning,
-                        name = name,
-                        avatarPath = vm.avatarPath,
-                        accent = accent,
-                        impersonating = isImpersonating,
-                    )
-                }
-            }
-            notice?.let { n ->
-                item(key = "notice") {
-                    Text(
-                        text = n,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    )
-                }
-            }
-        }
-
-        if (!isStreaming && (contextUsage != null || worldHits.isNotEmpty())) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-            ) {
-                contextUsage?.let { (used, max) ->
-                    StatusPill("上下文 ${formatTokens(used)}/${formatTokens(max)}")
-                }
-                if (worldHits.isNotEmpty()) {
-                    StatusPill("世界书 ×${worldHits.size}") {
-                        Toast.makeText(
-                            context,
-                            "命中：" + worldHits.take(5).joinToString("、"),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                }
-            }
-        }
 
         ChatInputBar(
             input = input,
@@ -371,6 +382,11 @@ fun ChatScreen(
             onVoice = {
                 Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
             },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .onSizeChanged { inputBarHeight = it.height }
+                .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f)),
         )
     }
 
@@ -388,28 +404,28 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
                     HorizontalDivider()
-                    MenuRow(Icons.Filled.ContentCopy, "复制") {
+                    MenuRow(PhosphorIcons.Copy, "复制") {
                         clipboard.setText(AnnotatedString(text))
                         Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                         menuMessageIndex = null
                     }
-                    MenuRow(Icons.Filled.Edit, "编辑这条消息") {
+                    MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
                         editIndex = index; editDraft = text; menuMessageIndex = null
                     }
                     if (!isUserMsg) {
-                        MenuRow(Icons.Filled.Person, "冒充（让模型替你说）") {
+                        MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
                         if (index == lastAiIndex) {
-                            MenuRow(Icons.Filled.Refresh, "重新生成") {
+                            MenuRow(PhosphorIcons.Refresh, "重新生成") {
                                 vm.regenerate(); menuMessageIndex = null
                             }
-                            MenuRow(Icons.Filled.FastForward, "继续生成") {
+                            MenuRow(PhosphorIcons.Continue, "继续生成") {
                                 vm.continueGeneration(); menuMessageIndex = null
                             }
                         }
                     }
-                    MenuRow(Icons.Filled.Delete, "删除这条消息", danger = true) {
+                    MenuRow(PhosphorIcons.Delete, "删除这条消息", danger = true) {
                         deleteTargetIndex = index; menuMessageIndex = null
                     }
                 }
@@ -477,16 +493,16 @@ fun ChatScreen(
                 )
                 HorizontalDivider()
                 if (vm.character != null) {
-                    MenuRow(Icons.Filled.Person, "角色详情") {
+                    MenuRow(PhosphorIcons.Person, "角色详情") {
                         showMore = false
                         showCharacterInfo = true
                     }
                 }
-                MenuRow(Icons.Filled.Share, "导出聊天（JSONL）") {
+                MenuRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
                     showMore = false
                     exportChatLauncher.launch("$name-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
                 }
-                MenuRow(Icons.Filled.Delete, "清空会话", danger = true) {
+                MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
                     showMore = false
                     showClearConfirm = true
                 }
@@ -520,11 +536,12 @@ private fun ChatTopBar(
     accent: Color,
     onBack: () -> Unit,
     onMenu: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
         shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -534,7 +551,7 @@ private fun ChatTopBar(
                 .heightIn(min = 52.dp),
         ) {
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
             }
             Spacer(Modifier.size(6.dp))
             RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
@@ -555,7 +572,7 @@ private fun ChatTopBar(
                 )
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "更多")
+                Icon(PhosphorIcons.MoreVert, contentDescription = "更多")
             }
         }
     }
@@ -714,10 +731,10 @@ private fun MessageRow(
             if (showActions) {
                 Spacer(Modifier.size(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SmallAction(Icons.Filled.ContentCopy, "复制", onCopy)
-                    SmallAction(Icons.Filled.Refresh, "重新生成", onRegenerate)
-                    SmallAction(Icons.Filled.FastForward, "继续", onContinue)
-                    SmallAction(Icons.Filled.Delete, "删除", onDelete)
+                    SmallAction(PhosphorIcons.Copy, "复制", onCopy)
+                    SmallAction(PhosphorIcons.Refresh, "重新生成", onRegenerate)
+                    SmallAction(PhosphorIcons.Continue, "继续", onContinue)
+                    SmallAction(PhosphorIcons.Delete, "删除", onDelete)
                 }
             }
         }
@@ -895,7 +912,7 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
                 modifier = Modifier.weight(1f, fill = false),
             )
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Filled.Close, contentDescription = "移除附件", modifier = Modifier.size(14.dp))
+                Icon(PhosphorIcons.Close, contentDescription = "移除附件", modifier = Modifier.size(14.dp))
             }
         }
     }
@@ -1082,11 +1099,12 @@ private fun ChatInputBar(
     onStop: () -> Unit,
     onAttach: () -> Unit,
     onVoice: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
         shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         Column {
             if (pendingMedia.isNotEmpty()) {
@@ -1117,10 +1135,10 @@ private fun ChatInputBar(
                 }
             }
             IconButton(onClick = onToggleQuickBar, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Filled.MenuBook, contentDescription = "快捷工具盘")
+                Icon(PhosphorIcons.Book, contentDescription = "快捷工具盘")
             }
             IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Filled.Add, contentDescription = "附件 / 语音")
+                Icon(PhosphorIcons.Plus, contentDescription = "附件 / 语音")
             }
             OutlinedTextField(
                 value = input,
@@ -1134,7 +1152,7 @@ private fun ChatInputBar(
             )
             if (!isStreaming) {
                 IconButton(onClick = onVoice, modifier = Modifier.size(42.dp)) {
-                    Icon(Icons.Filled.Mic, contentDescription = "语音输入")
+                    Icon(PhosphorIcons.Mic, contentDescription = "语音输入")
                 }
                 IconButton(
                     onClick = onSend,
@@ -1142,7 +1160,7 @@ private fun ChatInputBar(
                     modifier = Modifier.size(42.dp),
                 ) {
                     Icon(
-                        Icons.Filled.Send,
+                        PhosphorIcons.Send,
                         contentDescription = "发送",
                         tint = if (input.isNotBlank() || pendingMedia.isNotEmpty()) {
                             MaterialTheme.colorScheme.primary
@@ -1153,7 +1171,7 @@ private fun ChatInputBar(
                 }
             } else {
                 IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
-                    Icon(Icons.Filled.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.error)
+                    Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.error)
                 }
             }
             }

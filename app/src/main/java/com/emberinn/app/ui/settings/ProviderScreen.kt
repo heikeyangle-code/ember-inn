@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.icons.PhosphorIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,10 +21,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -88,7 +85,7 @@ fun ProviderListScreen(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text("搜索提供商") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
@@ -262,7 +259,7 @@ fun ProviderDetailScreen(
             trailing = if (existing != null) {
                 {
                     IconButton(onClick = { confirmDelete = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "删除连接")
+                        Icon(PhosphorIcons.Delete, contentDescription = "删除连接")
                     }
                 }
             } else null,
@@ -453,7 +450,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text("搜索模型") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -504,7 +501,7 @@ private fun TopBar(
         modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+            Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
