@@ -288,7 +288,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - ✅ 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer 1.10.0 PlayerView）、发送前附件缩略图/移除
 - ✅ 系统文件选择器（image/video/audio 多选）→ 落盘 filesDir/media/，聊天 extra.media 只存路径 + source:"upload"（官方 saveBase64AsFile 语义，chats.js 逐行核实：{url,type,title,source} / media_display / media_index）→ 发送时 ChatPromptFactory 读文件转 data URL（官方 fetch→base64 语义）→ 引擎链内联 + token 预算；渲染时路径/URL 都支持
 - ✅ 上下文占比胶囊 + 世界书命中灯（onPrepared 回调 → counts/激活条目 → 聊天页状态胶囊，点击世界书看命中条目）
-- ⚠️ 大附件直接 base64 进 jsonl（官方同款，暂不压缩/不限额）；URL 直接导入、图片压缩、LaTeX 渲染未做
+- ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
+- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、图片发送前压缩（compressImage）、角色卡 extensions.assets（icon/background/voice）App 层入库/展示、LaTeX 渲染
 
 ### 4.9 App↔引擎接线核对表（本轮聊天链路，确认“结没结上”用这张表）
 
@@ -355,6 +356,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 74（2026-08-09：媒体官方行为补齐 + 审计修正）
+
+- 补官方行为：extra.inline_image=true（chats.js populateFileAttachment）；删除单条/整体替换/清空/删会话时清理附件文件（官方删除消息/附件会删文件）
+- 审计修正：HANDOFF 4.8 原“大附件 base64 进 jsonl”已过时（已改路径存储），改为官方对齐清单 + 未做登记（图库切换/URL 导入/压缩/角色卡 assets/LaTeX）
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 73（2026-08-09：媒体附件对齐官方存储格式）
 

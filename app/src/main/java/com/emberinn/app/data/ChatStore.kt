@@ -63,6 +63,8 @@ class ChatStore(private val context: Context) {
             JsonObject(emptyMap())
         } else {
             buildJsonObject {
+                // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
+                put("inline_image", JsonPrimitive(true))
                 put(
                     "media",
                     JsonArray(media.map { m ->
@@ -103,16 +105,19 @@ class ChatStore(private val context: Context) {
     /** 删除指定下标的一条消息（重新生成/删除消息用；对齐官方删除消息后落盘 jsonl）。 */
     /** 整体替换某会话消息（重新生成/继续/清空会话用）。 */
     fun replace(sessionId: String, elements: List<JsonElement>) {
+        val removed = messages(sessionId).filter { old -> elements.none { it == old } }
         File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(elements))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        deleteMediaFiles(removed)
     }
 
     fun removeAt(sessionId: String, index: Int) {
         val list = messages(sessionId).toMutableList()
         if (index in list.indices) {
-            list.removeAt(index)
+            val removed = list.removeAt(index)
             File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
             get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+            deleteMediaFiles(listOf(removed))
         }
     }
 
@@ -130,16 +135,31 @@ class ChatStore(private val context: Context) {
         return if (file.exists()) file.readText() else null
     }
 
-    /** 删除单个会话（会话元数据 + 聊天 jsonl）。 */
+    /** 删除单个会话（会话元数据 + 聊天 jsonl + 附件文件）。 */
     fun delete(sessionId: String) {
+        deleteMediaFiles(messages(sessionId))
         File(sessionsDir, "$sessionId.json").delete()
         File(chatsDir, "$sessionId.jsonl").delete()
     }
 
     fun deleteByCharacter(characterId: String?) {
         list().filter { it.characterId == characterId }.forEach { s ->
+            deleteMediaFiles(messages(s.id))
             File(sessionsDir, "${s.id}.json").delete()
             File(chatsDir, "${s.id}.jsonl").delete()
+        }
+    }
+
+    /** 清理被移除消息引用的本地附件文件（官方删除消息/附件会删文件；data URL 跳过）。 */
+    private fun deleteMediaFiles(elements: List<JsonElement>) {
+        elements.forEach { el ->
+            val extra = el.jsonObject["extra"] as? JsonObject ?: return@forEach
+            extra["media"]?.jsonArray?.forEach { me ->
+                val url = me.jsonObject["url"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+                if (!url.startsWith("data:")) {
+                    runCatching { File(url).delete() }
+                }
+            }
         }
     }
 }
