@@ -145,6 +145,9 @@ fun ChatScreen(
         }
     }
 
+    // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”
+    LaunchedEffect(Unit) { vm.refreshProviderConfigured() }
+
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 

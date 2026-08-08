@@ -52,6 +52,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice
 
+    /** 每次进入聊天页/发送前调用：重新读盘，避免配置后状态过期（设置页与聊天页共用 profiles.json）。 */
+    fun refreshProviderConfigured() {
+        _providerConfigured.value = chatRepository.profile() != null
+    }
+
+    private fun isProviderConfigured(): Boolean = chatRepository.profile() != null
+
     private var streamSession: LlmClient.StreamSession? = null
     private var streamActive = false
     private var currentCharName = "Assistant"
@@ -79,7 +86,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.append(sessionId, true, text, userName)
         refreshMessages()
 
-        if (!_providerConfigured.value) {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
@@ -117,7 +125,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.replace(sessionId, keep)
         refreshMessages()
         _notice.value = null
-        if (!_providerConfigured.value) {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
@@ -135,7 +144,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.replace(sessionId, msgs)
         refreshMessages()
         _notice.value = null
-        if (!_providerConfigured.value) {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
@@ -170,7 +180,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun impersonate() {
         if (_isStreaming.value) return
         _notice.value = null
-        if (!_providerConfigured.value) {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再冒充。）"
             return
         }

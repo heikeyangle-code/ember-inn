@@ -46,7 +46,11 @@ fun MainScreen(
             sessionId = sessionId,
             name = openName,
             onBack = { openSessionId = null },
-            onOpenSettings = { selectedTab = 2 },
+            // 聊天页里跳设置：先退出聊天（否则被早退逻辑挡住，设置 Tab 出不来）
+            onOpenSettings = {
+                openSessionId = null
+                selectedTab = 2
+            },
         )
         return
     }

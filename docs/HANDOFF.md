@@ -334,6 +334,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 62b（2026-08-09：修“配置了模型聊天还说没配置”）
+
+- 根因：ChatViewModel 只在创建时读一次 profiles.json 并缓存 providerConfigured，之后不刷新；且 MainScreen 在聊天打开时早退 return，聊天页“先选一个模型”跳设置被挡住
+- 修复：refreshProviderConfigured() 每次进入聊天页/发送前实时读盘（设置页与聊天页本就共用 ProviderStore/profiles.json）；MainScreen 跳设置时先退出聊天再切 Tab 2
+- 无引擎改动 → 无新差分；CI 验证中
+
 ## 最近一轮 62（2026-08-09：聊天页补编辑消息 + 冒充）
 
 - ChatStore.updateMessage：编辑文本 + extra.bias=null（官方 updateMessage AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）
