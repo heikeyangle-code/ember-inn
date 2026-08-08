@@ -90,6 +90,53 @@ class ChatPromptFactoryTest {
     }
 
     @Test
+    fun `media file path is converted to data url before inlining`() {
+        val tmp = java.io.File.createTempFile("media-test", ".png")
+        tmp.writeBytes(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47))
+        val history = listOf(
+            buildJsonObject {
+                put("name", "User")
+                put("is_user", true)
+                put("is_system", false)
+                put("send_date", "2026-08-09T00:00:00Z")
+                put("mes", "看图")
+                put(
+                    "extra",
+                    buildJsonObject {
+                        put(
+                            "media",
+                            JsonArray(
+                                listOf(
+                                    buildJsonObject {
+                                        put("type", "image")
+                                        put("url", tmp.absolutePath)
+                                        put("title", "a.png")
+                                        put("source", "upload")
+                                    },
+                                ),
+                            ),
+                        )
+                    },
+                )
+            },
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            imageInlining = true,
+        )
+        val hit = result.messages.firstOrNull { it.content == "看图" && it.media?.isNotEmpty() == true }
+        assertTrue(hit != null)
+        assertTrue(hit!!.media!!.first().url.startsWith("data:image/png;base64,"))
+        tmp.delete()
+    }
+
+    @Test
     fun `continue nudge targets the last assistant message`() {
         val history = listOf(
             msg(true, "问", "User"),

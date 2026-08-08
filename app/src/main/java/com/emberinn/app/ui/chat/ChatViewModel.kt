@@ -2,7 +2,7 @@ package com.emberinn.app.ui.chat
 
 import android.app.Application
 import android.net.Uri
-import android.util.Base64
+import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.CharacterRecord
@@ -244,11 +244,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _impersonated.value = null
     }
 
-    /** 从系统文件选择器取附件：读字节 → data URL（官方 fetch→base64 语义），类型缺省按图片。 */
+    /** 从系统文件选择器取附件：落盘到 media/ 目录，聊天只存路径（官方 saveBase64AsFile 语义），发送时再转 data URL。 */
     fun addPendingMedia(uri: Uri, mime: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val resolver = getApplication<Application>().contentResolver
+                val app = getApplication<Application>()
+                val resolver = app.contentResolver
                 val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
                 val type = mime?.ifBlank { null }
                     ?: resolver.getType(uri)
@@ -259,9 +260,42 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     type.startsWith("audio/") -> "audio"
                     else -> return@launch
                 }
-                val dataUrl = "data:$type;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-                _pendingMedia.value = _pendingMedia.value + MediaAttachment(type = mediaType, url = dataUrl)
+                val displayName = runCatching {
+                    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                        if (c.moveToFirst()) c.getString(0) else null
+                    }
+                }.getOrNull() ?: "attachment"
+                val extension = extensionFor(type, displayName)
+                val dir = java.io.File(app.filesDir, "media").apply { mkdirs() }
+                val file = java.io.File(dir, "${System.currentTimeMillis()}_${displayName.hashCode().toUInt().toString(16)}.$extension")
+                file.writeBytes(bytes)
+                _pendingMedia.value = _pendingMedia.value + MediaAttachment(
+                    type = mediaType,
+                    url = file.absolutePath,
+                    title = displayName,
+                )
             }
+        }
+    }
+
+    private fun extensionFor(mime: String, fallbackName: String): String {
+        val fromName = fallbackName.substringAfterLast('.', "").takeIf { it.isNotBlank() && it.length <= 5 }
+        if (fromName != null) return fromName
+        return when {
+            mime.startsWith("image/png") -> "png"
+            mime.startsWith("image/gif") -> "gif"
+            mime.startsWith("image/webp") -> "webp"
+            mime.startsWith("image/") -> "jpg"
+            mime.startsWith("video/mp4") -> "mp4"
+            mime.startsWith("video/webm") -> "webm"
+            mime.startsWith("video/") -> "mp4"
+            mime.startsWith("audio/mpeg") -> "mp3"
+            mime.startsWith("audio/mp4") || mime.contains("m4a") -> "m4a"
+            mime.startsWith("audio/ogg") -> "ogg"
+            mime.startsWith("audio/wav") -> "wav"
+            mime.startsWith("audio/flac") -> "flac"
+            mime.startsWith("audio/") -> "m4a"
+            else -> "bin"
         }
     }
 

@@ -127,7 +127,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     runCatching {
-                        listOf("characters", "chats", "sessions", "avatars", "provider").forEach { name ->
+                        listOf("characters", "chats", "sessions", "avatars", "provider", "media").forEach { name ->
                             File(context.filesDir, name).deleteRecursively()
                         }
                     }
@@ -194,7 +194,7 @@ private fun DataRow(
 private fun buildBackupZip(context: android.content.Context): ByteArray {
     val out = java.io.ByteArrayOutputStream()
     ZipOutputStream(out).use { zip ->
-        val dirs = listOf("characters", "sessions", "chats", "avatars", "provider")
+        val dirs = listOf("characters", "sessions", "chats", "avatars", "provider", "media")
         dirs.forEach { dirName ->
             val dir = File(context.filesDir, dirName)
             if (dir.exists()) {

@@ -89,7 +89,16 @@ class ChatPromptFactory {
                     identifier = "chatHistory",
                     media = extra?.get("media")?.jsonArray?.mapNotNull { me ->
                         val mo = me.jsonObject
-                        val url = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                        val rawUrl = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                        // 官方存储路径、请求时才 fetch→base64；本地文件直接读成 data URL 再进链内联
+                        val url = if (rawUrl.startsWith("data:")) {
+                            rawUrl
+                        } else {
+                            val f = java.io.File(rawUrl)
+                            if (!f.exists()) return@mapNotNull null
+                            val mime = mimeFromPath(rawUrl)
+                            "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(f.readBytes())
+                        }
                         MediaAttachment(
                             type = mo["type"]?.jsonPrimitive?.contentOrNull?.ifBlank { "image" } ?: "image",
                             url = url,
@@ -178,6 +187,23 @@ class ChatPromptFactory {
                 runCatching { WorldBookEntryParser.parse(el.jsonObject, "character", i) }.getOrNull()
             } ?: emptyList()
         return ParsedCard(source, entries)
+    }
+
+    private fun mimeFromPath(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
+        "png" -> "image/png"
+        "jpg", "jpeg" -> "image/jpeg"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "mp4" -> "video/mp4"
+        "webm" -> "video/webm"
+        "mov" -> "video/quicktime"
+        "mkv" -> "video/x-matroska"
+        "mp3" -> "audio/mpeg"
+        "m4a" -> "audio/mp4"
+        "ogg", "oga" -> "audio/ogg"
+        "wav" -> "audio/wav"
+        "flac" -> "audio/flac"
+        else -> "application/octet-stream"
     }
 
     private fun str(obj: JsonObject, key: String): String =

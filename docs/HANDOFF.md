@@ -286,7 +286,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **App 层（2026-08-09 已接）**：
 - ✅ 聊天消息 `extra.media` 解析（ChatPromptFactory → PromptMessage.media/mediaDisplay/mediaIndex）
 - ✅ 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer 1.10.0 PlayerView）、发送前附件缩略图/移除
-- ✅ 系统文件选择器（image/video/audio 多选）→ 读字节转 data URL（官方 fetch→base64 语义）→ 随消息进 extra.media → 引擎链内联 + token 预算
+- ✅ 系统文件选择器（image/video/audio 多选）→ 落盘 filesDir/media/，聊天 extra.media 只存路径 + source:"upload"（官方 saveBase64AsFile 语义，chats.js 逐行核实：{url,type,title,source} / media_display / media_index）→ 发送时 ChatPromptFactory 读文件转 data URL（官方 fetch→base64 语义）→ 引擎链内联 + token 预算；渲染时路径/URL 都支持
 - ✅ 上下文占比胶囊 + 世界书命中灯（onPrepared 回调 → counts/激活条目 → 聊天页状态胶囊，点击世界书看命中条目）
 - ⚠️ 大附件直接 base64 进 jsonl（官方同款，暂不压缩/不限额）；URL 直接导入、图片压缩、LaTeX 渲染未做
 
@@ -355,6 +355,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 73（2026-08-09：媒体附件对齐官方存储格式）
+
+- 官方源码核实（script.js getMediaDisplay/getMediaIndex + chats.js populateFileAttachment）：extra.media 条目 {url,type,title,source}，source=upload，存储路径而非 base64；media_display/media_index 键名与我实现一致
+- 调整：附件落盘 filesDir/media/，extra.media 只存路径 + source:"upload"；发送时 ChatPromptFactory 读文件 → data URL（mime 按扩展名推断）→ 链内联；渲染按 data:/路径 分别处理（Coil3 File / ExoPlayer Uri.fromFile）
+- 备份 zip 与清除数据均包含 media 目录；app 测试补“文件路径→data URL”断言
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 72（2026-08-09：首启引导）
 

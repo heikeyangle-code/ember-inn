@@ -70,6 +70,7 @@ class ChatStore(private val context: Context) {
                             put("type", JsonPrimitive(m.type))
                             put("url", JsonPrimitive(m.url))
                             if (m.title.isNotBlank()) put("title", JsonPrimitive(m.title))
+                            put("source", JsonPrimitive("upload"))
                         }
                     }),
                 )

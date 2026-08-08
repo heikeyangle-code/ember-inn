@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.chat
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -717,7 +718,7 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)) {
             if (media.type == "image") {
                 AsyncImage(
-                    model = media.url,
+                    model = mediaModel(media.url),
                     contentDescription = "附件",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)),
@@ -752,7 +753,7 @@ private fun MessageMedia(media: List<MediaAttachment>) {
         media.forEach { m ->
             when (m.type) {
                 "image" -> AsyncImage(
-                    model = m.url,
+                    model = mediaModel(m.url),
                     contentDescription = m.title.ifBlank { "图片" },
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -771,7 +772,8 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
     val context = LocalContext.current
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(url))
+            val uri = if (url.startsWith("data:")) Uri.parse(url) else Uri.fromFile(File(url))
+            setMediaItem(MediaItem.fromUri(uri))
             prepare()
         }
     }
@@ -1006,6 +1008,9 @@ private fun isUser(el: JsonElement): Boolean {
 
 private fun textOf(el: JsonElement): String =
     el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+
+/** 渲染输入：data URL 原样，本地路径转 File（Coil3/ExoPlayer 都能加载）。 */
+private fun mediaModel(url: String): Any = if (url.startsWith("data:")) url else File(url)
 
 private fun mediaOf(el: JsonElement): List<MediaAttachment> {
     val extra = el.jsonObject["extra"] as? JsonObject ?: return emptyList()
