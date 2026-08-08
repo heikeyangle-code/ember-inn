@@ -85,6 +85,9 @@ import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownColor
+import com.mikepenz.markdown.m3.markdownTypography
+import com.mikepenz.markdown.model.markdownPadding
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -515,14 +518,9 @@ private fun MessageRow(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     } else {
-                        Markdown(
+                        ChatMarkdown(
                             content = text,
-                            modifier = Modifier.heightIn(max = 420.dp),
-                            imageTransformer = Coil3ImageTransformerImpl,
-                            components = markdownComponents(
-                                codeBlock = highlightedCodeBlock,
-                                codeFence = highlightedCodeFence,
-                            ),
+                            onSurface = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -598,14 +596,9 @@ private fun StreamingRow(
                 color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
                 Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Markdown(
+                    ChatMarkdown(
                         content = text.ifEmpty { "…" },
-                        modifier = Modifier.heightIn(max = 420.dp),
-                        imageTransformer = Coil3ImageTransformerImpl,
-                        components = markdownComponents(
-                            codeBlock = highlightedCodeBlock,
-                            codeFence = highlightedCodeFence,
-                        ),
+                        onSurface = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "▍",
@@ -617,6 +610,58 @@ private fun StreamingRow(
             }
         }
     }
+}
+
+/** 聊天气泡里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。 */
+@Composable
+private fun ChatMarkdown(content: String, onSurface: Color) {
+    Markdown(
+        content = content,
+        modifier = Modifier.heightIn(max = 420.dp),
+        imageTransformer = Coil3ImageTransformerImpl,
+        components = markdownComponents(
+            codeBlock = highlightedCodeBlock,
+            codeFence = highlightedCodeFence,
+        ),
+        colors = markdownColor(
+            text = onSurface,
+            codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
+            inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
+            dividerColor = MaterialTheme.colorScheme.outlineVariant,
+            tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
+        ),
+        typography = markdownTypography(
+            h1 = MaterialTheme.typography.titleMedium,
+            h2 = MaterialTheme.typography.titleMedium,
+            h3 = MaterialTheme.typography.titleSmall,
+            h4 = MaterialTheme.typography.titleSmall,
+            h5 = MaterialTheme.typography.titleSmall,
+            h6 = MaterialTheme.typography.titleSmall,
+            text = MaterialTheme.typography.bodyMedium,
+            paragraph = MaterialTheme.typography.bodyMedium,
+            ordered = MaterialTheme.typography.bodyMedium,
+            bullet = MaterialTheme.typography.bodyMedium,
+            list = MaterialTheme.typography.bodyMedium,
+            quote = MaterialTheme.typography.bodyMedium.copy(
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+            ),
+            code = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+            inlineCode = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+        ),
+        padding = markdownPadding(
+            block = 3.dp,
+            list = 2.dp,
+            listItemTop = 2.dp,
+            listItemBottom = 2.dp,
+            listIndent = 10.dp,
+            codeBlock = PaddingValues(10.dp),
+            blockQuote = PaddingValues(horizontal = 8.dp),
+        ),
+    )
 }
 
 @Composable

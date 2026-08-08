@@ -220,7 +220,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 
 ### 4.3 聊天页 🟡 v2（核心已接线）
 > 2026-08-09 修正：continue 用官方默认 nudge 路径（此前误用 continue_prefill=true 且 App 传“旧在前”，导致引擎把最老消息当续写对象=“重新生成”）；ChatPromptFactory 已按官方 setOpenAIMessages 翻成“新的在前”。思考过程走 LlmClient.onReasoning 独立通道，流式气泡上方显示“思考过程”块。
-消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
+消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
 ❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
@@ -336,6 +336,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 66（2026-08-09：Markdown 收敛成聊天风）
+
+- ChatMarkdown：AI 气泡 Markdown 定制 colors/typography/padding——正文 bodyMedium、标题降级 titleSmall/Medium、代码低饱和容器 + 等宽小字、列表/引用间距克制（对齐 README：正文 16sp、低饱和、克制）
+- 旧 SseParser 删除后运行时只有 SseChunkParser 一条路（见轮 65）
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 65（2026-08-09：删除旧 SseParser，运行时只留官方对拍解析器）
 
