@@ -33,6 +33,44 @@ data class SamplerParams(
     val cacheTTL: String = "5m",
 )
 
+/** 工具定义（官方 request.body.tools 的 function 结构）。 */
+@Serializable
+data class ToolDefinition(
+    val name: String,
+    val description: String = "",
+    val parameters: JsonObject = JsonObject(emptyMap()),
+)
+
+/**
+ * 发送请求时的能力开关（工具/结构化输出/联网搜索/图像模态/安全设置）。
+ * 对应官方 oai_settings 与后端 request.body 的相关字段，App 层按设置填充。
+ */
+@Serializable
+data class ProviderRequestOptions(
+    val tools: List<ToolDefinition> = emptyList(),
+    val toolChoice: String? = null,
+    val jsonSchema: JsonObject? = null,
+    val enableWebSearch: Boolean = false,
+    val requestImages: Boolean = false,
+    val aspectRatio: String = "",
+    val imageSize: String = "",
+    val safetySettings: JsonArray = JsonArray(emptyList()),
+) {
+    val hasTools: Boolean get() = tools.isNotEmpty()
+
+    /** 官方 OpenAI 风格 tools 数组（type=function）。 */
+    fun openAiTools(): JsonArray = JsonArray(tools.map { t ->
+        buildJsonObject {
+            put("type", JsonPrimitive("function"))
+            put("function", buildJsonObject {
+                put("name", JsonPrimitive(t.name))
+                put("description", JsonPrimitive(t.description))
+                put("parameters", t.parameters)
+            })
+        }
+    })
+}
+
 /** OpenAI 兼容 Chat Completions 请求体构建。 */
 object ChatRequestBuilder {
 
@@ -42,7 +80,8 @@ object ChatRequestBuilder {
         model: String,
         messages: List<CompletionMessage>,
         params: SamplerParams = SamplerParams(),
-    ): String = buildOpenAiCompatibleFromChatML(model, messages.map { messageJson(it) }, params)
+        options: ProviderRequestOptions = ProviderRequestOptions(),
+    ): String = buildOpenAiCompatibleFromChatML(model, messages.map { messageJson(it) }, params, options)
 
     /**
      * 直接吃官方 ChatML 消息（供 OpenRouter 等先做签名/缓存/媒体处理，再序列化）。
@@ -52,6 +91,7 @@ object ChatRequestBuilder {
         model: String,
         messages: List<JsonObject>,
         params: SamplerParams = SamplerParams(),
+        options: ProviderRequestOptions = ProviderRequestOptions(),
         extra: JsonObject? = null,
     ): String {
         val body = buildJsonObject {
@@ -63,6 +103,20 @@ object ChatRequestBuilder {
             put("presence_penalty", params.presencePenalty)
             put("frequency_penalty", params.frequencyPenalty)
             put("stream", params.stream)
+            if (options.hasTools) {
+                put("tools", options.openAiTools())
+                options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
+            }
+            options.jsonSchema?.let { schema ->
+                put("response_format", buildJsonObject {
+                    put("type", JsonPrimitive("json_schema"))
+                    put("json_schema", buildJsonObject {
+                        put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
+                        put("strict", JsonPrimitive(true))
+                        put("schema", schema["value"] ?: schema)
+                    })
+                })
+            }
             if (extra != null) extra.forEach { (k, v) -> put(k, v) }
         }
         return body.toString()

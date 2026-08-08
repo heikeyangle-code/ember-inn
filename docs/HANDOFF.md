@@ -172,6 +172,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 其余要点：
 - providers.json 数据驱动 **24 家**（新增 Cohere/AI21 专用协议条目；含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 2026-08 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）
 - LlmClient 七协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages）、Gemini（generateContent）、Mistral / xAI / AI21（/chat/completions）、Cohere（/v2/chat）；SSE 四格式（OpenAI delta 也覆盖 Mistral/xAI/AI21、Anthropic content_block_delta、Gemini candidates.parts、Cohere content-delta），流结束兜底 onDone
+- **能力管道已全通**（ProviderRequestOptions）：tools/tool_choice（OpenAI 兼容全家 + Anthropic + Gemini + Mistral/xAI/AI21/Cohere/DeepSeek 各自官方形态）、json_schema 结构化输出（openai/mistral/xai response_format、ai21/deepseek json_object+hack 消息、cohere response_format.schema、Anthropic 强制 tool、Gemini responseMimeType/responseSchema）、Anthropic/Gemini web_search、Gemini requestImages/aspectRatio/imageSize/safetySettings
 - 响应解析按协议取纯文本；Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
@@ -237,6 +238,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
 | 提示词组装 | `public/scripts/openai.js` preparePromptsForChatCompletion / populateChatCompletion + `public/scripts/script.js` generate | 发送前：PromptAssembler / ChatCompletionPipelinePlan 出消息列表 → PromptManager 宏替换 → 按协议走 ChatRequestBuilder（OpenAI）/ AnthropicRequestBuilder / GoogleRequestBuilder；**现在 App 直接发历史消息，是 P0 缺口** |
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
+| 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
 | Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；HTML 消息开关默认关，开启走本地 WebView + 消毒（对齐 power-user HTML 设置） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；**extra.media 解析与渲染组件还没接** |
@@ -282,7 +284,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
+10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天元数据（书签/快照/背景）；群聊多人回复拼接；BYAF 资源提取；App 层：聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -293,6 +295,20 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 52（2026-08-08：能力管道全通 —— 工具/结构化输出/联网搜索/图像模态/安全设置）
+
+- 新增 ToolDefinition + ProviderRequestOptions（tools/toolChoice/jsonSchema/enableWebSearch/requestImages/aspectRatio/imageSize/safetySettings）
+- ChatRequestBuilder：buildOpenAiCompatible(FromChatML) 支持 tools/tool_choice/response_format(json_schema)
+- LlmClient 全厂商按官方形态接线：
+  - OpenAI 兼容全家：tools + tool_choice + response_format.json_schema
+  - Anthropic：tools→input_schema、tool_choice、jsonSchema→强制 tool、enableWebSearch→web_search 工具
+  - Gemini：tools→function_declarations（$schema 移除、空 properties→null）、toolChoice→toolConfig、web_search→google_search、requestImages→responseModalities/imageConfig、safetySettings
+  - Mistral/xAI：tools + response_format.json_schema（strict 默认 true）
+  - AI21/DeepSeek：官方 json_object hack（response_format=json_object + “JSON schema for the response:” 追加 user 消息）+ tools（DeepSeek 清空空 required 数组）
+  - Cohere：tools（参数 $schema 移除）+ response_format.schema
+- LlmClientTest +6（openai/anthropic/gemini/mistral/ai21/cohere 能力断言）
+- 引擎 247 测全绿；官方基准 800 例不变
 
 ## 最近一轮 51（2026-08-08：OpenRouter 缓存 + DeepSeek reasoner 处理接线）
 

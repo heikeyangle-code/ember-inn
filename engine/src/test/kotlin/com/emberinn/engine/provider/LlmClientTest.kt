@@ -4,6 +4,7 @@ import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.ToolCall
 import java.io.File
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import mockwebserver3.MockResponse
@@ -662,6 +663,134 @@ class LlmClientTest {
         val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
         assertEquals("high", body["reasoning_effort"]?.toString()?.trim('"'))
         assertTrue(body["messages"]!!.toString().contains("reasoning_content"))
+        server.close()
+    }
+
+    @Test
+    fun `openai body includes tools tool choice and response format`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""").build())
+        val schema = Json.parseToJsonElement("""{"name":"my_schema","value":{"type":"object"}}""").jsonObject
+        LlmClient().chatCompletions(
+            provider,
+            ConnectionProfile(providerId = "openai", apiKey = "sk", model = "gpt-4o", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(
+                tools = listOf(ToolDefinition("getWeather", "weather", Json.parseToJsonElement("""{"type":"object","properties":{"city":{"type":"string"}}}""").jsonObject)),
+                toolChoice = "auto",
+                jsonSchema = schema,
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("getWeather", body["tools"]?.jsonArray?.get(0)?.jsonObject?.get("function")?.jsonObject?.get("name")?.toString()?.trim('"'))
+        assertEquals("auto", body["tool_choice"]?.toString()?.trim('"'))
+        assertEquals("my_schema", body["response_format"]?.jsonObject?.get("json_schema")?.jsonObject?.get("name")?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `anthropic passes tools and web search`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"content":[{"type":"text","text":"ok"}]}""").build())
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        LlmClient().chatCompletions(
+            anthropic,
+            ConnectionProfile(providerId = "anthropic", apiKey = "sk-ant", model = "claude-opus-4-7", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(
+                tools = listOf(ToolDefinition("getWeather", "weather", Json.parseToJsonElement("""{"type":"object"}""").jsonObject)),
+                enableWebSearch = true,
+            ),
+        )
+        val raw = server.takeRequest().body!!.utf8()
+        assertTrue(raw.contains("input_schema"))
+        assertTrue(raw.contains("web_search_20250305"))
+        server.close()
+    }
+
+    @Test
+    fun `gemini passes tools safety and image modality`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""").build())
+        val google = ProviderRegistry.get("google")!!
+        LlmClient().chatCompletions(
+            google,
+            ConnectionProfile(providerId = "google", apiKey = "gkey", model = "gemini-2.5-flash-image-preview", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(
+                tools = listOf(ToolDefinition("getWeather", "weather", Json.parseToJsonElement("""{"type":"object"}""").jsonObject)),
+                safetySettings = JsonArray(listOf(Json.parseToJsonElement("""{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}""").jsonObject)),
+                requestImages = true,
+                aspectRatio = "16:9",
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("getWeather", body["tools"]?.jsonArray?.get(0)?.jsonObject?.get("function_declarations")?.jsonArray?.get(0)?.jsonObject?.get("name")?.toString()?.trim('"'))
+        assertEquals("HARM_CATEGORY_HARASSMENT", body["safetySettings"]?.jsonArray?.get(0)?.jsonObject?.get("category")?.toString()?.trim('"'))
+        assertEquals("16:9", body["generationConfig"]?.jsonObject?.get("imageConfig")?.jsonObject?.get("aspectRatio")?.toString()?.trim('"'))
+        assertTrue(body["generationConfig"]?.jsonObject?.get("responseModalities")!!.toString().contains("image"))
+        server.close()
+    }
+
+    @Test
+    fun `mistral body includes tools and json schema`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""").build())
+        val mistral = ProviderRegistry.get("mistral")!!
+        LlmClient().chatCompletions(
+            mistral,
+            ConnectionProfile(providerId = "mistral", apiKey = "sk-m", model = "mistral-large-latest", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(
+                tools = listOf(ToolDefinition("getWeather", "weather", Json.parseToJsonElement("""{"type":"object"}""").jsonObject)),
+                jsonSchema = Json.parseToJsonElement("""{"name":"my_schema","value":{"type":"object"}}""").jsonObject,
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertTrue(body["tools"]!!.toString().contains("getWeather"))
+        assertEquals("my_schema", body["response_format"]?.jsonObject?.get("json_schema")?.jsonObject?.get("name")?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `ai21 json schema appends schema message`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""").build())
+        val ai21 = ProviderRegistry.get("ai21")!!
+        LlmClient().chatCompletions(
+            ai21,
+            ConnectionProfile(providerId = "ai21", apiKey = "sk-a", model = "jamba-large", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(jsonSchema = Json.parseToJsonElement("""{"name":"s","value":{"type":"object"}}""").jsonObject),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("json_object", body["response_format"]?.jsonObject?.get("type")?.toString()?.trim('"'))
+        assertTrue(body["messages"]!!.toString().contains("JSON schema for the response"))
+        server.close()
+    }
+
+    @Test
+    fun `cohere removes dollar schema from tool parameters`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().code(200).body("""{"message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}""").build())
+        val cohere = ProviderRegistry.get("cohere")!!
+        val params = Json.parseToJsonElement("""{"type":"object","properties":{},"required":[],"\u0024schema":"https://json-schema.org/draft/2020-12/schema"}""").jsonObject
+        LlmClient().chatCompletions(
+            cohere,
+            ConnectionProfile(providerId = "cohere", apiKey = "sk-c", model = "command-r-plus", baseUrlOverride = server.url("/").toString().trimEnd('/')),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(tools = listOf(ToolDefinition("getWeather", "weather", params))),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        val toolParams = body["tools"]?.jsonArray?.get(0)?.jsonObject?.get("function")?.jsonObject?.get("parameters")?.jsonObject
+        assertEquals(null, toolParams?.get("\$schema"))
+        assertEquals(0, toolParams?.get("required")?.jsonArray?.size)
         server.close()
     }
 }

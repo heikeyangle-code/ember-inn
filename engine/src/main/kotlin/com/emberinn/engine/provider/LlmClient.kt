@@ -114,8 +114,9 @@ class LlmClient(
         provider: ProviderSpec,
         profile: ConnectionProfile,
         messages: List<CompletionMessage>,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
     ): String {
-        val request = buildRequest(provider, profile, messages, stream = false)
+        val request = buildRequest(provider, profile, messages, stream = false, options = options)
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
@@ -150,8 +151,9 @@ class LlmClient(
         messages: List<CompletionMessage>,
         onDelta: (String) -> Unit,
         onDone: () -> Unit,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
     ) {
-        val request = buildRequest(provider, profile, messages, stream = true)
+        val request = buildRequest(provider, profile, messages, stream = true, options = options)
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
@@ -183,6 +185,7 @@ class LlmClient(
         profile: ConnectionProfile,
         messages: List<CompletionMessage>,
         stream: Boolean,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
     ): Request {
         val base = resolveBase(provider, profile)
         val builder = Request.Builder()
@@ -206,6 +209,10 @@ class LlmClient(
                     includeReasoning = profile.sampler.includeReasoning,
                     reasoningBudget = reasoningBudget,
                     enableAdaptiveThinking = profile.sampler.enableAdaptiveThinking,
+                    tools = options.tools.map { AnthropicTool(it.name, it.description, it.parameters) },
+                    toolChoice = options.toolChoice,
+                    jsonSchema = options.jsonSchema,
+                    enableWebSearch = options.enableWebSearch,
                 )
                 builder.url(url).post(request.body.toRequestBody("application/json".toMediaType()))
                 builder.header("x-api-key", profile.apiKey)
@@ -237,6 +244,17 @@ class LlmClient(
                     reasoningEffort = effort,
                     includeReasoning = profile.sampler.includeReasoning,
                     reasoningBudget = reasoningBudget,
+                    tools = options.tools.map { GeminiFunctionTool(it.name, it.description, it.parameters) },
+                    toolChoice = options.toolChoice?.let { JsonPrimitive(it) },
+                    enableWebSearch = options.enableWebSearch,
+                    requestImages = options.requestImages,
+                    aspectRatio = options.aspectRatio,
+                    imageSize = options.imageSize,
+                    safetySettings = options.safetySettings,
+                    responseMimeType = if (options.jsonSchema != null) "application/json" else null,
+                    responseSchema = options.jsonSchema?.let { schema ->
+                        schema["value"] as? JsonObject ?: schema
+                    },
                 )
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
             }
@@ -252,6 +270,21 @@ class LlmClient(
                     put("presence_penalty", profile.sampler.presencePenalty)
                     put("max_tokens", profile.sampler.maxTokens)
                     put("stream", stream)
+                    if (options.hasTools) {
+                        put("tools", options.openAiTools())
+                        options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
+                    }
+                    options.jsonSchema?.let { schema ->
+                        put("response_format", buildJsonObject {
+                            put("type", JsonPrimitive("json_schema"))
+                            put("json_schema", buildJsonObject {
+                                put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
+                                put("description", JsonPrimitive(schema["description"]?.let { it.toString().trim('"') } ?: ""))
+                                put("schema", schema["value"] ?: schema)
+                                put("strict", JsonPrimitive(true))
+                            })
+                        })
+                    }
                 }
                 builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
@@ -272,13 +305,35 @@ class LlmClient(
                     if (effort.isNotEmpty() && effort != "auto") {
                         put("reasoning_effort", if (effort == "high") "high" else "low")
                     }
+                    if (options.hasTools) {
+                        put("tools", options.openAiTools())
+                        options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
+                    }
+                    options.jsonSchema?.let { schema ->
+                        put("response_format", buildJsonObject {
+                            put("type", JsonPrimitive("json_schema"))
+                            put("json_schema", buildJsonObject {
+                                put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
+                                put("strict", JsonPrimitive(true))
+                                put("schema", schema["value"] ?: schema)
+                            })
+                        })
+                    }
                 }
                 builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             "ai21" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
-                val converted = ProviderConverters.convertAI21(chatML(messages), PromptNames())
+                val rawMl = chatML(messages).toMutableList()
+                val schema = options.jsonSchema
+                if (schema != null) {
+                    rawMl += buildJsonObject {
+                        put("role", JsonPrimitive("user"))
+                        put("content", JsonPrimitive("JSON schema for the response:\n" + (schema["value"] ?: schema)))
+                    }
+                }
+                val converted = ProviderConverters.convertAI21(rawMl, PromptNames())
                 val body = buildJsonObject {
                     put("messages", JsonArray(converted))
                     put("model", JsonPrimitive(profile.model))
@@ -286,6 +341,10 @@ class LlmClient(
                     put("temperature", profile.sampler.temperature)
                     put("top_p", profile.sampler.topP)
                     put("stream", stream)
+                    if (options.hasTools) put("tools", options.openAiTools())
+                    if (schema != null) {
+                        put("response_format", buildJsonObject { put("type", JsonPrimitive("json_object")) })
+                    }
                 }
                 builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
@@ -303,7 +362,27 @@ class LlmClient(
                     put("frequency_penalty", profile.sampler.frequencyPenalty)
                     put("presence_penalty", profile.sampler.presencePenalty)
                     put("documents", JsonArray(emptyList()))
-                    put("tools", JsonArray(emptyList()))
+                    if (options.hasTools) {
+                        put("tools", JsonArray(options.tools.map { t ->
+                            buildJsonObject {
+                                put("type", JsonPrimitive("function"))
+                                put("function", buildJsonObject {
+                                    put("name", JsonPrimitive(t.name))
+                                    put("description", JsonPrimitive(t.description))
+                                    val params = t.parameters.toMutableMap().apply { remove("\$schema") }
+                                    put("parameters", JsonObject(params))
+                                })
+                            }
+                        }))
+                    } else {
+                        put("tools", JsonArray(emptyList()))
+                    }
+                    options.jsonSchema?.let { schema ->
+                        put("response_format", buildJsonObject {
+                            put("type", JsonPrimitive("json_schema"))
+                            put("schema", schema["value"] ?: schema)
+                        })
+                    }
                 }
                 builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
@@ -356,25 +435,55 @@ class LlmClient(
                         model = profile.model,
                         messages = chatMl,
                         params = profile.sampler.copy(stream = stream),
+                        options = options,
                         extra = extra,
                     )
                 } else if (provider.id == "deepseek") {
                     // 官方 sendDeepSeekRequest：postProcessPrompt(SEMI_TOOLS) + addAssistantPrefix + addReasoningContentToToolCalls
                     val chatMl = chatML(messages).toMutableList()
+                    val schema = options.jsonSchema
+                    if (schema != null) {
+                        chatMl += buildJsonObject {
+                            put("role", JsonPrimitive("user"))
+                            put("content", JsonPrimitive("JSON schema for the response:\n" + (schema["value"] ?: schema)))
+                        }
+                    }
+                    val tools = options.openAiTools().let { arr ->
+                        JsonArray(arr.map { el ->
+                            val tool = el.jsonObject
+                            val fn = tool["function"]?.jsonObject
+                            val required = fn?.get("parameters")?.jsonObject?.get("required")
+                            if (required is JsonArray && required.isEmpty()) {
+                                val params = fn!!.get("parameters")!!.jsonObject.toMutableMap().apply { remove("required") }
+                                val newFn = fn.toMutableMap().apply { put("parameters", JsonObject(params)) }
+                                tool.toMutableMap().apply { put("function", JsonObject(newFn)) }.let { JsonObject(it) }
+                            } else tool
+                        })
+                    }
                     val processed = ProviderConverters.addAssistantPrefix(
                         ProviderConverters.postProcessPrompt(chatMl, "semi_tools", PromptNames()),
-                        emptyList(),
+                        if (options.hasTools) options.openAiTools().map { it.jsonObject } else emptyList(),
                         "prefix",
                     ).toMutableList()
                     ProviderConverters.addReasoningContentToToolCalls(processed)
                     val effort = profile.sampler.reasoningEffort
-                    val extra = if (profile.sampler.includeReasoning && effort.isNotEmpty()) {
-                        buildJsonObject { put("reasoning_effort", effort) }
-                    } else null
+                    val extra = buildJsonObject {
+                        if (options.hasTools) {
+                            put("tools", tools)
+                            options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
+                        }
+                        if (schema != null) {
+                            put("response_format", buildJsonObject { put("type", JsonPrimitive("json_object")) })
+                        }
+                        if (profile.sampler.includeReasoning && effort.isNotEmpty()) {
+                            put("reasoning_effort", effort)
+                        }
+                    }
                     ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
                         model = profile.model,
                         messages = processed,
                         params = profile.sampler.copy(stream = stream),
+                        options = options.copy(tools = emptyList(), jsonSchema = null),
                         extra = extra,
                     )
                 } else {
@@ -382,6 +491,7 @@ class LlmClient(
                         model = profile.model,
                         messages = messages,
                         params = profile.sampler.copy(stream = stream),
+                        options = options,
                     )
                 }
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
