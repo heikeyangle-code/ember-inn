@@ -7,6 +7,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.engine.provider.ConnectionProfile
+import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,6 +24,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
 
+    private val _streamingText = MutableStateFlow("")
+    val streamingText: StateFlow<String> = _streamingText
+
+    private val _isStreaming = MutableStateFlow(false)
+    val isStreaming: StateFlow<Boolean> = _isStreaming
+
+    private var streamSession: LlmClient.StreamSession? = null
+
     val characterId: String? = chatStore.get(sessionId)?.characterId
 
     val accentColor: Long? = characterId?.let { id -> charStore.list().firstOrNull { it.id == id }?.seedColor }
@@ -35,7 +44,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun send(text: String, userName: String = "User") {
-        if (text.isBlank()) return
+        if (text.isBlank() || _isStreaming.value) return
         val charName = chatStore.get(sessionId)?.name ?: "Assistant"
         chatStore.append(sessionId, true, text, userName)
         _messages.value = chatStore.messages(sessionId)
@@ -46,11 +55,43 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             return
         }
 
-        viewModelScope.launch {
-            val history = chatStore.messages(sessionId)
-            val reply = withContext(Dispatchers.IO) { chatRepository.chat(history) }
-            chatStore.append(sessionId, false, reply ?: "（请求失败，请检查提供商配置。）", charName)
-            _messages.value = chatStore.messages(sessionId)
-        }
+        val characterRawJson = characterId?.let { id -> charStore.list().firstOrNull { it.id == id }?.rawJson }
+        val history = chatStore.messages(sessionId)
+        _streamingText.value = ""
+        _isStreaming.value = true
+
+        streamSession = chatRepository.streamPrepared(
+            characterRawJson = characterRawJson,
+            history = history,
+            userName = userName,
+            charName = charName,
+            onDelta = { delta ->
+                _streamingText.value += delta
+            },
+            onDone = {
+                _isStreaming.value = false
+                streamSession = null
+                val reply = _streamingText.value
+                if (reply.isNotBlank()) {
+                    chatStore.append(sessionId, false, reply, charName)
+                    _messages.value = chatStore.messages(sessionId)
+                }
+                _streamingText.value = ""
+            },
+            onError = {
+                _isStreaming.value = false
+                streamSession = null
+                val partial = _streamingText.value
+                chatStore.append(sessionId, false, partial.ifEmpty { "（请求失败，请检查提供商配置。）" }, charName)
+                _messages.value = chatStore.messages(sessionId)
+                _streamingText.value = ""
+            },
+        )
+    }
+
+    /** 停止按钮：取消当前流式请求（官方 abortController 语义）。 */
+    fun stop() {
+        streamSession?.cancel()
+        streamSession = null
     }
 }

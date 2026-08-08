@@ -4,6 +4,7 @@ import android.content.Context
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
+import com.emberinn.engine.provider.ProviderRequestOptions
 import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.ProviderStore
 import java.io.File
@@ -23,6 +24,7 @@ class ChatRepository(context: Context) {
 
     private val store = ProviderStore(File(context.filesDir, "provider"))
     private val client = LlmClient()
+    private val promptFactory = ChatPromptFactory()
     private val json = Json { ignoreUnknownKeys = true }
 
     fun profile(): ConnectionProfile? = store.load()
@@ -51,19 +53,37 @@ class ChatRepository(context: Context) {
         client.chatCompletions(provider, profile, messages)
     }
 
-    suspend fun streamChat(
+    /**
+     * 总装流式发送：角色卡 + 历史 → PromptPipeline 出最终消息 → SSE 流式。
+     * 返回可取消会话（停止按钮用）；未配置连接/提供商返回 null。
+     */
+    fun streamPrepared(
+        characterRawJson: String?,
         history: List<JsonElement>,
+        userName: String,
+        charName: String,
         onDelta: (String) -> Unit,
-    ): Boolean = withContext(Dispatchers.IO) {
-        val profile = store.load() ?: return@withContext false
-        val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext false
-        val messages = history.mapNotNull { el ->
-            val obj = el.jsonObject
-            val role = if (obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true) "user" else "assistant"
-            val content = obj["mes"]?.jsonPrimitive?.content ?: return@mapNotNull null
-            CompletionMessage(role = role, content = content)
-        }
-        client.streamChatCompletions(provider, profile, messages, onDelta = onDelta, onDone = {})
-        true
+        onDone: () -> Unit,
+        onError: (Throwable) -> Unit,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
+    ): LlmClient.StreamSession? {
+        val profile = store.load() ?: return null
+        val provider = ProviderRegistry.get(profile.providerId) ?: return null
+        val prepared = promptFactory.prepare(
+            characterRawJson = characterRawJson,
+            history = history,
+            userName = userName,
+            charName = charName,
+            model = profile.model,
+        )
+        return client.streamChatCompletionsAsync(
+            provider = provider,
+            profile = profile,
+            messages = prepared.messages,
+            onDelta = onDelta,
+            onDone = onDone,
+            onError = onError,
+            options = options,
+        )
     }
 }

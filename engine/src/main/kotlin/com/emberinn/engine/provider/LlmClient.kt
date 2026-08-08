@@ -155,29 +155,66 @@ class LlmClient(
     ) {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
-            }
-            val source = response.body?.source() ?: return
-            val sb = StringBuilder()
-            var finished = false
-            while (true) {
-                val line = source.readUtf8Line() ?: break
-                sb.append(line).append('\n')
-                if (line.isEmpty()) {
-                    for (chunk in SseParser.parse(sb.toString(), provider.protocol)) {
-                        if (chunk.done) {
-                            finished = true
-                            onDone()
-                        } else if (chunk.content.isNotEmpty()) {
-                            onDelta(chunk.content)
-                        }
-                    }
-                    sb.setLength(0)
-                }
-            }
-            if (!finished) onDone()
+            executeStream(response, provider.protocol, onDelta, onDone)
         }
+    }
+
+    /** 可取消流式会话（App 停止按钮用）：后台线程执行，返回 cancel()。 */
+    class StreamSession internal constructor(private val call: okhttp3.Call) {
+        fun cancel() { call.cancel() }
+    }
+
+    fun streamChatCompletionsAsync(
+        provider: ProviderSpec,
+        profile: ConnectionProfile,
+        messages: List<CompletionMessage>,
+        onDelta: (String) -> Unit,
+        onDone: () -> Unit,
+        onError: ((Throwable) -> Unit)? = null,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
+    ): StreamSession {
+        val request = buildRequest(provider, profile, messages, stream = true, options = options)
+        val call = http.newCall(request)
+        Thread {
+            try {
+                call.execute().use { response ->
+                    if (!response.isSuccessful) {
+                        error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
+                    }
+                    executeStream(response, provider.protocol, onDelta, onDone)
+                }
+            } catch (e: Exception) {
+                if (!call.isCanceled()) onError?.invoke(e)
+            }
+        }.start()
+        return StreamSession(call)
+    }
+
+    private fun executeStream(
+        response: okhttp3.Response,
+        protocol: String,
+        onDelta: (String) -> Unit,
+        onDone: () -> Unit,
+    ) {
+        val source = response.body?.source() ?: return
+        val sb = StringBuilder()
+        var finished = false
+        while (true) {
+            val line = source.readUtf8Line() ?: break
+            sb.append(line).append('\n')
+            if (line.isEmpty()) {
+                for (chunk in SseParser.parse(sb.toString(), protocol)) {
+                    if (chunk.done) {
+                        finished = true
+                        onDone()
+                    } else if (chunk.content.isNotEmpty()) {
+                        onDelta(chunk.content)
+                    }
+                }
+                sb.setLength(0)
+            }
+        }
+        if (!finished) onDone()
     }
 
     private fun buildRequest(
