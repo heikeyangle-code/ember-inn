@@ -45,11 +45,11 @@
 ```
 app        Compose UI（角色列表、聊天、设置、主题）
 engine     酒馆领域引擎（纯 Kotlin，不依赖 UI）
-           ├─ CardParser（V2/V3/CharX/JSON）
-           ├─ WorldBookScanner（关键词/深度/递归/分组）
-           ├─ MacroEngine（lexer/parser/evaluator）
-           ├─ SlashParser（解析 + 执行）
-           └─ PromptAssembler（提示词组装）
+           ├─ 领域模块（各带官方差分）：CardParser / WorldBookScanner / MacroEngine /
+           │   SlashParser / RegexEngine / 提供商转换器 / 媒体 / 群聊 / 表情 …
+           └─ 编排层（总装入口）：PromptPipeline —— 对齐官方 prepareOpenAIMessages，
+               一个入口把 世界书扫描 + 人设 + 作者注释 + 示例 + 历史 + 控制提示
+               组装成最终 CompletionMessage；只编排不写算法（算法都在领域模块）
 data       Room / DataStore / 文件存储
 provider   LlmProvider 接口 + 服务商注册表（数据驱动 JSON）
 services   TTS / STT / 图像 / 向量 / 翻译 接口
@@ -535,6 +535,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 
 0. **核心兼容层与官方 1:1，UI 层自由**：数据格式、字段名、注入算法、宏展开、斜杠行为、导入导出文件必须与官方互读互通；界面、交互、主题完全自主。兼容层 1:1 是长期可维护的前提——官方发版时只需对照行为测试，不会伤及 UI。
 1. 每个引擎模块配“官方行为回归测试”：同一输入，官方输出 vs 本项目输出。
+1.5. 编排层（PromptPipeline 总装）只做“调用顺序与传参”，业务逻辑必须留在各差分模块；App 只调总装，不在 UI 层重拼提示词。
 2. 核心引擎不依赖 UI 层。
 3. 服务商注册表只改数据，不改协议代码。
 4. 保持小步提交，CI 全量验证后再合入。
