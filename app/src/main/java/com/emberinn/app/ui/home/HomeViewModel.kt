@@ -12,6 +12,7 @@ import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
 import com.emberinn.engine.card.CardImporter
 import com.emberinn.engine.card.CharacterCardExporter
+import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,8 +128,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val name = data["name"]?.jsonPrimitive?.contentOrNull ?: "未命名角色"
                 val description = data["description"]?.jsonPrimitive?.contentOrNull ?: ""
                 val id = UUID.randomUUID().toString()
-                val avatarPath = if (format == CardFormat.PNG) store.saveAvatar(id, bytes) else null
-                val seedColor = if (format == CardFormat.PNG) extractSeed(bytes) else null
+                val paths = when (format) {
+                    CardFormat.PNG -> {
+                        val avatar = store.saveAvatar(id, bytes)
+                        AssetPaths(avatar, extractSeed(bytes), null, null)
+                    }
+                    CardFormat.CHARX -> extractCharXAssets(id, bytes)
+                    else -> AssetPaths(null, null, null, null)
+                }
+                val avatarPath = paths.avatarPath
+                val seedColor = paths.seedColor
+                val backgroundPath = paths.backgroundPath
+                val voicePath = paths.voicePath
                 store.save(
                     CharacterRecord(
                         id = id,
@@ -137,6 +148,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         rawJson = cardJson,
                         avatarPath = avatarPath,
                         seedColor = seedColor,
+                        backgroundPath = backgroundPath,
+                        voicePath = voicePath,
                     ),
                 )
                 refresh()
@@ -177,6 +190,43 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearMessage() { _message.value = null }
+
+    private data class AssetPaths(
+        val avatarPath: String?,
+        val seedColor: Long?,
+        val backgroundPath: String?,
+        val voicePath: String?,
+    )
+
+    /** CharX 资产入库（官方 persist auxiliary assets）：icon→头像，background/voice→assets 目录。 */
+    private fun extractCharXAssets(id: String, bytes: ByteArray): AssetPaths = runCatching {
+        val assets = CardImporter.extractAssets(bytes)
+        val iconBytes = assets.icon?.data
+        val avatarPath = iconBytes?.let { store.saveAvatar(id, it) }
+        val seedColor = iconBytes?.let { extractSeedBlocking(it) }
+        val assetsDir = File(application.filesDir, "assets").apply { mkdirs() }
+        var backgroundPath: String? = null
+        var voicePath: String? = null
+        assets.assets.forEach { asset ->
+            val data = asset.data ?: return@forEach
+            when (asset.type) {
+                "background" -> {
+                    backgroundPath = File(assetsDir, "$id-background.${asset.ext.ifBlank { "png" }}").also { it.writeBytes(data) }.absolutePath
+                }
+                "voice" -> {
+                    voicePath = File(assetsDir, "$id-voice.${asset.ext.ifBlank { "mp3" }}").also { it.writeBytes(data) }.absolutePath
+                }
+            }
+        }
+        AssetPaths(avatarPath, seedColor, backgroundPath, voicePath)
+    }.getOrElse { AssetPaths(null, null, null, null) }
+
+    private fun extractSeedBlocking(bytes: ByteArray): Long? = runCatching {
+        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching null
+        val palette = Palette.from(bmp).generate()
+        val swatch = palette.vibrantSwatch ?: palette.dominantSwatch ?: return@runCatching null
+        swatch.rgb.toLong() and 0xFFFFFFFFL
+    }.getOrNull()
 
     private suspend fun extractSeed(bytes: ByteArray): Long? = withContext(Dispatchers.Default) {
         runCatching {

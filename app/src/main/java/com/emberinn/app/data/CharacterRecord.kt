@@ -12,4 +12,7 @@ data class CharacterRecord(
     val importedAt: Long = System.currentTimeMillis(),
     val pinned: Boolean = false,
     val seedColor: Long? = null,
+    /** CharX/V3 资产落盘路径（官方 assets：background/voice），App 层资源入库。 */
+    val backgroundPath: String? = null,
+    val voicePath: String? = null,
 )
