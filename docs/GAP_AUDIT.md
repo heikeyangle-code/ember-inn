@@ -2,7 +2,7 @@
 
 ## 差分覆盖审计（2026-08-08）
 
-**已差分：53 组 / 835 例官方基准，全部通过；引擎 254 测全绿。**
+**已差分：54 组 / 840 例官方基准，全部通过；引擎 259 测全绿。**
 
 ### 覆盖充分的模块
 - 宏（158）、世界书（19+17+2）、正则（20+10）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、OpenAI 请求体全厂商（21）、SSE（11）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（16）
@@ -50,7 +50,7 @@
 - ✅ PromptManager 核心、ChatCompletion 嵌套集合、组装管线、bias/override；populateChatHistory 5 例 + populateDialogueExamples 4 例官方差分
 - ✅ CharacterCardFieldsEngine 角色卡字段聚合官方差分 6 例（群聊/chat_metadata/prefer 覆盖）
 - ✅ PromptUtils（collapseNewlines/parseMesExamples）官方差分 9 例
-  ✅ preparePromptsForChatCompletion 官方差分 7 例（wi_format/impersonation/role/injection/override/trigger 全核对）；✅ names_behavior COMPLETION 名字清理（PromptNameSanitizer 28 例差分 + ChatHistoryPopulator 接线）
+  ✅ preparePromptsForChatCompletion 官方差分 7 例（wi_format/impersonation/role/injection/override/trigger 全核对）；✅ PromptPipeline 总装器整链官方差分 5 例（prepareOpenAIMessages+populateChatCompletion：示例解析/控制提示/continue/pin/squash）；✅ names_behavior COMPLETION 名字清理（PromptNameSanitizer 28 例差分 + ChatHistoryPopulator 接线）
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
 - 🟡 工具预分配 token、媒体内联（OpenAI 已接；Anthropic/Gemini 消息整链已差分并接入 builder）、推理签名（Gemini 已接）、多模态；✅ 预算计算/其余提供商转换器/OpenRouter 缓存媒体签名已差分
@@ -97,4 +97,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 正则 20 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 5 + 提示词组装合并 7 + CharX 导入 9 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 19 + 表情分类预处理 8 + 群聊激活 15 + 群聊角色卡 8 + 群聊深度提示 7 + 群聊完整循环 11 + 精灵存储 9 + 角色卡字段 8 + JSON 导入 10 + BYAF 完整导入 8 + 斜杠转义 13 + 提示词工具 9 + JSON 导出 6 + SSE 流解析 11 + 正则管线 10 + 导演备注 7 + 人设引擎 16 + OpenAI 请求体 21 + 工具预算 4 + 管线计划 5 + 媒体附件 17 + 媒体内联 7 + 媒体内容块转换 25 + 消息转换整链 41 + 缓存深度 7 + 其余提供商转换器 61 + 媒体 token 成本 18 + 特殊协议请求体 23 + OpenAI 文本补全 6 + BYAF 资源 6 = **835 例官方基准（全部通过）**。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 正则 20 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 5 + 提示词组装合并 7 + CharX 导入 9 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 19 + 表情分类预处理 8 + 群聊激活 15 + 群聊角色卡 8 + 群聊深度提示 7 + 群聊完整循环 11 + 精灵存储 9 + 角色卡字段 8 + JSON 导入 10 + BYAF 完整导入 8 + 斜杠转义 13 + 提示词工具 9 + JSON 导出 6 + SSE 流解析 11 + 正则管线 10 + 导演备注 7 + 人设引擎 16 + OpenAI 请求体 21 + 工具预算 4 + 管线计划 5 + 媒体附件 17 + 媒体内联 7 + 媒体内容块转换 25 + 消息转换整链 41 + 缓存深度 7 + 其余提供商转换器 61 + 媒体 token 成本 18 + 特殊协议请求体 23 + OpenAI 文本补全 6 + BYAF 资源 6 + 提示词总装整链 5 = **840 例官方基准（全部通过）**。
