@@ -301,6 +301,20 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 > App 层（Compose UI）官方没有对应物，不做差分；上表“差分✅”指其调用的引擎能力已 1:1 差分验证。“CI 编译✅”指引用关系编译期对上；“真机待测”指安装 APK 后人工点一遍的最终确认项。
 
+### 4.10 接线测试策略（新会话必读：以后“怎么测接线”按这个来）
+
+接线盲区 = “运行时接对函数”与“App→引擎输入契约”，差分 fixture 覆盖不到，必须补自动化测试：
+
+| 层 | 测什么 | 怎么测 | 例子 |
+|---|---|---|---|
+| 引擎函数 | 输出与官方一致 | 差分 fixture（官方 JS 逐字提取对拍） | 858 例基准 |
+| 引擎内部运行时接线 | 实际走的函数/通道正确 | JVM 单测（MockWebServer 模拟协议） | LlmClientTest 流式：content:null 跳过、reasoning 独立通道、[DONE] 收尾 |
+| App→引擎契约 | 输入形状/顺序/回调 | app 模块 JVM 单测（纯 Kotlin，不碰 Android） | ChatPromptFactoryTest：generate 正序、continue nudge 选最后一条 AI |
+| 网络协议 | 请求体/响应解析 | MockWebServer + 转换器差分 | 各厂商请求体差分 |
+| UI 交互 | 清空时机/滚动/折叠等 | Compose UI 测试（androidTest，待引入）+ 真机清单 | 输入框点发送立即清空 |
+
+原则：测试代码都在 `src/test`（引擎/app），只跑 CI，**不进 APK**；HANDOFF 4.9 核对表每行按“差分✅ / CI✅ / 真机待测”标注，缺哪个补哪个。
+
 ## 5. 剩余工作（按优先级）
 
 **P0（“打开即聊”体验短板）**
