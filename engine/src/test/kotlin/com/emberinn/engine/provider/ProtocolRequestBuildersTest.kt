@@ -20,7 +20,7 @@ class ProtocolRequestBuildersTest {
     @Test
     fun `anthropic body splits system and roles`() {
         val root = Json.parseToJsonElement(AnthropicRequestBuilder.build("claude-sonnet-5", messages).body).jsonObject
-        assertEquals("系统", root["system"]?.jsonArray?.get(0)?.jsonPrimitive?.content)
+        assertEquals("系统", root["system"]?.jsonArray?.get(0)?.jsonObject?.get("text")?.jsonPrimitive?.content)
         assertEquals("user", root["messages"]!!.jsonArray[0].jsonObject["role"]?.toString()?.trim('"'))
         assertEquals("assistant", root["messages"]!!.jsonArray[1].jsonObject["role"]?.toString()?.trim('"'))
     }

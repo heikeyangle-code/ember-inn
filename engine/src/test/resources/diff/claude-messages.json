@@ -1,0 +1,3131 @@
+{
+  "source": "prompt-converters.js convertClaudeMessages + convertGooglePrompt + cachingAtDepthForClaude（逐字提取）",
+  "cases": [
+    {
+      "id": "system-extract",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "System instruction"
+          },
+          {
+            "role": "user",
+            "content": "Hello"
+          }
+        ],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": [
+          {
+            "type": "text",
+            "text": "System instruction"
+          }
+        ]
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": [
+            {
+              "text": "System instruction"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "all-system-placeholder",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Only system"
+          }
+        ],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Let's get started."
+              }
+            ]
+          }
+        ],
+        "systemPrompt": [
+          {
+            "type": "text",
+            "text": "Only system"
+          }
+        ]
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Only system"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "mid-system-to-user",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hi"
+          },
+          {
+            "role": "system",
+            "content": "Mid-prompt system"
+          },
+          {
+            "role": "assistant",
+            "content": "Reply"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi"
+              },
+              {
+                "type": "text",
+                "text": "Mid-prompt system"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reply"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hi\n\nMid-prompt system"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Reply"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "merge-same-role",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          },
+          {
+            "role": "assistant",
+            "content": "C"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              },
+              {
+                "type": "text",
+                "text": "B"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "C"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "A\n\nB"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "C"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "string-to-array",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hello"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "empty-messages-no-sys",
+      "args": {
+        "messages": [],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "empty-messages-with-sys",
+      "args": {
+        "messages": [],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Let's get started."
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "image-convert",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,abc123"
+                }
+              }
+            ]
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Look"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "abc123"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Look"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "abc123"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "assistant-image-move",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Here is an image"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,abc"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "Thanks"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Here is an image"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thanks"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "abc"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Here is an image"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "abc"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Thanks"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "assistant-image-last",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Here is an image"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,abc"
+                }
+              }
+            ]
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Here is an image"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "abc"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Here is an image"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "abc"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "two-assistant-images",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "a1"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,AAA"
+                }
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "a2"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,BBB"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "ok"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "a1"
+              },
+              {
+                "type": "text",
+                "text": "a2"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "ok"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "AAA"
+                }
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "BBB"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "a1\n\na2"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "AAA"
+                }
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "BBB"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "ok"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "video-unchanged",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "video_url",
+                "video_url": {
+                  "url": "data:video/mp4;base64,DDDD"
+                }
+              }
+            ]
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "video_url",
+                "video_url": {
+                  "url": "data:video/mp4;base64,DDDD"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "video/mp4",
+                  "data": "DDDD"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "prefill-trim",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hello"
+          }
+        ],
+        "assistantPrefill": "Sure, I will ",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sure, I will"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "prefill-all-space",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hello"
+          }
+        ],
+        "assistantPrefill": "   ",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "empty-text-zwsp",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "​"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "example-assistant-name",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Greetings",
+            "name": "example_assistant"
+          },
+          {
+            "role": "user",
+            "content": "Hi"
+          }
+        ],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": [
+          {
+            "type": "text",
+            "text": "Bot: Greetings"
+          }
+        ]
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": [
+            {
+              "text": "Bot: Greetings"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "example-user-name",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Hello there",
+            "name": "example_user"
+          },
+          {
+            "role": "user",
+            "content": "Hi"
+          }
+        ],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": [
+          {
+            "type": "text",
+            "text": "User: Hello there"
+          }
+        ]
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": [
+            {
+              "text": "User: Hello there"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "example-already-prefixed",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Bot: Greetings",
+            "name": "example_assistant"
+          },
+          {
+            "role": "user",
+            "content": "Hi"
+          }
+        ],
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": [
+          {
+            "type": "text",
+            "text": "Bot: Greetings"
+          }
+        ]
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Hi"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": [
+            {
+              "text": "Bot: Greetings"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "name-prefix-string",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hello",
+            "name": "Alice"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Alice: Hello"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Alice: Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "name-prefix-string-already",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Alice: hello",
+            "name": "Alice"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Alice: Alice: hello"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Alice: hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "name-prefix-array",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "hi"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,ZZZ"
+                }
+              }
+            ],
+            "name": "Alice"
+          }
+        ],
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Alice: hi"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "ZZZ"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Alice: hi"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "ZZZ"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "tool-calls",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "search for cats"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc1",
+                "function": {
+                  "name": "search",
+                  "arguments": "{\"q\":\"cats\"}"
+                }
+              }
+            ]
+          }
+        ],
+        "useTools": true,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "search for cats"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "tc1",
+                "name": "search",
+                "input": {
+                  "q": "cats"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "search for cats"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "tool-calls-no-tools",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "search for cats"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc1",
+                "function": {
+                  "name": "search",
+                  "arguments": "{\"q\":\"cats\"}"
+                }
+              }
+            ]
+          }
+        ],
+        "useTools": false,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "search for cats"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"q\":\"cats\"}"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "search for cats"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "tool-result",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "search"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc1",
+                "function": {
+                  "name": "search",
+                  "arguments": "{\"q\":\"cats\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "Found results",
+            "tool_call_id": "tc1"
+          }
+        ],
+        "useTools": true,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "search"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "tc1",
+                "name": "search",
+                "input": {
+                  "q": "cats"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "tc1",
+                "content": "Found results"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "search"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "parts": [
+              {
+                "functionResponse": {
+                  "name": "search",
+                  "response": {
+                    "name": "search",
+                    "content": "Found results"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "tool-result-no-tools",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "search"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc1",
+                "function": {
+                  "name": "search",
+                  "arguments": "{\"q\":\"cats\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "Found results",
+            "tool_call_id": "tc1"
+          }
+        ],
+        "useTools": false,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "search"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"q\":\"cats\"}"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Found results"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "search"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "parts": [
+              {
+                "functionResponse": {
+                  "name": "search",
+                  "response": {
+                    "name": "search",
+                    "content": "Found results"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "tool-calls-args-object",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc2",
+                "function": {
+                  "name": "weather",
+                  "arguments": {
+                    "city": "Paris"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "useTools": true,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "tc2",
+                "name": "weather",
+                "input": {
+                  "city": "Paris"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "weather",
+                  "args": {
+                    "city": "Paris"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-empty-messages",
+      "args": {
+        "messages": [],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Let's get started."
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-video-inline",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "video_url",
+                "video_url": {
+                  "url": "data:video/mp4;base64,VVVV"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "video_url",
+                "video_url": {
+                  "url": "data:video/mp4;base64,VVVV"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "video/mp4",
+                  "data": "VVVV"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-audio-inline",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "audio_url",
+                "audio_url": {
+                  "url": "data:audio/mpeg;base64,AAAA"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "audio_url",
+                "audio_url": {
+                  "url": "data:audio/mpeg;base64,AAAA"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "audio/mpeg",
+                  "data": "AAAA"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-signature-gemini3",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "Hello",
+            "signature": "sig-1"
+          }
+        ],
+        "model": "gemini-3-pro",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ],
+            "signature": "sig-1"
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Hello",
+                "thoughtSignature": "sig-1"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-signature-gemini25",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "Hello",
+            "signature": "sig-2"
+          }
+        ],
+        "model": "gemini-2.5-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ],
+            "signature": "sig-2"
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Hello",
+                "thoughtSignature": "sig-2"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-signature-disabled",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "Hello",
+            "signature": "sig-3"
+          }
+        ],
+        "model": "gemini-3-pro",
+        "enableThoughtSignatures": false,
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ],
+            "signature": "sig-3"
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-gemini3-functioncall-no-sig",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "tc1",
+                "function": {
+                  "name": "search",
+                  "arguments": "{\"q\":\"cats\"}"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-3-pro",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"q\":\"cats\"}"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                },
+                "thoughtSignature": "skip_thought_signature_validator"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-gemini3-image-model-text",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "Hello"
+          }
+        ],
+        "model": "gemini-3-pro-image-preview",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Hello",
+                "thoughtSignature": "skip_thought_signature_validator"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-gemini3-image-model-inline",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,SIGIMG"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-3-pro-image-preview",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": []
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "SIGIMG"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "SIGIMG"
+                },
+                "thoughtSignature": "skip_thought_signature_validator"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-media-resolution-detail",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,LOWRES",
+                  "detail": "low"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-3-pro",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "LOWRES"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "LOWRES"
+                },
+                "mediaResolution": {
+                  "level": "media_resolution_low"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-media-resolution-high-non3",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,HIGHRES",
+                  "detail": "high"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-2.5-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "HIGHRES"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "HIGHRES"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-merge-inline",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,AA"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "B"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,BB"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "AA"
+                }
+              },
+              {
+                "type": "text",
+                "text": "B"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "base64",
+                  "media_type": "image/png",
+                  "data": "BB"
+                }
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "A\n\nB"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "AA"
+                }
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "BB"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-tool-call-args-invalid",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "x1",
+                "function": {
+                  "name": "f",
+                  "arguments": "not json"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        },
+        "claudeThrows": true
+      },
+      "claude": null,
+      "google": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "f",
+                  "args": "not json"
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-name-prefix-user",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "NPC: hi"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "NPC: hi"
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    },
+    {
+      "id": "google-tool-call-id-unknown",
+      "args": {
+        "messages": [
+          {
+            "role": "tool",
+            "content": "result",
+            "tool_call_id": "nope"
+          }
+        ],
+        "model": "gemini-2.0-flash",
+        "useSysPrompt": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "claude": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "result"
+              }
+            ]
+          }
+        ],
+        "systemPrompt": []
+      },
+      "google": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "functionResponse": {
+                  "name": "unknown",
+                  "response": {
+                    "name": "unknown",
+                    "content": "result"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "system_instruction": {
+          "parts": []
+        }
+      }
+    }
+  ],
+  "cachingCases": [
+    {
+      "id": "depth-1",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "B"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "C"
+              }
+            ]
+          }
+        ],
+        "cachingAtDepth": 1,
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "B",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "C"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "depth-0-prefill-skip",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "B"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "prefill"
+              }
+            ]
+          }
+        ],
+        "cachingAtDepth": 0,
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "B"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "prefill"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "depth-1-plus2-break",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "B"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "C"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "D"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "E"
+              }
+            ]
+          }
+        ],
+        "cachingAtDepth": 1,
+        "ttl": "1h"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "B",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "1h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "C"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "D",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "1h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "E"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "depth-2-ttl-custom",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "A"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "B"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "C"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "D"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "E"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "F"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "G"
+              }
+            ]
+          }
+        ],
+        "cachingAtDepth": 2,
+        "ttl": "24h"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "B"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "C",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "24h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "D"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "E",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "24h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "F"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "G"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

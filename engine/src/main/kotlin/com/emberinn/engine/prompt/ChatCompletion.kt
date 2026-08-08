@@ -30,6 +30,8 @@ data class CompletionMessage(
     val toolCalls: List<ToolCall>? = null,
     val toolCallId: String? = null,
     val media: List<MediaAttachment>? = null,
+    /** Gemini 2.5/3 思考签名（对齐官方 message.signature，Gemini 转换时注入 thoughtSignature）。 */
+    val signature: String? = null,
 )
 
 /** 对齐官方 tool_calls（id/type/function.name/arguments）。 */

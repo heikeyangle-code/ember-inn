@@ -18,7 +18,8 @@ data class GeminiFunctionTool(
 
 /**
  * Gemini generateContent 请求体（对齐官方 sendMakerSuiteRequest getGeminiBody）。
- * 边界：convertGooglePrompt（消息转换/role 映射由本实现等价处理）、calculateGoogleBudgetTokens（预算由调用方传）、
+ * convertGooglePrompt 已移植（官方差分 41 例）；
+ * 边界：calculateGoogleBudgetTokens（预算由调用方传）、
  * GEMINI_SAFETY/VERTEX_SAFETY（安全设置由上层传）。
  */
 object GoogleRequestBuilder {
@@ -44,7 +45,6 @@ object GoogleRequestBuilder {
         responseMimeType: String? = null,
         responseSchema: JsonObject? = null,
         useSystemPrompt: Boolean = true,
-        systemInstructionParts: List<String> = emptyList(),
         tools: List<GeminiFunctionTool> = emptyList(),
         toolChoice: JsonElement? = null,
         enableWebSearch: Boolean = false,
@@ -55,6 +55,68 @@ object GoogleRequestBuilder {
         includeReasoning: Boolean = false,
         reasoningBudget: Any = 0,
         safetySettings: JsonArray = JsonArray(emptyList()),
+        charName: String = "",
+        userName: String = "",
+        groupNames: List<String> = emptyList(),
+        mediaQuality: String = "auto",
+        enableThoughtSignatures: Boolean = true,
+    ): String = buildFromChatML(
+        model = model,
+        messages = messages.map { it.toChatMLJson(mediaQuality) },
+        maxOutputTokens = maxOutputTokens,
+        temperature = temperature,
+        stream = stream,
+        topP = topP,
+        topK = topK,
+        stop = stop,
+        seed = seed,
+        responseMimeType = responseMimeType,
+        responseSchema = responseSchema,
+        useSystemPrompt = useSystemPrompt,
+        tools = tools,
+        toolChoice = toolChoice,
+        enableWebSearch = enableWebSearch,
+        requestImages = requestImages,
+        aspectRatio = aspectRatio,
+        imageSize = imageSize,
+        reasoningEffort = reasoningEffort,
+        includeReasoning = includeReasoning,
+        reasoningBudget = reasoningBudget,
+        safetySettings = safetySettings,
+        charName = charName,
+        userName = userName,
+        groupNames = groupNames,
+        enableThoughtSignatures = enableThoughtSignatures,
+    )
+
+    /** 直接吃官方 ChatML 消息（差分 fixture 与 App 层原始消息用）。 */
+    fun buildFromChatML(
+        model: String,
+        messages: List<JsonObject>,
+        maxOutputTokens: Int = 512,
+        temperature: Double = 1.0,
+        stream: Boolean = false,
+        topP: Double = 1.0,
+        topK: Int? = null,
+        stop: List<String> = emptyList(),
+        seed: Long? = null,
+        responseMimeType: String? = null,
+        responseSchema: JsonObject? = null,
+        useSystemPrompt: Boolean = true,
+        tools: List<GeminiFunctionTool> = emptyList(),
+        toolChoice: JsonElement? = null,
+        enableWebSearch: Boolean = false,
+        requestImages: Boolean = false,
+        aspectRatio: String = "",
+        imageSize: String = "",
+        reasoningEffort: String = "",
+        includeReasoning: Boolean = false,
+        reasoningBudget: Any = 0,
+        safetySettings: JsonArray = JsonArray(emptyList()),
+        charName: String = "",
+        userName: String = "",
+        groupNames: List<String> = emptyList(),
+        enableThoughtSignatures: Boolean = true,
     ): String {
         val isGemma3 = "gemma-3" in model
         val isLearnLM = model.contains("learnlm")
@@ -145,23 +207,17 @@ object GoogleRequestBuilder {
             generationConfig["thinkingConfig"] = JsonObject(thinkingConfig)
         }
 
-        // 未显式传 systemInstructionParts 时，从 system 角色消息提取（对齐 convertGooglePrompt），contents 不含 system
-        val effectiveSystemParts = if (systemInstructionParts.isNotEmpty()) systemInstructionParts else messages.filter { it.role == "system" }.map { it.content }
-        val contents = messages.filter { it.role != "system" }.map { m ->
-            buildJsonObject {
-                put("role", if (m.role == "assistant") "model" else m.role)
-                put("parts", JsonArray(listOf(buildJsonObject { put("text", m.content) })))
-            }
-        }
+        // 消息转换/角色映射/system 提取/思考签名由官方 convertGooglePrompt 逐字差分处理
+        val names = PromptNames(userName = userName, charName = charName, groupNames = groupNames)
+        val converted = GooglePromptConverter.convert(messages, model, effectiveUseSystemPrompt, names, enableThoughtSignatures)
         val body = mutableMapOf<String, JsonElement>()
-        body["contents"] = JsonArray(contents)
+        body["contents"] = JsonArray(converted.contents)
         body["safetySettings"] = safetySettings
         body["generationConfig"] = JsonObject(generationConfig)
 
-        val systemParts = if (effectiveUseSystemPrompt) effectiveSystemParts else emptyList()
-        if (effectiveUseSystemPrompt && systemParts.isNotEmpty()) {
+        if (effectiveUseSystemPrompt && converted.systemInstructionParts.isNotEmpty()) {
             body["systemInstruction"] = buildJsonObject {
-                put("parts", JsonArray(systemParts.map { buildJsonObject { put("text", JsonPrimitive(it)) } }))
+                put("parts", JsonArray(converted.systemInstructionParts))
             }
         }
 

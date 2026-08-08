@@ -23,8 +23,8 @@ data class AnthropicRequest(
 
 /**
  * Anthropic Messages API 请求体（对齐官方 src/endpoints/backends/chat-completions.js sendClaudeRequest）。
- * 边界：convertClaudeMessages（消息转换）、calculateClaudeBudgetTokens（预算计算）、
- * cachingAtDepthForClaude（缓存注入）未移植，由调用方桩/传参（差分 fixture 同样打桩）。
+ * convertClaudeMessages + cachingAtDepthForClaude 已移植（官方差分 41+4 例）；
+ * 边界：calculateClaudeBudgetTokens（预算计算）由调用方传参（差分 fixture 同样打桩）。
  */
 object AnthropicRequestBuilder {
 
@@ -73,17 +73,84 @@ object AnthropicRequestBuilder {
         enableSystemPromptCache: Boolean = false,
         cachingAtDepth: Int = -1,
         enableAdaptiveThinking: Boolean = true,
+        charName: String = "",
+        userName: String = "",
+        groupNames: List<String> = emptyList(),
+        mediaQuality: String = "auto",
+        promptPlaceholder: String = "Let's get started.",
+        cacheTTL: String = "5m",
+    ): AnthropicRequest = buildFromChatML(
+        model = model,
+        messages = messages.map { it.toChatMLJson(mediaQuality) },
+        maxTokens = maxTokens,
+        temperature = temperature,
+        stream = stream,
+        topP = topP,
+        topK = topK,
+        stop = stop,
+        useSystemPrompt = useSystemPrompt,
+        systemPrompt = systemPrompt,
+        assistantPrefill = assistantPrefill,
+        tools = tools,
+        toolChoice = toolChoice,
+        jsonSchema = jsonSchema,
+        enableWebSearch = enableWebSearch,
+        reasoningEffort = reasoningEffort,
+        includeReasoning = includeReasoning,
+        verbosity = verbosity,
+        reasoningBudget = reasoningBudget,
+        enableSystemPromptCache = enableSystemPromptCache,
+        cachingAtDepth = cachingAtDepth,
+        enableAdaptiveThinking = enableAdaptiveThinking,
+        charName = charName,
+        userName = userName,
+        groupNames = groupNames,
+        promptPlaceholder = promptPlaceholder,
+        cacheTTL = cacheTTL,
+    )
+
+    /** 直接吃官方 ChatML 消息（差分 fixture 与 App 层原始消息用）。 */
+    fun buildFromChatML(
+        model: String,
+        messages: List<JsonObject>,
+        maxTokens: Int = 512,
+        temperature: Double = 1.0,
+        stream: Boolean = false,
+        topP: Double = 1.0,
+        topK: Int? = null,
+        stop: List<String> = emptyList(),
+        useSystemPrompt: Boolean = true,
+        systemPrompt: List<String> = emptyList(),
+        assistantPrefill: String = "",
+        tools: List<AnthropicTool> = emptyList(),
+        toolChoice: String? = null,
+        jsonSchema: JsonObject? = null,
+        enableWebSearch: Boolean = false,
+        reasoningEffort: String = "",
+        includeReasoning: Boolean = false,
+        verbosity: String = "",
+        reasoningBudget: Any = 1024,
+        enableSystemPromptCache: Boolean = false,
+        cachingAtDepth: Int = -1,
+        enableAdaptiveThinking: Boolean = true,
+        charName: String = "",
+        userName: String = "",
+        groupNames: List<String> = emptyList(),
+        promptPlaceholder: String = "Let's get started.",
+        cacheTTL: String = "5m",
     ): AnthropicRequest {
         val betaHeaders = mutableListOf("output-128k-2025-02-19", "context-1m-2025-08-07")
         val useTools = tools.isNotEmpty()
-        // 未显式传 systemPrompt 时，从 system 角色消息提取（对齐官方 convertClaudeMessages 的 system 处理）
-        val effectiveSystemPrompt = if (systemPrompt.isNotEmpty()) systemPrompt else messages.filter { it.role == "system" }.map { it.content }
-        val convertedMessages = messages.filter { it.role != "system" }.map { m ->
-            buildJsonObject {
-                put("role", if (m.role == "assistant") "assistant" else "user")
-                put("content", m.content)
-            }
-        }.toMutableList()
+        val names = PromptNames(userName = userName, charName = charName, groupNames = groupNames)
+        val converted = ClaudeMessagesConverter.convert(
+            messages,
+            assistantPrefill,
+            useSystemPrompt,
+            useTools,
+            names,
+            promptPlaceholder,
+        )
+        val convertedMessages = converted.messages.toMutableList()
 
         val requestBody = buildJsonObject {
             put("system", JsonArray(emptyList()))
@@ -98,9 +165,23 @@ object AnthropicRequestBuilder {
         }.toMutableMap()
 
         if (useSystemPrompt) {
-            // 官方差分证实：convertClaudeMessages 桩输出字符串数组时，cache_control 赋值无效（非严格模式），system 原样输出；
-            // 对象化（type/text/cache_control）依赖官方 convertClaudeMessages 的对象输出，本实现字符串输入保持原样。
-            requestBody["system"] = JsonArray(effectiveSystemPrompt.map { JsonPrimitive(it) })
+            val sysArr = if (systemPrompt.isNotEmpty()) {
+                systemPrompt.map { buildJsonObject {
+                    put("type", JsonPrimitive("text"))
+                    put("text", JsonPrimitive(it))
+                } }.toMutableList()
+            } else {
+                converted.systemPrompt.toMutableList()
+            }
+            if (enableSystemPromptCache && sysArr.isNotEmpty()) {
+                val last = sysArr.last().toMutableMap()
+                last["cache_control"] = buildJsonObject {
+                    put("type", JsonPrimitive("ephemeral"))
+                    put("ttl", JsonPrimitive(cacheTTL))
+                }
+                sysArr[sysArr.lastIndex] = JsonObject(last)
+            }
+            requestBody["system"] = JsonArray(sysArr)
         } else {
             requestBody.remove("system")
         }
@@ -122,7 +203,7 @@ object AnthropicRequestBuilder {
                 val last = mappedTools.last().toMutableMap()
                 last["cache_control"] = buildJsonObject {
                     put("type", JsonPrimitive("ephemeral"))
-                    put("ttl", JsonPrimitive(if (cachingAtDepth >= 0) "1h" else "5m"))
+                    put("ttl", JsonPrimitive(cacheTTL))
                 }
                 mappedTools[mappedTools.lastIndex] = JsonObject(last)
             }
@@ -154,6 +235,10 @@ object AnthropicRequestBuilder {
             requestBody["tools"] = JsonArray(toolsList)
         }
 
+        if (cachingAtDepth != -1) {
+            ClaudeMessagesConverter.atDepth(convertedMessages, cachingAtDepth, cacheTTL)
+            requestBody["messages"] = JsonArray(convertedMessages)
+        }
         if (cachingAtDepth != -1 || enableSystemPromptCache) {
             betaHeaders += "prompt-caching-2024-07-31"
             betaHeaders += "extended-cache-ttl-2025-04-11"

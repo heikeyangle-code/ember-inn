@@ -1,6 +1,5 @@
 package com.emberinn.engine.provider
 
-import com.emberinn.engine.prompt.CompletionMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -10,7 +9,7 @@ import org.junit.Test
 
 /**
  * 官方行为差分：sendClaudeRequest 的 requestBody 构造段。
- * fixture 由 scripts/diff/anthropic-body-official.mjs 生成（convertClaudeMessages/预算计算打桩），禁止手改。
+ * fixture 由 scripts/diff/anthropic-body-official.mjs 生成（真 convertClaudeMessages），禁止手改。
  */
 class AnthropicBodyDiffTest {
 
@@ -33,13 +32,7 @@ class AnthropicBodyDiffTest {
             val expectedBeta = case.getValue("expected").jsonObject.getValue("betaHeaders").jsonArray
                 .map { it.jsonPrimitive.content }
 
-            val messages = body["messages"]?.jsonArray.orEmpty().map { m ->
-                val obj = m.jsonObject
-                CompletionMessage(
-                    role = obj["role"]?.jsonPrimitive?.content ?: "user",
-                    content = obj["content"]?.jsonPrimitive?.content ?: "",
-                )
-            }
+            val rawMessages = body["messages"]?.jsonArray.orEmpty().map { it.jsonObject }
             val tools = body["tools"]?.jsonArray.orEmpty().map { t ->
                 val fn = t.jsonObject["function"]?.jsonObject ?: t.jsonObject
                 AnthropicTool(
@@ -52,9 +45,9 @@ class AnthropicBodyDiffTest {
                 if (p.isString) p.content else p.content.toIntOrNull() ?: 1024
             } ?: 1024
 
-            val result = AnthropicRequestBuilder.build(
+            val result = AnthropicRequestBuilder.buildFromChatML(
                 model = body["model"]!!.jsonPrimitive.content,
-                messages = messages,
+                messages = rawMessages,
                 maxTokens = body["max_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 512,
                 temperature = body["temperature"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 1.0,
                 stream = body["stream"]?.jsonPrimitive?.content == "true",
@@ -63,6 +56,7 @@ class AnthropicBodyDiffTest {
                 stop = body["stop"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
                 useSystemPrompt = body["use_sysprompt"]?.jsonPrimitive?.content == "true",
                 systemPrompt = body["systemPrompt"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
+                assistantPrefill = body["assistant_prefill"]?.jsonPrimitive?.content ?: "",
                 tools = tools,
                 toolChoice = body["tool_choice"]?.jsonPrimitive?.let { if (it.isString) it.content else null },
                 jsonSchema = body["json_schema"]?.jsonObject,

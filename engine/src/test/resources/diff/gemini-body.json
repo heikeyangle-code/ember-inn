@@ -1,5 +1,5 @@
 {
-  "source": "chat-completions.js sendMakerSuiteRequest getGeminiBody",
+  "source": "chat-completions.js sendMakerSuiteRequest getGeminiBody（真 convertGooglePrompt）",
   "cases": [
     {
       "id": "basic",
@@ -23,8 +23,7 @@
               "role": "user",
               "content": "hi"
             }
-          ],
-          "systemInstructionParts": []
+          ]
         }
       },
       "expected": {
@@ -70,12 +69,13 @@
           "stop": [],
           "messages": [
             {
+              "role": "system",
+              "content": "你是助手"
+            },
+            {
               "role": "user",
               "content": "hi"
             }
-          ],
-          "systemInstructionParts": [
-            "你是助手"
           ]
         }
       },
@@ -133,10 +133,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
-          ],
-          "systemInstructionParts": []
+          ]
         }
       },
       "expected": {
@@ -187,10 +191,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
           ],
-          "systemInstructionParts": [],
           "reasoningBudget": 2048
         }
       },
@@ -238,10 +246,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
           ],
-          "systemInstructionParts": [],
           "reasoningBudget": "low"
         }
       },
@@ -289,10 +301,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
           ],
-          "systemInstructionParts": [],
           "tools": [
             {
               "type": "function",
@@ -370,10 +386,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
           ],
-          "systemInstructionParts": [],
           "tools": [
             {
               "type": "function",
@@ -452,10 +472,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
-          ],
-          "systemInstructionParts": []
+          ]
         }
       },
       "expected": {
@@ -507,10 +531,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
-          ],
-          "systemInstructionParts": []
+          ]
         }
       },
       "expected": {
@@ -564,12 +592,13 @@
           "stop": [],
           "messages": [
             {
+              "role": "system",
+              "content": "x"
+            },
+            {
               "role": "user",
               "content": "hi"
             }
-          ],
-          "systemInstructionParts": [
-            "x"
           ]
         }
       },
@@ -579,7 +608,7 @@
             "role": "user",
             "parts": [
               {
-                "text": "hi"
+                "text": "x\n\nhi"
               }
             ]
           }
@@ -613,10 +642,14 @@
           "messages": [
             {
               "role": "user",
-              "content": "hi"
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
             }
           ],
-          "systemInstructionParts": [],
           "json_schema": {
             "value": {
               "type": "object"
@@ -645,6 +678,330 @@
           "responseSchema": {
             "type": "object"
           },
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "media-image",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "看图"
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "data:image/png;base64,CCCC"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "看图"
+              },
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "CCCC"
+                }
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "media-gemini3-resolution",
+      "args": {
+        "body": {
+          "model": "gemini-3-pro",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "data:image/png;base64,DDDD",
+                    "detail": "high"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": "DDDD"
+                },
+                "mediaResolution": {
+                  "level": "media_resolution_high"
+                }
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "signature-gemini3",
+      "args": {
+        "body": {
+          "model": "gemini-3-pro",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "assistant",
+              "content": "Hello",
+              "signature": "sig-1"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Hello",
+                "thoughtSignature": "sig-1"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "name-prefix",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "name": "NPC",
+              "content": "hi"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "NPC: hi"
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
+          "thinkingConfig": {
+            "includeThoughts": false,
+            "thinkingBudget": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "tool-calls-google",
+      "args": {
+        "body": {
+          "model": "gemini-3.6-flash",
+          "stream": false,
+          "enable_web_search": false,
+          "request_images": false,
+          "reasoning_effort": "",
+          "include_reasoning": false,
+          "request_image_aspect_ratio": "",
+          "request_image_resolution": "",
+          "use_sysprompt": true,
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "stop": [],
+          "messages": [
+            {
+              "role": "user",
+              "content": "search"
+            },
+            {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "id": "tc1",
+                  "function": {
+                    "name": "search",
+                    "arguments": "{\"q\":\"cats\"}"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "结果",
+              "tool_call_id": "tc1"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": "search"
+              }
+            ]
+          },
+          {
+            "role": "model",
+            "parts": [
+              {
+                "functionCall": {
+                  "name": "search",
+                  "args": {
+                    "q": "cats"
+                  }
+                },
+                "thoughtSignature": "skip_thought_signature_validator"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "parts": [
+              {
+                "functionResponse": {
+                  "name": "search",
+                  "response": {
+                    "name": "search",
+                    "content": "结果"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "safetySettings": [],
+        "generationConfig": {
+          "candidateCount": 1,
+          "maxOutputTokens": 512,
+          "temperature": 1,
+          "topP": 1,
           "thinkingConfig": {
             "includeThoughts": false,
             "thinkingBudget": 0
