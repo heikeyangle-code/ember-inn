@@ -217,6 +217,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ### 4.2 首页（角色 Tab）🟡
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
+✅ README 首页补齐：毛玻璃顶栏（Cloudy 浮层，正文区干净）、AI 对话渐变卡、角色卡最近消息预览、最近聊过卡头像+最近消息、AI 对话默认开场“我是余烬，想聊点什么？”。
 ❌ 世界书管理/正则/变量/快捷回复/模型覆盖/主题配方 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
@@ -245,7 +246,7 @@ launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfe
 
 ### 4.5 主题系统 ✅（全局层）
 ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成整套 M3 ColorScheme（含 surfaceContainer 系列，浅色低饱和容器、深色提亮主色）；MainActivity 持有 themeMode/preset 状态，贯通 MainScreen → SettingsScreen → AppearanceScreen。
-✅ 玻璃表面：聊天页顶栏/输入栏已接 Cloudy 0.7.1（背板模糊 + 半透明 tint，GPU + 旧设备 CPU 降级）；其他页面顶栏/浮层待铺开。
+✅ 玻璃表面：聊天页顶栏/输入栏 + 首页顶栏已接 Cloudy 0.7.1（背板模糊 + 半透明 tint，GPU + 旧设备 CPU 降级）；1px 高光描边/内阴影与其余页面待铺开。
 ❌ 角色卡驱动主题（seed 已存，未生成角色配色）、MeshGradient 氛围背景、预设主题完整落盘（目前只有模式+六套 preset 的基础）。
 
 ### 4.5.5 图标系统 ✅
