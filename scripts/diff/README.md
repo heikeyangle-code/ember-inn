@@ -43,6 +43,7 @@
 - `persona-engine-official.mjs`：官方人设纯逻辑（状态/临时锁/连接/解析）。
 - `group-loop-official.mjs`：官方群聊完整循环纯逻辑（自动续写/生成计划）。
 - `openai-params-official.mjs`：官方 OpenAI 请求体核心。
+- `tool-budget-official.mjs`：官方工具 token 预分配。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -99,6 +100,7 @@ node scripts/diff/authors-note-official.mjs
 node scripts/diff/persona-engine-official.mjs
 node scripts/diff/group-loop-official.mjs
 node scripts/diff/openai-params-official.mjs
+node scripts/diff/tool-budget-official.mjs
 node scripts/build-presets.mjs
 ```
 
