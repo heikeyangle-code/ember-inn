@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（53 组，共 835 例官方基准，全部通过）**：
+**已覆盖（54 组，共 840 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -101,6 +101,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
 | OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
 | BYAF 资源提取 | byaf-assets-official.mjs | ByafAssetsDiffTest | 6 |
+| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion） | prepare-messages-official.mjs | PromptPipelineDiffTest | 5 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -138,7 +139,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
 
 ### 3.5 提示词组装 ✅（核心）
-PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
+PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 5 例；边界：absolute 提示 in-chat 深度注入暂原样透传）、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
 ✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior（COMPLETION 名字清理）已接：PromptNameSanitizer 对齐 isValidName/sanitizeName（28 例差分），ChatHistoryPopulator 在 COMPLETION 模式清理 name，常量改为官方 NONE=-1/DEFAULT=0/COMPLETION=1/CONTENT=2；🟡 工具预分配 token、媒体内联、推理签名、多模态缺失。
 
 ### 3.6 正则 ✅
@@ -239,7 +240,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 引擎能力 | 官方源码位置 | App 接线点 |
 |---|---|---|
 | 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
-| 提示词组装 | `public/scripts/openai.js` preparePromptsForChatCompletion / populateChatCompletion + `public/scripts/script.js` generate | 发送前：PromptAssembler / ChatCompletionPipelinePlan 出消息列表 → PromptManager 宏替换 → 按协议走 ChatRequestBuilder（OpenAI）/ AnthropicRequestBuilder / GoogleRequestBuilder；**现在 App 直接发历史消息，是 P0 缺口** |
+| 提示词组装 | `public/scripts/openai.js` prepareOpenAIMessages + populateChatCompletion + `public/scripts/script.js` generate | ✅ 引擎已接：PromptPipeline.prepare 一个入口出最终消息（世界书/宏/人设/AN/示例/历史/控制提示/squash，整链差分 5 例）；App 发送前调它 + 按协议走 ChatRequestBuilder / Anthropic / Google |
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
@@ -306,6 +307,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 57（2026-08-08：PromptPipeline 总装器官方整链差分 5 例）
+
+- prepare-messages-official.mjs：逐字提取官方 prepareOpenAIMessages + populateChatCompletion + setOpenAIMessageExamples + parseExampleIntoIndividual + parseMesExamples + populateChatHistory + populateDialogueExamples；Message/ChatCompletion/promptManager/tokenHandler/ToolManager 打桩（与 Kotlin 移植同语义），dryRun=false + squash
+- PromptPipeline.prepareWithPrompts：官方端到端输出（最终消息数组）与 Kotlin 总装器整链对拍，5 例全过（basic / 人设+AN 扩展 / impersonate+quiet / pin_examples / continue+prefill）
+- 差分抓出并修 1 个真差异：continuePrefill 消息官方仅 names_behavior=COMPLETION 才带 name，原实现无条件带
+- 调试过程还发现 fixture 层坑：JsonNull 会被 kotlinx 当字符串 "null"（测试映射已处理）
+- 边界（已在脚本与类注释标注）：preparePromptsForChatCompletion 由它自己的 7 例差分覆盖，整链 fixture 用同一提示集合注入；absolute 提示 in-chat 深度注入（populationInjectionPrompts）暂原样透传
+- 官方基准 835 → 840；引擎 255 → 259 测全绿
 
 ## 最近一轮 56（2026-08-08：ToolLoopPlanner 工具递归决策 + 剩余缺口备注）
 

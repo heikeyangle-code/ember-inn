@@ -1,0 +1,789 @@
+{
+  "source": "openai.js prepareOpenAIMessages + populateChatCompletion 整链",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "user",
+              "content": "第一条"
+            },
+            {
+              "role": "assistant",
+              "content": "回复一",
+              "name": "Char"
+            },
+            {
+              "role": "user",
+              "content": "第二条"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "第一条",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "回复一",
+          "name": "Char"
+        },
+        {
+          "role": "user",
+          "content": "第二条",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        }
+      ]
+    },
+    {
+      "id": "persona-an-extension",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "user",
+              "content": "第一条"
+            },
+            {
+              "role": "assistant",
+              "content": "回复一",
+              "name": "Char"
+            },
+            {
+              "role": "user",
+              "content": "第二条"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "人设描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "authorsNote",
+              "role": "system",
+              "content": "作者注释",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0,
+              "position": "end",
+              "extension": true
+            }
+          ],
+          "personaDescription": "人设描述",
+          "extensionPrompts": {
+            "2_floating_prompt": {
+              "identifier": "2_floating_prompt",
+              "role": "system",
+              "content": "作者注释",
+              "position": "end"
+            }
+          }
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n作者注释\n作者注释\n描述\n性格\n场景\n人设描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "第一条",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "回复一",
+          "name": "Char"
+        },
+        {
+          "role": "user",
+          "content": "第二条",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        }
+      ]
+    },
+    {
+      "id": "impersonate-quiet",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "user",
+              "content": "第一条"
+            },
+            {
+              "role": "assistant",
+              "content": "回复一",
+              "name": "Char"
+            },
+            {
+              "role": "user",
+              "content": "第二条"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "impersonate",
+              "role": "assistant",
+              "content": "冒充内容",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "quietPrompt",
+              "role": "user",
+              "content": "安静提示",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            }
+          ],
+          "type": "impersonate",
+          "quietPrompt": "安静提示"
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "第一条",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "回复一",
+          "name": "Char"
+        },
+        {
+          "role": "user",
+          "content": "第二条",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        },
+        {
+          "role": "assistant",
+          "content": "冒充内容",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "安静提示",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "冒充内容",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "安静提示",
+          "name": null
+        }
+      ]
+    },
+    {
+      "id": "pin-examples",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "user",
+              "content": "第一条"
+            },
+            {
+              "role": "assistant",
+              "content": "回复一",
+              "name": "Char"
+            },
+            {
+              "role": "user",
+              "content": "第二条"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            }
+          ],
+          "pinExamples": true
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "user",
+          "content": "第一条",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "回复一",
+          "name": "Char"
+        },
+        {
+          "role": "user",
+          "content": "第二条",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        }
+      ]
+    },
+    {
+      "id": "continue-prefill-claude",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "assistant",
+              "content": "继续这段",
+              "name": "Char"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            }
+          ],
+          "type": "continue",
+          "continuePrefill": true,
+          "assistantPrefill": "Sure.",
+          "chatCompletionSource": "claude"
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        },
+        {
+          "role": "assistant",
+          "content": "Sure.\n\n继续这段",
+          "name": null
+        }
+      ]
+    }
+  ]
+}

@@ -185,7 +185,8 @@ object PromptPipeline {
             val continueMessage = CompletionMessage(
                 role = chatMessage.role,
                 content = content,
-                name = chatMessage.name,
+                // 官方：仅 names_behavior=COMPLETION 时 setName(sanitizeName(name))
+                name = if (input.namesBehavior == PromptAssembler.NAMES_COMPLETION) chatMessage.name else null,
                 identifier = "continuePrefill",
                 tokens = handler.countAsync(content, "conversation"),
             )
@@ -302,10 +303,6 @@ object PromptPipeline {
     )
 
     fun prepare(input: PrepareInput): PrepareResult {
-        val handler = TokenHandler(input.tokenCounter)
-        val chatCompletion = ChatCompletion(handler)
-        chatCompletion.setTokenBudget(input.maxContextTokens, input.maxTokens)
-
         val prompts = PromptAssembler.preparePromptsForChatCompletion(
             scenario = input.scenario,
             charPersonality = input.charPersonality,
@@ -329,6 +326,14 @@ object PromptPipeline {
             groupNudge = input.groupNudge,
             wiFormat = input.wiFormat,
         )
+        return prepareWithPrompts(input, prompts)
+    }
+
+    /** 差分/测试入口：使用外部提供的提示集合（官方端到端 fixture 用同一集合）。 */
+    fun prepareWithPrompts(input: PrepareInput, prompts: PromptItems): PrepareResult {
+        val handler = TokenHandler(input.tokenCounter)
+        val chatCompletion = ChatCompletion(handler)
+        chatCompletion.setTokenBudget(input.maxContextTokens, input.maxTokens)
 
         populate(
             chatCompletion = chatCompletion,
