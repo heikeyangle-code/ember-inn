@@ -110,7 +110,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
 - prepare-messages（总装整链，19 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**，打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。
-- SSE：LlmClient.executeStream 已切到官方对拍的 SseChunkParser（逐字符、事件级 catch 跳过 = 官方平滑流语义、[DONE]/message_stop 收尾、reasoning 不进正文）；SseParser 保留为聚合层（asText 非字符串一律跳过，不再拼字面 "null"）。
+- SSE：运行时只有官方对拍的 SseChunkParser 一条路（逐字符、事件级 catch 跳过 = 官方平滑流语义、[DONE]/message_stop 收尾、reasoning 独立通道）；旧 SseParser 已删除（曾把 content:null 拼成字面 "null"）。
 - **仍绕过 fixture 的部分**：prepareOpenAIMessages 的 chat→messages 构造循环（names_behavior 内容前缀、isSameModel 签名/推理过滤、media/invocations 从 extra 提取）由 fixture 直接注入消息对象绕过；Kotlin 侧由 App 的 ChatPromptFactory（JSONL → PromptMessage）按官方同名逻辑实现，接线点见 4.7/4.9。
 - 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
 
@@ -336,6 +336,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 65（2026-08-09：删除旧 SseParser，运行时只留官方对拍解析器）
+
+- 删除 engine/provider/SseParser.kt 与 SseParserTest.kt（旧实现曾把 content:null 拼成 "null"，且与官方对拍 SseChunkParser 重复）
+- LlmClientTest 里两个直接测 SseParser 的用例改写为 SseChunkParser（anthropic/google data 载荷），覆盖不丢失
+- HANDOFF 2.1 更新：SSE 只有一条运行时路径
 
 ## 最近一轮 64（2026-08-09：continue 官方 nudge 路径修正 + 思考过程显示 + ProviderState 共享）
 

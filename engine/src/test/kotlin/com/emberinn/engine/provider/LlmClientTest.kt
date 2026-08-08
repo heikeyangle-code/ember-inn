@@ -228,29 +228,21 @@ class LlmClientTest {
 
     @Test
     fun `anthropic sse parses content block deltas`() {
-        val chunks = SseParser.parse(
-            "event: content_block_start\n" +
-                "data: {\"type\":\"content_block_start\",\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n" +
-                "event: content_block_delta\n" +
-                "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"你\"}}\n\n" +
-                "event: content_block_delta\n" +
-                "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"好\"}}\n\n" +
-                "event: message_stop\n" +
-                "data: {\"type\":\"message_stop\"}\n\n",
-            "anthropic",
-        )
-        assertEquals(listOf("你", "好"), chunks.filter { it.content.isNotEmpty() }.map { it.content })
-        assertTrue(chunks.any { it.done })
+        val chunks = listOf(
+            SseChunkParser.parse("""{"type":"content_block_delta","delta":{"type":"text_delta","text":"你"}}"""),
+            SseChunkParser.parse("""{"type":"content_block_delta","delta":{"type":"text_delta","text":"好"}}"""),
+        ).flatten()
+        assertEquals(listOf("你", "好"), chunks.map { it.chunk })
+        assertTrue(chunks.none { it.reasoning })
     }
 
     @Test
     fun `google sse parses candidate text`() {
-        val chunks = SseParser.parse(
-            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"你\"}]}}]}\n\n" +
-                "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"好\"}]}}]}\n\n",
-            "google",
-        )
-        assertEquals(listOf("你", "好"), chunks.map { it.content })
+        val chunks = listOf(
+            SseChunkParser.parse("""{"candidates":[{"content":{"parts":[{"text":"你"}]}}]}"""),
+            SseChunkParser.parse("""{"candidates":[{"content":{"parts":[{"text":"好"}]}}]}"""),
+        ).flatten()
+        assertEquals(listOf("你", "好"), chunks.map { it.chunk })
     }
 
     @Test
