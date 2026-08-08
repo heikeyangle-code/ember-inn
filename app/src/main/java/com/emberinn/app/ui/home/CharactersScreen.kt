@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +73,11 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
+import com.skydoves.cloudy.sky
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.cloudy
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -95,6 +101,12 @@ fun CharactersScreen(
     var deleteTarget by remember { mutableStateOf<CharacterRecord?>(null) }
     var worldHit by remember { mutableStateOf<WorldInfoHit?>(null) }
     val searchResults = remember(query) { vm.search(query) }
+
+    // README 首页：毛玻璃顶栏（Cloudy 背板模糊，正文区干净）
+    val sky = rememberSky()
+    val density = LocalDensity.current
+    var topBarHeight by remember { mutableStateOf(0) }
+    val topBarPad = with(density) { topBarHeight.toDp() }
 
     // 每次进入首页/从设置返回都刷新（导入、清除数据、删除角色后列表不过期）
     LaunchedEffect(Unit) { vm.refresh() }
@@ -158,13 +170,11 @@ fun CharactersScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 88.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topBarPad + 8.dp, bottom = 88.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize().sky(sky),
             ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    HomeTopBar(query = query, onQueryChange = { query = it })
-                }
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     AiChatCard(onClick = { onOpenChat(vm.openChat(null, "AI 对话")) })
                 }
@@ -175,7 +185,12 @@ fun CharactersScreen(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(recentSessions, key = { it.id }) { session ->
-                                RecentChatCard(session) { onOpenChat(session) }
+                                RecentChatCard(
+                                    session = session,
+                                    avatarPath = characters.firstOrNull { it.id == session.characterId }?.avatarPath,
+                                    preview = vm.lastMessage(session.id),
+                                    onClick = { onOpenChat(session) },
+                                )
                             }
                         }
                     }
@@ -187,12 +202,26 @@ fun CharactersScreen(
                     items(filtered, key = { it.id }) { record ->
                         CharacterCard(
                             record = record,
+                            preview = vm.lastMessageFor(record.id),
                             onClick = { onOpenChat(vm.openChat(record.id, record.name)) },
                             onMenu = { menuRecord = record },
                         )
                     }
                 }
             }
+        }
+
+        if (query.isBlank() && characters.isNotEmpty()) {
+            HomeTopBar(
+                query = query,
+                onQueryChange = { query = it },
+                glass = true,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { topBarHeight = it.height }
+                    .cloudy(sky = sky, radius = 16, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)),
+            )
         }
 
         FloatingActionButton(
@@ -467,11 +496,20 @@ private fun SearchAvatar(name: String, isRole: Boolean) {
 }
 
 @Composable
-private fun HomeTopBar(query: String, onQueryChange: (String) -> Unit) {
+private fun HomeTopBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    glass: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
     Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+        color = if (glass) {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.14f)
+        } else {
+            MaterialTheme.colorScheme.background.copy(alpha = 0.92f)
+        },
         shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -500,35 +538,82 @@ private fun AiChatCard(onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Text("✦", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.size(12.dp))
-            Column {
-                Text("AI 对话", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("不用角色卡，直接聊天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // README：AI 对话 = 玻璃渐变卡（低饱和主色 → 表面）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
+                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.75f),
+                        ),
+                    ),
+                ),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Text("✦", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.size(12.dp))
+                Column {
+                    Text("AI 对话", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("不用角色卡，直接聊天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RecentChatCard(session: SessionRecord, onClick: () -> Unit) {
+private fun RecentChatCard(
+    session: SessionRecord,
+    avatarPath: String?,
+    preview: String?,
+    onClick: () -> Unit,
+) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Text(session.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text("继续聊天 →", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            // README：最近聊过 = 头像 + 名字（1 秒续聊）
+            if (avatarPath != null) {
+                AsyncImage(
+                    model = File(avatarPath),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(36.dp).clip(CircleShape),
+                )
+            } else {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                ) {
+                    Text(session.name.take(1), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Spacer(Modifier.size(10.dp))
+            Column {
+                Text(session.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(
+                    preview ?: "继续聊天",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit, onMenu: () -> Unit) {
+private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: () -> Unit, onMenu: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -578,7 +663,8 @@ private fun CharacterCard(record: CharacterRecord, onClick: () -> Unit, onMenu: 
                         }
                     }
                     Text(
-                        record.description.ifBlank { "暂无简介" },
+                        // README：卡片显示最近消息预览；无会话时回退简介
+                        preview?.takeIf { it.isNotBlank() } ?: record.description.ifBlank { "暂无简介" },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,

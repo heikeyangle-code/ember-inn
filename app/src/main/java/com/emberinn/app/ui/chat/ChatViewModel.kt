@@ -107,15 +107,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val avatarPath: String? = character?.avatarPath
 
     init {
-        // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补
-        if (character != null && chatStore.messages(sessionId).isEmpty()) {
-            val firstMes = firstMesOf(character.rawJson)
+        // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
+        // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”
+        if (chatStore.messages(sessionId).isEmpty()) {
+            val charName = chatStore.get(sessionId)?.name ?: "Assistant"
+            val firstMes = if (character != null) {
+                firstMesOf(character.rawJson)
+            } else {
+                DEFAULT_AI_OPENING
+            }
             if (!firstMes.isNullOrBlank()) {
-                val charName = chatStore.get(sessionId)?.name ?: character.name
                 chatStore.append(sessionId, false, firstMes, charName)
                 refreshMessages()
             }
         }
+    }
+
+    /** README 启动体验：AI 对话默认开场。 */
+    private companion object {
+        const val DEFAULT_AI_OPENING = "我是余烬，想聊点什么？"
     }
 
     private fun firstMesOf(rawJson: String): String? = runCatching {

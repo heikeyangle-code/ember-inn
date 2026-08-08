@@ -71,6 +71,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _recentSessions.value = chatStore.recent(8)
     }
 
+    /** README 首页卡片：角色的最近消息预览（该角色最新会话的最后一条消息）。 */
+    fun lastMessageFor(characterId: String?): String? {
+        if (characterId == null) return null
+        val session = chatStore.list().filter { it.characterId == characterId }.maxByOrNull { it.updatedAt } ?: return null
+        return chatStore.lastMessage(session.id)
+    }
+
+    fun lastMessage(sessionId: String): String? = chatStore.lastMessage(sessionId)
+
     /** 全局搜索（大小写不敏感）：角色名/描述、会话名/最后消息、世界书条目、设置项。 */
     fun search(query: String): SearchResults {
         val q = query.trim()

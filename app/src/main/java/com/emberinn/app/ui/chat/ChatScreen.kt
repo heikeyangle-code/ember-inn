@@ -47,6 +47,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -145,6 +146,7 @@ fun ChatScreen(
 
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
+    var contextDetail by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
     var showQuickBar by remember { mutableStateOf(false) }
@@ -323,7 +325,7 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
                     contextUsage?.let { (used, max) ->
-                        StatusPill("上下文 ${formatTokens(used)}/${formatTokens(max)}")
+                        ContextCapsule(used = used, max = max, onClick = { contextDetail = true })
                     }
                     if (worldHits.isNotEmpty()) {
                         StatusPill("世界书 ×${worldHits.size}") {
@@ -388,6 +390,37 @@ fun ChatScreen(
                 .onSizeChanged { inputBarHeight = it.height }
                 .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f)),
         )
+    }
+
+    if (contextDetail) {
+        val usage = contextUsage
+        if (usage != null) {
+            ModalBottomSheet(onDismissRequest = { contextDetail = false }, sheetState = rememberModalBottomSheetState()) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+                    Text("上下文占用", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.size(12.dp))
+                    val (used, max) = usage
+                    val pct = if (max <= 0) 0 else (used * 100 / max)
+                    val gradeText = when {
+                        pct >= 90 -> "红色：快满了，建议提高上限或精简提示"
+                        pct >= 75 -> "橙色：偏紧，长回复可能被裁剪"
+                        pct >= 50 -> "黄色：过半，留意后续消息长度"
+                        else -> "绿色：空间充足"
+                    }
+                    Text("已用：${formatTokens(used)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("上限：${formatTokens(max)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("占比：$pct%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        gradeText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            contextDetail = false
+        }
     }
 
     menuMessageIndex?.let { index ->
@@ -816,7 +849,50 @@ private fun StreamingRow(
     }
 }
 
-/** 状态胶囊（上下文占比 / 世界书命中），README 状态可见。 */
+/**
+ * README 上下文占比胶囊：圆环进度 + token/上限 + 百分比 + 绿→黄→橙→红分级，点开详细分解。
+ */
+@Composable
+private fun ContextCapsule(used: Int, max: Int, onClick: () -> Unit) {
+    val ratio = if (max <= 0) 0f else used.toFloat() / max
+    val grade = when {
+        ratio >= 0.90f -> MaterialTheme.colorScheme.error
+        ratio >= 0.75f -> Color(0xFFEF6C00)
+        ratio >= 0.50f -> Color(0xFFF9A825)
+        else -> Color(0xFF2E7D32)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        CircularProgressIndicator(
+            progress = { ratio.coerceIn(0f, 1f) },
+            modifier = Modifier.size(16.dp),
+            strokeWidth = 2.dp,
+            color = grade,
+            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            "${(ratio * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = grade,
+        )
+        Spacer(Modifier.size(5.dp))
+        Text(
+            "上下文 ${formatTokens(used)}/${formatTokens(max)}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** 状态胶囊（世界书命中等），README 状态可见。 */
 @Composable
 private fun StatusPill(text: String, onClick: (() -> Unit)? = null) {
     Surface(
