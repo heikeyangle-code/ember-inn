@@ -74,6 +74,7 @@ object V2Normalizer {
         talkativeness: Double = 0.5,
         creator: String = "",
         includeRootCreator: Boolean = false,
+        rootCreatorNotes: String? = null,
         tags: List<String> = emptyList(),
         systemPrompt: String = "",
         postHistoryInstructions: String = "",
@@ -96,6 +97,7 @@ object V2Normalizer {
         put("first_mes", JsonPrimitive(firstMes))
         put("mes_example", JsonPrimitive(mesExample))
         put("creatorcomment", JsonPrimitive(creatorComment))
+        if (rootCreatorNotes != null) put("creator_notes", JsonPrimitive(rootCreatorNotes))
         put("avatar", JsonPrimitive("none"))
         put("talkativeness", JsonPrimitive(talkativeness))
         if (includeRootCreator) put("creator", JsonPrimitive(creator))

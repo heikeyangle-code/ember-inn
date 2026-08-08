@@ -1,0 +1,41 @@
+{
+  "source": "characters.js getCharaCardV2+unsetPrivateFields",
+  "cases": [
+    {
+      "id": "v3",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v3\",\"spec_version\":\"3.0\",\"data\":{\"name\":\"N\",\"description\":\"D\",\"extensions\":{\"fav\":true,\"talkativeness\":0.7}},\"chat\":[\"x\"],\"json_data\":\"y\"}"
+        }
+      },
+      "expected": "{\n    \"spec\": \"chara_card_v3\",\n    \"spec_version\": \"3.0\",\n    \"data\": {\n        \"name\": \"N\",\n        \"description\": \"D\",\n        \"extensions\": {\n            \"fav\": false,\n            \"talkativeness\": 0.7\n        }\n    },\n    \"name\": \"N\",\n    \"description\": \"D\",\n    \"talkativeness\": 0.7,\n    \"fav\": false\n}"
+    },
+    {
+      "id": "v2",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v2\",\"name\":\"旧\",\"description\":\"d\",\"talkativeness\":0.8,\"fav\":true,\"chat\":\"c\"}"
+        }
+      },
+      "expected": "{\n    \"spec\": \"chara_card_v2\",\n    \"name\": \"旧\",\n    \"description\": \"d\",\n    \"talkativeness\": 0.8,\n    \"fav\": false,\n    \"data\": {\n        \"extensions\": {\n            \"fav\": false\n        }\n    }\n}"
+    },
+    {
+      "id": "v1",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"旧版\",\"description\":\"描述\",\"personality\":\"性格\",\"first_mes\":\"你好\",\"scenario\":\"场景\",\"mes_example\":\"示例\",\"creator_notes\":\"备注\",\"tags\":\"a,b\",\"talkativeness\":0.6}"
+        }
+      },
+      "expected": "{\n    \"name\": \"旧版\",\n    \"description\": \"描述\",\n    \"personality\": \"性格\",\n    \"first_mes\": \"你好\",\n    \"scenario\": \"场景\",\n    \"mes_example\": \"示例\",\n    \"creator_notes\": \"备注\",\n    \"tags\": [\n        \"a\",\n        \"b\"\n    ],\n    \"talkativeness\": 0.6,\n    \"creatorcomment\": \"\",\n    \"avatar\": \"none\",\n    \"fav\": false,\n    \"spec\": \"chara_card_v2\",\n    \"spec_version\": \"2.0\",\n    \"data\": {\n        \"name\": \"旧版\",\n        \"description\": \"描述\",\n        \"personality\": \"性格\",\n        \"scenario\": \"场景\",\n        \"first_mes\": \"你好\",\n        \"mes_example\": \"示例\",\n        \"creator_notes\": \"\",\n        \"system_prompt\": \"\",\n        \"post_history_instructions\": \"\",\n        \"tags\": [\n            \"a\",\n            \"b\"\n        ],\n        \"creator\": \"\",\n        \"character_version\": \"\",\n        \"alternate_greetings\": [],\n        \"extensions\": {\n            \"talkativeness\": 0.6,\n            \"fav\": false,\n            \"world\": \"\",\n            \"depth_prompt\": {\n                \"prompt\": \"\",\n                \"depth\": 4,\n                \"role\": \"system\"\n            }\n        }\n    },\n    \"create_date\": \"2026-08-08T00:00:00.000Z\"\n}"
+    },
+    {
+      "id": "v1-no-date",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"无日期\",\"description\":\"d\"}"
+        }
+      },
+      "expected": "{\n    \"name\": \"无日期\",\n    \"description\": \"d\",\n    \"personality\": \"\",\n    \"scenario\": \"\",\n    \"first_mes\": \"\",\n    \"mes_example\": \"\",\n    \"creatorcomment\": \"\",\n    \"avatar\": \"none\",\n    \"talkativeness\": 0.5,\n    \"fav\": false,\n    \"tags\": [],\n    \"spec\": \"chara_card_v2\",\n    \"spec_version\": \"2.0\",\n    \"data\": {\n        \"name\": \"无日期\",\n        \"description\": \"d\",\n        \"personality\": \"\",\n        \"scenario\": \"\",\n        \"first_mes\": \"\",\n        \"mes_example\": \"\",\n        \"creator_notes\": \"\",\n        \"system_prompt\": \"\",\n        \"post_history_instructions\": \"\",\n        \"tags\": [],\n        \"creator\": \"\",\n        \"character_version\": \"\",\n        \"alternate_greetings\": [],\n        \"extensions\": {\n            \"talkativeness\": 0.5,\n            \"fav\": false,\n            \"world\": \"\",\n            \"depth_prompt\": {\n                \"prompt\": \"\",\n                \"depth\": 4,\n                \"role\": \"system\"\n            }\n        }\n    },\n    \"create_date\": \"2026-08-08T00:00:00.000Z\"\n}"
+    }
+  ]
+}

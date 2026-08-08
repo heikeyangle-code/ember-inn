@@ -20,27 +20,27 @@ object CharacterCardExporter {
     private val json = Json { ignoreUnknownKeys = true }
     private val pretty = Json { ignoreUnknownKeys = true; prettyPrint = true; prettyPrintIndent = "    " }
 
-    fun exportToV2Json(jsonString: String): String {
+    fun exportToV2Json(jsonString: String, now: String = Instant.now().toString()): String {
         val root = json.parseToJsonElement(jsonString).jsonObject
-        val normalized = if (root["spec"] == null) legacyToV2(root) else V2Normalizer.normalize(jsonString)
+        val normalized = if (root["spec"] == null) legacyToV2(root, now) else V2Normalizer.normalize(jsonString)
         val cleaned = CharacterCardCodec.cleanPrivateFields(normalized)
         val element = json.parseToJsonElement(cleaned)
         return pretty.encodeToString(JsonElement.serializer(), element)
     }
 
     /** 旧版无 spec 卡 → charaFormatData 主字段映射；create_date 缺省用 ISO（对齐 getCharaCardV2）。 */
-    private fun legacyToV2(root: JsonObject): String {
+    private fun legacyToV2(root: JsonObject, now: String): String {
         val name = root["name"]?.jsonPrimitive?.contentOrNull ?: ""
         val tags = root["tags"]?.let {
             if (it is kotlinx.serialization.json.JsonArray) it.mapNotNull { e -> e.jsonPrimitive.contentOrNull }
             else it.jsonPrimitive.contentOrNull?.split(',')?.map { t -> t.trim() }?.filter { t -> t.isNotEmpty() } ?: emptyList()
         } ?: emptyList()
-        val now = V2Normalizer.humanizedDateTime()
-        val createDate = root["create_date"]?.jsonPrimitive?.contentOrNull ?: Instant.now().toString()
+        val createDate = root["create_date"]?.jsonPrimitive?.contentOrNull ?: now
         return V2Normalizer.buildV2FromLegacy(
             name = name,
             description = root["description"]?.jsonPrimitive?.contentOrNull ?: "",
             firstMes = root["first_mes"]?.jsonPrimitive?.contentOrNull ?: "",
+            mesExample = root["mes_example"]?.jsonPrimitive?.contentOrNull ?: "",
             createDate = createDate,
             chat = root["chat"]?.jsonPrimitive?.contentOrNull ?: "$name - $now",
             creatorComment = root["creatorcomment"]?.jsonPrimitive?.contentOrNull ?: "",
@@ -49,6 +49,7 @@ object CharacterCardExporter {
             talkativeness = root["talkativeness"]?.jsonPrimitive?.let { it.contentOrNull?.toDoubleOrNull() } ?: 0.5,
             creator = root["creator"]?.jsonPrimitive?.contentOrNull ?: "",
             includeRootCreator = root.containsKey("creator"),
+            rootCreatorNotes = root["creator_notes"]?.jsonPrimitive?.contentOrNull,
             tags = tags,
             systemPrompt = root["system_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
             postHistoryInstructions = root["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: "",
