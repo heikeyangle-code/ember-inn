@@ -337,6 +337,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 67（2026-08-09：聊天页滚动/消息完整显示/思考过程折叠）
+
+- 流式滚动：只在用户贴底时跟随，且流式用 scrollToItem（逐 token animate 会造成上下跳）
+- 消息显示不全：ChatMarkdown 去掉 heightIn(420.dp) 上限，最终消息完整渲染，无需展开
+- 思考过程：生成完不再清空——lastReasoning 保留（finalize/stop 均保存），最后一条 AI 消息下方 ReasoningCard 默认折叠、点开查看；finalize 分支顺序修正为 冒充→continue→思考→追加
+- 无引擎改动；App 编译待 CI
+
 ## 最近一轮 66（2026-08-09：Markdown 收敛成聊天风）
 
 - ChatMarkdown：AI 气泡 Markdown 定制 colors/typography/padding——正文 bodyMedium、标题降级 titleSmall/Medium、代码低饱和容器 + 等宽小字、列表/引用间距克制（对齐 README：正文 16sp、低饱和、克制）
