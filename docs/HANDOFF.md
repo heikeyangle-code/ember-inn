@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（47 组，共 641 例官方基准，全部通过）**：
+**已覆盖（48 组，共 666 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -97,6 +97,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | ChatCompletionPipeline 计划 | chat-pipeline-official.mjs | ChatPipelineDiffTest | 5 |
 | 媒体附件纯逻辑 | media-engine-official.mjs | MediaEngineDiffTest | 17 |
 | 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
+| 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 
 **尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -154,7 +155,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
 - ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
 ✅ Anthropic/Gemini 请求体已 1:1 + 官方差分（12+11 例）：thinking（adaptive/enabled+预算）、tools/tool_choice、web_search、json_schema、beta headers、采样限制、verbosity、图像模态、systemInstruction、toolConfig 等；
-   边界：convertClaudeMessages/convertGooglePrompt（消息转换）、calculateClaudeBudgetTokens（预算计算）、GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）。
+✅ 媒体内容块转换（Claude/Gemini）官方差分 25 例（image_url/text/video/audio → Claude image/text 块、Gemini inlineData，含 media_resolution_low/high 与 JS split 边缘语义）；
+   边界：convertClaudeMessages/convertGooglePrompt 整链（下一步接入 builder）、calculateClaudeBudgetTokens（预算计算）、GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）。
 🟡 Vertex AI 服务账号认证未做；Claude/Gemini tokenizer 仍是回退 cl100k。
 
 ### 3.12 表情精灵 ✅（引擎层纯逻辑）

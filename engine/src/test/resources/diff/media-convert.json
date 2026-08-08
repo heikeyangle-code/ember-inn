@@ -1,0 +1,471 @@
+{
+  "source": "prompt-converters.js 媒体块转换（逐字提取）",
+  "cases": [
+    {
+      "id": "claude-image",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,AAAA"
+            }
+          }
+        }
+      },
+      "expected": {
+        "type": "image",
+        "source": {
+          "type": "base64",
+          "media_type": "image/png",
+          "data": "AAAA"
+        }
+      }
+    },
+    {
+      "id": "claude-text",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "text",
+            "text": "hello"
+          }
+        }
+      },
+      "expected": {
+        "type": "text",
+        "text": "hello"
+      }
+    },
+    {
+      "id": "claude-text-empty",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "text",
+            "text": ""
+          }
+        }
+      },
+      "expected": {
+        "type": "text",
+        "text": "​"
+      }
+    },
+    {
+      "id": "claude-text-name",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "text",
+            "text": "hi"
+          },
+          "name": "Alice"
+        }
+      },
+      "expected": {
+        "type": "text",
+        "text": "Alice: hi"
+      }
+    },
+    {
+      "id": "claude-text-name-empty",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "text",
+            "text": "hi"
+          },
+          "name": ""
+        }
+      },
+      "expected": {
+        "type": "text",
+        "text": "hi"
+      }
+    },
+    {
+      "id": "claude-image-remote-url",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://x/a.png"
+            }
+          }
+        }
+      },
+      "expected": {
+        "type": "image",
+        "source": {
+          "type": "base64",
+          "media_type": "//x/a.png"
+        }
+      }
+    },
+    {
+      "id": "claude-image-no-comma",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png"
+            }
+          }
+        }
+      },
+      "expected": {
+        "type": "image",
+        "source": {
+          "type": "base64",
+          "media_type": "image/png"
+        }
+      }
+    },
+    {
+      "id": "claude-image-url-missing",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "image_url",
+            "image_url": {}
+          }
+        }
+      },
+      "expected": {
+        "type": "image",
+        "source": {
+          "type": "base64"
+        }
+      }
+    },
+    {
+      "id": "claude-unknown-part",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "tool_use",
+            "id": "x"
+          }
+        }
+      },
+      "expected": {
+        "type": "tool_use",
+        "id": "x"
+      }
+    },
+    {
+      "id": "claude-video-unchanged",
+      "args": {
+        "body": {
+          "target": "claude",
+          "part": {
+            "type": "video_url",
+            "video_url": {
+              "url": "data:video/mp4;base64,BBBB"
+            }
+          }
+        }
+      },
+      "expected": {
+        "type": "video_url",
+        "video_url": {
+          "url": "data:video/mp4;base64,BBBB"
+        }
+      }
+    },
+    {
+      "id": "gemini-image",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/jpeg;base64,CCCC"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/jpeg",
+          "data": "CCCC"
+        }
+      }
+    },
+    {
+      "id": "gemini-video",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "video_url",
+            "video_url": {
+              "url": "data:video/mp4;base64,DDDD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "video/mp4",
+          "data": "DDDD"
+        }
+      }
+    },
+    {
+      "id": "gemini-audio",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "audio_url",
+            "audio_url": {
+              "url": "data:audio/mpeg;base64,EEEE"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "audio/mpeg",
+          "data": "EEEE"
+        }
+      }
+    },
+    {
+      "id": "gemini-text",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "text",
+            "text": "ok"
+          }
+        }
+      },
+      "expected": {
+        "text": "ok"
+      }
+    },
+    {
+      "id": "gemini-text-empty",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "text",
+            "text": ""
+          }
+        }
+      },
+      "expected": {
+        "text": ""
+      }
+    },
+    {
+      "id": "gemini-unknown-part",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "function_call",
+            "name": "f"
+          }
+        }
+      },
+      "expected": {
+        "type": "function_call",
+        "name": "f"
+      }
+    },
+    {
+      "id": "gemini-image-gemini3-high",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "model": "gemini-3-pro",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,FFFF",
+              "detail": "high"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "FFFF"
+        },
+        "mediaResolution": {
+          "level": "media_resolution_high"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-gemini3-low",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "model": "gemini-3-pro",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,GGGG",
+              "detail": "low"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "GGGG"
+        },
+        "mediaResolution": {
+          "level": "media_resolution_low"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-low-non3",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "model": "gemini-2.5-pro",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,HHHH",
+              "detail": "low"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "HHHH"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-gemini3-unknown-detail",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "model": "gemini-3-pro",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,IIII",
+              "detail": "auto"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "IIII"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-remote-url",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://x/a.png"
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "gemini-audio-remote-url",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "audio_url",
+            "audio_url": {
+              "url": "https://x/a.mp3"
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "gemini-image-no-comma",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-extra-comma",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,AAAA,BBBB"
+            }
+          }
+        }
+      },
+      "expected": {
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "AAAA"
+        }
+      }
+    },
+    {
+      "id": "gemini-image-url-missing",
+      "args": {
+        "body": {
+          "target": "gemini",
+          "part": {
+            "type": "image_url",
+            "image_url": {}
+          }
+        }
+      },
+      "expected": null
+    }
+  ]
+}
