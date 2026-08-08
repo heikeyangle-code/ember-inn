@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（50 组，共 800 例官方基准，全部通过）**：
+**已覆盖（51 组，共 823 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -98,6 +98,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 媒体附件纯逻辑 | media-engine-official.mjs | MediaEngineDiffTest | 17 |
 | 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
 | 媒体 token 成本 | media-cost-official.mjs | MediaCostDiffTest | 18 |
+| 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -163,7 +164,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 | Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | ✅ `calculateClaudeBudgetTokens` 已接入 LlmClient（SamplerParams.reasoningEffort 默认 auto；adaptive→effort 字符串/auto→不加 thinking） | 🟡 官方不发模型列表请求，用默认模型 | ✅ 差 tokenizer |
 | Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | ✅ `calculateGoogleBudgetTokens` 已接入 LlmClient（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | ✅ `models[].name`（过滤 generateContent） | ✅ 差 tokenizer |
 | OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支 + transforms/plugins/reasoning.exclude/effort） | ✅ | ✅ `embedOpenRouterMedia`（audio+video）已接线 | ✅ `addOpenRouterSignatures` + `cachingAtDepthForOpenRouterClaude` + `cachingSystemPromptForOpenRouter`（SamplerParams 缓存开关/深度/TTL）+ DeepSeek `addReasoningContentToToolCalls` 全部接线 | ✅ | ✅ |
-| Mistral | ✅ 专用路由 `/chat/completions` | ✅（官方 sendMistralAIRequest 字段） | ✅ `convertMistral` 已接线 | — | — | ✅ | ✅ |
+| Mistral | ✅ 专用路由 `/chat/completions` | ✅ body 差分 23 例含内（sendMistralAIRequest 逐字提取） | ✅ `convertMistral` 已接线 | — | — | ✅ | ✅ |
 | xAI | ✅ 专用路由 `/chat/completions` | ✅（官方 sendXAIRequest 字段，reasoning_effort high→high/其它→low） | ✅ `convertXAI` 已接线 | — | — | ✅ | ✅ |
 | Cohere | ✅ 专用路由 `/v2/chat`（官方 API_COHERE_V2） | ✅（官方 sendCohereRequest 字段：documents/tools/p/frequency/presence） | ✅ `convertCohere` 已接线 | — | — | ❌（无 models 端点，默认模型 command-r-plus） | ✅ |
 | AI21 | ✅ 专用路由 `studio/v1/chat/completions` | ✅（官方 sendAI21Request 字段） | ✅ `convertAI21` 已接线 | — | — | ❌（无 models 端点，默认模型 jamba-large） | ✅ |
@@ -295,6 +296,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 53（2026-08-08：特殊协议请求体官方差分 23 例）
+
+- special-bodies-official.mjs：逐字提取官方 sendMistralAIRequest/sendXaiRequest/sendAI21Request/sendCohereRequest 的 requestBody 构造段 + 真 convert*Messages（getPromptNames/getConfigValue/crypto/request.socket 打桩），23 例 fixture 全过
+- 请求体从 LlmClient 内联抽出为 MistralRequestBuilder/XaiRequestBuilder/Ai21RequestBuilder/CohereRequestBuilder（与 Anthropic/Gemini 同架构），builder 增加 names 参数
+- 差分抓出并修 2 个真差异：
+  1. xAI reasoning_effort：官方“非空即写（auto 也写 low）”，原实现 auto 时省略
+  2. AI21/DeepSeek JSON schema 消息：官方 JSON.stringify(value, null, 4) 4 空格美化，原实现紧凑拼接
+  3. json_schema.strict 官方 `?? true`（false 保 false），原实现写死 true
+  4. Cohere safety_mode：模型以 08-2024 结尾时加 OFF（原实现漏了）
+- 官方基准 800 → 823；引擎 247 → 248 测全绿
 
 ## 最近一轮 52（2026-08-08：能力管道全通 —— 工具/结构化输出/联网搜索/图像模态/安全设置）
 

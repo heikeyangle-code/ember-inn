@@ -260,131 +260,26 @@ class LlmClient(
             }
             "mistral" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
-                val converted = ProviderConverters.convertMistral(chatML(messages), PromptNames())
-                val body = buildJsonObject {
-                    put("model", JsonPrimitive(profile.model))
-                    put("messages", JsonArray(converted))
-                    put("temperature", profile.sampler.temperature)
-                    put("top_p", profile.sampler.topP)
-                    put("frequency_penalty", profile.sampler.frequencyPenalty)
-                    put("presence_penalty", profile.sampler.presencePenalty)
-                    put("max_tokens", profile.sampler.maxTokens)
-                    put("stream", stream)
-                    if (options.hasTools) {
-                        put("tools", options.openAiTools())
-                        options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
-                    }
-                    options.jsonSchema?.let { schema ->
-                        put("response_format", buildJsonObject {
-                            put("type", JsonPrimitive("json_schema"))
-                            put("json_schema", buildJsonObject {
-                                put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
-                                put("description", JsonPrimitive(schema["description"]?.let { it.toString().trim('"') } ?: ""))
-                                put("schema", schema["value"] ?: schema)
-                                put("strict", JsonPrimitive(true))
-                            })
-                        })
-                    }
-                }
-                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                val body = MistralRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             "xai" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
-                val converted = ProviderConverters.convertXAI(chatML(messages), PromptNames())
-                val effort = profile.sampler.reasoningEffort
-                val body = buildJsonObject {
-                    put("model", JsonPrimitive(profile.model))
-                    put("messages", JsonArray(converted))
-                    put("temperature", profile.sampler.temperature)
-                    put("max_tokens", profile.sampler.maxTokens)
-                    put("stream", stream)
-                    put("presence_penalty", profile.sampler.presencePenalty)
-                    put("frequency_penalty", profile.sampler.frequencyPenalty)
-                    put("top_p", profile.sampler.topP)
-                    if (effort.isNotEmpty() && effort != "auto") {
-                        put("reasoning_effort", if (effort == "high") "high" else "low")
-                    }
-                    if (options.hasTools) {
-                        put("tools", options.openAiTools())
-                        options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
-                    }
-                    options.jsonSchema?.let { schema ->
-                        put("response_format", buildJsonObject {
-                            put("type", JsonPrimitive("json_schema"))
-                            put("json_schema", buildJsonObject {
-                                put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
-                                put("strict", JsonPrimitive(true))
-                                put("schema", schema["value"] ?: schema)
-                            })
-                        })
-                    }
-                }
-                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                val body = XaiRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             "ai21" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
-                val rawMl = chatML(messages).toMutableList()
-                val schema = options.jsonSchema
-                if (schema != null) {
-                    rawMl += buildJsonObject {
-                        put("role", JsonPrimitive("user"))
-                        put("content", JsonPrimitive("JSON schema for the response:\n" + (schema["value"] ?: schema)))
-                    }
-                }
-                val converted = ProviderConverters.convertAI21(rawMl, PromptNames())
-                val body = buildJsonObject {
-                    put("messages", JsonArray(converted))
-                    put("model", JsonPrimitive(profile.model))
-                    put("max_tokens", profile.sampler.maxTokens)
-                    put("temperature", profile.sampler.temperature)
-                    put("top_p", profile.sampler.topP)
-                    put("stream", stream)
-                    if (options.hasTools) put("tools", options.openAiTools())
-                    if (schema != null) {
-                        put("response_format", buildJsonObject { put("type", JsonPrimitive("json_object")) })
-                    }
-                }
-                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                val body = Ai21RequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             "cohere" -> {
                 val url = base.trimEnd('/') + "/chat"
-                val converted = ProviderConverters.convertCohere(chatML(messages), PromptNames())
-                val body = buildJsonObject {
-                    put("stream", stream)
-                    put("model", JsonPrimitive(profile.model))
-                    put("messages", JsonArray(converted))
-                    put("temperature", profile.sampler.temperature)
-                    put("max_tokens", profile.sampler.maxTokens)
-                    put("p", profile.sampler.topP)
-                    put("frequency_penalty", profile.sampler.frequencyPenalty)
-                    put("presence_penalty", profile.sampler.presencePenalty)
-                    put("documents", JsonArray(emptyList()))
-                    if (options.hasTools) {
-                        put("tools", JsonArray(options.tools.map { t ->
-                            buildJsonObject {
-                                put("type", JsonPrimitive("function"))
-                                put("function", buildJsonObject {
-                                    put("name", JsonPrimitive(t.name))
-                                    put("description", JsonPrimitive(t.description))
-                                    val params = t.parameters.toMutableMap().apply { remove("\$schema") }
-                                    put("parameters", JsonObject(params))
-                                })
-                            }
-                        }))
-                    } else {
-                        put("tools", JsonArray(emptyList()))
-                    }
-                    options.jsonSchema?.let { schema ->
-                        put("response_format", buildJsonObject {
-                            put("type", JsonPrimitive("json_schema"))
-                            put("schema", schema["value"] ?: schema)
-                        })
-                    }
-                }
-                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                val body = CohereRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             else -> {
@@ -445,7 +340,10 @@ class LlmClient(
                     if (schema != null) {
                         chatMl += buildJsonObject {
                             put("role", JsonPrimitive("user"))
-                            put("content", JsonPrimitive("JSON schema for the response:\n" + (schema["value"] ?: schema)))
+                            put("content", JsonPrimitive("JSON schema for the response:\n" + Json {
+                                    prettyPrint = true
+                                    prettyPrintIndent = "    "
+                                }.encodeToString(JsonElement.serializer(), schema["value"] ?: schema)))
                         }
                     }
                     val tools = options.openAiTools().let { arr ->
