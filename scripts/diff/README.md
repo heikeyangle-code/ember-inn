@@ -40,6 +40,7 @@
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
 - `authors-note-official.mjs`：官方导演备注默认值 + ANWithWI。
+- `persona-engine-official.mjs`：官方人设纯逻辑（状态/临时锁/连接/解析）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -93,6 +94,7 @@ node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs
 node scripts/diff/authors-note-official.mjs
+node scripts/diff/persona-engine-official.mjs
 node scripts/build-presets.mjs
 ```
 
