@@ -358,6 +358,17 @@ await add('continue-prefill-claude', {
     messages: [{ role: 'assistant', content: '继续这段', name: 'Char' }],
 });
 
+// 2026-08-09 补分支：顶层 continue-nudge（非 prefill）——锁 PromptPipeline 到 ChatHistoryPopulator 的 cyclePrompt 透传
+await add('continue-nudge', {
+    ...base,
+    type: 'continue',
+    cyclePrompt: '回复一',
+    messages: [
+        { role: 'user', content: '第一条' },
+        { role: 'assistant', content: '回复一', name: 'Char' },
+    ],
+});
+
 await add('absolute-in-chat', {
     ...base,
     promptCollection: [...base.promptCollection,

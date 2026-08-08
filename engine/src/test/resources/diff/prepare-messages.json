@@ -786,6 +786,152 @@
       ]
     },
     {
+      "id": "continue-nudge",
+      "args": {
+        "body": {
+          "name2": "Char",
+          "name1": "User",
+          "charDescription": "描述",
+          "charPersonality": "性格",
+          "scenario": "场景",
+          "worldInfoBefore": "世界书前",
+          "worldInfoAfter": "世界书后",
+          "maxContextTokens": 10000,
+          "maxTokens": 256,
+          "mesExamples": "<START>\nUser: 你好\nChar: 你好呀",
+          "messages": [
+            {
+              "role": "user",
+              "content": "第一条"
+            },
+            {
+              "role": "assistant",
+              "content": "回复一",
+              "name": "Char"
+            }
+          ],
+          "promptCollection": [
+            {
+              "identifier": "worldInfoBefore",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "main",
+              "role": "system",
+              "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "worldInfoAfter",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charDescription",
+              "role": "system",
+              "content": "描述",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "charPersonality",
+              "role": "system",
+              "content": "性格",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "scenario",
+              "role": "system",
+              "content": "场景",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "personaDescription",
+              "role": "system",
+              "content": "",
+              "name": null,
+              "system_prompt": true,
+              "injection_position": 0
+            },
+            {
+              "identifier": "chatHistory",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            },
+            {
+              "identifier": "dialogueExamples",
+              "role": "user",
+              "content": "",
+              "name": null,
+              "system_prompt": false,
+              "injection_position": 0
+            }
+          ],
+          "type": "continue",
+          "cyclePrompt": "回复一"
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "assistant",
+          "content": "回复一",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "New chat:",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "你好",
+          "name": "example_user"
+        },
+        {
+          "role": "system",
+          "content": "你好呀",
+          "name": "example_assistant"
+        },
+        {
+          "role": "user",
+          "content": "第一条",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "[Continue your last message without repeating its original content.]",
+          "name": null
+        }
+      ]
+    },
+    {
       "id": "absolute-in-chat",
       "args": {
         "body": {
