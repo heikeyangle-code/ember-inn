@@ -101,6 +101,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val accentColor: Long? = character?.seedColor
     val avatarPath: String? = character?.avatarPath
 
+    init {
+        // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补
+        if (character != null && chatStore.messages(sessionId).isEmpty()) {
+            val firstMes = firstMesOf(character.rawJson)
+            if (!firstMes.isNullOrBlank()) {
+                val charName = chatStore.get(sessionId)?.name ?: character.name
+                chatStore.append(sessionId, false, firstMes, charName)
+                refreshMessages()
+            }
+        }
+    }
+
+    private fun firstMesOf(rawJson: String): String? = runCatching {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val root = json.parseToJsonElement(rawJson).jsonObject
+        val data = root["data"]?.jsonObject ?: root
+        data["first_mes"]?.jsonPrimitive?.contentOrNull
+    }.getOrNull()
+
     fun saveProvider(profile: ConnectionProfile) {
         chatRepository.saveProfile(profile)
         ProviderState.refresh(profile)

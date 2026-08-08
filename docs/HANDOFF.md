@@ -321,6 +321,23 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 原则：测试代码都在 `src/test`（引擎/app），只跑 CI，**不进 APK**；HANDOFF 4.9 核对表每行按“差分✅ / CI✅ / 真机待测”标注，缺哪个补哪个。
 
+### 4.11 审计结论（2026-08-09，App 层 vs 官方引擎逐项）
+
+**已确认并修复**
+- 重新生成/继续生成：官方只对最后一条 AI 生效（Generate 先删最后一条再生成）；长按菜单同样限制 → 已修
+- 新会话开场白：官方新聊天第一条 = first_mes；空会话补上（含 {{user}} 宏由总装展开）→ 已修；alternate_greetings 未做
+- 首页/会话列表进入不刷新（导入/清除后过期）→ 已修
+- 发送主线程卡顿、流式滚动跳动、消息 420dp 截断、思考过程消失 → 已修（前几轮）
+
+**已确认的兼容缺口（登记，未修）**
+- 导出的 JSONL 消息缺官方字段（gen_started/gen_finished/extra.api/extra.model/extra.reasoning/token_count）：官方可导入（缺省兼容），但不是逐字段 1:1
+- ChatPromptFactory.toOpenAiMessages 跳过 is_system 消息，官方把 narrator（extra.type=narrator）当 system 消息保留：导入含 system/narrator 的官方聊天时会错位
+- 上下文占比用 TokenHandler.counts 之和，不含 start_chat 预留 3 token：轻微低估
+- 编辑消息未跑官方 regex(isEdit)+bias 提取（正则 UI 未接）
+- 附件：图库切换/URL 导入/图片压缩未做；角色卡 URL 型资产未下载
+- swipes 模型缺失 → 无滑动切回复；聊天元数据（书签/快照/背景）未做
+- 顶栏/输入栏玻璃为半透明模拟（Cloudy 未引入）；平板双栏未做
+
 ## 5. 剩余工作（按优先级）
 
 **P0（“打开即聊”体验短板）**
@@ -356,6 +373,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 77（2026-08-09：审计——新会话开场白补齐 + 兼容缺口登记）
+
+- ChatViewModel init：角色空会话自动补 first_mes（官方 newChat 语义，宏由总装展开）
+- HANDOFF 4.11 新增审计结论：已修复清单 + 兼容缺口（JSONL 官方字段/ narrator-system 错位/上下文占比低估/编辑 regex/图库/URL/压缩/swipes/元数据/玻璃/双栏）
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 76（2026-08-09：审计修复——regenerate 官方语义 / 设置回调 / 首页刷新）
 
