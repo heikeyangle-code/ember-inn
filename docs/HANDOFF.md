@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（52 组，共 829 例官方基准，全部通过）**：
+**已覆盖（53 组，共 835 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -100,6 +100,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 媒体 token 成本 | media-cost-official.mjs | MediaCostDiffTest | 18 |
 | 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
 | OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
+| BYAF 资源提取 | byaf-assets-official.mjs | ByafAssetsDiffTest | 6 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -115,7 +116,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 ### 3.1 角色卡 ✅
 PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；JSON 导入 5 例 + JSON 导出 4 例（getCharaCardV2+unsetPrivateFields）、YAML 3 例、CharX 5 例、BYAF 14+5+4+4 例；V2 归一（readFromV2，官方差分 5 例 + 多轮补真 bug）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；🟡 BYAF 资源提取未实现；App 层资源入库/URL 导入未做。
+✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；App 层资源入库/URL 导入未做。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
@@ -297,6 +298,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 55（2026-08-08：BYAF 资源提取官方差分 6 例）
+
+- byaf-assets-official.mjs：逐字提取官方 getCharacterImages/getChatBackgrounds 方法体（extractFileFromZipBuffer/fsPromises/path/urlJoin 打桩），6 例 fixture 全过
+- ByafImporter 新增 extractCharacterImages/extractChatBackgrounds（1:1）：无图回退默认头像、label 透传、字节去重+paths 合并、名称 "Name bg N"
+- 差分抓出 1 个真差异：官方 url-join 不折叠 ../（zip 路径原样查），原实现折叠 .. 会错误命中
+- ByafAssetsDiffTest：图片文件名/字节/label、背景名/字节/paths 逐项对比
+- 官方基准 829 → 835；引擎 249 → 250 测全绿
+- 文档 3.1 更正：BYAF 资源提取从“未实现”改为 ✅（此前代码已有但未差分）
 
 ## 最近一轮 54（2026-08-08：OpenAI 文本补全路由 + 官方差分 6 例）
 

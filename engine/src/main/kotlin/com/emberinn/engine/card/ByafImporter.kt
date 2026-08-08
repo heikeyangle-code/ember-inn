@@ -326,7 +326,7 @@ object ByafImporter {
         character["images"]?.jsonArray?.forEach { imageEl ->
             val image = imageEl.jsonObject
             val imagePath = image["path"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: return@forEach
-            val fullPath = joinRelative(baseDir, imagePath)
+            val fullPath = urlJoin(baseDir, imagePath)
             val data = files[fullPath] ?: return@forEach
             images.add(ByafAsset(filename = imagePath.substringAfterLast('/'), data = data, label = image["label"]?.jsonPrimitive?.content ?: ""))
         }
@@ -348,17 +348,71 @@ object ByafImporter {
         return ByafAssets(images = images, backgrounds = backgrounds)
     }
 
-    private fun joinRelative(baseDir: String, path: String): String {
-        val parts = (if (baseDir.isEmpty()) "" else "$baseDir/") + path
-        val segments = mutableListOf<String>()
-        for (seg in parts.split('/')) {
-            when (seg) {
-                "", "." -> {}
-                ".." -> if (segments.isNotEmpty()) segments.removeAt(segments.lastIndex)
-                else -> segments.add(seg)
-            }
+    /** 官方 url-join：只归一重复斜杠，不折叠 ../（BYAF 路径按 zip 原样查）。 */
+    private fun urlJoin(baseDir: String, path: String): String {
+        val joined = (if (baseDir.isEmpty()) "" else "$baseDir/") + path
+        return joined.replace(Regex("/+"), "/")
+    }
+
+    /** 官方 getCharacterImages/getChatBackgrounds 的 1:1 输出（差分见 byaf-assets-official.mjs）。 */
+    data class ByafImageAsset(val filename: String, val data: ByteArray, val label: String)
+    data class ByafBackgroundAsset(val name: String, val data: ByteArray, val paths: List<String>)
+
+    /** JS 模板字符串语义：缺失→"undefined"、null→"null"。 */
+    private fun jsString(el: JsonElement?): String = when (el) {
+        null -> "undefined"
+        is JsonNull -> "null"
+        is JsonPrimitive -> el.content
+        else -> el.toString()
+    }
+
+    fun extractCharacterImages(
+        files: Map<String, ByteArray>,
+        character: JsonObject,
+        characterPath: String,
+        defaultAvatar: ByteArray,
+    ): List<ByafImageAsset> {
+        val characterImages = character["images"]?.jsonArray
+        if (characterImages == null || characterImages.isEmpty()) {
+            return listOf(ByafImageAsset(filename = "", data = defaultAvatar, label = ""))
         }
-        return segments.joinToString("/")
+        val out = mutableListOf<ByafImageAsset>()
+        val baseDir = if (characterPath.contains('/')) characterPath.substringBeforeLast('/') else ""
+        for (imageEl in characterImages) {
+            val image = imageEl.jsonObject
+            val imagePath = image["path"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: continue
+            val fullPath = urlJoin(baseDir, imagePath)
+            val data = files[fullPath] ?: continue
+            out += ByafImageAsset(
+                filename = imagePath.substringAfterLast('/'),
+                data = data,
+                label = image["label"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: "",
+            )
+        }
+        if (out.isEmpty()) return listOf(ByafImageAsset(filename = "", data = defaultAvatar, label = ""))
+        return out
+    }
+
+    fun extractChatBackgrounds(
+        files: Map<String, ByteArray>,
+        character: JsonObject,
+        scenarios: List<JsonObject>,
+    ): List<ByafBackgroundAsset> {
+        val backgrounds = mutableListOf<ByafBackgroundAsset>()
+        var index = 1
+        val characterName = jsString(character["name"])
+        for (scenario in scenarios) {
+            val bgPath = scenario["backgroundImage"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: continue
+            val data = files[bgPath] ?: continue
+            val existing = backgrounds.indexOfFirst { it.data.contentEquals(data) }
+            if (existing != -1) {
+                backgrounds[existing] = backgrounds[existing].copy(paths = backgrounds[existing].paths + bgPath)
+                continue
+            }
+            backgrounds += ByafBackgroundAsset(name = "$characterName bg $index", data = data, paths = listOf(bgPath))
+            index++
+        }
+        return backgrounds
     }
 
     /** BYAF 聊天背景（对齐官方 getChatFromScenario 的 chatBackgrounds 参数）。 */
