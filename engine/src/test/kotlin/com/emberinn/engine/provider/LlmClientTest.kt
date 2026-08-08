@@ -1,6 +1,7 @@
 package com.emberinn.engine.provider
 
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.ToolCall
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -596,6 +597,71 @@ class LlmClientTest {
         )
         assertEquals(listOf("你", "好"), deltas)
         assertTrue(done)
+        server.close()
+    }
+
+    @Test
+    fun `openrouter claude caching adds cache control`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val openrouter = ProviderRegistry.get("openrouter")!!
+        LlmClient().chatCompletions(
+            openrouter,
+            ConnectionProfile(
+                providerId = "openrouter",
+                apiKey = "sk-or",
+                model = "anthropic/claude-sonnet-5",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(enableSystemPromptCache = true, cachingAtDepth = 2),
+            ),
+            listOf(
+                CompletionMessage("system", "你是助手"),
+                CompletionMessage("user", "hi"),
+                CompletionMessage("assistant", "hello"),
+                CompletionMessage("user", "again"),
+            ),
+        )
+        val raw = server.takeRequest().body!!.utf8()
+        assertTrue(raw.contains("cache_control"))
+        assertTrue(raw.contains("5m"))
+        server.close()
+    }
+
+    @Test
+    fun `deepseek applies semi tools processing and reasoning effort`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val deepseek = ProviderRegistry.get("deepseek")!!
+        LlmClient().chatCompletions(
+            deepseek,
+            ConnectionProfile(
+                providerId = "deepseek",
+                apiKey = "sk-d",
+                model = "deepseek-v4-flash",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(includeReasoning = true, reasoningEffort = "high"),
+            ),
+            listOf(
+                CompletionMessage("assistant", "hello", toolCalls = listOf(ToolCall("call_1", "f", "{}"))),
+                CompletionMessage("tool", "result", toolCallId = "call_1"),
+                CompletionMessage("user", "next"),
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("high", body["reasoning_effort"]?.toString()?.trim('"'))
+        assertTrue(body["messages"]!!.toString().contains("reasoning_content"))
         server.close()
     }
 }

@@ -157,12 +157,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 |---|---|---|---|---|---|---|---|
 | OpenAI | ✅ `/chat/completions` | ✅ 全厂商参数 21 例差分 | ✅ | ✅ MediaInliner 7 例差分 | — | ✅ `data[].id` | ✅ |
 | Azure OpenAI | ✅ `deployments/{model}/chat/completions?api-version=2024-12-01` + api-key 头 | ✅ 同全厂商参数 | ✅ | ✅ | — | ✅ `value[].id` | ✅ |
-| DeepSeek | ✅ `/beta/chat/completions` | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| DeepSeek | ✅ `/beta/chat/completions` | ✅ | ✅（官方 sendDeepSeekRequest：postProcessPrompt semi_tools + addAssistantPrefix + addReasoningContentToToolCalls + reasoning_effort） | ✅ | — | ✅ | ✅ |
 | Groq / Moonshot / MiniMax / 智谱 / 通义 / 硅基流动 / Z.AI / Fireworks / Perplexity / Custom / NanoGPT / Chutes / ElectronHub / SiliconFlow / o1 / Ollama | ✅ openai-compatible | ✅（各自厂商参数分支） | ✅ | ✅（OpenAI 媒体数组） | — | ✅ `data[].id` / 无端点时最小对话探测 | ✅ |
 | Workers AI | ✅ `{account}/ai/v1/chat/completions` | ✅ | ✅ | ✅ | — | ✅ `result[].name` | ✅ |
 | Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | ✅ `calculateClaudeBudgetTokens` 已接入 LlmClient（SamplerParams.reasoningEffort 默认 auto；adaptive→effort 字符串/auto→不加 thinking） | 🟡 官方不发模型列表请求，用默认模型 | ✅ 差 tokenizer |
 | Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | ✅ `calculateGoogleBudgetTokens` 已接入 LlmClient（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | ✅ `models[].name`（过滤 generateContent） | ✅ 差 tokenizer |
-| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支 + transforms/plugins/reasoning.exclude） | ✅ | ✅ `embedOpenRouterMedia`（audio+video）已接线 | 🟡 `addOpenRouterSignatures` 已接线；`addReasoningContentToToolCalls` / `cachingAtDepthForOpenRouterClaude` / `cachingSystemPromptForOpenRouter` 已差分移植，等设置项（缓存开关/深度/TTL） | ✅ | 🟡 差缓存设置项 |
+| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支 + transforms/plugins/reasoning.exclude/effort） | ✅ | ✅ `embedOpenRouterMedia`（audio+video）已接线 | ✅ `addOpenRouterSignatures` + `cachingAtDepthForOpenRouterClaude` + `cachingSystemPromptForOpenRouter`（SamplerParams 缓存开关/深度/TTL）+ DeepSeek `addReasoningContentToToolCalls` 全部接线 | ✅ | ✅ |
 | Mistral | ✅ 专用路由 `/chat/completions` | ✅（官方 sendMistralAIRequest 字段） | ✅ `convertMistral` 已接线 | — | — | ✅ | ✅ |
 | xAI | ✅ 专用路由 `/chat/completions` | ✅（官方 sendXAIRequest 字段，reasoning_effort high→high/其它→low） | ✅ `convertXAI` 已接线 | — | — | ✅ | ✅ |
 | Cohere | ✅ 专用路由 `/v2/chat`（官方 API_COHERE_V2） | ✅（官方 sendCohereRequest 字段：documents/tools/p/frequency/presence） | ✅ `convertCohere` 已接线 | — | — | ❌（无 models 端点，默认模型 command-r-plus） | ✅ |
@@ -282,7 +282,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；OpenRouter 缓存标记（cachingAtDepth/cachingSystemPrompt，需设置项）+ addReasoningContentToToolCalls 接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
+10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -293,6 +293,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 51（2026-08-08：OpenRouter 缓存 + DeepSeek reasoner 处理接线）
+
+- SamplerParams 新增 enableSystemPromptCache（默认关）/cachingAtDepth（默认 -1）/cacheTTL（默认 5m）
+- OpenRouter：isClaude 模型按官方顺序 cachingSystemPromptForOpenRouter（开缓存时）→ cachingAtDepthForOpenRouterClaude（深度 != -1）；reasoning.exclude 补 effort
+- DeepSeek：官方 sendDeepSeekRequest 全链 —— postProcessPrompt(semi_tools) → addAssistantPrefix(prefix) → addReasoningContentToToolCalls → includeReasoning+effort 时加 reasoning_effort
+- LlmClientTest +2（OpenRouter cache_control/5m、DeepSeek reasoning_content/reasoning_effort）
+- 引擎 241 测全绿；官方基准 800 例不变
+- 提供商引擎侧仅剩：Vertex 认证（搁置）、Claude/Gemini 官方 tokenizer（P2）
 
 ## 最近一轮 50（2026-08-08：Mistral/xAI/Cohere/AI21 协议路由 + OpenRouter 专项接线）
 

@@ -86,7 +86,7 @@
 - ✅ SSE 流解析 parseStreamData 官方差分 11 例（OpenAI/Anthropic/Gemini/token/content/thinking/message/not-primary）
 - ✅ MediaEngine 媒体纯逻辑官方差分 17 例（type/display/index，含边缘）
 - ✅ MediaTokenCost 媒体 token 成本官方差分 18 例（图片 2048→768→512 方格计费、视频 263/秒、音频 32/秒、失败回退）
-- ✅ 逐提供商审计已落盘（HANDOFF 3.9）：OpenAI 兼容全家 + Anthropic/Gemini（含预算）+ Mistral/xAI/Cohere/AI21 路由全接；OpenRouter 已接签名/媒体/reasoning，缓存等设置项；只剩 Vertex 认证未做；App 接线源码对照见 HANDOFF 4.7，组件选型见 COMPONENTS.md
+- ✅ 逐提供商审计已落盘（HANDOFF 3.9）：OpenAI 兼容全家 + Anthropic/Gemini（含预算）+ Mistral/xAI/Cohere/AI21 路由 + OpenRouter 缓存/签名/媒体 + DeepSeek reasoner 全部接线；只剩 Vertex 认证（搁置）；App 接线源码对照见 HANDOFF 4.7，组件选型见 COMPONENTS.md
 - ✅ PersonaEngine 状态/临时锁/连接/按聊天解析官方差分 16 例；🟡 人设持久化与管理 UI（App 层）、多模型 tokenizer、服务层
 - 🟡 向量服务引擎已齐（RAG/聊天重排/文件向量化 + 持久化）；App 层配置/调用未接线；TTS/STT/图像/翻译 仍 P3/P4
 

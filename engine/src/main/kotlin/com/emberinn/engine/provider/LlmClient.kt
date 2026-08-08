@@ -332,16 +332,48 @@ class LlmClient(
                     val chatMl = chatML(messages).toMutableList()
                     ProviderConverters.addOpenRouterSignatures(chatMl, profile.model)
                     ProviderConverters.embedOpenRouterMedia(chatMl, audio = true, video = true)
+                    val isClaude = Regex("^anthropic/claude").containsMatchIn(profile.model)
+                    if (isClaude) {
+                        if (profile.sampler.enableSystemPromptCache) {
+                            ProviderConverters.cachingSystemPromptForOpenRouter(chatMl, profile.sampler.cacheTTL)
+                        }
+                        if (profile.sampler.cachingAtDepth != -1) {
+                            ProviderConverters.cachingAtDepthForOpenRouterClaude(
+                                chatMl, profile.sampler.cachingAtDepth, profile.sampler.cacheTTL,
+                            )
+                        }
+                    }
+                    val effort = profile.sampler.reasoningEffort
                     val extra = buildJsonObject {
                         put("transforms", JsonArray(emptyList()))
                         put("plugins", JsonArray(emptyList()))
                         put("reasoning", buildJsonObject {
                             put("exclude", !profile.sampler.includeReasoning)
+                            if (effort.isNotEmpty()) put("effort", effort)
                         })
                     }
                     ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
                         model = profile.model,
                         messages = chatMl,
+                        params = profile.sampler.copy(stream = stream),
+                        extra = extra,
+                    )
+                } else if (provider.id == "deepseek") {
+                    // 官方 sendDeepSeekRequest：postProcessPrompt(SEMI_TOOLS) + addAssistantPrefix + addReasoningContentToToolCalls
+                    val chatMl = chatML(messages).toMutableList()
+                    val processed = ProviderConverters.addAssistantPrefix(
+                        ProviderConverters.postProcessPrompt(chatMl, "semi_tools", PromptNames()),
+                        emptyList(),
+                        "prefix",
+                    ).toMutableList()
+                    ProviderConverters.addReasoningContentToToolCalls(processed)
+                    val effort = profile.sampler.reasoningEffort
+                    val extra = if (profile.sampler.includeReasoning && effort.isNotEmpty()) {
+                        buildJsonObject { put("reasoning_effort", effort) }
+                    } else null
+                    ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
+                        model = profile.model,
+                        messages = processed,
                         params = profile.sampler.copy(stream = stream),
                         extra = extra,
                     )

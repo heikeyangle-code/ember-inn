@@ -25,6 +25,12 @@ data class SamplerParams(
     val includeReasoning: Boolean = false,
     /** 官方 enableAdaptiveThinking（Claude opus-4-6/sonnet-4-6 是否走 adaptive），默认开。 */
     val enableAdaptiveThinking: Boolean = true,
+    /** 官方 claude.enableSystemPromptCache（OpenRouter/Claude 系统提示缓存），默认关。 */
+    val enableSystemPromptCache: Boolean = false,
+    /** 官方 cachingAtDepth（消息缓存深度，-1 = 关）。 */
+    val cachingAtDepth: Int = -1,
+    /** 官方 claude.extendedTTL：false→5m，true→1h。 */
+    val cacheTTL: String = "5m",
 )
 
 /** OpenAI 兼容 Chat Completions 请求体构建。 */
