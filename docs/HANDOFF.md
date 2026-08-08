@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（49 组，共 782 例官方基准，全部通过）**：
+**已覆盖（50 组，共 800 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -97,6 +97,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | ChatCompletionPipeline 计划 | chat-pipeline-official.mjs | ChatPipelineDiffTest | 5 |
 | 媒体附件纯逻辑 | media-engine-official.mjs | MediaEngineDiffTest | 17 |
 | 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
+| 媒体 token 成本 | media-cost-official.mjs | MediaCostDiffTest | 18 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
@@ -190,7 +191,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 223 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算/管线计划/媒体附件/媒体内联）
+- 引擎测试 228 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine：自动续写判定 + 每人生成类型 + 队列号）官方差分 11 例；🟡 多人回复拼接/组提示/nudge 链的 App 调度仍待做。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -258,12 +259,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - MediaConverter 25 例：Claude/Gemini 内容块转换（image/text/video/audio → Claude image/text、Gemini inlineData，media_resolution_low/high、JS split 边缘）
 - 消息转换整链 41 例：convertClaudeMessages / convertGooglePrompt（媒体随消息走）
 - 已接入请求体：OpenAI（ChatRequestBuilder）、Anthropic/Gemini（builder 内 toChatMLJson → 转换器）
+- MediaTokenCost 18 例：getImageTokenCost（low→85、auto≤512→85、2048 缩放→768 短边→512 方格 170/格+85）、视频 263 tokens/秒（回退 263×40）、音频 32 tokens/秒（回退 32×300）
 
 **App 层待做（引擎已完成，缺 UI/IO）**：
 - 聊天消息 `extra.media` 解析（官方消息 JSON 里的媒体字段 → CompletionMessage.media）
 - 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer）、附件上传/URL 导入
-- 发送时把用户选择的附件挂到消息的 media 上
-- 🟡 **媒体 token 成本估算未移植**（官方 addImage/addVideo/addAudio：图片走 getImageTokenCost（失败回退 tokensPerImage）、视频 263 tokens/秒（时长失败回退 263×40）、音频 32 tokens/秒（失败回退 32×300））——引擎目前只有媒体内容结构，没有成本估算；App 做上下文占比前需要补
+- 发送时把用户选择的附件挂到消息的 media 上（同时用 MediaTokenCost 估算 token，供上下文占比胶囊显示）
 
 ## 5. 剩余工作（按优先级）
 
@@ -281,7 +282,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）+ 媒体 token 成本估算（官方 263/32 每秒规则）
+10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -292,6 +293,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 48（2026-08-08：媒体 token 成本估算移植 + 官方差分 18 例）
+
+- media-cost-official.mjs：逐字提取官方 openai.js getImageTokenCost + addVideo/addAudio 的 token 规则（getImageSize/getDuration 打桩），18 例 fixture 全过
+- MediaTokenCost：图片 low→85、auto≤512→85、2048 缩放→768 短边→512 方格（170/格+85）；视频 263 tokens/秒（回退 263×40）；音频 32 tokens/秒（回退 32×300）
+- 官方基准 782 → 800；引擎 227 → 228 测全绿；HANDOFF 4.8 缺口已销（App 渲染时调用 MediaTokenCost 供上下文占比显示）
 
 ## 最近一轮 47（2026-08-08：提供商审计 + App 接线源码对照 + 组件选型文档）
 

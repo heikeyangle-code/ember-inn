@@ -1,0 +1,203 @@
+{
+  "source": "media 成本估算（openai.js getImageTokenCost/addVideo/addAudio）",
+  "cases": [
+    {
+      "id": "image-low-large",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 3000,
+          "height": 2000,
+          "quality": "low"
+        }
+      },
+      "expected": 85
+    },
+    {
+      "id": "image-auto-small",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 512,
+          "height": 512,
+          "quality": "auto"
+        }
+      },
+      "expected": 85
+    },
+    {
+      "id": "image-auto-tiny",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 200,
+          "height": 300,
+          "quality": "auto"
+        }
+      },
+      "expected": 85
+    },
+    {
+      "id": "image-auto-1024",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 1024,
+          "height": 768,
+          "quality": "auto"
+        }
+      },
+      "expected": 765
+    },
+    {
+      "id": "image-auto-2000",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 2000,
+          "height": 1000,
+          "quality": "auto"
+        }
+      },
+      "expected": 1105
+    },
+    {
+      "id": "image-high-square",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 768,
+          "height": 768,
+          "quality": "high"
+        }
+      },
+      "expected": 765
+    },
+    {
+      "id": "image-high-3000",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 3000,
+          "height": 2000,
+          "quality": "high"
+        }
+      },
+      "expected": 1105
+    },
+    {
+      "id": "image-high-ultrawide",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 4096,
+          "height": 100,
+          "quality": "high"
+        }
+      },
+      "expected": 21165
+    },
+    {
+      "id": "image-high-2000x1",
+      "args": {
+        "body": {
+          "method": "image",
+          "width": 2000,
+          "height": 1,
+          "quality": "high"
+        }
+      },
+      "expected": 1020085
+    },
+    {
+      "id": "video-0s",
+      "args": {
+        "body": {
+          "method": "video",
+          "duration": 0
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "video-1p2s",
+      "args": {
+        "body": {
+          "method": "video",
+          "duration": 1.2
+        }
+      },
+      "expected": 526
+    },
+    {
+      "id": "video-2s",
+      "args": {
+        "body": {
+          "method": "video",
+          "duration": 2
+        }
+      },
+      "expected": 526
+    },
+    {
+      "id": "video-40p5s",
+      "args": {
+        "body": {
+          "method": "video",
+          "duration": 40.5
+        }
+      },
+      "expected": 10783
+    },
+    {
+      "id": "video-fallback",
+      "args": {
+        "body": {
+          "method": "video",
+          "duration": "throw"
+        }
+      },
+      "expected": 10520
+    },
+    {
+      "id": "audio-0s",
+      "args": {
+        "body": {
+          "method": "audio",
+          "duration": 0
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "audio-1p5s",
+      "args": {
+        "body": {
+          "method": "audio",
+          "duration": 1.5
+        }
+      },
+      "expected": 64
+    },
+    {
+      "id": "audio-300s",
+      "args": {
+        "body": {
+          "method": "audio",
+          "duration": 300
+        }
+      },
+      "expected": 9600
+    },
+    {
+      "id": "audio-fallback",
+      "args": {
+        "body": {
+          "method": "audio",
+          "duration": "throw"
+        }
+      },
+      "expected": 9600
+    }
+  ]
+}
