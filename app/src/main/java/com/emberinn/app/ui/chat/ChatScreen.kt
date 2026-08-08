@@ -72,7 +72,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -254,7 +256,13 @@ fun ChatScreen(
             .fillMaxSize()
             .systemBarsPadding()
             .imePadding()
-            .background(MaterialTheme.colorScheme.background),
+            .background(
+                // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
+                Brush.verticalGradient(
+                    0f to MaterialTheme.colorScheme.background,
+                    1f to lerp(accent, MaterialTheme.colorScheme.background, 0.84f),
+                ),
+            ),
     ) {
         // 源层：消息列表作为模糊来源，上下留出浮层高度
         Column(
@@ -343,20 +351,6 @@ fun ChatScreen(
                 }
             }
 
-            if (!isStreaming && (contextUsage != null || worldHits.isNotEmpty())) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    contextUsage?.let { (used, max) ->
-                        ContextCapsule(used = used, max = max, onClick = { contextDetail = true })
-                    }
-                    if (worldHits.isNotEmpty()) {
-                        StatusPill("世界书 ×${worldHits.size}") { worldPanel = true }
-                    }
-                }
-            }
         }
 
         ChatTopBar(
@@ -380,6 +374,10 @@ fun ChatScreen(
             isStreaming = isStreaming,
             canQuickContinue = !isStreaming && lastAiIndex >= 0,
             quickBarOpen = showQuickBar,
+            worldHitsCount = worldHits.size,
+            contextUsage = contextUsage,
+            onOpenWorldPanel = { worldPanel = true },
+            onOpenContextDetail = { contextDetail = true },
             onToggleQuickBar = { showQuickBar = !showQuickBar },
             onQuickContinue = {
                 showQuickBar = false
@@ -664,11 +662,6 @@ private fun ChatTopBar(
                     color = accent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "会话中 · 数据仅存本地",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
@@ -1235,6 +1228,10 @@ private fun ChatInputBar(
     isStreaming: Boolean,
     canQuickContinue: Boolean,
     quickBarOpen: Boolean,
+    worldHitsCount: Int,
+    contextUsage: Pair<Int, Int>?,
+    onOpenWorldPanel: () -> Unit,
+    onOpenContextDetail: () -> Unit,
     onToggleQuickBar: () -> Unit,
     onQuickContinue: () -> Unit,
     onQuickImpersonate: () -> Unit,
@@ -1250,6 +1247,21 @@ private fun ChatInputBar(
         modifier = modifier,
     ) {
         Column {
+            // README 状态可见：上下文占比 + 世界书命中常驻输入栏顶部（不占消息区）
+            if (!isStreaming && (contextUsage != null || worldHitsCount > 0)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp),
+                ) {
+                    contextUsage?.let { (used, max) ->
+                        ContextCapsule(used = used, max = max, onClick = onOpenContextDetail)
+                    }
+                    if (worldHitsCount > 0) {
+                        StatusPill("世界书 ×$worldHitsCount", onClick = onOpenWorldPanel)
+                    }
+                }
+            }
             if (pendingMedia.isNotEmpty()) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 12.dp),

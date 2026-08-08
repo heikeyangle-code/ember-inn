@@ -63,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -87,7 +88,7 @@ import kotlinx.serialization.json.jsonPrimitive
 @Composable
 fun CharactersScreen(
     onOpenChat: (SessionRecord) -> Unit,
-    onOpenSettings: () -> Unit = {},
+    onOpenSettings: (String?) -> Unit = {},
     vm: HomeViewModel = viewModel(),
 ) {
     val characters by vm.characters.collectAsState()
@@ -157,7 +158,7 @@ fun CharactersScreen(
                 query = query,
                 results = searchResults,
                 onQueryChange = { query = it },
-                onOpenCharacter = { record -> onOpenChat(vm.openChat(record.id, record.name)) },
+                onOpenCharacter = { record -> onOpenChat(vm.openOrResume(record.id, record.name)) },
                 onOpenSession = { onOpenChat(it) },
                 onOpenSettings = onOpenSettings,
                 onOpenWorldInfo = { worldHit = it },
@@ -165,7 +166,7 @@ fun CharactersScreen(
         } else if (characters.isEmpty()) {
             EmptyHome(
                 onImport = { importLauncher.launch(arrayOf("*/*")) },
-                onDirectChat = { onOpenChat(vm.openChat(null, "AI 对话")) },
+                onDirectChat = { onOpenChat(vm.newSession(null, "AI 对话")) },
             )
         } else {
             LazyVerticalGrid(
@@ -176,7 +177,7 @@ fun CharactersScreen(
                 modifier = Modifier.fillMaxSize().sky(sky),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    AiChatCard(onClick = { onOpenChat(vm.openChat(null, "AI 对话")) })
+                    AiChatCard(onClick = { onOpenChat(vm.newSession(null, "AI 对话")) })
                 }
                 if (recentSessions.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -203,7 +204,7 @@ fun CharactersScreen(
                         CharacterCard(
                             record = record,
                             preview = vm.lastMessageFor(record.id),
-                            onClick = { onOpenChat(vm.openChat(record.id, record.name)) },
+                            onClick = { onOpenChat(vm.openOrResume(record.id, record.name)) },
                             onMenu = { menuRecord = record },
                         )
                     }
@@ -246,7 +247,7 @@ fun CharactersScreen(
                     vm.togglePin(record); menuRecord = null
                 }
                 MenuRow(PhosphorIcons.Plus, "新会话") {
-                    onOpenChat(vm.openChat(record.id, record.name)); menuRecord = null
+                    onOpenChat(vm.newSession(record.id, record.name)); menuRecord = null
                 }
                 MenuRow(PhosphorIcons.Edit, "查看 / 编辑字段") {
                     detailRecord = record; menuRecord = null
@@ -319,7 +320,7 @@ private fun SearchResultsColumn(
     onQueryChange: (String) -> Unit,
     onOpenCharacter: (CharacterRecord) -> Unit,
     onOpenSession: (SessionRecord) -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSettings: (String?) -> Unit,
     onOpenWorldInfo: (WorldInfoHit) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -372,7 +373,7 @@ private fun SearchResultsColumn(
                 if (results.settings.isNotEmpty()) {
                     item { SearchGroupHeader("设置") }
                     items(results.settings, key = { "set-${it.label}" }) { hit ->
-                        SettingsSearchRow(hit = hit, onClick = onOpenSettings)
+                        SettingsSearchRow(hit = hit, onClick = { onOpenSettings(hit.route) })
                     }
                 }
             }
@@ -473,6 +474,8 @@ private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
                 Text(hit.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(hit.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            Spacer(Modifier.width(8.dp))
+            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -614,6 +617,8 @@ private fun RecentChatCard(
 
 @Composable
 private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: () -> Unit, onMenu: () -> Unit) {
+    // README 角色卡驱动主题（第二层）：每张卡一眼不同——名字用该卡 seed、无头像占位用 seed 淡色渐变
+    val seed = record.seedColor?.let { Color(it.toInt()) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -634,15 +639,22 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                     Box(
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(
                             Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.tertiaryContainer,
-                                ),
+                                if (seed != null) {
+                                    listOf(
+                                        lerp(seed, MaterialTheme.colorScheme.surfaceVariant, 0.62f),
+                                        lerp(seed, MaterialTheme.colorScheme.surfaceVariant, 0.85f),
+                                    )
+                                } else {
+                                    listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.tertiaryContainer,
+                                    )
+                                },
                             ),
                         ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(record.name.take(1).ifBlank { "?" }, style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(record.name.take(1).ifBlank { "?" }, style = MaterialTheme.typography.displaySmall, color = seed ?: MaterialTheme.colorScheme.primary)
                     }
                 }
                 Column(modifier = Modifier.padding(10.dp)) {
@@ -651,6 +663,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                             record.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
+                            color = seed ?: MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),

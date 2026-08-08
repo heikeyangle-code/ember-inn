@@ -153,12 +153,14 @@ private fun ProfileChip(
             if (active) {
                 Text(" ✓", style = MaterialTheme.typography.labelLarge)
             }
-            Text(
-                "✕",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.clickable(onClick = onDelete).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
+            IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    PhosphorIcons.Close,
+                    contentDescription = "删除连接",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }
