@@ -219,7 +219,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
-> 2026-08-09 修正：continue 用官方默认 nudge 路径（此前误用 continue_prefill=true 且 App 传“旧在前”，导致引擎把最老消息当续写对象=“重新生成”）；ChatPromptFactory 已按官方 setOpenAIMessages 翻成“新的在前”。思考过程走 LlmClient.onReasoning 独立通道，流式气泡上方显示“思考过程”块。
+> 现状：continue 走官方默认 nudge 路径（历史“新的在前”对齐 setOpenAIMessages）；思考过程走 onReasoning 独立通道（流式显示 + 生成后折叠卡片）；重新生成/继续只对最后一条 AI 生效；新角色空会话自动补 first_mes 开场白。
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
 ❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
 
@@ -235,7 +235,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 外观与主题：主题模式（跟随系统/浅色/深色）+ 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），点选立即全局生效（实时预览），SharedPreferences 持久化；字体/圆角/背景模糊标“开发中”
 - 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索）/ 测试连接 / 保存 / 删除确认
 - 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
-- 语音 / 服务 / 数据与隐私：标“开发中”（不假装做完）
+- 语音 / 服务：标“开发中”（不假装做完）
 
 ### 4.4.5 应用图标 ✅
 launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
@@ -289,54 +289,11 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - ✅ 系统文件选择器（image/video/audio 多选）→ 落盘 filesDir/media/，聊天 extra.media 只存路径 + source:"upload"（官方 saveBase64AsFile 语义，chats.js 逐行核实：{url,type,title,source} / media_display / media_index）→ 发送时 ChatPromptFactory 读文件转 data URL（官方 fetch→base64 语义）→ 引擎链内联 + token 预算；渲染时路径/URL 都支持
 - ✅ 上下文占比胶囊 + 世界书命中灯（onPrepared 回调 → counts/激活条目 → 聊天页状态胶囊，点击世界书看命中条目）
 - ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
-- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、图片发送前压缩（compressImage）、角色卡 extensions.assets（icon/background/voice）App 层入库/展示、LaTeX 渲染
+- ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
+- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、图片发送前压缩（compressImage）、URL 型资产下载、LaTeX 渲染
 
-### 4.9 App↔引擎接线核对表（本轮聊天链路，确认“结没结上”用这张表）
-
-| 官方行为 | 官方源码位置 | 引擎函数 | App 调用点 | 验证 |
-|---|---|---|---|---|
-| 流式发送（角色卡/世界书/示例/历史总装） | `public/scripts/openai.js` prepareOpenAIMessages + `public/scripts/script.js` generate | PromptPipeline.prepare（整链差分 19 例）+ LlmClient.streamChatCompletionsAsync | ChatPromptFactory.prepare → ChatRepository.streamPrepared → ChatViewModel.startStream → ChatScreen StreamingRow | 差分✅ / CI 编译✅ / 真机待测 |
-| SSE 逐 token 解析 + 思考过程 | `public/scripts/sse-stream.js` | SseChunkParser（差分 15 例） | LlmClient.executeStream → onDelta/onReasoning 独立通道 → ViewModel 正文 + 思考过程 | 差分✅ / CI 编译✅ |
-| 停止生成（保留已生成部分） | 官方 abortController + mes_stop | StreamSession.cancel | ChatViewModel.stop → 部分落盘 | 差分✅ / CI 编译✅ / 真机待测 |
-| 重新生成 | option_regenerate | —（复用最后用户消息重新请求） | ChatViewModel.regenerate | CI 编译✅ / 真机待测 |
-| 继续生成 | mes_continue（默认 continue_prefill=false → nudge 路径） | PromptPipeline type=continue + cyclePrompt（nudge，差分已覆盖） | ChatViewModel.continueGeneration：传完整历史（ChatPromptFactory 翻成官方“新的在前”），续写追加回最后一条 AI | 差分✅ / CI 编译✅ / 真机待测 |
-| 删除单条消息 | 官方删除消息后重写 jsonl | ChatJsonl.import/export（文件差分） | ChatStore.removeAt → ChatViewModel.deleteMessage | CI 编译✅ / 真机待测 |
-| 清空会话 | 官方清空聊天 | — | ChatStore.replace(emptyList) | CI 编译✅ / 真机待测 |
-| 会话列表/置顶/导出 | 官方 session 管理 + 聊天文件 | ChatJsonl 格式 | SessionRecord.pinned + ChatStore.list/lastMessage/exportJsonl → SessionsScreen | CI 编译✅ / 真机待测 |
-| 未配置模型 | 官方报错提示不生成占位 | — | ChatViewModel notice → ChatScreen 横幅 → 设置页 | CI 编译✅ / 真机待测 |
-
-> App 层（Compose UI）官方没有对应物，不做差分；上表“差分✅”指其调用的引擎能力已 1:1 差分验证。“CI 编译✅”指引用关系编译期对上；“真机待测”指安装 APK 后人工点一遍的最终确认项。
-
-### 4.10 接线测试策略（新会话必读：以后“怎么测接线”按这个来）
-
-接线盲区 = “运行时接对函数”与“App→引擎输入契约”，差分 fixture 覆盖不到，必须补自动化测试：
-
-| 层 | 测什么 | 怎么测 | 例子 |
-|---|---|---|---|
-| 引擎函数 | 输出与官方一致 | 差分 fixture（官方 JS 逐字提取对拍） | 858 例基准 |
-| 引擎内部运行时接线 | 实际走的函数/通道正确 | JVM 单测（MockWebServer 模拟协议） | LlmClientTest 流式：content:null 跳过、reasoning 独立通道、[DONE] 收尾 |
-| App→引擎契约 | 输入形状/顺序/回调 | app 模块 JVM 单测（纯 Kotlin，不碰 Android） | ChatPromptFactoryTest：generate 正序、continue nudge 选最后一条 AI |
-| 网络协议 | 请求体/响应解析 | MockWebServer + 转换器差分 | 各厂商请求体差分 |
-| UI 交互 | 清空时机/滚动/折叠等 | Compose UI 测试（androidTest，待引入）+ 真机清单 | 输入框点发送立即清空 |
-
-原则：测试代码都在 `src/test`（引擎/app），只跑 CI，**不进 APK**；HANDOFF 4.9 核对表每行按“差分✅ / CI✅ / 真机待测”标注，缺哪个补哪个。
-
-### 4.11 审计结论（2026-08-09，App 层 vs 官方引擎逐项）
-
-**已确认并修复**
-- 重新生成/继续生成：官方只对最后一条 AI 生效（Generate 先删最后一条再生成）；长按菜单同样限制 → 已修
-- 新会话开场白：官方新聊天第一条 = first_mes；空会话补上（含 {{user}} 宏由总装展开）→ 已修；alternate_greetings 未做
-- 首页/会话列表进入不刷新（导入/清除后过期）→ 已修
-- 发送主线程卡顿、流式滚动跳动、消息 420dp 截断、思考过程消失 → 已修（前几轮）
-
-**已确认的兼容缺口（登记，未修）**
-- 导出的 JSONL 消息缺官方字段（gen_started/gen_finished/extra.api/extra.model/extra.reasoning/token_count）：官方可导入（缺省兼容），但不是逐字段 1:1
-- ChatPromptFactory.toOpenAiMessages 跳过 is_system 消息，官方把 narrator（extra.type=narrator）当 system 消息保留：导入含 system/narrator 的官方聊天时会错位
-- 上下文占比用 TokenHandler.counts 之和，不含 start_chat 预留 3 token：轻微低估
-- 编辑消息未跑官方 regex(isEdit)+bias 提取（正则 UI 未接）
-- 附件：图库切换/URL 导入/图片压缩未做；角色卡 URL 型资产未下载
-- swipes 模型缺失 → 无滑动切回复；聊天元数据（书签/快照/背景）未做
-- 顶栏/输入栏玻璃为半透明模拟（Cloudy 未引入）；平板双栏未做
+### 4.9 App↔引擎接线状态
+聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。
 
 ## 5. 剩余工作（按优先级）
 
@@ -372,59 +329,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
-## 6. 最近工作日志
+## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
-## 最近一轮 77（2026-08-09：审计——新会话开场白补齐 + 兼容缺口登记）
-
-- ChatViewModel init：角色空会话自动补 first_mes（官方 newChat 语义，宏由总装展开）
-- HANDOFF 4.11 新增审计结论：已修复清单 + 兼容缺口（JSONL 官方字段/ narrator-system 错位/上下文占比低估/编辑 regex/图库/URL/压缩/swipes/元数据/玻璃/双栏）
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 76（2026-08-09：审计修复——regenerate 官方语义 / 设置回调 / 首页刷新）
-
-- 官方核实（script.js Generate）：regenerate 只对最后一条 AI 生效——先删最后一条再生成。修复：ChatViewModel.regenerate 改为 lastOrNull 判定 + removeAt；continueGeneration 同样只对最后一条；长按菜单“重新生成/继续”只在最后一条 AI 显示
-- 编译修复：ChatStore 缺 jsonArray import；SettingsHome 数据与隐私行误用外层 page（改为 onOpenData 回调）
-- 首页不刷新 bug：清除全部数据/导入后回角色 Tab 列表过期 → CharactersScreen 进入时 LaunchedEffect refresh
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 75（2026-08-09：CharX 角色卡资产 App 入库）
-
-- HomeViewModel.importCard：CHARX 格式用引擎 extractAssets 取 icon→头像（+Palette seed）、background/voice 落盘 filesDir/assets/<id>-<type>.<ext>，路径记入 CharacterRecord.backgroundPath/voicePath（旧 JSON 兼容）
-- 官方参照：src/endpoints/characters.js persist auxiliary assets；引擎 CharXAssets 差分已覆盖提取
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 74（2026-08-09：媒体官方行为补齐 + 审计修正）
-
-- 补官方行为：extra.inline_image=true（chats.js populateFileAttachment）；删除单条/整体替换/清空/删会话时清理附件文件（官方删除消息/附件会删文件）
-- 审计修正：HANDOFF 4.8 原“大附件 base64 进 jsonl”已过时（已改路径存储），改为官方对齐清单 + 未做登记（图库切换/URL 导入/压缩/角色卡 assets/LaTeX）
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 73（2026-08-09：媒体附件对齐官方存储格式）
-
-- 官方源码核实（script.js getMediaDisplay/getMediaIndex + chats.js populateFileAttachment）：extra.media 条目 {url,type,title,source}，source=upload，存储路径而非 base64；media_display/media_index 键名与我实现一致
-- 调整：附件落盘 filesDir/media/，extra.media 只存路径 + source:"upload"；发送时 ChatPromptFactory 读文件 → data URL（mime 按扩展名推断）→ 链内联；渲染按 data:/路径 分别处理（Coil3 File / ExoPlayer Uri.fromFile）
-- 备份 zip 与清除数据均包含 media 目录；app 测试补“文件路径→data URL”断言
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 72（2026-08-09：首启引导）
-
-- OnboardingScreen：欢迎页（✦ 品牌 + 低饱和氛围渐变 + 导入角色卡 / 直接开始聊天 / 跳过 + “数据仅保存在本地”信任信号）
-- MainScreen：首次启动展示（OnboardingPrefs SharedPreferences 标记）；导入走 HomeViewModel.importCard（PNG/JSON/CharX/YAML/BYAF）；直接开始聊天 → openChat(null, "AI 对话")
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 71（2026-08-09：设置·数据与隐私页做实）
-
-- DataPrivacyScreen：导出全部数据 zip（characters/sessions/chats/avatars/provider，相对路径）+ 数据位置展示 + 清除全部数据（二次确认、不可撤销提示）
-- SettingsScreen：SettingsPage.DATA + 深链 "data" + 设置组入口（备份与导出 / 数据仅保存在本地）
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 70（2026-08-09：媒体附件全链路 + 上下文占比胶囊 + 世界书命中灯）
-
-- 发送附件：系统多选（image/video/audio）→ IO 读字节 → data URL → extra.media 落 jsonl → ChatPromptFactory 解析成 PromptMessage.media → 引擎链内联（data URL + token 记账）→ 各协议请求体（MediaInliner/MediaConvert 已有差分）
-- 渲染：图片/GIF Coil3（coil-gif）、音视频 Media3 ExoPlayer（PlayerView，AndroidView 包装）；输入区附件缩略图可移除；消息气泡内媒体随消息显示（AI/用户均支持）
-- 上下文占比胶囊 + 世界书命中灯：ChatPromptFactory.Prepared 增加 counts/maxContextTokens；ChatRepository.onPrepared 回调；ChatViewModel worldHits/contextUsage；聊天页输入区上方状态胶囊（世界书点击 Toast 展示命中条目）
-- app 测试补：extra.media → 出站消息 media 内联断言；media3-exoplayer/ui 依赖加入；app JUnit 依赖补上（修 CI）
-- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 69（2026-08-09：锁死两处接线盲区为自动化测试）
 
@@ -432,24 +338,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - App：ChatPromptFactoryTest（纯 Kotlin JVM 单测）锁住“generate 输出时间正序”与“continue nudge 选中最后一条 AI 并收尾”——锁住“新的在前”接线契约（曾致 continue 错当最老消息）
 - 引擎 262 测全绿；App 单测由 CI 编译验证
 
-## 最近一轮 68（2026-08-09：发送卡顿修复——总装挪后台线程）
-
-- 根因：send() 在主线程同步做 PromptPipeline 总装（世界书/宏/历史/JTokkit token 计数）→ UI 顿 ~1s 才开始发
-- 修复：startStream 用 viewModelScope.launch(Dispatchers.Default) 调 streamPrepared，先置“生成中”再异步组装+建请求；组装期间点停止会取消刚建好的请求；streamSession/streamActive 加 @Volatile
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 67（2026-08-09：聊天页滚动/消息完整显示/思考过程折叠）
-
-- 流式滚动：只在用户贴底时跟随，且流式用 scrollToItem（逐 token animate 会造成上下跳）
-- 消息显示不全：ChatMarkdown 去掉 heightIn(420.dp) 上限，最终消息完整渲染，无需展开
-- 思考过程：生成完不再清空——lastReasoning 保留（finalize/stop 均保存），最后一条 AI 消息下方 ReasoningCard 默认折叠、点开查看；finalize 分支顺序修正为 冒充→continue→思考→追加
-- 无引擎改动；App 编译待 CI
-
-## 最近一轮 66（2026-08-09：Markdown 收敛成聊天风）
-
-- ChatMarkdown：AI 气泡 Markdown 定制 colors/typography/padding——正文 bodyMedium、标题降级 titleSmall/Medium、代码低饱和容器 + 等宽小字、列表/引用间距克制（对齐 README：正文 16sp、低饱和、克制）
-- 旧 SseParser 删除后运行时只有 SseChunkParser 一条路（见轮 65）
-- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 65（2026-08-09：删除旧 SseParser，运行时只留官方对拍解析器）
 
@@ -457,12 +345,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - LlmClientTest 里两个直接测 SseParser 的用例改写为 SseChunkParser（anthropic/google data 载荷），覆盖不丢失
 - HANDOFF 2.1 更新：SSE 只有一条运行时路径
 
-## 最近一轮 64（2026-08-09：continue 官方 nudge 路径修正 + 思考过程显示 + ProviderState 共享）
-
-- 根因：App 把历史“旧在前”传给总装，而官方 setOpenAIMessages 是“新的在前”；continue_prefill 的 shift() 于是把最老消息当续写对象 → 表现成“重新生成”。修复：ChatPromptFactory 历史消息 asReversed()（官方顺序）；continueGeneration 用官方默认 nudge 路径（type=continue + cyclePrompt=最后 AI 文本，continue_prefill=false），续写追加回最后一条 AI（stop 保留 partial 同样合并）
-- 思考过程：LlmClient.streamChatCompletionsAsync/executeStream 增加 onReasoning 独立通道（官方 reasoning 不进正文）；ChatViewModel.streamingReasoning；ChatScreen 流式气泡上方“思考过程”块（secondaryContainer 低饱和）
-- ProviderState 进程内共享：ProviderViewModel 保存/切换/删除后刷新；ChatViewModel 订阅，不再每次发送读 profiles.json；仅进聊天页读盘兜底（更彻底方案 Room/DataStore Flow 列 P1）
-- 引擎 261 测全绿（本轮无引擎差分新增；LlmClient 改动由现有 SSE 差分 + 单测覆盖，App 接线待 CI）
 
 ## 最近一轮 63（2026-08-09：SSE null 修复 + LlmClient 切官方对拍解析器 + 聊天页 UI 重排 + 模型页深链）
 
@@ -472,26 +354,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 聊天页 UI 按 README 重排（systemBars 留白、气泡 78% 限宽、间距圆角留白、顶栏输入栏玻璃感、空状态居中）；未配置横幅一键深链“提供商与模型”子页（SettingsScreen deepLink + MainScreen 先退出聊天再切 Tab）
 - HANDOFF：2 节表、2.1、4.3、日志63
 
-## 最近一轮 62b（2026-08-09：修“配置了模型聊天还说没配置”）
-
-- 根因：ChatViewModel 只在创建时读一次 profiles.json 并缓存 providerConfigured，之后不刷新；且 MainScreen 在聊天打开时早退 return，聊天页“先选一个模型”跳设置被挡住
-- 修复：refreshProviderConfigured() 每次进入聊天页/发送前实时读盘（设置页与聊天页本就共用 ProviderStore/profiles.json）；MainScreen 跳设置时先退出聊天再切 Tab 2
-- 无引擎改动 → 无新差分；CI 验证中
-
-## 最近一轮 62（2026-08-09：聊天页补编辑消息 + 冒充）
-
-- ChatStore.updateMessage：编辑文本 + extra.bias=null（官方 updateMessage AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）
-- ChatViewModel：editMessage（流式中禁编辑）、impersonate（type=impersonate，草稿进 _impersonated 不落历史，停止保留草稿）、consumeImpersonation
-- ChatPromptFactory/ChatRepository：impersonationPrompt 透传（默认官方 default_impersonation_prompt）
-- ChatScreen：长按菜单加“编辑”（弹窗改文本保存）与“冒充”（AI 消息）；冒充流式气泡标“冒充草稿 · 我”，完成后草稿自动进输入框可改可发
-- 无引擎改动 → 无新差分；App 编译待 CI 验证；Claude assistant_impersonation（默认空）排 P2
-
-## 最近一轮 61（2026-08-09：首页全局搜索——角色/会话/世界书/设置）
-
-- HomeViewModel.search()：角色名/描述、会话名 + 最后消息预览、角色卡内嵌世界书条目（key/keys/content/comment）、设置目录；WorldInfoHit / SettingsHit / SearchResults 数据类
-- CharactersScreen：输入非空时切搜索结果列表（分组：角色/会话/世界书/设置），角色点击开聊、会话点击打开、世界书点击出详情弹层、设置点击跳设置 Tab；空结果引导；保留顶部搜索框
-- MainScreen：CharactersScreen 接 onOpenSettings（切 Tab 2）
-- 无引擎改动 → 无新差分；App 编译待 CI 验证；设置结果深链排后续
 
 ## 最近一轮 60（2026-08-09：总装整链补工具/媒体/推理签名分支差分 8 例 + App 聊天链路 CI 全绿）
 
@@ -501,15 +363,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 官方基准 846 → 854；引擎 259 测全绿
 - App 层：聊天页总装流式 + 停止/重新生成/继续/删除 + Markdown；聊天 Tab 会话列表/新建对话/置顶/导出；修复 ChatPromptFactory contentOrNull() 误调用（CI 编译错误）；CI 全绿（engine-test + assembleDebug/Release APK）
 
-## 最近一轮 59（2026-08-09：聊天页总装流式接线 + 聊天 Tab 会话列表）
-
-- ChatRepository.streamPrepared：PromptPipeline 总装 → LlmClient.streamChatCompletionsAsync（SSE 可取消，官方 sse-stream.js 语义）；新增 type / continuePrefill 透传
-- ChatViewModel：流式发送（未配置模型只提示不写历史）、stop()（取消保留已生成部分）、regenerate()、continueGeneration()（mes_continue 语义，续写合并落盘）、deleteMessage / clearSession / notice / providerConfigured
-- ChatScreen：顶栏返回 + 角色头像 + accent 角色名；AI 左 / 用户右气泡（surfaceContainer / primaryContainer，用户 4dp 角）；流式气泡 + 闪烁光标；最后一条 AI 常驻 4 键（复制/重新生成/继续/删除）+ 长按菜单；清空二次确认；Markdown + 代码高亮；未配置模型横幅 → 设置页
-- 新会话列表页（聊天 Tab）：按时间倒序 + 置顶优先、长按 / ⋯ = 置顶 / 导出 JSONL / 删除（二次确认）、FAB 新建对话（AI 对话或选角色，UUID 多会话）、空状态引导；群聊入口如实标开发中
-- 依赖：multiplatform-markdown-renderer-m3 / coil3 / code 0.43.0 + material-icons-extended（BOM 1.7.8）；**markdownComponents 实际在 com.mikepenz.markdown.compose.components、highlightedCodeBlock/Fence 在 com.mikepenz.markdown.compose.elements**（对 0.43.0 源码 jar 核实，非 m3/code 包）
-- 数据层：SessionRecord.pinned 置顶字段（兼容旧 JSON）、ChatStore.lastMessage / exportJsonl / delete
-- 本轮无新引擎差分（引擎未改动）；引擎 259 测全绿；App 编译待 CI 验证
 
 ## 最近一轮 58（2026-08-08：总装整链差分 5→11 例 + 防漏机制）
 
