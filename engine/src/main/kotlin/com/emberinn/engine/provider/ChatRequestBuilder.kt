@@ -19,6 +19,12 @@ data class SamplerParams(
     val presencePenalty: Double = 0.0,
     val frequencyPenalty: Double = 0.0,
     val stream: Boolean = false,
+    /** 官方 reasoning_effort：auto/low/medium/high/min/max，默认 auto。 */
+    val reasoningEffort: String = "auto",
+    /** 官方 include_reasoning（思考内容是否随响应返回），默认关。 */
+    val includeReasoning: Boolean = false,
+    /** 官方 enableAdaptiveThinking（Claude opus-4-6/sonnet-4-6 是否走 adaptive），默认开。 */
+    val enableAdaptiveThinking: Boolean = true,
 )
 
 /** OpenAI 兼容 Chat Completions 请求体构建。 */

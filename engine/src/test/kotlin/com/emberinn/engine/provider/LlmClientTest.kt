@@ -277,4 +277,146 @@ class LlmClientTest {
         assertEquals("openai", store.load()?.providerId)
         dir.deleteRecursively()
     }
+
+    @Test
+    fun `anthropic derives numeric thinking budget from effort`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"content":[{"type":"text","text":"ok"}]}""")
+                .build(),
+        )
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        LlmClient().chatCompletions(
+            anthropic,
+            ConnectionProfile(
+                providerId = "anthropic",
+                apiKey = "sk-ant",
+                model = "claude-haiku-4-5",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(maxTokens = 512, reasoningEffort = "low"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        // official calculateClaudeBudgetTokens: max(floor(512*0.1),1024)=1024 → min(1024,21333)
+        assertEquals(1024, body["thinking"]?.jsonObject?.get("budget_tokens")?.toString()?.toInt())
+        // max_tokens <= 1024 时官方 +1024
+        assertEquals(1536, body["max_tokens"]?.toString()?.toInt())
+        server.close()
+    }
+
+    @Test
+    fun `anthropic adaptive effort passes string to output_config`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"content":[{"type":"text","text":"ok"}]}""")
+                .build(),
+        )
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        LlmClient().chatCompletions(
+            anthropic,
+            ConnectionProfile(
+                providerId = "anthropic",
+                apiKey = "sk-ant",
+                model = "claude-opus-4-7",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(reasoningEffort = "high"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals("adaptive", body["thinking"]?.jsonObject?.get("type")?.toString()?.trim('"'))
+        assertEquals("high", body["output_config"]?.jsonObject?.get("effort")?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `anthropic adaptive auto omits thinking`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"content":[{"type":"text","text":"ok"}]}""")
+                .build(),
+        )
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        LlmClient().chatCompletions(
+            anthropic,
+            ConnectionProfile(
+                providerId = "anthropic",
+                apiKey = "sk-ant",
+                model = "claude-opus-4-7",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(reasoningEffort = "auto"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals(null, body["thinking"])
+        server.close()
+    }
+
+    @Test
+    fun `google derives thinking level for gemini 3`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+                .build(),
+        )
+        val google = ProviderRegistry.get("google")!!
+        LlmClient().chatCompletions(
+            google,
+            ConnectionProfile(
+                providerId = "google",
+                apiKey = "gkey",
+                model = "gemini-3.6-flash",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(reasoningEffort = "low"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        val thinking = body["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+        assertEquals("low", thinking?.get("thinkingLevel")?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `google auto effort leaves thinking budget unset`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+                .build(),
+        )
+        val google = ProviderRegistry.get("google")!!
+        LlmClient().chatCompletions(
+            google,
+            ConnectionProfile(
+                providerId = "google",
+                apiKey = "gkey",
+                model = "gemini-3.6-flash",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(reasoningEffort = "auto"),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        val thinking = body["generationConfig"]?.jsonObject?.get("thinkingConfig")?.jsonObject
+        assertEquals(null, thinking?.get("thinkingLevel"))
+        assertEquals(null, thinking?.get("thinkingBudget"))
+        server.close()
+    }
 }

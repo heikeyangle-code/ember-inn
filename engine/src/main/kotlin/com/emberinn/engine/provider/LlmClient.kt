@@ -183,6 +183,12 @@ class LlmClient(
         when (provider.protocol) {
             "anthropic" -> {
                 val url = base.trimEnd('/') + "/messages"
+                val effort = profile.sampler.reasoningEffort
+                val isAdaptive = Regex("^claude-(opus-4-7)").containsMatchIn(profile.model) ||
+                    (profile.sampler.enableAdaptiveThinking && Regex("^claude-(opus-4-6|sonnet-4-6)").containsMatchIn(profile.model))
+                val reasoningBudget = ProviderConverters.calculateClaudeBudgetTokens(
+                    profile.sampler.maxTokens, effort, stream, isAdaptive,
+                )
                 val request = AnthropicRequestBuilder.build(
                     model = profile.model,
                     messages = messages,
@@ -190,6 +196,10 @@ class LlmClient(
                     temperature = profile.sampler.temperature,
                     stream = stream,
                     topP = profile.sampler.topP,
+                    reasoningEffort = effort,
+                    includeReasoning = profile.sampler.includeReasoning,
+                    reasoningBudget = reasoningBudget,
+                    enableAdaptiveThinking = profile.sampler.enableAdaptiveThinking,
                 )
                 builder.url(url).post(request.body.toRequestBody("application/json".toMediaType()))
                 builder.header("x-api-key", profile.apiKey)
@@ -208,12 +218,19 @@ class LlmClient(
                 if (stream) params += "alt=sse"
                 val url = base.trimEnd('/') + "/" + apiVersion + "/models/" + model + ":generateContent" +
                     (if (params.isNotEmpty()) "?" + params.joinToString("&") else "")
+                val effort = profile.sampler.reasoningEffort
+                val reasoningBudget = ProviderConverters.calculateGoogleBudgetTokens(
+                    profile.sampler.maxTokens, effort, profile.model,
+                )
                 val body = GoogleRequestBuilder.build(
                     model = profile.model,
                     messages = messages,
                     maxOutputTokens = profile.sampler.maxTokens,
                     temperature = profile.sampler.temperature,
                     topP = profile.sampler.topP,
+                    reasoningEffort = effort,
+                    includeReasoning = profile.sampler.includeReasoning,
+                    reasoningBudget = reasoningBudget,
                 )
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
             }

@@ -45,7 +45,7 @@ object AnthropicRequestBuilder {
     private val noSamplingRegex = Regex("claude-(opus-4-7)")
 
     /**
-     * @param reasoningBudget 官方 calculateClaudeBudgetTokens 的结果：数字预算 或 字符串 effort（adaptive）。
+     * @param reasoningBudget 官方 calculateClaudeBudgetTokens 的结果：数字预算 / 字符串 effort（adaptive）/ null（auto 且 adaptive → 不加 thinking）。
      * @param enableSystemPromptCache 官方 enableSystemPromptCache 配置
      * @param cachingAtDepth 官方 cachingAtDepth 配置（>=0 时启用缓存注入，本实现只发 beta 头）
      * @param enableAdaptiveThinking 官方 enableAdaptiveThinking 配置
@@ -69,7 +69,7 @@ object AnthropicRequestBuilder {
         reasoningEffort: String = "",
         includeReasoning: Boolean = false,
         verbosity: String = "",
-        reasoningBudget: Any = 1024,
+        reasoningBudget: Any? = 1024,
         enableSystemPromptCache: Boolean = false,
         cachingAtDepth: Int = -1,
         enableAdaptiveThinking: Boolean = true,
@@ -129,7 +129,7 @@ object AnthropicRequestBuilder {
         reasoningEffort: String = "",
         includeReasoning: Boolean = false,
         verbosity: String = "",
-        reasoningBudget: Any = 1024,
+        reasoningBudget: Any? = 1024,
         enableSystemPromptCache: Boolean = false,
         cachingAtDepth: Int = -1,
         enableAdaptiveThinking: Boolean = true,

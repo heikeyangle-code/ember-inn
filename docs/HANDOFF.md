@@ -151,7 +151,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
-**一句话结论**：请求体参数（OpenAI 兼容全厂商 21 例差分）、Anthropic/Gemini 请求体与消息转换、SSE 三格式、模型列表、OpenAI 媒体内联都已完成并差分；**但 LlmClient 只路由 openai-compatible / anthropic / google 三个协议**，Mistral / xAI / Cohere / AI21 / OpenRouter 专项转换器已差分移植却**未接进请求链路**，Vertex 服务账号认证未做。App 接线前先补“已差分未接线”项。
+**一句话结论**：请求体参数（OpenAI 兼容全厂商 21 例差分）、Anthropic/Gemini 请求体与消息转换、SSE 三格式、模型列表、OpenAI 媒体内联、Claude/Gemini 预算自动推导都已完成并差分；**但 LlmClient 只路由 openai-compatible / anthropic / google 三个协议**，Mistral / xAI / Cohere / AI21 / OpenRouter 专项转换器已差分移植却**未接进请求链路**，Vertex 服务账号认证未做。App 接线前先补“已差分未接线”项。
 
 | 提供商 | 协议路由 | 请求体 | 消息转换 | 媒体 | 预算/缓存/签名 | 模型列表 | 状态 |
 |---|---|---|---|---|---|---|---|
@@ -160,8 +160,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 | DeepSeek | ✅ `/beta/chat/completions` | ✅ | ✅ | ✅ | — | ✅ | ✅ |
 | Groq / Moonshot / MiniMax / 智谱 / 通义 / 硅基流动 / Z.AI / Fireworks / Perplexity / Custom / NanoGPT / Chutes / ElectronHub / SiliconFlow / o1 / Ollama | ✅ openai-compatible | ✅（各自厂商参数分支） | ✅ | ✅（OpenAI 媒体数组） | — | ✅ `data[].id` / 无端点时最小对话探测 | ✅ |
 | Workers AI | ✅ `{account}/ai/v1/chat/completions` | ✅ | ✅ | ✅ | — | ✅ `result[].name` | ✅ |
-| Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | 🟡 `calculateClaudeBudgetTokens` 已差分移植但**未接线**（builder 由调用方传 reasoningBudget） | 🟡 官方不发模型列表请求，用默认模型 | 🟡 差预算自动推导 + tokenizer |
-| Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | 🟡 `calculateGoogleBudgetTokens` 已差分移植但**未接线** | ✅ `models[].name`（过滤 generateContent） | 🟡 差预算自动推导 + tokenizer |
+| Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | ✅ `calculateClaudeBudgetTokens` 已接入 LlmClient（SamplerParams.reasoningEffort 默认 auto；adaptive→effort 字符串/auto→不加 thinking） | 🟡 官方不发模型列表请求，用默认模型 | ✅ 差 tokenizer |
+| Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | ✅ `calculateGoogleBudgetTokens` 已接入 LlmClient（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | ✅ `models[].name`（过滤 generateContent） | ✅ 差 tokenizer |
 | OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支，含 Referer/X-Title） | ✅ | 🟡 `embedOpenRouterMedia` 已差分移植未接线 | 🟡 `cachingAtDepthForOpenRouterClaude` / `cachingSystemPromptForOpenRouter` / `addOpenRouterSignatures` / `addReasoningContentToToolCalls`（DeepSeek reasoner）已差分移植未接线 | ✅ | 🟡 专项未接请求链路 |
 | Mistral | ✅ openai-compatible | ✅（mistral 参数分支） | 🟡 `convertMistralMessages` 已差分未接线 | — | — | ✅ | 🟡 |
 | xAI | ✅ openai-compatible | ✅（xai 参数分支） | 🟡 `convertXaiMessages` 已差分未接线 | — | — | ✅ | 🟡 |
@@ -237,7 +237,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
 | 提示词组装 | `public/scripts/openai.js` preparePromptsForChatCompletion / populateChatCompletion + `public/scripts/script.js` generate | 发送前：PromptAssembler / ChatCompletionPipelinePlan 出消息列表 → PromptManager 宏替换 → 按协议走 ChatRequestBuilder（OpenAI）/ AnthropicRequestBuilder / GoogleRequestBuilder；**现在 App 直接发历史消息，是 P0 缺口** |
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | 已封装在 AnthropicRequestBuilder / GoogleRequestBuilder 内部；Mistral/xAI/Cohere/AI21/OpenRouter 转换器在 ProviderConverters，LlmClient 路由扩展时调用 |
-| 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | 在 LlmClient 按模型/effort 调 ProviderConverters 两个预算函数，把结果传进 builder 的 reasoningBudget，代替现在的固定值 |
+| 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
 | Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；HTML 消息开关默认关，开启走本地 WebView + 消毒（对齐 power-user HTML 设置） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；**extra.media 解析与渲染组件还没接** |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
@@ -282,7 +282,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
-10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + Claude/Gemini/OpenRouter 预算/缓存/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
+10. Vertex AI 服务账号认证；OpenRouter/Mistral/xAI/Cohere/AI21 转换器接线 + OpenRouter 缓存/媒体嵌入/签名接线；聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
@@ -293,6 +293,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 49（2026-08-08：Claude/Gemini 预算自动推导接进 LlmClient）
+
+- SamplerParams 新增 reasoningEffort（默认 auto）/includeReasoning/enableAdaptiveThinking（官方默认值）
+- LlmClient anthropic 分支：isAdaptiveModel 按官方正则（opus-4-7 恒 adaptive；opus-4-6/sonnet-4-6 看开关）→ calculateClaudeBudgetTokens → builder.reasoningBudget（允许 null：auto+adaptive 不加 thinking）
+- LlmClient google 分支：calculateGoogleBudgetTokens → builder（gemini-3 flash/pro 返回 thinkingLevel 字符串，2.5 flash/pro 返回数字预算）
+- Anthropic/Google builder 的 reasoningBudget 参数改为可空（null = 官方“不加 thinking”语义）
+- LlmClientTest +5：数字预算（1024+max_tokens 补到 1536）、adaptive effort→output_config、adaptive auto 无 thinking、gemini-3 thinkingLevel、google auto 不设预算
+- 引擎 228 测全绿；官方基准 800 例不变
 
 ## 最近一轮 48（2026-08-08：媒体 token 成本估算移植 + 官方差分 18 例）
 
