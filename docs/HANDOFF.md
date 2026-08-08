@@ -214,8 +214,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 底部三 Tab（角色/聊天/设置）；聊天页、设置子页都接 BackHandler，系统返回键/侧滑返回逐级回退（聊天→列表、提供商详情→列表→设置主页）；Manifest 已开 enableOnBackInvokedCallback（Android 13+ 预测性返回动画）。README 守则第 7 条已落实。
 
 ### 4.2 首页（角色 Tab）🟡
-品牌顶栏 + 搜索框（目前只过滤角色名/描述，非全局）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
-❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题。
+品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
+❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线）
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → 设置页；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。
@@ -303,7 +303,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P0（“打开即聊”体验短板）**
 1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
 2. ~~流式/停止/重新生成/继续/复制/删除/提示词总装~~ → 已做；剩编辑消息、冒充、滑动切回复
-3. 全局搜索：首页搜索框接会话/世界书/设置
+3. ~~全局搜索~~ → 首页搜索已接角色/会话/世界书/设置；设置结果深链到具体子页未做（目前跳设置 Tab）
 
 **P1（功能完整）**
 4. 角色详情编辑页：卡字段编辑、世界书管理 UI、正则/变量/快捷回复、模型覆盖、主题配方
@@ -333,6 +333,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 61（2026-08-09：首页全局搜索——角色/会话/世界书/设置）
+
+- HomeViewModel.search()：角色名/描述、会话名 + 最后消息预览、角色卡内嵌世界书条目（key/keys/content/comment）、设置目录；WorldInfoHit / SettingsHit / SearchResults 数据类
+- CharactersScreen：输入非空时切搜索结果列表（分组：角色/会话/世界书/设置），角色点击开聊、会话点击打开、世界书点击出详情弹层、设置点击跳设置 Tab；空结果引导；保留顶部搜索框
+- MainScreen：CharactersScreen 接 onOpenSettings（切 Tab 2）
+- 无引擎改动 → 无新差分；App 编译待 CI 验证；设置结果深链排后续
 
 ## 最近一轮 60（2026-08-09：总装整链补工具/媒体/推理签名分支差分 8 例 + App 聊天链路 CI 全绿）
 

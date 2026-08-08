@@ -23,12 +23,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -84,6 +88,7 @@ import kotlinx.serialization.json.jsonPrimitive
 @Composable
 fun CharactersScreen(
     onOpenChat: (SessionRecord) -> Unit,
+    onOpenSettings: () -> Unit = {},
     vm: HomeViewModel = viewModel(),
 ) {
     val characters by vm.characters.collectAsState()
@@ -95,6 +100,8 @@ fun CharactersScreen(
     var menuRecord by remember { mutableStateOf<CharacterRecord?>(null) }
     var detailRecord by remember { mutableStateOf<CharacterRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<CharacterRecord?>(null) }
+    var worldHit by remember { mutableStateOf<WorldInfoHit?>(null) }
+    val searchResults = remember(query) { vm.search(query) }
 
     val filtered = remember(characters, query) {
         if (query.isBlank()) characters
@@ -137,7 +144,17 @@ fun CharactersScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (characters.isEmpty() && query.isBlank()) {
+        if (query.isNotBlank()) {
+            SearchResultsColumn(
+                query = query,
+                results = searchResults,
+                onQueryChange = { query = it },
+                onOpenCharacter = { record -> onOpenChat(vm.openChat(record.id, record.name)) },
+                onOpenSession = { onOpenChat(it) },
+                onOpenSettings = onOpenSettings,
+                onOpenWorldInfo = { worldHit = it },
+            )
+        } else if (characters.isEmpty()) {
             EmptyHome(
                 onImport = { importLauncher.launch(arrayOf("*/*")) },
                 onDirectChat = { onOpenChat(vm.openChat(null, "AI 对话")) },
@@ -225,6 +242,26 @@ fun CharactersScreen(
         }
     }
 
+    worldHit?.let { hit ->
+        ModalBottomSheet(onDismissRequest = { worldHit = null }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+                Text(
+                    "世界书条目 · ${hit.characterName}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                )
+                Text(hit.key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    hit.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+
     deleteTarget?.let { record ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
@@ -240,6 +277,189 @@ fun CharactersScreen(
                 TextButton(onClick = { deleteTarget = null }) { Text("取消") }
             },
         )
+    }
+}
+
+@Composable
+private fun SearchResultsColumn(
+    query: String,
+    results: SearchResults,
+    onQueryChange: (String) -> Unit,
+    onOpenCharacter: (CharacterRecord) -> Unit,
+    onOpenSession: (SessionRecord) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenWorldInfo: (WorldInfoHit) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        HomeTopBar(query = query, onQueryChange = onQueryChange)
+        val isEmpty = results.characters.isEmpty() && results.sessions.isEmpty() &&
+            results.worldInfo.isEmpty() && results.settings.isEmpty()
+        if (isEmpty) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    "没有找到「$query」",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (results.characters.isNotEmpty()) {
+                    item { SearchGroupHeader("角色") }
+                    items(results.characters, key = { "c-${it.id}" }) { record ->
+                        CharacterSearchRow(record, onClick = { onOpenCharacter(record) })
+                    }
+                }
+                if (results.sessions.isNotEmpty()) {
+                    item { SearchGroupHeader("会话") }
+                    items(results.sessions, key = { "s-${it.id}" }) { session ->
+                        SessionSearchRow(session = session, onClick = { onOpenSession(session) })
+                    }
+                }
+                if (results.worldInfo.isNotEmpty()) {
+                    item { SearchGroupHeader("世界书") }
+                    itemsIndexed(results.worldInfo, key = { i, hit -> "w-${hit.characterId}-${i}" }) { _, hit ->
+                        WorldInfoSearchRow(hit = hit, onClick = { onOpenWorldInfo(hit) })
+                    }
+                }
+                if (results.settings.isNotEmpty()) {
+                    item { SearchGroupHeader("设置") }
+                    items(results.settings, key = { "set-${it.label}" }) { hit ->
+                        SettingsSearchRow(hit = hit, onClick = onOpenSettings)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchGroupHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+    )
+}
+
+@Composable
+private fun CharacterSearchRow(record: CharacterRecord, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            SearchAvatar(name = record.name, isRole = true)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(record.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    record.description.ifBlank { "暂无简介" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text("去聊天", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun SessionSearchRow(session: SessionRecord, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            SearchAvatar(name = session.name, isRole = session.characterId != null)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(session.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("会话记录", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("打开", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun WorldInfoSearchRow(hit: WorldInfoHit, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            SearchAvatar(name = "书", isRole = false)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(hit.key, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    hit.content.take(60),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(hit.characterName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            SearchAvatar(name = "设", isRole = false)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(hit.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(hit.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchAvatar(name: String, isRole: Boolean) {
+    Surface(
+        shape = CircleShape,
+        color = if (isRole) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.size(36.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                name.take(1).ifBlank { "✦" },
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+            )
+        }
     }
 }
 

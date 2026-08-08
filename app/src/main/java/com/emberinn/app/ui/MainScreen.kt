@@ -75,6 +75,7 @@ fun MainScreen(
                         openSessionId = session.id
                         openName = session.name
                     },
+                    onOpenSettings = { selectedTab = 2 },
                 )
                 1 -> com.emberinn.app.ui.sessions.SessionsScreen(
                     onOpenSession = { session ->

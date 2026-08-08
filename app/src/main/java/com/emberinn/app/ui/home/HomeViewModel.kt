@@ -19,9 +19,33 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+/** 全局搜索结果（README：角色 + 会话 + 世界书 + 设置）。 */
+data class SearchResults(
+    val characters: List<CharacterRecord> = emptyList(),
+    val sessions: List<SessionRecord> = emptyList(),
+    val worldInfo: List<WorldInfoHit> = emptyList(),
+    val settings: List<SettingsHit> = emptyList(),
+)
+
+/** 世界书命中：所属角色 + 条目 key + 内容（用于搜索结果的详情弹层）。 */
+data class WorldInfoHit(
+    val characterName: String,
+    val characterId: String,
+    val key: String,
+    val content: String,
+)
+
+/** 设置项命中：点击后跳到设置 Tab（深链排后续）。 */
+data class SettingsHit(
+    val label: String,
+    val description: String,
+)
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -42,6 +66,57 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _characters.value = store.list()
         _recentSessions.value = chatStore.recent(8)
     }
+
+    /** 全局搜索（大小写不敏感）：角色名/描述、会话名/最后消息、世界书条目、设置项。 */
+    fun search(query: String): SearchResults {
+        val q = query.trim()
+        if (q.isEmpty()) return SearchResults()
+        val characters = store.list()
+        return SearchResults(
+            characters = characters.filter {
+                it.name.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
+            },
+            sessions = chatStore.list().filter { session ->
+                session.name.contains(q, ignoreCase = true) ||
+                    (chatStore.lastMessage(session.id)?.contains(q, ignoreCase = true) == true)
+            },
+            worldInfo = characters.flatMap { c -> worldBookHits(c, q) },
+            settings = settingsCatalog.filter {
+                it.label.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
+            },
+        )
+    }
+
+    private fun worldBookHits(character: CharacterRecord, query: String): List<WorldInfoHit> = runCatching {
+        val root = json.parseToJsonElement(character.rawJson).jsonObject
+        val data = root["data"]?.jsonObject ?: root
+        val entries = data["character_book"]?.jsonObject?.get("entries") as? JsonArray ?: return@runCatching emptyList()
+        entries.mapNotNull { el ->
+            val e = el.jsonObject
+            val key = e["key"]?.jsonPrimitive?.contentOrNull ?: ""
+            val keys = e["keys"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+            val content = e["content"]?.jsonPrimitive?.contentOrNull ?: ""
+            val comment = e["comment"]?.jsonPrimitive?.contentOrNull ?: ""
+            val haystack = listOf(key, *keys.toTypedArray(), content, comment).joinToString("\n")
+            if (haystack.contains(query, ignoreCase = true)) {
+                WorldInfoHit(
+                    characterName = character.name,
+                    characterId = character.id,
+                    key = key.ifBlank { keys.firstOrNull().orEmpty() }.ifBlank { "未命名条目" },
+                    content = content.ifBlank { comment }.ifBlank { "（空条目）" },
+                )
+            } else null
+        }
+    }.getOrDefault(emptyList())
+
+    private val settingsCatalog = listOf(
+        SettingsHit("主题", "外观与主题：浅色/深色/跟随系统 + 预设主题"),
+        SettingsHit("模型", "提供商与模型：API Key / 接口地址 / 默认模型"),
+        SettingsHit("语音", "语音：TTS 朗读 / STT 输入（开发中）"),
+        SettingsHit("服务", "服务：翻译 / 图像 / 向量（开发中）"),
+        SettingsHit("数据与隐私", "数据与隐私：备份 / 导出 / 清除数据"),
+        SettingsHit("关于", "关于：版本 / 开源协议 / 数据说明"),
+    )
 
     fun importCard(bytes: ByteArray, format: CardFormat) {
         viewModelScope.launch {
