@@ -153,6 +153,6 @@ class ChatPromptFactoryTest {
         )
         val contents = result.messages.map { it.content }
         assertTrue(contents.any { it.contains("旧回复") })
-        assertEquals("Continue your last message without repeating its original content.", contents.last())
+        assertEquals("[Continue your last message without repeating its original content.]", contents.last())
     }
 }
