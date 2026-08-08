@@ -56,11 +56,11 @@ class ChatPromptFactory {
         val chatMessages = history.mapNotNull { el ->
             val obj = el.jsonObject
             val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
-            val mes = obj["mes"]?.jsonPrimitive?.contentOrNull() ?: return@mapNotNull null
+            val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
             ChatMessage(
                 mes = mes,
                 isUser = isUser,
-                name = obj["name"]?.jsonPrimitive?.contentOrNull(),
+                name = obj["name"]?.jsonPrimitive?.contentOrNull,
             )
         }
         val historyMessages = PromptAssembler.toOpenAiMessages(chatMessages, user = userName)
@@ -124,7 +124,7 @@ class ChatPromptFactory {
             creatorNotes = str(data, "creator_notes"),
             depthPrompt = str(data, "depth_prompt"),
             alternateGreetings = data["alternate_greetings"]?.jsonArray
-                ?.mapNotNull { it.jsonPrimitive.contentOrNull() } ?: emptyList(),
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
         )
         val entries = data["character_book"]?.jsonObject?.get("entries")?.jsonArray
             ?.mapIndexedNotNull { i, el ->
@@ -134,5 +134,5 @@ class ChatPromptFactory {
     }
 
     private fun str(obj: JsonObject, key: String): String =
-        obj[key]?.jsonPrimitive?.contentOrNull() ?: ""
+        obj[key]?.jsonPrimitive?.contentOrNull ?: ""
 }
