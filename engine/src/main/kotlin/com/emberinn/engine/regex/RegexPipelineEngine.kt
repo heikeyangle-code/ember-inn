@@ -27,6 +27,7 @@ object RegexPipelineEngine {
         isEdit: Boolean = false,
         depth: Int? = null,
         disabledExtensions: Set<String> = emptySet(),
+        substitute: (String) -> String = { it },
     ): String {
         var finalString = raw
         if ("regex" in disabledExtensions || raw.isEmpty()) return finalString
@@ -54,6 +55,7 @@ object RegexPipelineEngine {
                         substituteRegex = script.substituteRegex,
                     ),
                     finalString,
+                    substitute,
                 )
             }
         }

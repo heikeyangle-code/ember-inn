@@ -1,5 +1,24 @@
 # 引擎 vs 官方缺口审计（持续更新）
 
+## 差分覆盖审计（2026-08-08）
+
+**已差分：42 组 / 581 例官方基准，全部通过；引擎 218 测全绿。**
+
+### 覆盖充分的模块
+- 宏（158）、世界书（19+17+2）、正则（20+9）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、SSE（8）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（14）
+
+### 覆盖不足 / 只有手写测试或源码对照
+- LlmClient 网络层、OpenAI createGenerationParameters 完整请求体、ChatCompletionPipeline 整体、官方 tokenizer、向量库持久化、斜杠完整 parser、快捷回复/预设库、作用域宏配对（chevrotain CST）
+
+### 已知边界与潜在风险（后续优先补）
+- 正则：JS 特有 flags x/X/u/U/A/J 未实现；trimStrings 的 characterOverride 未接；RegexPipeline 的宏替换已补 substitute 透传，但仍需 App 层接 MacroEngine
+- SSE：choices.delta.content 数组（thinking 块）、choices.message 工具调用、Cohere 完整分支未全覆盖；not-primary 官方抛错、当前解析器返回空
+- 人设：resolve 的 autoLock 未按 power_user.persona_auto_lock 计算
+- 群聊：shouldAutoContinue 未含 is_send_press/abortController 状态；多人回复拼接/nudge 链属 App 调度
+- 角色卡：V2Normalizer 仍可能遇到更多缺失字段组合；BYAF/CharX 文件冲突未穷举
+- 表情：Fuse 模糊匹配、本地 BERT/WebLLM 分类未移植
+- 向量：emoji 码点近似、FileVectorStore 持久化未官方差分
+
 对照官方 release（~/sillytavern-ref），逐项核对引擎覆盖情况。
 ✅=已实现且有测试/差分　🟡=部分/边界　❌=未做
 

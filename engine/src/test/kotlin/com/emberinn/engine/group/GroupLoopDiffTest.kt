@@ -57,6 +57,9 @@ class GroupLoopDiffTest {
                     activatedMembers = body["activatedMembers"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                     showQueue = body["showQueue"]?.jsonPrimitive?.content == "true",
                 )
+                if (body["showQueue"]?.jsonPrimitive?.content == "true" && plan.plan.isNotEmpty()) {
+                    assertEquals("queue field", 1, plan.plan.first().queue)
+                }
                 buildJsonObject {
                     val queueByAvatar = plan.queueOrder.toMap()
                     put("plan", JsonArray(plan.plan.map {
