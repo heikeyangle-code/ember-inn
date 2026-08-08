@@ -4,6 +4,7 @@ import com.emberinn.engine.media.MediaInliner
 import com.emberinn.engine.prompt.CompletionMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
@@ -82,7 +83,8 @@ object ChatRequestBuilder {
         messages: List<CompletionMessage>,
         params: SamplerParams = SamplerParams(),
         options: ProviderRequestOptions = ProviderRequestOptions(),
-    ): String = buildOpenAiCompatibleFromChatML(model, messages.map { messageJson(it) }, params, options)
+        source: String = "openai",
+    ): String = buildOpenAiCompatibleFromChatML(model, messages.map { messageJson(it) }, params, options, source = source)
 
     /**
      * 直接吃官方 ChatML 消息（供 OpenRouter 等先做签名/缓存/媒体处理，再序列化）。
@@ -94,6 +96,7 @@ object ChatRequestBuilder {
         params: SamplerParams = SamplerParams(),
         options: ProviderRequestOptions = ProviderRequestOptions(),
         extra: JsonObject? = null,
+        source: String = "openai",
     ): String {
         val body = buildJsonObject {
             put("model", model)
@@ -120,7 +123,47 @@ object ChatRequestBuilder {
             }
             if (extra != null) extra.forEach { (k, v) -> put(k, v) }
         }
-        return body.toString()
+        return applyGpt5Params(body, model, params, source).toString()
+    }
+
+    /**
+     * 对齐官方 openai.js createGenerationParameters 的 gpt-5 分支
+     * （gptSources = openai / azure_openai / openrouter）：
+     * max_tokens → max_completion_tokens，并删掉 gpt-5 不支持的采样参数。
+     */
+    private fun applyGpt5Params(
+        body: JsonObject,
+        model: String,
+        params: SamplerParams,
+        source: String,
+    ): JsonObject {
+        val gptSources = setOf("openai", "azure_openai", "openrouter")
+        if (source !in gptSources || !Regex("gpt-5").containsMatchIn(model)) return body
+        val map = body.toMutableMap()
+        map["max_completion_tokens"] = map.remove("max_tokens") ?: JsonNull
+        map.remove("logprobs")
+        map.remove("top_logprobs")
+        if (Regex("gpt-5-chat-latest").containsMatchIn(model)) {
+            map.remove("tools")
+            map.remove("tool_choice")
+        } else if (
+            Regex("gpt-5\\.(1|2|3|4)").containsMatchIn(model) &&
+            !Regex("chat-latest").containsMatchIn(model) &&
+            params.reasoningEffort.isBlank()
+        ) {
+            map.remove("frequency_penalty")
+            map.remove("presence_penalty")
+            map.remove("logit_bias")
+            map.remove("stop")
+        } else {
+            map.remove("temperature")
+            map.remove("top_p")
+            map.remove("frequency_penalty")
+            map.remove("presence_penalty")
+            map.remove("logit_bias")
+            map.remove("stop")
+        }
+        return JsonObject(map)
     }
 
     private fun messageJson(message: CompletionMessage): JsonObject = buildJsonObject {

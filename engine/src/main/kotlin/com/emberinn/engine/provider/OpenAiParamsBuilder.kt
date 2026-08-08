@@ -114,9 +114,10 @@ object OpenAiParamsBuilder {
         }.toMutableMap()
 
         if (settings.source == "azure_openai") {
-            body["azure_base_url"] = settings.azureBaseUrl?.let { JsonPrimitive(it) } ?: JsonNull
-            body["azure_deployment_name"] = settings.azureDeploymentName?.let { JsonPrimitive(it) } ?: JsonNull
-            body["azure_api_version"] = settings.azureApiVersion?.let { JsonPrimitive(it) } ?: JsonNull
+            // 对齐官方 JSON.stringify：undefined 字段直接丢弃，不写 null
+            settings.azureBaseUrl?.let { body["azure_base_url"] = JsonPrimitive(it) }
+            settings.azureDeploymentName?.let { body["azure_deployment_name"] = JsonPrimitive(it) }
+            settings.azureApiVersion?.let { body["azure_api_version"] = JsonPrimitive(it) }
             if (Regex("^gpt-[34]").containsMatchIn(model)) body.remove("reasoning_effort")
         }
 
@@ -274,6 +275,35 @@ object OpenAiParamsBuilder {
                     body["messages"] = JsonArray(newMessages)
                 }
                 body.remove("n")
+            }
+        }
+
+        // 对齐官方 gptSources（openai/azure_openai/openrouter）+ /gpt-5/：
+        // max_tokens → max_completion_tokens，并删掉 gpt-5 不支持的采样参数
+        val gptSources = setOf("openai", "azure_openai", "openrouter")
+        if (settings.source in gptSources && Regex("gpt-5").containsMatchIn(model)) {
+            body["max_completion_tokens"] = body.remove("max_tokens") ?: JsonNull
+            body.remove("logprobs")
+            body.remove("top_logprobs")
+            if (Regex("gpt-5-chat-latest").containsMatchIn(model)) {
+                body.remove("tools")
+                body.remove("tool_choice")
+            } else if (
+                Regex("gpt-5\\.(1|2|3|4)").containsMatchIn(model) &&
+                !Regex("chat-latest").containsMatchIn(model) &&
+                body["reasoning_effort"] == null
+            ) {
+                body.remove("frequency_penalty")
+                body.remove("presence_penalty")
+                body.remove("logit_bias")
+                body.remove("stop")
+            } else {
+                body.remove("temperature")
+                body.remove("top_p")
+                body.remove("frequency_penalty")
+                body.remove("presence_penalty")
+                body.remove("logit_bias")
+                body.remove("stop")
             }
         }
 

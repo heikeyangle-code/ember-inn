@@ -386,7 +386,15 @@ fun ProviderDetailScreen(
                 value = contextWindow.toString(),
                 onValueChange = vm::setContextWindow,
                 label = { Text("上下文上限（tokens）") },
-                supportingText = { Text("聊天页占比胶囊的分母；默认 8192，建议按模型真实窗口填（如 128000）") },
+                supportingText = {
+                    Text(
+                        if (contextAuto) {
+                            "默认按所选模型窗口自动填（如 gpt-5.5 = 272K）；手动改数字后不再自动跟随"
+                        } else {
+                            "已手动设置，切换模型不再自动改；想恢复自动请改回后重新打开"
+                        },
+                    )
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

@@ -354,6 +354,13 @@ class LlmClient(
                 if (provider.id == "vertexai") {
                     error("Vertex AI 需要服务账号与项目配置，请使用 Gemini (AI Studio) 或自定义地址。")
                 }
+                // 官方 gptSources 映射：仅 openai/azure_openai/openrouter 对 gpt-5 做参数转换
+                val gptSource = when (provider.id) {
+                    "openrouter" -> "openrouter"
+                    "azure" -> "azure_openai"
+                    "openai" -> "openai"
+                    else -> "other"
+                }
                 val isTextCompletion = profile.model in TEXT_COMPLETION_MODELS && provider.id != "openrouter"
                 val url = when (provider.id) {
                     "azure" -> {
@@ -404,6 +411,7 @@ class LlmClient(
                         params = profile.sampler.copy(stream = stream),
                         options = options,
                         extra = extra,
+                        source = gptSource,
                     )
                 } else if (provider.id == "deepseek") {
                     // 官方 sendDeepSeekRequest：postProcessPrompt(SEMI_TOOLS) + addAssistantPrefix + addReasoningContentToToolCalls
@@ -455,6 +463,7 @@ class LlmClient(
                         params = profile.sampler.copy(stream = stream),
                         options = options.copy(tools = emptyList(), jsonSchema = null),
                         extra = extra,
+                        source = gptSource,
                     )
                 } else {
                     ChatRequestBuilder.buildOpenAiCompatible(
@@ -462,6 +471,7 @@ class LlmClient(
                         messages = messages,
                         params = profile.sampler.copy(stream = stream),
                         options = options,
+                        source = gptSource,
                     )
                 }
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))

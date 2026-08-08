@@ -22,6 +22,24 @@ class ProviderRegistryTest {
     }
 
     @Test
+    fun `context defaults parse by provider and model`() {
+        val openai = ProviderRegistry.get("openai")!!
+        assertEquals(272000, openai.defaultContextWindow)
+        assertEquals(272000, openai.modelContexts["gpt-5.5"])
+        assertEquals(400000, openai.modelContexts["gpt-5.4"])
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        assertEquals(1000000, anthropic.defaultContextWindow)
+        assertEquals(200000, anthropic.modelContexts["claude-haiku-4-5"])
+        val google = ProviderRegistry.get("google")!!
+        assertEquals(1048576, google.defaultContextWindow)
+        assertEquals(16384, openai.defaultMaxTokens)
+        // 未知模型兜底厂商默认窗口，再兜底 8192
+        val custom = ProviderRegistry.get("custom")!!
+        assertEquals(null, custom.defaultContextWindow)
+        assertTrue(custom.modelContexts.isEmpty())
+    }
+
+    @Test
     fun `chat request body builds messages and tools`() {
         val body = ChatRequestBuilder.buildOpenAiCompatible(
             model = "gpt-4o",

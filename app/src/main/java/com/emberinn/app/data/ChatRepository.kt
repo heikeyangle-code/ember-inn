@@ -76,14 +76,22 @@ class ChatRepository(context: Context) {
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
+        // 老档案里存的旧默认（512 / 8192）视为未设置：按厂商/模型自动取真实默认，
+        // 不重进设置页保存也能直接修好“只思考不出正文”与胶囊分母 8K。
+        val effectiveMaxTokens = if (profile.sampler.maxTokens == 512) {
+            provider.defaultMaxTokens ?: 512
+        } else profile.sampler.maxTokens
+        val effectiveContextWindow = if (profile.contextWindow == 8192) {
+            provider.modelContexts[profile.model] ?: provider.defaultContextWindow ?: 8192
+        } else profile.contextWindow
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
             userName = userName,
             charName = charName,
             model = profile.model,
-            maxContextTokens = profile.contextWindow,
-            maxTokens = profile.sampler.maxTokens,
+            maxContextTokens = effectiveContextWindow,
+            maxTokens = effectiveMaxTokens,
             type = type,
             continuePrefill = continuePrefill,
             impersonationPrompt = impersonationPrompt,
@@ -95,7 +103,8 @@ class ChatRepository(context: Context) {
         onPrepared?.invoke(prepared)
         return client.streamChatCompletionsAsync(
             provider = provider,
-            profile = profile,
+            // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）
+            profile = profile.copy(sampler = profile.sampler.copy(maxTokens = effectiveMaxTokens)),
             messages = prepared.messages,
             onDelta = onDelta,
             onDone = onDone,

@@ -1,6 +1,6 @@
 {
  "source": "README 供应商表 + 官方 chat_completion_sources/src/endpoints/backends/chat-completions.js + 2026-08 联网核实",
- "verified_at": "2026-08-07",
+ "verified_at": "2026-08-09",
  "providers": [
   {
    "id": "openai",
@@ -20,7 +20,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://platform.openai.com/docs/api-reference/models/list",
-   "default_max_tokens": 16384
+   "default_max_tokens": 16384,
+   "default_context_window": 272000,
+   "model_contexts": {
+    "gpt-5.5": 272000,
+    "gpt-5.4": 400000,
+    "gpt-5.4-mini": 400000
+   }
   },
   {
    "id": "anthropic",
@@ -39,7 +45,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://platform.claude.com/docs/en/api/models/list",
-   "default_max_tokens": 8192
+   "default_max_tokens": 8192,
+   "default_context_window": 1000000,
+   "model_contexts": {
+    "claude-opus-5": 1000000,
+    "claude-sonnet-5": 1000000,
+    "claude-haiku-4-5": 200000
+   }
   },
   {
    "id": "google",
@@ -58,7 +70,14 @@
     "gemini-3-pro"
    ],
    "requires_key": true,
-   "docs_url": "https://ai.google.dev/gemini-api/docs/models"
+   "docs_url": "https://ai.google.dev/gemini-api/docs/models",
+   "default_max_tokens": 8192,
+   "default_context_window": 1048576,
+   "model_contexts": {
+    "gemini-3.6-flash": 1048576,
+    "gemini-3.5-flash": 1048576,
+    "gemini-3-pro": 1048576
+   }
   },
   {
    "id": "vertexai",
@@ -81,7 +100,14 @@
     "gemini-3-pro"
    ],
    "requires_key": true,
-   "docs_url": "https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal"
+   "docs_url": "https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal",
+   "default_max_tokens": 8192,
+   "default_context_window": 1048576,
+   "model_contexts": {
+    "gemini-3.6-flash": 1048576,
+    "gemini-3.5-flash": 1048576,
+    "gemini-3-pro": 2097152
+   }
   },
   {
    "id": "deepseek",
@@ -99,7 +125,12 @@
    ],
    "requires_key": true,
    "docs_url": "https://api-docs.deepseek.com/",
-   "default_max_tokens": 8192
+   "default_max_tokens": 8192,
+   "default_context_window": 1000000,
+   "model_contexts": {
+    "deepseek-v4-flash": 1000000,
+    "deepseek-v4-pro": 1000000
+   }
   },
   {
    "id": "openrouter",
@@ -122,7 +153,12 @@
    ],
    "requires_key": true,
    "docs_url": "https://openrouter.ai/docs/api-reference/overview",
-   "default_max_tokens": 8192
+   "default_max_tokens": 8192,
+   "model_contexts": {
+    "anthropic/claude-sonnet-5": 1000000,
+    "openai/gpt-5.5": 272000,
+    "deepseek/deepseek-v4-flash": 1000000
+   }
   },
   {
    "id": "groq",
@@ -140,7 +176,12 @@
    ],
    "requires_key": true,
    "docs_url": "https://console.groq.com/docs/models",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "llama-3.3-70b-versatile": 131072,
+    "llama-3.1-8b-instant": 131072
+   }
   },
   {
    "id": "ollama",
@@ -159,7 +200,13 @@
    ],
    "requires_key": false,
    "docs_url": "https://docs.ollama.com/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "qwen3.5:32b": 262144,
+    "llama3.3:70b": 131072,
+    "qwen3-coder:30b": 262144
+   }
   },
   {
    "id": "mistral",
@@ -178,7 +225,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.mistral.ai/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "mistral-medium-3.5": 131072,
+    "mistral-small-4": 131072,
+    "mistral-large-latest": 262144
+   }
   },
   {
    "id": "xai",
@@ -197,7 +250,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.x.ai/",
-   "default_max_tokens": 8192
+   "default_max_tokens": 8192,
+   "default_context_window": 1000000,
+   "model_contexts": {
+    "grok-4.3": 1000000,
+    "grok-4": 262144,
+    "grok-4-fast": 131072
+   }
   },
   {
    "id": "moonshot",
@@ -216,7 +275,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://platform.moonshot.ai/docs/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 1000000,
+   "model_contexts": {
+    "kimi-k3": 1000000,
+    "kimi-k2.6": 262144,
+    "kimi-k2.7-code": 262144
+   }
   },
   {
    "id": "zhipu",
@@ -235,7 +300,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.bigmodel.cn/cn/guide/start/model-overview",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 200000,
+   "model_contexts": {
+    "glm-5.2": 200000,
+    "glm-5.1": 200000,
+    "glm-5": 200000
+   }
   },
   {
    "id": "dashscope",
@@ -253,7 +324,14 @@
     "qwen-flash"
    ],
    "requires_key": true,
-   "docs_url": "https://help.aliyun.com/zh/model-studio/"
+   "docs_url": "https://help.aliyun.com/zh/model-studio/",
+   "default_max_tokens": 8192,
+   "default_context_window": 262144,
+   "model_contexts": {
+    "qwen3.7-max": 262144,
+    "qwen3.7-plus": 262144,
+    "qwen-flash": 131072
+   }
   },
   {
    "id": "siliconflow",
@@ -284,7 +362,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.siliconflow.cn/cn/",
-   "default_max_tokens": 8192
+   "default_max_tokens": 8192,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "deepseek-ai/DeepSeek-V3.2": 131072,
+    "Pro/zai-org/GLM-5.1": 200000,
+    "Qwen/Qwen3.6-35B-A3B": 262144
+   }
   },
   {
    "id": "zai",
@@ -311,7 +395,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.z.ai/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 200000,
+   "model_contexts": {
+    "glm-5.2": 200000,
+    "glm-5.1": 200000,
+    "glm-5": 200000
+   }
   },
   {
    "id": "minimax",
@@ -338,7 +428,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://platform.minimax.io/docs/guides/text-generation",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 1000000,
+   "model_contexts": {
+    "MiniMax-M3": 1000000,
+    "MiniMax-M2.7": 1000000,
+    "MiniMax-M2": 1000000
+   }
   },
   {
    "id": "fireworks",
@@ -357,7 +453,13 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.fireworks.ai/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 262144,
+   "model_contexts": {
+    "accounts/fireworks/models/qwen3p7-plus": 262144,
+    "accounts/fireworks/models/kimi-k2-instruct": 262144,
+    "accounts/fireworks/models/step-3p7-flash-nvfp4": 131072
+   }
   },
   {
    "id": "perplexity",
@@ -375,7 +477,12 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.perplexity.ai/guides/model-cards",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 200000,
+   "model_contexts": {
+    "sonar-pro": 200000,
+    "sonar-reasoning-pro": 200000
+   }
   },
   {
    "id": "workers-ai",
@@ -392,7 +499,11 @@
    ],
    "requires_key": true,
    "docs_url": "https://developers.cloudflare.com/workers-ai/",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "@cf/meta/llama-3.3-70b-instruct": 131072
+   }
   },
   {
    "id": "azure",
@@ -408,7 +519,8 @@
    "default_models": [],
    "requires_key": true,
    "docs_url": "https://learn.microsoft.com/azure/ai-services/openai/reference",
-   "default_max_tokens": 16384
+   "default_max_tokens": 16384,
+   "default_context_window": 272000
   },
   {
    "id": "volcengine",
@@ -426,7 +538,14 @@
     "doubao-seed-2.0-lite"
    ],
    "requires_key": true,
-   "docs_url": "https://www.volcengine.com/docs/82379"
+   "docs_url": "https://www.volcengine.com/docs/82379",
+   "default_max_tokens": 8192,
+   "default_context_window": 262144,
+   "model_contexts": {
+    "doubao-seed-2.1-pro-preview": 262144,
+    "doubao-seed-2.0-pro": 262144,
+    "doubao-seed-2.0-lite": 262144
+   }
   },
   {
    "id": "custom",
@@ -463,7 +582,11 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.cohere.com/reference/chat",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 131072,
+   "model_contexts": {
+    "command-r-plus": 131072
+   }
   },
   {
    "id": "ai21",
@@ -485,7 +608,11 @@
    ],
    "requires_key": true,
    "docs_url": "https://docs.ai21.com/docs/jamba-chat",
-   "default_max_tokens": 4096
+   "default_max_tokens": 4096,
+   "default_context_window": 262144,
+   "model_contexts": {
+    "jamba-large": 262144
+   }
   }
  ]
 }

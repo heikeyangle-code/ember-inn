@@ -39,6 +39,12 @@ data class ProviderSpec(
     /** 建议的最大回复 tokens（推理模型思考会占额度，512 太小正文常被掐空）；用户可改。 */
     @SerialName("default_max_tokens")
     val defaultMaxTokens: Int? = null,
+    /** 该服务商默认上下文窗口（tokens）；未知模型兜底，已知模型优先看 [modelContexts]。 */
+    @SerialName("default_context_window")
+    val defaultContextWindow: Int? = null,
+    /** 已知模型 → 上下文窗口（tokens），用于“默认按模型”自动填胶囊分母。 */
+    @SerialName("model_contexts")
+    val modelContexts: Map<String, Int> = emptyMap(),
     @SerialName("requires_key")
     val requiresKey: Boolean = true,
     @SerialName("docs_url")

@@ -131,6 +131,17 @@ function buildOpenAiParams(settings, model, type, messages) {
         delete generate_data.temperature; delete generate_data.top_p; delete generate_data.frequency_penalty; delete generate_data.presence_penalty;
         if (/^(openai\\/)?(o1)/.test(model)) { generate_data.messages.forEach(msg => { if (msg.role === 'system') msg.role = 'user'; }); delete generate_data.n; }
     }
+    if (['openai','azure_openai','openrouter'].includes(settings.source) && /gpt-5/.test(model)) {
+        generate_data.max_completion_tokens = generate_data.max_tokens;
+        delete generate_data.max_tokens; delete generate_data.logprobs; delete generate_data.top_logprobs;
+        if (/gpt-5-chat-latest/.test(model)) {
+            delete generate_data.tools; delete generate_data.tool_choice;
+        } else if (/gpt-5\.(1|2|3|4)/.test(model) && !/chat-latest/.test(model) && !generate_data.reasoning_effort) {
+            delete generate_data.frequency_penalty; delete generate_data.presence_penalty; delete generate_data.logit_bias; delete generate_data.stop;
+        } else {
+            delete generate_data.temperature; delete generate_data.top_p; delete generate_data.frequency_penalty; delete generate_data.presence_penalty; delete generate_data.logit_bias; delete generate_data.stop;
+        }
+    }
     return generate_data;
 }
 `;
@@ -169,6 +180,12 @@ await add('vertex', { settings: { ...baseSettings, source: 'vertexai' }, model: 
 await add('electronhub', { settings: { ...baseSettings, source: 'electronhub' }, model: 'e', type: 'normal', messages: [] });
 await add('siliconflow', { settings: { ...baseSettings, source: 'siliconflow' }, model: 's', type: 'normal', messages: [] });
 await add('o1', { settings: { ...baseSettings }, model: 'o1', type: 'normal', messages: [{ role: 'system', content: 'x' }] });
+await add('gpt5', { settings: { ...baseSettings }, model: 'gpt-5.5', type: 'normal', messages: [{ role: 'user', content: 'hi' }] });
+await add('gpt5-chat-latest', { settings: { ...baseSettings }, model: 'gpt-5-chat-latest', type: 'normal', messages: [] });
+await add('gpt5-no-reasoning', { settings: { ...baseSettings, reasoningEffort: undefined }, model: 'gpt-5.4', type: 'normal', messages: [] });
+await add('gpt5-reasoning', { settings: { ...baseSettings, reasoningEffort: 'high' }, model: 'gpt-5.4', type: 'normal', messages: [] });
+await add('azure-gpt5', { settings: { ...baseSettings, source: 'azure_openai' }, model: 'gpt-5.5', type: 'normal', messages: [] });
+await add('openrouter-gpt5', { settings: { ...baseSettings, source: 'openrouter' }, model: 'openai/gpt-5.5', type: 'normal', messages: [] });
 
 writeFileSync(outFile, JSON.stringify({ source: 'openai.js createGenerationParameters 全厂商', cases }, null, 2));
 console.log('openai-params:', cases.length, 'cases ->', outFile);

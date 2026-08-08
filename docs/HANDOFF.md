@@ -46,8 +46,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（54 组差分 fixture，共 795 例对拍，全部通过）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 54 组 / 795 例（机器数）为准。
+**已覆盖（54 组差分 fixture，共 801 例对拍，全部通过）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 54 组 / 801 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -305,6 +305,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - ✅ 系统文件选择器（image/video/audio 多选）→ 落盘 filesDir/media/，聊天 extra.media 只存路径 + source:"upload"（官方 saveBase64AsFile 语义，chats.js 逐行核实：{url,type,title,source} / media_display / media_index）→ 发送时 ChatPromptFactory 读文件转 data URL（官方 fetch→base64 语义）→ 引擎链内联 + token 预算；渲染时路径/URL 都支持
 - ✅ 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）+ 世界书命中面板（条目名/命中键/常驻/位置/token）
 - ✅ 2026-08-09 修复“只思考无正文”：ChatRepository 此前不传 maxTokens（总装一直用默认 512，思考型模型额度被思考占满→正文为空）；现 profile.sampler.maxTokens 传入总装，设置页可调，providers.json 各厂商补 default_max_tokens（openai 16384 / anthropic 8192 / deepseek 8192 等），空正文提示语说明原因。
+- ✅ 2026-08-09 根治“只思考无正文 / 继续生成不出内容”（两个真正根因一次修完）：
+  - 引擎 1:1 缺口：官方 openai.js gpt-5 分支未移植。现 openai/azure_openai/openrouter 三源对 gpt-5 系列自动 max_tokens→max_completion_tokens，并按官方删不支持采样参数（gpt-5-chat-latest 删 tools/tool_choice；gpt-5.1–5.4 无 reasoning_effort 删 freq/pres；其余删 temp/top_p/freq/pres）。ChatRequestBuilder 增加 source 参数并接入 LlmClient 三个调用点；OpenAiParamsBuilder 同步镜像。
+  - 老档案默认值迁移：旧 profile 存 maxTokens=512 / contextWindow=8192（旧写死默认）。ChatRepository 运行时把 512→厂商 default_max_tokens（openai 16384）、8192→模型窗口（providers.json model_contexts），不重进设置保存也生效；设置页打开同样自动升级展示。
+  - providers.json 24 家补 default_context_window + model_contexts（gpt-5.5 272K / claude 1M / gemini 1M / deepseek 1M / grok-4.3 1M / kimi-k3 1M / glm 200K / qwen 262K / 豆包 256K 等，2026-08-09 联网核实）；上下文胶囊分母默认按所选模型，设置页显示“按模型自动”（手动改数字后退出自动）。
 - ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
 - ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
 - ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、URL 型资产下载、LaTeX 渲染（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
@@ -347,6 +351,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
+
+
+## 最近一轮 71（2026-08-09：gpt-5 请求体分支 1:1 补全 + openai-params 差分 21→27 例）
+
+- 对照官方 public/scripts/openai.js 逐字移植 gpt-5 分支：gptSources（openai/azure_openai/openrouter）且模型匹配 /gpt-5/ 时，max_tokens → max_completion_tokens，删除 logprobs/top_logprobs；gpt-5-chat-latest 再删 tools/tool_choice；gpt-5.(1|2|3|4) 且无 reasoning_effort 删 freq/pres/logit_bias/stop；其余删 temp/top_p/freq/pres/logit_bias/stop
+- ChatRequestBuilder 增加 source 参数（openai/azure_openai/openrouter/other），LlmClient 三个调用点接入（openrouter/azure 单独映射，custom 等非 gptSources 不转换，对齐官方）
+- OpenAiParamsBuilder 同步镜像 gpt-5 分支；同时修 azure 未填字段（官方 JSON.stringify 丢弃 undefined，此前输出 null）——新差分案例 azure-gpt5 抓出
+- openai-params 差分 21→27 例（gpt5 / gpt5-chat-latest / gpt5-no-reasoning / gpt5-reasoning / azure-gpt5 / openrouter-gpt5）；新增 Gpt5RequestParamsTest 6 例；官方基准 795→801 例；引擎全量 267 测全绿
+- 边界登记：无（该分支为官方 gpt-5 行为锁死；App 老档案迁移见 4.4）
 
 
 ## 最近一轮 70（2026-08-09：总装链对照官方源码深度审计——6 处引擎差异 + 2 处差分桩修正）

@@ -204,6 +204,10 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _message.value = null
     }
 
+    /** 模型窗口优先，其次厂商默认窗口，兜底 8192。 */
+    private fun defaultContextFor(spec: ProviderSpec, model: String): Int =
+        spec.modelContexts[model] ?: spec.defaultContextWindow ?: 8192
+
     private fun buildProfile(): ConnectionProfile {
         val spec = provider() ?: return ConnectionProfile(providerId = "")
         val baseOverride = _baseUrl.value.trim().ifBlank { "" }
