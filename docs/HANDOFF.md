@@ -357,6 +357,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 6. 最近工作日志
 
+## 最近一轮 76（2026-08-09：审计修复——regenerate 官方语义 / 设置回调 / 首页刷新）
+
+- 官方核实（script.js Generate）：regenerate 只对最后一条 AI 生效——先删最后一条再生成。修复：ChatViewModel.regenerate 改为 lastOrNull 判定 + removeAt；continueGeneration 同样只对最后一条；长按菜单“重新生成/继续”只在最后一条 AI 显示
+- 编译修复：ChatStore 缺 jsonArray import；SettingsHome 数据与隐私行误用外层 page（改为 onOpenData 回调）
+- 首页不刷新 bug：清除全部数据/导入后回角色 Tab 列表过期 → CharactersScreen 进入时 LaunchedEffect refresh
+- 无引擎改动；App 编译待 CI
+
 ## 最近一轮 75（2026-08-09：CharX 角色卡资产 App 入库）
 
 - HomeViewModel.importCard：CHARX 格式用引擎 extractAssets 取 icon→头像（+Palette seed）、background/voice 落盘 filesDir/assets/<id>-<type>.<ext>，路径记入 CharacterRecord.backgroundPath/voicePath（旧 JSON 兼容）

@@ -103,6 +103,9 @@ fun CharactersScreen(
     var worldHit by remember { mutableStateOf<WorldInfoHit?>(null) }
     val searchResults = remember(query) { vm.search(query) }
 
+    // 每次进入首页/从设置返回都刷新（导入、清除数据、删除角色后列表不过期）
+    LaunchedEffect(Unit) { vm.refresh() }
+
     val filtered = remember(characters, query) {
         if (query.isBlank()) characters
         else characters.filter { it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }

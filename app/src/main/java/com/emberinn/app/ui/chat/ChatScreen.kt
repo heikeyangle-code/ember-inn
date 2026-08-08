@@ -351,11 +351,13 @@ fun ChatScreen(
                         MenuRow(Icons.Filled.Person, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
-                        MenuRow(Icons.Filled.Refresh, "重新生成") {
-                            vm.regenerate(); menuMessageIndex = null
-                        }
-                        MenuRow(Icons.Filled.FastForward, "继续生成") {
-                            vm.continueGeneration(); menuMessageIndex = null
+                        if (index == lastAiIndex) {
+                            MenuRow(Icons.Filled.Refresh, "重新生成") {
+                                vm.regenerate(); menuMessageIndex = null
+                            }
+                            MenuRow(Icons.Filled.FastForward, "继续生成") {
+                                vm.continueGeneration(); menuMessageIndex = null
+                            }
                         }
                     }
                     MenuRow(Icons.Filled.Delete, "删除这条消息", danger = true) {

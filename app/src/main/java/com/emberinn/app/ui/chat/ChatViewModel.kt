@@ -166,14 +166,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamContinueMode = false
     }
 
-    /** 重新生成：删掉最后一条 AI 回复，用同样的最后一条用户消息重新请求。 */
+    /** 重新生成（官方 option_regenerate）：只对最后一条 AI 生效——先删掉它，再按剩余历史重新请求。 */
     fun regenerate() {
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
-        val lastUser = msgs.indexOfLast { isUser(it) }
-        if (lastUser < 0) return
-        val keep = msgs.take(lastUser + 1)
-        chatStore.replace(sessionId, keep)
+        val last = msgs.lastOrNull() ?: return
+        if (isUser(last)) return
+        chatStore.removeAt(sessionId, msgs.lastIndex)
         refreshMessages()
         _notice.value = null
         if (!isProviderConfigured()) {
@@ -181,7 +180,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
-        startStream(history = keep)
+        startStream(history = chatStore.messages(sessionId))
     }
 
     /**
@@ -192,9 +191,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun continueGeneration() {
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
-        val lastAi = msgs.indexOfLast { !isUser(it) }
-        if (lastAi < 0) return
-        val lastText = textOf(msgs[lastAi])
+        val last = msgs.lastOrNull() ?: return
+        if (isUser(last)) return
+        val lastText = textOf(last)
         _notice.value = null
         if (!isProviderConfigured()) {
             refreshProviderConfigured()

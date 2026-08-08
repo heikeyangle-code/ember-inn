@@ -121,6 +121,7 @@ fun SettingsScreen(
             themePreset = themePreset,
             onOpenProviders = { page = SettingsPage.PROVIDERS },
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
         )
     }
@@ -139,6 +140,7 @@ private fun SettingsHome(
     themePreset: ThemePreset,
     onOpenProviders: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
     val profiles by vm.profiles.collectAsState()
@@ -191,8 +193,8 @@ private fun SettingsHome(
         SettingsGroup(
             "数据与隐私",
             listOf(
-                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified) { page = SettingsPage.DATA },
-                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified) { page = SettingsPage.DATA },
+                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified, onOpenData),
+                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified, onOpenData),
             ),
         ),
         SettingsGroup(
