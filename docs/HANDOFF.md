@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（54 组，共 854 例官方基准，全部通过）**：
+**已覆盖（54 组，共 858 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -87,7 +87,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 13 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
-| SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 11 |
+| SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 15 |
 | 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 10 |
 | 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 7 |
 | 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 16 |
@@ -110,6 +110,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
 - prepare-messages（总装整链，19 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**，打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。
+- SSE：LlmClient.executeStream 已切到官方对拍的 SseChunkParser（逐字符、事件级 catch 跳过 = 官方平滑流语义、[DONE]/message_stop 收尾、reasoning 不进正文）；SseParser 保留为聚合层（asText 非字符串一律跳过，不再拼字面 "null"）。
 - **仍绕过 fixture 的部分**：prepareOpenAIMessages 的 chat→messages 构造循环（names_behavior 内容前缀、isSameModel 签名/推理过滤、media/invocations 从 extra 提取）由 fixture 直接注入消息对象绕过；Kotlin 侧由 App 的 ChatPromptFactory（JSONL → PromptMessage）按官方同名逻辑实现，接线点见 4.7/4.9。
 - 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
 
@@ -218,7 +219,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线）
-消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → 设置页；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。
+消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
 ❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
@@ -333,6 +334,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 63（2026-08-09：SSE null 修复 + LlmClient 切官方对拍解析器 + 聊天页 UI 重排 + 模型页深链）
+
+- 修复“回复全是 NULL NULL”：SseParser.asText() 对非字符串原语（JsonNull/数字/布尔）不再 toString，null content 直接跳过；LlmClient.executeStream 改用官方对拍的 SseChunkParser（逐字符增量、事件级 catch 跳过 = 官方平滑流语义、[DONE]/anthropic message_stop 收尾、reasoning 不进正文）
+- SseChunkParser 补齐官方边界：无匹配分支抛 Unknown event data format；delta:null 时按 JS typeof null==='object' 抛 reading 'text'；cohere 要求 type 匹配；.jsonArray/.jsonObject 全部改安全转型防 JsonNull 抛错
+- sse-stream 差分 11→15 例（null content / 空 content / delta null / choices 空）；官方基准 854→858；引擎 261 测全绿
+- 聊天页 UI 按 README 重排（systemBars 留白、气泡 78% 限宽、间距圆角留白、顶栏输入栏玻璃感、空状态居中）；未配置横幅一键深链“提供商与模型”子页（SettingsScreen deepLink + MainScreen 先退出聊天再切 Tab）
+- HANDOFF：2 节表、2.1、4.3、日志63
 
 ## 最近一轮 62b（2026-08-09：修“配置了模型聊天还说没配置”）
 

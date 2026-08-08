@@ -47,6 +47,77 @@
       ]
     },
     {
+      "id": "openai-delta-null-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": null
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
+      "id": "openai-delta-empty-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": ""
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
+      "id": "openai-delta-null-delta",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": null
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Cannot read properties of null (reading 'text')"
+      }
+    },
+    {
+      "id": "openai-delta-missing-choices",
+      "args": {
+        "body": {
+          "json": {
+            "choices": []
+          }
+        }
+      },
+      "expected": {
+        "error": "Not a primary swipe"
+      }
+    },
+    {
       "id": "anthropic-text",
       "args": {
         "body": {

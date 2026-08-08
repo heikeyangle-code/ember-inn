@@ -39,6 +39,7 @@ fun MainScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var openSessionId by rememberSaveable { mutableStateOf<String?>(null) }
     var openName by rememberSaveable { mutableStateOf("") }
+    var settingsDeepLink by rememberSaveable { mutableStateOf<String?>(null) }
 
     val sessionId = openSessionId
     if (sessionId != null) {
@@ -46,9 +47,10 @@ fun MainScreen(
             sessionId = sessionId,
             name = openName,
             onBack = { openSessionId = null },
-            // 聊天页里跳设置：先退出聊天（否则被早退逻辑挡住，设置 Tab 出不来）
+            // 聊天页里跳设置：先退出聊天（否则被早退逻辑挡住），并深链到“提供商与模型”页
             onOpenSettings = {
                 openSessionId = null
+                settingsDeepLink = "providers"
                 selectedTab = 2
             },
         )
@@ -91,6 +93,8 @@ fun MainScreen(
                     themeMode = themeMode,
                     themePreset = themePreset,
                     onThemeChanged = onThemeChanged,
+                    deepLink = settingsDeepLink,
+                    onDeepLinkConsumed = { settingsDeepLink = null },
                 )
             }
         }

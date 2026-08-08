@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -158,7 +160,12 @@ fun ChatScreen(
         if (isStreaming && streamingText.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
         ChatTopBar(
             name = name,
             avatarPath = vm.avatarPath,
@@ -174,8 +181,8 @@ fun ChatScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (items.isEmpty()) {
                 item { EmptyChat(name = name, accent = accent) }
@@ -345,18 +352,23 @@ private fun ChatTopBar(
     onMenu: () -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 10.dp)
+                .heightIn(min = 52.dp),
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
             }
-            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 36)
-            Spacer(Modifier.size(10.dp))
+            Spacer(Modifier.size(6.dp))
+            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
+            Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
@@ -367,12 +379,12 @@ private fun ChatTopBar(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "会话中",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "会话中 · 数据仅存本地",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = onMenu) {
+            IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
                 Icon(Icons.Filled.MoreVert, contentDescription = "更多")
             }
         }
@@ -410,20 +422,29 @@ private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: I
 @Composable
 private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         ) {
-            Text(
-                text = "还没配置模型",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "还没配置模型",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = "配好后就能开始对话",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                )
+            }
             TextButton(onClick = onOpenSettings) {
                 Text("先选一个模型")
             }
@@ -451,12 +472,12 @@ private fun MessageRow(
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         if (!isUser) {
-            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 28)
-            Spacer(Modifier.size(8.dp))
+            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 32)
+            Spacer(Modifier.size(10.dp))
         }
         Column(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-            modifier = Modifier.widthIn(max = 300.dp),
+            modifier = Modifier.fillMaxWidth(0.78f),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -465,26 +486,26 @@ private fun MessageRow(
                     color = if (isUser) MaterialTheme.colorScheme.onSurfaceVariant else accent,
                     fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(8.dp))
                 Text(
                     text = time,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                 )
             }
-            Spacer(Modifier.size(3.dp))
+            Spacer(Modifier.size(4.dp))
             Surface(
                 shape = RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = if (isUser) 16.dp else 4.dp,
-                    bottomEnd = if (isUser) 4.dp else 16.dp,
+                    topStart = 18.dp,
+                    topEnd = 18.dp,
+                    bottomStart = if (isUser) 18.dp else 6.dp,
+                    bottomEnd = if (isUser) 6.dp else 18.dp,
                 ),
                 color = if (isUser) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress),
             ) {
-                Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     if (isUser) {
                         Text(
                             text = text,
@@ -505,7 +526,8 @@ private fun MessageRow(
                 }
             }
             if (showActions) {
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Spacer(Modifier.size(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SmallAction(Icons.Filled.ContentCopy, "复制", onCopy)
                     SmallAction(Icons.Filled.Refresh, "重新生成", onRegenerate)
                     SmallAction(Icons.Filled.FastForward, "继续", onContinue)
@@ -535,9 +557,9 @@ private fun StreamingRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
     ) {
-        RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 28)
-        Spacer(Modifier.size(8.dp))
-        Column(modifier = Modifier.widthIn(max = 300.dp)) {
+        RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 32)
+        Spacer(Modifier.size(10.dp))
+        Column(modifier = Modifier.fillMaxWidth(0.78f)) {
             Text(
                 text = if (impersonating) "冒充草稿 · 我" else name,
                 style = MaterialTheme.typography.labelMedium,
@@ -546,10 +568,10 @@ private fun StreamingRow(
             )
             Spacer(Modifier.size(3.dp))
             Surface(
-                shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp),
+                shape = RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
-                Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Markdown(
                         content = text.ifEmpty { "…" },
                         modifier = Modifier.heightIn(max = 420.dp),
@@ -573,9 +595,9 @@ private fun StreamingRow(
 
 @Composable
 private fun SmallAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.size(4.dp))
+    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.size(5.dp))
         Text(label, style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -606,33 +628,38 @@ private fun ChatInputBar(
     onVoice: () -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
-            IconButton(onClick = onAttach) {
+            IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
                 Icon(Icons.Filled.Add, contentDescription = "附件 / 语音")
             }
             OutlinedTextField(
                 value = input,
                 onValueChange = onInputChange,
                 placeholder = { Text("输入消息…") },
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(24.dp),
                 maxLines = 4,
-                modifier = Modifier.weight(1f).heightIn(min = 44.dp, max = 160.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 46.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                IconButton(onClick = onVoice) {
+                IconButton(onClick = onVoice, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Filled.Mic, contentDescription = "语音输入")
                 }
-                IconButton(onClick = onSend) {
+                IconButton(onClick = onSend, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Filled.Send, contentDescription = "发送", tint = MaterialTheme.colorScheme.primary)
                 }
             } else {
-                IconButton(onClick = onStop) {
+                IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Filled.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.error)
                 }
             }
@@ -643,23 +670,24 @@ private fun ChatInputBar(
 @Composable
 private fun EmptyChat(name: String, accent: Color) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("✦", style = MaterialTheme.typography.displayMedium, color = accent)
-        Spacer(Modifier.size(12.dp))
+        Text("✦", style = MaterialTheme.typography.displayLarge, color = accent.copy(alpha = 0.85f))
+        Spacer(Modifier.size(16.dp))
         Text(
             "和 ${name.ifBlank { "TA" }} 打个招呼吧",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
-        Spacer(Modifier.size(4.dp))
+        Spacer(Modifier.size(6.dp))
         Text(
             "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 40.dp),
+            lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+            modifier = Modifier.padding(horizontal = 48.dp),
         )
     }
 }

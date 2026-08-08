@@ -129,7 +129,8 @@ object SseParser {
     }
 
     private fun JsonElement?.asText(): String? = when (this) {
-        is JsonPrimitive -> if (isString) content else toString()
+        // 官方只把字符串当文本；null / 数字 / 布尔一律跳过（否则 content:null 会拼出 "null"）
+        is JsonPrimitive -> if (isString) content else null
         else -> null
     }
 }

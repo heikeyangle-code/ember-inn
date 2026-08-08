@@ -70,6 +70,10 @@ async function add(id, jsonData) {
 }
 
 await add('openai-delta', { choices: [{ index: 0, delta: { content: 'hi' } }] });
+await add('openai-delta-null-content', { choices: [{ index: 0, delta: { content: null } }] });
+await add('openai-delta-empty-content', { choices: [{ index: 0, delta: { content: '' } }] });
+await add('openai-delta-null-delta', { choices: [{ index: 0, delta: null }] });
+await add('openai-delta-missing-choices', { choices: [] });
 await add('anthropic-text', { delta: { text: 'yo' } });
 await add('anthropic-thinking', { delta: { thinking: 're' } });
 await add('gemini-parts', { candidates: [{ index: 0, content: { parts: [{ text: 'ab' }, { text: 'cd' }] } }] });

@@ -203,18 +203,41 @@ class LlmClient(
             val line = source.readUtf8Line() ?: break
             sb.append(line).append('\n')
             if (line.isEmpty()) {
-                for (chunk in SseParser.parse(sb.toString(), protocol)) {
-                    if (chunk.done) {
-                        finished = true
-                        onDone()
-                    } else if (chunk.content.isNotEmpty()) {
-                        onDelta(chunk.content)
-                    }
-                }
+                val raw = sb.toString()
                 sb.setLength(0)
+                val dataText = extractSseData(raw)
+                if (dataText == null) continue
+                if (dataText == "[DONE]") {
+                    finished = true
+                    onDone()
+                    continue
+                }
+                // Anthropic 结束事件（event: message_stop 或 data type=message_stop）
+                if (protocol == "anthropic" && raw.contains("message_stop")) {
+                    finished = true
+                    onDone()
+                    continue
+                }
+                try {
+                    // 官方对拍解析器：逐字符增量；推理文本单独通道，不进聊天正文
+                    for (chunk in SseChunkParser.parse(dataText)) {
+                        if (chunk.reasoning) continue
+                        if (chunk.chunk.isNotEmpty()) onDelta(chunk.chunk)
+                    }
+                } catch (e: IllegalStateException) {
+                    // 对齐官方平滑流：parseStreamData 抛 Unknown/Not primary → catch 后跳过该事件
+                }
             }
         }
         if (!finished) onDone()
+    }
+
+    /** 从 SSE 事件文本里取 data: 负载（多行按官方 EventSource 语义用 \n 连接）。 */
+    private fun extractSseData(raw: String): String? {
+        val lines = raw.lineSequence()
+            .mapNotNull { line -> if (line.startsWith("data:")) line.removePrefix("data:").trimStart() else null }
+            .toList()
+        return if (lines.isEmpty()) null else lines.joinToString("\n")
     }
 
     private fun buildRequest(

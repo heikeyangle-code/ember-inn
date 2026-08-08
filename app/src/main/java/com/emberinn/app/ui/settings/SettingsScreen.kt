@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,10 +65,23 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     themePreset: ThemePreset,
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
+    deepLink: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
     vm: ProviderViewModel = viewModel(),
 ) {
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
     var providerId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // 一键深链：聊天页“先选一个模型”→ 直接进提供商与模型页
+    LaunchedEffect(deepLink) {
+        when (deepLink) {
+            "providers" -> page = SettingsPage.PROVIDERS
+            "appearance" -> page = SettingsPage.APPEARANCE
+            "about" -> page = SettingsPage.ABOUT
+            else -> {}
+        }
+        onDeepLinkConsumed()
+    }
 
     // 系统返回：子页逐级返回（详情 → 列表 → 设置主页），主页返回交给系统退出
     BackHandler(enabled = page != SettingsPage.HOME) {
