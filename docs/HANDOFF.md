@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（49 组，共 721 例官方基准，全部通过）**：
+**已覆盖（49 组，共 782 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -99,7 +99,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
-| 消息缓存深度（Claude） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4 |
+| 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
+| 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
 
 **尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -159,7 +160,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ✅ Anthropic/Gemini 请求体已 1:1 + 官方差分（12+11 例）：thinking（adaptive/enabled+预算）、tools/tool_choice、web_search、json_schema、beta headers、采样限制、verbosity、图像模态、systemInstruction、toolConfig 等；
 ✅ 媒体内容块转换（Claude/Gemini）官方差分 25 例（image_url/text/video/audio → Claude image/text 块、Gemini inlineData，含 media_resolution_low/high 与 JS split 边缘语义）；
 ✅ convertClaudeMessages + convertGooglePrompt 整链官方差分 41 例 + cachingAtDepthForClaude 4 例（system 提取 length>1 语义、名字前缀、图片搬移、prefill、同角色合并、tool 块、Gemini 思考签名/分辨率、JS Number 规范化 1.0→1）；已接入 Anthropic/Gemini 请求体（body 差分 17+16 例，system 为官方对象数组形态）；
-   边界：calculateClaudeBudgetTokens（预算计算）、GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）。
+✅ 其余纯转换函数官方差分 61 例：Cohere/AI21/Mistral/xAI 转换器、mergeMessages/postProcessPrompt/addAssistantPrefix、convertTextCompletionPrompt、calculateClaudeBudgetTokens/calculateGoogleBudgetTokens、OpenRouter 缓存/媒体嵌入/推理签名（ProviderConverters）；
+   边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）；convertClaudePrompt 遗留旧函数（仅 token 计数用）未移植。
 🟡 Vertex AI 服务账号认证未做；Claude/Gemini tokenizer 仍是回退 cl100k。
 
 ### 3.12 表情精灵 ✅（引擎层纯逻辑）

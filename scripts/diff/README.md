@@ -48,7 +48,7 @@
 - `media-engine-official.mjs`：官方媒体附件纯逻辑（类型/显示/索引）。
 - `media-inline-official.mjs`：官方 OpenAI 媒体内联内容结构。
 - `media-convert-official.mjs`：官方 prompt-converters.js Claude/Gemini 内容块转换（含 media_resolution_low/high、JS split 边缘）。
-- `prompt-converters-official.mjs`：官方 convertClaudeMessages + convertGooglePrompt + cachingAtDepthForClaude 整链（逐字提取）。
+- `prompt-converters-official.mjs`：官方 prompt-converters.js 全部纯转换函数（Claude/Gemini 整链、Cohere/AI21/Mistral/xAI、mergeMessages、postProcess、预算、OpenRouter 缓存/媒体/签名）逐字提取。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：

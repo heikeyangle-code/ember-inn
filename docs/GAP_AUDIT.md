@@ -2,7 +2,7 @@
 
 ## 差分覆盖审计（2026-08-08）
 
-**已差分：49 组 / 721 例官方基准，全部通过；引擎 226 测全绿。**
+**已差分：49 组 / 782 例官方基准，全部通过；引擎 227 测全绿。**
 
 ### 覆盖充分的模块
 - 宏（158）、世界书（19+17+2）、正则（20+10）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、OpenAI 请求体全厂商（21）、SSE（11）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（16）
@@ -53,7 +53,7 @@
   ✅ preparePromptsForChatCompletion 官方差分 7 例（wi_format/impersonation/role/injection/override/trigger 全核对）；✅ names_behavior COMPLETION 名字清理（PromptNameSanitizer 28 例差分 + ChatHistoryPopulator 接线）
 - ✅ in-chat 深度注入（populationInjectionPrompts）、continue nudge、相对扩展注入 main
 - ✅ 工具调用（tool_calls/tool 结果）、control prompts、pin_examples、squash
-- 🟡 工具预分配 token、媒体内联（OpenAI 已接；Anthropic/Gemini 消息整链已差分并接入 builder）、推理签名（Gemini 已接）、多模态
+- 🟡 工具预分配 token、媒体内联（OpenAI 已接；Anthropic/Gemini 消息整链已差分并接入 builder）、推理签名（Gemini 已接）、多模态；✅ 预算计算/其余提供商转换器/OpenRouter 缓存媒体签名已差分
 - ✅ continue prefill/nudge、人设 IN_CHAT 注入、作者注释组合（ANWithWI）
 - ✅ AuthorsNoteEngine：默认值解析 + ANWithWI 官方差分 7 例（position 默认=1）
 - 🟡 群聊调度核心已实现（SWAP/APPEND/队列），完整调度（App 联动）待做；工具预分配 token/媒体内联/推理签名边界

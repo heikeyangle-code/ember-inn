@@ -1,5 +1,5 @@
 {
-  "source": "prompt-converters.js convertClaudeMessages + convertGooglePrompt + cachingAtDepthForClaude（逐字提取）",
+  "source": "prompt-converters.js 全部纯转换函数（逐字提取）",
   "cases": [
     {
       "id": "system-extract",
@@ -3122,6 +3122,1887 @@
             {
               "type": "text",
               "text": "G"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "moreCases": [
+    {
+      "id": "cohere-empty",
+      "target": "cohere",
+      "args": {
+        "messages": [],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": {
+        "chatHistory": [
+          {
+            "role": "user",
+            "content": "Let's get started."
+          }
+        ]
+      }
+    },
+    {
+      "id": "cohere-tool-after-assistant",
+      "target": "cohere",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "准备调用"
+          },
+          {
+            "role": "user",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": {
+        "chatHistory": [
+          {
+            "role": "user",
+            "content": "准备调用",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cohere-tool-first",
+      "target": "cohere",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "a"
+                }
+              },
+              {
+                "id": "t2",
+                "function": {
+                  "name": "b"
+                }
+              }
+            ]
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": {
+        "chatHistory": [
+          {
+            "role": "user",
+            "content": "I'm going to call a tool for that: a, b",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "a"
+                }
+              },
+              {
+                "id": "t2",
+                "function": {
+                  "name": "b"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cohere-names",
+      "target": "cohere",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Greetings",
+            "name": "example_assistant"
+          },
+          {
+            "role": "user",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": {
+        "chatHistory": [
+          {
+            "role": "system",
+            "content": "Bot: Greetings"
+          },
+          {
+            "role": "user",
+            "content": "NPC: hi"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai21-basic",
+      "target": "ai21",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          },
+          {
+            "role": "assistant",
+            "content": "C"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A\n\nB"
+        },
+        {
+          "role": "assistant",
+          "content": "C"
+        }
+      ]
+    },
+    {
+      "id": "ai21-system",
+      "target": "ai21",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S1"
+          },
+          {
+            "role": "system",
+            "content": "S2"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "S1\n\nS2"
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "ai21-empty",
+      "target": "ai21",
+      "args": {
+        "messages": [],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "Let's get started."
+        }
+      ]
+    },
+    {
+      "id": "ai21-names",
+      "target": "ai21",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Hello",
+            "name": "example_user"
+          },
+          {
+            "role": "assistant",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "User: Hello"
+        },
+        {
+          "role": "assistant",
+          "content": "NPC: hi"
+        }
+      ]
+    },
+    {
+      "id": "mistral-basic",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          },
+          {
+            "role": "assistant",
+            "content": "yo"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "content": "yo"
+        }
+      ]
+    },
+    {
+      "id": "mistral-prefix",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          },
+          {
+            "role": "assistant",
+            "content": "yo"
+          }
+        ],
+        "enablePrefix": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "hi"
+        },
+        {
+          "role": "assistant",
+          "content": "yo",
+          "prefix": true
+        }
+      ]
+    },
+    {
+      "id": "mistral-tool-hash",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "search"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "original-id",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "result",
+            "tool_call_id": "original-id"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "search"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "e3fdd9867",
+              "function": {
+                "name": "f",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "result",
+          "tool_call_id": "e3fdd9867"
+        }
+      ]
+    },
+    {
+      "id": "mistral-fix-tool",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "u"
+          },
+          {
+            "role": "tool",
+            "content": "t",
+            "tool_call_id": "x"
+          },
+          {
+            "role": "user",
+            "content": "after"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "u\n\nafter"
+        },
+        {
+          "role": "tool",
+          "content": "t",
+          "tool_call_id": "a4abd4448"
+        }
+      ]
+    },
+    {
+      "id": "mistral-system-after-assistant",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "a"
+          },
+          {
+            "role": "system",
+            "content": "s"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "a"
+        },
+        {
+          "role": "user",
+          "content": "s"
+        }
+      ]
+    },
+    {
+      "id": "mistral-names",
+      "target": "mistral",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "Greetings",
+            "name": "example_assistant"
+          },
+          {
+            "role": "user",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "Bot: Greetings"
+        },
+        {
+          "role": "user",
+          "content": "NPC: hi"
+        }
+      ]
+    },
+    {
+      "id": "xai-basic",
+      "target": "xai",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "hi",
+            "name": "Bot"
+          },
+          {
+            "role": "user",
+            "content": "yo"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Bot: hi"
+        },
+        {
+          "role": "user",
+          "content": "yo"
+        }
+      ]
+    },
+    {
+      "id": "xai-example-user",
+      "target": "xai",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "hello",
+            "name": "example_user"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "User: hello"
+        }
+      ]
+    },
+    {
+      "id": "xai-user-skip",
+      "target": "xai",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "hi",
+          "name": "NPC"
+        }
+      ]
+    },
+    {
+      "id": "xai-no-char-name",
+      "target": "xai",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "hi",
+            "name": "Bot"
+          }
+        ],
+        "names": {
+          "userName": "",
+          "charName": "",
+          "groupNames": []
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "hi"
+        }
+      ]
+    },
+    {
+      "id": "merge-basic",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A\n\nB"
+        }
+      ]
+    },
+    {
+      "id": "merge-strict-placeholders",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "A"
+          }
+        ],
+        "strict": true,
+        "placeholders": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "Let's get started."
+        },
+        {
+          "role": "assistant",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "merge-strict-system",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "system",
+            "content": "mid"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          }
+        ],
+        "strict": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "S"
+        },
+        {
+          "role": "user",
+          "content": "A\n\nmid\n\nB"
+        }
+      ]
+    },
+    {
+      "id": "merge-single",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          }
+        ],
+        "single": true,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "Bot: A\n\nUser: B"
+        }
+      ]
+    },
+    {
+      "id": "merge-tools-false",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "u"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "r",
+            "tool_call_id": "t1"
+          }
+        ],
+        "tools": false,
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "u"
+        },
+        {
+          "role": "assistant",
+          "content": ""
+        },
+        {
+          "role": "user",
+          "content": "r"
+        }
+      ]
+    },
+    {
+      "id": "merge-media",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "x"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,AA"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "y"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "x"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,AA"
+              }
+            },
+            {
+              "type": "text",
+              "text": "y"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "merge-empty",
+      "target": "merge",
+      "args": {
+        "messages": [],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "Let's get started."
+        }
+      ]
+    },
+    {
+      "id": "merge-name-prefix",
+      "target": "merge",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi",
+            "name": "NPC"
+          }
+        ],
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "NPC: hi"
+        }
+      ]
+    },
+    {
+      "id": "post-merge",
+      "target": "postProcess",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          }
+        ],
+        "type": "merge",
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A\n\nB"
+        }
+      ]
+    },
+    {
+      "id": "post-semi",
+      "target": "postProcess",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "A"
+          },
+          {
+            "role": "user",
+            "content": "B"
+          }
+        ],
+        "type": "semi",
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "A"
+        },
+        {
+          "role": "user",
+          "content": "B"
+        }
+      ]
+    },
+    {
+      "id": "post-strict",
+      "target": "postProcess",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "type": "strict",
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "S"
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "post-unknown",
+      "target": "postProcess",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "type": "nope",
+        "names": {
+          "userName": "User",
+          "charName": "Bot",
+          "groupNames": [
+            "GroupA",
+            "GroupB"
+          ]
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "prefix-basic",
+      "target": "assistantPrefix",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          }
+        ],
+        "tools": [],
+        "property": "prefix"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A"
+        },
+        {
+          "role": "assistant",
+          "content": "B",
+          "prefix": true
+        }
+      ]
+    },
+    {
+      "id": "prefix-tools",
+      "target": "assistantPrefix",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          }
+        ],
+        "tools": [
+          {
+            "type": "function"
+          }
+        ],
+        "property": "prefix"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A"
+        },
+        {
+          "role": "assistant",
+          "content": "B"
+        }
+      ]
+    },
+    {
+      "id": "prefix-tool-role",
+      "target": "assistantPrefix",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "tool",
+            "content": "r"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          }
+        ],
+        "tools": [],
+        "property": "prefix"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A"
+        },
+        {
+          "role": "tool",
+          "content": "r"
+        },
+        {
+          "role": "assistant",
+          "content": "B"
+        }
+      ]
+    },
+    {
+      "id": "prefix-empty",
+      "target": "assistantPrefix",
+      "args": {
+        "messages": [],
+        "tools": [],
+        "property": "prefix"
+      },
+      "expected": []
+    },
+    {
+      "id": "tc-basic",
+      "target": "textCompletion",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "s"
+          },
+          {
+            "role": "user",
+            "content": "u"
+          },
+          {
+            "role": "assistant",
+            "content": "a"
+          }
+        ]
+      },
+      "expected": "System: s\nuser: u\nassistant: a\nassistant:"
+    },
+    {
+      "id": "tc-named-system",
+      "target": "textCompletion",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "s",
+            "name": "NPC"
+          },
+          {
+            "role": "user",
+            "content": "u"
+          }
+        ]
+      },
+      "expected": "NPC: s\nuser: u\nassistant:"
+    },
+    {
+      "id": "tc-string",
+      "target": "textCompletion",
+      "args": {
+        "messages": "raw prompt"
+      },
+      "expected": "raw prompt"
+    },
+    {
+      "id": "budget-claude-adaptive-min",
+      "target": "claudeBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "min",
+        "stream": true,
+        "isAdaptiveModel": true
+      },
+      "expected": "low"
+    },
+    {
+      "id": "budget-claude-adaptive-auto",
+      "target": "claudeBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "auto",
+        "stream": true,
+        "isAdaptiveModel": true
+      },
+      "expected": null
+    },
+    {
+      "id": "budget-claude-low-stream",
+      "target": "claudeBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "stream": true,
+        "isAdaptiveModel": false
+      },
+      "expected": 1024
+    },
+    {
+      "id": "budget-claude-max-nonstream",
+      "target": "claudeBudget",
+      "args": {
+        "maxTokens": 100000,
+        "reasoningEffort": "max",
+        "stream": false,
+        "isAdaptiveModel": false
+      },
+      "expected": 21333
+    },
+    {
+      "id": "budget-claude-unknown",
+      "target": "claudeBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "weird",
+        "stream": true,
+        "isAdaptiveModel": false
+      },
+      "expected": 1024
+    },
+    {
+      "id": "budget-google-flash-low",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "model": "gemini-2.5-flash"
+      },
+      "expected": 100
+    },
+    {
+      "id": "budget-google-flash-lite-low",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "model": "gemini-2.5-flash-lite"
+      },
+      "expected": 512
+    },
+    {
+      "id": "budget-google-pro-low",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "model": "gemini-2.5-pro"
+      },
+      "expected": 128
+    },
+    {
+      "id": "budget-google-flash-auto",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "auto",
+        "model": "gemini-2.5-flash"
+      },
+      "expected": -1
+    },
+    {
+      "id": "budget-google-gemini3-flash-low",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "model": "gemini-3-flash"
+      },
+      "expected": "low"
+    },
+    {
+      "id": "budget-google-gemini3-pro-medium",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "medium",
+        "model": "gemini-3-pro"
+      },
+      "expected": "low"
+    },
+    {
+      "id": "budget-google-unknown",
+      "target": "googleBudget",
+      "args": {
+        "maxTokens": 1000,
+        "reasoningEffort": "low",
+        "model": "foo"
+      },
+      "expected": null
+    },
+    {
+      "id": "or-depth-string",
+      "target": "openRouterDepth",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          },
+          {
+            "role": "user",
+            "content": "C"
+          }
+        ],
+        "cachingAtDepth": 0,
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": "B"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "C",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "or-depth-array",
+      "target": "openRouterDepth",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "C"
+              }
+            ]
+          }
+        ],
+        "cachingAtDepth": 1,
+        "ttl": "1h"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "A"
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "B",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "1h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "C"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "or-depth-skip-system",
+      "target": "openRouterDepth",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          },
+          {
+            "role": "assistant",
+            "content": "B"
+          }
+        ],
+        "cachingAtDepth": 0,
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "S"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": "B"
+        }
+      ]
+    },
+    {
+      "id": "or-sys-basic",
+      "target": "openRouterSys",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "ttl": "24h"
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": [
+            {
+              "type": "text",
+              "text": "S",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "24h"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "or-sys-no-ttl",
+      "target": "openRouterSys",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S"
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": [
+            {
+              "type": "text",
+              "text": "S",
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "or-sys-array-text",
+      "target": "openRouterSys",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": [
+              {
+                "type": "text",
+                "text": "S"
+              },
+              {
+                "type": "image_url",
+                "image_url": {
+                  "url": "data:image/png;base64,X"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": [
+            {
+              "type": "text",
+              "text": "S",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "data:image/png;base64,X"
+              }
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "or-sys-cache-exists",
+      "target": "openRouterSys",
+      "args": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "S",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          },
+          {
+            "role": "user",
+            "content": "A"
+          }
+        ],
+        "ttl": "5m"
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "S",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        },
+        {
+          "role": "user",
+          "content": "A"
+        }
+      ]
+    },
+    {
+      "id": "or-embed-audio",
+      "target": "embedMedia",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "audio_url",
+                "audio_url": {
+                  "url": "data:audio/mpeg;base64,AU"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_audio",
+              "input_audio": {
+                "format": "mp3",
+                "data": "AU"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "or-embed-video-off",
+      "target": "embedMedia",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "video_url",
+                "video_url": {
+                  "url": "data:video/mp4;base64,VI"
+                }
+              }
+            ]
+          }
+        ],
+        "video": false
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "video_url",
+              "video_url": {
+                "url": "data:video/mp4;base64,VI"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "or-reasoning-content",
+      "target": "reasoningContent",
+      "args": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "u"
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": "x",
+            "reasoning_content": "keep"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "u"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "t1",
+              "function": {
+                "name": "f",
+                "arguments": "{}"
+              }
+            }
+          ],
+          "reasoning_content": ""
+        },
+        {
+          "role": "user",
+          "content": "x",
+          "reasoning_content": "keep"
+        }
+      ]
+    },
+    {
+      "id": "or-signatures",
+      "target": "openRouterSignatures",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "a",
+            "signature": "sig-1"
+          },
+          {
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "id": "t1",
+                "signature": "sig-2",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          }
+        ],
+        "model": "openai/gpt-5"
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "a",
+          "reasoning_details": [
+            {
+              "index": 0,
+              "id": "signature-0",
+              "type": "reasoning.encrypted",
+              "data": "sig-1",
+              "format": "openai-responses-v1"
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "t1",
+              "function": {
+                "name": "f",
+                "arguments": "{}"
+              }
+            }
+          ],
+          "reasoning_details": [
+            {
+              "index": 0,
+              "id": "t1",
+              "type": "reasoning.encrypted",
+              "data": "sig-2",
+              "format": "openai-responses-v1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "or-signatures-anthropic",
+      "target": "openRouterSignatures",
+      "args": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "a",
+            "signature": "sig-3"
+          }
+        ],
+        "model": "anthropic/claude-3.7"
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "a",
+          "reasoning_details": [
+            {
+              "index": 0,
+              "id": "signature-0",
+              "type": "reasoning.encrypted",
+              "data": "sig-3",
+              "format": "anthropic-claude-v1"
             }
           ]
         }
