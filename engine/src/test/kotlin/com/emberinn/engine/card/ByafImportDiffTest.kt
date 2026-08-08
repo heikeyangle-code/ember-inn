@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -46,6 +47,7 @@ class ByafImportDiffTest {
                 now = "2026-08-08T00:00:00.000Z",
                 chatNow = "2026-08-08@00h00m00s000ms",
                 preservedFileName = body["preservedFileName"]?.jsonPrimitive?.content,
+                existingFiles = body["exists"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet() ?: emptySet(),
             )
 
             val actual = buildJsonObject {
