@@ -229,6 +229,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 
 ### 4.4 设置 ✅（README 规格）
 - 数据与隐私页已做实：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明展示 + 清除全部数据（二次确认，建议先备份）
+- 首启引导已做实（README 启动体验）：欢迎页 + 导入角色卡（系统选择器直接导入）/ 直接开始聊天（进 AI 对话）/ 跳过；SharedPreferences 标记只显示一次；低饱和氛围渐变
 
 - 设置主页：大标题 + 副标题、设置搜索（真过滤）、常用快捷区（主题/模型/语音/备份）、六组卡片（外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于）
 - 外观与主题：主题模式（跟随系统/浅色/深色）+ 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），点选立即全局生效（实时预览），SharedPreferences 持久化；字体/圆角/背景模糊标“开发中”
@@ -329,7 +330,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P1（功能完整）**
 4. 角色详情编辑页：卡字段编辑、世界书管理 UI、正则/变量/快捷回复、模型覆盖、主题配方
 5. 聊天页 LaTeX 渲染；滑动切回复；上下文占比胶囊 + 世界书命中灯；媒体附件渲染（4.8 的 App 待做项）
-6. 设置剩余组：语音（TTS/STT）、服务（翻译/图像/向量）、数据与隐私（备份/导出）、首启引导
+6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；剩语音（TTS/STT）、服务（翻译/图像/向量）
 
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
@@ -354,6 +355,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 72（2026-08-09：首启引导）
+
+- OnboardingScreen：欢迎页（✦ 品牌 + 低饱和氛围渐变 + 导入角色卡 / 直接开始聊天 / 跳过 + “数据仅保存在本地”信任信号）
+- MainScreen：首次启动展示（OnboardingPrefs SharedPreferences 标记）；导入走 HomeViewModel.importCard（PNG/JSON/CharX/YAML/BYAF）；直接开始聊天 → openChat(null, "AI 对话")
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 71（2026-08-09：设置·数据与隐私页做实）
 
