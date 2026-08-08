@@ -34,7 +34,7 @@ class GroupDepthDiffTest {
             val body = case.getValue("args").jsonObject.getValue("body").jsonObject
             val expected = case.getValue("expected")
 
-            val group = body.getValue("groups").jsonArray.first().jsonObject
+            val group = body["groups"]?.jsonArray?.firstOrNull()?.jsonObject
             val membersList = body.getValue("characters").jsonArray.map { el ->
                 val o = el.jsonObject
                 val dp = o["data"]?.jsonObject?.get("extensions")?.jsonObject?.get("depth_prompt")?.jsonObject
@@ -48,9 +48,9 @@ class GroupDepthDiffTest {
             }
             val actual = GroupDepthPromptsEngine.collect(
                 groupId = body["groupId"]!!.jsonPrimitive.content,
-                generationMode = group["generation_mode"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                members = group["members"]!!.jsonArray.map { it.jsonPrimitive.content },
-                disabledMembers = group["disabled_members"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                generationMode = group?.get("generation_mode")?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                members = group?.get("members")?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                disabledMembers = group?.get("disabled_members")?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                 characterCards = membersList,
                 characterId = body["characterId"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
             )

@@ -309,6 +309,96 @@
         "firstMessage": "你好",
         "alternateGreetings": []
       }
+    },
+    {
+      "id": "persona-only",
+      "args": {
+        "body": {
+          "characters": [],
+          "chid": 0,
+          "power_user": {
+            "persona_description": "只有人设",
+            "prefer_character_prompt": true,
+            "prefer_character_jailbreak": true
+          }
+        }
+      },
+      "expected": {
+        "system": "",
+        "mesExamples": "",
+        "description": "",
+        "personality": "",
+        "persona": "只有人设",
+        "scenario": "",
+        "jailbreak": "",
+        "version": "",
+        "charDepthPrompt": "",
+        "creatorNotes": "",
+        "firstMessage": "",
+        "alternateGreetings": []
+      }
+    },
+    {
+      "id": "group-empty-cards",
+      "args": {
+        "body": {
+          "characters": [
+            {
+              "name": "Alice",
+              "description": "描述 {{char}}",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例",
+              "first_mes": "你好",
+              "data": {
+                "system_prompt": "系统提示",
+                "post_history_instructions": "结语",
+                "character_version": "1.2",
+                "creator_notes": "备注",
+                "alternate_greetings": [
+                  "备选A",
+                  "备选B"
+                ],
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "深度提示"
+                  }
+                }
+              }
+            }
+          ],
+          "chid": 0,
+          "selected_group": "g1",
+          "groupCards": {
+            "description": "",
+            "personality": "",
+            "scenario": "",
+            "mesExamples": ""
+          },
+          "power_user": {
+            "persona_description": "",
+            "prefer_character_prompt": true,
+            "prefer_character_jailbreak": true
+          }
+        }
+      },
+      "expected": {
+        "system": "系统提示",
+        "mesExamples": "",
+        "description": "",
+        "personality": "",
+        "persona": "",
+        "scenario": "",
+        "jailbreak": "结语",
+        "version": "1.2",
+        "charDepthPrompt": "深度提示",
+        "creatorNotes": "备注",
+        "firstMessage": "你好",
+        "alternateGreetings": [
+          "备选A",
+          "备选B"
+        ]
+      }
     }
   ]
 }

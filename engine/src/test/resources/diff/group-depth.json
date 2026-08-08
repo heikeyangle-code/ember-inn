@@ -319,6 +319,105 @@
           "role": "user"
         }
       ]
+    },
+    {
+      "id": "no-group",
+      "args": {
+        "body": {
+          "groupId": "",
+          "characterId": 0,
+          "groups": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "empty-members",
+      "args": {
+        "body": {
+          "groupId": "g",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g",
+              "generation_mode": 1,
+              "members": [],
+              "disabled_members": []
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Alice深度 {{char}}",
+                    "depth": 6,
+                    "role": "user"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "data": {
+                "extensions": {
+                  "depth_prompt": {
+                    "prompt": "Bob深度",
+                    "depth": 8,
+                    "role": "assistant"
+                  }
+                }
+              }
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "data": {
+                "extensions": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": []
     }
   ]
 }

@@ -162,6 +162,55 @@
         "index": 2,
         "jumped": false
       }
+    },
+    {
+      "id": "loose-not-found",
+      "args": {
+        "body": {
+          "text": "abc",
+          "index": 0,
+          "sequence": "|",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 0,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-offset-not-found",
+      "args": {
+        "body": {
+          "text": "a | b",
+          "index": 2,
+          "sequence": ":",
+          "strict": true,
+          "offset": 1
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 2,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-many-backslashes",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
     }
   ]
 }

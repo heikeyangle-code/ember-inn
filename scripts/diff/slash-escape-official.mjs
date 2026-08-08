@@ -69,5 +69,9 @@ await add('closure-start', { text: 'abc {:', index: 4, sequence: '{:', strict: t
 await add('closure-escaped', { text: 'abc \\{:', index: 4, sequence: '{:', strict: true });
 await add('offset-pipe', { text: 'a | b', index: 2, sequence: '|', strict: true, offset: 1 });
 
+
+await add('loose-not-found', { text: 'abc', index: 0, sequence: '|', strict: false });
+await add('strict-offset-not-found', { text: 'a | b', index: 2, sequence: ':', strict: true, offset: 1 });
+await add('strict-many-backslashes', { text: 'abc \\\\| def', index: 4, sequence: '|', strict: true });
 writeFileSync(outFile, JSON.stringify({ source: 'SlashCommandParser testSymbol', cases }, null, 2));
 console.log('slash-escape:', cases.length, 'cases ->', outFile);

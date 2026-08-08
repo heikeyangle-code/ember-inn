@@ -122,5 +122,12 @@ await add('empty-greetings', {
     power_user: { persona_description: '', prefer_character_prompt: true, prefer_character_jailbreak: true },
 });
 
+
+await add('persona-only', { characters: [], chid: 0, power_user: { persona_description: '只有人设', prefer_character_prompt: true, prefer_character_jailbreak: true } });
+await add('group-empty-cards', {
+    characters: [fullChar], chid: 0, selected_group: 'g1',
+    groupCards: { description: '', personality: '', scenario: '', mesExamples: '' },
+    power_user: { persona_description: '', prefer_character_prompt: true, prefer_character_jailbreak: true },
+});
 writeFileSync(outFile, JSON.stringify({ source: 'script.js getCharacterCardFields', cases }, null, 2));
 console.log('character-fields:', cases.length, 'cases ->', outFile);

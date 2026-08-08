@@ -72,5 +72,8 @@ await add('disabled-current', { groupId: 'g', characterId: 0, groups: [{ id: 'g'
 await add('disabled-other', { groupId: 'g', characterId: 1, groups: [{ id: 'g', generation_mode: 1, members: ['a', 'b'], disabled_members: ['a'] }], characters: chars });
 await add('missing', { groupId: 'g', characterId: 0, groups: [{ id: 'g', generation_mode: 1, members: ['a', 'missing'], disabled_members: [] }], characters: chars });
 
+
+await add('no-group', { groupId: '', characterId: 0, groups: [], characters: chars });
+await add('empty-members', { groupId: 'g', characterId: 0, groups: [{ id: 'g', generation_mode: 1, members: [], disabled_members: [] }], characters: chars });
 writeFileSync(outFile, JSON.stringify({ source: 'group-chats.js getGroupDepthPrompts', cases }, null, 2));
 console.log('group-depth:', cases.length, 'cases ->', outFile);
