@@ -44,6 +44,8 @@ class ChatPromptFactory {
         model: String,
         maxContextTokens: Int = 8192,
         maxTokens: Int = 512,
+        type: String = "generate",
+        continuePrefill: Boolean = false,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(parsed?.source)
@@ -94,6 +96,8 @@ class ChatPromptFactory {
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,
+                type = type,
+                continuePrefill = continuePrefill,
             ),
         )
         return Prepared(result.messages, wiResult.activated)

@@ -66,6 +66,8 @@ class ChatRepository(context: Context) {
         onDone: () -> Unit,
         onError: (Throwable) -> Unit,
         options: ProviderRequestOptions = ProviderRequestOptions(),
+        type: String = "generate",
+        continuePrefill: Boolean = false,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
@@ -75,6 +77,8 @@ class ChatRepository(context: Context) {
             userName = userName,
             charName = charName,
             model = profile.model,
+            type = type,
+            continuePrefill = continuePrefill,
         )
         return client.streamChatCompletionsAsync(
             provider = provider,

@@ -1,7 +1,6 @@
 package com.emberinn.app.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -9,7 +8,6 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -23,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 
 private data class TabSpec(val label: String, val icon: ImageVector)
 
@@ -45,9 +42,12 @@ fun MainScreen(
 
     val sessionId = openSessionId
     if (sessionId != null) {
-        com.emberinn.app.ui.chat.ChatScreen(sessionId = sessionId, name = openName) {
-            openSessionId = null
-        }
+        com.emberinn.app.ui.chat.ChatScreen(
+            sessionId = sessionId,
+            name = openName,
+            onBack = { openSessionId = null },
+            onOpenSettings = { selectedTab = 2 },
+        )
         return
     }
 
@@ -76,7 +76,12 @@ fun MainScreen(
                         openName = session.name
                     },
                 )
-                1 -> PlaceholderScreen("聊天", "P0 骨架：会话列表 / 新建对话 / 群聊入口")
+                1 -> com.emberinn.app.ui.sessions.SessionsScreen(
+                    onOpenSession = { session ->
+                        openSessionId = session.id
+                        openName = session.name
+                    },
+                )
                 else -> com.emberinn.app.ui.settings.SettingsScreen(
                     themeMode = themeMode,
                     themePreset = themePreset,
@@ -87,19 +92,3 @@ fun MainScreen(
     }
 }
 
-@Composable
-private fun PlaceholderScreen(title: String, subtitle: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "✦ $title",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 32.dp),
-        )
-    }
-}

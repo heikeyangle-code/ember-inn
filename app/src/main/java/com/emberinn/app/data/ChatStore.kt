@@ -10,6 +10,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class SessionRecord(
@@ -17,6 +20,7 @@ data class SessionRecord(
     val characterId: String?,
     val name: String,
     val updatedAt: Long = System.currentTimeMillis(),
+    val pinned: Boolean = false,
 )
 
 /** 聊天会话存储：sessions 目录（*.json）+ chats 目录（*.jsonl）（对齐官方 jsonl：每行一条消息 JSON）。 */
@@ -34,7 +38,7 @@ class ChatStore(private val context: Context) {
     fun list(): List<SessionRecord> =
         sessionsDir.listFiles { f -> f.extension == "json" }
             ?.mapNotNull { f -> runCatching { json.decodeFromString<SessionRecord>(f.readText()) }.getOrNull() }
-            ?.sortedByDescending { it.updatedAt }
+            ?.sortedWith(compareByDescending<SessionRecord> { it.pinned }.thenByDescending { it.updatedAt })
             ?: emptyList()
 
     fun recent(limit: Int): List<SessionRecord> = list().take(limit)
@@ -62,6 +66,42 @@ class ChatStore(private val context: Context) {
         }
         File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
+    /** 删除指定下标的一条消息（重新生成/删除消息用；对齐官方删除消息后落盘 jsonl）。 */
+    /** 整体替换某会话消息（重新生成/继续/清空会话用）。 */
+    fun replace(sessionId: String, elements: List<JsonElement>) {
+        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(elements))
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
+    fun removeAt(sessionId: String, index: Int) {
+        val list = messages(sessionId).toMutableList()
+        if (index in list.indices) {
+            list.removeAt(index)
+            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+            get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        }
+    }
+
+    /** 会话列表预览：最后一条消息文本（无消息返回 null）。 */
+    fun lastMessage(sessionId: String): String? {
+        val list = messages(sessionId)
+        if (list.isEmpty()) return null
+        val mes = list.last().jsonObject["mes"]?.jsonPrimitive?.contentOrNull
+        return mes?.takeIf { it.isNotBlank() }
+    }
+
+    /** 导出聊天：原始 JSONL 文本（对齐官方聊天文件格式）。 */
+    fun exportJsonl(sessionId: String): String? {
+        val file = File(chatsDir, "$sessionId.jsonl")
+        return if (file.exists()) file.readText() else null
+    }
+
+    /** 删除单个会话（会话元数据 + 聊天 jsonl）。 */
+    fun delete(sessionId: String) {
+        File(sessionsDir, "$sessionId.json").delete()
+        File(chatsDir, "$sessionId.jsonl").delete()
     }
 
     fun deleteByCharacter(characterId: String?) {

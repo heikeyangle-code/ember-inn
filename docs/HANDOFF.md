@@ -216,9 +216,13 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 品牌顶栏 + 搜索框（目前只过滤角色名/描述，非全局）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题。
 
-### 4.3 聊天页 🟡 v1
-消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；配置提供商后走 LlmClient 真实请求（非流式）；返回手势已修。
-❌ 流式渲染/停止、重新生成/继续/冒充/编辑/删除、滑动切回复、长按菜单、Markdown/代码高亮、上下文占比胶囊、世界书命中灯、快捷工具盘、PromptAssembler 拼好的提示词还没接进发送（现在直接发历史消息）。
+### 4.3 聊天页 🟡 v2（核心已接线）
+消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → 设置页；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。
+❌ 滑动切回复、编辑消息、冒充（impersonate）、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）。
+
+### 4.3.5 聊天 Tab（会话列表）✅
+全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。
+❌ 新建群聊入口（引擎群聊激活/合并/深度/循环已 1:1，App 调度层排 P2，UI 如实标“开发中”）。
 
 ### 4.4 设置 ✅（README 规格）
 - 设置主页：大标题 + 副标题、设置搜索（真过滤）、常用快捷区（主题/模型/语音/备份）、六组卡片（外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于）
@@ -235,7 +239,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ❌ 角色卡驱动主题（seed 已存，未生成角色配色）、MeshGradient 氛围背景、玻璃表面（Cloudy/Haze）、预设主题完整落盘（目前只有模式+六套 preset 的基础）。
 
 ### 4.6 数据存储 🟡
-角色卡 characters/*.json + avatars/*.png、会话 sessions/*.json + chats/*.jsonl、提供商 profiles.json、主题 SharedPreferences（README 计划是 DataStore，未迁移）。
+角色卡 characters/*.json + avatars/*.png、会话 sessions/*.json（含 pinned 置顶字段）+ chats/*.jsonl、提供商 profiles.json、主题 SharedPreferences（README 计划是 DataStore，未迁移）。
 ❌ Room 未引入。
 
 ### 4.7 App 接线时官方行为怎么接（源码对照，新会话先读这里）
@@ -277,16 +281,32 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer）、附件上传/URL 导入
 - 发送时把用户选择的附件挂到消息的 media 上（同时用 MediaTokenCost 估算 token，供上下文占比胶囊显示）
 
+### 4.9 App↔引擎接线核对表（本轮聊天链路，确认“结没结上”用这张表）
+
+| 官方行为 | 官方源码位置 | 引擎函数 | App 调用点 | 验证 |
+|---|---|---|---|---|
+| 流式发送（角色卡/世界书/示例/历史总装） | `public/scripts/openai.js` prepareOpenAIMessages + `public/scripts/script.js` generate | PromptPipeline.prepare（整链差分 11 例）+ LlmClient.streamChatCompletionsAsync | ChatPromptFactory.prepare → ChatRepository.streamPrepared → ChatViewModel.startStream → ChatScreen StreamingRow | 差分✅ / CI 编译✅ / 真机待测 |
+| SSE 逐 token 解析 | `public/scripts/sse-stream.js` | SseParser（差分 11 例） | LlmClient.executeStream → onDelta → ViewModel 增量 | 差分✅ / CI 编译✅ |
+| 停止生成（保留已生成部分） | 官方 abortController + mes_stop | StreamSession.cancel | ChatViewModel.stop → 部分落盘 | 差分✅ / CI 编译✅ / 真机待测 |
+| 重新生成 | option_regenerate | —（复用最后用户消息重新请求） | ChatViewModel.regenerate | CI 编译✅ / 真机待测 |
+| 继续生成 | mes_continue | PromptPipeline type=continue + continuePrefill（差分已覆盖） | ChatViewModel.continueGeneration → 续写合并落盘 | 差分✅ / CI 编译✅ / 真机待测 |
+| 删除单条消息 | 官方删除消息后重写 jsonl | ChatJsonl.import/export（文件差分） | ChatStore.removeAt → ChatViewModel.deleteMessage | CI 编译✅ / 真机待测 |
+| 清空会话 | 官方清空聊天 | — | ChatStore.replace(emptyList) | CI 编译✅ / 真机待测 |
+| 会话列表/置顶/导出 | 官方 session 管理 + 聊天文件 | ChatJsonl 格式 | SessionRecord.pinned + ChatStore.list/lastMessage/exportJsonl → SessionsScreen | CI 编译✅ / 真机待测 |
+| 未配置模型 | 官方报错提示不生成占位 | — | ChatViewModel notice → ChatScreen 横幅 → 设置页 | CI 编译✅ / 真机待测 |
+
+> App 层（Compose UI）官方没有对应物，不做差分；上表“差分✅”指其调用的引擎能力已 1:1 差分验证。“CI 编译✅”指引用关系编译期对上；“真机待测”指安装 APK 后人工点一遍的最终确认项。
+
 ## 5. 剩余工作（按优先级）
 
 **P0（“打开即聊”体验短板）**
-1. 聊天 Tab：会话列表 / 新建对话 / 群聊入口（现在是占位页）
-2. 聊天页：流式渲染 + 停止按钮；消息操作（重新生成/继续/复制/删除/编辑）；PromptAssembler 提示词真正接进发送
+1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
+2. ~~流式/停止/重新生成/继续/复制/删除/提示词总装~~ → 已做；剩编辑消息、冒充、滑动切回复
 3. 全局搜索：首页搜索框接会话/世界书/设置
 
 **P1（功能完整）**
 4. 角色详情编辑页：卡字段编辑、世界书管理 UI、正则/变量/快捷回复、模型覆盖、主题配方
-5. 聊天页 Markdown/LaTeX/代码高亮渲染；滑动切回复；上下文占比胶囊 + 世界书命中灯
+5. 聊天页 LaTeX 渲染；滑动切回复；上下文占比胶囊 + 世界书命中灯；媒体附件渲染（4.8 的 App 待做项）
 6. 设置剩余组：语音（TTS/STT）、服务（翻译/图像/向量）、数据与隐私（备份/导出）、首启引导
 
 **P2（引擎边界）**
@@ -312,6 +332,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 59（2026-08-09：聊天页总装流式接线 + 聊天 Tab 会话列表）
+
+- ChatRepository.streamPrepared：PromptPipeline 总装 → LlmClient.streamChatCompletionsAsync（SSE 可取消，官方 sse-stream.js 语义）；新增 type / continuePrefill 透传
+- ChatViewModel：流式发送（未配置模型只提示不写历史）、stop()（取消保留已生成部分）、regenerate()、continueGeneration()（mes_continue 语义，续写合并落盘）、deleteMessage / clearSession / notice / providerConfigured
+- ChatScreen：顶栏返回 + 角色头像 + accent 角色名；AI 左 / 用户右气泡（surfaceContainer / primaryContainer，用户 4dp 角）；流式气泡 + 闪烁光标；最后一条 AI 常驻 4 键（复制/重新生成/继续/删除）+ 长按菜单；清空二次确认；Markdown + 代码高亮；未配置模型横幅 → 设置页
+- 新会话列表页（聊天 Tab）：按时间倒序 + 置顶优先、长按 / ⋯ = 置顶 / 导出 JSONL / 删除（二次确认）、FAB 新建对话（AI 对话或选角色，UUID 多会话）、空状态引导；群聊入口如实标开发中
+- 依赖：multiplatform-markdown-renderer-m3 / coil3 / code 0.43.0 + material-icons-extended（BOM 1.7.8）；**markdownComponents 实际在 com.mikepenz.markdown.compose.components、highlightedCodeBlock/Fence 在 com.mikepenz.markdown.compose.elements**（对 0.43.0 源码 jar 核实，非 m3/code 包）
+- 数据层：SessionRecord.pinned 置顶字段（兼容旧 JSON）、ChatStore.lastMessage / exportJsonl / delete
+- 本轮无新引擎差分（引擎未改动）；引擎 259 测全绿；App 编译待 CI 验证
 
 ## 最近一轮 58（2026-08-08：总装整链差分 5→11 例 + 防漏机制）
 
