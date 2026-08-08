@@ -1023,7 +1023,7 @@ private fun mediaOf(el: JsonElement): List<MediaAttachment> {
             title = mo["title"]?.jsonPrimitive?.contentOrNull ?: "",
         )
     } ?: emptyList()
-}""
+}
 
 private fun nameOf(el: JsonElement, isUser: Boolean): String =
     el.jsonObject["name"]?.jsonPrimitive?.contentOrNull
