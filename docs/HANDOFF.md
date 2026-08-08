@@ -138,7 +138,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 ✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
 
 ### 3.5 提示词组装 ✅（核心）
-PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
+PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
 ✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior（COMPLETION 名字清理）已接：PromptNameSanitizer 对齐 isValidName/sanitizeName（28 例差分），ChatHistoryPopulator 在 COMPLETION 模式清理 name，常量改为官方 NONE=-1/DEFAULT=0/COMPLETION=1/CONTENT=2；🟡 工具预分配 token、媒体内联、推理签名、多模态缺失。
 
 ### 3.6 正则 ✅
@@ -289,6 +289,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 9. 群聊完整调度 + 人设管理 UI；聊天元数据（背景/书签/快照）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天元数据（书签/快照/背景）；群聊多人回复拼接；BYAF 资源提取；App 层：聊天 extra.media 解析 + 媒体渲染组件（图片 Coil3 / 音视频 Media3）
 
+**备注（不能纯引擎做 / 需 App 或外部）**
+- Vertex AI 服务账号认证（需服务账号 JSON + 项目配置，引擎无法实现）
+- Claude/Gemini 官方 tokenizer（可做但用户同意暂时搁置；只影响 token 估算精度，不影响聊天）
+- 150+ 斜杠命令（多数依赖 App 状态/生成流程）；斜杠 REPLACE_GETVAR 等解析语义（部分可做，排 P2）
+- 群聊多人回复拼接 / 组提示 / nudge 链（App 调度层，引擎激活/合并/深度/循环已 1:1）
+- 聊天书签 / 快照 / 背景（引擎逻辑待做，且需 App 数据模型）
+- TTS / STT / 图像 / 翻译 / 聊天摘要 summarize（服务层 P3/P4，官方默认关）
+
 **P3/P4（服务与扩展）**
 11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
 12. 自有插件 API、无障碍贯穿、平板双栏
@@ -298,6 +306,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 56（2026-08-08：ToolLoopPlanner 工具递归决策 + 剩余缺口备注）
+
+- ToolLoopPlanner：官方 ToolManager.RECURSE_LIMIT=5 语义 —— shouldContinue（有 tool_calls 且 recursion < limit）、buildNextMessages（assistant + 每条 tool 结果消息）、nextRecursionCount；单测 4 例
+- 工具真正执行（扩展注册/调用/流式累计）在 App 层，引擎决策层已 1:1
+- HANDOFF 5 新增“备注（不能纯引擎做）”：Vertex 认证 / tokenizer（搁置）/ 150+ 斜杠命令 / 群聊拼接 / 书签快照 / 服务层
+- 引擎 254 测全绿；官方基准 835 例不变
 
 ## 最近一轮 55（2026-08-08：BYAF 资源提取官方差分 6 例）
 
