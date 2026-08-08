@@ -45,6 +45,7 @@
 - `openai-params-official.mjs`：官方 OpenAI 请求体核心。
 - `tool-budget-official.mjs`：官方工具 token 预分配。
 - `chat-pipeline-official.mjs`：官方 ChatCompletionPipeline 整链操作计划。
+- `media-engine-official.mjs`：官方媒体附件纯逻辑（类型/显示/索引）。
 - `build-presets.mjs`：把官方 default/content/presets 打包进引擎 resources。
 - `../engine/src/test/resources/diff/*.json`：官方输出快照（提交入库）。
 - `engine/src/test/kotlin/com/emberinn/engine/prompt/InstructModeDiffTest.kt`：
@@ -103,6 +104,7 @@ node scripts/diff/group-loop-official.mjs
 node scripts/diff/openai-params-official.mjs
 node scripts/diff/tool-budget-official.mjs
 node scripts/diff/chat-pipeline-official.mjs
+node scripts/diff/media-engine-official.mjs
 node scripts/build-presets.mjs
 ```
 
