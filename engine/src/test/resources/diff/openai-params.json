@@ -1,5 +1,5 @@
 {
-  "source": "openai.js createGenerationParameters 核心",
+  "source": "openai.js createGenerationParameters 全厂商",
   "cases": [
     {
       "id": "basic",
@@ -29,7 +29,36 @@
             "requestTokenProbabilities": false,
             "stopStrings": [
               "END"
-            ]
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
           },
           "model": "gpt-4o",
           "type": "normal",
@@ -56,68 +85,6 @@
         "top_p": 1,
         "max_tokens": 512,
         "stream": true,
-        "stop": [
-          "END"
-        ],
-        "chat_completion_source": "openai",
-        "user_name": "U",
-        "char_name": "C",
-        "group_names": [],
-        "include_reasoning": false,
-        "reasoning_effort": "low",
-        "enable_web_search": false,
-        "request_images": false,
-        "request_image_resolution": "auto",
-        "request_image_aspect_ratio": "1:1",
-        "custom_prompt_post_processing": "NONE",
-        "verbosity": "normal"
-      }
-    },
-    {
-      "id": "quiet",
-      "args": {
-        "body": {
-          "settings": {
-            "source": "openai",
-            "temp": 1,
-            "freqPen": 0,
-            "presPen": 0,
-            "topP": 1,
-            "maxTokens": 512,
-            "stream": true,
-            "n": 1,
-            "userName": "U",
-            "charName": "C",
-            "groupNames": [],
-            "showThoughts": false,
-            "reasoningEffort": "low",
-            "enableWebSearch": false,
-            "requestImages": false,
-            "requestImageResolution": "auto",
-            "requestImageAspectRatio": "1:1",
-            "customPromptPostProcessing": "NONE",
-            "verbosity": "normal",
-            "seed": -1,
-            "requestTokenProbabilities": false,
-            "stopStrings": [
-              "END"
-            ]
-          },
-          "model": "gpt-4o",
-          "type": "quiet",
-          "messages": []
-        }
-      },
-      "expected": {
-        "type": "quiet",
-        "messages": [],
-        "model": "gpt-4o",
-        "temperature": 1,
-        "frequency_penalty": 0,
-        "presence_penalty": 0,
-        "top_p": 1,
-        "max_tokens": 512,
-        "stream": false,
         "stop": [
           "END"
         ],
@@ -164,6 +131,35 @@
             "stopStrings": [
               "END"
             ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w",
             "azureBaseUrl": "https://x",
             "azureDeploymentName": "dep",
             "azureApiVersion": "2024-12-01"
@@ -203,11 +199,11 @@
       }
     },
     {
-      "id": "seed",
+      "id": "openrouter",
       "args": {
         "body": {
           "settings": {
-            "source": "openai",
+            "source": "openrouter",
             "temp": 1,
             "freqPen": 0,
             "presPen": 0,
@@ -226,13 +222,42 @@
             "requestImageAspectRatio": "1:1",
             "customPromptPostProcessing": "NONE",
             "verbosity": "normal",
-            "seed": 42,
+            "seed": 7,
             "requestTokenProbabilities": false,
             "stopStrings": [
               "END"
-            ]
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
           },
-          "model": "gpt-4o",
+          "model": "openai/gpt-4o",
           "type": "normal",
           "messages": []
         }
@@ -240,7 +265,7 @@
       "expected": {
         "type": "normal",
         "messages": [],
-        "model": "gpt-4o",
+        "model": "openai/gpt-4o",
         "temperature": 1,
         "frequency_penalty": 0,
         "presence_penalty": 0,
@@ -250,7 +275,7 @@
         "stop": [
           "END"
         ],
-        "chat_completion_source": "openai",
+        "chat_completion_source": "openrouter",
         "user_name": "U",
         "char_name": "C",
         "group_names": [],
@@ -262,15 +287,30 @@
         "request_image_aspect_ratio": "1:1",
         "custom_prompt_post_processing": "NONE",
         "verbosity": "normal",
-        "seed": 42
+        "top_k": 40,
+        "min_p": 0.1,
+        "repetition_penalty": 1.05,
+        "top_a": 0.5,
+        "use_fallback": true,
+        "provider": {
+          "order": [
+            "a"
+          ]
+        },
+        "quantizations": [
+          "q4"
+        ],
+        "allow_fallbacks": true,
+        "middleout": false,
+        "seed": 7
       }
     },
     {
-      "id": "vision",
+      "id": "groq",
       "args": {
         "body": {
           "settings": {
-            "source": "openai",
+            "source": "groq",
             "temp": 1,
             "freqPen": 0,
             "presPen": 0,
@@ -290,12 +330,41 @@
             "customPromptPostProcessing": "NONE",
             "verbosity": "normal",
             "seed": -1,
-            "requestTokenProbabilities": true,
+            "requestTokenProbabilities": false,
             "stopStrings": [
               "END"
-            ]
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
           },
-          "model": "gpt-4o-vision",
+          "model": "llama",
           "type": "normal",
           "messages": []
         }
@@ -303,14 +372,17 @@
       "expected": {
         "type": "normal",
         "messages": [],
-        "model": "gpt-4o-vision",
+        "model": "llama",
         "temperature": 1,
         "frequency_penalty": 0,
         "presence_penalty": 0,
         "top_p": 1,
         "max_tokens": 512,
         "stream": true,
-        "chat_completion_source": "openai",
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "groq",
         "user_name": "U",
         "char_name": "C",
         "group_names": [],
@@ -322,6 +394,1471 @@
         "request_image_aspect_ratio": "1:1",
         "custom_prompt_post_processing": "NONE",
         "verbosity": "normal"
+      }
+    },
+    {
+      "id": "xai-grok3",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "xai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "grok-3-mini",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "grok-3-mini",
+        "temperature": 1,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "chat_completion_source": "xai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "xai-grok4",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "xai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "grok-4",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "grok-4",
+        "temperature": 1,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "chat_completion_source": "xai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "cohere",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "cohere",
+            "temp": 1,
+            "freqPen": 0.5,
+            "presPen": 0.5,
+            "topP": 0.5,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "command",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "command",
+        "temperature": 1,
+        "frequency_penalty": 0.5,
+        "presence_penalty": 0.5,
+        "top_p": 0.5,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "cohere",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "top_k": 40
+      }
+    },
+    {
+      "id": "deepseek",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "deepseek",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 0,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "deepseek",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "deepseek",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 2.220446049250313e-16,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "deepseek",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "workers-ai",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "workers_ai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": 3,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 80,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "llama",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "llama",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "workers_ai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "workers_ai_account_id": "w",
+        "top_k": 50,
+        "repetition_penalty": 1.05,
+        "seed": 3
+      }
+    },
+    {
+      "id": "moonshot-k2",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "moonshot",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "kimi-k2.5",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "kimi-k2.5",
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "moonshot",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "custom",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "custom",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "m",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "m",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "custom",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "custom_url": "http://x",
+        "custom_include_body": true,
+        "custom_exclude_body": false,
+        "custom_include_headers": true
+      }
+    },
+    {
+      "id": "perplexity",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "perplexity",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "p",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "p",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "chat_completion_source": "perplexity",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "top_k": 40
+      }
+    },
+    {
+      "id": "mistral",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "mistralai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "m",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "m",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "mistralai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "safe_prompt": false
+      }
+    },
+    {
+      "id": "chutes",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "chutes",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 20,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "c",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "c",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "chutes",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "min_p": 0.1,
+        "top_k": 20,
+        "repetition_penalty": 1.05
+      }
+    },
+    {
+      "id": "zai",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "zai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "z",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "z",
+        "temperature": 1,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "zai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "zai_endpoint": "z"
+      }
+    },
+    {
+      "id": "minimax",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "minimax",
+            "temp": 0,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "m",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "m",
+        "temperature": 2.220446049250313e-16,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "minimax",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "minimax_endpoint": "m"
+      }
+    },
+    {
+      "id": "nanogpt",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "nanogpt",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "n",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "n",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "nanogpt",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "nanogpt_provider": "p",
+        "nanogpt_payg_override": "x",
+        "top_k": 40,
+        "min_p": 0.1,
+        "repetition_penalty": 1.05,
+        "top_a": 0.5
+      }
+    },
+    {
+      "id": "vertex",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "vertexai",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "v",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "v",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "vertexai",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "top_k": 40,
+        "use_sysprompt": true,
+        "vertexai_auth_mode": "oauth",
+        "vertexai_region": "us",
+        "vertexai_express_project_id": "p"
+      }
+    },
+    {
+      "id": "electronhub",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "electronhub",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "e",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "e",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "electronhub",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "top_k": 40
+      }
+    },
+    {
+      "id": "siliconflow",
+      "args": {
+        "body": {
+          "settings": {
+            "source": "siliconflow",
+            "temp": 1,
+            "freqPen": 0,
+            "presPen": 0,
+            "topP": 1,
+            "maxTokens": 512,
+            "stream": true,
+            "n": 1,
+            "userName": "U",
+            "charName": "C",
+            "groupNames": [],
+            "showThoughts": false,
+            "reasoningEffort": "low",
+            "enableWebSearch": false,
+            "requestImages": false,
+            "requestImageResolution": "auto",
+            "requestImageAspectRatio": "1:1",
+            "customPromptPostProcessing": "NONE",
+            "verbosity": "normal",
+            "seed": -1,
+            "requestTokenProbabilities": false,
+            "stopStrings": [
+              "END"
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
+          },
+          "model": "s",
+          "type": "normal",
+          "messages": []
+        }
+      },
+      "expected": {
+        "type": "normal",
+        "messages": [],
+        "model": "s",
+        "temperature": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "top_p": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "chat_completion_source": "siliconflow",
+        "user_name": "U",
+        "char_name": "C",
+        "group_names": [],
+        "include_reasoning": false,
+        "reasoning_effort": "low",
+        "enable_web_search": false,
+        "request_images": false,
+        "request_image_resolution": "auto",
+        "request_image_aspect_ratio": "1:1",
+        "custom_prompt_post_processing": "NONE",
+        "verbosity": "normal",
+        "siliconflow_endpoint": "s"
       }
     },
     {
@@ -352,16 +1889,55 @@
             "requestTokenProbabilities": false,
             "stopStrings": [
               "END"
-            ]
+            ],
+            "topK": 40,
+            "minP": 0.1,
+            "repetitionPenalty": 1.05,
+            "topA": 0.5,
+            "useFallback": true,
+            "provider": {
+              "order": [
+                "a"
+              ]
+            },
+            "quantizations": [
+              "q4"
+            ],
+            "allowFallbacks": true,
+            "middleout": false,
+            "nanogptProvider": "p",
+            "nanogptPaygOverride": "x",
+            "useSysprompt": true,
+            "vertexaiAuthMode": "oauth",
+            "vertexaiRegion": "us",
+            "vertexaiExpressProjectId": "p",
+            "customUrl": "http://x",
+            "customIncludeBody": true,
+            "customExcludeBody": false,
+            "customIncludeHeaders": true,
+            "zaiEndpoint": "z",
+            "siliconflowEndpoint": "s",
+            "minimaxEndpoint": "m",
+            "workersAiAccountId": "w"
           },
           "model": "o1",
           "type": "normal",
-          "messages": []
+          "messages": [
+            {
+              "role": "user",
+              "content": "x"
+            }
+          ]
         }
       },
       "expected": {
         "type": "normal",
-        "messages": [],
+        "messages": [
+          {
+            "role": "user",
+            "content": "x"
+          }
+        ],
         "model": "o1",
         "stream": false,
         "chat_completion_source": "openai",

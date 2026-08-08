@@ -60,6 +60,29 @@ class OpenAiParamsDiffTest {
                 azureBaseUrl = s["azureBaseUrl"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
                 azureDeploymentName = s["azureDeploymentName"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
                 azureApiVersion = s["azureApiVersion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                topK = s["topK"]?.jsonPrimitive?.content?.toIntOrNull() ?: 40,
+                minP = s["minP"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.1,
+                repetitionPenalty = s["repetitionPenalty"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 1.05,
+                topA = s["topA"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.5,
+                useFallback = s["useFallback"]?.jsonPrimitive?.content == "true",
+                provider = s["provider"],
+                quantizations = s["quantizations"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                allowFallbacks = s["allowFallbacks"]?.jsonPrimitive?.content == "true",
+                middleout = s["middleout"]?.jsonPrimitive?.content == "true",
+                nanogptProvider = s["nanogptProvider"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                nanogptPaygOverride = s["nanogptPaygOverride"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                useSysprompt = s["useSysprompt"]?.jsonPrimitive?.content != "false",
+                vertexaiAuthMode = s["vertexaiAuthMode"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                vertexaiRegion = s["vertexaiRegion"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                vertexaiExpressProjectId = s["vertexaiExpressProjectId"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                customUrl = s["customUrl"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                customIncludeBody = s["customIncludeBody"]?.jsonPrimitive?.content == "true",
+                customExcludeBody = s["customExcludeBody"]?.jsonPrimitive?.content == "true",
+                customIncludeHeaders = s["customIncludeHeaders"]?.jsonPrimitive?.content == "true",
+                zaiEndpoint = s["zaiEndpoint"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                siliconflowEndpoint = s["siliconflowEndpoint"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                minimaxEndpoint = s["minimaxEndpoint"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                workersAiAccountId = s["workersAiAccountId"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
             )
             val actual = json.parseToJsonElement(
                 OpenAiParamsBuilder.build(
@@ -81,6 +104,8 @@ class OpenAiParamsDiffTest {
                 val d = el.content.toDoubleOrNull()
                 if (d != null && d % 1.0 == 0.0 && d in Long.MIN_VALUE.toDouble()..Long.MAX_VALUE.toDouble()) {
                     kotlinx.serialization.json.JsonPrimitive(d.toLong().toString())
+                } else if (d != null) {
+                    kotlinx.serialization.json.JsonPrimitive(d.toString().lowercase())
                 } else el
             } else el
         }
