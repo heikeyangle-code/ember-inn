@@ -6,7 +6,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ChatCompletionPipelineTest {
+/**
+ * 总装器（PromptPipeline.populate = 生产唯一组装路径）行为测试。
+ * ChatCompletionPipeline 旧副本已删除，避免双实现分叉。
+ */
+class PromptPipelineAssemblerTest {
 
     private val env = MacroEnv(user = "玩家", char = "柳春娘")
 
@@ -32,25 +36,52 @@ class ChatCompletionPipelineTest {
         env = env,
     )
 
+    private fun populate(
+        prompts: PromptItems,
+        cc: ChatCompletion,
+        handler: TokenHandler,
+        type: String = "normal",
+        messages: List<PromptMessage> = emptyList(),
+        messageExamples: List<List<ExampleMessage>> = emptyList(),
+        newChatPrompt: String = "[新对话]",
+        newExampleChatPrompt: String = "[示例]",
+        selectedGroup: Boolean = false,
+        cyclePrompt: String = "",
+    ) {
+        PromptPipeline.populate(
+            chatCompletion = cc,
+            handler = handler,
+            input = PromptPipeline.PopulateInput(
+                prompts = prompts,
+                messages = messages,
+                messageExamples = messageExamples,
+                bias = "预填充",
+                type = type,
+                cyclePrompt = cyclePrompt,
+                env = env,
+                newChatPrompt = newChatPrompt,
+                newExampleChatPrompt = newExampleChatPrompt,
+                selectedGroup = selectedGroup,
+            ),
+        )
+    }
+
     @Test
     fun `pipeline assembles prompts in official order`() {
         val handler = TokenHandler(TokenCounter { it.length })
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(10000, 0)
         val prompts = preparePrompts()
-        ChatCompletionPipeline.populate(
+        populate(
             prompts = prompts,
-            chatCompletion = cc,
+            cc = cc,
             handler = handler,
-            env = env,
-            type = "normal",
+            // App/官方 setOpenAIMessages 传入的是“新的在前”
             messages = listOf(
-                PromptMessage("user", "你好"),
                 PromptMessage("assistant", "回应"),
+                PromptMessage("user", "你好"),
             ),
             messageExamples = listOf(listOf(ExampleMessage("玩家", "示例"))),
-            newChatPrompt = "[新对话]",
-            newExampleChatPrompt = "[示例]",
         )
 
         val chat = cc.getChat()
@@ -68,22 +99,15 @@ class ChatCompletionPipelineTest {
     }
 
     @Test
-    fun `extension with start position injects into main`() {
+    fun `extension with end position injects into main`() {
         val handler = TokenHandler(TokenCounter { it.length })
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(10000, 0)
         val prompts = preparePrompts()
-        // 记忆扩展在 PromptManager 合并后带 position=end（默认 IN_PROMPT）
-        ChatCompletionPipeline.populate(
+        populate(
             prompts = prompts,
-            chatCompletion = cc,
+            cc = cc,
             handler = handler,
-            env = env,
-            type = "normal",
-            messages = emptyList(),
-            messageExamples = emptyList(),
-            newChatPrompt = "[新对话]",
-            newExampleChatPrompt = "[示例]",
         )
         val main = (cc.entries[cc.findMessageIndex("main")] as ChatEntry.Collection).collection.items
         // summary 注入 main 末尾
@@ -97,16 +121,11 @@ class ChatCompletionPipelineTest {
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(10000, 0)
         val prompts = preparePrompts()
-        ChatCompletionPipeline.populate(
+        populate(
             prompts = prompts,
-            chatCompletion = cc,
+            cc = cc,
             handler = handler,
-            env = env,
-            type = "normal",
             messages = listOf(PromptMessage("user", "你好")),
-            messageExamples = emptyList(),
-            newChatPrompt = "[新对话]",
-            newExampleChatPrompt = "[示例]",
             selectedGroup = true,
         )
         val hist = (cc.entries[cc.findMessageIndex("chatHistory")] as ChatEntry.Collection).collection.items
@@ -116,18 +135,18 @@ class ChatCompletionPipelineTest {
 
     @Test
     fun `in-chat injection inserts absolute prompts by depth`() {
+        // 官方：入参新的在前（setOpenAIMessages 输出），函数内部按深度插入后整体 reverse
         val messages = listOf(
-            PromptMessage("user", "A"),
-            PromptMessage("assistant", "B"),
             PromptMessage("user", "C"),
+            PromptMessage("assistant", "B"),
+            PromptMessage("user", "A"),
         )
         val absolute = listOf(
             PromptItem("p1", "P1", content = "S1", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 1, injectionOrder = 100),
             PromptItem("p2", "P2", content = "U1", role = "user", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 2, injectionOrder = 50),
         )
-        val out = ChatCompletionPipeline.injectInChat(messages, absolute, emptyList())
-        assertEquals(listOf("A", "S1", "B", "U1", "C"), out.map { it.content })
-        assertTrue(out.all { !it.injected } || out.filter { it.injected }.size == 2)
+        val out = PromptPipeline.populationInjectionPrompts(absolute, messages)
+        assertEquals(listOf("A", "U1", "B", "S1", "C"), out.map { it.content })
     }
 
     @Test
@@ -136,65 +155,48 @@ class ChatCompletionPipelineTest {
             PromptItem("p1", "P1", content = "LOW", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 0, injectionOrder = 100),
             PromptItem("p2", "P2", content = "HIGH", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 0, injectionOrder = 200),
         )
-        val ext = listOf(ExtensionPrompt("x", "system", "EXT", position = "in_chat", depth = 0, order = 100))
-        val out = ChatCompletionPipeline.injectInChat(
-            listOf(PromptMessage("user", "M")),
+        val ext = listOf(
+            PromptItem("x", "X", content = "EXT", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 0, injectionOrder = 100),
+        )
+        val out = PromptPipeline.populationInjectionPrompts(
             absolute,
+            listOf(PromptMessage("user", "M")),
             ext,
         )
-        assertEquals("HIGH", out[0].content)
-        assertEquals("LOW\nEXT", out[1].content)
+        assertEquals(listOf("M", "LOW\nEXT", "HIGH"), out.map { it.content })
     }
 
     @Test
-    fun `continue nudge moves last message and appends nudge`() {
+    fun `continue nudge via pipeline moves last message and appends nudge`() {
         val handler = TokenHandler(TokenCounter { it.length })
         val cc = ChatCompletion(handler)
         cc.setTokenBudget(10000, 0)
         val prompts = PromptItems(
             listOf(PromptItem("chatHistory", "Chat History", marker = true)),
         )
-        ChatHistoryPopulator.populate(
-            messages = listOf(
-                PromptMessage("user", "问"),
-                PromptMessage("assistant", "旧回复"),
-            ),
-            chatCompletion = cc,
+        populate(
             prompts = prompts,
+            cc = cc,
             handler = handler,
             type = "continue",
-            newChatPrompt = "[新]",
-            env = env,
+            messages = listOf(
+                PromptMessage("assistant", "旧回复"),
+                PromptMessage("user", "问"),
+            ),
             cyclePrompt = "旧回复",
-            continueNudgePrompt = "[继续：{{lastChatMessage}}]",
         )
         val chat = cc.getChat().map { it.content }
         // 历史里只剩用户消息 + newChat；末尾集合 = 旧回复 + nudge
-        assertEquals(listOf("[新]", "问", "旧回复", "[继续：旧回复]"), chat)
+        assertEquals(listOf("[新对话]", "问", "旧回复", "[Continue your last message without repeating its original content.]"), chat)
     }
 
     @Test
     fun `persona in chat injects at depth`() {
-        val handler = TokenHandler(TokenCounter { it.length })
-        val cc = ChatCompletion(handler)
-        cc.setTokenBudget(10000, 0)
-        val prompts = PromptItems(
-            listOf(PromptItem("chatHistory", "Chat History", marker = true)),
-        )
-        ChatHistoryPopulator.populate(
-            messages = listOf(PromptMessage("user", "你好"), PromptMessage("assistant", "回应")),
-            chatCompletion = cc,
-            prompts = prompts,
-            handler = handler,
-            type = "normal",
-            newChatPrompt = "[新]",
-            env = env,
-        )
-        val injected = ChatCompletionPipeline.injectInChat(
-            messages = listOf(PromptMessage("user", "你好"), PromptMessage("assistant", "回应")),
+        val injected = PromptPipeline.populationInjectionPrompts(
             absolutePrompts = emptyList(),
+            messages = listOf(PromptMessage("assistant", "回应"), PromptMessage("user", "你好")),
             inChatExtensions = listOf(
-                ExtensionPrompt("personaDescription", "system", "人设文本", position = "in_chat", depth = 1),
+                PromptItem("personaDescription", "Persona", content = "人设文本", role = "system", injectionPosition = PromptInjection.ABSOLUTE, injectionDepth = 1, injectionOrder = 100),
             ),
         )
         assertEquals(listOf("你好", "人设文本", "回应"), injected.map { it.content })

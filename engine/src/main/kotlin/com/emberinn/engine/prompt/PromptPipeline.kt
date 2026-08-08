@@ -98,7 +98,8 @@ object PromptPipeline {
             val depthPrompts = absolutePrompts.filter { it.injectionDepth == depth && it.content.isNotEmpty() }
             val roleMessages = mutableListOf<PromptMessage>()
             val separator = "\n"
-            val orderGroups = linkedMapOf<Int, MutableList<PromptItem>>()
+            // 官方：预置 order=100 空组，保证只有扩展提示（in-chat）的深度也会走合并
+            val orderGroups = linkedMapOf<Int, MutableList<PromptItem>>().apply { put(100, mutableListOf()) }
             for (prompt in depthPrompts) {
                 val order = prompt.injectionOrder ?: 100
                 orderGroups.getOrPut(order) { mutableListOf() }.add(prompt)
@@ -109,9 +110,14 @@ object PromptPipeline {
                     val rolePrompts = orderPrompts
                         .filter { it.role == role }
                         .joinToString(separator) { it.content }
-                    val extensionPrompt = inChatExtensions
-                        .filter { it.injectionDepth == depth && it.role == role }
-                        .joinToString(separator) { it.content }
+                    // 官方：扩展提示只在 order==100 组合并（其余 order 组 extensionPrompt=''）
+                    val extensionPrompt = if (order == 100) {
+                        inChatExtensions
+                            .filter { it.injectionDepth == depth && it.role == role }
+                            .joinToString(separator) { it.content }
+                    } else {
+                        ""
+                    }
                     val jointPrompt = listOf(rolePrompts, extensionPrompt)
                         .filter { it.isNotEmpty() }
                         .map { it.trim() }
@@ -165,13 +171,15 @@ object PromptPipeline {
         chatCompletion: ChatCompletion,
         handler: TokenHandler,
         input: PopulateInput,
+        continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
     ) {
         val prompts = input.prompts
 
+        // 官方 Message.fromPromptAsync(prompt) = createAsync(role, content, identifier)：name 不复制
         fun messageFromPrompt(p: PromptItem): CompletionMessage = CompletionMessage(
             role = p.role,
             content = p.content,
-            name = p.name.ifEmpty { null },
+            name = null,
             identifier = p.identifier,
             tokens = handler.countAsync(p.content, "prompt"),
         )
@@ -217,10 +225,26 @@ object PromptPipeline {
         if (prompts.has("enhanceDefinitions")) addToChatCompletion("enhanceDefinitions")
         if (input.bias.isNotBlank() && prompts.has("bias")) addToChatCompletion("bias")
 
-        // 相对扩展提示注入 main（absolute 分支：官方会转成 injection 放 main 附近，本实现跳过）
+        // 相对扩展提示注入 main；main 缺失时官方把相对提示转成绝对注入（插到 absolutePrompts 中 main 附近）
+        val absolutePrompts = prompts.collection
+            .filter { it.injectionPosition == PromptInjection.ABSOLUTE }
+            .toMutableList()
         fun injectToMain(p: PromptItem) {
             if (chatCompletion.has("main")) {
                 chatCompletion.insert(messageFromPrompt(p), "main", p.position ?: "end")
+            } else {
+                val indexOfMain = absolutePrompts.indexOfFirst { it.identifier == "main" }
+                if (indexOfMain >= 0) {
+                    val main = absolutePrompts[indexOfMain]
+                    val promptCopy = p.copy(
+                        role = main.role,
+                        injectionPosition = main.injectionPosition,
+                        injectionDepth = main.injectionDepth,
+                        injectionOrder = main.injectionOrder,
+                    )
+                    val newIndex = if (p.position == "end") indexOfMain + 1 else indexOfMain
+                    absolutePrompts.add(newIndex.coerceAtMost(absolutePrompts.size), promptCopy)
+                }
             }
         }
         val knownPrompts = listOf("summary", "authorsNote", "vectorsMemory", "vectorsDataBank", "smartContext")
@@ -245,8 +269,12 @@ object PromptPipeline {
             val continueMessage = CompletionMessage(
                 role = chatMessage.role,
                 content = content,
-                // 官方：仅 names_behavior=COMPLETION 时 setName(sanitizeName(name))
-                name = if (input.namesBehavior == PromptAssembler.NAMES_COMPLETION) chatMessage.name else null,
+                // 官方：仅 COMPLETION 且原名存在时 setName(sanitizeName(name))
+                name = if (input.namesBehavior == PromptAssembler.NAMES_COMPLETION && chatMessage.name != null) {
+                    PromptNameSanitizer.sanitizeName(chatMessage.name)
+                } else {
+                    null
+                },
                 identifier = "continuePrefill",
                 tokens = handler.countAsync(content, "conversation"),
             )
@@ -255,7 +283,6 @@ object PromptPipeline {
         }
 
         // in-chat 深度注入（官方 populationInjectionPrompts）
-        val absolutePrompts = prompts.collection.filter { it.injectionPosition == PromptInjection.ABSOLUTE }
         val finalMessages = populationInjectionPrompts(absolutePrompts, messages)
 
         // 示例/历史顺序
@@ -274,6 +301,8 @@ object PromptPipeline {
                 prompts = prompts,
                 handler = handler,
                 type = input.type,
+                cyclePrompt = input.cyclePrompt,
+                continueNudgePrompt = continueNudgePrompt,
                 newChatPrompt = input.newChatPrompt,
                 env = input.env,
                 selectedGroup = input.selectedGroup,
@@ -296,6 +325,8 @@ object PromptPipeline {
                 prompts = prompts,
                 handler = handler,
                 type = input.type,
+                cyclePrompt = input.cyclePrompt,
+                continueNudgePrompt = continueNudgePrompt,
                 newChatPrompt = input.newChatPrompt,
                 env = input.env,
                 selectedGroup = input.selectedGroup,

@@ -63,7 +63,11 @@ object ChatHistoryPopulator {
                     CompletionMessage(
                         role = last.role,
                         content = MacroEngine.substitute(last.content, env),
-                        name = last.name,
+                        name = if (namesBehavior == PromptAssembler.NAMES_COMPLETION && last.name != null) {
+                            PromptNameSanitizer.sanitizeName(last.name)
+                        } else {
+                            null
+                        },
                         identifier = last.identifier ?: "",
                         tokens = handler.countAsync(MacroEngine.substitute(last.content, env), "conversation"),
                     ),
@@ -140,10 +144,12 @@ object ChatHistoryPopulator {
             } else {
                 substitutedContent
             }
+            // 官方 populateChatHistory：fromPromptAsync 丢弃 prompt.name，
+            // 仅 COMPLETION 模式 setName（isValidName 通过则原样，否则 sanitizeName），其余模式不带 name 字段
             val effectiveName = if (namesBehavior == PromptAssembler.NAMES_COMPLETION && m.name != null) {
-                PromptNameSanitizer.sanitizeName(m.name)
+                if (PromptNameSanitizer.isValidName(m.name)) m.name else PromptNameSanitizer.sanitizeName(m.name)
             } else {
-                m.name
+                null
             }
 
             // 官方 inlineMediaAttachment：LIST 逐个 / GALLERY 按 mediaIndex；

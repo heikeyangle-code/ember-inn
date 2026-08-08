@@ -109,7 +109,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
-- prepare-messages（总装整链，19 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**，打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。
+- prepare-messages（总装整链，19 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**，打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。in-chat 扩展合并的 order==100 规则由引擎单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖）。
 - SSE：运行时只有官方对拍的 SseChunkParser 一条路（逐字符、事件级 catch 跳过 = 官方平滑流语义、[DONE]/message_stop 收尾、reasoning 独立通道）；旧 SseParser 已删除（曾把 content:null 拼成字面 "null"）。
 - **仍绕过 fixture 的部分**：prepareOpenAIMessages 的 chat→messages 构造循环（names_behavior 内容前缀、isSameModel 签名/推理过滤、media/invocations 从 extra 提取）由 fixture 直接注入消息对象绕过；Kotlin 侧由 App 的 ChatPromptFactory（JSONL → PromptMessage）按官方同名逻辑实现，接线点见 4.7/4.9。
 - 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
@@ -147,7 +147,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 5 例；边界：absolute 提示 in-chat 深度注入暂原样透传）、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
-✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior（COMPLETION 名字清理）已接：PromptNameSanitizer 对齐 isValidName/sanitizeName（28 例差分），ChatHistoryPopulator 在 COMPLETION 模式清理 name，常量改为官方 NONE=-1/DEFAULT=0/COMPLETION=1/CONTENT=2；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 19 例，ChatHistoryPopulator 官方分支）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
+✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 19 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s、非法 flags）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
@@ -340,6 +340,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 
+## 最近一轮 70（2026-08-09：总装链对照官方源码深度审计——6 处引擎差异 + 2 处差分桩修正）
+
+- 逐层对照官方 openai.js 组装链审计，修复 6 处引擎差异：
+  1. PromptPipeline.populate 调 ChatHistoryPopulator 漏传 cyclePrompt/continueNudgePrompt → 默认 continue nudge（非 prefill）路径失效；两处调用已透传（App ChatPromptFactoryTest 抓出）
+  2. name 字段语义：官方 Message.fromPromptAsync 只复制 role/content/identifier，name 仅 COMPLETION 模式 setName（isValidName 通过才原样）；此前 DEFAULT 模式也带 name → 请求体多字段；已修 ChatHistoryPopulator 主循环/continue 移出消息 + PromptPipeline messageFromPrompt/continuePrefill
+  3. injectToMain 缺 main 时官方把相对扩展转成绝对注入（插到 absolutePrompts 中 main 附近）；此前直接丢弃
+  4. populationInjectionPrompts 未预置 order=100 空组 → 只有 in-chat 扩展提示的深度整段丢失；已补
+  5. populationInjectionPrompts 扩展提示合并缺 order==100 判断 → 扩展被并进所有 order 组；已补（旧副本原是对的，移植时丢了）
+  6. 删除生产未用的 ChatCompletionPipeline.kt 旧副本（仅测试引用），测试改写为 PromptPipelineAssemblerTest 锁生产唯一路径（含 continue nudge 顶层接线回归）
+- 差分脚本两处桩不忠实，已修并重新生成 fixture：Message.fromPromptAsync 桩不再保留 name（真实官方 createAsync 不复制）；promptManager.serviceSettings 补 names_behavior，isValidName/sanitizeName 用官方正则实现
+- 引擎 259 测全绿（含重生成后 19 例总装差分 + 组装器单测）；官方基准 858 例不变
+- 边界登记：quietImage（extras 图片提示）未接线；群聊 newChatPrompt 由 App 传入（群聊 App 层 P2）
 ## 最近一轮 69（2026-08-09：锁死两处接线盲区为自动化测试）
 
 - 引擎：LlmClientTest 新增流式运行时测试（MockWebServer 喂 role/null/reasoning_content/正文/[DONE]），断言正文只含“你好”、思考走 onReasoning、永不出现字面 null——锁住“运行时必须走官方对拍 SseChunkParser”

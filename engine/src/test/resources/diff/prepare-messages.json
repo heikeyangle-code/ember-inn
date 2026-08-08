@@ -125,7 +125,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -292,7 +292,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -458,7 +458,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -627,7 +627,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -939,7 +939,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -1096,7 +1096,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -1378,7 +1378,7 @@
         {
           "role": "assistant",
           "content": "最后是助手",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
@@ -1542,7 +1542,7 @@
         {
           "role": "assistant",
           "content": "回复一",
-          "name": "Char"
+          "name": null
         },
         {
           "role": "user",
