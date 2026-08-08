@@ -78,5 +78,8 @@ await add('v2', { spec: 'chara_card_v2', name: '旧', description: 'd', talkativ
 await add('v1', { name: '旧版', description: '描述', personality: '性格', first_mes: '你好', scenario: '场景', mes_example: '示例', creator_notes: '备注', tags: 'a,b', talkativeness: 0.6 });
 await add('v1-no-date', { name: '无日期', description: 'd' });
 
+
+await add('v3-no-data', { spec: 'chara_card_v3', name: '无data', description: 'd', talkativeness: 0.9, fav: true, chat: 'c' });
+await add('v1-tags-array', { name: '数组', description: 'd', tags: ['x', 'y'], mes_example: 'm' });
 writeFileSync(outFile, JSON.stringify({ source: 'characters.js getCharaCardV2+unsetPrivateFields', cases }, null, 2));
 console.log('json-export:', cases.length, 'cases ->', outFile);

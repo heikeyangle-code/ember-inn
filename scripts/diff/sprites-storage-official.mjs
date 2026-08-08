@@ -96,5 +96,11 @@ await add('risu-no-name', {
     data: { data: { extensions: { risuai: { additionalAssets: [['x', 'WA==']] } } } },
 });
 
+
+await add('path-empty', { method: 'path', name: '' });
+await add('risu-existing', {
+    method: 'risu',
+    data: { data: { name: 'Bob', extensions: { risuai: { additionalAssets: [['joy', 'Sk9Z']], emotions: [] } } } },
+});
 writeFileSync(outFile, JSON.stringify({ source: 'sprites.js getSpritesPath/importRisuSprites', cases }, null, 2));
 console.log('sprites-storage:', cases.length, 'cases ->', outFile);

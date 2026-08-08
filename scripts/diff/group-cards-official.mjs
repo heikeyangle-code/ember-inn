@@ -138,5 +138,17 @@ await add('missing-member', {
     characters: chars, chat_metadata: {},
 });
 
+
+await add('append-disabled-other', {
+    groupId: 'g1', characterId: 0,
+    groups: [{ ...baseGroup, generation_mode: 1, disabled_members: ['a'] }],
+    characters: chars, chat_metadata: {},
+});
+await add('empty-values', {
+    groupId: 'g1', characterId: 0,
+    groups: [{ ...baseGroup }],
+    characters: chars.map(c => ({ ...c, description: '', personality: '', scenario: '', mes_example: '' })),
+    chat_metadata: {},
+});
 writeFileSync(outFile, JSON.stringify({ source: 'group-chats.js getGroupCharacterCardsLazy', cases }, null, 2));
 console.log('group-cards:', cases.length, 'cases ->', outFile);

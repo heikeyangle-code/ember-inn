@@ -153,6 +153,108 @@
           }
         }
       }
+    },
+    {
+      "id": "trailing-dots",
+      "args": {
+        "body": {
+          "yaml": "name: Alice...\n"
+        }
+      },
+      "expected": {
+        "name": "Alice",
+        "description": "",
+        "first_mes": "",
+        "create_date": "2026-08-08T00:00:00.000Z",
+        "chat": "Alice - 2026-08-08@00h00m00s000ms",
+        "personality": "",
+        "creatorcomment": "",
+        "avatar": "none",
+        "mes_example": "",
+        "scenario": "",
+        "talkativeness": 0.5,
+        "creator": "",
+        "tags": [],
+        "fav": false,
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "Alice",
+          "description": "",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "alternate_greetings": [],
+          "extensions": {
+            "talkativeness": 0.5,
+            "fav": false,
+            "world": "",
+            "depth_prompt": {
+              "prompt": "",
+              "depth": 4,
+              "role": "system"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "multiline-context",
+      "args": {
+        "body": {
+          "yaml": "name: 多行\ncontext: |\n  第一行\n  第二行\n"
+        }
+      },
+      "expected": {
+        "name": "多行",
+        "description": "第一行\n第二行\n",
+        "first_mes": "",
+        "create_date": "2026-08-08T00:00:00.000Z",
+        "chat": "多行 - 2026-08-08@00h00m00s000ms",
+        "personality": "",
+        "creatorcomment": "",
+        "avatar": "none",
+        "mes_example": "",
+        "scenario": "",
+        "talkativeness": 0.5,
+        "creator": "",
+        "tags": [],
+        "fav": false,
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "多行",
+          "description": "第一行\n第二行\n",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "alternate_greetings": [],
+          "extensions": {
+            "talkativeness": 0.5,
+            "fav": false,
+            "world": "",
+            "depth_prompt": {
+              "prompt": "",
+              "depth": 4,
+              "role": "system"
+            }
+          }
+        }
+      }
     }
   ]
 }

@@ -283,6 +283,102 @@
         "scenario": "森林\n海边",
         "mesExamples": "<START>\n示例A\n<START>\\n示例B"
       }
+    },
+    {
+      "id": "append-disabled-other",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [
+                "a"
+              ],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "爱丽丝描述",
+              "personality": "开朗",
+              "scenario": "森林",
+              "mes_example": "示例A"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "鲍勃描述 {{char}}",
+              "personality": "沉稳",
+              "scenario": "海边",
+              "mes_example": "<START>\\n示例B"
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "爱丽丝描述\n鲍勃描述 Bob",
+        "personality": "开朗\n沉稳",
+        "scenario": "森林\n海边",
+        "mesExamples": "<START>\n示例A\n<START>\\n示例B"
+      }
+    },
+    {
+      "id": "empty-values",
+      "args": {
+        "body": {
+          "groupId": "g1",
+          "characterId": 0,
+          "groups": [
+            {
+              "id": "g1",
+              "generation_mode": 1,
+              "members": [
+                "a",
+                "b"
+              ],
+              "disabled_members": [],
+              "generation_mode_join_prefix": "",
+              "generation_mode_join_suffix": ""
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "description": "",
+              "personality": "",
+              "scenario": "",
+              "mes_example": ""
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "description": "",
+              "personality": "",
+              "scenario": "",
+              "mes_example": ""
+            }
+          ],
+          "chat_metadata": {}
+        }
+      },
+      "expected": {
+        "description": "",
+        "personality": "",
+        "scenario": "",
+        "mesExamples": ""
+      }
     }
   ]
 }

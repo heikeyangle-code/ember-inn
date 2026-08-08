@@ -204,6 +204,56 @@
           }
         }
       }
+    },
+    {
+      "id": "path-empty",
+      "args": {
+        "body": {
+          "method": "path",
+          "name": ""
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "risu-existing",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "name": "Bob",
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [
+                    [
+                      "joy",
+                      "Sk9Z"
+                    ]
+                  ],
+                  "emotions": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [
+          {
+            "spritesPath": "/chars/Bob",
+            "filename": "joy.png"
+          }
+        ],
+        "data": {
+          "data": {
+            "name": "Bob",
+            "extensions": {
+              "risuai": {}
+            }
+          }
+        }
+      }
     }
   ]
 }

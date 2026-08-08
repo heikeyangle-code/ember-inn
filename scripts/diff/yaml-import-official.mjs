@@ -137,5 +137,8 @@ await add('creators-and-fav', [
     'talkativeness: 0.8',
 ].join('\n'));
 
+
+await add('trailing-dots', 'name: Alice...\n');
+await add('multiline-context', 'name: 多行\ncontext: |\n  第一行\n  第二行\n');
 writeFileSync(outFile, JSON.stringify({ source: 'characters.js importFromYaml', cases }, null, 2));
 console.log('yaml-import:', cases.length, 'cases ->', outFile);

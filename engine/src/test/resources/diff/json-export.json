@@ -36,6 +36,24 @@
         }
       },
       "expected": "{\n    \"name\": \"无日期\",\n    \"description\": \"d\",\n    \"personality\": \"\",\n    \"scenario\": \"\",\n    \"first_mes\": \"\",\n    \"mes_example\": \"\",\n    \"creatorcomment\": \"\",\n    \"avatar\": \"none\",\n    \"talkativeness\": 0.5,\n    \"fav\": false,\n    \"tags\": [],\n    \"spec\": \"chara_card_v2\",\n    \"spec_version\": \"2.0\",\n    \"data\": {\n        \"name\": \"无日期\",\n        \"description\": \"d\",\n        \"personality\": \"\",\n        \"scenario\": \"\",\n        \"first_mes\": \"\",\n        \"mes_example\": \"\",\n        \"creator_notes\": \"\",\n        \"system_prompt\": \"\",\n        \"post_history_instructions\": \"\",\n        \"tags\": [],\n        \"creator\": \"\",\n        \"character_version\": \"\",\n        \"alternate_greetings\": [],\n        \"extensions\": {\n            \"talkativeness\": 0.5,\n            \"fav\": false,\n            \"world\": \"\",\n            \"depth_prompt\": {\n                \"prompt\": \"\",\n                \"depth\": 4,\n                \"role\": \"system\"\n            }\n        }\n    },\n    \"create_date\": \"2026-08-08T00:00:00.000Z\"\n}"
+    },
+    {
+      "id": "v3-no-data",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v3\",\"name\":\"无data\",\"description\":\"d\",\"talkativeness\":0.9,\"fav\":true,\"chat\":\"c\"}"
+        }
+      },
+      "expected": "{\n    \"spec\": \"chara_card_v3\",\n    \"name\": \"无data\",\n    \"description\": \"d\",\n    \"talkativeness\": 0.9,\n    \"fav\": false,\n    \"data\": {\n        \"extensions\": {\n            \"fav\": false\n        }\n    }\n}"
+    },
+    {
+      "id": "v1-tags-array",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"数组\",\"description\":\"d\",\"tags\":[\"x\",\"y\"],\"mes_example\":\"m\"}"
+        }
+      },
+      "expected": "{\n    \"name\": \"数组\",\n    \"description\": \"d\",\n    \"tags\": [\n        \"x\",\n        \"y\"\n    ],\n    \"mes_example\": \"m\",\n    \"personality\": \"\",\n    \"scenario\": \"\",\n    \"first_mes\": \"\",\n    \"creatorcomment\": \"\",\n    \"avatar\": \"none\",\n    \"talkativeness\": 0.5,\n    \"fav\": false,\n    \"spec\": \"chara_card_v2\",\n    \"spec_version\": \"2.0\",\n    \"data\": {\n        \"name\": \"数组\",\n        \"description\": \"d\",\n        \"personality\": \"\",\n        \"scenario\": \"\",\n        \"first_mes\": \"\",\n        \"mes_example\": \"m\",\n        \"creator_notes\": \"\",\n        \"system_prompt\": \"\",\n        \"post_history_instructions\": \"\",\n        \"tags\": [\n            \"x\",\n            \"y\"\n        ],\n        \"creator\": \"\",\n        \"character_version\": \"\",\n        \"alternate_greetings\": [],\n        \"extensions\": {\n            \"talkativeness\": 0.5,\n            \"fav\": false,\n            \"world\": \"\",\n            \"depth_prompt\": {\n                \"prompt\": \"\",\n                \"depth\": 4,\n                \"role\": \"system\"\n            }\n        }\n    },\n    \"create_date\": \"2026-08-08T00:00:00.000Z\"\n}"
     }
   ]
 }
