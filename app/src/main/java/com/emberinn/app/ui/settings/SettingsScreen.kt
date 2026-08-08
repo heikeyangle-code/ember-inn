@@ -57,7 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -78,6 +78,7 @@ fun SettingsScreen(
             "providers" -> page = SettingsPage.PROVIDERS
             "appearance" -> page = SettingsPage.APPEARANCE
             "about" -> page = SettingsPage.ABOUT
+            "data" -> page = SettingsPage.DATA
             else -> {}
         }
         onDeepLinkConsumed()
@@ -112,6 +113,7 @@ fun SettingsScreen(
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )
+        SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
         else -> SettingsHome(
             vm = vm,
@@ -189,8 +191,8 @@ private fun SettingsHome(
         SettingsGroup(
             "数据与隐私",
             listOf(
-                SettingRow("数据仅保存在本地", "存储位置见关于页", Color.Unspecified),
-                SettingRow("备份与导出", "开发中", Color.Unspecified),
+                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified) { page = SettingsPage.DATA },
+                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified) { page = SettingsPage.DATA },
             ),
         ),
         SettingsGroup(
