@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.data.ProviderState
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -132,6 +133,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                         }
                     }
                     showClearConfirm = false
+                    ProviderState.refresh(null)
                     Toast.makeText(context, "已清除全部本地数据", Toast.LENGTH_SHORT).show()
                 }) { Text("清除", color = MaterialTheme.colorScheme.error) }
             },

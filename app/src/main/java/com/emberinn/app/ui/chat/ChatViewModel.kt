@@ -10,6 +10,8 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
@@ -233,12 +235,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
     }
 
-    /** 编辑消息（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI 接线）。 */
+    /** 编辑消息（官方 updateMessage：substituteParams 宏替换 + 清 extra.bias；regex(isEdit)/bias 提取待正则 UI 接线）。 */
     fun editMessage(index: Int, newText: String) {
         if (_isStreaming.value) return
         val text = newText.trim()
         if (text.isEmpty()) return
-        chatStore.updateMessage(sessionId, index, text)
+        val env = MacroEnv(user = currentUserName, char = currentCharName)
+        val processed = MacroEngine.substitute(text, env)
+        chatStore.updateMessage(sessionId, index, processed)
         refreshMessages()
     }
 
@@ -399,7 +403,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         _worldHits.value = info.activatedWorldInfo
                             .map { it.name.ifBlank { it.keys.firstOrNull().orEmpty() } }
                             .filter { it.isNotBlank() }
-                        _contextUsage.value = Pair(info.counts.values.sum(), info.maxContextTokens)
+                        // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
+                        _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
                     }
                 },
             )

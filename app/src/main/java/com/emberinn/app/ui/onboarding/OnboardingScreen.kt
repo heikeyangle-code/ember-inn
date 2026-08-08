@@ -1,5 +1,8 @@
 package com.emberinn.app.ui.onboarding
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +18,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -29,6 +37,13 @@ fun OnboardingScreen(
     onDirectChat: () -> Unit,
     onSkip: () -> Unit,
 ) {
+    // README 品牌开场：1.5–2s 微光 → 淡入欢迎内容（Lottie 资产未提供，用 Compose 动画替代）
+    var showWelcome by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1600)
+        showWelcome = true
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -49,6 +64,8 @@ fun OnboardingScreen(
         ) {
             Text("✦", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(18.dp))
+            AnimatedVisibility(visible = showWelcome, enter = fadeIn(animationSpec = tween(600))) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "欢迎来到余烬酒馆",
                 style = MaterialTheme.typography.headlineSmall,
@@ -79,6 +96,8 @@ fun OnboardingScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+                }
+            }
         }
     }
 }
