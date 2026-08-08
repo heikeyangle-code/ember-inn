@@ -10,6 +10,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
+import com.emberinn.engine.card.CardImporter
 import com.emberinn.engine.card.CharXImporter
 import com.emberinn.engine.card.CharacterCardExporter
 import java.io.File
