@@ -1,6 +1,8 @@
 package com.emberinn.app.ui.chat
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
@@ -288,10 +290,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         if (c.moveToFirst()) c.getString(0) else null
                     }
                 }.getOrNull() ?: "attachment"
-                val extension = extensionFor(type, displayName)
+                // 官方 compressImage：非 jpeg/png/webp 一律转缩略图（JPEG，最长边 2048）；>2MB 的提供商规则登记
+                val safeMime = type == "image/jpeg" || type == "image/png" || type == "image/webp"
+                val processedBytes = if (mediaType == "image" && !safeMime) compressToJpeg(bytes) else bytes
+                val extension = if (processedBytes !== bytes) "jpg" else extensionFor(type, displayName)
                 val dir = java.io.File(app.filesDir, "media").apply { mkdirs() }
                 val file = java.io.File(dir, "${System.currentTimeMillis()}_${displayName.hashCode().toUInt().toString(16)}.$extension")
-                file.writeBytes(bytes)
+                file.writeBytes(processedBytes)
                 _pendingMedia.value = _pendingMedia.value + MediaAttachment(
                     type = mediaType,
                     url = file.absolutePath,
@@ -299,6 +304,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 )
             }
         }
+    }
+
+    /** 官方 createThumbnail 近似：最长边 2048 等比缩放 → JPEG 85。 */
+    private fun compressToJpeg(bytes: ByteArray): ByteArray {
+        val src = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
+        val maxSide = 2048
+        val longest = maxOf(src.width, src.height)
+        val scale = if (longest > maxSide) maxSide.toFloat() / longest else 1f
+        val scaled = if (scale < 1f) {
+            Bitmap.createScaledBitmap(src, (src.width * scale).toInt().coerceAtLeast(1), (src.height * scale).toInt().coerceAtLeast(1), true)
+        } else {
+            src
+        }
+        val out = java.io.ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
+        if (scaled !== src) scaled.recycle()
+        return out.toByteArray()
     }
 
     private fun extensionFor(mime: String, fallbackName: String): String {
