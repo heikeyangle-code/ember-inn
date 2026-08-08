@@ -59,7 +59,7 @@ function getOrCreatePersonaDescriptor(userAvatar, powerUser) {
     return object;
 }
 
-function resolvePersonaForChat(chatMetaPersona, userAvatars, connectedPersonas, defaultPersona, allowMultiConnections, userAvatar) {
+function resolvePersonaForChat(chatMetaPersona, userAvatars, connectedPersonas, defaultPersona, allowMultiConnections, userAvatar, personaAutoLock) {
     let chatPersona = '';
     let connectType = null;
     let unlockChat = false;
@@ -89,7 +89,8 @@ function resolvePersonaForChat(chatMetaPersona, userAvatars, connectedPersonas, 
     if (chatMetaPersona && !userAvatars.includes(chatMetaPersona)) unlockChat = true;
     if (defaultPersona && !userAvatars.includes(defaultPersona)) { clearDefault = true; defaultPersona = null; }
 
-    return { chatPersona, connectType, unlockChat, clearDefault, willSwitch: !!chatPersona && userAvatar !== chatPersona, autoLock: !!chatPersona && false };
+    const autoLock = !!chatPersona && personaAutoLock && (userAvatar !== chatPersona ? userAvatar !== chatMetaPersona : !chatMetaPersona);
+    return { chatPersona, connectType, unlockChat, clearDefault, willSwitch: !!chatPersona && userAvatar !== chatPersona, autoLock };
 }
 `;
 
@@ -103,7 +104,7 @@ const runCase = new Function([
     '    if (method === "connected") return getConnectedPersonas(b.personaDescriptions, b.characterKey);',
     '    if (method === "connectionObj") return getCurrentConnectionObj(b.selectedGroup ?? null, b.charAvatar ?? null);',
     '    if (method === "descriptor") return getOrCreatePersonaDescriptor(b.userAvatar, b.powerUser);',
-    '    if (method === "resolve") return resolvePersonaForChat(b.chatMetaPersona ?? null, b.userAvatars ?? [], b.connectedPersonas ?? [], b.defaultPersona ?? null, b.allowMultiConnections ?? false, b.userAvatar);',
+    '    if (method === "resolve") return resolvePersonaForChat(b.chatMetaPersona ?? null, b.userAvatars ?? [], b.connectedPersonas ?? [], b.defaultPersona ?? null, b.allowMultiConnections ?? false, b.userAvatar, b.personaAutoLock ?? false);',
     '    throw new Error("unknown method");',
     '};',
 ].join('\n'));
@@ -139,6 +140,9 @@ await add('resolve-chat-lock', { method: 'resolve', chatMetaPersona: 'a', userAv
 await add('resolve-connected', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'b'], connectedPersonas: ['a'], defaultPersona: null, allowMultiConnections: false, userAvatar: 'b' });
 await add('resolve-default', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'd'], connectedPersonas: [], defaultPersona: 'd', allowMultiConnections: false, userAvatar: 'a' });
 await add('resolve-invalid', { method: 'resolve', chatMetaPersona: 'x', userAvatars: ['a'], connectedPersonas: [], defaultPersona: 'd', allowMultiConnections: false, userAvatar: 'a' });
+await add('resolve-auto-lock-switch', { method: 'resolve', chatMetaPersona: 'a', userAvatars: ['a', 'b'], connectedPersonas: [], defaultPersona: null, allowMultiConnections: false, userAvatar: 'b', personaAutoLock: true });
+await add('resolve-auto-lock-same', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'b'], connectedPersonas: ['a'], defaultPersona: null, allowMultiConnections: false, userAvatar: 'a', personaAutoLock: true });
+
 
 writeFileSync(outFile, JSON.stringify({ source: 'personas.js 纯逻辑', cases }, null, 2));
 console.log('persona-engine:', cases.length, 'cases ->', outFile);

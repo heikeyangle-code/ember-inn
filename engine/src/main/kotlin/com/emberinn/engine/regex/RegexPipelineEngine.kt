@@ -28,6 +28,7 @@ object RegexPipelineEngine {
         depth: Int? = null,
         disabledExtensions: Set<String> = emptySet(),
         substitute: (String) -> String = { it },
+        characterOverride: String? = null,
     ): String {
         var finalString = raw
         if ("regex" in disabledExtensions || raw.isEmpty()) return finalString
@@ -56,6 +57,7 @@ object RegexPipelineEngine {
                     ),
                     finalString,
                     substitute,
+                    characterOverride,
                 )
             }
         }

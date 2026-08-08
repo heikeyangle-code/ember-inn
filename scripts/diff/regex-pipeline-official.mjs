@@ -65,7 +65,7 @@ const stub = `
 let extension_settings = { disabledExtensions: [] };
 let scripts = [];
 const substitute_find_regex = { NONE: 0, RAW: 1, ESCAPED: 2 };
-function substituteParams(text, options = {}) { if (!text) return ''; return String(text); }
+function substituteParams(text, options = {}) { if (!text) return ''; return String(text).replace(/\{\{char\}\}/gi, options.name2Override ?? ''); }
 function substituteParamsExtended(text, options = {}, postProcess) { const out = substituteParams(text, options); return typeof postProcess === 'function' ? postProcess(out) : out; }
 function getRegexScripts() { return scripts; }
 function consoleWarn() {}
@@ -112,6 +112,7 @@ await add('edit-skip', { raw: 'foo', placement: 1, isEdit: true, scripts: [{ ...
 await add('depth-min', { raw: 'foo', placement: 1, depth: 1, scripts: [{ ...baseScript, minDepth: 2 }] });
 await add('depth-max', { raw: 'foo', placement: 1, depth: 5, scripts: [{ ...baseScript, maxDepth: 3 }] });
 await add('disabled-extension', { raw: 'foo', placement: 1, disabledExtensions: ['regex'], scripts: [{ ...baseScript }] });
+await add('trim-char-override', { raw: 'hello Alice', placement: 1, characterOverride: 'Alice', scripts: [{ ...baseScript, findRegex: '(Alice)', replaceString: '$1', trimStrings: ['{{char}}'] }] });
 
 writeFileSync(outFile, JSON.stringify({ source: 'regex/engine.js getRegexedString', cases }, null, 2));
 console.log('regex-pipeline:', cases.length, 'cases ->', outFile);

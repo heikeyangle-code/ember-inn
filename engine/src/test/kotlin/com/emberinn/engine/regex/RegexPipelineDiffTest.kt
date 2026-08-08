@@ -59,6 +59,7 @@ class RegexPipelineDiffTest {
                 isEdit = body["isEdit"]?.jsonPrimitive?.content == "true",
                 depth = body["depth"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content?.toIntOrNull(),
                 disabledExtensions = body["disabledExtensions"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet() ?: emptySet(),
+                characterOverride = body["characterOverride"]?.jsonPrimitive?.content,
             )
             assertEquals("case $id", expected, actual)
         }

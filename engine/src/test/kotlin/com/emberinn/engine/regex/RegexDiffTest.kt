@@ -37,9 +37,9 @@ class RegexDiffTest {
                 disabled = bool(args, "disabled"),
                 substituteRegex = int(args, "substituteRegex"),
             )
-            val actual = RegexEngine.apply(script, str(args, "raw")) { text ->
+            val actual = RegexEngine.apply(script, str(args, "raw"), substitute = { text ->
                 text.replace("{{user}}", "Alice").replace("{{char}}", "Bob")
-            }
+            })
             assertEquals("case $id", expected, actual)
         }
     }

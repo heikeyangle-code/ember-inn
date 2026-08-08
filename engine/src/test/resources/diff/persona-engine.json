@@ -397,6 +397,60 @@
         "willSwitch": true,
         "autoLock": false
       }
+    },
+    {
+      "id": "resolve-auto-lock-switch",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": "a",
+          "userAvatars": [
+            "a",
+            "b"
+          ],
+          "connectedPersonas": [],
+          "defaultPersona": null,
+          "allowMultiConnections": false,
+          "userAvatar": "b",
+          "personaAutoLock": true
+        }
+      },
+      "expected": {
+        "chatPersona": "a",
+        "connectType": "chat",
+        "unlockChat": false,
+        "clearDefault": false,
+        "willSwitch": true,
+        "autoLock": true
+      }
+    },
+    {
+      "id": "resolve-auto-lock-same",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": null,
+          "userAvatars": [
+            "a",
+            "b"
+          ],
+          "connectedPersonas": [
+            "a"
+          ],
+          "defaultPersona": null,
+          "allowMultiConnections": false,
+          "userAvatar": "a",
+          "personaAutoLock": true
+        }
+      },
+      "expected": {
+        "chatPersona": "a",
+        "connectType": "character",
+        "unlockChat": false,
+        "clearDefault": false,
+        "willSwitch": false,
+        "autoLock": true
+      }
     }
   ]
 }

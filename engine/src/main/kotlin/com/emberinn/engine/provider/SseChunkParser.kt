@@ -117,7 +117,7 @@ object SseChunkParser {
         val content = obj["content"] as? JsonPrimitive
         val objectType = obj["object"]?.jsonPrimitive?.content
         if (content != null && content.isString && content.content.isNotEmpty() && objectType != "chat.completion.chunk") {
-            if ((obj["index"] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > 0 } == true) return out
+            if ((obj["index"] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > 0 } == true) throw IllegalStateException("Not a primary swipe")
             for (ch in content.content) {
                 val data = setPath(root, listOf("content"), JsonPrimitive(ch.toString()))
                 out += SseParsedChunk(data, ch.toString())
@@ -128,9 +128,9 @@ object SseChunkParser {
         // choices
         val choices = obj["choices"]?.jsonArray
         if (choices != null) {
-            if (choices.isEmpty()) return out
+            if (choices.isEmpty()) throw IllegalStateException("Not a primary swipe")
             val choice = choices.first().jsonObject
-            if ((choice["index"] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > 0 } == true) return out
+            if ((choice["index"] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > 0 } == true) throw IllegalStateException("Not a primary swipe")
             val choiceText = choice["text"] as? JsonPrimitive
             if (choiceText != null && choiceText.isString && choiceText.content.isNotEmpty()) {
                 for (ch in choiceText.content) {
@@ -180,6 +180,20 @@ object SseChunkParser {
                         out += SseParsedChunk(data, ch.toString())
                     }
                     return out
+                }
+                val dcArray = deltaObj["content"]?.jsonArray
+                if (dcArray != null && dcArray.isNotEmpty()) {
+                    val thinking = dcArray.first().jsonObject["thinking"]?.jsonArray
+                    if (thinking != null && thinking.isNotEmpty()) {
+                        val text = thinking.first().jsonObject["text"] as? JsonPrimitive
+                        if (text != null && text.isString && text.content.isNotEmpty()) {
+                            for (ch in text.content) {
+                                val data = setPath(root, listOf("choices", "0", "delta", "content", "0", "thinking", "0", "text"), JsonPrimitive(ch.toString()))
+                                out += SseParsedChunk(data, ch.toString(), reasoning = true, reasoningPresent = true)
+                            }
+                            return out
+                        }
+                    }
                 }
             }
             val message = choice["message"]?.jsonObject

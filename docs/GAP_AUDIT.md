@@ -2,7 +2,7 @@
 
 ## 差分覆盖审计（2026-08-08）
 
-**已差分：42 组 / 581 例官方基准，全部通过；引擎 218 测全绿。**
+**已差分：42 组 / 587 例官方基准，全部通过；引擎 218 测全绿。**
 
 ### 覆盖充分的模块
 - 宏（158）、世界书（19+17+2）、正则（20+9）、PNG（6）、角色卡导入导出（YAML 5 / JSON 15 / CharX 9 / BYAF 35）、提示词组装（preparePrompts 7 + 历史/示例 9 + 角色卡字段 8 + 提示词工具 9）、Anthropic/Gemini（23）、SSE（8）、表情（19+8+9）、群聊（15+8+7+11）、名字规则（28）、斜杠转义（13）、导演备注（7）、人设引擎（14）
@@ -11,9 +11,9 @@
 - LlmClient 网络层、OpenAI createGenerationParameters 完整请求体、ChatCompletionPipeline 整体、官方 tokenizer、向量库持久化、斜杠完整 parser、快捷回复/预设库、作用域宏配对（chevrotain CST）
 
 ### 已知边界与潜在风险（后续优先补）
-- 正则：JS 特有 flags x/X/u/U/A/J 未实现；trimStrings 的 characterOverride 未接；RegexPipeline 的宏替换已补 substitute 透传，但仍需 App 层接 MacroEngine
-- SSE：choices.delta.content 数组（thinking 块）、choices.message 工具调用、Cohere 完整分支未全覆盖；not-primary 官方抛错、当前解析器返回空
-- 人设：resolve 的 autoLock 未按 power_user.persona_auto_lock 计算
+- 正则：JS 特有 flags x/X/u/U/A/J 未实现；trimStrings characterOverride 已接（官方差分覆盖）；RegexPipeline 宏替换已透传，App 层需接 MacroEngine
+- SSE：choices.delta.content 数组 thinking、choices.message.content、not-primary 抛错已补；Cohere 完整分支与 choices.message 工具调用仍边界
+- 人设：resolve 的 autoLock 已按 persona_auto_lock 计算（官方差分覆盖）
 - 群聊：shouldAutoContinue 未含 is_send_press/abortController 状态；多人回复拼接/nudge 链属 App 调度
 - 角色卡：V2Normalizer 仍可能遇到更多缺失字段组合；BYAF/CharX 文件冲突未穷举
 - 表情：Fuse 模糊匹配、本地 BERT/WebLLM 分类未移植
@@ -94,4 +94,4 @@
 
 ## 差分覆盖总数
 instruct 36 + 世界书 19 + 世界书扫描 17 + 世界书文件 2 + 正则 13 + PNG 6 +
-宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 正则 20 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 5 + 提示词组装合并 7 + CharX 导入 9 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 19 + 表情分类预处理 8 + 群聊激活 15 + 群聊角色卡 8 + 群聊深度提示 7 + 群聊完整循环 11 + 精灵存储 9 + 角色卡字段 8 + JSON 导入 10 + BYAF 完整导入 8 + 斜杠转义 13 + 提示词工具 9 + JSON 导出 6 + SSE 流解析 8 + 正则管线 9 + 导演备注 7 + 人设引擎 14 = 581 例官方基准（全部通过）。
+宏 158 + pick 5 + 编辑器排序 6 + 自动执行选择 4 + 向量工具 14 + 角色卡 V2 归一 5 + 正则解析 9 + 正则 20 + 作用域宏裁剪 7 + Anthropic 请求体 12 + Gemini 请求体 11 + 聊天历史填充 5 + 示例对话填充 4 + YAML 导入 5 + 提示词组装合并 7 + CharX 导入 9 + BYAF 纯逻辑 14 + BYAF 聊天导入 5 + BYAF 角色卡组装 4 + 名字规则 28 + 表情精灵 19 + 表情分类预处理 8 + 群聊激活 15 + 群聊角色卡 8 + 群聊深度提示 7 + 群聊完整循环 11 + 精灵存储 9 + 角色卡字段 8 + JSON 导入 10 + BYAF 完整导入 8 + 斜杠转义 13 + 提示词工具 9 + JSON 导出 6 + SSE 流解析 11 + 正则管线 10 + 导演备注 7 + 人设引擎 16 = 587 例官方基准（全部通过）。

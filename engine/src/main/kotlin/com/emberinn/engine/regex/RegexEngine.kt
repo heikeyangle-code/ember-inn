@@ -32,6 +32,7 @@ object RegexEngine {
         script: RegexScript,
         raw: String,
         substitute: (String) -> String = { it },
+        characterOverride: String? = null,
     ): String {
         if (script.disabled || script.findRegex.isBlank() || raw.isEmpty()) return raw
         val regexString = when (script.substituteRegex) {
@@ -51,7 +52,7 @@ object RegexEngine {
                     name.isNotEmpty() -> mr.groups[name]?.value
                     else -> null
                 } ?: ""
-                trim(value, script.trimStrings, substitute)
+                trim(value, script.trimStrings, substitute, characterOverride)
             }
             substitute(replace)
         }
@@ -61,9 +62,19 @@ object RegexEngine {
         return raw.replaceRange(first.range, transform(first))
     }
 
-    private fun trim(value: String, trimStrings: List<String>, substitute: (String) -> String): String {
+    private fun trim(
+        value: String,
+        trimStrings: List<String>,
+        substitute: (String) -> String,
+        characterOverride: String?,
+    ): String {
         var out = value
-        for (t in trimStrings) if (t.isNotEmpty()) out = out.replace(substitute(t), "")
+        for (t in trimStrings) {
+            if (t.isNotEmpty()) {
+                val withOverride = if (characterOverride != null) t.replace("{{char}}", characterOverride) else t
+                out = out.replace(substitute(withOverride), "")
+            }
+        }
         return out
     }
 

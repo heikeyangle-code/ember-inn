@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（42 组，共 581 例官方基准，全部通过）**：
+**已覆盖（42 组，共 587 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -86,10 +86,10 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 13 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
-| SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 8 |
-| 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 9 |
+| SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 11 |
+| 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 10 |
 | 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 7 |
-| 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 14 |
+| 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 16 |
 | 群聊完整循环 | group-loop-official.mjs | GroupLoopDiffTest | 11 |
 
 **尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
@@ -227,6 +227,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 40（2026-08-08：审计修复）
+
+- 正则管线 +1：trimStrings 的 characterOverride 透传（官方 substituteParams name2Override）
+- 人设 +2：resolve 的 autoLock 按 persona_auto_lock 计算（切换/同人设两分支）
+- SSE +3：choices.delta.content 数组 thinking、choices.message.content、not-primary 抛错（官方行为）
+- 官方基准 581 → 587；引擎 218 测全绿
 
 ## 最近一轮 39（2026-08-08：群聊完整循环纯逻辑官方差分）
 
@@ -514,7 +521,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 42 个脚本 + 581 例 fixture
+- 差分工具 42 个脚本 + 587 例 fixture
 
 ## 7. 注意事项
 

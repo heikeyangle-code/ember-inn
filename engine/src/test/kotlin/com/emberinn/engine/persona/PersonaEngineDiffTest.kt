@@ -109,6 +109,7 @@ class PersonaEngineDiffTest {
                         defaultPersona = body["defaultPersona"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
                         allowMultiConnections = body["allowMultiConnections"]?.jsonPrimitive?.content == "true",
                         userAvatar = body["userAvatar"]!!.jsonPrimitive.content,
+                        personaAutoLock = body["personaAutoLock"]?.jsonPrimitive?.content == "true",
                     )
                     buildJsonObject {
                         put("chatPersona", JsonPrimitive(r.chatPersona ?: ""))

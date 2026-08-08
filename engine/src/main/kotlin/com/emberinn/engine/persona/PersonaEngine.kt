@@ -101,6 +101,7 @@ object PersonaEngine {
         defaultPersona: String?,
         allowMultiConnections: Boolean,
         userAvatar: String,
+        personaAutoLock: Boolean = false,
     ): PersonaResolveResult {
         var chatPersona: String? = null
         var connectType: String? = null
@@ -134,6 +135,8 @@ object PersonaEngine {
         }
 
         val willSwitch = chatPersona != null && userAvatar != chatPersona
-        return PersonaResolveResult(chatPersona, connectType, unlockChat, clearDefault, willSwitch, autoLock = false)
+        val autoLock = chatPersona != null && personaAutoLock &&
+            if (userAvatar != chatPersona) userAvatar != chatMetaPersona else chatMetaPersona.isNullOrEmpty()
+        return PersonaResolveResult(chatPersona, connectType, unlockChat, clearDefault, willSwitch, autoLock)
     }
 }

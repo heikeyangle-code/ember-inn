@@ -339,6 +339,142 @@
           "chunk": ""
         }
       ]
+    },
+    {
+      "id": "openai-delta-array-thinking",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "re"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "r"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "r",
+          "reasoning": true
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "e"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "e",
+          "reasoning": true
+        }
+      ]
+    },
+    {
+      "id": "openai-message-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "hi"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "h"
+                }
+              }
+            ]
+          },
+          "chunk": "h"
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "i"
+                }
+              }
+            ]
+          },
+          "chunk": "i"
+        }
+      ]
+    },
+    {
+      "id": "not-primary",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 1,
+                "delta": {
+                  "content": "x"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Not a primary swipe"
+      }
     }
   ]
 }

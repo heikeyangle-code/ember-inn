@@ -34,15 +34,19 @@ class SseStreamDiffTest {
             val body = case.getValue("args").jsonObject.getValue("body").jsonObject
             val expected = case.getValue("expected")
 
-            val actual = JsonArray(
-                SseChunkParser.parse(body.getValue("json").toString()).map { c ->
-                    buildJsonObject {
-                        put("data", c.data)
-                        put("chunk", JsonPrimitive(c.chunk))
-                        if (c.reasoningPresent) put("reasoning", JsonPrimitive(c.reasoning))
-                    }
-                },
-            )
+            val actual = try {
+                JsonArray(
+                    SseChunkParser.parse(body.getValue("json").toString()).map { c ->
+                        buildJsonObject {
+                            put("data", c.data)
+                            put("chunk", JsonPrimitive(c.chunk))
+                            if (c.reasoningPresent) put("reasoning", JsonPrimitive(c.reasoning))
+                        }
+                    },
+                )
+            } catch (e: IllegalStateException) {
+                buildJsonObject { put("error", JsonPrimitive(e.message ?: "")) }
+            }
             assertEquals("case $id", canonical(expected), canonical(actual))
         }
     }

@@ -209,6 +209,32 @@
         }
       },
       "expected": "foo"
+    },
+    {
+      "id": "trim-char-override",
+      "args": {
+        "body": {
+          "raw": "hello Alice",
+          "placement": 1,
+          "characterOverride": "Alice",
+          "scripts": [
+            {
+              "findRegex": "(Alice)",
+              "replaceString": "$1",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true,
+              "trimStrings": [
+                "{{char}}"
+              ]
+            }
+          ]
+        }
+      },
+      "expected": "hello "
     }
   ]
 }
