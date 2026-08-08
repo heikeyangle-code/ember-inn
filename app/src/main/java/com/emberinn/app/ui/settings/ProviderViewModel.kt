@@ -64,6 +64,10 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _contextWindow = MutableStateFlow(8192)
     val contextWindow: StateFlow<Int> = _contextWindow
 
+    /** 上下文上限是否跟随模型自动取默认；用户手动改数字后关掉。 */
+    private val _contextAuto = MutableStateFlow(true)
+    val contextAuto: StateFlow<Boolean> = _contextAuto
+
     private val _maxTokens = MutableStateFlow(512)
     val maxTokens: StateFlow<Int> = _maxTokens
 
@@ -90,13 +94,18 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _region.value = existing?.region.orEmpty()
         _accountId.value = existing?.accountId.orEmpty()
         _apiVersion.value = existing?.apiVersionOverride.orEmpty()
-        _contextWindow.value = existing?.contextWindow ?: 8192
-        _maxTokens.value = existing?.sampler?.maxTokens ?: spec.defaultMaxTokens ?: 512
+        val model = existing?.model?.takeIf { it.isNotBlank() }
+            ?: spec.defaultModels.firstOrNull().orEmpty()
         val list = spec.defaultModels.toMutableList()
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
-        _selectedModel.value = existing?.model?.takeIf { it.isNotBlank() }
-            ?: spec.defaultModels.firstOrNull().orEmpty()
+        _selectedModel.value = model
+        // 旧版本固定默认（8192 / 512）视为“未手动设置”：按模型/厂商自动取，老档案不用重填也能修好
+        val storedContext = existing?.contextWindow
+        _contextAuto.value = storedContext == null || storedContext == 8192
+        _contextWindow.value = if (_contextAuto.value) defaultContextFor(spec, model) else storedContext!!
+        val storedTokens = existing?.sampler?.maxTokens
+        _maxTokens.value = if (storedTokens == null || storedTokens == 512) (spec.defaultMaxTokens ?: 512) else storedTokens
         _message.value = null
         _testing.value = false
     }
@@ -126,8 +135,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _apiVersion.value = value.trim()
     }
 
-    /** 上下文上限（tokens），占比胶囊分母；0/非法回退 8192。 */
+    /** 上下文上限（tokens），占比胶囊分母；手动输入即退出“按模型自动”。 */
     fun setContextWindow(value: String) {
+        _contextAuto.value = false
         val n = value.filter { it.isDigit() }.toIntOrNull()
         _contextWindow.value = (n ?: 8192).coerceIn(256, 2_000_000)
     }
@@ -140,6 +150,10 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
 
     fun selectModel(model: String) {
         _selectedModel.value = model
+        val spec = provider()
+        if (_contextAuto.value && spec != null) {
+            _contextWindow.value = defaultContextFor(spec, model)
+        }
     }
 
     fun testConnection() {

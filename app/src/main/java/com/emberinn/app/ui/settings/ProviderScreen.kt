@@ -247,6 +247,7 @@ fun ProviderDetailScreen(
     val apiVersion by vm.apiVersion.collectAsState()
     val selectedModel by vm.selectedModel.collectAsState()
     val contextWindow by vm.contextWindow.collectAsState()
+    val contextAuto by vm.contextAuto.collectAsState()
     val maxTokens by vm.maxTokens.collectAsState()
     val testing by vm.testing.collectAsState()
     val message by vm.message.collectAsState()
@@ -377,7 +378,7 @@ fun ProviderDetailScreen(
                 value = maxTokens.toString(),
                 onValueChange = vm::setMaxTokens,
                 label = { Text("最大回复 tokens") },
-                supportingText = { Text("思考型模型会先耗思考额度，太小会导致只有思考没有正文（如 512 常被掐空，建议 8192）") },
+                supportingText = { Text("默认按厂商建议自动填（OpenAI 16384 / Claude 8192…）；思考型模型太小会只思考不出正文") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
