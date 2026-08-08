@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -35,6 +36,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -82,6 +86,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -105,6 +110,7 @@ import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.markdownPadding
 import java.io.File
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.JsonElement
@@ -149,11 +155,31 @@ fun ChatScreen(
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showMore by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
+    var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+
+    val exportChatLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        uri?.let { u ->
+            val text = vm.exportJsonl()
+            if (text == null) {
+                Toast.makeText(context, "这条会话还没有消息，无内容可导出", Toast.LENGTH_SHORT).show()
+            } else {
+                runCatching {
+                    context.contentResolver.openOutputStream(u)?.use { it.write(text.toByteArray()) }
+                    Toast.makeText(context, "已导出：$name.jsonl", Toast.LENGTH_SHORT).show()
+                }.onFailure { e ->
+                    Toast.makeText(context, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     val mediaPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
@@ -205,6 +231,7 @@ fun ChatScreen(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
+            .imePadding()
             .background(MaterialTheme.colorScheme.background),
     ) {
         ChatTopBar(
@@ -212,7 +239,7 @@ fun ChatScreen(
             avatarPath = vm.avatarPath,
             accent = accent,
             onBack = onBack,
-            onMenu = { showClearConfirm = true },
+            onMenu = { showMore = true },
         )
 
         if (!providerConfigured) {
@@ -238,6 +265,13 @@ fun ChatScreen(
                         val isUserMsg = isUser(el)
                         val text = textOf(el)
                         val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg
+                        val dateLabel = if (item.index == 0) {
+                            dateLabelOf(el)
+                        } else {
+                            val prev = dateLabelOf(messages[item.index - 1])
+                            val cur = dateLabelOf(el)
+                            if (prev == cur) null else cur
+                        }
                         MessageRow(
                             isUser = isUserMsg,
                             text = text,
@@ -245,6 +279,7 @@ fun ChatScreen(
                             reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
                             name = nameOf(el, isUserMsg),
                             time = timeOf(el),
+                            dateLabel = dateLabel,
                             avatarPath = if (isUserMsg) null else vm.avatarPath,
                             accent = accent,
                             showActions = showActions,
@@ -361,11 +396,29 @@ fun ChatScreen(
                         }
                     }
                     MenuRow(Icons.Filled.Delete, "删除这条消息", danger = true) {
-                        vm.deleteMessage(index); menuMessageIndex = null
+                        deleteTargetIndex = index; menuMessageIndex = null
                     }
                 }
             }
         }
+    }
+
+    deleteTargetIndex?.let { index ->
+        AlertDialog(
+            onDismissRequest = { deleteTargetIndex = null },
+            title = { Text("删除这条消息？") },
+            text = { Text("删除后不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteMessage(index)
+                    deleteTargetIndex = null
+                    Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTargetIndex = null }) { Text("取消") }
+            },
+        )
     }
 
     editIndex?.let { index ->
@@ -391,6 +444,28 @@ fun ChatScreen(
                 TextButton(onClick = { editIndex = null }) { Text("取消") }
             },
         )
+    }
+
+    if (showMore) {
+        ModalBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "会话菜单",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                MenuRow(Icons.Filled.Share, "导出聊天（JSONL）") {
+                    showMore = false
+                    exportChatLauncher.launch("$name-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
+                }
+                MenuRow(Icons.Filled.Delete, "清空会话", danger = true) {
+                    showMore = false
+                    showClearConfirm = true
+                }
+            }
+        }
     }
 
     if (showClearConfirm) {
@@ -531,6 +606,7 @@ private fun MessageRow(
     time: String,
     avatarPath: String?,
     accent: Color,
+    dateLabel: String?,
     showActions: Boolean,
     onCopy: () -> Unit,
     onRegenerate: () -> Unit,
@@ -538,7 +614,17 @@ private fun MessageRow(
     onDelete: () -> Unit,
     onLongPress: () -> Unit,
 ) {
-    Row(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (dateLabel != null) {
+            Text(
+                text = dateLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            )
+        }
+        Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
@@ -609,6 +695,7 @@ private fun MessageRow(
                 }
             }
         }
+    }
     }
 }
 
@@ -965,8 +1052,20 @@ private fun ChatInputBar(
                 IconButton(onClick = onVoice, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Filled.Mic, contentDescription = "语音输入")
                 }
-                IconButton(onClick = onSend, modifier = Modifier.size(42.dp)) {
-                    Icon(Icons.Filled.Send, contentDescription = "发送", tint = MaterialTheme.colorScheme.primary)
+                IconButton(
+                    onClick = onSend,
+                    enabled = input.isNotBlank() || pendingMedia.isNotEmpty(),
+                    modifier = Modifier.size(42.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Send,
+                        contentDescription = "发送",
+                        tint = if (input.isNotBlank() || pendingMedia.isNotEmpty()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                    )
                 }
             } else {
                 IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
@@ -1030,6 +1129,21 @@ private fun mediaOf(el: JsonElement): List<MediaAttachment> {
 private fun nameOf(el: JsonElement, isUser: Boolean): String =
     el.jsonObject["name"]?.jsonPrimitive?.contentOrNull
         ?.takeIf { it.isNotBlank() } ?: if (isUser) "我" else "助手"
+
+/** 日期分隔（微信式）：今天 / 昨天 / MM月dd日 / yyyy年MM月dd日；无日期返回 null。 */
+private fun dateLabelOf(el: JsonElement): String? {
+    val raw = el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull ?: return null
+    return runCatching {
+        val date = Instant.parse(raw).atZone(ZoneId.systemDefault()).toLocalDate()
+        val today = LocalDate.now()
+        when {
+            date == today -> "今天"
+            date == today.minusDays(1) -> "昨天"
+            date.year == today.year -> date.format(DateTimeFormatter.ofPattern("M月d日"))
+            else -> date.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))
+        }
+    }.getOrNull()
+}
 
 private fun timeOf(el: JsonElement): String {
     val raw = el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull ?: return ""

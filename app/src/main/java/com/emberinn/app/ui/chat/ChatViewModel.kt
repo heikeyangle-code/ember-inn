@@ -336,6 +336,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _notice.value = null
     }
 
+    /** 导出聊天原始 JSONL（官方聊天文件格式，可直接进酒馆）。 */
+    fun exportJsonl(): String? = chatStore.exportJsonl(sessionId)
+
     private fun startStream(
         history: List<JsonElement>,
         type: String = "generate",
