@@ -66,19 +66,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
 
+    /** 卡片预览缓存：一次 refresh 算好，避免网格滚动时逐卡读盘（README：UI 线程不做 IO）。 */
+    private var previewCache: Map<String, String> = emptyMap()
+    private var sessionPreviewCache: Map<String, String> = emptyMap()
+
     fun refresh() {
         _characters.value = store.list()
         _recentSessions.value = chatStore.recent(8)
+        val sessions = chatStore.list()
+        previewCache = characters.value
+            .mapNotNull { c -> c.id to (sessions.filter { it.characterId == c.id }.maxByOrNull { it.updatedAt }?.let { chatStore.lastMessage(it.id) }) }
+            .filter { (_, v) -> !v.isNullOrBlank() }
+            .associate { (k, v) -> k to v!! }
+        sessionPreviewCache = sessions.mapNotNull { it.id to chatStore.lastMessage(it.id) }
+            .filter { (_, v) -> !v.isNullOrBlank() }
+            .associate { (k, v) -> k to v!! }
     }
 
-    /** README 首页卡片：角色的最近消息预览（该角色最新会话的最后一条消息）。 */
-    fun lastMessageFor(characterId: String?): String? {
-        if (characterId == null) return null
-        val session = chatStore.list().filter { it.characterId == characterId }.maxByOrNull { it.updatedAt } ?: return null
-        return chatStore.lastMessage(session.id)
-    }
+    /** README 首页卡片：角色的最近消息预览（refresh 时缓存，不在组合期读盘）。 */
+    fun lastMessageFor(characterId: String?): String? =
+        characterId?.let { previewCache[it] }
 
-    fun lastMessage(sessionId: String): String? = chatStore.lastMessage(sessionId)
+    fun lastMessage(sessionId: String): String? = sessionPreviewCache[sessionId]
 
     /** 全局搜索（大小写不敏感）：角色名/描述、会话名/最后消息、世界书条目、设置项。 */
     fun search(query: String): SearchResults {

@@ -229,10 +229,10 @@ fun ChatScreen(
             if (nearBottom) followBottom = true
         }
     }
+    // 只有处于“贴底跟随”状态才滚底；用户上滑查看历史时不拽走
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
+        if (messages.isNotEmpty() && followBottom) {
             listState.scrollToItem(messages.lastIndex)
-            followBottom = true
         }
     }
     // 流式：贴底时用即时滚动到流式项末尾（正文变长不再跳顶，也不逐 token 动画）
@@ -392,6 +392,7 @@ fun ChatScreen(
             onSend = {
                 val text = input.trim()
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
+                    followBottom = true
                     vm.send(text, media = pendingMedia)
                     input = ""
                 }
@@ -486,8 +487,6 @@ fun ChatScreen(
                     )
                 }
             }
-        } else {
-            contextDetail = false
         }
     }
 
