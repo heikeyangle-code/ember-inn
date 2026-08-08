@@ -7,7 +7,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** SSE 解析：OpenAI Chat Completions / Anthropic Messages / Gemini generateContent 三种格式。 */
+/** SSE 聚合解析（历史实现）。
+ * @deprecated 运行时已切到官方对拍的 SseChunkParser（LlmClient.executeStream）；
+ * 本类只保留给测试/聚合参考，新代码禁止使用，避免再出现“对的没用、错的在跑”。
+ */
 object SseParser {
 
     private val json = Json { ignoreUnknownKeys = true }
