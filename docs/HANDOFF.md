@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（44 组，共 612 例官方基准，全部通过）**：
+**已覆盖（45 组，共 617 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -93,6 +93,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 群聊完整循环 | group-loop-official.mjs | GroupLoopDiffTest | 11 |
 | OpenAI 请求体（全厂商） | openai-params-official.mjs | OpenAiParamsDiffTest | 21 |
 | 工具 token 预分配 | tool-budget-official.mjs | ToolBudgetDiffTest | 4 |
+| ChatCompletionPipeline 计划 | chat-pipeline-official.mjs | ChatPipelineDiffTest | 5 |
 
 **尚未做差分的**：斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -166,7 +167,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 220 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算）
+- 引擎测试 221 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算/管线计划）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine：自动续写判定 + 每人生成类型 + 队列号）官方差分 11 例；🟡 多人回复拼接/组提示/nudge 链的 App 调度仍待做。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -230,6 +231,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 44（2026-08-08：ChatCompletionPipeline 整链计划官方差分）
+
+- chat-pipeline-official.mjs：逐字提取 openai.js populateChatCompletion，prompts/Message/TokenHandler/populate* 打桩，5 例 fixture 全过
+- ChatCompletionPipelinePlan：固定顺序/控制提示/系统+用户相对/增强/bias/相对注入/工具预留/continue prefill/pin_examples/free+control 全操作序列
+- 官方基准 612 → 617；引擎 221 测全绿
 
 ## 最近一轮 43（2026-08-08：工具 token 预分配官方差分）
 
@@ -543,7 +550,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 44 个脚本 + 612 例 fixture
+- 差分工具 45 个脚本 + 617 例 fixture
 
 ## 7. 注意事项
 

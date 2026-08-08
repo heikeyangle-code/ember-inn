@@ -1,0 +1,688 @@
+{
+  "source": "openai.js populateChatCompletion",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "prompts": {
+            "collection": [
+              {
+                "identifier": "main",
+                "role": "system",
+                "content": "main",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "worldInfoBefore",
+                "role": "system",
+                "content": "worldInfoBefore",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "worldInfoAfter",
+                "role": "system",
+                "content": "worldInfoAfter",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "charDescription",
+                "role": "system",
+                "content": "charDescription",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "charPersonality",
+                "role": "system",
+                "content": "charPersonality",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "scenario",
+                "role": "system",
+                "content": "scenario",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "personaDescription",
+                "role": "system",
+                "content": "personaDescription",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "nsfw",
+                "role": "system",
+                "content": "nsfw",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "jailbreak",
+                "role": "system",
+                "content": "jailbreak",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "dialogueExamples",
+                "role": "system",
+                "content": "dialogueExamples",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "chatHistory",
+                "role": "system",
+                "content": "chatHistory",
+                "name": null,
+                "injection_position": 0
+              }
+            ],
+            "overriddenPrompts": [
+              "main"
+            ]
+          },
+          "bias": "",
+          "quietPrompt": "",
+          "type": "normal",
+          "pinExamples": false
+        }
+      },
+      "expected": [
+        {
+          "op": "reserve",
+          "amount": 3
+        },
+        {
+          "op": "add",
+          "collection": "worldInfoBefore",
+          "index": 1
+        },
+        {
+          "op": "add",
+          "collection": "main",
+          "index": 0
+        },
+        {
+          "op": "add",
+          "collection": "worldInfoAfter",
+          "index": 2
+        },
+        {
+          "op": "add",
+          "collection": "charDescription",
+          "index": 3
+        },
+        {
+          "op": "add",
+          "collection": "charPersonality",
+          "index": 4
+        },
+        {
+          "op": "add",
+          "collection": "scenario",
+          "index": 5
+        },
+        {
+          "op": "add",
+          "collection": "personaDescription",
+          "index": 6
+        },
+        {
+          "op": "overridden",
+          "ids": [
+            "main"
+          ]
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        },
+        {
+          "op": "add",
+          "collection": "nsfw",
+          "index": 7
+        },
+        {
+          "op": "add",
+          "collection": "jailbreak",
+          "index": 8
+        },
+        {
+          "op": "populate",
+          "name": "chatHistory"
+        },
+        {
+          "op": "populate",
+          "name": "dialogueExamples"
+        },
+        {
+          "op": "free",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "quiet-impersonate",
+      "args": {
+        "body": {
+          "prompts": {
+            "collection": [
+              {
+                "identifier": "main",
+                "role": "system",
+                "content": "main",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "impersonate",
+                "role": "system",
+                "content": "impersonate",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "quietPrompt",
+                "role": "system",
+                "content": "quietPrompt",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "nsfw",
+                "role": "system",
+                "content": "nsfw",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "jailbreak",
+                "role": "system",
+                "content": "jailbreak",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "dialogueExamples",
+                "role": "system",
+                "content": "dialogueExamples",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "chatHistory",
+                "role": "system",
+                "content": "chatHistory",
+                "name": null,
+                "injection_position": 0
+              }
+            ],
+            "overriddenPrompts": [
+              "main"
+            ]
+          },
+          "bias": "B",
+          "quietPrompt": "Q",
+          "type": "impersonate",
+          "pinExamples": true
+        }
+      },
+      "expected": [
+        {
+          "op": "reserve",
+          "amount": 3
+        },
+        {
+          "op": "add",
+          "collection": "main",
+          "index": 0
+        },
+        {
+          "op": "overridden",
+          "ids": [
+            "main"
+          ]
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": [
+              {
+                "role": "system",
+                "content": "impersonate",
+                "name": null,
+                "identifier": "impersonate"
+              },
+              {
+                "role": "system",
+                "content": "quietPrompt",
+                "name": null,
+                "identifier": "quietPrompt"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "collection": "nsfw",
+          "index": 3
+        },
+        {
+          "op": "add",
+          "collection": "jailbreak",
+          "index": 4
+        },
+        {
+          "op": "populate",
+          "name": "dialogueExamples"
+        },
+        {
+          "op": "populate",
+          "name": "chatHistory"
+        },
+        {
+          "op": "free",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": [
+              {
+                "role": "system",
+                "content": "impersonate",
+                "name": null,
+                "identifier": "impersonate"
+              },
+              {
+                "role": "system",
+                "content": "quietPrompt",
+                "name": null,
+                "identifier": "quietPrompt"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "collection": "controlPrompts",
+          "index": null
+        }
+      ]
+    },
+    {
+      "id": "absolute-and-tools",
+      "args": {
+        "body": {
+          "prompts": {
+            "collection": [
+              {
+                "identifier": "main",
+                "role": "system",
+                "content": "main",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "summary",
+                "role": "system",
+                "content": "summary",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "nsfw",
+                "role": "system",
+                "content": "nsfw",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "jailbreak",
+                "role": "system",
+                "content": "jailbreak",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "dialogueExamples",
+                "role": "system",
+                "content": "dialogueExamples",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "chatHistory",
+                "role": "system",
+                "content": "chatHistory",
+                "name": null,
+                "injection_position": 0
+              }
+            ],
+            "overriddenPrompts": [
+              "main"
+            ]
+          },
+          "bias": "",
+          "quietPrompt": "",
+          "type": "normal",
+          "toolCallsEnabled": true,
+          "toolTokenCount": 33
+        }
+      },
+      "expected": [
+        {
+          "op": "reserve",
+          "amount": 3
+        },
+        {
+          "op": "add",
+          "collection": "main",
+          "index": 0
+        },
+        {
+          "op": "overridden",
+          "ids": [
+            "main"
+          ]
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        },
+        {
+          "op": "add",
+          "collection": "nsfw",
+          "index": 2
+        },
+        {
+          "op": "add",
+          "collection": "jailbreak",
+          "index": 3
+        },
+        {
+          "op": "reserve",
+          "amount": 33
+        },
+        {
+          "op": "populate",
+          "name": "chatHistory"
+        },
+        {
+          "op": "populate",
+          "name": "dialogueExamples"
+        },
+        {
+          "op": "free",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "continue-prefill",
+      "args": {
+        "body": {
+          "prompts": {
+            "collection": [
+              {
+                "identifier": "main",
+                "role": "system",
+                "content": "main",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "nsfw",
+                "role": "system",
+                "content": "nsfw",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "jailbreak",
+                "role": "system",
+                "content": "jailbreak",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "dialogueExamples",
+                "role": "system",
+                "content": "dialogueExamples",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "chatHistory",
+                "role": "system",
+                "content": "chatHistory",
+                "name": null,
+                "injection_position": 0
+              }
+            ],
+            "overriddenPrompts": [
+              "main"
+            ]
+          },
+          "bias": "",
+          "quietPrompt": "",
+          "type": "continue",
+          "continuePrefill": true,
+          "chatCompletionSource": "claude",
+          "assistantPrefill": "continue:",
+          "messages": [
+            {
+              "role": "assistant",
+              "content": "last",
+              "name": "C",
+              "identifier": "chatHistory-1"
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "op": "reserve",
+          "amount": 3
+        },
+        {
+          "op": "add",
+          "collection": "main",
+          "index": 0
+        },
+        {
+          "op": "overridden",
+          "ids": [
+            "main"
+          ]
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": [
+              {
+                "role": "assistant",
+                "content": "continue:\n\nlast",
+                "identifier": "continuePrefill"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "collection": "nsfw",
+          "index": 1
+        },
+        {
+          "op": "add",
+          "collection": "jailbreak",
+          "index": 2
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "role": "assistant",
+            "content": "continue:\n\nlast",
+            "identifier": "continuePrefill"
+          }
+        },
+        {
+          "op": "populate",
+          "name": "chatHistory"
+        },
+        {
+          "op": "populate",
+          "name": "dialogueExamples"
+        },
+        {
+          "op": "free",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": [
+              {
+                "role": "assistant",
+                "content": "continue:\n\nlast",
+                "identifier": "continuePrefill"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "collection": "controlPrompts",
+          "index": null
+        }
+      ]
+    },
+    {
+      "id": "disabled-prompt",
+      "args": {
+        "body": {
+          "prompts": {
+            "collection": [
+              {
+                "identifier": "main",
+                "role": "system",
+                "content": "main",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "worldInfoBefore",
+                "role": "system",
+                "content": "worldInfoBefore",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "nsfw",
+                "role": "system",
+                "content": "nsfw",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "jailbreak",
+                "role": "system",
+                "content": "jailbreak",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "dialogueExamples",
+                "role": "system",
+                "content": "dialogueExamples",
+                "name": null,
+                "injection_position": 0
+              },
+              {
+                "identifier": "chatHistory",
+                "role": "system",
+                "content": "chatHistory",
+                "name": null,
+                "injection_position": 0
+              }
+            ],
+            "overriddenPrompts": [
+              "main"
+            ]
+          },
+          "disabledPromptIds": [
+            "worldInfoBefore"
+          ],
+          "bias": "",
+          "quietPrompt": "",
+          "type": "normal"
+        }
+      },
+      "expected": [
+        {
+          "op": "reserve",
+          "amount": 3
+        },
+        {
+          "op": "add",
+          "collection": "main",
+          "index": 0
+        },
+        {
+          "op": "overridden",
+          "ids": [
+            "main"
+          ]
+        },
+        {
+          "op": "reserve",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        },
+        {
+          "op": "add",
+          "collection": "nsfw",
+          "index": 2
+        },
+        {
+          "op": "add",
+          "collection": "jailbreak",
+          "index": 3
+        },
+        {
+          "op": "populate",
+          "name": "chatHistory"
+        },
+        {
+          "op": "populate",
+          "name": "dialogueExamples"
+        },
+        {
+          "op": "free",
+          "amount": {
+            "identifier": "controlPrompts",
+            "collection": []
+          }
+        }
+      ]
+    }
+  ]
+}
