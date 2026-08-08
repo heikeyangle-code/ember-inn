@@ -218,7 +218,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
-### 4.3 聊天页 🟡 v2（核心已接线）
+### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
 > 2026-08-09 修正：continue 用官方默认 nudge 路径（此前误用 continue_prefill=true 且 App 传“旧在前”，导致引擎把最老消息当续写对象=“重新生成”）；ChatPromptFactory 已按官方 setOpenAIMessages 翻成“新的在前”。思考过程走 LlmClient.onReasoning 独立通道，流式气泡上方显示“思考过程”块。
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
 ❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
@@ -280,10 +280,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 已接入请求体：OpenAI（ChatRequestBuilder）、Anthropic/Gemini（builder 内 toChatMLJson → 转换器）
 - MediaTokenCost 18 例：getImageTokenCost（low→85、auto≤512→85、2048 缩放→768 短边→512 方格 170/格+85）、视频 263 tokens/秒（回退 263×40）、音频 32 tokens/秒（回退 32×300）
 
-**App 层待做（引擎已完成，缺 UI/IO）**：
-- 聊天消息 `extra.media` 解析（官方消息 JSON 里的媒体字段 → CompletionMessage.media）
-- 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer）、附件上传/URL 导入
-- 发送时把用户选择的附件挂到消息的 media 上（同时用 MediaTokenCost 估算 token，供上下文占比胶囊显示）
+**App 层（2026-08-09 已接）**：
+- ✅ 聊天消息 `extra.media` 解析（ChatPromptFactory → PromptMessage.media/mediaDisplay/mediaIndex）
+- ✅ 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer 1.10.0 PlayerView）、发送前附件缩略图/移除
+- ✅ 系统文件选择器（image/video/audio 多选）→ 读字节转 data URL（官方 fetch→base64 语义）→ 随消息进 extra.media → 引擎链内联 + token 预算
+- ✅ 上下文占比胶囊 + 世界书命中灯（onPrepared 回调 → counts/激活条目 → 聊天页状态胶囊，点击世界书看命中条目）
+- ⚠️ 大附件直接 base64 进 jsonl（官方同款，暂不压缩/不限额）；URL 直接导入、图片压缩、LaTeX 渲染未做
 
 ### 4.9 App↔引擎接线核对表（本轮聊天链路，确认“结没结上”用这张表）
 
@@ -350,6 +352,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 70（2026-08-09：媒体附件全链路 + 上下文占比胶囊 + 世界书命中灯）
+
+- 发送附件：系统多选（image/video/audio）→ IO 读字节 → data URL → extra.media 落 jsonl → ChatPromptFactory 解析成 PromptMessage.media → 引擎链内联（data URL + token 记账）→ 各协议请求体（MediaInliner/MediaConvert 已有差分）
+- 渲染：图片/GIF Coil3（coil-gif）、音视频 Media3 ExoPlayer（PlayerView，AndroidView 包装）；输入区附件缩略图可移除；消息气泡内媒体随消息显示（AI/用户均支持）
+- 上下文占比胶囊 + 世界书命中灯：ChatPromptFactory.Prepared 增加 counts/maxContextTokens；ChatRepository.onPrepared 回调；ChatViewModel worldHits/contextUsage；聊天页输入区上方状态胶囊（世界书点击 Toast 展示命中条目）
+- app 测试补：extra.media → 出站消息 media 内联断言；media3-exoplayer/ui 依赖加入；app JUnit 依赖补上（修 CI）
+- 无引擎改动；App 编译待 CI
 
 ## 最近一轮 69（2026-08-09：锁死两处接线盲区为自动化测试）
 

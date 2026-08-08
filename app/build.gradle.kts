@@ -89,5 +89,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.palette)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    testImplementation(libs.junit)
     debugImplementation(libs.androidx.ui.tooling)
 }

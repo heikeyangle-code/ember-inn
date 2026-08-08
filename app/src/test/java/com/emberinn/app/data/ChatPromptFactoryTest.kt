@@ -1,6 +1,7 @@
 package com.emberinn.app.data
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -44,6 +45,48 @@ class ChatPromptFactoryTest {
         val i2 = contents.indexOf("回复一")
         val i3 = contents.indexOf("第二条")
         assertTrue(i1 >= 0 && i2 > i1 && i3 > i2)
+    }
+
+    @Test
+    fun `extra media is parsed and inlined into the outgoing message`() {
+        val history = listOf(
+            buildJsonObject {
+                put("name", "User")
+                put("is_user", true)
+                put("is_system", false)
+                put("send_date", "2026-08-09T00:00:00Z")
+                put("mes", "看图")
+                put(
+                    "extra",
+                    buildJsonObject {
+                        put(
+                            "media",
+                            JsonArray(
+                                listOf(
+                                    buildJsonObject {
+                                        put("type", "image")
+                                        put("url", "data:image/png;base64,AA==")
+                                    },
+                                ),
+                            ),
+                        )
+                    },
+                )
+            },
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            imageInlining = true,
+        )
+        val hit = result.messages.firstOrNull { it.content == "看图" && it.media?.isNotEmpty() == true }
+        assertTrue(hit != null)
+        assertEquals("data:image/png;base64,AA==", hit!!.media!!.first().url)
     }
 
     @Test

@@ -1,10 +1,12 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.worldinfo.ChatJsonl
 import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -55,15 +57,31 @@ class ChatStore(private val context: Context) {
     }
 
     /** 消息字段对齐官方 script.js：name / is_user / is_system / send_date / mes / extra。 */
-    fun append(sessionId: String, isUser: Boolean, content: String, name: String) {
+    fun append(sessionId: String, isUser: Boolean, content: String, name: String, media: List<MediaAttachment> = emptyList()) {
         val list = messages(sessionId).toMutableList()
+        val extra = if (media.isEmpty()) {
+            JsonObject(emptyMap())
+        } else {
+            buildJsonObject {
+                put(
+                    "media",
+                    JsonArray(media.map { m ->
+                        buildJsonObject {
+                            put("type", JsonPrimitive(m.type))
+                            put("url", JsonPrimitive(m.url))
+                            if (m.title.isNotBlank()) put("title", JsonPrimitive(m.title))
+                        }
+                    }),
+                )
+            }
+        }
         list += buildJsonObject {
             put("name", JsonPrimitive(name))
             put("is_user", JsonPrimitive(isUser))
             put("is_system", JsonPrimitive(false))
             put("send_date", JsonPrimitive(java.time.Instant.now().toString()))
             put("mes", JsonPrimitive(content))
-            put("extra", JsonObject(emptyMap()))
+            put("extra", extra)
         }
         File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }

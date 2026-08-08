@@ -71,6 +71,8 @@ class ChatRepository(context: Context) {
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
         cyclePrompt: String = "",
         onReasoning: ((String) -> Unit)? = null,
+        mediaInlining: Boolean = false,
+        onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
@@ -84,7 +86,11 @@ class ChatRepository(context: Context) {
             continuePrefill = continuePrefill,
             impersonationPrompt = impersonationPrompt,
             cyclePrompt = cyclePrompt,
+            imageInlining = mediaInlining,
+            videoInlining = mediaInlining,
+            audioInlining = mediaInlining,
         )
+        onPrepared?.invoke(prepared)
         return client.streamChatCompletionsAsync(
             provider = provider,
             profile = profile,

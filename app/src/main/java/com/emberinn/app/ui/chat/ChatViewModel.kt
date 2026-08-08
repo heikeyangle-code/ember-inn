@@ -1,6 +1,8 @@
 package com.emberinn.app.ui.chat
 
 import android.app.Application
+import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.CharacterRecord
@@ -8,6 +10,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +48,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 最近一次生成的完整思考过程（生成完保留，UI 折叠展示；新请求时清空）。 */
     private val _lastReasoning = MutableStateFlow<String?>(null)
     val lastReasoning: StateFlow<String?> = _lastReasoning
+
+    /** 待发送附件（官方 extra.media；本地读成 data URL 后随消息发送）。 */
+    private val _pendingMedia = MutableStateFlow<List<MediaAttachment>>(emptyList())
+    val pendingMedia: StateFlow<List<MediaAttachment>> = _pendingMedia
+
+    /** 上次发送命中的世界书条目（名字/主关键词），聊天页显示命中灯。 */
+    private val _worldHits = MutableStateFlow<List<String>>(emptyList())
+    val worldHits: StateFlow<List<String>> = _worldHits
+
+    /** 上次发送的上下文占用（已用 token, 上限），聊天页显示占比胶囊。 */
+    private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
+    val contextUsage: StateFlow<Pair<Int, Int>?> = _contextUsage
 
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
@@ -91,14 +106,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ProviderState.refresh(profile)
     }
 
-    fun send(text: String, userName: String = "User") {
-        if (text.isBlank() || _isStreaming.value) return
+    fun send(text: String, userName: String = "User", media: List<MediaAttachment> = emptyList()) {
+        if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return
         val charName = chatStore.get(sessionId)?.name ?: "Assistant"
         currentCharName = charName
         currentUserName = userName
         _notice.value = null
         _impersonated.value = null
-        chatStore.append(sessionId, true, text, userName)
+        chatStore.append(sessionId, true, text, userName, media)
+        _pendingMedia.value = emptyList()
         refreshMessages()
 
         if (!isProviderConfigured()) {
@@ -106,7 +122,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
-        startStream(history = chatStore.messages(sessionId))
+        startStream(
+            history = chatStore.messages(sessionId),
+            mediaInlining = media.isNotEmpty(),
+        )
     }
 
     /** 停止按钮：取消请求并保留已生成的部分（官方 abortController + mes_stop 语义）。 */
@@ -225,6 +244,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _impersonated.value = null
     }
 
+    /** 从系统文件选择器取附件：读字节 → data URL（官方 fetch→base64 语义），类型缺省按图片。 */
+    fun addPendingMedia(uri: Uri, mime: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val resolver = getApplication<Application>().contentResolver
+                val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
+                val type = mime?.ifBlank { null }
+                    ?: resolver.getType(uri)
+                    ?: "application/octet-stream"
+                val mediaType = when {
+                    type.startsWith("image/") -> "image"
+                    type.startsWith("video/") -> "video"
+                    type.startsWith("audio/") -> "audio"
+                    else -> return@launch
+                }
+                val dataUrl = "data:$type;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+                _pendingMedia.value = _pendingMedia.value + MediaAttachment(type = mediaType, url = dataUrl)
+            }
+        }
+    }
+
+    fun removePendingMedia(index: Int) {
+        val list = _pendingMedia.value
+        if (index in list.indices) _pendingMedia.value = list.filterIndexed { i, _ -> i != index }
+    }
+
+    fun clearPendingMedia() {
+        _pendingMedia.value = emptyList()
+    }
+
     fun clearSession() {
         if (_isStreaming.value) stop()
         chatStore.replace(sessionId, emptyList())
@@ -242,11 +291,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         impersonation: Boolean = false,
         cyclePrompt: String = "",
         continueMode: Boolean = false,
+        mediaInlining: Boolean = false,
         onFinished: (() -> Unit)? = null,
     ) {
         _streamingText.value = ""
         _streamingReasoning.value = ""
         _lastReasoning.value = null
+        _worldHits.value = emptyList()
+        _contextUsage.value = null
         _isStreaming.value = true
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
@@ -286,6 +338,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 type = type,
                 continuePrefill = continuePrefill,
                 cyclePrompt = cyclePrompt,
+                mediaInlining = mediaInlining,
+                onPrepared = { info ->
+                    if (streamActive) {
+                        _worldHits.value = info.activatedWorldInfo
+                            .map { it.name.ifBlank { it.keys.firstOrNull().orEmpty() } }
+                            .filter { it.isNotBlank() }
+                        _contextUsage.value = Pair(info.counts.values.sum(), info.maxContextTokens)
+                    }
+                },
             )
             if (streamActive) {
                 streamSession = session

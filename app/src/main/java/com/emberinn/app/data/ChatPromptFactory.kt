@@ -2,6 +2,8 @@ package com.emberinn.app.data
 
 import com.emberinn.engine.macros.ChatMessage
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.media.MediaDisplay
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
@@ -40,6 +42,8 @@ class ChatPromptFactory {
     data class Prepared(
         val messages: List<CompletionMessage>,
         val activatedWorldInfo: List<WorldInfoEntry>,
+        val counts: Map<String, Int> = emptyMap(),
+        val maxContextTokens: Int = 8192,
     )
 
     fun prepare(
@@ -54,6 +58,9 @@ class ChatPromptFactory {
         continuePrefill: Boolean = false,
         impersonationPrompt: String = DEFAULT_IMPERSONATION_PROMPT,
         cyclePrompt: String = "",
+        imageInlining: Boolean = false,
+        videoInlining: Boolean = false,
+        audioInlining: Boolean = false,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(parsed?.source)
@@ -75,7 +82,25 @@ class ChatPromptFactory {
         // 总装内部 populationInjectionPrompts 会 reverse 一次、历史填充再 reverse 一次。
         // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
         val historyMessages = PromptAssembler.toOpenAiMessages(chatMessages, user = userName)
-            .map { it.copy(identifier = "chatHistory") }
+            .mapIndexed { i, pm ->
+                val el = history.getOrNull(i)?.jsonObject
+                val extra = el?.get("extra") as? JsonObject
+                pm.copy(
+                    identifier = "chatHistory",
+                    media = extra?.get("media")?.jsonArray?.mapNotNull { me ->
+                        val mo = me.jsonObject
+                        val url = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                        MediaAttachment(
+                            type = mo["type"]?.jsonPrimitive?.contentOrNull?.ifBlank { "image" } ?: "image",
+                            url = url,
+                            title = mo["title"]?.jsonPrimitive?.contentOrNull ?: "",
+                        )
+                    },
+                    mediaDisplay = extra?.get("media_display")?.jsonPrimitive?.contentOrNull
+                        ?.takeIf { it == MediaDisplay.LIST || it == MediaDisplay.GALLERY },
+                    mediaIndex = extra?.get("media_index")?.jsonPrimitive?.content?.toIntOrNull(),
+                )
+            }
             .asReversed()
 
         // 世界书扫描（角色卡内嵌 character_book）
@@ -112,9 +137,17 @@ class ChatPromptFactory {
                 continuePrefill = continuePrefill,
                 impersonationPrompt = impersonationPrompt,
                 cyclePrompt = cyclePrompt,
+                imageInlining = imageInlining,
+                videoInlining = videoInlining,
+                audioInlining = audioInlining,
             ),
         )
-        return Prepared(result.messages, wiResult.activated)
+        return Prepared(
+            messages = result.messages,
+            activatedWorldInfo = wiResult.activated,
+            counts = result.counts,
+            maxContextTokens = maxContextTokens,
+        )
     }
 
     private data class ParsedCard(

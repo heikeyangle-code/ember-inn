@@ -4,12 +4,15 @@ package com.emberinn.app.ui.chat
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -56,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,8 +75,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,7 +88,12 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import com.emberinn.engine.media.MediaAttachment
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
@@ -93,8 +107,10 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -125,6 +141,9 @@ fun ChatScreen(
     val impersonated by vm.impersonated.collectAsState()
     val streamingReasoning by vm.streamingReasoning.collectAsState()
     val lastReasoning by vm.lastReasoning.collectAsState()
+    val pendingMedia by vm.pendingMedia.collectAsState()
+    val worldHits by vm.worldHits.collectAsState()
+    val contextUsage by vm.contextUsage.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
@@ -134,6 +153,15 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+
+    val mediaPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        uris.forEach { uri ->
+            val mime = context.contentResolver.getType(uri)
+            vm.addPendingMedia(uri, mime)
+        }
+    }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
     val items = remember(messages, isStreaming, streamingText) {
@@ -212,6 +240,7 @@ fun ChatScreen(
                         MessageRow(
                             isUser = isUserMsg,
                             text = text,
+                            media = mediaOf(el),
                             reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
                             name = nameOf(el, isUserMsg),
                             time = timeOf(el),
@@ -251,20 +280,43 @@ fun ChatScreen(
             }
         }
 
+        if (!isStreaming && (contextUsage != null || worldHits.isNotEmpty())) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                contextUsage?.let { (used, max) ->
+                    StatusPill("上下文 ${formatTokens(used)}/${formatTokens(max)}")
+                }
+                if (worldHits.isNotEmpty()) {
+                    StatusPill("世界书 ×${worldHits.size}") {
+                        Toast.makeText(
+                            context,
+                            "命中：" + worldHits.take(5).joinToString("、"),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            }
+        }
+
         ChatInputBar(
             input = input,
             onInputChange = { input = it },
+            pendingMedia = pendingMedia,
+            onRemoveMedia = { index -> vm.removePendingMedia(index) },
             isStreaming = isStreaming,
             onSend = {
                 val text = input.trim()
-                if (text.isNotEmpty()) {
-                    vm.send(text)
+                if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
+                    vm.send(text, media = pendingMedia)
                     input = ""
                 }
             },
             onStop = { vm.stop() },
             onAttach = {
-                Toast.makeText(context, "附件功能开发中", Toast.LENGTH_SHORT).show()
+                mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
             },
             onVoice = {
                 Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
@@ -470,6 +522,7 @@ private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
 private fun MessageRow(
     isUser: Boolean,
     text: String,
+    media: List<MediaAttachment>,
     reasoning: String?,
     name: String,
     time: String,
@@ -534,6 +587,10 @@ private fun MessageRow(
                         )
                     }
                 }
+            }
+            if (media.isNotEmpty()) {
+                Spacer(Modifier.size(8.dp))
+                MessageMedia(media = media)
             }
             if (!reasoning.isNullOrBlank()) {
                 Spacer(Modifier.size(6.dp))
@@ -624,6 +681,116 @@ private fun StreamingRow(
             }
         }
     }
+}
+
+/** 状态胶囊（上下文占比 / 世界书命中），README 状态可见。 */
+@Composable
+private fun StatusPill(text: String, onClick: (() -> Unit)? = null) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+        )
+    }
+}
+
+private fun formatTokens(n: Int): String = if (n >= 1000) {
+    "%.1fk".format(n / 1000.0)
+} else {
+    n.toString()
+}
+
+/** 输入区待发附件缩略图（可移除）。 */
+@Composable
+private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier.widthIn(max = 180.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)) {
+            if (media.type == "image") {
+                AsyncImage(
+                    model = media.url,
+                    contentDescription = "附件",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)),
+                )
+            } else {
+                Box(
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(if (media.type == "video") "▶" else "♪", color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+            Spacer(Modifier.size(6.dp))
+            Text(
+                text = media.title.ifBlank { if (media.type == "image") "图片" else if (media.type == "video") "视频" else "音频" },
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "移除附件", modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
+
+/** 消息附件渲染：图片/GIF 用 Coil3（coil-gif），音视频用 Media3 ExoPlayer（README 渲染规范）。 */
+@Composable
+private fun MessageMedia(media: List<MediaAttachment>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        media.forEach { m ->
+            when (m.type) {
+                "image" -> AsyncImage(
+                    model = m.url,
+                    contentDescription = m.title.ifBlank { "图片" },
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                )
+                else -> MediaPlayer(m.url, isAudio = m.type == "audio")
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaPlayer(url: String, isAudio: Boolean) {
+    val context = LocalContext.current
+    val player = remember(url) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            prepare()
+        }
+    }
+    DisposableEffect(player) {
+        onDispose { player.release() }
+    }
+    AndroidView(
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                this.player = player
+                useController = true
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = if (isAudio) 56.dp else 120.dp, max = 320.dp)
+            .clip(RoundedCornerShape(12.dp)),
+    )
 }
 
 /** 生成完的思考过程：默认折叠，点开查看。 */
@@ -746,6 +913,8 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 private fun ChatInputBar(
     input: String,
     onInputChange: (String) -> Unit,
+    pendingMedia: List<MediaAttachment>,
+    onRemoveMedia: (Int) -> Unit,
     isStreaming: Boolean,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -757,12 +926,24 @@ private fun ChatInputBar(
         shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        ) {
+        Column {
+            if (pendingMedia.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    itemsIndexed(pendingMedia, key = { i, media -> "$i-${media.url.take(24)}" }) { index, media ->
+                        PendingMediaChip(media = media, onRemove = { onRemoveMedia(index) })
+                    }
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) {
             IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
                 Icon(Icons.Filled.Add, contentDescription = "附件 / 语音")
             }
@@ -787,6 +968,7 @@ private fun ChatInputBar(
                 IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Filled.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.error)
                 }
+            }
             }
         }
     }
@@ -824,6 +1006,19 @@ private fun isUser(el: JsonElement): Boolean {
 
 private fun textOf(el: JsonElement): String =
     el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+
+private fun mediaOf(el: JsonElement): List<MediaAttachment> {
+    val extra = el.jsonObject["extra"] as? JsonObject ?: return emptyList()
+    return extra["media"]?.jsonArray?.mapNotNull { me ->
+        val mo = me.jsonObject
+        val url = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+        MediaAttachment(
+            type = mo["type"]?.jsonPrimitive?.contentOrNull?.ifBlank { "image" } ?: "image",
+            url = url,
+            title = mo["title"]?.jsonPrimitive?.contentOrNull ?: "",
+        )
+    } ?: emptyList()
+}""
 
 private fun nameOf(el: JsonElement, isUser: Boolean): String =
     el.jsonObject["name"]?.jsonPrimitive?.contentOrNull
