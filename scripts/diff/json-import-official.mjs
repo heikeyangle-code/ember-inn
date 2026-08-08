@@ -134,5 +134,24 @@ await add('preserved', {
     spec: 'chara_card_v3', data: { name: 'Preserved卡', description: 'd' },
 }, { preservedFileName: 'keep.json' });
 
+
+await add('v3-no-data', {
+    spec: 'chara_card_v3', name: '无data', description: 'd', talkativeness: 0.9, fav: true, chat: 'c',
+});
+await add('v2-data-present', {
+    spec: 'chara_card_v2', name: '有data', description: 'd', talkativeness: 0.8, fav: true, chat: 'c',
+    data: { name: '有data', description: 'data描述', extensions: { talkativeness: 0.3, fav: false } },
+});
+await add('v1-tags-array', {
+    name: '数组标签', description: 'd', tags: ['x', 'y'], mes_example: 'm',
+});
+await add('gradio-with-name', {
+    char_name: '渐变', name: '原name', char_persona: '人设', char_greeting: '你好', world_scenario: '场景',
+    creator_notes: '备注', tags: 'a',
+});
+await add('v1-empty-creator', {
+    name: '空备注', creator_notes: '', mes_example: 'x',
+});
+
 writeFileSync(outFile, JSON.stringify({ source: 'characters.js importFromJson', cases }, null, 2));
 console.log('json-import:', cases.length, 'cases ->', outFile);

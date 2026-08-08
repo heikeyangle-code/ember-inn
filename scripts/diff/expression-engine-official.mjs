@@ -63,8 +63,9 @@ const chooseSpriteForExpression = extractFunction(exprSrc, 'function chooseSprit
 
 const spritesFunctions = `
 function labelFromFilename(fileName) {
-    const match = fileName.match(/^(.+?)(?:[-\\.].*?)?$/);
-    return match?.[1] ?? fileName;
+    const lower = fileName.toLowerCase();
+    const match = lower.match(/^(.+?)(?:[-\\.].*?)?$/);
+    return match?.[1] ?? lower;
 }
 
 function groupSprites(sprites, customLabels) {
@@ -175,6 +176,24 @@ await add('choose-reroll-same', {
         { fileName: 'joy.png', title: 'joy', imageSrc: '/characters/A/joy.png' },
         { fileName: 'joy-2.png', title: 'joy-2', imageSrc: '/characters/A/joy-2.png' },
     ] }] },
+    settings: { expressions: { allowMultiple: true, rerollIfSame: true } },
+});
+
+
+await add('label-uppercase', { method: 'labelFromFilename', fileName: 'JOY-1.PNG' });
+await add('group-empty', { method: 'groupSprites', sprites: [], customLabels: [] });
+await add('choose-no-cache', {
+    method: 'choose', folderName: 'X', expression: 'joy',
+    spriteCache: {}, settings: { expressions: { allowMultiple: false } },
+});
+await add('choose-fallback-empty', {
+    method: 'choose', folderName: 'A', expression: 'anger',
+    spriteCache: { A: [{ label: 'happy', files: [] }] },
+    settings: { expressions: { fallback_expression: 'happy', allowMultiple: false } },
+});
+await add('choose-reroll-all-same', {
+    method: 'choose', folderName: 'A', expression: 'joy', random: 0.5, prevSrc: '/characters/A/joy.png',
+    spriteCache: { A: [{ label: 'joy', files: [{ fileName: 'joy.png', title: 'joy', imageSrc: '/characters/A/joy.png' }] }] },
     settings: { expressions: { allowMultiple: true, rerollIfSame: true } },
 });
 

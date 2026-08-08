@@ -48,7 +48,7 @@ class GroupActivationDiffTest {
                     name = o["name"]?.jsonPrimitive?.content ?: "",
                     isUser = o["is_user"]?.jsonPrimitive?.content == "true",
                     isSystem = o["is_system"]?.jsonPrimitive?.content == "true",
-                    originalAvatar = o["original_avatar"]?.jsonPrimitive?.content,
+                    originalAvatar = o["original_avatar"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
                     extraType = o["extra"]?.jsonObject?.get("type")?.jsonPrimitive?.content,
                 )
             } ?: emptyList()
@@ -56,7 +56,7 @@ class GroupActivationDiffTest {
                 GroupMessage(
                     name = o["name"]?.jsonPrimitive?.content ?: "",
                     isUser = o["is_user"]?.jsonPrimitive?.content == "true",
-                    originalAvatar = o["original_avatar"]?.jsonPrimitive?.content,
+                    originalAvatar = o["original_avatar"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
                     extraType = o["extra"]?.jsonObject?.get("type")?.jsonPrimitive?.content,
                 )
             }

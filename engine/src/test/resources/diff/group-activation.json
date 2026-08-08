@@ -453,6 +453,188 @@
         "c",
         "a"
       ]
+    },
+    {
+      "id": "list-empty",
+      "args": {
+        "body": {
+          "method": "list",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "randoms": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "natural-empty",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": null,
+          "allowSelfResponses": false,
+          "isUserInput": false,
+          "randoms": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "pooled-empty",
+      "args": {
+        "body": {
+          "method": "pooled",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [],
+          "lastMessage": null,
+          "isUserInput": false,
+          "randoms": [
+            0.5
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "swipe-all-system-allow",
+      "args": {
+        "body": {
+          "method": "swipe",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "allowSystem": true,
+          "chat": [
+            {
+              "is_user": false,
+              "is_system": true,
+              "name": "Sys",
+              "original_avatar": null
+            }
+          ],
+          "randoms": [
+            0.9
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "natural-zero-random",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": null,
+          "allowSelfResponses": false,
+          "isUserInput": true,
+          "randoms": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "expected": [
+        "b",
+        "c",
+        "a"
+      ]
     }
   ]
 }

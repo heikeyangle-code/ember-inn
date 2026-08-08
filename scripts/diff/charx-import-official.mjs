@@ -280,5 +280,32 @@ await add('sfx-prefix', {
     data: { name: '自解压卡', description: 'd' },
 }, {}, { sfxPrefix: 'SELF-EXTRACTING-HEADER!' });
 
+
+await add('ext-from-path', {
+    spec: 'chara_card_v3',
+    data: { name: '路径扩展', extensions: { fav: false }, assets: [
+        { type: 'emotion', name: 'happy', uri: 'embedded://sprites/happy.png' },
+    ] },
+}, { 'sprites/happy.png': Buffer.from('aGVsbG8=', 'base64').toString('base64') });
+await add('uri-uppercase', {
+    spec: 'chara_card_v3',
+    data: { name: '大写URI', extensions: { fav: false }, assets: [
+        { type: 'emotion', name: 'sad', ext: 'webp', uri: 'EMBEDDED://sprites/sad.webp' },
+    ] },
+}, { 'sprites/sad.webp': Buffer.from('d2VicA==', 'base64').toString('base64') });
+await add('icon-first', {
+    spec: 'chara_card_v3',
+    data: { name: '双图标', extensions: { fav: false }, assets: [
+        { type: 'icon', name: 'a.png', ext: 'png', uri: 'embeded://icons/a.png' },
+        { type: 'icon', name: 'b.png', ext: 'png', uri: 'embeded://icons/b.png' },
+    ] },
+}, { 'icons/a.png': Buffer.from('QQ==', 'base64').toString('base64'), 'icons/b.png': Buffer.from('Qg==', 'base64').toString('base64') });
+await add('path-dot-prefix', {
+    spec: 'chara_card_v3',
+    data: { name: '点前缀', extensions: { fav: false }, assets: [
+        { type: 'background', name: 'bg', ext: 'jpg', uri: 'embeded://./bg/room.jpg' },
+    ] },
+}, { 'bg/room.jpg': Buffer.from('YmFjaw==', 'base64').toString('base64') });
+
 writeFileSync(outFile, JSON.stringify({ source: 'src/charx.js CharXParser + characters.js importFromCharX', cases }, null, 2));
 console.log('charx-import:', cases.length, 'cases ->', outFile);

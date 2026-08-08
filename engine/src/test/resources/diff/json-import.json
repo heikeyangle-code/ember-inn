@@ -208,6 +208,240 @@
         "resultFileName": "keep.json",
         "risuRun": true
       }
+    },
+    {
+      "id": "v3-no-data",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v3\",\"name\":\"无data\",\"description\":\"d\",\"talkativeness\":0.9,\"fav\":true,\"chat\":\"c\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "name": "无data",
+          "description": "d",
+          "fav": false,
+          "data": {
+            "extensions": {
+              "fav": false
+            }
+          },
+          "chat": "无data - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "无data",
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v2-data-present",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v2\",\"name\":\"有data\",\"description\":\"d\",\"talkativeness\":0.8,\"fav\":true,\"chat\":\"c\",\"data\":{\"name\":\"有data\",\"description\":\"data描述\",\"extensions\":{\"talkativeness\":0.3,\"fav\":false}}}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v2",
+          "name": "有data",
+          "description": "data描述",
+          "talkativeness": 0.3,
+          "fav": false,
+          "data": {
+            "name": "有data",
+            "description": "data描述",
+            "extensions": {
+              "talkativeness": 0.3,
+              "fav": false
+            }
+          },
+          "chat": "有data - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "有data",
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v1-tags-array",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"数组标签\",\"description\":\"d\",\"tags\":[\"x\",\"y\"],\"mes_example\":\"m\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "数组标签",
+          "description": "d",
+          "creatorcomment": "",
+          "personality": "",
+          "first_mes": "",
+          "avatar": "none",
+          "chat": "数组标签 - 2026-08-08@00h00m00s000ms",
+          "mes_example": "m",
+          "scenario": "",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.5,
+          "creator": "",
+          "tags": [
+            "x",
+            "y"
+          ],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "数组标签",
+            "description": "d",
+            "personality": "",
+            "scenario": "",
+            "first_mes": "",
+            "mes_example": "m",
+            "creator_notes": "",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [
+              "x",
+              "y"
+            ],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.5,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "数组标签",
+        "risuRun": false
+      }
+    },
+    {
+      "id": "gradio-with-name",
+      "args": {
+        "body": {
+          "json": "{\"char_name\":\"渐变\",\"name\":\"原name\",\"char_persona\":\"人设\",\"char_greeting\":\"你好\",\"world_scenario\":\"场景\",\"creator_notes\":\"备注\",\"tags\":\"a\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "原name",
+          "description": "",
+          "creatorcomment": "备注",
+          "personality": "",
+          "first_mes": "",
+          "avatar": "none",
+          "chat": "原name - 2026-08-08@00h00m00s000ms",
+          "mes_example": "",
+          "scenario": "",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.5,
+          "creator": "",
+          "tags": [
+            "a"
+          ],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "原name",
+            "description": "",
+            "personality": "",
+            "scenario": "",
+            "first_mes": "",
+            "mes_example": "",
+            "creator_notes": "备注",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [
+              "a"
+            ],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.5,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "原name",
+        "risuRun": false
+      }
+    },
+    {
+      "id": "v1-empty-creator",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"空备注\",\"creator_notes\":\"\",\"mes_example\":\"x\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "空备注",
+          "description": "",
+          "creatorcomment": "",
+          "personality": "",
+          "first_mes": "",
+          "avatar": "none",
+          "chat": "空备注 - 2026-08-08@00h00m00s000ms",
+          "mes_example": "x",
+          "scenario": "",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.5,
+          "creator": "",
+          "tags": [],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "空备注",
+            "description": "",
+            "personality": "",
+            "scenario": "",
+            "first_mes": "",
+            "mes_example": "x",
+            "creator_notes": "",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.5,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "空备注",
+        "risuRun": false
+      }
     }
   ]
 }

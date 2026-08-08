@@ -386,6 +386,106 @@
         "title": "joy",
         "imageSrc": "/characters/A/joy.png"
       }
+    },
+    {
+      "id": "label-uppercase",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "JOY-1.PNG"
+        }
+      },
+      "expected": "joy"
+    },
+    {
+      "id": "group-empty",
+      "args": {
+        "body": {
+          "method": "groupSprites",
+          "sprites": [],
+          "customLabels": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "choose-no-cache",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "X",
+          "expression": "joy",
+          "spriteCache": {},
+          "settings": {
+            "expressions": {
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "choose-fallback-empty",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "anger",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "happy",
+                "files": []
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "fallback_expression": "happy",
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "choose-reroll-all-same",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "random": 0.5,
+          "prevSrc": "/characters/A/joy.png",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": true,
+              "rerollIfSame": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/A/joy.png"
+      }
     }
   ]
 }

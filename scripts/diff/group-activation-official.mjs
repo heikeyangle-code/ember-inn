@@ -215,5 +215,20 @@ await add('natural-allow-self', {
     randoms: [0.1, 0.1, 0.1, 0.9],
 });
 
+
+await add('list-empty', { method: 'list', members: [], characters: chars, randoms: [] });
+await add('natural-empty', { method: 'natural', members: [], characters: chars, input: '', lastMessage: null, allowSelfResponses: false, isUserInput: false, randoms: [] });
+await add('pooled-empty', { method: 'pooled', members: [], characters: chars, chat: [], lastMessage: null, isUserInput: false, randoms: [0.5] });
+await add('swipe-all-system-allow', {
+    method: 'swipe', members: ['a', 'b', 'c'], characters: chars, allowSystem: true,
+    chat: [{ is_user: false, is_system: true, name: 'Sys', original_avatar: null }],
+    randoms: [0.9],
+});
+await add('natural-zero-random', {
+    method: 'natural', members: ['a', 'b', 'c'], characters: chars,
+    input: '', lastMessage: null, allowSelfResponses: false, isUserInput: true,
+    randoms: [0, 0, 0, 0, 0],
+});
+
 writeFileSync(outFile, JSON.stringify({ source: 'group-chats.js activate*', cases }, null, 2));
 console.log('group-activation:', cases.length, 'cases ->', outFile);

@@ -45,7 +45,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（37 组，共 487 例官方基准，全部通过）**：
+**已覆盖（37 组，共 510 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -69,20 +69,20 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 示例对话填充 | dialogue-examples-pop-official.mjs | DialogueExamplesPopDiffTest | 4 |
 | YAML 角色卡导入 | yaml-import-official.mjs | YamlImportDiffTest | 3 |
 | 提示词组装合并 | prepare-prompts-official.mjs | PreparePromptsDiffTest | 7 |
-| CharX 角色卡导入 | charx-import-official.mjs | CharXImportDiffTest | 5 |
+| CharX 角色卡导入 | charx-import-official.mjs | CharXImportDiffTest | 9 |
 | BYAF 纯逻辑 | byaf-macros-official.mjs | ByafMacrosDiffTest | 14 |
 | BYAF 聊天导入 | byaf-chat-official.mjs | ByafChatDiffTest | 5 |
 | BYAF 角色卡组装 | byaf-card-official.mjs | ByafCardDiffTest | 4 |
 | PromptManager 名字规则 | prompt-name-official.mjs | PromptNameDiffTest | 28 |
-| 表情精灵引擎 | expression-engine-official.mjs | ExpressionEngineDiffTest | 14 |
+| 表情精灵引擎 | expression-engine-official.mjs | ExpressionEngineDiffTest | 19 |
 | 表情分类文本预处理 | expression-classify-official.mjs | ExpressionClassifyDiffTest | 8 |
-| 群聊成员激活 | group-activation-official.mjs | GroupActivationDiffTest | 10 |
+| 群聊成员激活 | group-activation-official.mjs | GroupActivationDiffTest | 15 |
 | 群聊角色卡合并 | group-cards-official.mjs | GroupCardsDiffTest | 6 |
 | 群聊深度提示 | group-depth-official.mjs | GroupDepthDiffTest | 5 |
 | 精灵存储/Risu 导入 | sprites-storage-official.mjs | SpriteStorageDiffTest | 7 |
 | 角色卡字段聚合 | character-fields-official.mjs | CharacterFieldsDiffTest | 6 |
-| JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 5 |
-| BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 4 |
+| JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 10 |
+| BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 10 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 4 |
@@ -222,6 +222,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 32（2026-08-08：边缘 case 扩充）
+
+- JSON 导入 +5：v3 无 data / v2 data 覆盖 / tags 数组 / gradio 带 name / 空备注
+- BYAF 导入 +4：重复背景去重 / 背景文件名冲突 / 空场景标题 / 重复备用图标
+- CharX +4：扩展名从 zipPath 推导 / URI 大小写 / 非 main 图标 / ./ 路径归一
+- 表情引擎 +5：大写文件名 / 空列表 / 无缓存 / fallback 空 / reroll 全排除
+- 群聊激活 +5：空成员 / 自然空 / 池化空 / 全 system 且允许 / 随机 0
+- 差分顺带修 2 个真 bug：BYAF uniqueName 要按完整路径判重；空 title 回退 card.name
+- 官方基准 487 → 510（组数不变，case 增加）；引擎 213 测全绿
 
 ## 最近一轮 31（2026-08-08：JSON 角色卡导出官方差分）
 
@@ -453,7 +463,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 轮 1（更早，已合入 main）
 - 引擎：PNG/JSON/CharX/YAML/BYAF 导入、世界书全套、宏 e2e 差分 158、正则 13 差分、提示词组装（ChatCompletion 嵌套集合 + populators + 扩展注入）、instruct 36 差分、预设 127 打包、CI 修复（keystore 目录、KDoc 未闭合注释、ChatScreen 导入等）
-- 差分工具 37 个脚本 + 487 例 fixture
+- 差分工具 37 个脚本 + 510 例 fixture
 
 ## 7. 注意事项
 

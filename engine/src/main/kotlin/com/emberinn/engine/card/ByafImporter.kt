@@ -213,7 +213,10 @@ object ByafImporter {
                 seenData += data
                 val ext = if (bgPath.contains('.')) bgPath.substringAfterLast('.') else "png"
                 val base = "${fileNameBase}_bg"
-                val unique = uniqueName(base) { candidate -> "$candidate.$ext" in existingFiles || backgroundPlans.any { it.filePath.endsWith("/$candidate.$ext") } }
+                val unique = uniqueName(base) { candidate ->
+                    "/images/$fileNameBase/$candidate.$ext" in existingFiles ||
+                        backgroundPlans.any { it.filePath.endsWith("/$candidate.$ext") }
+                }
                 val newFile = "$unique.$ext"
                 val filePath = "/images/$fileNameBase/$newFile"
                 backgroundPlans += ByafBackgroundPlan(filePath, data)
@@ -221,7 +224,7 @@ object ByafImporter {
             }
 
             for (scenario in scenarios) {
-                val title = scenario["title"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: cardName
+                val title = (scenario["title"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() } ?: "").ifEmpty { cardName }
                 val chatName = sanitizeReplacement("$title - $chatNow imported.jsonl")
                 val filePath = "/chats/$fileNameBase/$chatName"
                 val content = chatFromScenario(scenario, userName, cardName, updatedBackgrounds, now).joinToString("\n") { it.toString() }
@@ -242,7 +245,10 @@ object ByafImporter {
                 val ext = if (icon.filename.contains('.')) icon.filename.substringAfterLast('.') else "png"
                 val label = sanitizeReplacement(icon.label).ifEmpty { "alt" }
                 val folder = "/chars/${sanitizeReplacement(cardName)}"
-                val unique = uniqueName(label) { candidate -> "$candidate.$ext" in existingFiles || iconPlans.any { it.filePath.endsWith("/$candidate.$ext") } }
+                val unique = uniqueName(label) { candidate ->
+                    "$folder/$candidate.$ext" in existingFiles ||
+                        iconPlans.any { it.filePath.endsWith("/$candidate.$ext") }
+                }
                 iconPlans += ByafIconPlan(filePath = "$folder/$unique.$ext", data = icon.data)
             }
         }

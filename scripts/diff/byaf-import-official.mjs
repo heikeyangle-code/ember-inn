@@ -84,6 +84,7 @@ const console = { info: () => {}, warn: () => {}, error: () => {}, log: () => {}
 let writtenChats = [];
 let writtenBackgrounds = [];
 let writtenIcons = [];
+let writtenPaths = [];
 let writeCharacterResult = null;
 
 const path = {
@@ -94,7 +95,7 @@ const path = {
 };
 
 const fs = {
-    existsSync: (p) => request.body.exists?.includes(p) ?? false,
+    existsSync: (p) => (request.body.exists?.includes(p) ?? false) || writtenPaths.includes(p),
     mkdirSync: () => {},
     unlinkSync: () => {},
     readdirSync: () => [],
@@ -102,6 +103,7 @@ const fs = {
 const fsPromises = { readFile: async () => ({ buffer: Buffer.from(request.body.zipBase64 ?? '', 'base64') }), unlink: async () => {} };
 
 const writeFileAtomicSync = (filePath, data) => {
+    writtenPaths.push(filePath);
     if (String(filePath).includes('chats/')) writtenChats.push({ filePath, content: data.toString() });
     else if (String(filePath).includes('images/')) writtenBackgrounds.push({ filePath, data: Buffer.from(data).toString('base64') });
     else writtenIcons.push({ filePath, data: Buffer.from(data).toString('base64') });
@@ -161,6 +163,7 @@ const runCase = new Function('request', 'sanitize', [
     readFromV2,
     importFromByaf,
     'return (async () => {',
+    '    writtenPaths = [];',
     '    request.user = { directories: { chats: "/chats", characters: "/chars", userImages: "/images", root: "/" } };',
     '    request.body.user_name = request.body.userName ?? "用户";',
     '    const fileName = await importFromByaf(\'upload.byaf\', { request }, request.body.preservedFileName ?? null);',
@@ -176,8 +179,10 @@ async function add(id, body) {
 
 const byafData = (scenarios, backgrounds = []) => {
     const first = scenarios[0] ?? {};
-    const altGreetings = scenarios.length > 1 && scenarios[1]?.firstMessages?.[0]?.text
-        ? [scenarios[1].firstMessages[0].text] : [];
+    const firstText = scenarios[0]?.firstMessages?.[0]?.text;
+    const altGreetings = scenarios.slice(1)
+        .filter(s => s.firstMessages?.[0]?.text && s.firstMessages[0].text !== firstText)
+        .map(s => s.firstMessages[0].text);
     const card = {
         spec: 'chara_card_v2', spec_version: '2.0', create_date: '2026-08-08T00:00:00.000Z',
         data: {
@@ -217,6 +222,32 @@ await add('alt-icons', {
         images: [
             { filename: 'avatar.png', image: Buffer.from('QVZBVEFS', 'base64'), label: 'main' },
             { filename: 'alt1.png', image: Buffer.from('QUxUMQ==', 'base64'), label: '备选图标' },
+        ],
+    },
+});
+
+
+await add('duplicate-bg', {
+    userName: '用户',
+    byafData: byafData([scenarioA, { ...scenarioA, title: '场景A2' }], [{ name: 'bg.png', paths: ['bg.png'], data: Buffer.from('QkdB', 'base64') }]),
+});
+await add('bg-collision', {
+    userName: '用户',
+    exists: ['/images/显示_名/显示_名_bg.png'],
+    byafData: byafData([scenarioA], [{ name: 'bg.png', paths: ['bg.png'], data: Buffer.from('QkdB', 'base64') }]),
+});
+await add('empty-title', {
+    userName: '用户',
+    byafData: byafData([{ ...scenarioA, title: '' }], []),
+});
+await add('duplicate-icons', {
+    userName: '用户',
+    byafData: {
+        ...byafData([scenarioA], []),
+        images: [
+            { filename: 'avatar.png', image: Buffer.from('QVZBVEFS', 'base64'), label: 'main' },
+            { filename: 'a.png', image: Buffer.from('QQ==', 'base64'), label: 'same' },
+            { filename: 'b.png', image: Buffer.from('Qg==', 'base64'), label: 'same' },
         ],
     },
 });
