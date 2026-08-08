@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -244,6 +246,7 @@ fun ProviderDetailScreen(
     val accountId by vm.accountId.collectAsState()
     val apiVersion by vm.apiVersion.collectAsState()
     val selectedModel by vm.selectedModel.collectAsState()
+    val contextWindow by vm.contextWindow.collectAsState()
     val testing by vm.testing.collectAsState()
     val message by vm.message.collectAsState()
 
@@ -369,6 +372,15 @@ fun ProviderDetailScreen(
                     Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            OutlinedTextField(
+                value = contextWindow.toString(),
+                onValueChange = vm::setContextWindow,
+                label = { Text("上下文上限（tokens）") },
+                supportingText = { Text("聊天页占比胶囊的分母；默认 8192，建议按模型真实窗口填（如 128000）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             message?.let {
                 Text(
                     it,

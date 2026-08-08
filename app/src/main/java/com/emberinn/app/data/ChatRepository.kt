@@ -82,6 +82,7 @@ class ChatRepository(context: Context) {
             userName = userName,
             charName = charName,
             model = profile.model,
+            maxContextTokens = profile.contextWindow,
             type = type,
             continuePrefill = continuePrefill,
             impersonationPrompt = impersonationPrompt,

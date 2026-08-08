@@ -60,6 +60,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _selectedModel = MutableStateFlow("")
     val selectedModel: StateFlow<String> = _selectedModel
 
+    private val _contextWindow = MutableStateFlow(8192)
+    val contextWindow: StateFlow<Int> = _contextWindow
+
     private val _testing = MutableStateFlow(false)
     val testing: StateFlow<Boolean> = _testing
 
@@ -81,6 +84,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _region.value = existing?.region.orEmpty()
         _accountId.value = existing?.accountId.orEmpty()
         _apiVersion.value = existing?.apiVersionOverride.orEmpty()
+        _contextWindow.value = existing?.contextWindow ?: 8192
         val list = spec.defaultModels.toMutableList()
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
@@ -113,6 +117,12 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
 
     fun setApiVersion(value: String) {
         _apiVersion.value = value.trim()
+    }
+
+    /** 上下文上限（tokens），占比胶囊分母；0/非法回退 8192。 */
+    fun setContextWindow(value: String) {
+        val n = value.filter { it.isDigit() }.toIntOrNull()
+        _contextWindow.value = (n ?: 8192).coerceIn(256, 2_000_000)
     }
 
     fun selectModel(model: String) {
@@ -194,6 +204,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             region = _region.value,
             accountId = _accountId.value,
             apiVersionOverride = _apiVersion.value,
+            contextWindow = _contextWindow.value,
         )
     }
 

@@ -57,9 +57,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _pendingMedia = MutableStateFlow<List<MediaAttachment>>(emptyList())
     val pendingMedia: StateFlow<List<MediaAttachment>> = _pendingMedia
 
-    /** 上次发送命中的世界书条目（名字/主关键词），聊天页显示命中灯。 */
-    private val _worldHits = MutableStateFlow<List<String>>(emptyList())
-    val worldHits: StateFlow<List<String>> = _worldHits
+    /** 上次发送命中的世界书条目（完整信息），聊天页状态面板（README 命中指示灯）。 */
+    private val _worldHits = MutableStateFlow<List<WorldHitView>>(emptyList())
+    val worldHits: StateFlow<List<WorldHitView>> = _worldHits
 
     /** 上次发送的上下文占用（已用 token, 上限），聊天页显示占比胶囊。 */
     private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
@@ -420,11 +420,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 onError = {
                     if (streamActive) {
                         streamActive = false
+                        // 中断也保留已流出的思考过程，不静默吞掉
+                        if (_streamingReasoning.value.isNotBlank()) {
+                            _lastReasoning.value = _streamingReasoning.value
+                        }
                         if (_streamingText.value.isBlank()) {
-                            _notice.value = "（请求失败，请检查网络或 API Key 后重试。）"
+                            _notice.value = "（请求中断，请检查网络或 API Key 后重试。）"
                         } else {
                             finalizeStream(streamContinueMode)
                         }
+                        _streamingReasoning.value = ""
                         onFinished?.invoke()
                     }
                 },
@@ -434,9 +439,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 mediaInlining = mediaInlining,
                 onPrepared = { info ->
                     if (streamActive) {
-                        _worldHits.value = info.activatedWorldInfo
-                            .map { it.name.ifBlank { it.keys.firstOrNull().orEmpty() } }
-                            .filter { it.isNotBlank() }
+                        _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
+                            val name = entry.name.ifBlank { entry.keys.firstOrNull().orEmpty() }
+                            if (name.isBlank()) null else WorldHitView(
+                                name = name,
+                                key = entry.keys.firstOrNull().orEmpty(),
+                                constant = entry.constant,
+                                positionLabel = positionLabel(entry.position),
+                                tokens = entryTokens(entry.content),
+                            )
+                        }
                         // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
                         _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
                     }
@@ -520,6 +532,30 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)
     }
+
+    /** 世界书命中面板行（README 状态面板：名字/关键词/常驻/位置/token）。 */
+    data class WorldHitView(
+        val name: String,
+        val key: String,
+        val constant: Boolean,
+        val positionLabel: String,
+        val tokens: Int,
+    )
+
+    private fun positionLabel(position: Int): String = when (position) {
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_AFTER -> "角色后"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_AT_DEPTH -> "深度"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_AN_TOP -> "作者注释上"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_AN_BOTTOM -> "作者注释下"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_EM_TOP -> "EM 上"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_EM_BOTTOM -> "EM 下"
+        com.emberinn.engine.worldinfo.WorldInfoConstants.POSITION_OUTLET -> "出口"
+        else -> "角色前"
+    }
+
+    private fun entryTokens(content: String): Int = runCatching {
+        com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(chatRepository.profile()?.model.orEmpty()).count(content)
+    }.getOrDefault(content.length / 4)
 
     private fun isUser(el: JsonElement): Boolean {
         val v = el.jsonObject["is_user"] ?: return false

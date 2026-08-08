@@ -150,6 +150,7 @@ fun ChatScreen(
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var contextDetail by remember { mutableStateOf(false) }
+    var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
     var showQuickBar by remember { mutableStateOf(false) }
@@ -351,13 +352,7 @@ fun ChatScreen(
                         ContextCapsule(used = used, max = max, onClick = { contextDetail = true })
                     }
                     if (worldHits.isNotEmpty()) {
-                        StatusPill("世界书 ×${worldHits.size}") {
-                            Toast.makeText(
-                                context,
-                                "命中：" + worldHits.take(5).joinToString("、"),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
+                        StatusPill("世界书 ×${worldHits.size}") { worldPanel = true }
                     }
                 }
             }
@@ -413,6 +408,55 @@ fun ChatScreen(
                 .onSizeChanged { inputBarHeight = it.height }
                 .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f)),
         )
+    }
+
+    if (worldPanel) {
+        ModalBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+                Text("世界书命中", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.size(4.dp))
+                Text(
+                    "本次发送注入的世界书条目（点击状态胶囊打开）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.size(10.dp))
+                if (worldHits.isEmpty()) {
+                    Text("没有命中条目", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    worldHits.forEach { hit ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier.size(10.dp).clip(CircleShape)
+                                    .background(
+                                        if (hit.constant) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.tertiary,
+                                    ),
+                            )
+                            Spacer(Modifier.size(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(hit.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
+                                Text(
+                                    listOf(
+                                        if (hit.constant) "常驻" else "关键词命中",
+                                        hit.key.takeIf { it.isNotBlank() }?.let { "键：$it" },
+                                        hit.positionLabel,
+                                        "${hit.tokens} token",
+                                    ).filterNotNull().joinToString(" · "),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (contextDetail) {
