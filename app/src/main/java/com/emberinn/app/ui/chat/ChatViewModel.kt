@@ -482,11 +482,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             }
             _streamingReasoning.value.isNotBlank() -> {
-                // 思考过程保留 + 正常追加回复
+                // 思考过程保留 + 正常追加回复；空正文不再静默吞掉，给用户明确反馈
                 _lastReasoning.value = _streamingReasoning.value
                 if (reply.isNotBlank()) {
                     appendAiReply(reply)
                     refreshMessages()
+                } else {
+                    _notice.value = "（模型只返回了思考过程，没有生成正文。请重试，或换个模型/关闭思考模式。）"
                 }
             }
             reply.isNotBlank() -> {

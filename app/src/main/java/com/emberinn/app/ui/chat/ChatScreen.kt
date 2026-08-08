@@ -65,6 +65,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -116,6 +117,8 @@ import kotlinx.serialization.json.jsonPrimitive
 private sealed interface ChatItem {
     data class Message(val index: Int, val element: JsonElement) : ChatItem
     data object Streaming : ChatItem
+    /** 思考过程但没有可挂载的 AI 消息（空正文场景），独立成卡，避免思考完就消失。 */
+    data object ReasoningOnly : ChatItem
 }
 
 @Composable
@@ -186,10 +189,15 @@ fun ChatScreen(
     }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
-    val items = remember(messages, isStreaming, streamingText) {
+    val items = remember(messages, isStreaming, streamingText, lastReasoning) {
         buildList {
             messages.forEachIndexed { i, el -> add(ChatItem.Message(i, el)) }
-            if (isStreaming) add(ChatItem.Streaming)
+            if (isStreaming) {
+                add(ChatItem.Streaming)
+            } else if (lastReasoning != null && messages.indexOfLast { el -> !isUser(el) } < 0) {
+                // 空正文场景：思考过程独立成卡，不随流式结束消失
+                add(ChatItem.ReasoningOnly)
+            }
         }
     }
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
@@ -208,17 +216,28 @@ fun ChatScreen(
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
-    }
-    // 流式：只在用户贴底时跟随，且用即时滚动（每 token 动画会上下跳）
-    LaunchedEffect(streamingText) {
-        if (isStreaming && streamingText.isNotEmpty()) {
+    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）
+    var followBottom by remember { mutableStateOf(true) }
+    LaunchedEffect(listState, isStreaming) {
+        snapshotFlow {
             val info = listState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index
-            if (lastVisible == null || lastVisible >= items.lastIndex - 1) {
-                listState.scrollToItem(items.lastIndex)
-            }
+            val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            last >= info.totalItemsCount - 3
+        }.collect { nearBottom ->
+            if (listState.isScrollInProgress && !nearBottom) followBottom = false
+            if (nearBottom) followBottom = true
+        }
+    }
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.scrollToItem(messages.lastIndex)
+            followBottom = true
+        }
+    }
+    // 流式：贴底时用即时滚动到流式项末尾（正文变长不再跳顶，也不逐 token 动画）
+    LaunchedEffect(streamingText, streamingReasoning) {
+        if (isStreaming && followBottom) {
+            listState.scrollToItem(items.lastIndex, scrollOffset = Int.MAX_VALUE)
         }
     }
 
@@ -260,6 +279,7 @@ fun ChatScreen(
                 itemsIndexed(items, key = { _, item -> when (item) {
                     is ChatItem.Message -> "m-${item.index}"
                     ChatItem.Streaming -> "streaming"
+                    ChatItem.ReasoningOnly -> "reasoning-only"
                 } }) { _, item ->
                     when (item) {
                         is ChatItem.Message -> {
@@ -303,6 +323,9 @@ fun ChatScreen(
                             accent = accent,
                             impersonating = isImpersonating,
                         )
+                        ChatItem.ReasoningOnly -> {
+                            lastReasoning?.let { ReasoningCard(text = it) }
+                        }
                     }
                 }
                 notice?.let { n ->
