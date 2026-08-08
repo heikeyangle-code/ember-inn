@@ -180,10 +180,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             when {
                 wasImpersonating -> _impersonated.value = partial
                 wasContinue -> {
+                    // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                     val after = chatStore.messages(sessionId).toMutableList()
                     val aiIdx = after.indexOfLast { !isUser(it) }
                     if (aiIdx >= 0) {
-                        val combined = textOf(after[aiIdx]) + "\n" + partial
+                        val combined = textOf(after[aiIdx]) + partial
                         after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                         chatStore.replace(sessionId, after)
                         refreshMessages()
@@ -493,12 +494,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 _isImpersonating.value = false
             }
             continueMode && reply.isNotBlank() -> {
-                // 官方 mes_continue：续写追加回最后一条 AI 消息（思考过程一并保留）
+                // 官方 mes_continue：saveReply('continue') lastMessage.mes += getMessage，紧贴追加不插换行
                 if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
-                    val combined = textOf(after[aiIdx]) + "\n" + reply
+                    val combined = textOf(after[aiIdx]) + reply
                     after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                     chatStore.replace(sessionId, after)
                     refreshMessages()
