@@ -26,6 +26,8 @@ object RegexEngine {
     private val matchMacro = Regex("""\{\{match\}\}""", RegexOption.IGNORE_CASE)
     private val groupToken = Regex("""\$(\d+)|\$<([^>]+)>""")
 
+    private data class ParsedRegex(val regex: Regex, val global: Boolean)
+
     fun apply(
         script: RegexScript,
         raw: String,
@@ -37,9 +39,9 @@ object RegexEngine {
             SUBSTITUTE_ESCAPED -> sanitizeRegexMacro(substitute(script.findRegex))
             else -> script.findRegex
         }
-        val regex = parseRegex(regexString) ?: return raw
+        val parsed = parseRegex(regexString) ?: return raw
 
-        return regex.replace(raw) { mr ->
+        val transform: (MatchResult) -> String = { mr ->
             var replace = matchMacro.replace(script.replaceString) { "$0" }
             replace = groupToken.replace(replace) { token ->
                 val num = token.groupValues[1]
@@ -53,6 +55,10 @@ object RegexEngine {
             }
             substitute(replace)
         }
+        // 官方 JS String.replace：无 g 只替换第一个匹配
+        if (parsed.global) return parsed.regex.replace(raw, transform)
+        val first = parsed.regex.find(raw) ?: return raw
+        return raw.replaceRange(first.range, transform(first))
     }
 
     private fun trim(value: String, trimStrings: List<String>, substitute: (String) -> String): String {
@@ -79,14 +85,22 @@ object RegexEngine {
         }
     }
 
-    private fun parseRegex(text: String): Regex? {
-        val m = Regex("^/(.*)/([a-z]*)$", RegexOption.DOT_MATCHES_ALL).matchEntire(text)
-        if (m == null) return runCatching { Regex(text) }.getOrNull()
-        val options = buildSet {
-            if ('i' in m.groupValues[2]) add(RegexOption.IGNORE_CASE)
-            if ('m' in m.groupValues[2]) add(RegexOption.MULTILINE)
-            if ('s' in m.groupValues[2]) add(RegexOption.DOT_MATCHES_ALL)
+    /** 对齐 utils.js regexFromString：/pat/flags、非法 flags 回退整体正则、无 g 仅首匹配。 */
+    private fun parseRegex(text: String): ParsedRegex? {
+        val slash = Regex("^/(.*)/([a-z]*)$", RegexOption.DOT_MATCHES_ALL).matchEntire(text)
+        if (slash != null) {
+            val flags = slash.groupValues[2]
+            val validFlags = flags.toSet().size == flags.length && flags.all { it in "gmixXsuUAJ" }
+            if (validFlags) {
+                val options = buildSet {
+                    if ('i' in flags) add(RegexOption.IGNORE_CASE)
+                    if ('m' in flags) add(RegexOption.MULTILINE)
+                    if ('s' in flags) add(RegexOption.DOT_MATCHES_ALL)
+                }
+                return runCatching { ParsedRegex(Regex(slash.groupValues[1], options), 'g' in flags) }.getOrNull()
+            }
         }
-        return runCatching { Regex(m.groupValues[1], options) }.getOrNull()
+        // 无斜杠形式或非法 flags：官方 RegExp(input)（无 g）
+        return runCatching { ParsedRegex(Regex(text), false) }.getOrNull()
     }
 }

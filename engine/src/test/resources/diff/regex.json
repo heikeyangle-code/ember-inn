@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T19:49:56.458Z",
+  "generated": "2026-08-08T08:13:59.576Z",
   "source": "sillytavern-ref release",
   "cases": [
     {
@@ -128,6 +128,69 @@
         "raw": "foo"
       },
       "expected": "foo"
+    },
+    {
+      "id": "flags_global",
+      "args": {
+        "findRegex": "/foo/g",
+        "replaceString": "X",
+        "raw": "foo foo"
+      },
+      "expected": "X X"
+    },
+    {
+      "id": "flags_first",
+      "args": {
+        "findRegex": "/foo/",
+        "replaceString": "X",
+        "raw": "foo foo"
+      },
+      "expected": "X foo"
+    },
+    {
+      "id": "flags_case_insensitive",
+      "args": {
+        "findRegex": "/FOO/i",
+        "replaceString": "X",
+        "raw": "foo FOO"
+      },
+      "expected": "X FOO"
+    },
+    {
+      "id": "flags_multiline",
+      "args": {
+        "findRegex": "/^a/m",
+        "replaceString": "X",
+        "raw": "b\na"
+      },
+      "expected": "b\nX"
+    },
+    {
+      "id": "flags_dotall",
+      "args": {
+        "findRegex": "/a.b/s",
+        "replaceString": "X",
+        "raw": "a\nb"
+      },
+      "expected": "X"
+    },
+    {
+      "id": "flags_invalid",
+      "args": {
+        "findRegex": "/foo/zz",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "no_flags_first_only",
+      "args": {
+        "findRegex": "foo",
+        "replaceString": "X",
+        "raw": "foo foo"
+      },
+      "expected": "X foo"
     }
   ]
 }

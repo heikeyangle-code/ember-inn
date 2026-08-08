@@ -1,0 +1,214 @@
+{
+  "source": "regex/engine.js getRegexedString",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "raw": "foo foo",
+          "placement": 1,
+          "scripts": [
+            {
+              "findRegex": "/foo/g",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "X X"
+    },
+    {
+      "id": "wrong-placement",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 2,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "markdown-only",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "isMarkdown": true,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": true,
+              "promptOnly": false,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "X"
+    },
+    {
+      "id": "markdown-skip",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "isMarkdown": false,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": true,
+              "promptOnly": false,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "prompt-only",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "isPrompt": true,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": true,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "X"
+    },
+    {
+      "id": "edit-skip",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "isEdit": true,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": false
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "depth-min",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "depth": 1,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true,
+              "minDepth": 2
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "depth-max",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "depth": 5,
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true,
+              "maxDepth": 3
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "disabled-extension",
+      "args": {
+        "body": {
+          "raw": "foo",
+          "placement": 1,
+          "disabledExtensions": [
+            "regex"
+          ],
+          "scripts": [
+            {
+              "findRegex": "foo",
+              "replaceString": "X",
+              "placement": [
+                1
+              ],
+              "markdownOnly": false,
+              "promptOnly": false,
+              "runOnEdit": true
+            }
+          ]
+        }
+      },
+      "expected": "foo"
+    }
+  ]
+}

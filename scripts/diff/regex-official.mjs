@@ -137,8 +137,17 @@ const cases = [
     { id: 'escaped_dot_miss', args: { findRegex: 'a.b', replaceString: 'X', substituteRegex: 2, raw: 'axb' } },
     { id: 'disabled', args: { findRegex: 'foo', replaceString: 'X', raw: 'foo', disabled: true } },
     { id: 'empty_pattern', args: { findRegex: '', replaceString: 'X', raw: 'foo' } },
+
     { id: 'invalid_regex', args: { findRegex: '(', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_global', args: { findRegex: '/foo/g', replaceString: 'X', raw: 'foo foo' } },
+    { id: 'flags_first', args: { findRegex: '/foo/', replaceString: 'X', raw: 'foo foo' } },
+    { id: 'flags_case_insensitive', args: { findRegex: '/FOO/i', replaceString: 'X', raw: 'foo FOO' } },
+    { id: 'flags_multiline', args: { findRegex: '/^a/m', replaceString: 'X', raw: 'b\na' } },
+    { id: 'flags_dotall', args: { findRegex: '/a.b/s', replaceString: 'X', raw: 'a\nb' } },
+    { id: 'flags_invalid', args: { findRegex: '/foo/zz', replaceString: 'X', raw: 'foo' } },
+    { id: 'no_flags_first_only', args: { findRegex: 'foo', replaceString: 'X', raw: 'foo foo' } },
 ];
+
 
 const moduleText = stub + `
 const __cases = ${JSON.stringify(cases)};
