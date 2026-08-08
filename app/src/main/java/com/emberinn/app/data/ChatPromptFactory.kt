@@ -53,6 +53,7 @@ class ChatPromptFactory {
         type: String = "generate",
         continuePrefill: Boolean = false,
         impersonationPrompt: String = DEFAULT_IMPERSONATION_PROMPT,
+        cyclePrompt: String = "",
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(parsed?.source)
@@ -70,8 +71,12 @@ class ChatPromptFactory {
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
             )
         }
+        // 对齐官方 setOpenAIMessages：进总装前消息是“新的在前”（official messages[i] 反向填充）；
+        // 总装内部 populationInjectionPrompts 会 reverse 一次、历史填充再 reverse 一次。
+        // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
         val historyMessages = PromptAssembler.toOpenAiMessages(chatMessages, user = userName)
             .map { it.copy(identifier = "chatHistory") }
+            .asReversed()
 
         // 世界书扫描（角色卡内嵌 character_book）
         val scanner = WorldInfoScanner(tokenCounter = tokenCounter)
@@ -106,6 +111,7 @@ class ChatPromptFactory {
                 type = type,
                 continuePrefill = continuePrefill,
                 impersonationPrompt = impersonationPrompt,
+                cyclePrompt = cyclePrompt,
             ),
         )
         return Prepared(result.messages, wiResult.activated)

@@ -6,6 +6,7 @@ import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
+import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _streamingText = MutableStateFlow("")
     val streamingText: StateFlow<String> = _streamingText
 
+    /** 流式思考过程（官方 reasoning 独立通道，不进聊天正文）。 */
+    private val _streamingReasoning = MutableStateFlow("")
+    val streamingReasoning: StateFlow<String> = _streamingReasoning
+
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
 
@@ -45,22 +50,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _impersonated = MutableStateFlow<String?>(null)
     val impersonated: StateFlow<String?> = _impersonated
 
-    private val _providerConfigured = MutableStateFlow(chatRepository.profile() != null)
-    val providerConfigured: StateFlow<Boolean> = _providerConfigured
+    /** 共享状态：设置页写入后自动更新，聊天页无需轮询读盘。 */
+    val providerConfigured: StateFlow<Boolean> = ProviderState.configured
 
     /** 瞬态提示（未配置模型 / 请求失败），只显示不落盘。 */
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice
 
-    /** 每次进入聊天页/发送前调用：重新读盘，避免配置后状态过期（设置页与聊天页共用 profiles.json）。 */
+    /** 每次进入聊天页调用：读盘刷新一次（设置页已保存过则直接由 ProviderState 同步）。 */
     fun refreshProviderConfigured() {
-        _providerConfigured.value = chatRepository.profile() != null
+        ProviderState.refresh(chatRepository.profile())
     }
 
-    private fun isProviderConfigured(): Boolean = chatRepository.profile() != null
+    private fun isProviderConfigured(): Boolean = ProviderState.isConfigured()
 
     private var streamSession: LlmClient.StreamSession? = null
     private var streamActive = false
+    private var streamContinueMode = false
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
@@ -73,7 +79,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun saveProvider(profile: ConnectionProfile) {
         chatRepository.saveProfile(profile)
-        _providerConfigured.value = true
+        ProviderState.refresh(profile)
     }
 
     fun send(text: String, userName: String = "User") {
@@ -102,17 +108,31 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamActive = false
         val partial = _streamingText.value
         val wasImpersonating = _isImpersonating.value
+        val wasContinue = streamContinueMode
         _isStreaming.value = false
         _isImpersonating.value = false
         if (partial.isNotBlank()) {
-            if (wasImpersonating) {
-                _impersonated.value = partial
-            } else {
-                chatStore.append(sessionId, false, partial, currentCharName)
-                refreshMessages()
+            when {
+                wasImpersonating -> _impersonated.value = partial
+                wasContinue -> {
+                    val after = chatStore.messages(sessionId).toMutableList()
+                    val aiIdx = after.indexOfLast { !isUser(it) }
+                    if (aiIdx >= 0) {
+                        val combined = textOf(after[aiIdx]) + "\n" + partial
+                        after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
+                        chatStore.replace(sessionId, after)
+                        refreshMessages()
+                    }
+                }
+                else -> {
+                    chatStore.append(sessionId, false, partial, currentCharName)
+                    refreshMessages()
+                }
             }
         }
         _streamingText.value = ""
+        _streamingReasoning.value = ""
+        streamContinueMode = false
     }
 
     /** 重新生成：删掉最后一条 AI 回复，用同样的最后一条用户消息重新请求。 */
@@ -133,32 +153,29 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         startStream(history = keep)
     }
 
-    /** 继续生成：官方 mes_continue——把最后一条 AI 回复移出、以 continue 模式续写，结果追加到原消息。 */
+    /**
+     * 继续生成：官方 mes_continue（默认 continue_prefill=false → nudge 路径）。
+     * 传完整历史（ChatPromptFactory 会翻成“新的在前”），引擎把最后一条 AI 移进 continueNudge；
+     * 流结束把续写追加回最后一条 AI（不新增消息）。
+     */
     fun continueGeneration() {
         if (_isStreaming.value) return
-        val msgs = chatStore.messages(sessionId).toMutableList()
+        val msgs = chatStore.messages(sessionId)
         val lastAi = msgs.indexOfLast { !isUser(it) }
         if (lastAi < 0) return
         val lastText = textOf(msgs[lastAi])
-        msgs.removeAt(lastAi)
-        chatStore.replace(sessionId, msgs)
-        refreshMessages()
         _notice.value = null
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
-        startStream(history = msgs, type = "continue", continuePrefill = true) {
-            val after = chatStore.messages(sessionId).toMutableList()
-            if (after.isNotEmpty() && !isUser(after.last())) {
-                val combined = lastText + "\n" + textOf(after.last())
-                val rebuilt = JsonObject(after.last().jsonObject + ("mes" to JsonPrimitive(combined)))
-                after[after.size - 1] = rebuilt
-                chatStore.replace(sessionId, after)
-                refreshMessages()
-            }
-        }
+        startStream(
+            history = msgs,
+            type = "continue",
+            cyclePrompt = lastText,
+            continueMode = true,
+        )
     }
 
     fun deleteMessage(index: Int) {
@@ -211,11 +228,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         type: String = "generate",
         continuePrefill: Boolean = false,
         impersonation: Boolean = false,
+        cyclePrompt: String = "",
+        continueMode: Boolean = false,
         onFinished: (() -> Unit)? = null,
     ) {
         _streamingText.value = ""
+        _streamingReasoning.value = ""
         _isStreaming.value = true
         _isImpersonating.value = impersonation
+        streamContinueMode = continueMode
         streamActive = true
         streamSession = chatRepository.streamPrepared(
             characterRawJson = character?.rawJson,
@@ -225,10 +246,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             onDelta = { delta ->
                 if (streamActive) _streamingText.value += delta
             },
+            onReasoning = { text ->
+                if (streamActive) _streamingReasoning.value += text
+            },
             onDone = {
                 if (streamActive) {
                     streamActive = false
-                    finalizeStream()
+                    finalizeStream(streamContinueMode)
                     onFinished?.invoke()
                 }
             },
@@ -238,35 +262,53 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     if (_streamingText.value.isBlank()) {
                         _notice.value = "（请求失败，请检查网络或 API Key 后重试。）"
                     } else {
-                        finalizeStream()
+                        finalizeStream(streamContinueMode)
                     }
                     onFinished?.invoke()
                 }
             },
             type = type,
             continuePrefill = continuePrefill,
+            cyclePrompt = cyclePrompt,
         )
         if (streamSession == null) {
             streamActive = false
             _isStreaming.value = false
             _isImpersonating.value = false
+            _streamingReasoning.value = ""
             _notice.value = "（未配置模型，请先选一个模型。）"
         }
     }
 
-    private fun finalizeStream() {
+    private fun finalizeStream(continueMode: Boolean = false) {
         _isStreaming.value = false
         streamSession = null
         val reply = _streamingText.value
-        if (_isImpersonating.value) {
-            // 官方：冒充结果进输入框，不写历史
-            if (reply.isNotBlank()) _impersonated.value = reply
-            _isImpersonating.value = false
-        } else if (reply.isNotBlank()) {
-            chatStore.append(sessionId, false, reply, currentCharName)
-            refreshMessages()
+        when {
+            _isImpersonating.value -> {
+                // 官方：冒充结果进输入框，不写历史
+                if (reply.isNotBlank()) _impersonated.value = reply
+                _isImpersonating.value = false
+            }
+            continueMode && reply.isNotBlank() -> {
+                // 官方 mes_continue：续写追加回最后一条 AI 消息
+                val after = chatStore.messages(sessionId).toMutableList()
+                val aiIdx = after.indexOfLast { !isUser(it) }
+                if (aiIdx >= 0) {
+                    val combined = textOf(after[aiIdx]) + "\n" + reply
+                    after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
+                    chatStore.replace(sessionId, after)
+                    refreshMessages()
+                }
+            }
+            reply.isNotBlank() -> {
+                chatStore.append(sessionId, false, reply, currentCharName)
+                refreshMessages()
+            }
         }
         _streamingText.value = ""
+        _streamingReasoning.value = ""
+        streamContinueMode = false
     }
 
     private fun refreshMessages() {

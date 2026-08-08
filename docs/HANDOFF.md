@@ -219,6 +219,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ❌ 角色详情编辑页、世界书/正则/变量/快捷回复/模型覆盖 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线）
+> 2026-08-09 修正：continue 用官方默认 nudge 路径（此前误用 continue_prefill=true 且 App 传“旧在前”，导致引擎把最老消息当续写对象=“重新生成”）；ChatPromptFactory 已按官方 setOpenAIMessages 翻成“新的在前”。思考过程走 LlmClient.onReasoning 独立通道，流式气泡上方显示“思考过程”块。
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏玻璃感（surface 半透明 + 细阴影）、空状态居中留白。
 ❌ 滑动切回复、上下文占比胶囊、世界书命中灯、快捷工具盘、媒体附件渲染（见 4.8）；Claude 冒充的 assistant_impersonation 设置未接（默认空串，影响为 0，排 P2）。
 
@@ -242,6 +243,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 4.6 数据存储 🟡
 角色卡 characters/*.json + avatars/*.png、会话 sessions/*.json（含 pinned 置顶字段）+ chats/*.jsonl、提供商 profiles.json、主题 SharedPreferences（README 计划是 DataStore，未迁移）。
+✅ 提供商“已配置”状态用进程内 ProviderState 共享（设置页保存/切换/删除后刷新，聊天页订阅，不再每发必读盘）；仅进入聊天页时读一次盘兜底。
 ❌ Room 未引入。
 
 ### 4.7 App 接线时官方行为怎么接（源码对照，新会话先读这里）
@@ -288,10 +290,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 官方行为 | 官方源码位置 | 引擎函数 | App 调用点 | 验证 |
 |---|---|---|---|---|
 | 流式发送（角色卡/世界书/示例/历史总装） | `public/scripts/openai.js` prepareOpenAIMessages + `public/scripts/script.js` generate | PromptPipeline.prepare（整链差分 19 例）+ LlmClient.streamChatCompletionsAsync | ChatPromptFactory.prepare → ChatRepository.streamPrepared → ChatViewModel.startStream → ChatScreen StreamingRow | 差分✅ / CI 编译✅ / 真机待测 |
-| SSE 逐 token 解析 | `public/scripts/sse-stream.js` | SseParser（差分 11 例） | LlmClient.executeStream → onDelta → ViewModel 增量 | 差分✅ / CI 编译✅ |
+| SSE 逐 token 解析 + 思考过程 | `public/scripts/sse-stream.js` | SseChunkParser（差分 15 例） | LlmClient.executeStream → onDelta/onReasoning 独立通道 → ViewModel 正文 + 思考过程 | 差分✅ / CI 编译✅ |
 | 停止生成（保留已生成部分） | 官方 abortController + mes_stop | StreamSession.cancel | ChatViewModel.stop → 部分落盘 | 差分✅ / CI 编译✅ / 真机待测 |
 | 重新生成 | option_regenerate | —（复用最后用户消息重新请求） | ChatViewModel.regenerate | CI 编译✅ / 真机待测 |
-| 继续生成 | mes_continue | PromptPipeline type=continue + continuePrefill（差分已覆盖） | ChatViewModel.continueGeneration → 续写合并落盘 | 差分✅ / CI 编译✅ / 真机待测 |
+| 继续生成 | mes_continue（默认 continue_prefill=false → nudge 路径） | PromptPipeline type=continue + cyclePrompt（nudge，差分已覆盖） | ChatViewModel.continueGeneration：传完整历史（ChatPromptFactory 翻成官方“新的在前”），续写追加回最后一条 AI | 差分✅ / CI 编译✅ / 真机待测 |
 | 删除单条消息 | 官方删除消息后重写 jsonl | ChatJsonl.import/export（文件差分） | ChatStore.removeAt → ChatViewModel.deleteMessage | CI 编译✅ / 真机待测 |
 | 清空会话 | 官方清空聊天 | — | ChatStore.replace(emptyList) | CI 编译✅ / 真机待测 |
 | 会话列表/置顶/导出 | 官方 session 管理 + 聊天文件 | ChatJsonl 格式 | SessionRecord.pinned + ChatStore.list/lastMessage/exportJsonl → SessionsScreen | CI 编译✅ / 真机待测 |
@@ -334,6 +336,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 64（2026-08-09：continue 官方 nudge 路径修正 + 思考过程显示 + ProviderState 共享）
+
+- 根因：App 把历史“旧在前”传给总装，而官方 setOpenAIMessages 是“新的在前”；continue_prefill 的 shift() 于是把最老消息当续写对象 → 表现成“重新生成”。修复：ChatPromptFactory 历史消息 asReversed()（官方顺序）；continueGeneration 用官方默认 nudge 路径（type=continue + cyclePrompt=最后 AI 文本，continue_prefill=false），续写追加回最后一条 AI（stop 保留 partial 同样合并）
+- 思考过程：LlmClient.streamChatCompletionsAsync/executeStream 增加 onReasoning 独立通道（官方 reasoning 不进正文）；ChatViewModel.streamingReasoning；ChatScreen 流式气泡上方“思考过程”块（secondaryContainer 低饱和）
+- ProviderState 进程内共享：ProviderViewModel 保存/切换/删除后刷新；ChatViewModel 订阅，不再每次发送读 profiles.json；仅进聊天页读盘兜底（更彻底方案 Room/DataStore Flow 列 P1）
+- 引擎 261 测全绿（本轮无引擎差分新增；LlmClient 改动由现有 SSE 差分 + 单测覆盖，App 接线待 CI）
 
 ## 最近一轮 63（2026-08-09：SSE null 修复 + LlmClient 切官方对拍解析器 + 聊天页 UI 重排 + 模型页深链）
 

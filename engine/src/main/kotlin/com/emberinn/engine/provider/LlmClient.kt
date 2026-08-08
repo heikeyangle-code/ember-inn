@@ -172,6 +172,7 @@ class LlmClient(
         onDone: () -> Unit,
         onError: ((Throwable) -> Unit)? = null,
         options: ProviderRequestOptions = ProviderRequestOptions(),
+        onReasoning: ((String) -> Unit)? = null,
     ): StreamSession {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         val call = http.newCall(request)
@@ -181,7 +182,7 @@ class LlmClient(
                     if (!response.isSuccessful) {
                         error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
                     }
-                    executeStream(response, provider.protocol, onDelta, onDone)
+                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning)
                 }
             } catch (e: Exception) {
                 if (!call.isCanceled()) onError?.invoke(e)
@@ -195,6 +196,7 @@ class LlmClient(
         protocol: String,
         onDelta: (String) -> Unit,
         onDone: () -> Unit,
+        onReasoning: ((String) -> Unit)? = null,
     ) {
         val source = response.body?.source() ?: return
         val sb = StringBuilder()
@@ -219,10 +221,13 @@ class LlmClient(
                     continue
                 }
                 try {
-                    // 官方对拍解析器：逐字符增量；推理文本单独通道，不进聊天正文
+                    // 官方对拍解析器：逐字符增量；推理文本走独立通道（UI 显示思考过程，不进聊天正文）
                     for (chunk in SseChunkParser.parse(dataText)) {
-                        if (chunk.reasoning) continue
-                        if (chunk.chunk.isNotEmpty()) onDelta(chunk.chunk)
+                        if (chunk.reasoning) {
+                            if (chunk.chunk.isNotEmpty()) onReasoning?.invoke(chunk.chunk)
+                        } else if (chunk.chunk.isNotEmpty()) {
+                            onDelta(chunk.chunk)
+                        }
                     }
                 } catch (e: IllegalStateException) {
                     // 对齐官方平滑流：parseStreamData 抛 Unknown/Not primary → catch 后跳过该事件

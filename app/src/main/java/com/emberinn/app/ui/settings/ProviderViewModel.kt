@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.ChatRepository
+import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
@@ -157,19 +158,23 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         if (_selectedModel.value.isBlank() && spec.defaultModels.isNotEmpty()) {
             _selectedModel.value = spec.defaultModels.first()
         }
-        repo.saveProfile(buildProfile(), active = true)
+        val profile = buildProfile()
+        repo.saveProfile(profile, active = true)
         refreshProfiles()
+        ProviderState.refresh(profile)
         _message.value = "已保存"
     }
 
     fun switchActive(id: String) {
         repo.setActiveProfile(id)
         refreshProfiles()
+        ProviderState.refresh(repo.activeProfile())
     }
 
     fun deleteProfile(id: String) {
         repo.deleteProfile(id)
         refreshProfiles()
+        ProviderState.refresh(repo.activeProfile())
     }
 
     fun clearMessage() {

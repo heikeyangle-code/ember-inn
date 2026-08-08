@@ -120,6 +120,7 @@ fun ChatScreen(
     val notice by vm.notice.collectAsState()
     val isImpersonating by vm.isImpersonating.collectAsState()
     val impersonated by vm.impersonated.collectAsState()
+    val streamingReasoning by vm.streamingReasoning.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
@@ -217,6 +218,7 @@ fun ChatScreen(
                     }
                     ChatItem.Streaming -> StreamingRow(
                         text = streamingText,
+                        reasoning = streamingReasoning,
                         name = name,
                         avatarPath = vm.avatarPath,
                         accent = accent,
@@ -541,6 +543,7 @@ private fun MessageRow(
 @Composable
 private fun StreamingRow(
     text: String,
+    reasoning: String = "",
     name: String,
     avatarPath: String?,
     accent: Color,
@@ -566,7 +569,30 @@ private fun StreamingRow(
                 color = if (impersonating) MaterialTheme.colorScheme.secondary else accent,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(Modifier.size(3.dp))
+            Spacer(Modifier.size(4.dp))
+            if (reasoning.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Text(
+                            text = "思考过程",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.size(4.dp))
+                        Text(
+                            text = reasoning,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
+            }
             Surface(
                 shape = RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
