@@ -10,7 +10,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.engine.card.CardFormat
-import com.emberinn.engine.card.CardImporter
+import com.emberinn.engine.card.CharXImporter
 import com.emberinn.engine.card.CharacterCardExporter
 import java.io.File
 import java.util.UUID
@@ -200,7 +200,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     /** CharX 资产入库（官方 persist auxiliary assets）：icon→头像，background/voice→assets 目录。 */
     private fun extractCharXAssets(id: String, bytes: ByteArray): AssetPaths = runCatching {
-        val assets = CardImporter.extractAssets(bytes)
+        val assets = CharXImporter.extractAssets(bytes)
         val iconBytes = assets.icon?.data
         val avatarPath = iconBytes?.let { store.saveAvatar(id, it) }
         val seedColor = iconBytes?.let { extractSeedBlocking(it) }
