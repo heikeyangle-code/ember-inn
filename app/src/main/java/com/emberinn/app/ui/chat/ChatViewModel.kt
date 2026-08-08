@@ -39,6 +39,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _streamingReasoning = MutableStateFlow("")
     val streamingReasoning: StateFlow<String> = _streamingReasoning
 
+    /** 最近一次生成的完整思考过程（生成完保留，UI 折叠展示；新请求时清空）。 */
+    private val _lastReasoning = MutableStateFlow<String?>(null)
+    val lastReasoning: StateFlow<String?> = _lastReasoning
+
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
 
@@ -111,6 +115,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val wasContinue = streamContinueMode
         _isStreaming.value = false
         _isImpersonating.value = false
+        if (!wasImpersonating && _streamingReasoning.value.isNotBlank()) {
+            _lastReasoning.value = _streamingReasoning.value
+        }
         if (partial.isNotBlank()) {
             when {
                 wasImpersonating -> _impersonated.value = partial
@@ -234,6 +241,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     ) {
         _streamingText.value = ""
         _streamingReasoning.value = ""
+        _lastReasoning.value = null
         _isStreaming.value = true
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
@@ -284,20 +292,30 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isStreaming.value = false
         streamSession = null
         val reply = _streamingText.value
+        val wasImpersonating = _isImpersonating.value
         when {
-            _isImpersonating.value -> {
+            wasImpersonating -> {
                 // 官方：冒充结果进输入框，不写历史
                 if (reply.isNotBlank()) _impersonated.value = reply
                 _isImpersonating.value = false
             }
             continueMode && reply.isNotBlank() -> {
-                // 官方 mes_continue：续写追加回最后一条 AI 消息
+                // 官方 mes_continue：续写追加回最后一条 AI 消息（思考过程一并保留）
+                if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
                     val combined = textOf(after[aiIdx]) + "\n" + reply
                     after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                     chatStore.replace(sessionId, after)
+                    refreshMessages()
+                }
+            }
+            _streamingReasoning.value.isNotBlank() -> {
+                // 思考过程保留 + 正常追加回复
+                _lastReasoning.value = _streamingReasoning.value
+                if (reply.isNotBlank()) {
+                    chatStore.append(sessionId, false, reply, currentCharName)
                     refreshMessages()
                 }
             }

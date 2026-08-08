@@ -124,6 +124,7 @@ fun ChatScreen(
     val isImpersonating by vm.isImpersonating.collectAsState()
     val impersonated by vm.impersonated.collectAsState()
     val streamingReasoning by vm.streamingReasoning.collectAsState()
+    val lastReasoning by vm.lastReasoning.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
@@ -160,8 +161,15 @@ fun ChatScreen(
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
+    // 流式：只在用户贴底时跟随，且用即时滚动（每 token 动画会上下跳）
     LaunchedEffect(streamingText) {
-        if (isStreaming && streamingText.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
+        if (isStreaming && streamingText.isNotEmpty()) {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index
+            if (lastVisible == null || lastVisible >= items.lastIndex - 1) {
+                listState.scrollToItem(items.lastIndex)
+            }
+        }
     }
 
     Column(
@@ -204,6 +212,7 @@ fun ChatScreen(
                         MessageRow(
                             isUser = isUserMsg,
                             text = text,
+                            reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
                             name = nameOf(el, isUserMsg),
                             time = timeOf(el),
                             avatarPath = if (isUserMsg) null else vm.avatarPath,
@@ -461,6 +470,7 @@ private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
 private fun MessageRow(
     isUser: Boolean,
     text: String,
+    reasoning: String?,
     name: String,
     time: String,
     avatarPath: String?,
@@ -524,6 +534,10 @@ private fun MessageRow(
                         )
                     }
                 }
+            }
+            if (!reasoning.isNullOrBlank()) {
+                Spacer(Modifier.size(6.dp))
+                ReasoningCard(text = reasoning)
             }
             if (showActions) {
                 Spacer(Modifier.size(6.dp))
@@ -612,12 +626,52 @@ private fun StreamingRow(
     }
 }
 
+/** 生成完的思考过程：默认折叠，点开查看。 */
+@Composable
+private fun ReasoningCard(text: String) {
+    var expanded by remember { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = { expanded = !expanded }),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = if (expanded) "" else text.take(36) + "…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (expanded) {
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 /** 聊天气泡里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。 */
 @Composable
 private fun ChatMarkdown(content: String, onSurface: Color) {
     Markdown(
         content = content,
-        modifier = Modifier.heightIn(max = 420.dp),
+        modifier = Modifier.fillMaxWidth(),
         imageTransformer = Coil3ImageTransformerImpl,
         components = markdownComponents(
             codeBlock = highlightedCodeBlock,
