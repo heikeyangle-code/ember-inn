@@ -66,6 +66,7 @@ const fns = [
     extractFn(openaiSrc, 'async function populateChatCompletion('),
     extractFn(openaiSrc, 'function setOpenAIMessageExamples('),
     extractFn(openaiSrc, 'export function parseExampleIntoIndividual('),
+    extractFn(openaiSrc, 'async function populationInjectionPrompts('),
     extractFn(openaiSrc, 'async function populateChatHistory('),
     extractFn(openaiSrc, 'async function populateDialogueExamples('),
     extractFn(scriptSrc, 'export function parseMesExamples('),
@@ -102,8 +103,9 @@ const stub = [
     "    log(...a) { globalThis.console.error(\"CC_LOG\", ...a.map(x => (x instanceof Error ? x.stack : x))); }",
     '    validateMessageCollection() {}',
     '    validateMessage() {}',
-    '    checkTokenBudget() {}',
+    '    checkTokenBudget(x) { if ((x.getTokens?.() ?? x.tokens ?? 0) > this.tokenBudget) throw new TokenBudgetExceededError(); }',
     '    add(collection, position = null) {',
+    '        this.checkTokenBudget(collection);',
     '        if (position !== null && position !== -1) {',
     '            while (this.entries.length <= position) this.entries.push(null);',
     '            this.entries[position] = collection;',
@@ -113,6 +115,7 @@ const stub = [
     "    insert(message, identifier, position = 'end') {",
     '        const idx = this.findMessageIndex(identifier);',
     '        if (idx < 0) return;',
+    '        this.checkTokenBudget(message);',
     '        const c = this.entries[idx]?.collection;',
     '        if (!c) return;',
     '        if (message.content || message.tool_calls) {',
@@ -128,8 +131,8 @@ const stub = [
     "    reserveBudget(x) { this.tokenBudget -= (typeof x === 'number' ? x : (x?.getTokens?.() ?? x?.tokens ?? 0)); }",
     "    freeBudget(x) { this.tokenBudget += (typeof x === 'number' ? x : (x?.getTokens?.() ?? x?.tokens ?? 0)); }",
     '    setOverriddenPrompts(list) { this.overriddenPrompts = list; }',
-    '    canAfford() { return true; }',
-    '    canAffordAll() { return true; }',
+    '    canAfford(m) { return (m.tokens ?? 0) <= this.tokenBudget; }',
+    '    canAffordAll(ms) { return ms.reduce((s, m) => s + (m.tokens ?? 0), 0) <= this.tokenBudget; }',
     '    async squashSystemMessages() {',
     "        const exclude = ['newMainChat', 'newChat', 'groupNudge'];",
     '        const flat = this.entries.filter(Boolean).flatMap(e => e.collection);',
@@ -188,7 +191,10 @@ const stub = [
     'const INJECTION_POSITION = { RELATIVE: 0, ABSOLUTE: 1 };',
     'const ToolManager = { canPerformToolCalls: () => false, isToolCallingSupported: () => false, registerFunctionToolsOpenAI: async () => {} };',
     'const chat_completion_sources = { CLAUDE: \'claude\' };',
-    'const populationInjectionPrompts = async (absolutePrompts, messages) => messages;',
+    'const getExtensionPromptMaxDepth = () => 4;',
+    'const extension_prompt_roles = { SYSTEM: 0, USER: 1, ASSISTANT: 2 };',
+    'const extension_prompt_types = { IN_CHAT: 2 };',
+    'const getExtensionPrompt = async () => \'\';',
     'const isImageInliningSupported = () => false;',
     'const substituteParams = (t) => String(t);',
     'const substituteParamsExtended = (template, vars) => {',
@@ -318,6 +324,34 @@ await add('continue-prefill-claude', {
     chatCompletionSource: 'claude',
     messages: [{ role: 'assistant', content: '继续这段', name: 'Char' }],
 });
+
+await add('absolute-in-chat', {
+    ...base,
+    promptCollection: [...base.promptCollection,
+        { identifier: 'abs1', role: 'system', content: '深度注入', name: null, system_prompt: true, injection_position: 1, injection_depth: 2, injection_order: 100 },
+        { identifier: 'abs2', role: 'user', content: '更深', name: null, system_prompt: false, injection_position: 1, injection_depth: 3, injection_order: 50 }],
+});
+await add('group-nudge', {
+    ...base,
+    selectedGroup: true,
+    promptCollection: [...base.promptCollection,
+        { identifier: 'groupNudge', role: 'system', content: '[Write the next reply only as {{char}}.]', name: null, system_prompt: true, injection_position: 0 }],
+});
+await add('names-completion', {
+    ...base,
+    namesBehavior: 1,
+    messages: [
+        { role: 'user', content: '第一条', name: 'User' },
+        { role: 'assistant', content: '回复一', name: 'Char' },
+    ],
+});
+await add('send-if-empty', {
+    ...base,
+    sendIfEmpty: '[Start a new chat]',
+    messages: [{ role: 'assistant', content: '最后是助手', name: 'Char' }],
+});
+await add('squash-off', { ...base, squashSystemMessages: false });
+await add('budget-tight', { ...base, maxContextTokens: 40, maxTokens: 16 });
 
 writeFileSync(outFile, JSON.stringify({ source: 'openai.js prepareOpenAIMessages + populateChatCompletion 整链', cases }, null, 2));
 console.log('prepare-messages:', cases.length, 'cases ->', outFile);

@@ -58,6 +58,7 @@ class PromptPipelineDiffTest {
     private fun buildInput(body: JsonObject): PromptPipeline.PrepareInput {
         val name1 = body["name1"]?.jsonPrimitive?.content ?: "User"
         val name2 = body["name2"]?.jsonPrimitive?.content ?: "Char"
+        val selectedGroup = body["selectedGroup"]?.jsonPrimitive?.content == "true"
         val messages = body["messages"]?.jsonArray?.map { m ->
             val obj = m.jsonObject
             PromptMessage(
@@ -69,7 +70,11 @@ class PromptPipelineDiffTest {
         } ?: emptyList()
         val rawExamples = body["mesExamples"]?.jsonPrimitive?.content ?: ""
         val blocks = PromptUtils.parseMesExamples(rawExamples)
-        val examples = PromptPipeline.setOpenAIMessageExamples(blocks, name1, name2)
+        val examples = PromptPipeline.setOpenAIMessageExamples(
+            blocks, name1, name2,
+            selectedGroup = selectedGroup,
+            groupNames = body["groupNames"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+        )
 
         return PromptPipeline.PrepareInput(
             name2 = name2,
@@ -87,12 +92,20 @@ class PromptPipelineDiffTest {
             env = MacroEnv(user = body["name1"]?.jsonPrimitive?.content ?: "User", char = name2),
             maxContextTokens = body["maxContextTokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 8192,
             maxTokens = body["maxTokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 256,
-            tokenCounter = TokenCounter { text -> maxOf(1, text.length / 4) },
+            tokenCounter = TokenCounter { text -> maxOf(1, Math.ceil(text.length / 4.0).toInt()) },
             continuePrefill = body["continuePrefill"]?.jsonPrimitive?.content == "true",
             assistantPrefill = body["assistantPrefill"]?.jsonPrimitive?.content ?: "",
             chatCompletionSource = body["chatCompletionSource"]?.jsonPrimitive?.content ?: "openai",
             pinExamples = body["pinExamples"]?.jsonPrimitive?.content == "true",
-            squashSystemMessages = true,
+            selectedGroup = selectedGroup,
+            namesBehavior = body["namesBehavior"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+            sendIfEmpty = body["sendIfEmpty"]?.jsonPrimitive?.content ?: "",
+            squashSystemMessages = body["squashSystemMessages"]?.jsonPrimitive?.content != "false",
+            newChatPrompt = if (selectedGroup) {
+                body["newGroupChatPrompt"]?.jsonPrimitive?.content ?: "undefined"
+            } else {
+                body["newChatPrompt"]?.jsonPrimitive?.content ?: "New chat:"
+            },
         )
     }
 
@@ -106,6 +119,7 @@ class PromptPipelineDiffTest {
                 role = p["role"]?.jsonPrimitive?.content ?: "system",
                 systemPrompt = p["system_prompt"]?.jsonPrimitive?.content != "false",
                 injectionPosition = p["injection_position"]?.jsonPrimitive?.content?.toIntOrNull(),
+                injectionDepth = p["injection_depth"]?.jsonPrimitive?.content?.toIntOrNull(),
                 position = p["position"]?.jsonPrimitive?.content,
                 extension = p["extension"]?.jsonPrimitive?.content == "true",
             )

@@ -46,7 +46,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（54 组，共 840 例官方基准，全部通过）**：
+**已覆盖（54 组，共 846 例官方基准，全部通过）**：
 
 | 组 | 脚本 | 测试 | 例数 |
 |---|---|---|---|
@@ -101,11 +101,16 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
 | OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
 | BYAF 资源提取 | byaf-assets-official.mjs | ByafAssetsDiffTest | 6 |
-| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion） | prepare-messages-official.mjs | PromptPipelineDiffTest | 5 |
+| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion） | prepare-messages-official.mjs | PromptPipelineDiffTest | 11 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
+
+**分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
+- 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
+- prepare-messages（总装整链）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 恒空串（官方内置扩展源，Kotlin 同步为空）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；历史工具调用/媒体内联/推理签名分支 canUseTools=false（工具转换由 ChatHistoryPopulator 差分与单测覆盖，端到端未覆盖）；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖（11 例）。
+- 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
 
 **尚未做差分的**：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 请求体与响应解析用 MockWebServer 单测锁行为，转换器本身已逐字差分）；斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
 聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
@@ -307,6 +312,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 补 slash / JSON / CharX 导入导出的差分 fixture
 
 ## 6. 最近工作日志
+
+## 最近一轮 58（2026-08-08：总装整链差分 5→11 例 + 防漏机制）
+
+- prepare-messages-official.mjs：populationInjectionPrompts 从 identity 打桩换成官方真函数（absolute 深度注入）；ChatCompletion 打桩的 checkTokenBudget 从 no-op 改为真抛（对齐官方 TokenBudgetExceededError）；canAfford/canAffordAll 用真实预算
+- PromptPipeline 移植 populationInjectionPrompts（order 降序/角色固定序/深度 splice/整体 reverse）并接入 populate；预算溢出按官方“捕获后返回部分消息”
+- 新增 6 例：absolute-in-chat（深度 2/3 注入）、群聊 groupNudge（含 "undefined" new_group_chat_prompt 官方怪癖）、names_behavior=COMPLETION、send_if_empty、squash 关闭、预算溢出（官方返回 0）
+- 差分抓出并修 3 处：
+  1. 官方主链 populationInjectionPrompts 无条件 reverse → 历史最终为“最新在前”（1.18 真行为，旧 fixture 因打桩没暴露）
+  2. 测试 harness 的 token 计数用整数除法（floor），官方 stub 是 ceil —— 预算行为不一致，改 ceil
+  3. 测试映射漏了 promptCollection 的 injection_depth 字段 → absolute 注入不生效
+- 官方基准 840 → 846；引擎 259 测全绿
+- **防漏机制**：HANDOFF 新增 2.1 分支级覆盖审计与打桩登记——所有差分打桩必须登记，未登记不得声称 1:1
 
 ## 最近一轮 57（2026-08-08：PromptPipeline 总装器官方整链差分 5 例）
 

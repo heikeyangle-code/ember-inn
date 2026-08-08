@@ -8,7 +8,7 @@ import com.emberinn.engine.worldinfo.TokenCounter
  *
  * 纪律：本类只做“顺序与传参”，业务逻辑全部留在各差分模块
  * （preparePromptsForChatCompletion / populateChatHistory / populateDialogueExamples / ChatCompletion / PromptUtils）。
- * 边界：absolute 提示的 in-chat 深度注入（populationInjectionPrompts）暂为原样透传，官方差分 fixture 不覆盖该分支。
+ * 边界：官方 getExtensionPrompt(IN_CHAT) 的内置扩展源暂为空（差分脚本同样打桩）；预算由 ChatCompletion 严格执行。
  */
 object PromptPipeline {
 
@@ -74,6 +74,60 @@ object PromptPipeline {
             examples += parseExampleIntoIndividual(replaced, name1, name2, true, selectedGroup, groupNames)
         }
         return examples
+    }
+
+    // ---------- populationInjectionPrompts（官方 openai.js 1:1：absolute 提示按深度插入并反转） ----------
+
+    /**
+     * 官方 populationInjectionPrompts：absolute 提示按 injection_depth 分组，order 降序、角色
+     * system/user/assistant 固定序，拼接后 splice 到 messages[depth+已插数]，最后整体 reverse()
+     * （populateChatHistory 内部再 reverse 一次，净效果是顺序不变）。
+     * inChatExtensions 对应官方 getExtensionPrompt(IN_CHAT, depth)：当前实现恒为空（差分脚本同样打桩）。
+     */
+    fun populationInjectionPrompts(
+        absolutePrompts: List<PromptItem>,
+        messages: List<PromptMessage>,
+        inChatExtensions: List<PromptItem> = emptyList(),
+    ): List<PromptMessage> {
+        var totalInsertedMessages = 0
+        val out = messages.toMutableList()
+        val roleTypes = mapOf("system" to 0, "user" to 1, "assistant" to 2)
+        val maxDepth = PromptInjection.DEFAULT_DEPTH
+
+        for (depth in 0..maxDepth) {
+            val depthPrompts = absolutePrompts.filter { it.injectionDepth == depth && it.content.isNotEmpty() }
+            val roleMessages = mutableListOf<PromptMessage>()
+            val separator = "\n"
+            val orderGroups = linkedMapOf<Int, MutableList<PromptItem>>()
+            for (prompt in depthPrompts) {
+                val order = prompt.injectionOrder ?: 100
+                orderGroups.getOrPut(order) { mutableListOf() }.add(prompt)
+            }
+            for (order in orderGroups.keys.sortedDescending()) {
+                val orderPrompts = orderGroups[order] ?: continue
+                for (role in listOf("system", "user", "assistant")) {
+                    val rolePrompts = orderPrompts
+                        .filter { it.role == role }
+                        .joinToString(separator) { it.content }
+                    val extensionPrompt = inChatExtensions
+                        .filter { it.injectionDepth == depth && it.role == role }
+                        .joinToString(separator) { it.content }
+                    val jointPrompt = listOf(rolePrompts, extensionPrompt)
+                        .filter { it.isNotEmpty() }
+                        .map { it.trim() }
+                        .joinToString(separator)
+                    if (jointPrompt.isNotEmpty()) {
+                        roleMessages += PromptMessage(role = role, content = jointPrompt, injected = true)
+                    }
+                }
+            }
+            if (roleMessages.isNotEmpty()) {
+                val injectIdx = depth + totalInsertedMessages
+                out.addAll(injectIdx, roleMessages)
+                totalInsertedMessages += roleMessages.size
+            }
+        }
+        return out.reversed()
     }
 
     // ---------- populateChatCompletion（官方 openai.js 1:1 顺序） ----------
@@ -194,8 +248,9 @@ object PromptPipeline {
             chatCompletion.reserveBudget(continueMessage)
         }
 
-        // in-chat 深度注入（populationInjectionPrompts）：absolute 提示暂原样透传（边界见类注释）
-        val finalMessages = messages
+        // in-chat 深度注入（官方 populationInjectionPrompts）
+        val absolutePrompts = prompts.collection.filter { it.injectionPosition == PromptInjection.ABSOLUTE }
+        val finalMessages = populationInjectionPrompts(absolutePrompts, messages)
 
         // 示例/历史顺序
         if (input.pinExamples) {
@@ -335,7 +390,10 @@ object PromptPipeline {
         val chatCompletion = ChatCompletion(handler)
         chatCompletion.setTokenBudget(input.maxContextTokens, input.maxTokens)
 
-        populate(
+        // 官方 prepareOpenAIMessages：TokenBudgetExceededError / InvalidCharacterNameError / 未知错误
+        // 都只记录并继续（finally → getChat 返回能装下的部分消息）
+        runCatching {
+            populate(
             chatCompletion = chatCompletion,
             handler = handler,
             input = PopulateInput(
@@ -360,7 +418,8 @@ object PromptPipeline {
                 namesBehavior = input.namesBehavior,
                 sendIfEmpty = input.sendIfEmpty,
             ),
-        )
+            )
+        }
 
         if (input.squashSystemMessages) chatCompletion.squashSystemMessages()
         return PrepareResult(
