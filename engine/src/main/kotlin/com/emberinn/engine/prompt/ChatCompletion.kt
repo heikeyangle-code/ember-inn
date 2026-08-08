@@ -1,5 +1,6 @@
 package com.emberinn.engine.prompt
 
+import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.worldinfo.TokenCounter
 
 /** 对齐官方 TokenHandler：按类型统计 token。 */
@@ -28,6 +29,7 @@ data class CompletionMessage(
     val tokens: Int = 0,
     val toolCalls: List<ToolCall>? = null,
     val toolCallId: String? = null,
+    val media: List<MediaAttachment>? = null,
 )
 
 /** 对齐官方 tool_calls（id/type/function.name/arguments）。 */

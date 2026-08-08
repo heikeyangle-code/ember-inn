@@ -1,5 +1,6 @@
 package com.emberinn.engine.provider
 
+import com.emberinn.engine.media.MediaInliner
 import com.emberinn.engine.prompt.CompletionMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -45,7 +46,12 @@ object ChatRequestBuilder {
 
     private fun messageJson(message: CompletionMessage): JsonObject = buildJsonObject {
         put("role", message.role)
-        put("content", message.content)
+        val hasMedia = message.media?.isNotEmpty() == true
+        put(
+            "content",
+            if (hasMedia) MediaInliner.inlineOpenAi(JsonPrimitive(message.content), message.media.orEmpty())
+            else JsonPrimitive(message.content),
+        )
         message.name?.let { put("name", it) }
         message.toolCallId?.let { put("tool_call_id", it) }
         message.toolCalls?.let { calls ->
