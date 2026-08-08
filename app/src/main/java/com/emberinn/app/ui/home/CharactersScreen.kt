@@ -241,7 +241,14 @@ fun CharactersScreen(
 
     detailRecord?.let { record ->
         ModalBottomSheet(onDismissRequest = { detailRecord = null }, sheetState = rememberModalBottomSheetState()) {
-            CharacterFieldsSheet(record)
+            CharacterFieldsSheet(
+                record = record,
+                onSave = { name, fields ->
+                    vm.updateCharacter(record, name, fields)
+                    detailRecord = null
+                    Toast.makeText(context, "已保存：$name", Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 
@@ -603,37 +610,90 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 }
 
 @Composable
-private fun CharacterFieldsSheet(record: CharacterRecord) {
+/** 可编辑角色字段（README：每字段一行 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。 */
+private fun CharacterFieldsSheet(record: CharacterRecord, onSave: (String, Map<String, String>) -> Unit) {
     val json = remember { Json { ignoreUnknownKeys = true } }
-    val fields = remember(record.rawJson) {
-        runCatching {
-            val root = json.parseToJsonElement(record.rawJson).jsonObject
-            val data = root["data"]?.jsonObject ?: root
-            listOf(
-                "名字" to (data["name"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "描述" to (data["description"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "性格" to (data["personality"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "场景" to (data["scenario"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "开场白" to (data["first_mes"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "示例对话" to (data["mes_example"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "系统提示" to (data["system_prompt"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "剧情后指令" to (data["post_history_instructions"]?.jsonPrimitive?.contentOrNull ?: ""),
-                "创作者备注" to (data["creator_notes"]?.jsonPrimitive?.contentOrNull ?: ""),
-            ).filter { it.second.isNotBlank() }
-        }.getOrDefault(emptyList())
+    val fieldDefs = listOf(
+        "name" to "名字",
+        "description" to "描述",
+        "personality" to "性格",
+        "scenario" to "场景",
+        "first_mes" to "开场白",
+        "mes_example" to "示例对话",
+        "system_prompt" to "系统提示",
+        "post_history_instructions" to "剧情后指令",
+        "creator_notes" to "创作者备注",
+    )
+    var fields by remember(record.rawJson) {
+        mutableStateOf(
+            runCatching {
+                val root = json.parseToJsonElement(record.rawJson).jsonObject
+                val data = root["data"]?.jsonObject ?: root
+                fieldDefs.associate { (key, _) -> key to (data[key]?.jsonPrimitive?.contentOrNull ?: "") }
+            }.getOrDefault(emptyMap()),
+        )
     }
+    var editingKey by remember { mutableStateOf<String?>(null) }
+    var draft by remember { mutableStateOf("") }
+
     Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
         Text("角色字段", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
-        fields.forEach { (label, value) ->
-            Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 5, overflow = TextOverflow.Ellipsis)
+        fieldDefs.forEach { (key, label) ->
+            val value = fields[key].orEmpty()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable {
+                    editingKey = key
+                    draft = value
+                }.padding(vertical = 8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        value.ifBlank { "（空）" },
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (value.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(Icons.Filled.Edit, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider()
         }
-        if (fields.isEmpty()) {
-            Text("该卡暂无可用字段", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Spacer(Modifier.height(12.dp))
+        Button(
+            onClick = {
+                onSave(fields["name"].orEmpty().ifBlank { record.name }, fields)
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("保存修改") }
+    }
+
+    editingKey?.let { key ->
+        val label = fieldDefs.firstOrNull { it.first == key }?.second ?: key
+        AlertDialog(
+            onDismissRequest = { editingKey = null },
+            title = { Text("编辑$label") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    minLines = 3,
+                    maxLines = 10,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    fields = fields + (key to draft)
+                    editingKey = null
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingKey = null }) { Text("取消") }
+            },
+        )
     }
 }
 

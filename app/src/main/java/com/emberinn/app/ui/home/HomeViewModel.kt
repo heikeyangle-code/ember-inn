@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -174,6 +176,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** 导出走官方同款流程：V2 归一（readFromV2/charaFormatData）+ 私有字段清理 + 4 空格缩进。 */
     fun exportJson(record: CharacterRecord): String =
         CharacterCardExporter.exportToV2Json(record.rawJson)
+
+    /** 编辑角色字段（README：分字段展示 + 点击展开编辑）：改写 rawJson 对应键，同步角色名与已有会话名。 */
+    fun updateCharacter(record: CharacterRecord, newName: String, fields: Map<String, String>) {
+        runCatching {
+            val root = json.parseToJsonElement(record.rawJson).jsonObject.toMutableMap()
+            val data = (root["data"] as? JsonObject)?.toMutableMap() ?: root
+            fields.forEach { (key, value) -> data[key] = JsonPrimitive(value) }
+            if (root["data"] is JsonObject) root["data"] = JsonObject(data)
+            val newJson = json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), JsonObject(root))
+            val updated = record.copy(rawJson = newJson, name = newName)
+            store.save(updated)
+            chatStore.list().filter { it.characterId == record.id }.forEach { session ->
+                chatStore.upsert(session.copy(name = newName))
+            }
+            refresh()
+        }
+    }
 
     fun openChat(characterId: String?, name: String): SessionRecord {
         val session = chatStore.findByCharacter(characterId)
