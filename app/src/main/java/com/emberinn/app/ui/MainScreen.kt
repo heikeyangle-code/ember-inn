@@ -75,7 +75,7 @@ fun MainScreen(
         com.emberinn.app.ui.onboarding.OnboardingScreen(
             onImport = { importLauncher.launch(arrayOf("*/*")) },
             onDirectChat = {
-                val session = homeVm.openChat(null, "AI 对话")
+                val session = homeVm.newSession(null, "AI 对话")
                 openSessionId = session.id
                 openName = session.name
                 showOnboarding = false
@@ -129,7 +129,10 @@ fun MainScreen(
                         openSessionId = session.id
                         openName = session.name
                     },
-                    onOpenSettings = { selectedTab = 2 },
+                    onOpenSettings = { route ->
+                        selectedTab = 2
+                        if (route != null) settingsDeepLink = route
+                    },
                 )
                 1 -> com.emberinn.app.ui.sessions.SessionsScreen(
                     onOpenSession = { session ->

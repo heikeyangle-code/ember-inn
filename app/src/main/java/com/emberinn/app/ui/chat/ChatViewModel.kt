@@ -142,6 +142,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun send(text: String, userName: String = "User", media: List<MediaAttachment> = emptyList()) {
         if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return
+        // 未配置模型先拦住：只显示提示，不写历史（避免悬空用户消息之后真的发给模型）。
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            _notice.value = "（未配置模型，请先选一个模型再发送。）"
+            return
+        }
         val charName = chatStore.get(sessionId)?.name ?: "Assistant"
         currentCharName = charName
         currentUserName = userName
@@ -150,12 +156,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.append(sessionId, true, text, userName, media)
         _pendingMedia.value = emptyList()
         refreshMessages()
-
-        if (!isProviderConfigured()) {
-            refreshProviderConfigured()
-            _notice.value = "（未配置模型，请先选一个模型再发送。）"
-            return
-        }
         startStream(
             history = chatStore.messages(sessionId),
             mediaInlining = media.isNotEmpty(),

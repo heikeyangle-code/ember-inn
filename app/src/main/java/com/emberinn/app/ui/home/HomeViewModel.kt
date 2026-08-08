@@ -45,10 +45,11 @@ data class WorldInfoHit(
     val content: String,
 )
 
-/** 设置项命中：点击后跳到设置 Tab（深链排后续）。 */
+/** 设置项命中：route 对应 SettingsScreen deepLink（appearance/providers/data/about），空则只跳设置 Tab。 */
 data class SettingsHit(
     val label: String,
     val description: String,
+    val route: String? = null,
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -132,12 +133,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }.getOrDefault(emptyList())
 
     private val settingsCatalog = listOf(
-        SettingsHit("主题", "外观与主题：浅色/深色/跟随系统 + 预设主题"),
-        SettingsHit("模型", "提供商与模型：API Key / 接口地址 / 默认模型"),
+        SettingsHit("主题", "外观与主题：浅色/深色/跟随系统 + 预设主题", route = "appearance"),
+        SettingsHit("模型", "提供商与模型：API Key / 接口地址 / 默认模型", route = "providers"),
         SettingsHit("语音", "语音：TTS 朗读 / STT 输入（开发中）"),
         SettingsHit("服务", "服务：翻译 / 图像 / 向量（开发中）"),
-        SettingsHit("数据与隐私", "数据与隐私：备份 / 导出 / 清除数据"),
-        SettingsHit("关于", "关于：版本 / 开源协议 / 数据说明"),
+        SettingsHit("数据与隐私", "数据与隐私：备份 / 导出 / 清除数据", route = "data"),
+        SettingsHit("关于", "关于：版本 / 开源协议 / 数据说明", route = "about"),
     )
 
     fun importCard(bytes: ByteArray, format: CardFormat) {
@@ -213,16 +214,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openChat(characterId: String?, name: String): SessionRecord {
-        val session = chatStore.findByCharacter(characterId)
-            ?: chatStore.upsert(
-                SessionRecord(
-                    id = characterId ?: "ai",
-                    characterId = characterId,
-                    name = name,
-                ),
-            ).let { chatStore.get(characterId ?: "ai") }
-            ?: SessionRecord(id = characterId ?: "ai", characterId = characterId, name = name)
+    /** 点角色卡片进聊天：续聊该角色最近会话，没有才新建（README 首页：点卡片=进聊天）。 */
+    fun openOrResume(characterId: String?, name: String): SessionRecord {
+        chatStore.findByCharacter(characterId)?.let { refresh(); return it }
+        return newSession(characterId, name)
+    }
+
+    /** 新建空白会话（README：每个角色可开多个会话，UUID 会话 id）。 */
+    fun newSession(characterId: String?, name: String): SessionRecord {
+        val session = SessionRecord(
+            id = UUID.randomUUID().toString(),
+            characterId = characterId,
+            name = name,
+        )
+        chatStore.upsert(session)
         refresh()
         return session
     }
