@@ -346,7 +346,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊：✅ App 调度层已接（2026-08-10 第 84 轮：GroupStore + 新建群聊 + GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成；SWAP 用本人卡、APPEND 用合并卡）；🟡 未做：自然/池化激活策略、narrator、队列 UI、群聊深度提示接线（引擎已有，App 未接）、群聊 continue 多轮链；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（2026-08-10 第 85 轮：官方 checkpoint 存档语义——createBookmark 复制聊天 + 最后 AI 消息 extra.bookmark_link；长按“创建书签”、⋮“书签”列表打开/删除；官方 1.18 无独立快照，书签即存档）
+9. 群聊：✅ App 调度层已接（第 84 轮）+ natural/pooled 激活策略与队列提示（2026-08-10 第 87 轮：GroupRecord.activationStrategy 默认 natural，send 时按官方 GroupActivationEngine.natural/pooled 选人，空则回退全成员；多人时 notice 提示“本轮 X 位成员依次回复”）；🟡 未做：narrator、群聊深度提示 App 接线、自动续写（GroupLoopEngine.shouldAutoContinue）、群聊 continue 多轮链、策略切换 UI；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（第 85 轮）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
 
 **备注（不能纯引擎做 / 需 App 或外部）**
@@ -390,6 +390,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 87（2026-08-10：群聊 natural/pooled 激活 + 队列提示 + 分词器撤回归档）
+
+- GroupRecord 增 activationStrategy（官方 group_activation_strategy，默认 natural）
+- send 群聊分支：natural → GroupActivationEngine.natural（输入词命中成员名 + 话痨概率，talkativeness 读卡内字段）；
+  pooled → GroupActivationEngine.pooled；空结果回退启用成员；SWAP/APPEND 逻辑保持
+- 多人轮次时 notice 提示“本轮 N 位成员依次回复（A → B）”
+- **分词器收尾（P2-8）**：Claude/Gemini 官方 web tokenizer 本轮尝试后按用户要求撤掉——
+  不打包、不做下载，TokenCounterFactory 维持全模型 cl100k 回退；HANDOFF 保持“最后再做”
+- 剩余登记：narrator、群聊深度提示接线、自动续写、群聊 continue 多轮链、策略切换 UI
 
 ## 最近一轮 86（2026-08-10：翻译/图像执行层——P1-6 收尾）
 

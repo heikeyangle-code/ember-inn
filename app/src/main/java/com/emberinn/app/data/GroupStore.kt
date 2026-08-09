@@ -6,7 +6,7 @@ import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** 群聊（对齐官方 group 核心字段：members/disabledMembers/generationMode）。 */
+/** 群聊（对齐官方 group 核心字段：members/disabledMembers/generationMode/activationStrategy）。 */
 @Serializable
 data class GroupRecord(
     val id: String,
@@ -14,6 +14,8 @@ data class GroupRecord(
     val members: List<String>,
     val disabledMembers: List<String> = emptyList(),
     val generationMode: Int = GroupGenerationMode.APPEND,
+    /** 官方 group_activation_strategy：natural（默认）/ pooled / swipe / list / manual。 */
+    val activationStrategy: String = "natural",
 )
 
 /** 群聊存储：filesDir/groups/{id}.json（官方 data/group-chats/*.json 近似）。 */

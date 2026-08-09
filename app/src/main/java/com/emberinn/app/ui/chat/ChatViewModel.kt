@@ -26,7 +26,10 @@ import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.group.GroupActivationEngine
 import com.emberinn.engine.group.GroupCardMember
+import com.emberinn.engine.group.GroupMember
+import com.emberinn.engine.group.GroupMessage
 import com.emberinn.engine.group.GroupCharacterCardsEngine
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.media.MediaAttachment
@@ -703,7 +706,52 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 enabled.filter { it.name == lastName }.ifEmpty { listOf(enabled.last()) }
             }
             else -> {
-                if (group?.generationMode == GroupGenerationMode.SWAP) {
+                val strategy = group?.activationStrategy ?: "natural"
+                if (strategy == "natural" || strategy == "pooled") {
+                    // 官方 activateNatural / activatePooled：输入词命中成员名 + 话痨概率
+                    val membersForActivation = members.map { m ->
+                        GroupMember(
+                            avatar = m.id,
+                            name = m.name,
+                            talkativeness = CharacterCardEdit.readFields(m.rawJson, m.name, m.description).talkativeness.toDouble(),
+                        )
+                    }
+                    val lastMessage = history.lastOrNull()?.let { el ->
+                        GroupMessage(
+                            name = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: "",
+                            isUser = isUser(el),
+                            isSystem = el.jsonObject["is_system"]?.jsonPrimitive?.content == "true",
+                            originalAvatar = null,
+                        )
+                    }
+                    val lastUserText = history.lastOrNull { isUser(it) }
+                        ?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val activated = if (strategy == "natural") {
+                        GroupActivationEngine.natural(
+                            members = membersForActivation,
+                            input = lastUserText,
+                            lastMessage = lastMessage,
+                            allowSelfResponses = false,
+                            isUserInput = true,
+                        )
+                    } else {
+                        GroupActivationEngine.pooled(
+                            members = membersForActivation,
+                            chat = history.map { el ->
+                                GroupMessage(
+                                    name = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: "",
+                                    isUser = isUser(el),
+                                    isSystem = el.jsonObject["is_system"]?.jsonPrimitive?.content == "true",
+                                    originalAvatar = null,
+                                )
+                            },
+                            lastMessage = lastMessage,
+                            isUserInput = true,
+                        )
+                    }
+                    val byId = activated.mapNotNull { id -> members.firstOrNull { it.id == id } }
+                    byId.ifEmpty { enabled }
+                } else if (group?.generationMode == GroupGenerationMode.SWAP) {
                     val lastSpeaker = history.lastOrNull { !isUser(it) }
                         ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
                     val idx = enabled.indexOfFirst { it.name == lastSpeaker }
@@ -712,6 +760,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     enabled
                 }
             }
+        }
+        if (speakers.size > 1) {
+            _notice.value = "群聊：本轮 ${speakers.size} 位成员依次回复（${speakers.joinToString(" → ") { it.name }}）"
         }
         val steps = speakers.map { speaker ->
             val cardJson = if (group?.generationMode == GroupGenerationMode.SWAP) {
