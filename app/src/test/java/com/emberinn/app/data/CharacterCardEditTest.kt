@@ -288,4 +288,31 @@ class CharacterCardEditTest {
         assertEquals(null, clearedRead.maxTokens)
         assertEquals("", clearedRead.model)
     }
+
+    @Test
+    fun `read and save theme recipe`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"emberinn_theme_recipe":{
+              "seed":"#B23A2A","background":"/data/bg.png","shape":"rounded","font":"lxgw","style":"calm","lockMode":"dark"
+            }}}}
+        """.trimIndent()
+        val r = CharacterCardEdit.readThemeRecipe(card)
+        assertEquals("#B23A2A", r.seed)
+        assertEquals("/data/bg.png", r.background)
+        assertEquals("rounded", r.shape)
+        assertEquals("lxgw", r.font)
+        assertEquals("calm", r.style)
+        assertEquals("dark", r.lockMode)
+
+        val saved = CharacterCardEdit.applyThemeRecipe(card, r.copy(shape = "", lockMode = ""))
+        val reread = CharacterCardEdit.readThemeRecipe(saved)
+        assertEquals("", reread.shape)
+        assertEquals("", reread.lockMode)
+        assertEquals("lxgw", reread.font)
+
+        val cleared = CharacterCardEdit.applyThemeRecipe(saved, ThemeRecipe())
+        val clearedRead = CharacterCardEdit.readThemeRecipe(cleared)
+        assertEquals("", clearedRead.seed)
+        assertEquals("", clearedRead.background)
+    }
 }

@@ -9,6 +9,7 @@ import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.CharacterDetailFields
 import com.emberinn.app.data.ModelOverride
+import com.emberinn.app.data.ThemeRecipe
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
@@ -262,6 +263,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val root = json.parseToJsonElement(CharacterCardEdit.applyModelOverride(record.rawJson, o)).jsonObject
         saveJson(record, root)
     }
+
+    /** 读取角色级主题配方。 */
+    fun readThemeRecipe(record: CharacterRecord): ThemeRecipe =
+        CharacterCardEdit.readThemeRecipe(record.rawJson)
+
+    /** 保存角色级主题配方（全空 = 跟随全局）。 */
+    fun saveThemeRecipe(record: CharacterRecord, r: ThemeRecipe) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyThemeRecipe(record.rawJson, r)).jsonObject
+        saveJson(record, root)
+    }
+
+    /** 按 id 查角色（主题配方/背景应用用）。 */
+    fun findCharacter(id: String): CharacterRecord? = store.list().firstOrNull { it.id == id }
 
     /** 读取该卡变量（README 自定义扩展）。 */
     fun readVariables(record: CharacterRecord): Map<String, String> =

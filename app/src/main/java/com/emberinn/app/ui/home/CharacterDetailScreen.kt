@@ -66,6 +66,7 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.ModelOverride
+import com.emberinn.app.data.ThemeRecipe
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -92,6 +93,9 @@ fun CharacterDetailScreen(
     var modelOverride by remember(record.id) { mutableStateOf(vm.readModelOverride(record)) }
     var modelOverrideExpanded by remember { mutableStateOf(false) }
     var editingModelOverride by remember { mutableStateOf(false) }
+    var themeRecipe by remember(record.id) { mutableStateOf(vm.readThemeRecipe(record)) }
+    var themeRecipeExpanded by remember { mutableStateOf(false) }
+    var editingThemeRecipe by remember { mutableStateOf(false) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -108,6 +112,27 @@ fun CharacterDetailScreen(
     var varDraftValue by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+
+    val themeBgPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let { u ->
+            runCatching {
+                val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() } ?: return@runCatching
+                val ext = when (context.contentResolver.getType(u)) {
+                    "image/png" -> "png"
+                    "image/gif" -> "gif"
+                    "image/webp" -> "webp"
+                    else -> "jpg"
+                }
+                val file = java.io.File(context.filesDir, "assets/theme-bg-${record.id}.$ext")
+                file.parentFile?.mkdirs()
+                file.writeBytes(bytes)
+                themeRecipe = themeRecipe.copy(background = file.absolutePath)
+                dirty = true
+            }
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -146,6 +171,7 @@ fun CharacterDetailScreen(
         vm.saveRegexScripts(record, regexScripts)
         vm.saveVariables(record, variables)
         vm.saveModelOverride(record, modelOverride)
+        vm.saveThemeRecipe(record, themeRecipe)
         dirty = false
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
@@ -475,6 +501,60 @@ fun CharacterDetailScreen(
                                             modifier = Modifier.weight(1f),
                                         ) { Text("清除（跟随全局）", color = MaterialTheme.colorScheme.error) }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    SectionHeader("主题配方", if (themeRecipe.isEmpty()) "跟随全局" else "已覆盖")
+                }
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().clickable { themeRecipeExpanded = !themeRecipeExpanded },
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "seed / 背景 / 形状 / 字体 / 风格 / 浅深锁定",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Text(
+                                        themeRecipe.summary(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                Icon(
+                                    if (themeRecipeExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            if (themeRecipeExpanded) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedButton(
+                                        onClick = { editingThemeRecipe = true },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("编辑配方") }
+                                    OutlinedButton(
+                                        onClick = {
+                                            themeRecipe = ThemeRecipe()
+                                            dirty = true
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("恢复全局", color = MaterialTheme.colorScheme.error) }
                                 }
                             }
                         }
@@ -898,6 +978,82 @@ fun CharacterDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { editingModelOverride = false }) { Text("取消") }
+            },
+        )
+    }
+
+    // ---- 主题配方编辑对话框 ----
+    if (editingThemeRecipe) {
+        var tSeed by remember(themeRecipe) { mutableStateOf(themeRecipe.seed) }
+        var tShape by remember(themeRecipe) { mutableStateOf(themeRecipe.shape) }
+        var tFont by remember(themeRecipe) { mutableStateOf(themeRecipe.font) }
+        var tStyle by remember(themeRecipe) { mutableStateOf(themeRecipe.style) }
+        var tLock by remember(themeRecipe) { mutableStateOf(themeRecipe.lockMode) }
+        AlertDialog(
+            onDismissRequest = { editingThemeRecipe = false },
+            title = { Text("主题配方") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = tSeed,
+                        onValueChange = { tSeed = it },
+                        label = { Text("seed 色（#RRGGBB，留空用角色卡取色）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("背景", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { themeBgPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                            Text(if (themeRecipe.background.isBlank()) "选择背景图" else "更换背景图")
+                        }
+                        if (themeRecipe.background.isNotBlank()) {
+                            OutlinedButton(onClick = { themeRecipe = themeRecipe.copy(background = ""); dirty = true }, modifier = Modifier.weight(1f)) {
+                                Text("清除", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                    Text("形状", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("" to "跟随全局", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
+                            FilterChip(selected = tShape == v, onClick = { tShape = v }, label = { Text(label) })
+                        }
+                    }
+                    Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("" to "系统", "lxgw" to "霞鹜文楷", "source" to "思源宋体").forEach { (v, label) ->
+                            FilterChip(selected = tFont == v, onClick = { tFont = v }, label = { Text(label) })
+                        }
+                    }
+                    Text("风格档位", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("" to "跟随全局", "airy" to "轻盈", "calm" to "沉静", "vivid" to "鲜明").forEach { (v, label) ->
+                            FilterChip(selected = tStyle == v, onClick = { tStyle = v }, label = { Text(label) })
+                        }
+                    }
+                    Text("浅深锁定", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("" to "跟随全局", "system" to "跟随系统", "light" to "浅色", "dark" to "深色").forEach { (v, label) ->
+                            FilterChip(selected = tLock == v, onClick = { tLock = v }, label = { Text(label) })
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    themeRecipe = ThemeRecipe(
+                        seed = tSeed.trim(),
+                        background = themeRecipe.background,
+                        shape = tShape,
+                        font = tFont,
+                        style = tStyle,
+                        lockMode = tLock,
+                    )
+                    dirty = true
+                    editingThemeRecipe = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingThemeRecipe = false }) { Text("取消") }
             },
         )
     }
@@ -1438,3 +1594,26 @@ private fun ModelOverride.summary(): String {
 private fun ModelOverride.isEmpty(): Boolean =
     model.isBlank() && maxTokens == null && contextWindow == null && temperature == null &&
         topP == null && presencePenalty == null && frequencyPenalty == null
+
+/** 主题配方摘要（UI 展示用）。 */
+private fun ThemeRecipe.summary(): String {
+    val parts = mutableListOf<String>()
+    if (seed.isNotBlank()) parts += "seed $seed"
+    if (background.isNotBlank()) parts += "背景图"
+    if (shape == "square") parts += "方正"
+    if (shape == "rounded") parts += "圆润"
+    if (shape == "circle") parts += "浑圆"
+    if (font == "lxgw") parts += "霞鹜文楷"
+    if (font == "source") parts += "思源宋体"
+    if (style == "airy") parts += "轻盈"
+    if (style == "calm") parts += "沉静"
+    if (style == "vivid") parts += "鲜明"
+    if (lockMode == "system") parts += "锁定跟随系统"
+    if (lockMode == "light") parts += "锁定浅色"
+    if (lockMode == "dark") parts += "锁定深色"
+    return if (parts.isEmpty()) "未设置，跟随全局（点击展开编辑）" else parts.joinToString(" · ")
+}
+
+/** 是否完全未设置（跟随全局）。 */
+private fun ThemeRecipe.isEmpty(): Boolean =
+    seed.isBlank() && background.isBlank() && shape.isBlank() && font.isBlank() && style.isBlank() && lockMode.isBlank()

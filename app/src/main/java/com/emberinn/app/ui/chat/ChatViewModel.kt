@@ -8,6 +8,7 @@ import java.io.File
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
@@ -137,9 +138,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    /** 聊天背景（官方 chat_metadata.custom_background，本地文件路径）。 */
+    /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
     private val _chatBackground = MutableStateFlow(
-        chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull,
+        chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
+            ?: character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson).background }?.ifBlank { null },
     )
     val chatBackground: StateFlow<String?> = _chatBackground
 
