@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.ui.MainScreen
@@ -65,7 +64,7 @@ class MainActivity : ComponentActivity() {
                     preset
                 }
             }
-            // 形状：方正 4dp / 圆润 16dp / 浑圆 24dp；字体：思源宋体用系统衬线近似（霞鹜文楷待字体包）
+            // 形状：方正 4dp / 圆润 16dp / 浑圆 24dp；字体仅存储（M3 1.4 Typography 无 defaultFontFamily，待字体包）
             val radius = when (recipe?.shape) {
                 "square" -> 4.dp
                 "circle" -> 24.dp
@@ -79,11 +78,7 @@ class MainActivity : ComponentActivity() {
                 large = RoundedCornerShape(radius + 8.dp),
                 extraLarge = RoundedCornerShape(radius + 12.dp),
             )
-            val fontFamily = when (recipe?.font) {
-                "source" -> FontFamily.Serif
-                else -> FontFamily.Default
-            }
-            EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, shapes = shapes, fontFamily = fontFamily) {
+            EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, shapes = shapes) {
                 MainScreen(
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode

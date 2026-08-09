@@ -22,6 +22,7 @@ import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.data.SlashMessageActions
 import com.emberinn.app.data.TranslateClient

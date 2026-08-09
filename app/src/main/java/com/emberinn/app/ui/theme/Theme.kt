@@ -9,7 +9,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 
@@ -22,12 +21,11 @@ fun EmberInnTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     preset: ThemePreset = ThemePresets.first(),
     shapes: Shapes = Shapes(),
-    fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) preset.darkScheme() else preset.lightScheme(),
-        typography = Typography(defaultFontFamily = fontFamily),
+        typography = Typography(),
         shapes = shapes,
         content = content,
     )
