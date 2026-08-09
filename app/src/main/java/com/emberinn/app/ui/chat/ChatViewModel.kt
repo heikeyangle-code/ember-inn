@@ -186,11 +186,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 wasImpersonating -> _impersonated.value = partial
                 wasSwipe -> appendGeneratedSwipe(partial)
                 wasContinue -> {
-                    // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
+                    // 续写追加回最后一条 AI 消息：换行分隔（回退 7f3a42a 的紧贴追加）
                     val after = chatStore.messages(sessionId).toMutableList()
                     val aiIdx = after.indexOfLast { !isUser(it) }
                     if (aiIdx >= 0) {
-                        val combined = textOf(after[aiIdx]) + partial
+                        val combined = textOf(after[aiIdx]) + "\n" + partial
                         after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                         chatStore.replace(sessionId, after)
                         refreshMessages()
@@ -482,6 +482,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
         viewModelScope.launch(Dispatchers.Default) {
+            // buildRequest 阶段异常（如接口地址 scheme 非法）在 newCall 之前抛出，不经过 onError，
+            // 直接透传给协程会崩溃——这里统一兜底转 notice，绝不崩。
+            try {
             val session = chatRepository.streamPrepared(
                 characterRawJson = character?.rawJson,
                 history = history,
@@ -558,6 +561,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 // 组装期间用户点了停止：直接取消刚建好的请求
                 session?.cancel()
             }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (streamActive) {
+                    streamActive = false
+                    _isStreaming.value = false
+                    _isImpersonating.value = false
+                    _streamingReasoning.value = ""
+                    streamContinueMode = false
+                    generatingSwipe = false
+                    _notice.value = e.message?.let { "（$it）" }
+                        ?: "（请求失败，请检查提供商设置后重试。）"
+                }
+            }
         }
     }
 
@@ -592,12 +609,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             }
             continueMode && reply.isNotBlank() -> {
-                // 官方 mes_continue：saveReply('continue') lastMessage.mes += getMessage，紧贴追加不插换行
+                // 续写追加回最后一条 AI 消息：换行分隔（回退 7f3a42a 的紧贴追加）
                 if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
-                    val combined = textOf(after[aiIdx]) + reply
+                    val combined = textOf(after[aiIdx]) + "\n" + reply
                     after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                     chatStore.replace(sessionId, after)
                     refreshMessages()
