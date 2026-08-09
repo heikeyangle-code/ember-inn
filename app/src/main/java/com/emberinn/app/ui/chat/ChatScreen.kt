@@ -156,6 +156,8 @@ fun ChatScreen(
     val contextUsage by vm.contextUsage.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
+    // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
+    var reasoningExpanded by rememberSaveable { mutableStateOf(false) }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
@@ -322,6 +324,8 @@ fun ChatScreen(
                                 text = text,
                                 media = mediaOf(el),
                                 reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
+                                reasoningExpanded = reasoningExpanded,
+                                onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
                                 name = nameOf(el, isUserMsg),
                                 time = timeOf(el),
                                 dateLabel = dateLabel,
@@ -347,13 +351,21 @@ fun ChatScreen(
                             modifier = Modifier.animateItem(),
                             text = streamingText,
                             reasoning = streamingReasoning,
+                            reasoningExpanded = reasoningExpanded,
+                            onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
                             name = name,
                             avatarPath = vm.avatarPath,
                             accent = accent,
                             impersonating = isImpersonating,
                         )
                         ChatItem.ReasoningOnly -> {
-                            lastReasoning?.let { ReasoningCard(text = it) }
+                            lastReasoning?.let {
+                                ReasoningCard(
+                                    text = it,
+                                    expanded = reasoningExpanded,
+                                    onToggle = { reasoningExpanded = !reasoningExpanded },
+                                )
+                            }
                         }
                     }
                 }
@@ -801,6 +813,8 @@ private fun MessageRow(
     text: String,
     media: List<MediaAttachment>,
     reasoning: String?,
+    reasoningExpanded: Boolean = false,
+    onReasoningToggle: () -> Unit = {},
     name: String,
     time: String,
     avatarPath: String?,
@@ -858,10 +872,14 @@ private fun MessageRow(
                     color = MaterialTheme.colorScheme.outline,
                 )
             }
-            // 思考过程显示在正文上方（思考完不折叠到底部），默认折叠成一行，点开展开
+            // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
             if (!reasoning.isNullOrBlank()) {
                 Spacer(Modifier.size(4.dp))
-                ReasoningCard(text = reasoning)
+                ReasoningCard(
+                    text = reasoning,
+                    expanded = reasoningExpanded,
+                    onToggle = onReasoningToggle,
+                )
             }
             Spacer(Modifier.size(3.dp))
             // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动
@@ -963,6 +981,8 @@ private fun StreamingRow(
     modifier: Modifier = Modifier,
     text: String,
     reasoning: String = "",
+    reasoningExpanded: Boolean = false,
+    onReasoningToggle: () -> Unit = {},
     name: String,
     avatarPath: String?,
     accent: Color,
@@ -995,9 +1015,13 @@ private fun StreamingRow(
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.size(4.dp))
-            // 流式思考中：默认折叠成"思考中 ▸"一行（与生成完一致的折叠规范），点开展开
+            // 流式思考：同一个卡，默认折叠，点开展开看实时思考过程
             if (reasoning.isNotBlank()) {
-                ReasoningCard(text = reasoning, label = "思考中")
+                ReasoningCard(
+                    text = reasoning,
+                    expanded = reasoningExpanded,
+                    onToggle = onReasoningToggle,
+                )
                 Spacer(Modifier.size(6.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1222,25 +1246,25 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
     )
 }
 
-/** 思考过程：默认折叠成一行（流式/生成完共用），点开展开；显示在正文上方。 */
+/** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。 */
 @Composable
-private fun ReasoningCard(text: String, label: String = "思考过程") {
-    var expanded by remember { mutableStateOf(false) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit) {
+    Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .combinedClickable(onClick = { expanded = !expanded })
+            .combinedClickable(onClick = onToggle)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(
-            text = if (expanded) "$label ▾" else "$label ▸",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
-            fontWeight = FontWeight.Medium,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                fontWeight = FontWeight.Medium,
+            )
+        }
         if (expanded) {
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(5.dp))
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
