@@ -231,7 +231,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
 ✅ 角色详情编辑页已完成（2026-08-10 复验修复，c8b22e4 起）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。本轮修复：depth_prompt/talkativeness 读写改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；“新增条目”弹层删除按钮误删第一条的 bug 已修；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展）；✅ 快捷回复（该卡）UI 已做（槽位字段完全复用官方 QuickReplySlot：mes/label/enabled/automationId/preventAutoExecute，存 data.extensions.quick_replies，执行复用 QuickReplyExecutor；输入区快捷盘渲染 P3）；❌ 模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
+✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展，官方无 per-character 变量，见第 8 节不一致登记）；✅ 快捷回复（全局）已做（第 77 轮：按官方 Quick Reply 扩展做成全局 preset + 槽位，字段 mes/label/enabled/automationId/preventAutoExecute 完全复用官方 QuickReplySlot；设置→服务→快捷回复管理，聊天输入区快捷盘点击执行；per-character 快捷回复已删除，README 表述已改全局）；❌ 模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
@@ -242,7 +242,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ✅ **滑动切回复已做（README #1731“每条消息都能滑”）**：数据模型对齐官方 jsonl（`swipe_id` / `swipes[]` / `swipe_info[]`，ChatStore.ensureSwipes 初始化 + syncSwipeToMes 语义同步 mes/send_date/gen_*/extra）；AI 气泡横滑（右=下一个/最后一条 AI 越界生成新变体，左=上一个）；计数条 `n/N` + CaretLeft/Right（有变体时显示）；长按菜单“上一个/下一个回复”“删除当前回复”（官方 deleteSwipe 的 newSwipeId 规则）+“生成新回复（变体）”（官方 Generate('swipe')：coreChat.pop() 排除最后一条，结果追加进最后一条 swipes 不新增消息）；编辑消息同步写回 swipes[swipe_id]（官方 editMessage）。导出 jsonl 含 swipes 字段可直接进酒馆。近似：世界书扫描用排除最后一条的历史（与 regenerate 同策略；官方 swipe 扫描含最后一条——差异影响小，登记）。
 ❌ 滑动切回复的 swipe picker（变体历史弹层跳转）未做，排 P2。
 ✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
-⚠️ 快捷工具盘仍只有“继续/冒充”两个按钮（README 规格：世界书状态/上下文胶囊/快捷回复/正则开关/图像生成/附件/TTS），待升级。
+⚠️ 快捷工具盘=“继续/冒充 + 全局快捷回复 chips”（2026-08-10 第 77 轮已加快捷回复；正则开关/图像生成/附件/TTS 仍待升级）。
 现状补充：键盘适配（adjustResize + imePadding）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
 近期修复（2026-08-09）：自动滚底=贴底跟随+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；滚动跟随仅贴底时滚、发送复位；首页预览走 ViewModel 缓存（不再组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
 
@@ -339,7 +339,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 3. ~~全局搜索~~ → 已做；设置结果深链已实现（首页搜索 route → SettingsScreen deepLink：外观/提供商/数据/关于，MainScreen settingsDeepLink 接线）
 
 **P1（功能完整）**
-4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；剩正则/变量/快捷回复 UI、模型覆盖、主题配方（后两者为 README 角色页承诺的项目自定义功能，官方角色编辑器无对应字段）
+4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；剩模型覆盖、主题配方（README 角色页承诺的项目自定义功能，官方角色编辑器无对应字段）
 5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；Splash 原生启动待做（Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺，3641185 移除）
 6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）、服务（翻译/图像/向量）~~ → 设置/配置页已复验通过（2026-08-10），剩执行层（TTS 聊天朗读 / 翻译 / 图像请求）P3 接入；官方 1.18 无 STT
 
@@ -368,6 +368,32 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
+
+> 规则：任何与官方 1:1 有出入的实现必须在此登记；未登记即视为未完成。
+
+| 功能 | 与官方的差异 | 状态 |
+|---|---|---|
+| 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；150+ 官方命令多数未实现（占位）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
+| 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
+| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2）。差异：①官方在 sendMessageAsUser/saveReply **存前应用一次**，App 在 ChatPromptFactory prepare 每次应用 → 非幂等脚本可能双应用；②官方有 allowedOnly（character_allowed_regex 允许列表）与 global/preset/scoped 分桶，App 只做了该卡 scoped，global/preset/允许列表未做 | 🟡 应用时机近似，见 3.6 |
+| 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
+| 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 未编辑 automationId/preventAutoExecute；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
+| 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |
+| 世界书 UI | 官方是独立 World Info 面板（world_info 扩展），App 在角色详情页自绘增删改；数据格式（data.character_book.entries、v1 key→v2 keys 归一）与官方一致，未知字段保留 | 🟡 UI 自主（兼容层一致） |
+| 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 77（2026-08-10：快捷回复改为官方全局 + 不一致登记 + README 修订）
+
+- 按用户要求删除“该卡快捷回复”：CharacterCardEdit/HomeViewModel/详情页的 per-character 快捷回复全部移除
+- 改按官方 Quick Reply 扩展做全局：QuickReplyStore（filesDir/quick-replies.json，QuickReplyPreset 结构），
+  设置→服务→“快捷回复（全局）”管理页（槽位增删改/启用，字段 QuickReplySlot 官方），
+  聊天输入区快捷盘（quickBar 展开后横向 chips，点击 QuickReplyExecutor 执行、文本输出填输入框）
+- README：角色详情页/角色设置删“快捷回复（该卡/本角色专用）”，主设置加“快捷回复：全局预设 + 槽位”
+- 新增第 8 节“与官方不一致登记”：斜杠执行链、正则应用时机/分桶、该卡变量、快捷回复存储/交互、世界书 UI、
+  模型覆盖/主题配方 全部列明
+- 修复 CI 抓出的两处 id 类型错（CharacterRegexScript/CharacterQuickReply.id 为 String）
 
 ## 最近一轮 76（2026-08-10：斜杠解析核心机器差分 18 例 + 该卡变量/快捷回复 UI）
 

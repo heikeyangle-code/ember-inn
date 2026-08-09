@@ -51,7 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, VOICE, SERVICES, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, VOICE, SERVICES, QUICK_REPLIES, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -109,6 +109,7 @@ fun SettingsScreen(
         )
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
         else -> SettingsHome(
@@ -119,6 +120,7 @@ fun SettingsScreen(
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
             onOpenVoice = { page = SettingsPage.VOICE },
             onOpenServices = { page = SettingsPage.SERVICES },
+            onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
             onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
         )
@@ -140,6 +142,7 @@ private fun SettingsHome(
     onOpenAppearance: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
+    onOpenQuickReplies: () -> Unit,
     onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
@@ -197,6 +200,7 @@ private fun SettingsHome(
             "服务",
             listOf(
                 SettingRow("翻译 · 图像 · 向量", "配置已持久化 · 执行层 P3 接入", Color.Unspecified, onOpenServices),
+                SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies),
             ),
         ),
         SettingsGroup(

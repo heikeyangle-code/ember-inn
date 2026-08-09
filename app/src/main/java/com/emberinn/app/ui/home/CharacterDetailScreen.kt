@@ -64,7 +64,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
-import com.emberinn.app.data.CharacterQuickReply
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
@@ -89,7 +88,6 @@ fun CharacterDetailScreen(
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
     var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
-    var quickReplies by remember(record.id) { mutableStateOf(vm.readQuickReplies(record)) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -104,11 +102,6 @@ fun CharacterDetailScreen(
     var editingVarKey by remember { mutableStateOf<String?>(null) }
     var varDraftKey by remember { mutableStateOf("") }
     var varDraftValue by remember { mutableStateOf("") }
-    var editingQrIdx by remember { mutableStateOf<Int?>(null) }
-    var addingQr by remember { mutableStateOf(false) }
-    var qrDraftLabel by remember { mutableStateOf("") }
-    var qrDraftMes by remember { mutableStateOf("") }
-    var qrDraftEnabled by remember { mutableStateOf(true) }
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -148,7 +141,6 @@ fun CharacterDetailScreen(
         vm.saveWorldEntries(record, entries)
         vm.saveRegexScripts(record, regexScripts)
         vm.saveVariables(record, variables)
-        vm.saveQuickReplies(record, quickReplies)
         dirty = false
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
@@ -426,42 +418,6 @@ fun CharacterDetailScreen(
                         onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增变量") }
-                }
-
-                item {
-                    SectionHeader("快捷回复（该卡）", "${quickReplies.size} 条")
-                }
-                if (quickReplies.isEmpty()) {
-                    item {
-                        Text(
-                            "没有该卡快捷回复。聊天输入区快捷盘后续按此列表渲染（README 自定义扩展，执行层 P3）。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(quickReplies.size) { i ->
-                    SimpleEditRow(
-                        title = quickReplies[i].label,
-                        subtitle = quickReplies[i].mes,
-                        onEdit = {
-                            editingQrIdx = i
-                            qrDraftLabel = quickReplies[i].label
-                            qrDraftMes = quickReplies[i].mes
-                            qrDraftEnabled = quickReplies[i].enabled
-                        },
-                        onDelete = {
-                            quickReplies = quickReplies.filterIndexed { j, _ -> j != i }
-                            dirty = true
-                        },
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { addingQr = true; qrDraftLabel = ""; qrDraftMes = ""; qrDraftEnabled = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) { Text("＋ 新增快捷回复") }
                 }
 
                 item {
@@ -789,61 +745,6 @@ fun CharacterDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { editingVarKey = null }) { Text("取消") }
-            },
-        )
-    }
-
-    // ---- 快捷回复编辑对话框 ----
-    val editingQr = quickReplies.getOrNull(editingQrIdx ?: -1)
-    if (editingQr != null || addingQr) {
-        AlertDialog(
-            onDismissRequest = { addingQr = false; editingQrIdx = null },
-            title = { Text(if (addingQr) "新增快捷回复" else "编辑快捷回复") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = qrDraftLabel,
-                        onValueChange = { qrDraftLabel = it },
-                        label = { Text("按钮文案") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = qrDraftMes,
-                        onValueChange = { qrDraftMes = it },
-                        label = { Text("发送内容（斜杠链，如 /echo 你好）") },
-                        minLines = 2,
-                        maxLines = 6,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    )
-                    SwitchRow("启用", qrDraftEnabled) { qrDraftEnabled = it }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val label = qrDraftLabel.trim()
-                    if (label.isNotEmpty()) {
-                        if (addingQr) {
-                            quickReplies = quickReplies + CharacterQuickReply(
-                                id = ((quickReplies.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1).toString(),
-                                label = label,
-                                mes = qrDraftMes,
-                                enabled = qrDraftEnabled,
-                            )
-                        } else {
-                            val i = editingQrIdx ?: 0
-                            quickReplies = quickReplies.mapIndexed { j, r ->
-                                if (j == i) r.copy(label = label, mes = qrDraftMes, enabled = qrDraftEnabled) else r
-                            }
-                        }
-                        dirty = true
-                    }
-                    addingQr = false
-                    editingQrIdx = null
-                }) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { addingQr = false; editingQrIdx = null }) { Text("取消") }
             },
         )
     }

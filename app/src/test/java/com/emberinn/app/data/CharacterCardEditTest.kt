@@ -246,34 +246,19 @@ class CharacterCardEditTest {
     }
 
     @Test
-    fun `read and save per-character variables and quick replies`() {
+    fun `read and save per-character variables`() {
         val card = """
             {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{
-              "emberinn_variables":{"k":"v"},
-              "quick_replies":[
-                {"id":"q1","label":"打招呼","mes":"/echo 你好","enabled":true,"custom":1}
-              ]
+              "emberinn_variables":{"k":"v"}
             }}}
         """.trimIndent()
         assertEquals("v", CharacterCardEdit.readVariables(card)["k"])
-
-        val qrs = CharacterCardEdit.readQuickReplies(card)
-        assertEquals(1, qrs.size)
-        assertEquals("打招呼", qrs[0].label)
-        assertEquals("/echo 你好", qrs[0].mes)
-        assertTrue(qrs[0].enabled)
-
-        val saved = CharacterCardEdit.applyQuickReplies(card, qrs.map { it.copy(mes = "/echo 嗨", enabled = false) })
-        val reread = CharacterCardEdit.readQuickReplies(saved)
-        assertEquals("/echo 嗨", reread[0].mes)
-        assertEquals(false, reread[0].enabled)
-        // 未知字段保留
-        val savedRoot = json.parseToJsonElement(saved).jsonObject
-        val first = savedRoot["data"]!!.jsonObject["extensions"]!!.jsonObject["quick_replies"]!!.jsonArray[0].jsonObject
-        assertEquals(1, first["custom"]!!.jsonPrimitive.intOrNull)
-
         // 空值变量不落盘
-        val savedVars = CharacterCardEdit.applyVariables(saved, mapOf("a" to "1", "空" to ""))
-        assertEquals(mapOf("a" to "1"), CharacterCardEdit.readVariables(savedVars))
+        val saved = CharacterCardEdit.applyVariables(card, mapOf("a" to "1", "空" to ""))
+        assertEquals(mapOf("a" to "1"), CharacterCardEdit.readVariables(saved))
+        // 全空则移除扩展字段
+        val cleared = CharacterCardEdit.applyVariables(saved, emptyMap())
+        assertEquals(emptyMap(), CharacterCardEdit.readVariables(cleared))
     }
+
 }

@@ -104,6 +104,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.slash.QuickReplySlot
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
@@ -157,6 +158,8 @@ fun ChatScreen(
     val pendingMedia by vm.pendingMedia.collectAsState()
     val worldHits by vm.worldHits.collectAsState()
     val contextUsage by vm.contextUsage.collectAsState()
+    val quickReplies by vm.quickReplies.collectAsState()
+    val quickReplyOutput by vm.quickReplyOutput.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -217,6 +220,15 @@ fun ChatScreen(
         }
     }
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
+
+    // 全局快捷回复输出填输入框（官方点击槽位执行斜杠链；本 App 把文本输出放进输入框，用户可改可发）
+    LaunchedEffect(quickReplyOutput) {
+        quickReplyOutput?.let { output ->
+            input = output
+            followBottom = true
+            vm.consumeQuickReplyOutput()
+        }
+    }
 
     // 冒充草稿进输入框（官方：冒充结果落到发送框，用户可改可发）
     LaunchedEffect(impersonated) {
@@ -429,6 +441,8 @@ fun ChatScreen(
             onOpenWorldPanel = { worldPanel = true },
             onOpenContextDetail = { contextDetail = true },
             onToggleQuickBar = { showQuickBar = !showQuickBar },
+            quickReplies = quickReplies,
+            onQuickReply = { label -> vm.runQuickReply(label) },
             onQuickContinue = {
                 showQuickBar = false
                 vm.continueGeneration()
@@ -1406,6 +1420,8 @@ private fun ChatInputBar(
     onOpenWorldPanel: () -> Unit,
     onOpenContextDetail: () -> Unit,
     onToggleQuickBar: () -> Unit,
+    quickReplies: List<QuickReplySlot>,
+    onQuickReply: (String) -> Unit,
     onQuickContinue: () -> Unit,
     onQuickImpersonate: () -> Unit,
     onSend: () -> Unit,
@@ -1453,6 +1469,31 @@ private fun ChatInputBar(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
             if (quickBarOpen) {
+                val enabledReplies = quickReplies.filter { it.enabled }
+                if (enabledReplies.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    ) {
+                        items(enabledReplies, key = { it.label }) { slot ->
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { onQuickReply(slot.label) },
+                            ) {
+                                Text(
+                                    slot.label.ifBlank { "（未命名）" },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                )
+                            }
+                        }
+                    }
+                }
                 Column(modifier = Modifier.padding(end = 4.dp)) {
                     TextButton(
                         onClick = onQuickContinue,

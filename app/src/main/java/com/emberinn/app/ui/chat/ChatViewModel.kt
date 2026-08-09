@@ -16,6 +16,8 @@ import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.slash.QuickReplyExecutor
+import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +41,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val chatStore = ChatStore(application)
     private val charStore = CharacterStore(application)
     private val chatRepository = ChatRepository(application)
+    private val quickReplyStore = QuickReplyStore(application)
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -79,6 +82,22 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 共享状态：设置页写入后自动更新，聊天页无需轮询读盘。 */
     val providerConfigured: StateFlow<Boolean> = ProviderState.configured
+
+    /** 全局快捷回复槽位（官方 QuickReplySlot，设置页管理）。 */
+    private val _quickReplies = MutableStateFlow(quickReplyStore.slots())
+    val quickReplies: StateFlow<List<QuickReplySlot>> = _quickReplies
+
+    /** 快捷回复执行输出（填入输入框；空输出不动作，如 /let 只写变量）。 */
+    private val _quickReplyOutput = MutableStateFlow<String?>(null)
+    val quickReplyOutput: StateFlow<String?> = _quickReplyOutput
+
+    fun runQuickReply(label: String) {
+        if (_isStreaming.value) return
+        val output = QuickReplyExecutor.execute(quickReplyStore.load(), label)
+        if (output.isNotBlank()) _quickReplyOutput.value = output
+    }
+
+    fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
 
     /** 瞬态提示（未配置模型 / 请求失败），只显示不落盘。 */
     private val _notice = MutableStateFlow<String?>(null)
