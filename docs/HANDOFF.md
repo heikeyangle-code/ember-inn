@@ -340,7 +340,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **P1（功能完整）**
 4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；剩模型覆盖、主题配方（README 角色页承诺的项目自定义功能，官方角色编辑器无对应字段）
-5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；Splash 原生启动待做（Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺，3641185 移除）
+5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；✅ Splash 原生启动已做（2026-08-10 第 78 轮：主题级启动窗口，windowBackground 层叠图标 + Android 12+ windowSplashScreen*，MainActivity setTheme 切换；无新依赖）；Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺（3641185）
 6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）、服务（翻译/图像/向量）~~ → 设置/配置页已复验通过（2026-08-10），剩执行层（TTS 聊天朗读 / 翻译 / 图像请求）P3 接入；官方 1.18 无 STT
 
 **P2（引擎边界）**
@@ -383,6 +383,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |
 | 世界书 UI | 官方是独立 World Info 面板（world_info 扩展），App 在角色详情页自绘增删改；数据格式（data.character_book.entries、v1 key→v2 keys 归一）与官方一致，未知字段保留 | 🟡 UI 自主（兼容层一致） |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 78（2026-08-10：Splash 原生启动）
+
+- 主题级启动屏（无需 core-splashscreen 依赖）：Theme.EmberInn.Splash（windowBackground =
+  drawable/splash_background 深色底 + 居中 launcher 图标），Android 12+ 补 windowSplashScreenBackground/
+  windowSplashScreenAnimatedIcon/windowSplashScreenIconBackgroundColor（values-v31）
+- Manifest activity theme = Splash；MainActivity.onCreate 先 setTheme(Theme.EmberInn) 再 super（启动窗口→内容）
+- README“启动体验”项完成；品牌开场/Lottie 已随 README 删除（3641185），不再补
 
 ## 最近一轮 77（2026-08-10：快捷回复改为官方全局 + 不一致登记 + README 修订）
 
