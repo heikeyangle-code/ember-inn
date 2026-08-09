@@ -663,6 +663,9 @@ fun ChatScreen(
                         MenuRow(PhosphorIcons.CaretRight, "下一个回复") {
                             vm.swipeRight(index); menuMessageIndex = null
                         }
+                        MenuRow(PhosphorIcons.List, "变体列表") {
+                            swipePickerIndex = index; menuMessageIndex = null
+                        }
                         if (swipeCount > 1) {
                             MenuRow(PhosphorIcons.Delete, "删除当前回复", danger = true) {
                                 deleteSwipeTargetIndex = index; menuMessageIndex = null
@@ -1100,6 +1103,53 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 12.dp),
                 ) {
                     Text("添加文件")
+                }
+            }
+        }
+    }
+
+    swipePickerIndex?.let { index ->
+        val currentEl = messages.getOrNull(index)
+        val variants = vm.swipeVariantsOf(index)
+        if (variants.isNotEmpty() && currentEl != null) {
+            val currentSwipe = vm.currentSwipeOf(currentEl)
+            ModalBottomSheet(onDismissRequest = { swipePickerIndex = null }, sheetState = rememberModalBottomSheetState()) {
+                Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                    Text(
+                        "回复变体（${currentSwipe + 1}/${variants.size}）",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    )
+                    HorizontalDivider()
+                    variants.forEachIndexed { i, text ->
+                        val current = i == currentSwipe
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                vm.swipeToVariant(index, i)
+                                swipePickerIndex = null
+                            }.padding(horizontal = 20.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                "${i + 1}.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.widthIn(min = 8.dp))
+                            Text(
+                                text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (current) {
+                                Text("✓", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                    }
                 }
             }
         }

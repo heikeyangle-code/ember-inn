@@ -672,6 +672,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 读取消息的 swipes 变体数（UI 计数 chip 用）。 */
     fun swipeCountOf(el: JsonElement): Int = chatStore.swipeCount(el)
 
+    /** 变体列表（swipe picker 用；先 ensureSwipes 保证字段齐）。 */
+    fun swipeVariantsOf(index: Int): List<String> {
+        if (index !in chatStore.messages(sessionId).indices) return emptyList()
+        chatStore.ensureSwipes(sessionId, index)
+        return chatStore.swipesOf(chatStore.messages(sessionId)[index])
+    }
+
+    /** 跳转到指定变体（swipe picker 点击；对齐官方 swipe）。 */
+    fun swipeToVariant(index: Int, variant: Int) {
+        if (chatStore.swipeTo(sessionId, index, variant)) refreshMessages()
+    }
+
     /** 当前 swipes 下标（UI 计数 chip 用）。 */
     fun currentSwipeOf(el: JsonElement): Int = chatStore.currentSwipeId(el)
 

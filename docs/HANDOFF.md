@@ -337,7 +337,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P0（“打开即聊”体验短板）**
 1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
 2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装/滑动切回复~~ → 已做；剩 swipe picker（变体历史跳转，P2）
-3. ~~全局搜索~~ → 已做；设置结果深链已实现（首页搜索 route → SettingsScreen deepLink：外观/提供商/数据/关于，MainScreen settingsDeepLink 接线）
+3. ~~全局搜索~~ → 已做；设置结果深链已实现（首页搜索 route → SettingsScreen deepLink：外观/提供商/数据/关于，MainScreen settingsDeepLink 接线）；~~swipe picker~~ → 已做（第 91 轮：长按消息→变体列表弹层）
 
 **P1（功能完整）**
 4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；~~模型覆盖~~（第 81 轮）；主题配方已做存储+UI+聊天背景应用（第 82 轮）；全局形状/字体/锁定管线与配方导出分享 P3
@@ -392,6 +392,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 91（2026-08-10：swipe picker 变体历史弹层——P0-2 收尾）
+
+- 长按消息菜单新增“变体列表”：列出该消息全部 swipes（序号 + 文本预览 + 当前 ✓），点击跳转（chatStore.swipeTo）
+- ChatViewModel 增 swipeVariantsOf（先 ensureSwipes 补字段）与 swipeToVariant
+- 对应官方 swipe picker（变体历史弹层跳转）；长按菜单“上一个/下一个回复”“删除当前回复”保持
+- 无引擎改动；App 编译走 CI；HANDOFF P0 第 2 项关闭
 
 ## 最近一轮 90（2026-08-10：群聊剩余收尾——深度提示接线 + 自动续写 + 策略 UI）
 
