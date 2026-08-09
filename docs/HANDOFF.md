@@ -389,9 +389,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 人设 personaDescription | ✅ 已接（2026-08-10 第 83 轮）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
 | 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 无作者注释/记忆 UI（官方默认 AN 空则不注入），暂等价 | 🟡 待 UI |
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
-| 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
+| 世界书设置 | 已做（第 94 轮：设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 94（2026-08-10：世界书设置 UI——扫描深度/递归/预算可调）
+
+- WorldInfoPrefs（SharedPreferences）+ WorldInfoScreen（设置→服务→世界书）：深度/最少激活/预算百分比/最大递归步数/递归/大小写/整词，
+  对齐官方 World Info 面板字段，改动即存
+- ChatPromptFactory.prepare / ChatRepository.streamPrepared 增 worldInfoSettings 透传；ChatViewModel 发送前读 WorldInfoPrefs
+  （不再用 WorldInfoSettings() 默认值）
+- 设置页“服务”组加“世界书”入口；HANDOFF 第 8 节“世界书设置 | 🟡 待设置 UI”关闭
+- 无引擎改动；App 编译走 CI
 
 ## 最近一轮 93（2026-08-10：快捷回复 automationId 自动执行 + 槽位字段 UI）
 

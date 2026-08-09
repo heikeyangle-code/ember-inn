@@ -92,6 +92,7 @@ class ChatPromptFactory {
         vectorFileText: (String) -> String? = { null },
         extensionPrompts: Map<String, ExtensionPrompt> = emptyMap(),
         inChatExtensions: List<PromptItem> = emptyList(),
+        worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -231,7 +232,7 @@ class ChatPromptFactory {
             chat = indexedChat.map { it.second.mes },
             maxContext = maxContextTokens,
             entries = parsed?.worldEntries ?: emptyList(),
-            settings = WorldInfoSettings(),
+            settings = worldInfoSettings,
             global = GlobalScanData(characterName = charName),
             // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()

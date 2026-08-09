@@ -10,6 +10,7 @@ import com.emberinn.engine.worldinfo.VectorChatSettings
 import com.emberinn.engine.worldinfo.VectorFileRef
 import com.emberinn.engine.worldinfo.VectorSettings
 import com.emberinn.engine.worldinfo.VectorStore
+import com.emberinn.engine.worldinfo.WorldInfoSettings
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
 import java.io.File
@@ -97,6 +98,7 @@ class ChatRepository(context: Context) {
         vectorDataBank: List<VectorFileRef> = emptyList(),
         vectorFileText: (String) -> String? = { null },
         inChatExtensions: List<PromptItem> = emptyList(),
+        worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -154,6 +156,7 @@ class ChatRepository(context: Context) {
             vectorDataBank = vectorDataBank,
             vectorFileText = vectorFileText,
             inChatExtensions = inChatExtensions,
+            worldInfoSettings = worldInfoSettings,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

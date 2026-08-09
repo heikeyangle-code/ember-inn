@@ -30,6 +30,7 @@ import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.data.VectorRagService
 import com.emberinn.app.ui.settings.VoicePrefs
+import com.emberinn.app.ui.settings.WorldInfoPrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.group.GroupActivationEngine
@@ -1128,6 +1129,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val vectorSettings = rag.chatSettings()
             val vectorWorldSettings = rag.worldSettings()
             val vectorDataBank = rag.dataBankFiles()
+            val worldInfoSettings = WorldInfoPrefs.read(getApplication())
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
             }
@@ -1184,6 +1186,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorDataBank = vectorDataBank,
                 vectorFileText = { path -> rag.readDataBankText(path) },
                 inChatExtensions = inChatExtensions,
+                worldInfoSettings = worldInfoSettings,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
