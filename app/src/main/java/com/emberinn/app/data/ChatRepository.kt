@@ -20,12 +20,22 @@ import kotlinx.serialization.json.jsonPrimitive
  * 真实模型对话仓库：连接档案 → 历史消息 → LlmClient（OpenAI 兼容）。
  * 未配置连接时返回 null，由 ViewModel 走占位回复。
  */
+/** 上下文预算不足、必选提示词放不下（对齐官方 TokenBudgetExceededError 的用户提示）。 */
+class ContextBudgetException(message: String) : Exception(message)
+
 class ChatRepository(context: Context) {
 
     private val store = ProviderStore(File(context.filesDir, "provider"))
     private val client = LlmClient()
     private val promptFactory = ChatPromptFactory()
     private val json = Json { ignoreUnknownKeys = true }
+
+    companion object {
+        /** 旧档案固定默认 8192 视为“未设置”：取保守中间档，避免自动拉满模型窗口导致提示词爆炸。 */
+        const val DEFAULT_CONTEXT_WINDOW = 32_768
+        /** 上下文预算中留给必选提示词（角色卡/世界书/系统提示）的安全余量。 */
+        const val PROMPT_BUDGET_RESERVE = 2_048
+    }
 
     fun profile(): ConnectionProfile? = store.load()
 
@@ -76,14 +86,18 @@ class ChatRepository(context: Context) {
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
-        // 老档案里存的旧默认（512 / 8192）视为未设置：按厂商/模型自动取真实默认，
-        // 不重进设置页保存也能直接修好“只思考不出正文”与胶囊分母 8K。
-        val effectiveMaxTokens = if (profile.sampler.maxTokens == 512) {
+        // 旧档案默认值（512 / 8192）视为“未设置”：
+        // 上下文取保守中间档（官方机制：默认小值、用户可手动调大，不再自动拉满模型窗口）；
+        // 最大回复取厂商默认后按上下文钳制，保证预算 = 上下文 − 最大回复 恒为正。
+        val effectiveContextWindow = if (profile.contextWindow <= 0 || profile.contextWindow == 8192) {
+            DEFAULT_CONTEXT_WINDOW
+        } else {
+            profile.contextWindow
+        }
+        val effectiveMaxTokens = (if (profile.sampler.maxTokens == 512) {
             provider.defaultMaxTokens ?: 512
-        } else profile.sampler.maxTokens
-        val effectiveContextWindow = if (profile.contextWindow == 8192) {
-            provider.modelContexts[profile.model] ?: provider.defaultContextWindow ?: 8192
-        } else profile.contextWindow
+        } else profile.sampler.maxTokens)
+            .coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
@@ -101,6 +115,16 @@ class ChatRepository(context: Context) {
             audioInlining = mediaInlining,
         )
         onPrepared?.invoke(prepared)
+        // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。
+        if (prepared.messages.isEmpty()) {
+            onError(
+                ContextBudgetException(
+                    "上下文上限太小，装不下必要提示词（角色卡/世界书/系统提示）。" +
+                        "请调大“上下文上限”或调小“最大回复”。",
+                ),
+            )
+            return null
+        }
         return client.streamChatCompletionsAsync(
             provider = provider,
             // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）

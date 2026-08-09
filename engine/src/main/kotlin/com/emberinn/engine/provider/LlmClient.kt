@@ -281,6 +281,9 @@ class LlmClient(
                     toolChoice = options.toolChoice,
                     jsonSchema = options.jsonSchema,
                     enableWebSearch = options.enableWebSearch,
+                    enableSystemPromptCache = profile.sampler.enableSystemPromptCache,
+                    cachingAtDepth = profile.sampler.cachingAtDepth,
+                    cacheTTL = profile.sampler.cacheTTL,
                 )
                 builder.url(url).post(request.body.toRequestBody("application/json".toMediaType()))
                 builder.header("x-api-key", profile.apiKey)

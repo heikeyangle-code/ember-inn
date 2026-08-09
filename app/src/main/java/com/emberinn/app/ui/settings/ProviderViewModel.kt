@@ -23,6 +23,11 @@ import kotlinx.coroutines.withContext
 /** 提供商管理（参照命理2：列表 + 详情编辑；底层协议仍按酒馆 1:1）。 */
 class ProviderViewModel(application: Application) : AndroidViewModel(application) {
 
+    companion object {
+        /** 上下文默认档：能装下常见大卡 + 足够历史，又不至于像模型全窗口那样提示词爆炸。 */
+        const val DEFAULT_CONTEXT_WINDOW = 32_768
+    }
+
     private val repo = ChatRepository(application)
     private val client = LlmClient()
 
@@ -61,11 +66,11 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _selectedModel = MutableStateFlow("")
     val selectedModel: StateFlow<String> = _selectedModel
 
-    private val _contextWindow = MutableStateFlow(8192)
+    private val _contextWindow = MutableStateFlow(DEFAULT_CONTEXT_WINDOW)
     val contextWindow: StateFlow<Int> = _contextWindow
 
-    /** 上下文上限是否跟随模型自动取默认；用户手动改数字后关掉。 */
-    private val _contextAuto = MutableStateFlow(true)
+    /** 上下文上限是否跟随模型自动拉满（默认关：官方保守机制，避免提示词爆炸变慢）。 */
+    private val _contextAuto = MutableStateFlow(false)
     val contextAuto: StateFlow<Boolean> = _contextAuto
 
     private val _maxTokens = MutableStateFlow(512)
@@ -100,10 +105,12 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
         _selectedModel.value = model
-        // 旧版本固定默认（8192 / 512）视为“未手动设置”：按模型/厂商自动取，老档案不用重填也能修好
+        // 旧版本固定默认（8192 / 512）视为“未手动设置”：上下文取保守中间档，
+        // 不自动拉满模型窗口（否则提示词全量塞满、回复明显变慢）。
         val storedContext = existing?.contextWindow
-        _contextAuto.value = storedContext == null || storedContext == 8192
-        _contextWindow.value = if (_contextAuto.value) defaultContextFor(spec, model) else storedContext!!
+        val legacyDefault = storedContext == null || storedContext == 8192
+        _contextAuto.value = false
+        _contextWindow.value = if (legacyDefault) DEFAULT_CONTEXT_WINDOW else storedContext!!
         val storedTokens = existing?.sampler?.maxTokens
         _maxTokens.value = if (storedTokens == null || storedTokens == 512) (spec.defaultMaxTokens ?: 512) else storedTokens
         _message.value = null
@@ -139,7 +146,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setContextWindow(value: String) {
         _contextAuto.value = false
         val n = value.filter { it.isDigit() }.toIntOrNull()
-        _contextWindow.value = (n ?: 8192).coerceIn(256, 2_000_000)
+        _contextWindow.value = (n ?: DEFAULT_CONTEXT_WINDOW).coerceIn(256, 2_000_000)
     }
 
     /** 最大回复 tokens：推理模型思考会占额度，512 太小正文常被掐空。 */

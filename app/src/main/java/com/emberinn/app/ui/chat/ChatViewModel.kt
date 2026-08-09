@@ -11,6 +11,7 @@ import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
+import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
@@ -429,7 +430,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             _isStreaming.value = false
                             _isImpersonating.value = false
                             _streamingReasoning.value = ""
-                            _notice.value = "（请求中断，请检查网络或 API Key 后重试。）"
+                            _notice.value = if (e is ContextBudgetException) {
+                                "（${e.message}）"
+                            } else {
+                                "（请求中断，请检查网络或 API Key 后重试。）"
+                            }
                         } else {
                             finalizeStream(streamContinueMode)
                         }
