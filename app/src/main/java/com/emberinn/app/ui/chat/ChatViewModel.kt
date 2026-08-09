@@ -419,7 +419,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         onFinished?.invoke()
                     }
                 },
-                onError = {
+                onError = { e ->
                     if (streamActive) {
                         streamActive = false
                         // 中断也保留已流出的思考过程，不静默吞掉；状态必须全部复位，避免卡“生成中”
