@@ -229,13 +229,14 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 4.2 首页（角色 Tab）🟡
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
-✅ README 首页补齐：毛玻璃顶栏（Cloudy 浮层，正文区干净）、AI 对话渐变卡、角色卡最近消息预览、最近聊过卡头像+最近消息、AI 对话默认开场“我是余烬，想聊点什么？”。
-❌ 世界书管理/正则/变量/快捷回复/模型覆盖/主题配方 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
+✅ 角色详情编辑页已初步完成（待复验，2026-08-09 c8b22e4）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天；字段读写按 V2 归一化（readFromV2 对齐，V3 卡导入即归一为 V2）。
+❌ 正则/变量/快捷回复 UI、角色卡驱动完整主题；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。模型覆盖/主题配方已从清单移除（官方角色编辑器本就不存在，模型覆盖是聊天级 #custom_model_id）。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
 > 现状：continue 走官方默认 nudge 路径（历史“新的在前”对齐 setOpenAIMessages）；思考过程走 onReasoning 独立通道（流式显示 + 生成后折叠卡片）；重新生成/继续只对最后一条 AI 生效；新角色空会话自动补 first_mes 开场白。
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏为 Cloudy 0.7.1 真背板模糊玻璃（sky 源层 + cloudy 浮层，正文区不模糊）、空状态居中留白。
-❌ 角色详情入口、Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，排 P2）。
+✅ 角色详情入口已接通（角色卡长按菜单“查看/编辑详情”→ 详情编辑页，见 4.2）。
+❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，排 P2）。
 ✅ **滑动切回复已做（README #1731“每条消息都能滑”）**：数据模型对齐官方 jsonl（`swipe_id` / `swipes[]` / `swipe_info[]`，ChatStore.ensureSwipes 初始化 + syncSwipeToMes 语义同步 mes/send_date/gen_*/extra）；AI 气泡横滑（右=下一个/最后一条 AI 越界生成新变体，左=上一个）；计数条 `n/N` + CaretLeft/Right（有变体时显示）；长按菜单“上一个/下一个回复”“删除当前回复”（官方 deleteSwipe 的 newSwipeId 规则）+“生成新回复（变体）”（官方 Generate('swipe')：coreChat.pop() 排除最后一条，结果追加进最后一条 swipes 不新增消息）；编辑消息同步写回 swipes[swipe_id]（官方 editMessage）。导出 jsonl 含 swipes 字段可直接进酒馆。近似：世界书扫描用排除最后一条的历史（与 regenerate 同策略；官方 swipe 扫描含最后一条——差异影响小，登记）。
 ❌ 滑动切回复的 swipe picker（变体历史弹层跳转）未做，排 P2。
 ✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
@@ -255,7 +256,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 外观与主题：主题模式（跟随系统/浅色/深色）+ 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），点选立即全局生效（实时预览），SharedPreferences 持久化；字体/圆角/背景模糊标“开发中”
 - 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索）/ 上下文上限（tokens，占比胶囊分母）/ 最大回复 tokens（推理模型思考会占额度，512 太小正文被掐空；默认按 providers.json default_max_tokens）/ 测试连接 / 保存 / 删除确认
 - 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
-- 语音 / 服务：标“开发中”（不假装做完）
+- 语音（TTS）页已初步完成（待复验，2026-08-09 fa08e53）：Android 系统 TTS 本机引擎，语音选择/语速/试听真实可用；朗读选项字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；官方 1.18 无 STT，语音输入不假装（未做）
+- 服务页已初步完成（待复验，fa08e53）：翻译（官方 translate 扩展：provider/auto_mode/target_language/key，8 家提供商）、图像（官方 stable-diffusion：source/url/model/steps，8 个来源）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）；配置持久化，执行层 P3 接入（UI 诚实标注“配置已持久化，执行层后续接入”）
 
 ### 4.4.5 应用图标 ✅
 launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
@@ -286,7 +288,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；❌ HTML 消息开关 / LaTeX / Mermaid 未实现（README 高级渲染节要求，HANDOFF 旧文误写已做） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；❌ HTML 消息开关 / Mermaid 未实现（README 高级渲染节要求，HANDOFF 旧文误写已做） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -320,7 +322,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   - providers.json 24 家补 default_context_window + model_contexts（gpt-5.5 272K / claude 1M / gemini 1M / deepseek 1M / grok-4.3 1M / kimi-k3 1M / glm 200K / qwen 262K / 豆包 256K 等）；上下文胶囊分母默认按所选模型，设置页显示“按模型自动”（手动改数字后退出自动）。
 - ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
 - ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
-- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、URL 型资产下载、LaTeX 渲染（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
+- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
 
 ### 4.9 App↔引擎接线状态
 聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。
@@ -335,9 +337,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 3. ~~全局搜索~~ → 首页搜索已接角色/会话/世界书/设置；设置结果深链到具体子页未做（目前跳设置 Tab）
 
 **P1（功能完整）**
-4. 角色详情编辑页：卡字段编辑、世界书管理 UI、正则/变量/快捷回复、模型覆盖、主题配方
-5. 聊天页 LaTeX 渲染（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复已完成）；Splash 原生启动 / Lottie 品牌开场 / 余烬火花 mark / 中文行高 1.5–1.6（README 对账发现的未做项）
-6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；剩语音（TTS/STT）、服务（翻译/图像/向量）
+4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已初步完成（待复验）；剩正则/变量/快捷回复 UI。模型覆盖/主题配方已从清单移除（官方角色编辑器本就不存在）
+5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；剩 Splash 原生启动 / Lottie 品牌开场 / 余烬火花 mark（README 对账发现的未做项）
+6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）、服务（翻译/图像/向量）~~ → 设置/配置页已初步完成（待复验），剩执行层（TTS 聊天朗读 / 翻译 / 图像请求）P3 接入；官方 1.18 无 STT
 
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
