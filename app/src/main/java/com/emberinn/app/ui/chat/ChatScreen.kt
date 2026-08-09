@@ -858,6 +858,11 @@ private fun MessageRow(
                     color = MaterialTheme.colorScheme.outline,
                 )
             }
+            // 思考过程显示在正文上方（思考完不折叠到底部），默认折叠成一行，点开展开
+            if (!reasoning.isNullOrBlank()) {
+                Spacer(Modifier.size(4.dp))
+                ReasoningCard(text = reasoning)
+            }
             Spacer(Modifier.size(3.dp))
             // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动
             var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
@@ -938,10 +943,6 @@ private fun MessageRow(
             if (media.isNotEmpty()) {
                 Spacer(Modifier.size(8.dp))
                 MessageMedia(media = media)
-            }
-            if (!reasoning.isNullOrBlank()) {
-                Spacer(Modifier.size(6.dp))
-                ReasoningCard(text = reasoning)
             }
             if (showActions) {
                 Spacer(Modifier.size(8.dp))
