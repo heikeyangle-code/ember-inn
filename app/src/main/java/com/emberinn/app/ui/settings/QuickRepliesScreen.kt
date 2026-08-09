@@ -53,6 +53,8 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
     var draftLabel by remember { mutableStateOf("") }
     var draftMes by remember { mutableStateOf("") }
     var draftEnabled by remember { mutableStateOf(true) }
+    var draftAutomationId by remember { mutableStateOf("") }
+    var draftPreventAutoExecute by remember { mutableStateOf(false) }
 
     fun persist(next: List<QuickReplySlot>) {
         store.saveSlots(next)
@@ -100,6 +102,8 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                         draftLabel = slot.label
                                         draftMes = slot.mes
                                         draftEnabled = slot.enabled
+                                        draftAutomationId = slot.automationId
+                                        draftPreventAutoExecute = slot.preventAutoExecute
                                     }
                                 },
                             ) {
@@ -111,7 +115,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    slot.mes.ifBlank { "（空）" },
+                                    if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2,
@@ -125,6 +129,8 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                     draftLabel = slot.label
                                     draftMes = slot.mes
                                     draftEnabled = slot.enabled
+                                    draftAutomationId = slot.automationId
+                                    draftPreventAutoExecute = slot.preventAutoExecute
                                 }
                             }, modifier = Modifier.size(34.dp)) {
                                 Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
@@ -150,6 +156,8 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                     draftLabel = ""
                     draftMes = ""
                     draftEnabled = true
+                    draftAutomationId = ""
+                    draftPreventAutoExecute = false
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) { Text("＋ 新增快捷回复") }
@@ -185,13 +193,27 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         Switch(checked = draftEnabled, onCheckedChange = { draftEnabled = it })
                     }
+                    OutlinedTextField(
+                        value = draftAutomationId,
+                        onValueChange = { draftAutomationId = it },
+                        label = { Text("automationId（与世界书条目关联自动执行）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    ) {
+                        Text("自动执行期间禁止嵌套自动执行", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Switch(checked = draftPreventAutoExecute, onCheckedChange = { draftPreventAutoExecute = it })
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     val label = draftLabel.trim()
                     if (label.isNotEmpty()) {
-                        val slot = QuickReplySlot(mes = draftMes, label = label, enabled = draftEnabled)
+                        val slot = QuickReplySlot(mes = draftMes, label = label, enabled = draftEnabled, automationId = draftAutomationId.trim(), preventAutoExecute = draftPreventAutoExecute)
                         val next = if (adding) slots + slot else slots.mapIndexed { i, s -> if (i == editing) slot else s }
                         persist(next)
                     } else {

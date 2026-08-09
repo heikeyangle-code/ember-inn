@@ -242,7 +242,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ✅ **滑动切回复已做（README #1731“每条消息都能滑”）**：数据模型对齐官方 jsonl（`swipe_id` / `swipes[]` / `swipe_info[]`，ChatStore.ensureSwipes 初始化 + syncSwipeToMes 语义同步 mes/send_date/gen_*/extra）；AI 气泡横滑（右=下一个/最后一条 AI 越界生成新变体，左=上一个）；计数条 `n/N` + CaretLeft/Right（有变体时显示）；长按菜单“上一个/下一个回复”“删除当前回复”（官方 deleteSwipe 的 newSwipeId 规则）+“生成新回复（变体）”（官方 Generate('swipe')：coreChat.pop() 排除最后一条，结果追加进最后一条 swipes 不新增消息）；编辑消息同步写回 swipes[swipe_id]（官方 editMessage）。导出 jsonl 含 swipes 字段可直接进酒馆。近似：世界书扫描用排除最后一条的历史（与 regenerate 同策略；官方 swipe 扫描含最后一条——差异影响小，登记）。
 ❌ 滑动切回复的 swipe picker（变体历史弹层跳转）未做，排 P2。
 ✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
-⚠️ 快捷工具盘=“继续/冒充 + 全局快捷回复 chips”（2026-08-10 第 77 轮已加快捷回复；正则开关/图像生成/附件/TTS 仍待升级）。✅ 聊天元数据（2026-08-10 第 79 轮）：chats/{id}.json 官方 ChatHeader 读写；chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡（引擎参数已接）；custom_background 聊天背景（⋮ 菜单选图/清除，消息区低透明铺底）；书签/快照未做。
+⚠️ 快捷工具盘=“继续/冒充 + 全局快捷回复 chips”（第 77 轮）+ automationId 自动执行（第 93 轮：世界书命中条目 automationId 匹配槽位自动执行，prevent 栈 1:1）；正则开关/图像生成/附件/TTS 仍待升级。✅ 聊天元数据（2026-08-10 第 79 轮）：chats/{id}.json 官方 ChatHeader 读写；chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡（引擎参数已接）；custom_background 聊天背景（⋮ 菜单选图/清除，消息区低透明铺底）；书签/快照未做。
 现状补充：键盘适配（adjustResize + imePadding）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
 近期修复（2026-08-09）：自动滚底=贴底跟随+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；滚动跟随仅贴底时滚、发送复位；首页预览走 ViewModel 缓存（不再组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
 
@@ -392,6 +392,30 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 93（2026-08-10：快捷回复 automationId 自动执行 + 槽位字段 UI）
+
+- 引擎 AutoExecuteHandler 增 withPrevent(slot, block)（官方 performAutoExecute 的 push/execute/pop 语义），
+  performAutoExecute 改用它；AutoExecuteTest +1（prevent 栈嵌套行为）
+- App 接线：ChatViewModel.onPrepared 后跑 runAutoExecutions——WorldInfoAutoExecute.resolve 把激活世界书条目
+  automationId 与快捷回复槽位匹配，按官方 handleWIActivation 顺序执行（共享 SlashState、preventAutoExecute 栈生效，
+  非 impersonate；结果非空进输入框）；执行走 AppSlashExecutor（消息类命令也可用）
+- QuickRepliesScreen：槽位编辑新增 automationId 与“自动执行期间禁止嵌套自动执行”字段，列表显示 ⚙ automationId
+- 边界登记：官方在生成扫描过程中触发 WORLD_INFO_ACTIVATED，App 在 prepare 完成后（发请求前）触发，时机近似；
+  自动执行结果与手动点击一样填输入框（官方可改可发）
+- 引擎 285 测全绿；App 编译走 CI
+
+## CI 修复记录（2026-08-10：全仓编译红→绿，排查清单）
+
+- 根因链（多轮失败源于历史提交的 5 类问题，已全部修复并在 01c3749 全绿）：
+  1. **注释内 `/*` 触发 Kotlin 嵌套注释**：GroupStore/QuickReplyStore 的 KDoc 写 `group-chats/*.json`、`quick-replies/*.json`，
+     内层 `/*` 把文件后半段吞掉 → 全仓一堆 Unresolved reference（改写成“目录的 *.json”）
+  2. **ServicesPrefs.saveTranslate 少右括号**：导致 ServicesPrefs 编译失败 → ImageGenClient/TranslateClient/ServicesScreen 连锁报错
+  3. **前向引用**：ChatViewModel `_chatBackground` 初始化引用后声明的 `character`；ChatScreen `followBottom` 声明在使用之后（已挪到前面）
+  4. **缺导入**：ChatViewModel 缺 QuickReplyStore；ImageGenClient/TranslateClient 缺 ServicesPrefs；QuickRepliesScreen 缺 verticalScroll/size
+  5. **M3 1.4 Typography 无 defaultFontFamily 参数**：EmberInnTheme 去掉 fontFamily 参数（字体仅存储，边界已登记）
+- 排查方法：`gh run view <id> --log-failed` + 按文件统计 `e:` 行；本地用脚本扫注释嵌套/括号平衡
+- 结论：后续每轮提交前必须自查这五类问题；App 编译只能靠 CI，push 后以 `gh run list` 为准
 
 ## 最近一轮 92.5（2026-08-10：差分跟进——JSON 导入/导出的 null 容错真 bug）
 

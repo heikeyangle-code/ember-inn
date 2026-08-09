@@ -58,4 +58,20 @@ class AutoExecuteTest {
         h2.performAutoExecute(listOf(normal.slots.first()), listOf(normal))
         assertTrue(h2.checkExecute())
     }
+
+    @Test
+    fun `withPrevent pushes and pops prevent stack per slot`() {
+        val handler = AutoExecuteHandler()
+        assertTrue(handler.checkExecute())
+        val preventing = QuickReplySlot(mes = "/echo a", label = "a", preventAutoExecute = true)
+        val normal = QuickReplySlot(mes = "/echo b", label = "b")
+        handler.withPrevent(preventing) {
+            assertTrue(!handler.checkExecute())
+            handler.withPrevent(normal) {
+                assertTrue(handler.checkExecute())
+            }
+            assertTrue(!handler.checkExecute())
+        }
+        assertTrue(handler.checkExecute())
+    }
 }

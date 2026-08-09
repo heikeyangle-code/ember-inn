@@ -34,13 +34,20 @@ class AutoExecuteHandler {
     ) {
         for (slot in slots) {
             if (!checkExecute()) return
-            preventStack.addLast(slot.preventAutoExecute)
-            try {
+            withPrevent(slot) {
                 presets.firstOrNull { preset -> preset.slots.any { it.label == slot.label } }
                     ?.let { QuickReplyExecutor.execute(it, slot.label, state) }
-            } finally {
-                preventStack.removeLast()
             }
+        }
+    }
+
+    /** 官方 performAutoExecute 的 push/execute/pop 语义：执行前压入 prevent 栈，供后续槽位判定。 */
+    fun <T> withPrevent(slot: QuickReplySlot, block: () -> T): T {
+        preventStack.addLast(slot.preventAutoExecute)
+        try {
+            return block()
+        } finally {
+            preventStack.removeLast()
         }
     }
 }

@@ -44,7 +44,10 @@ import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.group.GroupLoopEngine
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.slash.AutoExecuteHandler
 import com.emberinn.engine.slash.QuickReplySlot
+import com.emberinn.engine.slash.SlashState
+import com.emberinn.engine.slash.WorldInfoAutoExecute
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
@@ -80,6 +83,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val imageGenClient = ImageGenClient()
     private val vectorRag = VectorRagService(application)
     private val slashExecutor = AppSlashExecutor(this)
+    private val autoExecuteHandler = AutoExecuteHandler()
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -148,6 +152,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
+
+    /** 官方 quick-reply AutoExecuteHandler.handleWIActivation：世界书命中条目的 automationId 匹配槽位自动执行。 */
+    private fun runAutoExecutions(activated: List<WorldInfoEntry>, type: String) {
+        if (type == "impersonate") return
+        val preset = quickReplyStore.load()
+        val slots = WorldInfoAutoExecute.resolve(activated, listOf(preset))
+        if (slots.isEmpty()) return
+        if (!autoExecuteHandler.checkExecute()) return
+        val state = SlashState()
+        for (slot in slots) {
+            autoExecuteHandler.withPrevent(slot) {
+                runCatching {
+                    val output = slashExecutor.execute(slot.mes, state)
+                    if (output.isNotBlank()) _quickReplyOutput.value = output
+                }
+            }
+        }
+    }
 
     /** 朗读指定消息（长按菜单）；文本处理与分段对齐官方 tts 扩展。 */
     fun narrateMessage(index: Int) {
@@ -1176,6 +1198,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         }
                         // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
                         _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
+                        // 官方 WORLD_INFO_ACTIVATED → 自动执行 automationId 匹配的快捷回复
+                        runAutoExecutions(info.activatedWorldInfo, type)
                     }
                 },
             )
