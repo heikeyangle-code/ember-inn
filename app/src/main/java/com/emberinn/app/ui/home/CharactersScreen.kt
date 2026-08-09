@@ -95,6 +95,9 @@ fun CharactersScreen(
 
     var query by rememberSaveable { mutableStateOf("") }
     var menuRecord by remember { mutableStateOf<CharacterRecord?>(null) }
+    var showImportSheet by remember { mutableStateOf(false) }
+    var showUrlImport by remember { mutableStateOf(false) }
+    var urlDraft by rememberSaveable { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<CharacterRecord?>(null) }
     var worldHit by remember { mutableStateOf<WorldInfoHit?>(null) }
     val searchResults = remember(query) { vm.search(query) }
@@ -222,11 +225,75 @@ fun CharactersScreen(
         }
 
         FloatingActionButton(
-            onClick = { importLauncher.launch(arrayOf("*/*")) },
+            onClick = { showImportSheet = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
             Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡")
         }
+    }
+
+    if (showImportSheet) {
+        ModalBottomSheet(onDismissRequest = { showImportSheet = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "导入角色卡",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                MenuRow(PhosphorIcons.Folder, "从文件导入（PNG / JSON / CharX）") {
+                    showImportSheet = false
+                    importLauncher.launch(arrayOf("*/*"))
+                }
+                MenuRow(PhosphorIcons.Share, "从 URL 导入") {
+                    showImportSheet = false
+                    urlDraft = ""
+                    showUrlImport = true
+                }
+            }
+        }
+    }
+
+    if (showUrlImport) {
+        AlertDialog(
+            onDismissRequest = { showUrlImport = false },
+            title = { Text("从 URL 导入角色卡") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = urlDraft,
+                        onValueChange = { urlDraft = it },
+                        label = { Text("角色卡直链（PNG / JSON / CharX）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "下载后自动识别格式并入库。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val url = urlDraft.trim()
+                    if (url.isBlank()) return@TextButton
+                    showUrlImport = false
+                    vm.importCardFromUrl(url) { ok, err ->
+                        if (ok) {
+                            Toast.makeText(context, "已从 URL 导入角色卡", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "导入失败：${err ?: "未知错误"}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) { Text("导入") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUrlImport = false }) { Text("取消") }
+            },
+        )
     }
 
     menuRecord?.let { record ->

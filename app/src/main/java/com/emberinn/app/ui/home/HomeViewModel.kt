@@ -39,6 +39,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /** 全局搜索结果（README：角色 + 会话 + 世界书 + 设置）。 */
 data class SearchResults(
@@ -152,6 +154,39 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         SettingsHit("数据与隐私", "数据与隐私：备份 / 导出 / 清除数据", route = "data"),
         SettingsHit("关于", "关于：版本 / 开源协议 / 数据说明", route = "about"),
     )
+
+    /** 从 URL 导入角色卡（README 兼容目标：对齐官方 content-manager URL 导入）。 */
+    fun importCardFromUrl(url: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            runCatching {
+                val bytes = download(url) ?: error("下载失败，请检查地址或网络")
+                val format = detectFormatFromUrl(url, bytes)
+                importCard(bytes, format)
+                true
+            }.onSuccess { onResult(true, null) }
+                .onFailure { onResult(false, it.message ?: "导入失败") }
+        }
+    }
+
+    private fun download(url: String): ByteArray? = runCatching {
+        val client = OkHttpClient.Builder().followRedirects(true).build()
+        val request = Request.Builder().url(url).header("User-Agent", "EmberInn/0.1").build()
+        client.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) return@use null
+            resp.body?.bytes()
+        }
+    }.getOrNull()
+
+    private fun detectFormatFromUrl(url: String, bytes: ByteArray): CardFormat {
+        val path = url.substringBefore('?').lowercase()
+        return when {
+            path.endsWith(".png") -> CardFormat.PNG
+            path.endsWith(".charx") -> CardFormat.CHARX
+            path.endsWith(".json") -> CardFormat.JSON
+            bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() -> CardFormat.PNG
+            else -> CardFormat.JSON
+        }
+    }
 
     fun importCard(bytes: ByteArray, format: CardFormat) {
         viewModelScope.launch {
