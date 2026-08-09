@@ -22,6 +22,7 @@ import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.ThemeState
 import com.emberinn.app.data.SlashMessageActions
 import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
@@ -378,6 +379,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _activePersona.value = personaStore.active()
     }
 
+    val characterId: String? = chatStore.get(sessionId)?.characterId
+    val character: CharacterRecord? =
+        characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
+
+    /** 群聊：会话 groupId → GroupRecord + 成员角色卡。 */
+    val group: GroupRecord? = chatStore.get(sessionId)?.groupId?.let { groupStore.get(it) }
+    val groupMembers: List<CharacterRecord> =
+        group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
+
+    val accentColor: Long? = character?.seedColor
+    val avatarPath: String? = character?.avatarPath
+
     /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
     private val _chatBackground = MutableStateFlow(
         chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
@@ -435,19 +448,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
-    val characterId: String? = chatStore.get(sessionId)?.characterId
-    val character: CharacterRecord? =
-        characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
-
-    /** 群聊：会话 groupId → GroupRecord + 成员角色卡。 */
-    val group: GroupRecord? = chatStore.get(sessionId)?.groupId?.let { groupStore.get(it) }
-    val groupMembers: List<CharacterRecord> =
-        group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
-
-    val accentColor: Long? = character?.seedColor
-    val avatarPath: String? = character?.avatarPath
-
     init {
+        // 第三层主题（角色配方）：当前角色进入全局主题管线；离开聊天由 ChatScreen 清空回全局
+        ThemeState.update(
+            recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
+            seedColor = character?.seedColor,
+        )
         // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
         // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”
         val isGroupSession = chatStore.get(sessionId)?.groupId != null

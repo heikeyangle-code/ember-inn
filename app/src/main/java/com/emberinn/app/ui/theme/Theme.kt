@@ -3,11 +3,13 @@ package com.emberinn.app.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 
@@ -19,11 +21,14 @@ import androidx.compose.ui.graphics.luminance
 fun EmberInnTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     preset: ThemePreset = ThemePresets.first(),
+    shapes: Shapes = Shapes(),
+    fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) preset.darkScheme() else preset.lightScheme(),
-        typography = Typography(),
+        typography = Typography(defaultFontFamily = fontFamily),
+        shapes = shapes,
         content = content,
     )
 }

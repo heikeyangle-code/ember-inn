@@ -231,7 +231,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
 ✅ 角色详情编辑页已完成（2026-08-10 复验修复，c8b22e4 起）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。本轮修复：depth_prompt/talkativeness 读写改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；“新增条目”弹层删除按钮误删第一条的 bug 已修；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展，官方无 per-character 变量，见第 8 节不一致登记）；✅ 快捷回复（全局）已做（第 77 轮：按官方 Quick Reply 扩展做成全局 preset + 槽位，字段 mes/label/enabled/automationId/preventAutoExecute 完全复用官方 QuickReplySlot；设置→服务→快捷回复管理，聊天输入区快捷盘点击执行；per-character 快捷回复已删除，README 表述已改全局）；✅ 模型覆盖已做（2026-08-10 第 81 轮）；✅ 主题配方（第 82 轮，部分）：data.extensions.emberinn_theme_recipe（seed/background/shape/font/style/lockMode）读写 + 角色详情页“主题配方”卡片（seed 输入、背景选图/清除、形状/字体/风格/浅深锁定 chips、恢复全局）；聊天页背景 = 会话锁定 custom_background 优先、角色配方 background 回退；🟡 全局应用剩余：形状/字体/浅深锁定 需全局主题管线改造（P3），字体文件下载、配方导出/分享（README 承诺）未做。设置搜索深链已实现。
+✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展，官方无 per-character 变量，见第 8 节不一致登记）；✅ 快捷回复（全局）已做（第 77 轮：按官方 Quick Reply 扩展做成全局 preset + 槽位，字段 mes/label/enabled/automationId/preventAutoExecute 完全复用官方 QuickReplySlot；设置→服务→快捷回复管理，聊天输入区快捷盘点击执行；per-character 快捷回复已删除，README 表述已改全局）；✅ 模型覆盖已做（2026-08-10 第 81 轮）；✅ 主题配方（第 82 轮，部分）：data.extensions.emberinn_theme_recipe（seed/background/shape/font/style/lockMode）读写 + 角色详情页“主题配方”卡片（seed 输入、背景选图/清除、形状/字体/风格/浅深锁定 chips、恢复全局）；聊天页背景 = 会话锁定 custom_background 优先、角色配方 background 回退；✅ 全局应用已做（第 92 轮：ThemeState + MainActivity 管线：浅深锁定/seed/形状生效；字体 source=系统衬线、lxgw 待字体包）；🟡 字体文件下载、风格档位映射未做（边界登记）。设置搜索深链已实现。
 注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
@@ -392,6 +392,20 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 92（2026-08-10：主题全局管线——形状/字体/浅深锁定 + 配方导出/分享）
+
+- **ThemeState**（app/data）：当前会话角色配方 + seed 色流；ChatViewModel init 写入，ChatScreen DisposableEffect 离开时清空回全局
+- **MainActivity 第三层主题生效**：
+  - 浅深锁定：配方 lockMode light/dark 覆盖全局模式（system 仍跟随系统）
+  - seed：配方 seed（#RRGGBB）> 角色取色 seedColor > 全局预设
+  - 形状：square 4dp / rounded 16dp / circle 24dp（M3 Shapes 五档）
+  - 字体：source 用系统衬线近似；lxgw 待字体包（边界登记）
+- EmberInnTheme 增 shapes/fontFamily 参数（默认不变）
+- **配方导出/导入/分享**：CharacterDetailScreen 主题配方弹层加“导出/分享”（ACTION_SEND JSON）与“导入”（文件选择器）；
+  CharacterCardEdit 增 themeRecipeToJson/themeRecipeFromJson（缺字段=跟随全局；背景路径仅本机存在时导入）
+- 测试：CharacterCardEditTest +1（配方 JSON roundtrip）；引擎 284 测全绿
+- 边界登记：霞鹜文楷字体文件未打包（选择会存进配方，字体暂回落系统）；风格档位 airy/calm/vivid 仅存储未映射；背景为本地路径
 
 ## 最近一轮 91（2026-08-10：swipe picker 变体历史弹层——P0-2 收尾）
 

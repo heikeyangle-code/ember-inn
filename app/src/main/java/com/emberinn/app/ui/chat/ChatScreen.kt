@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.data.Persona
+import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.skydoves.cloudy.sky
@@ -255,6 +256,9 @@ fun ChatScreen(
     }
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
 
+    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
+    // 贴底判定 = 最后一项（含流式项）可见，不再用 3 项容差——消息少时看历史曾被误判“贴底”而拽回。
+    var followBottom by remember { mutableStateOf(true) }
     // 全局快捷回复输出填输入框（官方点击槽位执行斜杠链；本 App 把文本输出放进输入框，用户可改可发）
     LaunchedEffect(quickReplyOutput) {
         quickReplyOutput?.let { output ->
@@ -275,12 +279,14 @@ fun ChatScreen(
     // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”
     LaunchedEffect(Unit) { vm.refreshProviderConfigured() }
 
+    // 离开聊天页：角色主题配方还原为全局主题
+    DisposableEffect(Unit) {
+        onDispose { ThemeState.clear() }
+    }
+
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
-    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
-    // 贴底判定 = 最后一项（含流式项）可见，不再用 3 项容差——消息少时看历史曾被误判“贴底”而拽回。
-    var followBottom by remember { mutableStateOf(true) }
     LaunchedEffect(listState, isStreaming) {
         snapshotFlow {
             val info = listState.layoutInfo

@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.home
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.ModelOverride
@@ -130,6 +132,24 @@ fun CharacterDetailScreen(
                 file.writeBytes(bytes)
                 themeRecipe = themeRecipe.copy(background = file.absolutePath)
                 dirty = true
+            }
+        }
+    }
+
+    val themeRecipeImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let { u ->
+            runCatching {
+                val text = context.contentResolver.openInputStream(u)?.use { it.readBytes() }?.toString(Charsets.UTF_8).orEmpty()
+                val imported = CharacterCardEdit.themeRecipeFromJson(text)
+                themeRecipe = imported.copy(
+                    background = imported.background.takeIf { java.io.File(it).exists() } ?: "",
+                )
+                dirty = true
+                Toast.makeText(context, "已导入主题配方", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "导入失败：配方文件格式不对", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -1034,6 +1054,36 @@ fun CharacterDetailScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "跟随全局", "system" to "跟随系统", "light" to "浅色", "dark" to "深色").forEach { (v, label) ->
                             FilterChip(selected = tLock == v, onClick = { tLock = v }, label = { Text(label) })
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val draft = ThemeRecipe(
+                                    seed = tSeed.trim(),
+                                    background = themeRecipe.background,
+                                    shape = tShape,
+                                    font = tFont,
+                                    style = tStyle,
+                                    lockMode = tLock,
+                                )
+                                val json = CharacterCardEdit.themeRecipeToJson(draft)
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/json"
+                                    putExtra(Intent.EXTRA_TITLE, "主题配方 · ${record.name}")
+                                    putExtra(Intent.EXTRA_TEXT, json)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "分享主题配方"))
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("导出/分享")
+                        }
+                        OutlinedButton(
+                            onClick = { themeRecipeImportLauncher.launch(arrayOf("text/*", "application/json")) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("导入")
                         }
                     }
                 }

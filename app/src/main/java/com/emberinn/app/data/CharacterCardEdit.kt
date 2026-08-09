@@ -423,6 +423,29 @@ object CharacterCardEdit {
         m["extensions"] = JsonObject(ext)
         JsonObject(m)
     }
+    /** 主题配方 → JSON 文本（导出/分享）。 */
+    fun themeRecipeToJson(r: ThemeRecipe): String = buildJsonObject {
+        if (r.seed.isNotBlank()) put("seed", JsonPrimitive(r.seed))
+        if (r.background.isNotBlank()) put("background", JsonPrimitive(r.background))
+        if (r.shape.isNotBlank()) put("shape", JsonPrimitive(r.shape))
+        if (r.font.isNotBlank()) put("font", JsonPrimitive(r.font))
+        if (r.style.isNotBlank()) put("style", JsonPrimitive(r.style))
+        if (r.lockMode.isNotBlank()) put("lockMode", JsonPrimitive(r.lockMode))
+    }.toString()
+
+    /** 主题配方 JSON → 对象（导入；缺字段为空=跟随全局）。 */
+    fun themeRecipeFromJson(text: String): ThemeRecipe = runCatching {
+        val o = json.parseToJsonElement(text).jsonObject
+        ThemeRecipe(
+            seed = o["seed"]?.jsonPrimitive?.contentOrNull ?: "",
+            background = o["background"]?.jsonPrimitive?.contentOrNull ?: "",
+            shape = o["shape"]?.jsonPrimitive?.contentOrNull ?: "",
+            font = o["font"]?.jsonPrimitive?.contentOrNull ?: "",
+            style = o["style"]?.jsonPrimitive?.contentOrNull ?: "",
+            lockMode = o["lockMode"]?.jsonPrimitive?.contentOrNull ?: "",
+        )
+    }.getOrDefault(ThemeRecipe())
+
 
     /** 世界书官方位置是 data.character_book；兼容历史卡把 character_book 放在根部的写法。 */
     private fun bookOf(root: JsonObject, data: JsonObject): JsonObject? =

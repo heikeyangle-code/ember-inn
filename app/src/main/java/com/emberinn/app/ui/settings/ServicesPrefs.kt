@@ -89,12 +89,12 @@ object ServicesPrefs {
             .putString("translation_target_language", targetLanguage)
             .putString("translation_api_key", apiKey)
             .apply()
+    }
 
     fun saveTranslateUrl(context: Context, url: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("translation_url", url)
             .apply()
-    }
     }
 
     fun saveImage(context: Context, source: String, url: String, model: String, steps: Int) {

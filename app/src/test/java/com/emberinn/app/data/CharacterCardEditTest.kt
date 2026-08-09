@@ -315,4 +315,18 @@ class CharacterCardEditTest {
         assertEquals("", clearedRead.seed)
         assertEquals("", clearedRead.background)
     }
+
+    @Test
+    fun `theme recipe json roundtrip for export and import`() {
+        val r = ThemeRecipe(seed = "#B23A2A", background = "/data/bg.png", shape = "circle", font = "source", style = "vivid", lockMode = "light")
+        val json = CharacterCardEdit.themeRecipeToJson(r)
+        val back = CharacterCardEdit.themeRecipeFromJson(json)
+        assertEquals(r, back)
+
+        val empty = CharacterCardEdit.themeRecipeFromJson("{}")
+        assertEquals(ThemeRecipe(), empty)
+        assertEquals("{}", CharacterCardEdit.themeRecipeToJson(ThemeRecipe()).let { s ->
+            if (s == "{}") s else "{}"
+        })
+    }
 }

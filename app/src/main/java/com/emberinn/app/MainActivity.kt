@@ -5,10 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.emberinn.app.data.ThemeState
 import com.emberinn.app.ui.MainScreen
 import com.emberinn.app.ui.theme.EmberInnTheme
 import com.emberinn.app.ui.theme.ThemeMode
@@ -25,12 +32,58 @@ class MainActivity : ComponentActivity() {
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
-            val darkTheme = when (mode) {
+            val recipe by ThemeState.recipe.collectAsState()
+            val seedColor by ThemeState.seedColor.collectAsState()
+            // 第三层角色主题配方：浅深锁定 > 全局模式；seed > 角色取色 > 全局预设
+            val effectiveMode = when (recipe?.lockMode) {
+                "light" -> ThemeMode.LIGHT
+                "dark" -> ThemeMode.DARK
+                else -> mode
+            }
+            val darkTheme = when (effectiveMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            EmberInnTheme(darkTheme = darkTheme, preset = preset) {
+            val effectivePreset = remember(preset, recipe, seedColor) {
+                val seedHex = recipe?.seed?.trim()
+                val seed = seedHex?.takeIf { it.isNotEmpty() }?.let(::parseColor)
+                    ?: seedColor?.let { Color(it.toInt()) }
+                    ?: preset.seed
+                if (seed != preset.seed) {
+                    ThemePreset(
+                        id = "character",
+                        name = "角色主题",
+                        desc = "角色卡配方",
+                        seed = seed,
+                        secondary = seed,
+                        tertiary = seed,
+                        lightBg = Color(0xFFF7F2E8),
+                        darkBg = Color(0xFF171513),
+                    )
+                } else {
+                    preset
+                }
+            }
+            // 形状：方正 4dp / 圆润 16dp / 浑圆 24dp；字体：思源宋体用系统衬线近似（霞鹜文楷待字体包）
+            val radius = when (recipe?.shape) {
+                "square" -> 4.dp
+                "circle" -> 24.dp
+                "rounded" -> 16.dp
+                else -> 12.dp
+            }
+            val shapes = Shapes(
+                extraSmall = RoundedCornerShape(radius),
+                small = RoundedCornerShape(radius),
+                medium = RoundedCornerShape(radius),
+                large = RoundedCornerShape(radius + 8.dp),
+                extraLarge = RoundedCornerShape(radius + 12.dp),
+            )
+            val fontFamily = when (recipe?.font) {
+                "source" -> FontFamily.Serif
+                else -> FontFamily.Default
+            }
+            EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, shapes = shapes, fontFamily = fontFamily) {
                 MainScreen(
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode
@@ -42,3 +95,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/** 解析 #RRGGBB / #AARRGGBB 十六进制颜色（失败返回 null）。 */
+private fun parseColor(hex: String): Color? = runCatching {
+    val h = hex.removePrefix("#")
+    val argb = when (h.length) {
+        6 -> "FF$h"
+        8 -> h
+        else -> return null
+    }
+    Color(argb.toLong(16))
+}.getOrNull()
