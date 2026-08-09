@@ -26,12 +26,12 @@ object V2Normalizer {
 
     fun normalize(charJson: String, now: String = humanizedDateTime()): String {
         val root = json.parseToJsonElement(charJson).jsonObject.toMutableMap()
-        val data = root["data"]?.jsonObject
-            ?: return charJson // 没有 data = 已是 V2（官方 warn 后原样返回）
+        val data = root["data"] as? JsonObject
+            ?: return charJson // 没有 data（含 null）= 已是 V2（官方 warn 后原样返回）
 
         root.remove("json_data")
 
-        val extensions = data["extensions"]?.jsonObject ?: JsonObject(emptyMap())
+        val extensions = data["extensions"] as? JsonObject ?: JsonObject(emptyMap())
         // 官方 readFromV2：talkativeness/fav 原值透传（不转换类型）；
         // 缺失时官方 defaultValue 回填会被随后的 char[field]=v2Value(undefined) 覆盖 → 实际不写入，差分已证实
         // 官方 readFromV2：talkativeness/fav 缺失时最终被 undefined 赋值覆盖 → 根字段删除

@@ -56,8 +56,9 @@ object CharacterCardCodec {
     fun cleanPrivateFields(jsonString: String): String {
         val root = json.parseToJsonElement(jsonString).jsonObject.toMutableMap()
         root["fav"] = JsonPrimitive(false)
-        val data = root["data"]?.jsonObject?.toMutableMap() ?: mutableMapOf()
-        val extensions = data["extensions"]?.jsonObject?.toMutableMap() ?: mutableMapOf()
+        // 官方 lodash get：null 视为缺省（JsonNull.jsonObject 会抛异常，必须先判型）
+        val data = (root["data"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val extensions = (data["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
         extensions["fav"] = JsonPrimitive(false)
         data["extensions"] = JsonObject(extensions)
         root["data"] = JsonObject(data)

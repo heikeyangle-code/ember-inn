@@ -44,7 +44,7 @@ object JsonImporter {
         val afterRisu = risu?.data?.toString() ?: text
         val afterClean = CharacterCardCodec.cleanPrivateFields(afterRisu)
         val card = Json.parseToJsonElement(afterClean).jsonObject.toMutableMap()
-        val data = card["data"]?.jsonObject?.toMutableMap()
+        val data = (card["data"] as? JsonObject)?.toMutableMap()
         val dataName = data?.get("name")?.jsonPrimitive?.contentOrNull
         if (data != null && !dataName.isNullOrEmpty()) {
             data["name"] = JsonPrimitive(CardSanitize.sanitizeName(dataName))

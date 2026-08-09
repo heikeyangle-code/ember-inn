@@ -44,9 +44,9 @@ object SpriteStorage {
         existingLabels: Set<String> = emptySet(),
     ): RisuExtraction? {
         val root = json.parseToJsonElement(dataJson).jsonObject
-        val data = root["data"]?.jsonObject ?: return RisuExtraction(emptyList(), root)
+        val data = root["data"] as? JsonObject ?: return RisuExtraction(emptyList(), root)
         val name = data["name"]?.jsonPrimitive?.content ?: return RisuExtraction(emptyList(), root)
-        val risu = data["extensions"]?.jsonObject?.get("risuai")?.jsonObject ?: return RisuExtraction(emptyList(), root)
+        val risu = (data["extensions"] as? JsonObject)?.get("risuai") as? JsonObject ?: return RisuExtraction(emptyList(), root)
         val path = spritesPath(charactersRoot, name, false) ?: return RisuExtraction(emptyList(), root)
 
         val images = mutableListOf<RisuSprite>()

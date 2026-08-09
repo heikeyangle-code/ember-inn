@@ -442,6 +442,137 @@
         "resultFileName": "空备注",
         "risuRun": false
       }
+    },
+    {
+      "id": "v2-with-data-book",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v2\",\"name\":\"带书\",\"description\":\"d\",\"talkativeness\":0.8,\"data\":{\"name\":\"带书\",\"description\":\"data描述\",\"character_book\":{\"entries\":[{\"keys\":[\"k\"],\"content\":\"内容\"}]},\"extensions\":{\"depth_prompt\":{\"prompt\":\"深层\",\"depth\":2,\"role\":\"user\"},\"talkativeness\":0.3,\"fav\":false}}}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v2",
+          "name": "带书",
+          "description": "data描述",
+          "talkativeness": 0.3,
+          "data": {
+            "name": "带书",
+            "description": "data描述",
+            "character_book": {
+              "entries": [
+                {
+                  "keys": [
+                    "k"
+                  ],
+                  "content": "内容"
+                }
+              ]
+            },
+            "extensions": {
+              "depth_prompt": {
+                "prompt": "深层",
+                "depth": 2,
+                "role": "user"
+              },
+              "talkativeness": 0.3,
+              "fav": false
+            }
+          },
+          "fav": false,
+          "chat": "带书 - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "带书",
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v2-null-fields",
+      "args": {
+        "body": {
+          "json": "{\"spec\":\"chara_card_v2\",\"name\":\"空字段\",\"description\":\"d\",\"data\":{\"name\":null,\"description\":null,\"first_mes\":null,\"extensions\":null}}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v2",
+          "name": null,
+          "description": null,
+          "data": {
+            "name": null,
+            "description": null,
+            "first_mes": null,
+            "extensions": {
+              "fav": false
+            }
+          },
+          "fav": false,
+          "first_mes": null,
+          "chat": "null - 2026-08-08@00h00m00s000ms",
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": null,
+        "risuRun": true
+      }
+    },
+    {
+      "id": "v1-emoji-name",
+      "args": {
+        "body": {
+          "json": "{\"name\":\"余烬🔥\",\"description\":\"emoji 名\",\"personality\":\"p\",\"first_mes\":\"🔥\"}"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "name": "余烬🔥",
+          "description": "emoji 名",
+          "creatorcomment": "",
+          "personality": "p",
+          "first_mes": "🔥",
+          "avatar": "none",
+          "chat": "余烬🔥 - 2026-08-08@00h00m00s000ms",
+          "mes_example": "",
+          "scenario": "",
+          "create_date": "2026-08-08T00:00:00.000Z",
+          "talkativeness": 0.5,
+          "creator": "",
+          "tags": [],
+          "fav": false,
+          "spec": "chara_card_v2",
+          "spec_version": "2.0",
+          "data": {
+            "name": "余烬🔥",
+            "description": "emoji 名",
+            "personality": "p",
+            "scenario": "",
+            "first_mes": "🔥",
+            "mes_example": "",
+            "creator_notes": "",
+            "system_prompt": "",
+            "post_history_instructions": "",
+            "tags": [],
+            "creator": "",
+            "character_version": "",
+            "alternate_greetings": [],
+            "extensions": {
+              "talkativeness": 0.5,
+              "fav": false,
+              "world": "",
+              "depth_prompt": {
+                "prompt": "",
+                "depth": 4,
+                "role": "system"
+              }
+            }
+          }
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "余烬🔥",
+        "risuRun": false
+      }
     }
   ]
 }

@@ -81,5 +81,27 @@ await add('v1-no-date', { name: '无日期', description: 'd' });
 
 await add('v3-no-data', { spec: 'chara_card_v3', name: '无data', description: 'd', talkativeness: 0.9, fav: true, chat: 'c' });
 await add('v1-tags-array', { name: '数组', description: 'd', tags: ['x', 'y'], mes_example: 'm' });
+await add('v2-full-data', {
+    spec: 'chara_card_v2', spec_version: '2.0', name: '旧名', description: '旧描述', talkativeness: 0.9, fav: true,
+    data: {
+        name: '新名', description: '新描述', personality: '性格', scenario: '场景', first_mes: '开场',
+        mes_example: '示例', creator_notes: '备注', tags: ['a', 'b'], talkativeness: 0.4,
+        character_book: { entries: [{ keys: ['k'], content: '内容' }] },
+        extensions: { depth_prompt: { prompt: '深层', depth: 2, role: 'user' }, fav: false, custom_key: 1 },
+    },
+    chat: ['会话'], json_data: 'x', assets: [{ type: 'icon', uri: 'a.png' }],
+});
+await add('v3-unknown-extensions', {
+    spec: 'chara_card_v3', spec_version: '3.0',
+    data: { name: 'N', description: 'D', extensions: { fav: true, talkativeness: 0.7, custom_flag: true, emberinn_variables: { a: '1' } } },
+    chat: ['x'], json_data: 'y',
+});
+await add('v1-unicode', {
+    name: '余烬🔥', description: 'emoji 名', personality: 'p', first_mes: '🔥', tags: ['🔥', '雪'],
+});
+await add('v2-null-data-fields', {
+    spec: 'chara_card_v2', name: '空字段', description: 'd', data: { name: null, description: null, first_mes: null },
+});
+
 writeFileSync(outFile, JSON.stringify({ source: 'characters.js getCharaCardV2+unsetPrivateFields', cases }, null, 2));
 console.log('json-export:', cases.length, 'cases ->', outFile);

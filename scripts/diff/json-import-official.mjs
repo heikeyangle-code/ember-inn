@@ -152,6 +152,21 @@ await add('gradio-with-name', {
 await add('v1-empty-creator', {
     name: '空备注', creator_notes: '', mes_example: 'x',
 });
+await add('v2-with-data-book', {
+    spec: 'chara_card_v2', name: '带书', description: 'd', talkativeness: 0.8,
+    data: {
+        name: '带书', description: 'data描述',
+        character_book: { entries: [{ keys: ['k'], content: '内容' }] },
+        extensions: { depth_prompt: { prompt: '深层', depth: 2, role: 'user' }, talkativeness: 0.3, fav: false },
+    },
+});
+await add('v2-null-fields', {
+    spec: 'chara_card_v2', name: '空字段', description: 'd', data: { name: null, description: null, first_mes: null, extensions: null },
+});
+await add('v1-emoji-name', {
+    name: '余烬🔥', description: 'emoji 名', personality: 'p', first_mes: '🔥',
+});
+
 
 writeFileSync(outFile, JSON.stringify({ source: 'characters.js importFromJson', cases }, null, 2));
 console.log('json-import:', cases.length, 'cases ->', outFile);
