@@ -18,7 +18,7 @@ data class GroupRecord(
     val activationStrategy: String = "natural",
 )
 
-/** 群聊存储：filesDir/groups/{id}.json（官方 data/group-chats/*.json 近似）。 */
+/** 群聊存储：filesDir/groups/{id}.json（官方 data/group-chats 目录的 *.json 近似）。 */
 class GroupStore(context: Context) {
 
     private val dir = File(context.filesDir, "groups").apply { mkdirs() }
