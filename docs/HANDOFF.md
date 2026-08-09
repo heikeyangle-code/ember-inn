@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 98（2026-08-10：HTML 消息 + Mermaid WebView 兜底渲染）
+
+- RenderPrefs（htmlEnabled 默认关）；外观与主题页新增“HTML 消息（WebView 渲染）”开关
+- ChatMarkdown：Mermaid ```mermaid 代码块始终 WebView 渲染（CDN 加载 mermaid@10，离线无图时显示源码）；
+  开启 HTML 开关后含 HTML 标签的富文本走 WebView（透明底、JS 开、最高 420dp）
+- 对应 README“Mermaid / 复杂 HTML 用局部 WebView 兜底”；边界：WebView 固定高度上限、Mermaid 需网络 CDN
+- 无引擎改动；App 编译走 CI
+
 ## 最近一轮 97（2026-08-10：平板/折叠屏双栏——大屏自适应）
 
 - MainScreen：屏幕宽度 >= 840dp 时聊天页不再全屏覆盖，改为左列表（当前 Tab）+ 右聊天（1:1.3）双栏；
