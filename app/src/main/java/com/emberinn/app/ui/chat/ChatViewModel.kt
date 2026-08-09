@@ -234,7 +234,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
-        if (isUser(last)) return
+        if (isUser(last)) {
+            // 不再静默失败：最后一条是用户消息时明确提示，否则点“继续”毫无反应
+            _notice.value = "（最后一条是你发的消息，先让对方回复或发送后再继续。）"
+            return
+        }
         val lastText = textOf(last)
         _notice.value = null
         if (!isProviderConfigured()) {

@@ -222,16 +222,17 @@ fun ChatScreen(
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
-    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）
+    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
+    // 贴底判定 = 最后一项（含流式项）可见，不再用 3 项容差——消息少时看历史曾被误判“贴底”而拽回。
     var followBottom by remember { mutableStateOf(true) }
     LaunchedEffect(listState, isStreaming) {
         snapshotFlow {
             val info = listState.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            last >= info.totalItemsCount - 3
-        }.collect { nearBottom ->
-            if (listState.isScrollInProgress && !nearBottom) followBottom = false
-            if (nearBottom) followBottom = true
+            val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return@snapshotFlow true
+            lastVisible.index >= info.totalItemsCount - 1
+        }.collect { atBottom ->
+            if (listState.isScrollInProgress && !atBottom) followBottom = false
+            if (atBottom) followBottom = true
         }
     }
     // 只有处于“贴底跟随”状态才滚底；用户上滑查看历史时不拽走
@@ -381,7 +382,8 @@ fun ChatScreen(
             pendingMedia = pendingMedia,
             onRemoveMedia = { index -> vm.removePendingMedia(index) },
             isStreaming = isStreaming,
-            canQuickContinue = !isStreaming && lastAiIndex >= 0,
+            canQuickContinue = !isStreaming && lastAiIndex >= 0 &&
+                messages.lastOrNull()?.let { !isUser(it) } == true,
             quickBarOpen = showQuickBar,
             worldHitsCount = worldHits.size,
             contextUsage = contextUsage,
