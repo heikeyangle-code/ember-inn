@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -82,6 +83,7 @@ class ChatRepository(context: Context) {
         cyclePrompt: String = "",
         onReasoning: ((String) -> Unit)? = null,
         mediaInlining: Boolean = false,
+        chatMetadata: JsonObject? = null,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -98,6 +100,11 @@ class ChatRepository(context: Context) {
             provider.defaultMaxTokens ?: 512
         } else profile.sampler.maxTokens)
             .coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
+        // 官方 populateChatCompletion：Claude 走 claude 分支（assistant prefill 等），其余 openai
+        val chatCompletionSource = when (provider.protocol) {
+            "anthropic" -> "claude"
+            else -> "openai"
+        }
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
@@ -113,6 +120,8 @@ class ChatRepository(context: Context) {
             imageInlining = mediaInlining,
             videoInlining = mediaInlining,
             audioInlining = mediaInlining,
+            chatMetadata = chatMetadata,
+            chatCompletionSource = chatCompletionSource,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

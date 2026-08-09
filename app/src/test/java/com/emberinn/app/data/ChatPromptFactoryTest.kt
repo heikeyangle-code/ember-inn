@@ -194,4 +194,67 @@ class ChatPromptFactoryTest {
         )
         assertTrue(result.messages.any { it.content.contains("哈喽") })
     }
+
+    @Test
+    fun `chat metadata overrides character fields`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","system_prompt":"卡系统提示","scenario":"卡场景","mes_example":"卡示例"}}
+        """.trimIndent()
+        val metadata = buildJsonObject {
+            put("system_prompt", "会话系统提示")
+            put("scenario", "会话场景")
+        }
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = card,
+            history = listOf(msg(true, "问", "User")),
+            userName = "User",
+            charName = "角色",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            chatMetadata = metadata,
+        )
+        val contents = result.messages.map { it.content }.joinToString("\n")
+        assertTrue(contents.contains("会话系统提示"))
+        assertTrue(contents.contains("会话场景"))
+        assertTrue(!contents.contains("卡系统提示"))
+        assertTrue(!contents.contains("卡场景"))
+    }
+
+    @Test
+    fun `bias macro is extracted from user input and stripped from message`() {
+        val history = listOf(msg(true, "问{{bias:悄悄说}}", "User"))
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+        )
+        val contents = result.messages.map { it.content }.joinToString("\n")
+        assertTrue(contents.contains("悄悄说"))
+        assertTrue(!contents.contains("{{bias"))
+    }
+
+    @Test
+    fun `bias is not injected for continue`() {
+        val history = listOf(
+            msg(true, "问{{bias:悄悄说}}", "User"),
+            msg(false, "旧回复", "小炭"),
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            type = "continue",
+            cyclePrompt = "旧回复",
+        )
+        assertTrue(!result.messages.any { it.content.contains("悄悄说") })
+    }
 }

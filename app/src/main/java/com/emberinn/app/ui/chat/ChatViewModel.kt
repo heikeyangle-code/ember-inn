@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import java.io.File
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +27,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -98,6 +101,39 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
+
+    /** 聊天背景（官方 chat_metadata.custom_background，本地文件路径）。 */
+    private val _chatBackground = MutableStateFlow(
+        chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull,
+    )
+    val chatBackground: StateFlow<String?> = _chatBackground
+
+    fun setChatBackground(uri: Uri) {
+        val bytes = runCatching {
+            getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        }.getOrNull() ?: return
+        val ext = when (getApplication<Application>().contentResolver.getType(uri)) {
+            "image/png" -> "png"
+            "image/gif" -> "gif"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+        val file = File(getApplication<Application>().filesDir, "media/chat-bg-$sessionId.$ext")
+        file.parentFile?.mkdirs()
+        file.writeBytes(bytes)
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        meta["custom_background"] = JsonPrimitive(file.absolutePath)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _chatBackground.value = file.absolutePath
+    }
+
+    fun clearChatBackground() {
+        _chatBackground.value?.let { old -> runCatching { File(old).delete() } }
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        meta.remove("custom_background")
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _chatBackground.value = null
+    }
 
     /** 瞬态提示（未配置模型 / 请求失败），只显示不落盘。 */
     private val _notice = MutableStateFlow<String?>(null)
@@ -548,6 +584,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 continuePrefill = continuePrefill,
                 cyclePrompt = cyclePrompt,
                 mediaInlining = mediaInlining,
+                chatMetadata = chatStore.metadata(sessionId),
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

@@ -258,7 +258,7 @@ class CharacterCardEditTest {
         assertEquals(mapOf("a" to "1"), CharacterCardEdit.readVariables(saved))
         // 全空则移除扩展字段
         val cleared = CharacterCardEdit.applyVariables(saved, emptyMap())
-        assertEquals(emptyMap(), CharacterCardEdit.readVariables(cleared))
+        assertEquals(emptyMap<String, String>(), CharacterCardEdit.readVariables(cleared))
     }
 
 }

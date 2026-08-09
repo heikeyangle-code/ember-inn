@@ -72,9 +72,17 @@ class ChatPromptFactory {
         imageInlining: Boolean = false,
         videoInlining: Boolean = false,
         audioInlining: Boolean = false,
+        chatMetadata: JsonObject? = null,
+        chatCompletionSource: String = "openai",
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
-        val fields = CharacterCardFieldsEngine.fields(parsed?.source)
+        // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
+        val fields = CharacterCardFieldsEngine.fields(
+            character = parsed?.source,
+            chatMetadataSystem = chatMetadata?.get("system_prompt")?.jsonPrimitive?.contentOrNull ?: "",
+            chatMetadataScenario = chatMetadata?.get("scenario")?.jsonPrimitive?.contentOrNull ?: "",
+            chatMetadataMesExample = chatMetadata?.get("mes_example")?.jsonPrimitive?.contentOrNull ?: "",
+        )
         // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）
         val env = MacroEnv(
             user = userName,
@@ -120,11 +128,29 @@ class ChatPromptFactory {
                     characterOverride = charName,
                 ),
             )
+        }.let { msgs ->
+            // 官方 getBiasStrings：{{bias:...}} 提取自输入文本（regenerate/swipe 时回溯 extra.bias）；
+            // impersonate/continue 不注入 bias。宏从消息文本剥离（官方 Handlebars helper 渲染为空）。
+            // 宏从所有用户消息剥离（避免 {{bias:...}} 泄漏进提示词，含 continue 里的旧消息）；
+            // bias 只取最后一条用户消息，且仅 generate/swipe 注入（官方 getBiasStrings 对 impersonate/continue 返回空）
+            var found = ""
+            var lastUserBias = ""
+            val cleaned = msgs.mapIndexed { i, m ->
+                if (m.isUser && m.mes.contains("{{bias")) {
+                    val (text, bias) = extractMessageBias(m.mes)
+                    if (i == msgs.lastIndex) lastUserBias = bias
+                    m.copy(mes = text)
+                } else m
+            }
+            if (type != "impersonate" && type != "continue" && lastUserBias.isNotBlank()) found = lastUserBias
+            cleaned to found
         }
+        val (cleanMessages, promptBias) = chatMessages
+
         // 对齐官方 setOpenAIMessages：进总装前消息是“新的在前”（official messages[i] 反向填充）；
         // 总装内部 populationInjectionPrompts 会 reverse 一次、历史填充再 reverse 一次。
         // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
-        val historyMessages = PromptAssembler.toOpenAiMessages(chatMessages, user = userName)
+        val historyMessages = PromptAssembler.toOpenAiMessages(cleanMessages, user = userName)
             .mapIndexed { i, pm ->
                 val el = history.getOrNull(i)?.jsonObject
                 val extra = el?.get("extra") as? JsonObject
@@ -158,7 +184,7 @@ class ChatPromptFactory {
         // 世界书扫描（角色卡内嵌 character_book）
         val scanner = WorldInfoScanner(tokenCounter = tokenCounter)
         val wiResult = scanner.scan(
-            chat = chatMessages.map { it.mes },
+            chat = cleanMessages.map { it.mes },
             maxContext = maxContextTokens,
             entries = parsed?.worldEntries ?: emptyList(),
             settings = WorldInfoSettings(),
@@ -186,6 +212,11 @@ class ChatPromptFactory {
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,
                 type = type,
+                // 官方 script.js generate：systemPromptOverride = 角色 system_prompt（元数据优先），jailbreak 同理
+                systemPromptOverride = fields.system,
+                jailbreakPromptOverride = fields.jailbreak,
+                bias = promptBias,
+                chatCompletionSource = chatCompletionSource,
                 continuePrefill = continuePrefill,
                 impersonationPrompt = impersonationPrompt,
                 cyclePrompt = cyclePrompt,
@@ -255,6 +286,18 @@ class ChatPromptFactory {
                 }.getOrNull()
             } ?: emptyList()
         return ParsedCard(source, entries, regexScripts)
+    }
+
+    /**
+     * 对齐官方 extractMessageBias（script.js）：提取 {{bias:...}} 内容并从消息中移除宏。
+     * 官方用 Handlebars helper；本实现用非贪婪正则（嵌套/引号边界近似，登记见 HANDOFF）。
+     */
+    private fun extractMessageBias(message: String): Pair<String, String> {
+        val pattern = Regex("""\{\{\s*bias\s*:([\s\S]*?)\s*\}\}""")
+        val matches = pattern.findAll(message).map { it.groupValues[1].trim() }.filter { it.isNotEmpty() }.toList()
+        val cleaned = pattern.replace(message, "")
+        val bias = if (matches.isEmpty()) "" else " " + matches.joinToString(" ")
+        return cleaned to bias
     }
 
     /** 官方位置：data.extensions.depth_prompt.prompt；兼容旧版 data.depth_prompt 字符串/对象。 */

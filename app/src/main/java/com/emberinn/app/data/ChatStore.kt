@@ -52,6 +52,28 @@ class ChatStore(private val context: Context) {
         File(sessionsDir, "${record.id}.json").writeText(json.encodeToString(SessionRecord.serializer(), record))
     }
 
+    /**
+     * 聊天元数据（对齐官方 ChatHeader：chats/{id}.json 的 chat_metadata）。
+     * 官方字段：custom_background（背景）/ chat_backgrounds（列表）/ system_prompt / scenario / mes_example 等。
+     */
+    fun metadata(sessionId: String): JsonObject {
+        val file = File(chatsDir, "$sessionId.json")
+        if (!file.exists()) return JsonObject(emptyMap())
+        return runCatching {
+            val root = json.parseToJsonElement(file.readText()).jsonObject
+            root["chat_metadata"]?.jsonObject ?: JsonObject(emptyMap())
+        }.getOrDefault(JsonObject(emptyMap()))
+    }
+
+    fun saveMetadata(sessionId: String, metadata: JsonObject) {
+        val header = buildJsonObject {
+            put("chat_metadata", metadata)
+            put("user_name", JsonPrimitive("unused"))
+            put("character_name", JsonPrimitive("unused"))
+        }
+        File(chatsDir, "$sessionId.json").writeText(json.encodeToString(JsonObject.serializer(), header))
+    }
+
     fun messages(sessionId: String): List<JsonElement> {
         val file = File(chatsDir, "$sessionId.jsonl")
         if (!file.exists()) return emptyList()
@@ -381,6 +403,7 @@ class ChatStore(private val context: Context) {
         deleteMediaFiles(messages(sessionId))
         File(sessionsDir, "$sessionId.json").delete()
         File(chatsDir, "$sessionId.jsonl").delete()
+        File(chatsDir, "$sessionId.json").delete()
     }
 
     fun deleteByCharacter(characterId: String?) {
@@ -388,6 +411,7 @@ class ChatStore(private val context: Context) {
             deleteMediaFiles(messages(s.id))
             File(sessionsDir, "${s.id}.json").delete()
             File(chatsDir, "${s.id}.jsonl").delete()
+            File(chatsDir, "${s.id}.json").delete()
         }
     }
 

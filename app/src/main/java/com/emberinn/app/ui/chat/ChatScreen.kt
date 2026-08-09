@@ -160,6 +160,7 @@ fun ChatScreen(
     val contextUsage by vm.contextUsage.collectAsState()
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
+    val chatBackground by vm.chatBackground.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -196,6 +197,12 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    val backgroundPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let { vm.setChatBackground(it) }
     }
 
     val mediaPicker = rememberLauncherForActivityResult(
@@ -303,6 +310,20 @@ fun ChatScreen(
                     ),
                 ),
         )
+        // 聊天背景（官方 chat_metadata.custom_background）：低饱和铺底，不影响正文可读性
+        chatBackground?.let { bgPath ->
+            val bgFile = java.io.File(bgPath)
+            if (bgFile.exists()) {
+                AsyncImage(
+                    model = bgFile,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.18f,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
         // 源层：消息列表作为模糊来源，上下留出浮层高度
         Column(
             modifier = Modifier
@@ -697,6 +718,16 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
+                MenuRow(PhosphorIcons.Folder, "聊天背景") {
+                    showMore = false
+                    backgroundPicker.launch(arrayOf("image/*"))
+                }
+                if (chatBackground != null) {
+                    MenuRow(PhosphorIcons.Folder, "清除聊天背景") {
+                        showMore = false
+                        vm.clearChatBackground()
+                    }
+                }
                 if (vm.character != null) {
                     MenuRow(PhosphorIcons.Person, "角色详情") {
                         showMore = false
