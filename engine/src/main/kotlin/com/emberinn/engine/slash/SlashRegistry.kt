@@ -73,6 +73,8 @@ object SlashRegistry {
             SlashCommandDef(
                 "let",
                 description = "设置作用域变量（对齐官方 /let）",
+                splitUnnamedArgument = true,
+                splitUnnamedArgumentCount = 1,
                 callback = { inv, state ->
                     val key = inv.namedArgs["key"] ?: inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
                     val value = if (inv.namedLists.containsKey("key")) {
@@ -92,6 +94,8 @@ object SlashRegistry {
             SlashCommandDef(
                 "qr-arg",
                 description = "设置 {{arg}} 参数（对齐官方 /qr-arg）",
+                splitUnnamedArgument = true,
+                splitUnnamedArgumentCount = 2,
                 callback = { inv, state ->
                     val name = inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
                     state.arguments[name] = inv.unnamedArgs.drop(1).joinToString(" ")
@@ -103,6 +107,8 @@ object SlashRegistry {
             SlashCommandDef(
                 "setvar",
                 description = "设置作用域变量（{{getvar}} 可读）",
+                splitUnnamedArgument = true,
+                splitUnnamedArgumentCount = 1,
                 callback = { inv, state ->
                     val key = inv.namedArgs["key"] ?: inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
                     val value = if (inv.namedArgs.containsKey("key")) {
@@ -118,8 +124,18 @@ object SlashRegistry {
         register(
             SlashCommandDef(
                 "parser-flag",
-                description = "解析器标志（引擎侧为无操作，参数保留）",
-                callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") },
+                description = "解析器标志：STRICT_ESCAPING / REPLACE_GETVAR（对齐官方 /parser-flag）",
+                splitUnnamedArgument = true,
+                callback = { inv, state ->
+                    val flag = inv.unnamedArgs.firstOrNull() ?: return@SlashCommandDef ""
+                    val on = inv.unnamedArgs.getOrNull(1)?.lowercase() in setOf("on", "true", "1", "yes", "y") ||
+                        inv.unnamedArgs.getOrNull(1) == null
+                    when (flag.uppercase()) {
+                        "STRICT_ESCAPING" -> state.strictEscaping = on
+                        "REPLACE_GETVAR" -> state.replaceGetvar = on
+                    }
+                    ""
+                },
             ),
         )
     }

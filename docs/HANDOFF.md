@@ -43,7 +43,7 @@ gh run list --limit 3
 gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **267 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **281 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -96,7 +96,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 角色卡字段聚合 | character-fields-official.mjs | CharacterFieldsDiffTest | 8 |
 | JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 10 |
 | BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
-| 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 13 |
+| 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
@@ -153,9 +153,9 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（2026-08-10：App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
-SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 10 例。
-🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似）；命令数远少于官方。
-✅ /parser-flag 命令已注册（引擎侧占位，参数保留）；❌ REPLACE_GETVAR/STRICT_ESCAPING 完整语义；150+ 官方命令多数未实现（多数依赖 App 状态）；无差分（SlashCommandParser 依赖数十模块与浏览器，无法逐字提取，源码对照+单测）。
+SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 27 例。
+✅ 2026-08-10 按官方 SlashCommandParser 逐字移植 tokenizer：parseCommand/parseNamedArgument/parseUnnamedArgument（split+splitUnnamedArgumentCount，/let、/setvar=1、/qr-arg=2）/parseQuotedValue/parseListValue/parseValue；STRICT_ESCAPING 完整语义（/parser-flag 可切换，影响后续命令解析）；REPLACE_GETVAR 官方新宏引擎下为 no-op（{{getvar::}} 由 MacroEngine 展开，已测）；rawQuotes 官方语义（整段到命令结束、保留引号）；注释（//、/#、块注释）与命令间普通文本丢弃；闭包转义（\{:）按官方消费反斜杠。
+🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似，闭包仍预解析）；命令数远少于官方（150+ 官方命令多数依赖 App 状态，未实现）；完整 SlashCommandParser 无法逐字差分（依赖数十模块与浏览器），testSymbol 差分 27 例 + 源码对照 + 单测。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
@@ -367,6 +367,24 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 最近一轮 74（2026-08-10：斜杠解析器按官方 SlashCommandParser 1:1 移植——STRICT_ESCAPING/REPLACE_GETVAR/rawQuotes/split/注释）
+
+- 对照官方 public/scripts/slash-commands/SlashCommandParser.js 逐字移植 tokenizer 核心：
+  1. testSymbol/testSymbolLooseyGoosey 走已差分 SlashEscape；新增差分用例 13→27（闭包 :}、引号 "、list [ ]、
+     4 反斜杠、offset+jumped 组合），fixture 重新生成，SlashEscapeDiffTest 全过
+  2. parseCommand/parseNamedArgument/parseUnnamedArgument 按官方 index/jumpedEscapeSequence 语义；
+     splitUnnamedArgument + splitUnnamedArgumentCount（/let、/setvar=1，/qr-arg=2）对齐官方（variables.js/quick-reply 核实）
+  3. STRICT_ESCAPING 完整：/parser-flag STRICT_ESCAPING on|off 立即生效并影响后续命令；偶数反斜杠也转义（与 loose 差异有单测锁）
+  4. REPLACE_GETVAR：官方新宏引擎（experimental_macro_engine）下 replaceGetvar 为 no-op，{{getvar::}}/{{getglobalvar::}}
+     由 MacroEngine 展开（SlashState.variables 已接），状态字段保留并可由 /parser-flag 切换
+  5. rawQuotes 官方语义修正：整段到命令结束（|/闭包/文本结束）为一个值、保留引号（原实现只取到引号闭合，偏差已修）
+  6. 注释（//、/#、块注释 /*...*|，支持嵌套）与命令间普通文本按官方丢弃；闭包转义 \{: 不再误解析
+  7. SlashEngine 改为官方顺序循环（parseClosure 核心）：边解析边执行，/parser-flag 影响后续命令；
+     管道 | 注入 / || 不注入语义保持
+- 引擎测试 267→281：SlashParserTest +6（rawQuotes/split/转义/list）、SlashEngineTest +6（parser-flag 链/注释/普通文本/
+  转义闭包/getvar 宏）、WorldBookImportTest +2（上轮）；全部本地跑绿
+- 边界登记：闭包仍为预解析立即执行（官方惰性闭包，近似不变）；150+ 官方命令未实现（多数依赖 App 状态）；完整 parser 无法差分（testSymbol 27 例差分 + 源码对照 + 单测）
 
 ## 最近一轮 73（2026-08-10：角色详情页复验修复 + 接线审计——世界书读不到/布局/官方位置/宏环境/continue 1:1）
 

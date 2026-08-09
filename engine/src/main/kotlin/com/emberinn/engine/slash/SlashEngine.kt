@@ -4,34 +4,62 @@ import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
 
 /**
- * 斜杠链式执行引擎，对齐官方 SlashCommandClosure.executeDirect + SlashCommandExecutor：
+ * 斜杠链式执行引擎，对齐官方 SlashCommandParser.parseClosure + executeDirect：
+ * - 顺序扫描整段文本：命令 / 注释 / /parser-flag / 普通文本（丢弃）
  * - 单管道 |：前一条命令的输出注入下一条的无名参数（官方 scope.pipe + injectPipe）
  * - 双管道 ||：不注入
- * - 闭包 {: ... :}：作为参数值立即执行，取其 pipe 输出
- * - 返回链上最后一条命令的输出
- * 注：官方惰性闭包（传给命令对象）与 () 即时执行在本核心中统一为即时求值。
+ * - /parser-flag STRICT_ESCAPING on|off 立即生效，影响后续命令解析
+ * - 闭包 {: ... :} 预解析为立即执行并取其 pipe 输出（官方惰性闭包，近似已登记）
  */
 object SlashEngine {
 
     fun execute(text: String, state: SlashState = SlashState()): String {
-        val segments = parseChain(text)
-        for ((index, segment) in segments.withIndex()) {
-            val resolved = resolveClosures(segment.text)
-            var invocation = SlashParser.parse(resolved)
-            val def = SlashRegistry.get(invocation.name)
-                ?: throw SlashParseException("未知命令: /${invocation.name}")
-            if (def.rawQuotes) {
-                invocation = SlashParser.parse(resolved, rawQuotes = true)
+        val resolved = resolveClosures(text)
+        val tok = SlashTokenizer(resolved, strictEscaping = state.strictEscaping)
+        var injectPipe = true
+        while (true) {
+            tok.discardWhitespace()
+            if (tok.index >= resolved.length) break
+            when {
+                tok.testBlockComment() -> tok.parseBlockComment()
+                tok.testComment() -> tok.parseComment()
+                tok.testParserFlag() -> tok.parseParserFlag(state)
+                tok.testCommand() -> {
+                    val inv = tok.parseCommand(
+                        rawQuotesFor = { name -> SlashRegistry.get(name)?.rawQuotes == true },
+                        splitFor = { name ->
+                            val def = SlashRegistry.get(name)
+                            (def?.splitUnnamedArgument == true) to def?.splitUnnamedArgumentCount
+                        },
+                    )
+                    val def = SlashRegistry.get(inv.name)
+                        ?: throw SlashParseException("未知命令: /${inv.name}")
+                    var finalInv = inv
+                    if (injectPipe && inv.unnamedArgs.isEmpty()) {
+                        finalInv = inv.copy(unnamedArgs = listOf(state.pipeValue))
+                    }
+                    finalInv = substituteInvocation(finalInv, state)
+                    finalInv = finalInv.copy(
+                        namedArgs = finalInv.namedArgs.mapValues { (_, v) -> v.replace("\u0001", "") },
+                        namedLists = finalInv.namedLists.mapValues { (_, v) -> v.map { it.replace("\u0001", "") } },
+                        unnamedArgs = finalInv.unnamedArgs.map { it.replace("\u0001", "") },
+                    )
+                    state.pipeValue = def.callback(finalInv, state)
+                    injectPipe = true
+                }
+                else -> {
+                    // 官方：命令之间的普通文本直接丢弃
+                    while (!tok.testCommandEnd()) tok.take()
+                }
             }
-            if (index > 0 && segment.inject && invocation.unnamedArgs.isEmpty()) {
-                invocation = invocation.copy(unnamedArgs = listOf(state.pipeValue))
+            tok.discardWhitespace()
+            if (tok.testSymbol("|")) {
+                tok.take()
+                if (tok.testSymbol("|")) {
+                    injectPipe = false
+                    tok.take()
+                }
             }
-            invocation = substituteInvocation(invocation, state)
-            invocation = invocation.copy(
-                namedArgs = invocation.namedArgs.mapValues { (_, v) -> v.replace("\u0001", "") },
-                unnamedArgs = invocation.unnamedArgs.map { it.replace("\u0001", "") },
-            )
-            state.pipeValue = def.callback(invocation, state)
         }
         return state.pipeValue
     }
@@ -46,51 +74,16 @@ object SlashEngine {
         )
     }
 
-    /** 顶层按 | / || 拆分，引号与闭包内的 | 不算。 */
-    private fun parseChain(text: String): List<PipeSegment> {
-        val segments = mutableListOf<PipeSegment>()
-        val sb = StringBuilder()
-        var quote: Char? = null
-        var closureDepth = 0
-        var bracketDepth = 0
-        var nextInject = true
-        var i = 0
-        while (i < text.length) {
-            val c = text[i]
-            if (quote != null) {
-                sb.append(c)
-                if (c == quote) quote = null
-                i++
-                continue
-            }
-            when {
-                c == '"' || c == '\'' -> { quote = c; sb.append(c) }
-                text.startsWith("{:", i) -> { closureDepth++; sb.append("{:"); i += 2; continue }
-                text.startsWith(":}", i) -> { closureDepth--; sb.append(":}"); i += 2; continue }
-                c == '[' -> { bracketDepth++; sb.append(c) }
-                c == ']' && bracketDepth > 0 -> { bracketDepth--; sb.append(c) }
-                c == '|' && closureDepth == 0 && bracketDepth == 0 -> {
-                    val inject = !text.startsWith("||", i)
-                    segments.add(PipeSegment(sb.toString(), nextInject))
-                    sb.setLength(0)
-                    nextInject = inject
-                    i += if (inject) 1 else 2
-                    continue
-                }
-                else -> sb.append(c)
-            }
-            i++
-        }
-        if (sb.isNotBlank()) segments.add(PipeSegment(sb.toString(), nextInject))
-        return segments
-    }
-
-    /** 把 {: 链 :} 替换为其执行输出（加引号保持单个参数）。 */
+    /**
+     * 把 {: 链 :} 替换为其执行输出（加控制字符占位，保持单个参数）。
+     * 转义判定对齐官方 testSymbol：{ 前反斜杠为奇数个时不是闭包。
+     */
     private fun resolveClosures(text: String): String {
         val sb = StringBuilder()
         var i = 0
         while (i < text.length) {
-            if (text.startsWith("{:", i)) {
+            val isClosure = text.startsWith("{:", i) && !isEscaped(text, i)
+            if (isClosure) {
                 var depth = 1
                 var j = i + 2
                 var quote: Char? = null
@@ -98,12 +91,12 @@ object SlashEngine {
                 while (j < text.length) {
                     val c = text[j]
                     if (quote != null) {
-                        if (c == quote) quote = null
+                        if (c == quote && !isEscaped(text, j)) quote = null
                     } else if (c == '"' || c == '\'') {
                         quote = c
-                    } else if (text.startsWith("{:", j)) {
+                    } else if (text.startsWith("{:", j) && !isEscaped(text, j)) {
                         depth++; j += 1
-                    } else if (text.startsWith(":}", j)) {
+                    } else if (text.startsWith(":}", j) && !isEscaped(text, j)) {
                         depth--
                         if (depth == 0) { end = j; break }
                         j += 1
@@ -113,7 +106,6 @@ object SlashEngine {
                 if (end < 0) { sb.append(text, i, text.length); break }
                 val inner = text.substring(i + 2, end)
                 val output = runCatching { execute(inner) }.getOrElse { "" }
-                // 控制字符占位，避免 rawQuotes 误加引号
                 sb.append('\u0001').append(output).append('\u0001')
                 i = end + 2
             } else {
@@ -123,5 +115,14 @@ object SlashEngine {
         return sb.toString()
     }
 
-    private data class PipeSegment(val text: String, val inject: Boolean)
+    /** 前一个（非转义链）反斜杠为奇数个 → 该位置被转义。 */
+    private fun isEscaped(text: String, index: Int): Boolean {
+        var backslashes = 0
+        var i = index - 1
+        while (i >= 0 && text[i] == '\\') {
+            backslashes++
+            i--
+        }
+        return backslashes % 2 == 1
+    }
 }

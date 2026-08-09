@@ -54,4 +54,45 @@ class SlashEngineTest {
         assertEquals("\"hello world\"", SlashEngine.execute("/echo \"hello world\""))
         assertEquals("OK:sys:hello world", SlashEngine.execute("/sys \"hello world\""))
     }
+
+    @Test
+    fun `parser-flag toggles strict escaping for subsequent commands`() {
+        // 默认 loose：两个反斜杠 → 值保留 a \| b（一个反斜杠）
+        assertEquals("a \\| b", SlashEngine.execute("/echo a \\\\| b"))
+        // STRICT_ESCAPING 开启后：两个反斜杠也被转义 → 管道分隔，值只剩 a \
+        assertEquals("a \\", SlashEngine.execute("/parser-flag STRICT_ESCAPING on | /echo a \\\\| b"))
+        // 关掉后恢复 loose
+        assertEquals(
+            "a \\| b",
+            SlashEngine.execute("/parser-flag STRICT_ESCAPING off | /echo a \\\\| b"),
+        )
+    }
+
+    @Test
+    fun `parser-flag default state is on when omitted`() {
+        assertEquals("a \\", SlashEngine.execute("/parser-flag STRICT_ESCAPING | /echo a \\\\| b"))
+    }
+
+    @Test
+    fun `comments are discarded between commands`() {
+        assertEquals("hi", SlashEngine.execute("// 注释 | /echo hi"))
+        assertEquals("hi", SlashEngine.execute("/# 注释 | /echo hi"))
+        assertEquals("b", SlashEngine.execute("/echo a /* 块注释 *| /echo b"))
+    }
+
+    @Test
+    fun `plain text between commands is discarded`() {
+        assertEquals("ok", SlashEngine.execute("随便说说 | /echo ok"))
+    }
+
+    @Test
+    fun `escaped closure is not resolved`() {
+        // \{: ... :} 被转义：不执行；转义反斜杠被解析器消费（官方 testSymbol 语义），文本为 {: 
+        assertEquals("{:", SlashEngine.execute("/echo \\{:"))
+    }
+
+    @Test
+    fun `getvar macro in arguments resolves via macro engine`() {
+        assertEquals("value", SlashEngine.execute("/let key=x value || /echo {{getvar::x}}"))
+    }
 }

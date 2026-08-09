@@ -47,4 +47,54 @@ class SlashParserTest {
     fun `help lists commands`() {
         assertTrue(SlashRegistry.execute("/help").contains("/continue"))
     }
+
+    @Test
+    fun `rawQuotes keeps quotes as one value per official`() {
+        val inv = SlashParser.parse("/echo \"hello world\"", rawQuotes = true)
+        assertEquals(listOf("\"hello world\""), inv.unnamedArgs)
+    }
+
+    @Test
+    fun `split unnamed with count merges the rest into one value`() {
+        // 对齐官方 /let：splitUnnamedArgumentCount=1，第一个拆开、其余合并
+        val inv = SlashParser.parse(
+            "/let key=greeting Hello World",
+            splitFor = { name -> (name == "let") to 1 },
+        )
+        assertEquals(listOf("Hello", "World"), inv.unnamedArgs)
+    }
+
+    @Test
+    fun `split unnamed with count two keeps two values`() {
+        // 对齐官方 /qr-arg：splitUnnamedArgumentCount=2
+        val inv = SlashParser.parse(
+            "/qr-arg hello world",
+            splitFor = { name -> (name == "qr-arg") to 2 },
+        )
+        assertEquals(listOf("hello", "world"), inv.unnamedArgs)
+    }
+
+    @Test
+    fun `escaped pipe stays inside the value`() {
+        // 输入 a \| b（一个反斜杠）：转义判定消费反斜杠，值里保留管道字符
+        val inv = SlashParser.parse("/echo a \\| b", rawQuotes = true)
+        assertEquals(listOf("a | b"), inv.unnamedArgs)
+    }
+
+    @Test
+    fun `strict escaping makes even backslashes consume the escape`() {
+        // 输入 a \\| b（两个反斜杠）：loose 只认单反斜杠 → 第二个反斜杠保留为文本（值 a \| b）；
+        // STRICT 下偶数个反斜杠也转义 → 消费一个、管道仍分隔（值 a \）
+        val loose = SlashParser.parse("/echo a \\\\| b", rawQuotes = true)
+        assertEquals(listOf("a \\| b"), loose.unnamedArgs)
+        val strict = SlashParser.parse("/echo a \\\\| b", rawQuotes = true, strictEscaping = true)
+        assertEquals(listOf("a \\"), strict.unnamedArgs)
+    }
+
+    @Test
+    fun `named list value keeps raw bracket form`() {
+        val inv = SlashParser.parse("/let key=list [\"a\",\"b\",\"c\"]")
+        assertEquals("list", inv.namedArgs["key"])
+        assertEquals("[\"a\",\"b\",\"c\"]", inv.unnamedArgs.first())
+    }
 }

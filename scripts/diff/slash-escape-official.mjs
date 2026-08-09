@@ -73,5 +73,20 @@ await add('offset-pipe', { text: 'a | b', index: 2, sequence: '|', strict: true,
 await add('loose-not-found', { text: 'abc', index: 0, sequence: '|', strict: false });
 await add('strict-offset-not-found', { text: 'a | b', index: 2, sequence: ':', strict: true, offset: 1 });
 await add('strict-many-backslashes', { text: 'abc \\\\| def', index: 4, sequence: '|', strict: true });
+// 第 73 轮扩充：闭包/引号/list 定界符的转义判定（STRICT vs loose）
+await add('loose-closure-end', { text: 'abc :}', index: 4, sequence: ':}', strict: false });
+await add('strict-closure-end', { text: 'abc :}', index: 4, sequence: ':}', strict: true });
+await add('strict-closure-end-escaped', { text: 'abc \\:}', index: 4, sequence: ':}', strict: true });
+await add('loose-quote', { text: 'abc "def"', index: 4, sequence: '"', strict: false });
+await add('strict-quote', { text: 'abc "def"', index: 4, sequence: '"', strict: true });
+await add('strict-quote-escaped', { text: 'abc \\"def', index: 4, sequence: '"', strict: true });
+await add('strict-quote-two-escapes', { text: 'abc \\\\"def', index: 4, sequence: '"', strict: true });
+await add('loose-list-open', { text: 'abc [x]', index: 4, sequence: '[', strict: false });
+await add('strict-list-close', { text: 'abc [x]', index: 7, sequence: ']', strict: true });
+await add('strict-list-close-escaped', { text: 'abc [x\\]', index: 6, sequence: ']', strict: true });
+await add('loose-pipe-jumped', { text: 'abc \\| def', index: 5, sequence: '|', strict: false, jumped: true });
+await add('strict-pipe-four-escapes', { text: 'abc \\\\| def', index: 4, sequence: '|', strict: true });
+await add('strict-pipe-four-escapes-jumped', { text: 'abc \\\\| def', index: 5, sequence: '|', strict: true, jumped: true });
+await add('loose-pipe-escaped-offset', { text: 'a \\| b', index: 2, sequence: '|', strict: false, offset: 1 });
 writeFileSync(outFile, JSON.stringify({ source: 'SlashCommandParser testSymbol', cases }, null, 2));
 console.log('slash-escape:', cases.length, 'cases ->', outFile);

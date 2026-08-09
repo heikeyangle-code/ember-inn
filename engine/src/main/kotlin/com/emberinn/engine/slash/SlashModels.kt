@@ -21,16 +21,24 @@ data class SlashCommandDef(
     val description: String = "",
     val callback: (CommandInvocation, SlashState) -> String,
     val rawQuotes: Boolean = false,
+    /** 对齐官方 splitUnnamedArgument：无名参数按空白拆成多个（如 /qr-arg、/let）。 */
+    val splitUnnamedArgument: Boolean = false,
+    /** 对齐官方 splitUnnamedArgumentCount：前 N 个拆开，其余合并为一个值。 */
+    val splitUnnamedArgumentCount: Int? = null,
 )
 
 class SlashParseException(message: String) : RuntimeException(message)
 
-/** 斜杠执行状态：变量（/let）、参数（/qr-arg）、管道值（{{pipe}}）。 */
+/** 斜杠执行状态：变量（/let）、参数（/qr-arg）、管道值（{{pipe}}）、解析器标志。 */
 class SlashState : SlashMacroState {
 
     val variables = mutableMapOf<String, String>()
     val arguments = mutableMapOf<String, String>()
     var pipeValue: String = ""
+    /** 对齐官方 PARSER_FLAG.STRICT_ESCAPING（/parser-flag 可切换，默认关）。 */
+    var strictEscaping: Boolean = false
+    /** 对齐官方 PARSER_FLAG.REPLACE_GETVAR（新宏引擎下宏展开由 MacroEngine 完成，仅记录状态）。 */
+    var replaceGetvar: Boolean = false
 
     override fun variable(name: String): String? {
         val parts = name.split("::")
