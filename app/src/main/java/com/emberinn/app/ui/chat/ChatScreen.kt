@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.animateItem
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -398,6 +397,7 @@ fun ChatScreen(
         )
 
         ChatInputBar(
+            accent = accent,
             input = input,
             onInputChange = { input = it },
             pendingMedia = pendingMedia,
@@ -989,13 +989,13 @@ private fun StreamingRow(
     impersonating: Boolean = false,
 ) {
     val transition = rememberInfiniteTransition(label = "caret")
-    val alpha by transition.animateFloat(
+    val caretAlpha by transition.animateFloat(
         initialValue = 0.3f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
         label = "caretAlpha",
     )
-    val scale by transition.animateFloat(
+    val caretScale by transition.animateFloat(
         initialValue = 0.75f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
@@ -1034,7 +1034,11 @@ private fun StreamingRow(
                     modifier = Modifier
                         .padding(start = 4.dp, end = 2.dp)
                         .size(6.dp)
-                        .graphicsLayer { scaleX = scale; scaleY = scale; alpha = alpha }
+                        .graphicsLayer {
+                            scaleX = caretScale
+                            scaleY = caretScale
+                            this.alpha = caretAlpha
+                        }
                         .background(accent, CircleShape),
                 )
             }
@@ -1365,6 +1369,7 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 
 @Composable
 private fun ChatInputBar(
+    accent: Color,
     input: String,
     onInputChange: (String) -> Unit,
     pendingMedia: List<MediaAttachment>,
