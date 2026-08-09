@@ -298,7 +298,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → Lottie/sprite 动画渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
-| 人设 | `public/scripts/personas.js` | 进聊天前 PersonaEngine.resolve 出当前人设 → 描述符注入提示词组装 |
+| 人设 | `public/scripts/personas.js` | ✅ 2026-08-10 第 83 轮：PersonaStore（filesDir/personas.json，官方 Persona Management 语义）+ 聊天 ⋮ 人设选择/新建/编辑/删除；选中人设时 personaDescription 注入（personaInPrompt=true，官方 persona_in_prompt 语义；引擎 PromptPipeline 补同名透传参数，默认 false 行为不变） |
 | 作者注释 | `public/scripts/authors-note.js` | AuthorsNoteEngine.resolve 每 N 条消息刷新，ANWithWI 合并世界书结果后注入 |
 | tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
 | 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
@@ -346,7 +346,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊完整调度 + 人设管理 UI；聊天书签/快照（背景已做，见 3.8/4.3）
+9. 群聊完整调度（引擎激活/合并/深度/循环已 1:1，App 调度层待做）；✅ 人设管理 UI 已做（2026-08-10 第 83 轮）；聊天书签/快照（背景已做，见 3.8/4.3）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
 
 **备注（不能纯引擎做 / 需 App 或外部）**
@@ -385,11 +385,20 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 角色 system_prompt / 剧情后指令 | 官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride；App 此前漏传（角色系统提示词从未生效）→ 已修（79 轮） | ✅ 已修 |
 | {{bias}} 提示词 | 官方 getBiasStrings 从输入/最近用户消息 extra.bias 提取；App 此前不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ 已修 |
 | chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 此前恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
-| 人设 personaDescription | 引擎参数存在；App 无人设管理 UI（P2-9），官方默认空，暂等价 | 🟡 待 UI |
+| 人设 personaDescription | ✅ 已接（2026-08-10 第 83 轮）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
 | 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 无作者注释/记忆 UI（官方默认 AN 空则不注入），暂等价 | 🟡 待 UI |
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 83（2026-08-10：人设管理 UI + persona 注入接线——P2-9 部分）
+
+- PersonaStore（filesDir/personas.json）：官方 Persona Management 语义（全局列表 + activeId，name/description）
+- 聊天 ⋮ 菜单“人设”：列表选择（当前标记）/ 新建 / 编辑 / 删除
+- ChatPromptFactory/ChatRepository 透传 personaDescription + personaInPrompt；
+  引擎 PromptPipeline 补 personaInPrompt 参数（官方同名参数，默认 false 行为不变，差分无影响）
+- App 语义：选中人设即 personaInPrompt=true（官方 persona_in_prompt=true 等价）；未选人设不注入
+- 测试：ChatPromptFactoryTest +1（人设描述注入）；全量引擎测试本地跑绿
 
 ## 最近一轮 82（2026-08-10：主题配方（角色级）——README P1-4 收尾）
 

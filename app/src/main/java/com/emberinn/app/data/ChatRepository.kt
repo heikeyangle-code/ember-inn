@@ -84,6 +84,8 @@ class ChatRepository(context: Context) {
         onReasoning: ((String) -> Unit)? = null,
         mediaInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
+        personaDescription: String = "",
+        personaInPrompt: Boolean = false,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -133,6 +135,8 @@ class ChatRepository(context: Context) {
             audioInlining = mediaInlining,
             chatMetadata = chatMetadata,
             chatCompletionSource = chatCompletionSource,
+            personaDescription = personaDescription,
+            personaInPrompt = personaInPrompt,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

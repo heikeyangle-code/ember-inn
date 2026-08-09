@@ -74,6 +74,8 @@ class ChatPromptFactory {
         audioInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
         chatCompletionSource: String = "openai",
+        personaDescription: String = "",
+        personaInPrompt: Boolean = false,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -208,6 +210,8 @@ class ChatPromptFactory {
                 messages = historyMessages,
                 messageExamples = examples,
                 env = env,
+                personaDescription = personaDescription,
+                personaInPrompt = personaInPrompt,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,

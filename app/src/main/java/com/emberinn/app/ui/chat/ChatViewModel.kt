@@ -14,6 +14,8 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
+import com.emberinn.app.data.Persona
+import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
@@ -49,6 +51,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val charStore = CharacterStore(application)
     private val chatRepository = ChatRepository(application)
     private val quickReplyStore = QuickReplyStore(application)
+    private val personaStore = PersonaStore(application)
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -136,6 +139,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (!ok && cleaned.isNotBlank()) {
             _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
         }
+    }
+
+    /** 人设（官方 Persona Management：全局列表 + active，persona_description 进提示词）。 */
+    private val _personas = MutableStateFlow(personaStore.list())
+    val personas: StateFlow<List<Persona>> = _personas
+    private val _activePersona = MutableStateFlow(personaStore.active())
+    val activePersona: StateFlow<Persona?> = _activePersona
+
+    fun setPersona(id: String) {
+        personaStore.setActive(id)
+        _activePersona.value = personaStore.active()
+        _personas.value = personaStore.list()
+    }
+
+    fun savePersona(persona: Persona) {
+        val list = personaStore.list()
+        val next = if (list.any { it.id == persona.id }) {
+            list.map { if (it.id == persona.id) persona else it }
+        } else {
+            list + persona
+        }
+        personaStore.save(next, activeId = persona.id)
+        _personas.value = personaStore.list()
+        _activePersona.value = personaStore.active()
+    }
+
+    fun deletePersona(id: String) {
+        personaStore.save(personaStore.list().filterNot { it.id == id })
+        _personas.value = personaStore.list()
+        _activePersona.value = personaStore.active()
     }
 
     /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
@@ -626,6 +659,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 cyclePrompt = cyclePrompt,
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
+                personaDescription = _activePersona.value?.description.orEmpty(),
+                personaInPrompt = _activePersona.value != null,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

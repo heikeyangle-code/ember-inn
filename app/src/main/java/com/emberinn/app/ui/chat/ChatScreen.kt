@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.chat
 
+import com.emberinn.app.data.Persona
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -161,6 +162,8 @@ fun ChatScreen(
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
     val chatBackground by vm.chatBackground.collectAsState()
+    val personas by vm.personas.collectAsState()
+    val activePersona by vm.activePersona.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -172,6 +175,10 @@ fun ChatScreen(
     var showMore by remember { mutableStateOf(false) }
     var showQuickBar by remember { mutableStateOf(false) }
     var showCharacterInfo by remember { mutableStateOf(false) }
+    var showPersonaPicker by remember { mutableStateOf(false) }
+    var personaDraftName by remember { mutableStateOf("") }
+    var personaDraftDesc by remember { mutableStateOf("") }
+    var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
@@ -732,6 +739,10 @@ fun ChatScreen(
                         vm.clearChatBackground()
                     }
                 }
+                MenuRow(PhosphorIcons.Person, "人设") {
+                    showMore = false
+                    showPersonaPicker = true
+                }
                 if (vm.character != null) {
                     MenuRow(PhosphorIcons.Person, "角色详情") {
                         showMore = false
@@ -748,6 +759,111 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showPersonaPicker) {
+        ModalBottomSheet(onDismissRequest = { showPersonaPicker = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "人设",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                if (personas.isEmpty()) {
+                    Text(
+                        "还没有人设。新建后，人设描述会注入提示词（官方 Persona Management 语义）。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    )
+                }
+                personas.forEach { p ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            vm.setPersona(p.id)
+                            showPersonaPicker = false
+                        }.padding(horizontal = 20.dp, vertical = 8.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                p.name.ifBlank { "（未命名）" },
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (activePersona?.id == p.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            )
+                            if (p.description.isNotBlank()) {
+                                Text(
+                                    p.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        if (activePersona?.id == p.id) {
+                            Text("当前", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = {
+                            editingPersona = p
+                            personaDraftName = p.name
+                            personaDraftDesc = p.description
+                        }, modifier = Modifier.size(32.dp)) {
+                            Icon(PhosphorIcons.Edit, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                        }
+                        IconButton(onClick = { vm.deletePersona(p.id) }, modifier = Modifier.size(32.dp)) {
+                            Icon(PhosphorIcons.Delete, contentDescription = "删除人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                }
+                TextButton(
+                    onClick = {
+                        editingPersona = Persona(id = "p-" + System.nanoTime().toString(36), name = "", description = "")
+                        personaDraftName = ""
+                        personaDraftDesc = ""
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) { Text("＋ 新建人设") }
+            }
+        }
+    }
+
+    editingPersona?.let { target ->
+        AlertDialog(
+            onDismissRequest = { editingPersona = null },
+            title = { Text(if (target.name.isBlank()) "新建人设" else "编辑人设") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = personaDraftName,
+                        onValueChange = { personaDraftName = it },
+                        label = { Text("人设名称") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = personaDraftDesc,
+                        onValueChange = { personaDraftDesc = it },
+                        label = { Text("描述（支持 {{char}}/{{user}} 宏）") },
+                        minLines = 3,
+                        maxLines = 8,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.savePersona(target.copy(name = personaDraftName.trim(), description = personaDraftDesc))
+                    editingPersona = null
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingPersona = null }) { Text("取消") }
+            },
+        )
     }
 
     if (showClearConfirm) {

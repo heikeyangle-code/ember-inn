@@ -257,4 +257,20 @@ class ChatPromptFactoryTest {
         )
         assertTrue(!result.messages.any { it.content.contains("悄悄说") })
     }
+
+    @Test
+    fun `persona description is injected into prompt`() {
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = listOf(msg(true, "问", "User")),
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            personaDescription = "我是 {{user}} 的助手，话痨模式。",
+            personaInPrompt = true,
+        )
+        assertTrue(result.messages.any { it.content.contains("话痨模式") })
+    }
 }
