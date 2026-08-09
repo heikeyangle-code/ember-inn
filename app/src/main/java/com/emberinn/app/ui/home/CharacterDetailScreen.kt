@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
+import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -85,6 +86,7 @@ fun CharacterDetailScreen(
 
     var fields by remember(record.id) { mutableStateOf(vm.readCharacterFields(record)) }
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
+    var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -94,6 +96,8 @@ fun CharacterDetailScreen(
     var editingGreetingIdx by remember { mutableStateOf<Int?>(null) }
     var greetingDraft by remember { mutableStateOf("") }
     var editingDepth by remember { mutableStateOf(false) }
+    var editingRegexIdx by remember { mutableStateOf<Int?>(null) }
+    var addingRegex by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -131,6 +135,7 @@ fun CharacterDetailScreen(
     val save = {
         vm.saveCharacterFields(record, fields)
         vm.saveWorldEntries(record, entries)
+        vm.saveRegexScripts(record, regexScripts)
         dirty = false
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
@@ -346,6 +351,36 @@ fun CharacterDetailScreen(
                         onClick = { addingEntry = true },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增条目") }
+                }
+
+                item {
+                    SectionHeader("正则（该卡）", "${regexScripts.size} 条")
+                }
+                if (regexScripts.isEmpty()) {
+                    item {
+                        Text(
+                            "没有该卡正则。新增后，发送消息 / 生成回复时会自动应用（对齐官方 data.extensions.regex_scripts）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                        )
+                    }
+                }
+                items(regexScripts.size) { i ->
+                    RegexRow(
+                        script = regexScripts[i],
+                        onEdit = { editingRegexIdx = i },
+                        onToggle = {
+                            regexScripts = regexScripts.mapIndexed { j, s -> if (j == i) s.copy(disabled = !s.disabled) else s }
+                            dirty = true
+                        },
+                    )
+                }
+                item {
+                    OutlinedButton(
+                        onClick = { addingRegex = true },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    ) { Text("＋ 新增正则") }
                 }
 
                 item {
@@ -596,6 +631,43 @@ fun CharacterDetailScreen(
             onDismiss = {
                 addingEntry = false
                 editingEntryIdx = null
+            },
+        )
+    }
+
+    // ---- 正则编辑弹层 ----
+    val editingRegex = regexScripts.getOrNull(editingRegexIdx ?: -1)
+    if (editingRegex != null || addingRegex) {
+        RegexEditorSheet(
+            initial = editingRegex ?: CharacterRegexScript(
+                id = (regexScripts.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1,
+                scriptName = "", findRegex = "", replaceString = "",
+                placement = listOf(1, 2, 5, 6), runOnEdit = true,
+            ),
+            isNew = addingRegex,
+            onSave = { s ->
+                if (addingRegex) {
+                    regexScripts = regexScripts + s
+                } else {
+                    val i = editingRegexIdx ?: 0
+                    regexScripts = regexScripts.mapIndexed { j, old -> if (j == i) s else old }
+                }
+                dirty = true
+                addingRegex = false
+                editingRegexIdx = null
+            },
+            onDelete = {
+                val i = editingRegexIdx
+                if (i != null && i in regexScripts.indices) {
+                    regexScripts = regexScripts.filterIndexed { j, _ -> j != i }
+                    dirty = true
+                }
+                addingRegex = false
+                editingRegexIdx = null
+            },
+            onDismiss = {
+                addingRegex = false
+                editingRegexIdx = null
             },
         )
     }
@@ -867,5 +939,217 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (script.disabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit).padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    script.scriptName.ifBlank { "（未命名正则）" },
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (script.scriptName.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    script.findRegex.ifBlank { "（空匹配式）" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "替换为 ${script.replaceString.ifBlank { "（空）" }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(PhosphorIcons.Edit, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+            }
+            Switch(checked = !script.disabled, onCheckedChange = { onToggle() })
+        }
+    }
+}
+
+@Composable
+private fun RegexEditorSheet(
+    initial: CharacterRegexScript,
+    isNew: Boolean,
+    onSave: (CharacterRegexScript) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var scriptName by remember(initial) { mutableStateOf(initial.scriptName) }
+    var findRegex by remember(initial) { mutableStateOf(initial.findRegex) }
+    var replaceString by remember(initial) { mutableStateOf(initial.replaceString) }
+    var trimStrings by remember(initial) { mutableStateOf(initial.trimStrings.joinToString(", ")) }
+    var placement by remember(initial) { mutableStateOf(initial.placement.toSet()) }
+    var disabled by remember(initial) { mutableStateOf(initial.disabled) }
+    var markdownOnly by remember(initial) { mutableStateOf(initial.markdownOnly) }
+    var promptOnly by remember(initial) { mutableStateOf(initial.promptOnly) }
+    var runOnEdit by remember(initial) { mutableStateOf(initial.runOnEdit) }
+    var minDepth by remember(initial) { mutableStateOf(initial.minDepth?.toString() ?: "") }
+    var maxDepth by remember(initial) { mutableStateOf(initial.maxDepth?.toString() ?: "") }
+    var substituteRegex by remember(initial) { mutableStateOf(initial.substituteRegex) }
+
+    val placementOptions = listOf(
+        1 to "用户输入",
+        2 to "AI 输出",
+        5 to "世界书",
+        6 to "推理",
+    )
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            Text(
+                if (isNew) "新增该卡正则" else "编辑正则",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+            Text(
+                "字段对齐官方 RegexScriptData（char-data.js），保存进 data.extensions.regex_scripts。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 10.dp),
+            )
+            OutlinedTextField(
+                value = scriptName,
+                onValueChange = { scriptName = it },
+                label = { Text("名称") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = findRegex,
+                onValueChange = { findRegex = it },
+                label = { Text("匹配式（支持 /pat/flags）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            OutlinedTextField(
+                value = replaceString,
+                onValueChange = { replaceString = it },
+                label = { Text("替换为（支持 $1 / $<name> / {{match}}）") },
+                minLines = 2,
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            OutlinedTextField(
+                value = trimStrings,
+                onValueChange = { trimStrings = it },
+                label = { Text("裁剪串（逗号分隔）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Text(
+                "应用位置",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                placementOptions.forEach { (value, label) ->
+                    FilterChip(
+                        selected = value in placement,
+                        onClick = {
+                            placement = if (value in placement) placement - value else placement + value
+                        },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            SwitchRow("禁用", disabled) { disabled = it }
+            SwitchRow("仅 Markdown 显示", markdownOnly) { markdownOnly = it }
+            SwitchRow("仅提示词", promptOnly) { promptOnly = it }
+            SwitchRow("编辑消息时也执行", runOnEdit) { runOnEdit = it }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                OutlinedTextField(
+                    value = minDepth,
+                    onValueChange = { minDepth = it.filter { c -> c.isDigit() || c == '-' } },
+                    label = { Text("最小深度") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = maxDepth,
+                    onValueChange = { maxDepth = it.filter { c -> c.isDigit() || c == '-' } },
+                    label = { Text("最大深度") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                "匹配式宏替换",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf(0 to "不替换", 1 to "原样替换", 2 to "转义替换").forEach { (value, label) ->
+                    FilterChip(
+                        selected = substituteRegex == value,
+                        onClick = { substituteRegex = value },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (!isNew) {
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }
+                Button(
+                    onClick = {
+                        onSave(
+                            CharacterRegexScript(
+                                id = initial.id,
+                                scriptName = scriptName.trim(),
+                                findRegex = findRegex.trim(),
+                                replaceString = replaceString,
+                                trimStrings = trimStrings.split(',').map { it.trim() }.filter { it.isNotEmpty() },
+                                placement = placementOptions.map { it.first }.filter { it in placement },
+                                disabled = disabled,
+                                markdownOnly = markdownOnly,
+                                promptOnly = promptOnly,
+                                runOnEdit = runOnEdit,
+                                minDepth = minDepth.toIntOrNull(),
+                                maxDepth = maxDepth.toIntOrNull(),
+                                substituteRegex = substituteRegex,
+                            ),
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("保存") }
+            }
+        }
     }
 }

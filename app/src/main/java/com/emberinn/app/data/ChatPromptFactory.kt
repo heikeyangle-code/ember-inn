@@ -12,6 +12,8 @@ import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptAssembler
 import com.emberinn.engine.prompt.PromptPipeline
 import com.emberinn.engine.prompt.PromptUtils
+import com.emberinn.engine.regex.RegexPipelineEngine
+import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.engine.worldinfo.GlobalScanData
 import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.WorldBookEntryParser
@@ -19,6 +21,7 @@ import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.engine.worldinfo.WorldInfoScanner
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -26,6 +29,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -36,6 +40,10 @@ class ChatPromptFactory {
 
     /** 对齐官方 openai.js default_impersonation_prompt。 */
     companion object {
+        /** 官方 regex_placement（engine.js）：USER_INPUT=1 / AI_OUTPUT=2。 */
+        const val REGEX_USER_INPUT = 1
+        const val REGEX_AI_OUTPUT = 2
+
         const val DEFAULT_IMPERSONATION_PROMPT =
             "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
     }
@@ -88,6 +96,7 @@ class ChatPromptFactory {
             system = SystemFields(model = model),
         )
         val tokenCounter = TokenCounterFactory.forModel(model)
+        val regexScripts = parsed?.regexScripts ?: emptyList()
 
         // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）
         val chatMessages = history.mapNotNull { el ->
@@ -98,6 +107,18 @@ class ChatPromptFactory {
                 mes = mes,
                 isUser = isUser,
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
+            )
+        }.map { m ->
+            // 官方：用户输入存前过 USER_INPUT 正则、生成回复存前过 AI_OUTPUT 正则（script.js sendMessageAsUser/saveReply）；
+            // 本 App 在总装时统一应用（对幂等脚本等价；双应用边界见 HANDOFF）
+            if (regexScripts.isEmpty()) m
+            else m.copy(
+                mes = RegexPipelineEngine.apply(
+                    raw = m.mes,
+                    placement = if (m.isUser) REGEX_USER_INPUT else REGEX_AI_OUTPUT,
+                    scripts = regexScripts,
+                    characterOverride = charName,
+                ),
             )
         }
         // 对齐官方 setOpenAIMessages：进总装前消息是“新的在前”（official messages[i] 反向填充）；
@@ -184,6 +205,7 @@ class ChatPromptFactory {
     private data class ParsedCard(
         val source: CharacterCardSource,
         val worldEntries: List<WorldInfoEntry>,
+        val regexScripts: List<RegexPipelineScript>,
     )
 
     private fun parseCard(raw: String): ParsedCard {
@@ -210,7 +232,29 @@ class ChatPromptFactory {
             ?.mapIndexedNotNull { i, el ->
                 runCatching { WorldBookEntryParser.parse(el.jsonObject, "character", i) }.getOrNull()
             } ?: emptyList()
-        return ParsedCard(source, entries)
+        // 该卡正则（官方 char-data.js RegexScriptData → 引擎 RegexPipelineScript）
+        val regexScripts = data["extensions"]?.jsonObject?.get("regex_scripts")?.jsonArray
+            ?.mapNotNull { el ->
+                val e = el.jsonObject
+                runCatching {
+                    RegexPipelineScript(
+                        findRegex = (e["findRegex"] as? JsonPrimitive)?.contentOrNull ?: "",
+                        replaceString = (e["replaceString"] as? JsonPrimitive)?.contentOrNull ?: "",
+                        trimStrings = (e["trimStrings"] as? JsonArray)
+                            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList(),
+                        disabled = (e["disabled"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        substituteRegex = (e["substituteRegex"] as? JsonPrimitive)?.intOrNull ?: 0,
+                        placement = (e["placement"] as? JsonArray)
+                            ?.mapNotNull { (it as? JsonPrimitive)?.intOrNull } ?: listOf(1, 2, 5, 6),
+                        markdownOnly = (e["markdownOnly"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        promptOnly = (e["promptOnly"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        runOnEdit = (e["runOnEdit"] as? JsonPrimitive)?.booleanOrNull ?: true,
+                        minDepth = (e["minDepth"] as? JsonPrimitive)?.intOrNull,
+                        maxDepth = (e["maxDepth"] as? JsonPrimitive)?.intOrNull,
+                    )
+                }.getOrNull()
+            } ?: emptyList()
+        return ParsedCard(source, entries, regexScripts)
     }
 
     /** 官方位置：data.extensions.depth_prompt.prompt；兼容旧版 data.depth_prompt 字符串/对象。 */

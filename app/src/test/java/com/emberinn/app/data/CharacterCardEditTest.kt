@@ -208,4 +208,40 @@ class CharacterCardEditTest {
         val data = dataOf(saved)
         assertEquals(1, data["character_book"]!!.jsonObject["entries"]!!.jsonArray.size)
     }
+
+    @Test
+    fun `read and save character regex scripts keeps unknown fields`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
+              {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽",
+               "placement":[1,2],"disabled":false,"markdownOnly":false,"promptOnly":false,
+               "runOnEdit":true,"minDepth":null,"maxDepth":null,"substituteRegex":0,
+               "customFlag":true}
+            ]}}}
+        """.trimIndent()
+        val scripts = CharacterCardEdit.readRegexScripts(card)
+        assertEquals(1, scripts.size)
+        assertEquals("改口", scripts[0].scriptName)
+        assertEquals("/你好/", scripts[0].findRegex)
+        assertEquals(listOf(1, 2), scripts[0].placement)
+        assertTrue(scripts[0].runOnEdit)
+
+        val saved = CharacterCardEdit.applyRegexScripts(
+            card,
+            scripts.map { it.copy(findRegex = "/你好|您好/", disabled = true, minDepth = 3) },
+        )
+        val root = json.parseToJsonElement(saved).jsonObject
+        val scriptsJson = root["data"]!!.jsonObject["extensions"]!!.jsonObject["regex_scripts"]!!.jsonArray
+        val first = scriptsJson[0].jsonObject
+        assertEquals("/你好|您好/", first["findRegex"]!!.jsonPrimitive.content)
+        assertEquals(true, first["disabled"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals(3, first["minDepth"]!!.jsonPrimitive.intOrNull)
+        assertEquals(true, first["customFlag"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals(listOf(1, 2), first["placement"]!!.jsonArray.map { it.jsonPrimitive.intOrNull })
+
+        val reread = CharacterCardEdit.readRegexScripts(saved)
+        assertEquals("/你好|您好/", reread[0].findRegex)
+        assertTrue(reread[0].disabled)
+        assertEquals(3, reread[0].minDepth)
+    }
 }

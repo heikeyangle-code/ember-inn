@@ -48,6 +48,23 @@ data class WorldEntryDraft(
     val insertionOrder: Int,
 )
 
+/** 该卡正则脚本（对齐官方 char-data.js RegexScriptData；缺失字段用官方默认）。 */
+data class CharacterRegexScript(
+    val id: String,
+    val scriptName: String,
+    val findRegex: String,
+    val replaceString: String,
+    val trimStrings: List<String> = emptyList(),
+    val placement: List<Int> = listOf(1, 2, 5, 6),
+    val disabled: Boolean = false,
+    val markdownOnly: Boolean = false,
+    val promptOnly: Boolean = false,
+    val runOnEdit: Boolean = true,
+    val minDepth: Int? = null,
+    val maxDepth: Int? = null,
+    val substituteRegex: Int = 0,
+)
+
 /**
  * 角色卡 data 层读改写（纯逻辑，App 详情页 + 单元测试共用）。
  *
@@ -210,6 +227,70 @@ object CharacterCardEdit {
             m["character_book"] = JsonObject(book)
             JsonObject(m)
         }
+    }
+
+    /** 官方 RegexScriptData 全部可编辑字段（保存时按此覆盖）。 */
+    private val regexFields = listOf(
+        "scriptName", "findRegex", "replaceString", "trimStrings", "placement",
+        "disabled", "markdownOnly", "promptOnly", "runOnEdit", "minDepth", "maxDepth", "substituteRegex",
+    )
+
+    /** 读取该卡正则脚本（官方位置 data.extensions.regex_scripts）。 */
+    fun readRegexScripts(raw: String): List<CharacterRegexScript> = runCatching {
+        val root = json.parseToJsonElement(raw).jsonObject
+        val data = dataLayer(root)
+        val ext = data["extensions"]?.jsonObject ?: return@runCatching emptyList()
+        (ext["regex_scripts"] as? JsonArray)?.mapIndexedNotNull { i, el ->
+            val e = el as? JsonObject ?: return@mapIndexedNotNull null
+            fun str(key: String): String = (e[key] as? JsonPrimitive)?.contentOrNull ?: ""
+            fun bool(key: String, def: Boolean): Boolean = (e[key] as? JsonPrimitive)?.booleanOrNull ?: def
+            fun int(key: String): Int? = (e[key] as? JsonPrimitive)?.intOrNull
+            CharacterRegexScript(
+                id = str("id").ifBlank { (i + 1).toString() },
+                scriptName = str("scriptName"),
+                findRegex = str("findRegex"),
+                replaceString = str("replaceString"),
+                trimStrings = (e["trimStrings"] as? JsonArray)
+                    ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList(),
+                placement = (e["placement"] as? JsonArray)
+                    ?.mapNotNull { (it as? JsonPrimitive)?.intOrNull } ?: listOf(1, 2, 5, 6),
+                disabled = bool("disabled", false),
+                markdownOnly = bool("markdownOnly", false),
+                promptOnly = bool("promptOnly", false),
+                runOnEdit = bool("runOnEdit", true),
+                minDepth = int("minDepth"),
+                maxDepth = int("maxDepth"),
+                substituteRegex = int("substituteRegex") ?: 0,
+            )
+        } ?: emptyList()
+    }.getOrDefault(emptyList())
+
+    /** 保存该卡正则脚本：只覆盖官方字段，未知字段原样保留。 */
+    fun applyRegexScripts(raw: String, scripts: List<CharacterRegexScript>): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val original = (ext["regex_scripts"] as? JsonArray)?.map { it as? JsonObject } ?: emptyList()
+        val scriptsJson = JsonArray(scripts.mapIndexed { i, s ->
+            val base = original.getOrNull(i)?.toMutableMap() ?: mutableMapOf()
+            regexFields.forEach { base.remove(it) }
+            base["id"] = JsonPrimitive(s.id.ifBlank { (i + 1).toString() })
+            base["scriptName"] = JsonPrimitive(s.scriptName)
+            base["findRegex"] = JsonPrimitive(s.findRegex)
+            base["replaceString"] = JsonPrimitive(s.replaceString)
+            base["trimStrings"] = JsonArray(s.trimStrings.map(::JsonPrimitive))
+            base["placement"] = JsonArray(s.placement.map(::JsonPrimitive))
+            base["disabled"] = JsonPrimitive(s.disabled)
+            base["markdownOnly"] = JsonPrimitive(s.markdownOnly)
+            base["promptOnly"] = JsonPrimitive(s.promptOnly)
+            base["runOnEdit"] = JsonPrimitive(s.runOnEdit)
+            if (s.minDepth != null) base["minDepth"] = JsonPrimitive(s.minDepth) else base.remove("minDepth")
+            if (s.maxDepth != null) base["maxDepth"] = JsonPrimitive(s.maxDepth) else base.remove("maxDepth")
+            base["substituteRegex"] = JsonPrimitive(s.substituteRegex)
+            JsonObject(base)
+        })
+        ext["regex_scripts"] = scriptsJson
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
     }
 
     /** 世界书官方位置是 data.character_book；兼容历史卡把 character_book 放在根部的写法。 */

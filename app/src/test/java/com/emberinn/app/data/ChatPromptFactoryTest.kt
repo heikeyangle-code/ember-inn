@@ -174,4 +174,24 @@ class ChatPromptFactoryTest {
         )
         assertTrue(result.messages.any { it.content.contains("深层设定文本") })
     }
+
+    @Test
+    fun `character regex applies to user message before prompt`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
+              {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽","placement":[1],"runOnEdit":true}
+            ]}}}
+        """.trimIndent()
+        val history = listOf(msg(true, "你好", "User"))
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = card,
+            history = history,
+            userName = "User",
+            charName = "角色",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+        )
+        assertTrue(result.messages.any { it.content.contains("哈喽") })
+    }
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.palette.graphics.Palette
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.CharacterDetailFields
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
@@ -238,6 +239,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** 保存世界书条目：只覆盖编辑字段，未知字段原样保留；v1（key/order/disable）归一为 v2。 */
     fun saveWorldEntries(record: CharacterRecord, entries: List<WorldEntryDraft>) {
         val root = json.parseToJsonElement(CharacterCardEdit.applyWorldEntries(record.rawJson, entries)).jsonObject
+        saveJson(record, root)
+    }
+
+    /** 读取该卡正则脚本（官方 data.extensions.regex_scripts）。 */
+    fun readRegexScripts(record: CharacterRecord): List<CharacterRegexScript> =
+        CharacterCardEdit.readRegexScripts(record.rawJson)
+
+    /** 保存该卡正则脚本：只覆盖官方字段，未知字段原样保留。 */
+    fun saveRegexScripts(record: CharacterRecord, scripts: List<CharacterRegexScript>) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyRegexScripts(record.rawJson, scripts)).jsonObject
         saveJson(record, root)
     }
 

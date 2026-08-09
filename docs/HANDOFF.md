@@ -163,7 +163,7 @@ PromptManagerCore（默认/用户顺序、enabled、injection_trigger、prepareP
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s、非法 flags）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
-🟡 global/preset/scoped 分桶与允许列表（App 层）。
+✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData；ChatPromptFactory 总装前对用户消息过 USER_INPUT、AI 消息过 AI_OUTPUT 位点——官方 script.js sendMessageAsUser/saveReply 的近似，双应用边界登记）；🟡 global/preset/scoped 分桶与允许列表（App 层）。
 
 ### 3.7 预设 ✅
 官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包。
@@ -230,7 +230,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
 ✅ 角色详情编辑页已完成（2026-08-10 复验修复，c8b22e4 起）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。本轮修复：depth_prompt/talkativeness 读写改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；“新增条目”弹层删除按钮误删第一条的 bug 已修；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-❌ 正则/变量/快捷回复 UI、模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
+✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；❌ 变量/快捷回复 UI（README 自定义扩展，排后）、模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
@@ -367,6 +367,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 最近一轮 75（2026-08-10：该卡正则——官方 RegexScriptData 读写 + 详情页 UI + 聊天位点接线）
+
+- 官方位置核实：per-character regex = character.data.extensions.regex_scripts（char-data.js RegexScriptData），
+  引擎 getRegexedString 的 USER_INPUT=1 / AI_OUTPUT=2 位点（engine.js regex_placement）
+- CharacterCardEdit 增 readRegexScripts/applyRegexScripts：只覆盖官方 12 字段（scriptName/findRegex/replaceString/
+  trimStrings/placement/disabled/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/substituteRegex），
+  未知字段（如 customFlag）原样保留；缺省 placement [1,2,5,6]、runOnEdit true、substituteRegex 0
+- 角色详情页新增“正则（该卡）”区块（列表 + 编辑弹层：名称/匹配式/替换串/裁剪串/位置 chips/禁用/仅 Markdown/
+  仅提示词/编辑执行/深度范围/宏替换档），保存一次写回
+- ChatPromptFactory 总装前应用：用户消息过 USER_INPUT、AI 消息过 AI_OUTPUT（官方在 sendMessageAsUser/saveReply
+  存前应用，本 App 在 prepare 统一应用——幂等脚本等价，双应用边界登记）；characterOverride 传角色名
+- App 纯逻辑测试（本地引擎类路径跑绿）：CharacterCardEditTest +1（正则读写+未知字段保留）、
+  ChatPromptFactoryTest +1（用户消息正则生效）
+- 边界：global/preset/scoped 分桶与允许列表未做；变量/快捷回复“该卡”UI 待做（README 自定义扩展，无官方格式）
 
 ## 最近一轮 74（2026-08-10：斜杠解析器按官方 SlashCommandParser 1:1 移植——STRICT_ESCAPING/REPLACE_GETVAR/rawQuotes/split/注释）
 
