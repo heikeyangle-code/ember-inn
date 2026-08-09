@@ -1943,7 +1943,7 @@ private fun mermaidHtmlOf(content: String): String? {
 
 /** 粗略 HTML 判定：存在成对/单标签（忽略 markdown 代码围栏内的）。 */
 private fun looksLikeHtml(content: String): Boolean {
-    val outsideFence = content.replace(Regex("```[\s\S]*?```"), "")
+    val outsideFence = content.replace(Regex("```[\\s\\S]*?```"), "")
     return Regex("<[a-zA-Z][^>]*>").containsMatchIn(outsideFence)
 }
 
@@ -1970,8 +1970,6 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
     )
 }
 
-  }
-}
 
 @Composable
 private fun SmallAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
