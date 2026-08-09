@@ -322,6 +322,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 4.9 App↔引擎接线状态
 聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。
+上下文预算对齐官方（commit `131d5c6`）：默认 32K（旧 8192 视为未设置）、maxTokens 钳制保证预算为正、
+必选提示词装不下时走 `ContextBudgetException` 人话报错；Claude 直连缓存参数已接线（详见第 6 节日志 72）。
 
 ## 5. 剩余工作（按优先级）
 
@@ -360,6 +362,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 最近一轮 72（2026-08-09：上下文预算对齐官方修复——默认 32K / 预算恒正 / Claude 缓存接线）
+
+- 根因：旧档案 `contextWindow=8192` 被自动升级成模型全窗口（272k~1M），ChatCompletion 预算 = 上下文 − 最大回复 直接为负/巨大
+  → 历史永不裁剪、世界书预算 25% 无上限 → 有卡时提示词爆炸变慢；必选提示词装不下时引擎静默返回空提示词 → “超上限不回复 / 只思考没正文”
+- App（ChatRepository）：未设置的上下文默认 32K（不再拉满模型窗口）；maxTokens 按“上下文 − 2048”钳制，预算恒正；
+  `prepared.messages.isEmpty()` 时抛 `ContextBudgetException`，ChatViewModel 显示人话报错，绝不发送空请求
+- App（ProviderViewModel）：默认上下文 32K、“自动跟随模型拉满”默认关；旧档案 8192 视为未设置
+- Engine（LlmClient）：Claude 直连补传 `enableSystemPromptCache / cachingAtDepth / cacheTTL`
+  （此前 builder 支持但调用点漏传，长上下文缓存永不生效；差分 fixture 已有 cache-enabled 用例）
+- 验证：引擎 267 测全绿（801 例对拍）；commit `131d5c6`
+- 剩余：真正“1M 流畅”还需 Memory 摘要压缩（官方 memory 扩展 1:1，P3）——当前长聊只能裁剪
 
 ## 最近一轮 71（2026-08-09：gpt-5 请求体分支 1:1 补全 + openai-params 差分 21→27 例）
 
