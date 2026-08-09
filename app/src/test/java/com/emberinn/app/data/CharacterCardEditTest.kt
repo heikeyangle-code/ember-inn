@@ -261,4 +261,31 @@ class CharacterCardEditTest {
         assertEquals(emptyMap<String, String>(), CharacterCardEdit.readVariables(cleared))
     }
 
+
+    @Test
+    fun `read and save model override`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"emberinn_model_override":{
+              "model":"gpt-5","maxTokens":4096,"contextWindow":131072,"temperature":0.8,"topP":0.9,
+              "presencePenalty":0.1,"frequencyPenalty":0.2
+            }}}}
+        """.trimIndent()
+        val o = CharacterCardEdit.readModelOverride(card)
+        assertEquals("gpt-5", o.model)
+        assertEquals(4096, o.maxTokens)
+        assertEquals(131072, o.contextWindow)
+        assertEquals(0.8, o.temperature!!, 1e-6)
+        assertEquals(0.9, o.topP!!, 1e-6)
+
+        val saved = CharacterCardEdit.applyModelOverride(card, o.copy(model = "", temperature = null))
+        val reread = CharacterCardEdit.readModelOverride(saved)
+        assertEquals("", reread.model)
+        assertEquals(null, reread.temperature)
+        assertEquals(4096, reread.maxTokens)
+
+        val cleared = CharacterCardEdit.applyModelOverride(saved, ModelOverride())
+        val clearedRead = CharacterCardEdit.readModelOverride(cleared)
+        assertEquals(null, clearedRead.maxTokens)
+        assertEquals("", clearedRead.model)
+    }
 }

@@ -91,15 +91,26 @@ class ChatRepository(context: Context) {
         // 旧档案默认值（512 / 8192）视为“未设置”：
         // 上下文取保守中间档（官方机制：默认小值、用户可手动调大，不再自动拉满模型窗口）；
         // 最大回复取厂商默认后按上下文钳制，保证预算 = 上下文 − 最大回复 恒为正。
-        val effectiveContextWindow = if (profile.contextWindow <= 0 || profile.contextWindow == 8192) {
-            DEFAULT_CONTEXT_WINDOW
-        } else {
-            profile.contextWindow
-        }
-        val effectiveMaxTokens = (if (profile.sampler.maxTokens == 512) {
-            provider.defaultMaxTokens ?: 512
-        } else profile.sampler.maxTokens)
-            .coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
+        // 角色级模型覆盖（README：模型/上下文/最大回复/采样，本角色覆盖全局；存卡内扩展字段）
+        val override = characterRawJson?.let { CharacterCardEdit.readModelOverride(it) }
+        val effectiveModel = override?.model?.ifBlank { null } ?: profile.model
+        val effectiveContextWindow = override?.contextWindow?.takeIf { it > 0 }
+            ?: if (profile.contextWindow <= 0 || profile.contextWindow == 8192) {
+                DEFAULT_CONTEXT_WINDOW
+            } else {
+                profile.contextWindow
+            }
+        val effectiveMaxTokens = override?.maxTokens?.takeIf { it > 0 }
+            ?: (if (profile.sampler.maxTokens == 512) {
+                provider.defaultMaxTokens ?: 512
+            } else profile.sampler.maxTokens)
+                .coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
+        val sampler = profile.sampler.copy(
+            temperature = override?.temperature ?: profile.sampler.temperature,
+            topP = override?.topP ?: profile.sampler.topP,
+            presencePenalty = override?.presencePenalty ?: profile.sampler.presencePenalty,
+            frequencyPenalty = override?.frequencyPenalty ?: profile.sampler.frequencyPenalty,
+        )
         // 官方 populateChatCompletion：Claude 走 claude 分支（assistant prefill 等），其余 openai
         val chatCompletionSource = when (provider.protocol) {
             "anthropic" -> "claude"
@@ -110,7 +121,7 @@ class ChatRepository(context: Context) {
             history = history,
             userName = userName,
             charName = charName,
-            model = profile.model,
+            model = effectiveModel,
             maxContextTokens = effectiveContextWindow,
             maxTokens = effectiveMaxTokens,
             type = type,
@@ -137,7 +148,7 @@ class ChatRepository(context: Context) {
         return client.streamChatCompletionsAsync(
             provider = provider,
             // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）
-            profile = profile.copy(sampler = profile.sampler.copy(maxTokens = effectiveMaxTokens)),
+            profile = profile.copy(model = effectiveModel, sampler = sampler.copy(maxTokens = effectiveMaxTokens), contextWindow = effectiveContextWindow),
             messages = prepared.messages,
             onDelta = onDelta,
             onDone = onDone,

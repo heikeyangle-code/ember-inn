@@ -8,6 +8,7 @@ import androidx.palette.graphics.Palette
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.CharacterDetailFields
+import com.emberinn.app.data.ModelOverride
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
@@ -249,6 +250,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** 保存该卡正则脚本：只覆盖官方字段，未知字段原样保留。 */
     fun saveRegexScripts(record: CharacterRecord, scripts: List<CharacterRegexScript>) {
         val root = json.parseToJsonElement(CharacterCardEdit.applyRegexScripts(record.rawJson, scripts)).jsonObject
+        saveJson(record, root)
+    }
+
+    /** 读取角色级模型覆盖。 */
+    fun readModelOverride(record: CharacterRecord): ModelOverride =
+        CharacterCardEdit.readModelOverride(record.rawJson)
+
+    /** 保存角色级模型覆盖（全空 = 跟随全局）。 */
+    fun saveModelOverride(record: CharacterRecord, o: ModelOverride) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyModelOverride(record.rawJson, o)).jsonObject
         saveJson(record, root)
     }
 

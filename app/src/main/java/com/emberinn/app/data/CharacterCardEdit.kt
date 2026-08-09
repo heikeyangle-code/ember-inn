@@ -48,6 +48,18 @@ data class WorldEntryDraft(
     val insertionOrder: Int,
 )
 
+
+/** 角色级模型覆盖（README 角色页承诺；官方无角色级字段，存 data.extensions.emberinn_model_override，见第 8 节）。 */
+data class ModelOverride(
+    val model: String = "",
+    val maxTokens: Int? = null,
+    val contextWindow: Int? = null,
+    val temperature: Double? = null,
+    val topP: Double? = null,
+    val presencePenalty: Double? = null,
+    val frequencyPenalty: Double? = null,
+)
+
 /** 该卡正则脚本（对齐官方 char-data.js RegexScriptData；缺失字段用官方默认）。 */
 data class CharacterRegexScript(
     val id: String,
@@ -314,6 +326,49 @@ object CharacterCardEdit {
             ext["emberinn_variables"] = JsonObject(
                 variables.filterValues { it.isNotEmpty() }.mapValues { (_, v) -> JsonPrimitive(v) },
             )
+        }
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
+    }
+
+
+    /** 读取角色级模型覆盖（null = 跟随全局）。 */
+    fun readModelOverride(raw: String): ModelOverride = runCatching {
+        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val ext = data["extensions"]?.jsonObject ?: return@runCatching ModelOverride()
+        val o = ext["emberinn_model_override"]?.jsonObject ?: return@runCatching ModelOverride()
+        fun str(key: String): String = (o[key] as? JsonPrimitive)?.contentOrNull ?: ""
+        fun int(key: String): Int? = (o[key] as? JsonPrimitive)?.intOrNull
+        fun dbl(key: String): Double? = (o[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
+        ModelOverride(
+            model = str("model"),
+            maxTokens = int("maxTokens"),
+            contextWindow = int("contextWindow"),
+            temperature = dbl("temperature"),
+            topP = dbl("topP"),
+            presencePenalty = dbl("presencePenalty"),
+            frequencyPenalty = dbl("frequencyPenalty"),
+        )
+    }.getOrDefault(ModelOverride())
+
+    /** 保存角色级模型覆盖；全空则移除字段（回到跟随全局）。 */
+    fun applyModelOverride(raw: String, o: ModelOverride): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val empty = o.model.isBlank() && o.maxTokens == null && o.contextWindow == null &&
+            o.temperature == null && o.topP == null && o.presencePenalty == null && o.frequencyPenalty == null
+        if (empty) {
+            ext.remove("emberinn_model_override")
+        } else {
+            ext["emberinn_model_override"] = buildJsonObject {
+                if (o.model.isNotBlank()) put("model", JsonPrimitive(o.model))
+                o.maxTokens?.let { put("maxTokens", JsonPrimitive(it)) }
+                o.contextWindow?.let { put("contextWindow", JsonPrimitive(it)) }
+                o.temperature?.let { put("temperature", JsonPrimitive(it)) }
+                o.topP?.let { put("topP", JsonPrimitive(it)) }
+                o.presencePenalty?.let { put("presencePenalty", JsonPrimitive(it)) }
+                o.frequencyPenalty?.let { put("frequencyPenalty", JsonPrimitive(it)) }
+            }
         }
         m["extensions"] = JsonObject(ext)
         JsonObject(m)

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
+import com.emberinn.app.data.ModelOverride
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -88,6 +89,9 @@ fun CharacterDetailScreen(
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
     var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
+    var modelOverride by remember(record.id) { mutableStateOf(vm.readModelOverride(record)) }
+    var modelOverrideExpanded by remember { mutableStateOf(false) }
+    var editingModelOverride by remember { mutableStateOf(false) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -141,6 +145,7 @@ fun CharacterDetailScreen(
         vm.saveWorldEntries(record, entries)
         vm.saveRegexScripts(record, regexScripts)
         vm.saveVariables(record, variables)
+        vm.saveModelOverride(record, modelOverride)
         dirty = false
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
@@ -418,6 +423,62 @@ fun CharacterDetailScreen(
                         onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增变量") }
+                }
+
+                item {
+                    SectionHeader("模型覆盖", if (modelOverride.isEmpty()) "跟随全局" else "已覆盖")
+                }
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().clickable { modelOverrideExpanded = !modelOverrideExpanded },
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "模型 / 上下文 / 采样（本角色覆盖全局）",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Text(
+                                        modelOverride.summary(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                Icon(
+                                    if (modelOverrideExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            if (modelOverrideExpanded) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedButton(
+                                        onClick = { editingModelOverride = true },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("编辑覆盖") }
+                                    if (!modelOverride.isEmpty()) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                modelOverride = ModelOverride()
+                                                dirty = true
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                        ) { Text("清除（跟随全局）", color = MaterialTheme.colorScheme.error) }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -745,6 +806,98 @@ fun CharacterDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { editingVarKey = null }) { Text("取消") }
+            },
+        )
+    }
+
+    // ---- 模型覆盖编辑对话框 ----
+    if (editingModelOverride) {
+        var mModel by remember(modelOverride) { mutableStateOf(modelOverride.model) }
+        var mMaxTokens by remember(modelOverride) { mutableStateOf(modelOverride.maxTokens?.toString() ?: "") }
+        var mContext by remember(modelOverride) { mutableStateOf(modelOverride.contextWindow?.toString() ?: "") }
+        var mTemp by remember(modelOverride) { mutableStateOf(modelOverride.temperature?.toString() ?: "") }
+        var mTopP by remember(modelOverride) { mutableStateOf(modelOverride.topP?.toString() ?: "") }
+        var mPres by remember(modelOverride) { mutableStateOf(modelOverride.presencePenalty?.toString() ?: "") }
+        var mFreq by remember(modelOverride) { mutableStateOf(modelOverride.frequencyPenalty?.toString() ?: "") }
+        AlertDialog(
+            onDismissRequest = { editingModelOverride = false },
+            title = { Text("模型覆盖") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = mModel,
+                        onValueChange = { mModel = it },
+                        label = { Text("模型（留空跟随全局）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = mContext,
+                        onValueChange = { mContext = it.filter { c -> c.isDigit() } },
+                        label = { Text("上下文上限（tokens）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = mMaxTokens,
+                        onValueChange = { mMaxTokens = it.filter { c -> c.isDigit() } },
+                        label = { Text("最大回复 tokens") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = mTemp,
+                        onValueChange = { mTemp = it },
+                        label = { Text("温度 temperature") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = mTopP,
+                        onValueChange = { mTopP = it },
+                        label = { Text("Top P") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = mPres,
+                        onValueChange = { mPres = it },
+                        label = { Text("存在惩罚 presence_penalty") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    OutlinedTextField(
+                        value = mFreq,
+                        onValueChange = { mFreq = it },
+                        label = { Text("频率惩罚 frequency_penalty") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    modelOverride = ModelOverride(
+                        model = mModel.trim(),
+                        maxTokens = mMaxTokens.toIntOrNull(),
+                        contextWindow = mContext.toIntOrNull(),
+                        temperature = mTemp.toDoubleOrNull(),
+                        topP = mTopP.toDoubleOrNull(),
+                        presencePenalty = mPres.toDoubleOrNull(),
+                        frequencyPenalty = mFreq.toDoubleOrNull(),
+                    )
+                    dirty = true
+                    editingModelOverride = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingModelOverride = false }) { Text("取消") }
             },
         )
     }
@@ -1267,3 +1420,21 @@ private fun SimpleEditRow(
     }
     HorizontalDivider()
 }
+
+/** 模型覆盖摘要（UI 展示用）。 */
+private fun ModelOverride.summary(): String {
+    val parts = mutableListOf<String>()
+    if (model.isNotBlank()) parts += model
+    contextWindow?.let { parts += "上下文 ${it}" }
+    maxTokens?.let { parts += "回复 ${it}" }
+    temperature?.let { parts += "温度 $it" }
+    topP?.let { parts += "topP $it" }
+    presencePenalty?.let { parts += "pres $it" }
+    frequencyPenalty?.let { parts += "freq $it" }
+    return if (parts.isEmpty()) "未设置，跟随全局（点击展开编辑）" else parts.joinToString(" · ")
+}
+
+/** 是否完全未设置（跟随全局）。 */
+private fun ModelOverride.isEmpty(): Boolean =
+    model.isBlank() && maxTokens == null && contextWindow == null && temperature == null &&
+        topP == null && presencePenalty == null && frequencyPenalty == null
