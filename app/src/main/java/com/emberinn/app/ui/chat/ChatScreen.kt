@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -272,10 +273,23 @@ fun ChatScreen(
                 // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
                 Brush.verticalGradient(
                     0f to MaterialTheme.colorScheme.background,
-                    1f to lerp(accent, MaterialTheme.colorScheme.background, 0.84f),
+                    0.6f to MaterialTheme.colorScheme.background,
+                    1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
                 ),
             ),
     ) {
+        // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .size(380.dp)
+                .offset(x = (-140).dp, y = 60.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(accent.copy(alpha = 0.09f), Color.Transparent),
+                    ),
+                ),
+        )
         // 源层：消息列表作为模糊来源，上下留出浮层高度
         Column(
             modifier = Modifier
