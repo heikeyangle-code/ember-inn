@@ -79,6 +79,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.hapticfeedback.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -171,6 +173,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+    val haptic = LocalHapticFeedback.current
 
     val exportChatLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -423,6 +426,7 @@ fun ChatScreen(
                 val text = input.trim()
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
                     followBottom = true
+                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                     vm.send(text, media = pendingMedia)
                     input = ""
                 }
@@ -589,6 +593,7 @@ fun ChatScreen(
             text = { Text("删除后不可恢复。") },
             confirmButton = {
                 TextButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.Reject)
                     vm.deleteMessage(index)
                     deleteTargetIndex = null
                     Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
