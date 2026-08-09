@@ -184,6 +184,8 @@ fun ChatScreen(
     var bookmarkDraftName by remember { mutableStateOf("") }
     var showBookmarksSheet by remember { mutableStateOf(false) }
     var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
+    var showImageDialog by remember { mutableStateOf(false) }
+    var imagePrompt by remember { mutableStateOf("") }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
@@ -476,6 +478,7 @@ fun ChatScreen(
             onToggleQuickBar = { showQuickBar = !showQuickBar },
             quickReplies = quickReplies,
             onQuickReply = { label -> vm.runQuickReply(label) },
+            onQuickImage = { showImageDialog = true; showQuickBar = false },
             onQuickContinue = {
                 showQuickBar = false
                 vm.continueGeneration()
@@ -610,6 +613,10 @@ fun ChatScreen(
                     }
                     MenuRow(PhosphorIcons.SpeakerHigh, "朗读这条消息") {
                         vm.narrateMessage(index)
+                        menuMessageIndex = null
+                    }
+                    MenuRow(PhosphorIcons.FileText, "翻译这条消息") {
+                        vm.translateMessage(index)
                         menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.BookmarkSimple, "创建书签（存档到此）") {
@@ -876,6 +883,34 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { editingPersona = null }) { Text("取消") }
+            },
+        )
+    }
+
+    if (showImageDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageDialog = false },
+            title = { Text("图像生成") },
+            text = {
+                OutlinedTextField(
+                    value = imagePrompt,
+                    onValueChange = { imagePrompt = it },
+                    label = { Text("提示词（AUTOMATIC1111）") },
+                    minLines = 2,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val prompt = imagePrompt.trim()
+                    if (prompt.isNotEmpty()) vm.generateImage(prompt)
+                    showImageDialog = false
+                    imagePrompt = ""
+                }) { Text("生成") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImageDialog = false }) { Text("取消") }
             },
         )
     }
@@ -1669,6 +1704,7 @@ private fun ChatInputBar(
     onToggleQuickBar: () -> Unit,
     quickReplies: List<QuickReplySlot>,
     onQuickReply: (String) -> Unit,
+    onQuickImage: () -> Unit,
     onQuickContinue: () -> Unit,
     onQuickImpersonate: () -> Unit,
     onSend: () -> Unit,
@@ -1742,6 +1778,16 @@ private fun ChatInputBar(
                     }
                 }
                 Column(modifier = Modifier.padding(end = 4.dp)) {
+                    TextButton(
+                        onClick = onQuickImage,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            "图像",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        )
+                    }
                     TextButton(
                         onClick = onQuickContinue,
                         enabled = canQuickContinue,

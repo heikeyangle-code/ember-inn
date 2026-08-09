@@ -16,9 +16,11 @@ import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GroupStore
+import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.ui.settings.VoicePrefs
@@ -33,6 +35,7 @@ import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -60,6 +63,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val quickReplyStore = QuickReplyStore(application)
     private val personaStore = PersonaStore(application)
     private val groupStore = GroupStore(application)
+    private val translateClient = TranslateClient()
+    private val imageGenClient = ImageGenClient()
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -132,6 +137,40 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun stopNarration() { TtsReader.stop() }
+
+    /** 图像生成（A1111）：成功则追加到待发送附件，用户可预览后发送。 */
+    fun generateImage(prompt: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val path = imageGenClient.generate(getApplication(), prompt)
+            withContext(Dispatchers.Main) {
+                if (path != null) {
+                    _pendingMedia.value = _pendingMedia.value + MediaAttachment(
+                        type = "image",
+                        url = path,
+                        title = "生成的图片",
+                    )
+                } else {
+                    _notice.value = "（图像生成失败：请检查 设置→服务→图像 的接口地址与来源。）"
+                }
+            }
+        }
+    }
+
+    /** 翻译指定消息（P1-6 执行层；结果放 notice）。 */
+    fun translateMessage(index: Int) {
+        val msgs = chatStore.messages(sessionId)
+        val text = msgs.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = translateClient.translate(getApplication(), text)
+            withContext(Dispatchers.Main) {
+                _notice.value = if (result.isNullOrBlank()) {
+                    "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
+                } else {
+                    "译文：$result"
+                }
+            }
+        }
+    }
 
     // ---- 书签（官方 checkpoint 存档语义）----
 

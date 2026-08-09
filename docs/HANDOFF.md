@@ -259,7 +259,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索）/ 上下文上限（tokens，占比胶囊分母）/ 最大回复 tokens（推理模型思考会占额度，512 太小正文被掐空；默认按 providers.json default_max_tokens）/ 测试连接 / 保存 / 删除确认
 - 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
 - 语音（TTS）✅（2026-08-10 第 80 轮执行层已接）：Android 系统 TTS 本机引擎，语音选择/语速/试听真实可用；朗读选项字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；聊天自动朗读（auto_generation）、消息长按“朗读这条消息”、narrate_user 已接；文本处理对齐官方（跳代码块/标签、去星号、正则 /pat/flags、去图片、按行分段排队），纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装（未做）
-- 服务页已初步完成（待复验，fa08e53）：翻译（官方 translate 扩展：provider/auto_mode/target_language/key，8 家提供商）、图像（官方 stable-diffusion：source/url/model/steps，8 个来源）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）；配置持久化，执行层 P3 接入（UI 诚实标注“配置已持久化，执行层后续接入”）
+- 服务页 ✅（2026-08-10 第 86 轮执行层已接）：翻译（LibreTranslate/DeepL/DeepLX 已实现，接口地址可配；Google/Lingva/Bing/OneRing/Yandex 登记未实现）、图像（AUTOMATIC1111 已实现；ComfyUI/SDCPP/Horde/NovelAI/OpenAI/HF 登记未实现）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）；向量 App 接线待做（引擎已就绪）
 
 ### 4.4.5 应用图标 ✅
 launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
@@ -341,7 +341,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P1（功能完整）**
 4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；~~模型覆盖~~（第 81 轮）；主题配方已做存储+UI+聊天背景应用（第 82 轮）；全局形状/字体/锁定管线与配方导出分享 P3
 5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；✅ Splash 原生启动已做（2026-08-10 第 78 轮：主题级启动窗口，windowBackground 层叠图标 + Android 12+ windowSplashScreen*，MainActivity setTheme 切换；无新依赖）；Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺（3641185）
-6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（2026-08-10 第 80 轮：自动朗读/长按朗读/narrateUser，文本处理对齐官方 tts 扩展，Android 系统 TTS）；~~服务（翻译/图像/向量）~~ → 配置页已做，剩执行层（翻译 / 图像请求）P3 接入；官方 1.18 无 STT
+6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（第 80 轮）；~~服务（翻译/图像）~~ → 执行层已接（2026-08-10 第 86 轮：翻译 LibreTranslate/DeepL/DeepLX、图像 AUTOMATIC1111，聊天长按翻译 + 快捷工具盘“图像”）；向量 App 接线待做；官方 1.18 无 STT
 
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
@@ -390,6 +390,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 86（2026-08-10：翻译/图像执行层——P1-6 收尾）
+
+- TranslateClient：LibreTranslate（表单 q/source=auto/target/api_key）、DeepL（DeepL-Auth-Key + translations[0].text）、
+  DeepLX（data）；ServicesPrefs 补 translation_url；服务页翻译卡加“接口地址”输入
+- 聊天长按消息 → “翻译这条消息”（结果进 notice；失败给配置提示）
+- ImageGenClient：AUTOMATIC1111 /sdapi/v1/txt2img（prompt/steps/512x768，images[0] base64 → filesDir/media/gen-*.png）
+- 快捷工具盘加“图像”按钮 → 提示词对话框 → 生成成功追加到待发送附件（可预览后发送）
+- 边界登记：Google/Lingva/Bing/OneRing/Yandex 翻译、ComfyUI/SDCPP/Horde/NovelAI/OpenAI/HF 图像未实现；
+  图像尺寸固定 512x768；翻译自动模式（auto_mode）仅配置不自动执行
+- 无引擎改动；App 编译走 CI
 
 ## 最近一轮 85（2026-08-10：聊天书签——官方 checkpoint 存档语义）
 

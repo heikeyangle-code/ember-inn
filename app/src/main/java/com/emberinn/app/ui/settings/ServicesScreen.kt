@@ -113,8 +113,10 @@ private fun TranslateCard() {
     var autoMode by rememberSaveable { mutableStateOf(ServicesPrefs.translateAutoMode(context)) }
     var target by rememberSaveable { mutableStateOf(ServicesPrefs.translateTargetLanguage(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.translateApiKey(context)) }
+    var url by rememberSaveable { mutableStateOf(ServicesPrefs.translateUrl(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     fun save() = ServicesPrefs.saveTranslate(context, provider, autoMode, target, apiKey)
+    fun saveUrl(v: String) { url = v; ServicesPrefs.saveTranslateUrl(context, v) }
 
     ServiceCard(title = "翻译") {
         ServiceNote("官方 translate 扩展：自动模式 / 提供商 / 目标语言 / API Key。翻译执行在 P3 接入。")
@@ -128,6 +130,7 @@ private fun TranslateCard() {
             onValueChange = { apiKey = it; save() },
             label = "API Key（按提供商需要）",
         )
+        TextFieldRow("接口地址（可空：Libre 官方/DeepL free 默认）", url) { saveUrl(it) }
     }
 }
 
