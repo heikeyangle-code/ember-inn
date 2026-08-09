@@ -6,12 +6,15 @@ import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import android.net.Uri
+import android.view.ViewGroup
+import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1864,56 +1867,109 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
 private val chatBodyMedium: androidx.compose.ui.text.TextStyle
     @Composable get() = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.8.sp)
 
-/** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。 */
+/** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
+ *  Mermaid 代码块与开启“HTML 消息”后的富文本走 WebView 兜底（README 高级渲染）。 */
 @Composable
 private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier = Modifier) {
-    Markdown(
-        content = content,
-        modifier = modifier.fillMaxWidth(),
-        imageTransformer = Coil3ImageTransformerImpl,
-        components = markdownComponents(
-            codeBlock = highlightedCodeBlock,
-            codeFence = highlightedCodeFence,
-        ),
-        colors = markdownColor(
-            text = onSurface,
-            codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
-            inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
-            dividerColor = MaterialTheme.colorScheme.outlineVariant,
-            tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
-        ),
-        typography = markdownTypography(
-            h1 = MaterialTheme.typography.titleMedium,
-            h2 = MaterialTheme.typography.titleMedium,
-            h3 = MaterialTheme.typography.titleSmall,
-            h4 = MaterialTheme.typography.titleSmall,
-            h5 = MaterialTheme.typography.titleSmall,
-            h6 = MaterialTheme.typography.titleSmall,
-            text = chatBodyMedium,
-            paragraph = chatBodyMedium,
-            ordered = chatBodyMedium,
-            bullet = chatBodyMedium,
-            list = chatBodyMedium,
-            quote = chatBodyMedium.copy(
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+    val context = LocalContext.current
+    val mermaid = mermaidHtmlOf(content)
+    val htmlEnabled = RenderPrefs.htmlEnabled(context)
+    val rawHtml = if (htmlEnabled && mermaid == null && looksLikeHtml(content)) content else null
+    when {
+        mermaid != null -> WebViewHtml(mermaid, modifier)
+        rawHtml != null -> WebViewHtml(rawHtml, modifier)
+        else -> Markdown(
+            content = content,
+            modifier = modifier.fillMaxWidth(),
+            imageTransformer = Coil3ImageTransformerImpl,
+            components = markdownComponents(
+                codeBlock = highlightedCodeBlock,
+                codeFence = highlightedCodeFence,
             ),
-            code = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            colors = markdownColor(
+                text = onSurface,
+                codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
+                inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
+                dividerColor = MaterialTheme.colorScheme.outlineVariant,
+                tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
             ),
-            inlineCode = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            typography = markdownTypography(
+                h1 = MaterialTheme.typography.titleMedium,
+                h2 = MaterialTheme.typography.titleMedium,
+                h3 = MaterialTheme.typography.titleSmall,
+                h4 = MaterialTheme.typography.titleSmall,
+                h5 = MaterialTheme.typography.titleSmall,
+                h6 = MaterialTheme.typography.titleSmall,
+                text = chatBodyMedium,
+                paragraph = chatBodyMedium,
+                ordered = chatBodyMedium,
+                bullet = chatBodyMedium,
+                list = chatBodyMedium,
+                quote = chatBodyMedium.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                ),
+                code = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                ),
+                inlineCode = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                ),
             ),
-        ),
-        padding = markdownPadding(
-            block = 3.dp,
-            list = 2.dp,
-            listItemTop = 2.dp,
-            listItemBottom = 2.dp,
-            listIndent = 10.dp,
-            codeBlock = PaddingValues(10.dp),
-            blockQuote = PaddingValues(horizontal = 8.dp),
-        ),
+            padding = markdownPadding(
+                block = 3.dp,
+                list = 2.dp,
+                listItemTop = 2.dp,
+                listItemBottom = 2.dp,
+                listIndent = 10.dp,
+                codeBlock = PaddingValues(10.dp),
+                blockQuote = PaddingValues(horizontal = 8.dp),
+            ),
+        )
+    }
+}
+
+/** 提取 ```mermaid 代码块并包成 WebView HTML（网络加载 mermaid CDN；离线无图时显示原代码）。 */
+private fun mermaidHtmlOf(content: String): String? {
+    val m = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE).find(content)
+        ?: return null
+    val diagram = m.groupValues[1].trim().replace("</", "&lt;/")
+    return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>body{margin:8px;background:transparent;color:#333} @media (prefers-color-scheme: dark){body{color:#ddd}}</style>
+</head><body><pre class="mermaid">$diagram</pre>
+<script>mermaid.initialize({startOnLoad:true,theme:'base'});</script></body></html>"""
+}
+
+/** 粗略 HTML 判定：存在成对/单标签（忽略 markdown 代码围栏内的）。 */
+private fun looksLikeHtml(content: String): Boolean {
+    val outsideFence = content.replace(Regex("```[\s\S]*?```"), "")
+    return Regex("<[a-zA-Z][^>]*>").containsMatchIn(outsideFence)
+}
+
+/** WebView 兜底渲染（HTML 消息 / Mermaid）。 */
+@Composable
+private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
+    AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                setBackgroundColor(0x00000000)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+                loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+            }
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(max = 420.dp)
+            .clip(RoundedCornerShape(12.dp)),
     )
+}
+
+  }
 }
 
 @Composable

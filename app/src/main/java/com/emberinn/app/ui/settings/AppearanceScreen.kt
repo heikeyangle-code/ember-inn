@@ -23,15 +23,21 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
@@ -86,6 +92,27 @@ fun AppearanceScreen(
                     selected = preset.id == themePreset.id,
                     onClick = { onThemeChanged(themeMode, preset) },
                 )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val renderContext = LocalContext.current
+                var htmlEnabled by remember { mutableStateOf(RenderPrefs.htmlEnabled(renderContext)) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { htmlEnabled = !htmlEnabled; RenderPrefs.setHtmlEnabled(renderContext, htmlEnabled) }
+                        .padding(vertical = 10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("HTML 消息（WebView 渲染）", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "消息含 HTML 标签时用 WebView 展示；Mermaid 代码块始终走 WebView 兜底",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it) })
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ComingSoonCard()
