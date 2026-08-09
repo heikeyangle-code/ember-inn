@@ -93,6 +93,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -1297,6 +1298,10 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
     }
 }
 
+// 中文阅读行高：官方未指定（继承浏览器 normal≈1.2），按项目要求取 1.55（16sp × 1.55 ≈ 24.8sp）
+private val chatBodyMedium: androidx.compose.ui.text.TextStyle
+    @Composable get() = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.8.sp)
+
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。 */
 @Composable
 private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier = Modifier) {
@@ -1305,6 +1310,7 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         modifier = modifier.fillMaxWidth(),
         imageTransformer = Coil3ImageTransformerImpl,
         components = markdownComponents(
+            paragraph = { model -> LatexParagraph(content = model.content, node = model.node) },
             codeBlock = highlightedCodeBlock,
             codeFence = highlightedCodeFence,
         ),
@@ -1322,12 +1328,12 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
             h4 = MaterialTheme.typography.titleSmall,
             h5 = MaterialTheme.typography.titleSmall,
             h6 = MaterialTheme.typography.titleSmall,
-            text = MaterialTheme.typography.bodyMedium,
-            paragraph = MaterialTheme.typography.bodyMedium,
-            ordered = MaterialTheme.typography.bodyMedium,
-            bullet = MaterialTheme.typography.bodyMedium,
-            list = MaterialTheme.typography.bodyMedium,
-            quote = MaterialTheme.typography.bodyMedium.copy(
+            text = chatBodyMedium,
+            paragraph = chatBodyMedium,
+            ordered = chatBodyMedium,
+            bullet = chatBodyMedium,
+            list = chatBodyMedium,
+            quote = chatBodyMedium.copy(
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
             ),
             code = MaterialTheme.typography.bodySmall.copy(
