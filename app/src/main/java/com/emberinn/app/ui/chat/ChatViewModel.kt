@@ -133,6 +133,29 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun stopNarration() { TtsReader.stop() }
 
+    // ---- 书签（官方 checkpoint 存档语义）----
+
+    private val _bookmarks = MutableStateFlow(chatStore.bookmarkNames(sessionId))
+    val bookmarks: StateFlow<List<String>> = _bookmarks
+
+    fun defaultBookmarkName(): String = "Checkpoint #${chatStore.bookmarkNames(sessionId).size + 1}"
+
+    fun createBookmark(name: String) {
+        if (chatStore.createBookmark(sessionId, name)) {
+            _bookmarks.value = chatStore.bookmarkNames(sessionId)
+            refreshMessages()
+        }
+    }
+
+    fun openBookmark(name: String) {
+        if (chatStore.openBookmark(sessionId, name)) refreshMessages()
+    }
+
+    fun deleteBookmark(name: String) {
+        chatStore.deleteBookmark(sessionId, name)
+        _bookmarks.value = chatStore.bookmarkNames(sessionId)
+    }
+
     private fun narrateText(text: String) {
         val voice = VoicePrefs.read(getApplication())
         if (!voice.enabled) return

@@ -164,6 +164,7 @@ fun ChatScreen(
     val chatBackground by vm.chatBackground.collectAsState()
     val personas by vm.personas.collectAsState()
     val activePersona by vm.activePersona.collectAsState()
+    val bookmarks by vm.bookmarks.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -179,6 +180,10 @@ fun ChatScreen(
     var personaDraftName by remember { mutableStateOf("") }
     var personaDraftDesc by remember { mutableStateOf("") }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
+    var showBookmarkDialog by remember { mutableStateOf(false) }
+    var bookmarkDraftName by remember { mutableStateOf("") }
+    var showBookmarksSheet by remember { mutableStateOf(false) }
+    var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
@@ -607,6 +612,11 @@ fun ChatScreen(
                         vm.narrateMessage(index)
                         menuMessageIndex = null
                     }
+                    MenuRow(PhosphorIcons.BookmarkSimple, "创建书签（存档到此）") {
+                        menuMessageIndex = null
+                        bookmarkDraftName = vm.defaultBookmarkName()
+                        showBookmarkDialog = true
+                    }
                     val swipeCount = vm.swipeCountOf(el)
                     if (!isUserMsg) {
                         MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
@@ -739,6 +749,10 @@ fun ChatScreen(
                         vm.clearChatBackground()
                     }
                 }
+                MenuRow(PhosphorIcons.BookmarkSimple, "书签") {
+                    showMore = false
+                    showBookmarksSheet = true
+                }
                 MenuRow(PhosphorIcons.Person, "人设") {
                     showMore = false
                     showPersonaPicker = true
@@ -862,6 +876,88 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { editingPersona = null }) { Text("取消") }
+            },
+        )
+    }
+
+    if (showBookmarkDialog) {
+        AlertDialog(
+            onDismissRequest = { showBookmarkDialog = false },
+            title = { Text("创建书签") },
+            text = {
+                OutlinedTextField(
+                    value = bookmarkDraftName,
+                    onValueChange = { bookmarkDraftName = it },
+                    label = { Text("书签名（当前聊天存档）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = bookmarkDraftName.trim()
+                    if (name.isNotEmpty()) vm.createBookmark(name)
+                    showBookmarkDialog = false
+                }) { Text("创建") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBookmarkDialog = false }) { Text("取消") }
+            },
+        )
+    }
+
+    if (showBookmarksSheet) {
+        ModalBottomSheet(onDismissRequest = { showBookmarksSheet = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "书签",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                if (bookmarks.isEmpty()) {
+                    Text(
+                        "还没有书签。长按消息 → 创建书签，把当前聊天存档下来。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    )
+                }
+                bookmarks.forEach { name ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            showBookmarksSheet = false
+                            bookmarkToOpen = name
+                        }.padding(horizontal = 20.dp, vertical = 8.dp),
+                    ) {
+                        Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            vm.deleteBookmark(name)
+                        }, modifier = Modifier.size(32.dp)) {
+                            Icon(PhosphorIcons.Delete, contentDescription = "删除书签", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                }
+            }
+        }
+    }
+
+    bookmarkToOpen?.let { name ->
+        AlertDialog(
+            onDismissRequest = { bookmarkToOpen = null },
+            title = { Text("打开书签「$name」？") },
+            text = { Text("当前聊天会被书签存档内容替换，此操作不可撤销。建议先创建新书签。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.openBookmark(name)
+                    bookmarkToOpen = null
+                }) { Text("打开", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { bookmarkToOpen = null }) { Text("取消") }
             },
         )
     }

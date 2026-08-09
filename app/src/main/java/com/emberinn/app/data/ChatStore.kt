@@ -417,6 +417,48 @@ class ChatStore(private val context: Context) {
         }
     }
 
+
+    // ---- 书签（对齐官方 bookmarks.js：checkpoint 存档 + 消息 extra.bookmark_link）----
+
+    /** 书签名列表（chats/{sessionId}-Checkpoint-*.jsonl）。 */
+    fun bookmarkNames(sessionId: String): List<String> =
+        chatsDir.listFiles { f -> f.name.startsWith("$sessionId-Checkpoint-") && f.extension == "jsonl" }
+            ?.map { it.name.removePrefix("$sessionId-Checkpoint-").removeSuffix(".jsonl") }
+            ?.sortedDescending() ?: emptyList()
+
+    /** 创建书签：复制当前聊天为存档，并把最后一条 AI 消息 extra.bookmark_link 写入（官方 saveBookmark）。 */
+    fun createBookmark(sessionId: String, name: String): Boolean {
+        val src = File(chatsDir, "$sessionId.jsonl")
+        if (!src.exists()) return false
+        val target = File(chatsDir, "$sessionId-Checkpoint-$name.jsonl")
+        target.writeText(src.readText())
+        // 官方：lastMes.extra.bookmark_link = name
+        val list = messages(sessionId).toMutableList()
+        val aiIdx = list.indexOfLast { el ->
+            el.jsonObject["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } != true
+        }
+        if (aiIdx >= 0) {
+            val el = list[aiIdx].jsonObject
+            val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+            extra["bookmark_link"] = JsonPrimitive(name)
+            list[aiIdx] = JsonObject(el + ("extra" to JsonObject(extra)))
+            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        }
+        return true
+    }
+
+    /** 打开书签：用存档内容替换当前聊天（官方切换 checkpoint chat；本 App 载入当前会话，调用方需二次确认）。 */
+    fun openBookmark(sessionId: String, name: String): Boolean {
+        val target = File(chatsDir, "$sessionId-Checkpoint-$name.jsonl")
+        if (!target.exists()) return false
+        File(chatsDir, "$sessionId.jsonl").writeText(target.readText())
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        return true
+    }
+
+    fun deleteBookmark(sessionId: String, name: String) {
+        File(chatsDir, "$sessionId-Checkpoint-$name.jsonl").delete()
+    }
     /** 清理被移除消息引用的本地附件文件（官方删除消息/附件会删文件；data URL 跳过）。 */
     private fun deleteMediaFiles(elements: List<JsonElement>) {
         elements.forEach { el ->

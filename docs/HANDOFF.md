@@ -346,7 +346,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊：✅ App 调度层已接（2026-08-10 第 84 轮：GroupStore + 新建群聊 + GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成；SWAP 用本人卡、APPEND 用合并卡）；🟡 未做：自然/池化激活策略、narrator、队列 UI、群聊深度提示接线（引擎已有，App 未接）、群聊 continue 多轮链；✅ 人设管理 UI（第 83 轮）；聊天书签/快照（背景已做，见 3.8/4.3）
+9. 群聊：✅ App 调度层已接（2026-08-10 第 84 轮：GroupStore + 新建群聊 + GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成；SWAP 用本人卡、APPEND 用合并卡）；🟡 未做：自然/池化激活策略、narrator、队列 UI、群聊深度提示接线（引擎已有，App 未接）、群聊 continue 多轮链；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（2026-08-10 第 85 轮：官方 checkpoint 存档语义——createBookmark 复制聊天 + 最后 AI 消息 extra.bookmark_link；长按“创建书签”、⋮“书签”列表打开/删除；官方 1.18 无独立快照，书签即存档）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
 
 **备注（不能纯引擎做 / 需 App 或外部）**
@@ -390,6 +390,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 85（2026-08-10：聊天书签——官方 checkpoint 存档语义）
+
+- 对齐官方 bookmarks.js：创建书签 = 复制当前聊天为 chats/{id}-Checkpoint-{name}.jsonl，
+  最后一条 AI 消息 extra.bookmark_link = 书签名
+- 长按消息 → “创建书签（存档到此）”；⋮ 菜单 → “书签”列表（点击打开=载入当前会话需二次确认；删除）
+- 官方 1.18 无独立快照扩展，书签即 checkpoint 存档（HANDOFF 原“快照”项按此落地）
+- 边界登记：打开书签 = 覆盖当前会话（官方是切换 chat 文件）；书签名冲突直接覆盖
 
 ## 最近一轮 84（2026-08-10：群聊 App 调度层——P2-9 大项）
 
