@@ -16,7 +16,6 @@ jtokkit = "1.1.0"
 okhttp = "5.4.0"
 media3 = "1.10.0"
 markdown = "0.43.0"
-latex = "1.5.2"
 datastore = "1.2.1"
 lottie = "6.7.1"
 cloudy = "0.7.1"
@@ -41,7 +40,6 @@ markdown-renderer = { group = "com.mikepenz", name = "multiplatform-markdown-ren
 markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "markdown" }
 markdown-renderer-coil3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-coil3", version.ref = "markdown" }
 markdown-renderer-code = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-code", version.ref = "markdown" }
-latex-renderer = { group = "io.github.huarangmeng", name = "latex-renderer", version.ref = "latex" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
 cloudy = { group = "com.github.skydoves", name = "cloudy", version.ref = "cloudy" }

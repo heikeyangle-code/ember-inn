@@ -85,7 +85,6 @@ dependencies {
     implementation(libs.markdown.renderer.m3)
     implementation(libs.markdown.renderer.coil3)
     implementation(libs.markdown.renderer.code)
-    implementation(libs.latex.renderer)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.palette)

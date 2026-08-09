@@ -1310,7 +1310,6 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         modifier = modifier.fillMaxWidth(),
         imageTransformer = Coil3ImageTransformerImpl,
         components = markdownComponents(
-            paragraph = { model -> LatexParagraph(content = model.content, node = model.node) },
             codeBlock = highlightedCodeBlock,
             codeFence = highlightedCodeFence,
         ),
