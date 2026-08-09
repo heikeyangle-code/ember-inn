@@ -169,7 +169,7 @@ RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s
 官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包。
 
 ### 3.8 聊天 🟡
-jsonl 基础 + BYAF 聊天导入 + continue nudge。
+jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 层，对齐官方 `swipe_id`/`swipes[]`/`swipe_info[]`：ensureSwipes 初始化、syncSwipeToMes 同步、Generate('swipe') 追加、deleteSwipe、editMessage 写回）**。
 ❌ 聊天元数据（背景/书签/快照）（注：官方无 chat v2，此前审计有误已删）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
@@ -235,11 +235,13 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge。
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
 > 现状：continue 走官方默认 nudge 路径（历史“新的在前”对齐 setOpenAIMessages）；思考过程走 onReasoning 独立通道（流式显示 + 生成后折叠卡片）；重新生成/继续只对最后一条 AI 生效；新角色空会话自动补 first_mes 开场白。
 消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：更新文本 + 清 extra.bias；regex/isEdit 待正则 UI）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、气泡限宽 78%、间距/圆角/留白加大、顶栏与输入栏为 Cloudy 0.7.1 真背板模糊玻璃（sky 源层 + cloudy 浮层，正文区不模糊）、空状态居中留白。
-❌ 滑动切回复、角色详情入口、Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，排 P2）。
+❌ 角色详情入口、Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，排 P2）。
+✅ **滑动切回复已做（README #1731“每条消息都能滑”）**：数据模型对齐官方 jsonl（`swipe_id` / `swipes[]` / `swipe_info[]`，ChatStore.ensureSwipes 初始化 + syncSwipeToMes 语义同步 mes/send_date/gen_*/extra）；AI 气泡横滑（右=下一个/最后一条 AI 越界生成新变体，左=上一个）；计数条 `n/N` + CaretLeft/Right（有变体时显示）；长按菜单“上一个/下一个回复”“删除当前回复”（官方 deleteSwipe 的 newSwipeId 规则）+“生成新回复（变体）”（官方 Generate('swipe')：coreChat.pop() 排除最后一条，结果追加进最后一条 swipes 不新增消息）；编辑消息同步写回 swipes[swipe_id]（官方 editMessage）。导出 jsonl 含 swipes 字段可直接进酒馆。近似：世界书扫描用排除最后一条的历史（与 regenerate 同策略；官方 swipe 扫描含最后一条——差异影响小，登记）。
+❌ 滑动切回复的 swipe picker（变体历史弹层跳转）未做，排 P2。
 ✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
 ⚠️ 快捷工具盘仍只有“继续/冒充”两个按钮（README 规格：世界书状态/上下文胶囊/快捷回复/正则开关/图像生成/附件/TTS），待升级。
 现状补充：键盘适配（adjustResize + imePadding）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
-近期修复（2026-08-09）：自动滚底=贴底跟随+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；滚动跟随仅贴底时滚、发送复位；首页预览走 ViewModel 缓存（不再组合期读盘）。
+近期修复（2026-08-09）：自动滚底=贴底跟随+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；滚动跟随仅贴底时滚、发送复位；首页预览走 ViewModel 缓存（不再组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
 全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。
@@ -329,12 +331,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **P0（“打开即聊”体验短板）**
 1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
-2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装~~ → 已做；剩滑动切回复（需要 swipes 数据模型）
+2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装/滑动切回复~~ → 已做；剩 swipe picker（变体历史跳转，P2）
 3. ~~全局搜索~~ → 首页搜索已接角色/会话/世界书/设置；设置结果深链到具体子页未做（目前跳设置 Tab）
 
 **P1（功能完整）**
 4. 角色详情编辑页：卡字段编辑、世界书管理 UI、正则/变量/快捷回复、模型覆盖、主题配方
-5. 聊天页 LaTeX 渲染；滑动切回复（上下文胶囊 / 世界书命中面板 / 媒体附件渲染已完成）；Splash 原生启动 / Lottie 品牌开场 / 余烬火花 mark / 中文行高 1.5–1.6（README 对账发现的未做项）
+5. 聊天页 LaTeX 渲染（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复已完成）；Splash 原生启动 / Lottie 品牌开场 / 余烬火花 mark / 中文行高 1.5–1.6（README 对账发现的未做项）
 6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；剩语音（TTS/STT）、服务（翻译/图像/向量）
 
 **P2（引擎边界）**
