@@ -191,6 +191,7 @@ fun ChatScreen(
     var showImageDialog by remember { mutableStateOf(false) }
     var showDataBank by remember { mutableStateOf(false) }
     var showGroupSettings by remember { mutableStateOf(false) }
+    var pendingDisplay by remember { mutableStateOf<String?>(null) }
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
     var groupStrategy by rememberSaveable { mutableStateOf(vm.group?.activationStrategy ?: "natural") }
     var imagePrompt by remember { mutableStateOf("") }
@@ -407,6 +408,9 @@ fun ChatScreen(
                                 isUser = isUserMsg,
                                 text = text,
                                 media = mediaOf(el),
+                                mediaDisplay = extraDisplayOf(el),
+                                mediaIndex = extraIndexOf(el),
+                                onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
                                 reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
                                 reasoningExpanded = reasoningExpanded,
                                 onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
@@ -486,6 +490,8 @@ fun ChatScreen(
             input = input,
             onInputChange = { input = it },
             pendingMedia = pendingMedia,
+            pendingDisplay = pendingDisplay,
+            onDisplayChange = { pendingDisplay = it },
             onRemoveMedia = { index -> vm.removePendingMedia(index) },
             isStreaming = isStreaming,
             canQuickContinue = !isStreaming && lastAiIndex >= 0 &&
@@ -512,8 +518,9 @@ fun ChatScreen(
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
                     followBottom = true
                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    vm.send(text, media = pendingMedia)
+                    vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay, mediaIndex = 0)
                     input = ""
+                    pendingDisplay = null
                 }
             },
             onStop = { vm.stop() },
@@ -1310,6 +1317,9 @@ private fun MessageRow(
     isUser: Boolean,
     text: String,
     media: List<MediaAttachment>,
+    mediaDisplay: String? = null,
+    mediaIndex: Int? = null,
+    onMediaIndexChange: (Int) -> Unit = {},
     reasoning: String?,
     reasoningExpanded: Boolean = false,
     onReasoningToggle: () -> Unit = {},
@@ -1458,7 +1468,7 @@ private fun MessageRow(
             }
             if (media.isNotEmpty()) {
                 Spacer(Modifier.size(8.dp))
-                MessageMedia(media = media)
+                MessageMedia(media = media, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange)
             }
             if (showActions) {
                 Spacer(Modifier.size(8.dp))
@@ -1699,26 +1709,100 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
     }
 }
 
-/** 消息附件渲染：图片/GIF 用 Coil3（coil-gif），音视频用 Media3 ExoPlayer（README 渲染规范）。 */
+/** 消息附件渲染：图片/GIF 用 Coil3（coil-gif），音视频用 Media3 ExoPlayer（README 渲染规范）。
+ *  gallery = 官方 extra.media_display=GALLERY：多图单张显示 + 左右滑切（media_index 落盘）+ 圆点计数；
+ *  list / 缺省 = 全部纵向排列。 */
 @Composable
-private fun MessageMedia(media: List<MediaAttachment>) {
+private fun MessageMedia(
+    media: List<MediaAttachment>,
+    display: String? = null,
+    index: Int? = null,
+    onIndexChange: (Int) -> Unit = {},
+) {
+    val images = media.filter { it.type == "image" }
+    val others = media.filter { it.type != "image" }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        media.forEach { m ->
-            when (m.type) {
-                "image" -> AsyncImage(
-                    model = mediaModel(m.url),
-                    contentDescription = m.title.ifBlank { "图片" },
+        if (display == "gallery" && images.size > 1) {
+            val safeIndex = (index ?: 0).coerceIn(0, images.lastIndex)
+            val image = images[safeIndex]
+            val threshold = with(LocalDensity.current) { 48.dp.toPx() }
+            var dragTotal by remember { mutableStateOf(0f) }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(images.size, safeIndex) {
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { change, amount ->
+                                change.consume()
+                                dragTotal += amount
+                            },
+                            onDragEnd = {
+                                if (dragTotal < -threshold && safeIndex < images.lastIndex) {
+                                    onIndexChange(safeIndex + 1)
+                                } else if (dragTotal > threshold && safeIndex > 0) {
+                                    onIndexChange(safeIndex - 1)
+                                }
+                                dragTotal = 0f
+                            },
+                            onDragCancel = { dragTotal = 0f },
+                        )
+                    },
+            ) {
+                AsyncImage(
+                    model = mediaModel(image.url),
+                    contentDescription = image.title.ifBlank { "图片" },
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 320.dp)
                         .clip(RoundedCornerShape(12.dp)),
                 )
-                else -> MediaPlayer(m.url, isAudio = m.type == "audio")
+            }
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            ) {
+                repeat(images.size) { i ->
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (i == safeIndex) 7.dp else 5.dp)
+                            .background(
+                                if (i == safeIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                CircleShape,
+                            ),
+                    )
+                }
+            }
+        } else {
+            media.forEach { m ->
+                when (m.type) {
+                    "image" -> AsyncImage(
+                        model = mediaModel(m.url),
+                        contentDescription = m.title.ifBlank { "图片" },
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 320.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                    )
+                    else -> MediaPlayer(m.url, isAudio = m.type == "audio")
+                }
             }
         }
+        others.forEach { m -> MediaPlayer(m.url, isAudio = m.type == "audio") }
     }
 }
+
+/** 读取消息 extra.media_display（list/gallery）。 */
+private fun extraDisplayOf(el: JsonElement): String? =
+    (el.jsonObject["extra"] as? JsonObject)?.get("media_display")?.jsonPrimitive?.contentOrNull
+        ?.takeIf { it == "list" || it == "gallery" }
+
+/** 读取消息 extra.media_index（gallery 当前选中，缺省 0）。 */
+private fun extraIndexOf(el: JsonElement): Int? =
+    (el.jsonObject["extra"] as? JsonObject)?.get("media_index")?.jsonPrimitive?.content?.toIntOrNull()
 
 @Composable
 private fun MediaPlayer(url: String, isAudio: Boolean) {
@@ -1875,6 +1959,8 @@ private fun ChatInputBar(
     input: String,
     onInputChange: (String) -> Unit,
     pendingMedia: List<MediaAttachment>,
+    pendingDisplay: String?,
+    onDisplayChange: (String?) -> Unit,
     onRemoveMedia: (Int) -> Unit,
     isStreaming: Boolean,
     canQuickContinue: Boolean,
@@ -1917,6 +2003,26 @@ private fun ChatInputBar(
                 }
             }
             if (pendingMedia.isNotEmpty()) {
+                if (pendingMedia.count { it.type == "image" } > 1) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, top = 6.dp),
+                    ) {
+                        Text("显示：", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = pendingDisplay != "gallery",
+                            onClick = { onDisplayChange(null) },
+                            label = { Text("列表") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = pendingDisplay == "gallery",
+                            onClick = { onDisplayChange("gallery") },
+                            label = { Text("图库") },
+                        )
+                    }
+                }
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

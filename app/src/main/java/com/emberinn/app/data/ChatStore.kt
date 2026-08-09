@@ -94,6 +94,8 @@ class ChatStore(private val context: Context) {
         genStarted: String? = null,
         genFinished: String? = null,
         reasoning: String? = null,
+        mediaDisplay: String? = null,
+        mediaIndex: Int? = null,
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
@@ -111,6 +113,9 @@ class ChatStore(private val context: Context) {
                         }
                     }),
                 )
+                // 官方 extra.media_display：list / gallery；media_index 为 gallery 当前选中
+                mediaDisplay?.takeIf { it == "list" || it == "gallery" }?.let { put("media_display", JsonPrimitive(it)) }
+                mediaIndex?.coerceAtLeast(0)?.let { put("media_index", JsonPrimitive(it)) }
             }
             // 官方消息 extra 字段：api / model / reasoning（导出对齐官方 jsonl）
             if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))

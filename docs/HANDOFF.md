@@ -325,7 +325,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   - providers.json 24 家补 default_context_window + model_contexts（gpt-5.5 272K / claude 1M / gemini 1M / deepseek 1M / grok-4.3 1M / kimi-k3 1M / glm 200K / qwen 262K / 豆包 256K 等）；上下文胶囊分母默认按所选模型，设置页显示“按模型自动”（手动改数字后退出自动）。
 - ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
 - ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
-- ⚠️ 未做（登记）：图库切换（LIST/GALLERY + media_index 左右滑）、从 URL 导入附件、URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
+- ⚠️ 图库切换已做（第 95 轮：发送端列表/图库切换 + 渲染横滑/圆点 + media_index 落盘）；未做（登记）：从 URL 导入附件、URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
 
 ### 4.9 App↔引擎接线状态
 聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。
@@ -392,6 +392,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | 已做（第 94 轮：设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 95（2026-08-10：图库切换 LIST/GALLERY + media_index 左右滑）
+
+- 发送端：输入区待发多图时显示“列表/图库”切换（默认列表），发送时 extra 写 media_display + media_index=0（ChatStore.append 增参）
+- 渲染端：MessageMedia 支持 gallery（单张 + 横滑切图 + 圆点计数；滑动写回 extra.media_index，ChatViewModel.setMediaIndex）；
+  含音视频时非图媒体仍在图库下方列出；list/缺省保持纵向排列
+- 对齐官方 extra.media_display / media_index 语义；引擎 MediaDisplay 常量已有
+- 无引擎改动；App 编译走 CI
 
 ## 最近一轮 94（2026-08-10：世界书设置 UI——扫描深度/递归/预算可调）
 

@@ -512,7 +512,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ProviderState.refresh(profile)
     }
 
-    fun send(text: String, userName: String = "User", media: List<MediaAttachment> = emptyList()) {
+    fun send(
+        text: String,
+        userName: String = "User",
+        media: List<MediaAttachment> = emptyList(),
+        mediaDisplay: String? = null,
+        mediaIndex: Int? = null,
+    ) {
         if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return
         // 官方 ST：输入以 / 开头即斜杠命令（消息类直接插消息，不触发生成；未知命令只提示不发送）
         if (text.trimStart().startsWith("/") && media.isEmpty()) {
@@ -530,7 +536,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         currentUserName = userName
         _notice.value = null
         _impersonated.value = null
-        chatStore.append(sessionId, true, text, userName, media)
+        chatStore.append(sessionId, true, text, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
         _pendingMedia.value = emptyList()
         refreshMessages()
         val voice = VoicePrefs.read(getApplication())
@@ -712,6 +718,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 跳转到指定变体（swipe picker 点击；对齐官方 swipe）。 */
     fun swipeToVariant(index: Int, variant: Int) {
         if (chatStore.swipeTo(sessionId, index, variant)) refreshMessages()
+    }
+
+    /** 图库模式左右滑：更新消息 extra.media_index（对齐官方 gallery media_index）。 */
+    fun setMediaIndex(messageIndex: Int, mediaIndex: Int) {
+        val list = chatStore.messages(sessionId).toMutableList()
+        if (messageIndex !in list.indices) return
+        val el = list[messageIndex].jsonObject
+        val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        extra["media_index"] = JsonPrimitive(mediaIndex)
+        list[messageIndex] = JsonObject(el + ("extra" to JsonObject(extra)))
+        chatStore.replace(sessionId, list)
+        refreshMessages()
     }
 
     /** 当前 swipes 下标（UI 计数 chip 用）。 */
