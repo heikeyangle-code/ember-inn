@@ -13,6 +13,7 @@ import com.emberinn.engine.worldinfo.InMemoryVectorStore
 import com.emberinn.engine.worldinfo.StringHash
 import com.emberinn.engine.worldinfo.VectorChatSettings
 import com.emberinn.engine.worldinfo.VectorItem
+import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.worldinfo.VectorSettings
 
 /**
@@ -378,5 +379,33 @@ class ChatPromptFactoryTest {
             val norm = kotlin.math.sqrt(v.sumOf { it * it })
             v.map { if (norm > 0.0) it / norm else 0.0 }
         }
+    }
+
+    @Test
+    fun `group depth prompts are injected as in chat extensions`() {
+        val history = listOf(
+            msg(false, "回应", "小炭"),
+            msg(true, "你好", "User"),
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            inChatExtensions = listOf(
+                PromptItem(
+                    identifier = "groupDepthPrompt0",
+                    name = "群聊深度提示 1",
+                    content = "群聊深度提示文本",
+                    role = "system",
+                    injectionDepth = 1,
+                    injectionOrder = 100,
+                ),
+            ),
+        )
+        assertTrue(result.messages.any { it.content == "群聊深度提示文本" })
     }
 }

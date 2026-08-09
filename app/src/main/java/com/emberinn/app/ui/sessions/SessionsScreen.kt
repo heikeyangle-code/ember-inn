@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -59,6 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
+import com.emberinn.engine.group.GroupGenerationMode
 import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
@@ -80,6 +82,8 @@ fun SessionsScreen(
     var showGroupSheet by rememberSaveable { mutableStateOf(false) }
     var groupName by rememberSaveable { mutableStateOf("") }
     var groupMemberIds by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var groupMode by rememberSaveable { mutableStateOf(GroupGenerationMode.APPEND) }
+    var groupStrategy by rememberSaveable { mutableStateOf("natural") }
     var menuSession by remember { mutableStateOf<SessionRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<SessionRecord?>(null) }
 
@@ -171,6 +175,8 @@ fun SessionsScreen(
                 showNewSheet = false
                 groupName = ""
                 groupMemberIds = emptySet()
+                groupMode = GroupGenerationMode.APPEND
+                groupStrategy = "natural"
                 showGroupSheet = true
             },
             onDismiss = { showNewSheet = false },
@@ -190,6 +196,44 @@ fun SessionsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Text(
+                        "生成模式",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row {
+                        FilterChip(
+                            selected = groupMode == GroupGenerationMode.APPEND,
+                            onClick = { groupMode = GroupGenerationMode.APPEND },
+                            label = { Text("全员依次（APPEND）") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = groupMode == GroupGenerationMode.SWAP,
+                            onClick = { groupMode = GroupGenerationMode.SWAP },
+                            label = { Text("轮流（SWAP）") },
+                        )
+                    }
+                    Text(
+                        "激活策略",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row {
+                        FilterChip(
+                            selected = groupStrategy == "natural",
+                            onClick = { groupStrategy = "natural" },
+                            label = { Text("natural（点名/话痨）") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = groupStrategy == "pooled",
+                            onClick = { groupStrategy = "pooled" },
+                            label = { Text("pooled（全体池）") },
+                        )
+                    }
                     Text(
                         "选择成员（至少 2 个）",
                         style = MaterialTheme.typography.labelMedium,
@@ -230,7 +274,7 @@ fun SessionsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val session = vm.newGroupSession(groupMemberIds.toList(), groupName)
+                    val session = vm.newGroupSession(groupMemberIds.toList(), groupName, groupMode, groupStrategy)
                     showGroupSheet = false
                     if (session != null) onOpenSession(session)
                 }) { Text("创建") }

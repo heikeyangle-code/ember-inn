@@ -219,7 +219,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 引擎测试 267 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
-- ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 第 84 轮：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；🟡 natural/pooled 激活、narrator、队列 UI、深度提示 App 接线、群聊 continue 链。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
+- ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 第 84 轮：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活（第 87 轮）+ 队列提示（第 87 轮）；✅ 深度提示 App 接线（第 90 轮：in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（第 90 轮：shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（第 90 轮：新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
 - ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
 
 ## 4. App / UI 进度
@@ -347,7 +347,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 ✅ + 常用/消息类斜杠命令 ✅（第 89 轮：纯函数/变量/if + sendas/send/sys/sysname/comment/message-role/message-name/hide/unhide/delname/addswipe/delswipe；UI 已能做到的不做；/gen /genraw /trigger /inject /while 等异步生成类仍缺）+ slash 差分 fixture ✅（18→43 例）
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊：✅ App 调度层已接（第 84 轮）+ natural/pooled 激活策略与队列提示（2026-08-10 第 87 轮：GroupRecord.activationStrategy 默认 natural，send 时按官方 GroupActivationEngine.natural/pooled 选人，空则回退全成员；多人时 notice 提示“本轮 X 位成员依次回复”）；🟡 未做：narrator、群聊深度提示 App 接线、自动续写（GroupLoopEngine.shouldAutoContinue）、群聊 continue 多轮链、策略切换 UI；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（第 85 轮）
+9. 群聊：✅ App 调度层（第 84 轮）+ natural/pooled 激活与队列提示（第 87 轮）+ 深度提示接线 + 自动续写链 + 策略切换 UI（第 90 轮）；narrator 按官方 1.18 无独立模式（/sys 旁白消息可用）；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（第 85 轮）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
 
 **备注（不能纯引擎做 / 需 App 或外部）**
@@ -392,6 +392,26 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 90（2026-08-10：群聊剩余收尾——深度提示接线 + 自动续写 + 策略 UI）
+
+- **PromptPipeline 支持 in-chat 扩展注入**：PopulateInput/PrepareInput 增 inChatExtensions（默认空，差分无影响）；
+  populationInjectionPrompts 的 in_chat 通道不再恒空，App 侧群聊深度提示从这里进（order==100 规则仍是官方 1:1）
+- **群聊深度提示 App 接线**：每步生成前 GroupDepthPromptsEngine.collect（APPEND/APPEND_DISABLED；
+  SWAP 不注入；禁用成员仅当前发言者时保留），按官方 setExtensionPrompt(IN_CHAT, depth, role) 语义
+  转 PromptItem 传给 ChatPromptFactory.prepare → PromptPipeline（identifier groupDepthPrompt{i}）
+- **自动续写**：GenerationPrefs（官方 power_user.auto_continue，默认关）；
+  runGroupStep 每人生成完按 GroupLoopEngine.shouldAutoContinue 判定，命中则同一成员 /continue 链（上限 5 次），
+  再轮到下一成员（对齐官方 generateGroupWrapper 的 while shouldAutoContinue）
+- **策略切换 UI**：新建群聊弹层加“生成模式（全员依次 APPEND / 轮流 SWAP）”和“激活策略（natural/pooled）”；
+  聊天 ⋮ → 群聊设置 可改（对下一轮生效）；SessionsViewModel.newGroupSession 透传两字段
+- narrator：官方 1.18 无独立群聊 narrator 模式（group-chats.js 仅系统消息类型），
+  App 群聊内 /sys 旁白消息已可用（第 89 轮消息类命令，群聊会话同样走 ChatStore），此项关闭
+- 测试：PromptPipelineAssemblerTest +1（prepare 整链 in-chat 注入）、ChatPromptFactoryTest +1（群聊深度提示进请求体）；
+  引擎 284 测全绿
+- 边界登记（第 8 节）：auto-continue 用引擎 shouldAutoContinue（官方 power_user 设置无 UI，默认关）；
+  群聊深度提示 content 未做宏替换（官方 baseChatReplace 已由 ChatPromptFactory 总装统一替换，等价）；
+  continue 链上限 5（官方无硬上限但有 abort 语义）
 
 ## 最近一轮 89（2026-08-10：斜杠常用/消息类命令 + 解析差分扩到 43 例）
 

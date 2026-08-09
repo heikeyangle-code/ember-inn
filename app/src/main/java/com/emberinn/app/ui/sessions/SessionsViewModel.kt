@@ -7,6 +7,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GroupStore
+import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.data.SessionRecord
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,13 +41,26 @@ class SessionsViewModel(application: Application) : AndroidViewModel(application
     fun exportJsonl(sessionId: String): String? = chatStore.exportJsonl(sessionId)
 
     /** 新建群聊会话：GroupRecord + 会话（groupId 关联，成员来自角色列表）。 */
-    fun newGroupSession(memberIds: List<String>, name: String): SessionRecord? {
+    fun newGroupSession(
+        memberIds: List<String>,
+        name: String,
+        generationMode: Int = GroupGenerationMode.APPEND,
+        activationStrategy: String = "natural",
+    ): SessionRecord? {
         if (memberIds.size < 2) {
             _message.value = "群聊至少选 2 个角色"
             return null
         }
         val groupId = UUID.randomUUID().toString()
-        groupStore.save(GroupRecord(id = groupId, name = name.ifBlank { "群聊" }, members = memberIds))
+        groupStore.save(
+            GroupRecord(
+                id = groupId,
+                name = name.ifBlank { "群聊" },
+                members = memberIds,
+                generationMode = generationMode,
+                activationStrategy = activationStrategy,
+            ),
+        )
         val session = SessionRecord(
             id = UUID.randomUUID().toString(),
             characterId = null,

@@ -16,6 +16,7 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.GroupRecord
+import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.data.GroupStore
 import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
@@ -34,8 +35,13 @@ import com.emberinn.engine.group.GroupCardMember
 import com.emberinn.engine.group.GroupMember
 import com.emberinn.engine.group.GroupMessage
 import com.emberinn.engine.group.GroupCharacterCardsEngine
+import com.emberinn.engine.group.AutoContinueSettings
+import com.emberinn.engine.group.GroupDepthMember
+import com.emberinn.engine.group.GroupDepthPromptsEngine
 import com.emberinn.engine.group.GroupGenerationMode
+import com.emberinn.engine.group.GroupLoopEngine
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
@@ -817,6 +823,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val cardJson: String,
         val type: String,
         val cyclePrompt: String = "",
+        val inChatExtensions: List<PromptItem> = emptyList(),
     )
 
     private fun startGroupTurn(type: String, cyclePrompt: String = "") {
@@ -903,12 +910,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             } else {
                 buildGroupCardJson(speaker)
             }
-            GroupStep(speaker, cardJson, if (type == "regenerate" || type == "continue") type else "generate", cyclePrompt)
+            GroupStep(
+                speaker = speaker,
+                cardJson = cardJson,
+                type = if (type == "regenerate" || type == "continue") type else "generate",
+                cyclePrompt = cyclePrompt,
+                inChatExtensions = buildGroupDepthPrompts(speaker),
+            )
         }
         runGroupStep(steps, 0, history)
     }
 
-    private fun runGroupStep(steps: List<GroupStep>, index: Int, history: List<JsonElement>) {
+    private fun runGroupStep(
+        steps: List<GroupStep>,
+        index: Int,
+        history: List<JsonElement>,
+        autoContinueRuns: Int = 0,
+    ) {
         if (index >= steps.size) return
         val step = steps[index]
         currentCharName = step.speaker.name
@@ -919,12 +937,72 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             cyclePrompt = step.cyclePrompt,
             continueMode = step.type == "continue",
             characterRawJsonOverride = step.cardJson,
+            inChatExtensions = step.inChatExtensions,
             onFinished = {
-                if (!isLastStep) {
-                    runGroupStep(steps, index + 1, chatStore.messages(sessionId))
+                val msgs = chatStore.messages(sessionId)
+                // 官方 generateGroupWrapper：每人生成后按 shouldAutoContinue 自动续写（power_user.auto_continue，默认关）
+                val lastAi = msgs.lastOrNull { !isUser(it) }
+                val lastText = lastAi?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
+                val should = autoContinueRuns < 5 && GroupLoopEngine.shouldAutoContinue(
+                    messageChunk = lastText.ifBlank { null },
+                    isImpersonate = false,
+                    settings = AutoContinueSettings(
+                        enabled = GenerationPrefs.autoContinueEnabled(getApplication()),
+                        targetLength = GenerationPrefs.autoContinueTargetLength(getApplication()),
+                        allowChatCompletions = GenerationPrefs.allowChatCompletions(getApplication()),
+                    ),
+                    userInputEmpty = msgs.isEmpty() || !isUser(msgs.last()),
+                    lastMessageTokens = runCatching {
+                        com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(chatRepository.profile()?.model.orEmpty()).count(lastText)
+                    }.getOrNull(),
+                    isOpenAi = chatRepository.profile()?.let { profile ->
+                        com.emberinn.engine.provider.ProviderRegistry.get(profile.providerId)?.protocol != "anthropic"
+                    } ?: true,
+                )
+                when {
+                    should -> runGroupStep(
+                        listOf(step.copy(type = "continue", cyclePrompt = lastText)),
+                        0,
+                        msgs,
+                        autoContinueRuns + 1,
+                    )
+                    !isLastStep -> runGroupStep(steps, index + 1, msgs)
                 }
             },
         )
+    }
+
+    /** 群聊深度提示（官方 getGroupDepthPrompts → setExtensionPrompt(IN_CHAT, depth, role)）。 */
+    private fun buildGroupDepthPrompts(speaker: CharacterRecord): List<PromptItem> {
+        if (group?.generationMode == GroupGenerationMode.SWAP) return emptyList()
+        val speakerIndex = groupMembers.indexOfFirst { it.id == speaker.id }
+        val prompts = GroupDepthPromptsEngine.collect(
+            groupId = group?.id ?: "",
+            generationMode = group?.generationMode ?: GroupGenerationMode.APPEND,
+            members = groupMembers.map { it.id },
+            disabledMembers = group?.disabledMembers.orEmpty(),
+            characterCards = groupMembers.map { m ->
+                val f = CharacterCardEdit.readFields(m.rawJson, m.name, m.description)
+                GroupDepthMember(
+                    avatar = m.id,
+                    name = m.name,
+                    depthPrompt = f.depthPrompt,
+                    depth = f.depthPromptDepth.toIntOrNull() ?: 4,
+                    role = f.depthPromptRole.ifBlank { "system" },
+                )
+            },
+            characterId = speakerIndex,
+        )
+        return prompts.mapIndexed { i, p ->
+            PromptItem(
+                identifier = "groupDepthPrompt$i",
+                name = "群聊深度提示 ${i + 1}",
+                content = p.text,
+                role = p.role,
+                injectionDepth = p.depth,
+                injectionOrder = 100,
+            )
+        }
     }
 
     /** APPEND 模式：官方 getGroupCharacterCards 合并成员卡字段 → 合成卡 JSON 喂总装。 */
@@ -966,6 +1044,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }.toString()
     }
 
+    /** 群聊设置：生成模式（SWAP/APPEND）+ 激活策略（natural/pooled）。 */
+    fun saveGroupSettings(generationMode: Int, activationStrategy: String) {
+        group?.let {
+            groupStore.save(it.copy(generationMode = generationMode, activationStrategy = activationStrategy))
+        }
+    }
+
     private fun startStream(
         history: List<JsonElement>,
         type: String = "generate",
@@ -976,6 +1061,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         swipeMode: Boolean = false,
         mediaInlining: Boolean = false,
         characterRawJsonOverride: String? = null,
+        inChatExtensions: List<PromptItem> = emptyList(),
         onFinished: (() -> Unit)? = null,
     ) {
         streamStartedAt = java.time.Instant.now().toString()
@@ -1056,6 +1142,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorWorldSettings = vectorWorldSettings,
                 vectorDataBank = vectorDataBank,
                 vectorFileText = { path -> rag.readDataBankText(path) },
+                inChatExtensions = inChatExtensions,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

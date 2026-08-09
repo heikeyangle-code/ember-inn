@@ -82,7 +82,8 @@ object PromptPipeline {
      * 官方 populationInjectionPrompts：absolute 提示按 injection_depth 分组，order 降序、角色
      * system/user/assistant 固定序，拼接后 splice 到 messages[depth+已插数]，最后整体 reverse()
      * （populateChatHistory 内部再 reverse 一次，净效果是顺序不变）。
-     * inChatExtensions 对应官方 getExtensionPrompt(IN_CHAT, depth)：当前实现恒为空（差分脚本同样打桩）。
+     * inChatExtensions 对应官方 getExtensionPrompt(IN_CHAT, depth)：差分脚本打桩为空；
+     * App 侧群聊深度提示（GroupDepthPromptsEngine）从这里注入（第 90 轮接线）。
      */
     fun populationInjectionPrompts(
         absolutePrompts: List<PromptItem>,
@@ -165,6 +166,7 @@ object PromptPipeline {
         val selectedGroup: Boolean = false,
         val namesBehavior: Int = PromptAssembler.NAMES_DEFAULT,
         val sendIfEmpty: String = "",
+        val inChatExtensions: List<PromptItem> = emptyList(),
     )
 
     fun populate(
@@ -282,8 +284,8 @@ object PromptPipeline {
             chatCompletion.reserveBudget(continueMessage)
         }
 
-        // in-chat 深度注入（官方 populationInjectionPrompts）
-        val finalMessages = populationInjectionPrompts(absolutePrompts, messages)
+        // in-chat 深度注入（官方 populationInjectionPrompts；群聊深度提示等扩展从这里进）
+        val finalMessages = populationInjectionPrompts(absolutePrompts, messages, input.inChatExtensions)
 
         // 示例/历史顺序
         if (input.pinExamples) {
@@ -406,6 +408,7 @@ object PromptPipeline {
         val namesBehavior: Int = PromptAssembler.NAMES_DEFAULT,
         val sendIfEmpty: String = "",
         val squashSystemMessages: Boolean = true,
+        val inChatExtensions: List<PromptItem> = emptyList(),
     )
 
     data class PrepareResult(
@@ -480,6 +483,7 @@ object PromptPipeline {
                 selectedGroup = input.selectedGroup,
                 namesBehavior = input.namesBehavior,
                 sendIfEmpty = input.sendIfEmpty,
+                inChatExtensions = input.inChatExtensions,
             ),
             )
         }

@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.data.Persona
+import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -52,6 +53,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -187,6 +189,9 @@ fun ChatScreen(
     var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     var showDataBank by remember { mutableStateOf(false) }
+    var showGroupSettings by remember { mutableStateOf(false) }
+    var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
+    var groupStrategy by rememberSaveable { mutableStateOf(vm.group?.activationStrategy ?: "natural") }
     var imagePrompt by remember { mutableStateOf("") }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
@@ -772,6 +777,14 @@ fun ChatScreen(
                     showMore = false
                     showDataBank = true
                 }
+                if (vm.group != null) {
+                    MenuRow(PhosphorIcons.Person, "群聊设置") {
+                        showMore = false
+                        groupMode = vm.group?.generationMode ?: GroupGenerationMode.APPEND
+                        groupStrategy = vm.group?.activationStrategy ?: "natural"
+                        showGroupSettings = true
+                    }
+                }
                 MenuRow(PhosphorIcons.Person, "人设") {
                     showMore = false
                     showPersonaPicker = true
@@ -792,6 +805,61 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showGroupSettings) {
+        AlertDialog(
+            onDismissRequest = { showGroupSettings = false },
+            title = { Text("群聊设置") },
+            text = {
+                Column {
+                    Text("生成模式", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        FilterChip(
+                            selected = groupMode == GroupGenerationMode.APPEND,
+                            onClick = { groupMode = GroupGenerationMode.APPEND },
+                            label = { Text("全员依次（APPEND）") },
+                        )
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        FilterChip(
+                            selected = groupMode == GroupGenerationMode.SWAP,
+                            onClick = { groupMode = GroupGenerationMode.SWAP },
+                            label = { Text("轮流（SWAP）") },
+                        )
+                    }
+                    Text("激活策略", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        FilterChip(
+                            selected = groupStrategy == "natural",
+                            onClick = { groupStrategy = "natural" },
+                            label = { Text("natural") },
+                        )
+                        Spacer(Modifier.widthIn(min = 8.dp))
+                        FilterChip(
+                            selected = groupStrategy == "pooled",
+                            onClick = { groupStrategy = "pooled" },
+                            label = { Text("pooled") },
+                        )
+                    }
+                    Text(
+                        "APPEND=本轮全员依次回复；SWAP=上一发言人之后轮流。策略切换对下一轮生效。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.saveGroupSettings(groupMode, groupStrategy)
+                    showGroupSettings = false
+                    Toast.makeText(context, "已保存群聊设置", Toast.LENGTH_SHORT).show()
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGroupSettings = false }) { Text("取消") }
+            },
+        )
     }
 
     if (showPersonaPicker) {

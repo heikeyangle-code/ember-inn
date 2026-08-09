@@ -9,6 +9,7 @@ import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaDisplay
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.ExtensionPrompt
+import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptAssembler
@@ -90,6 +91,7 @@ class ChatPromptFactory {
         vectorDataBank: List<VectorFileRef> = emptyList(),
         vectorFileText: (String) -> String? = { null },
         extensionPrompts: Map<String, ExtensionPrompt> = emptyMap(),
+        inChatExtensions: List<PromptItem> = emptyList(),
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -256,6 +258,7 @@ class ChatPromptFactory {
                 personaDescription = personaDescription,
                 personaInPrompt = personaInPrompt,
                 extensionPrompts = extensionPrompts + vectorTransform?.extensionPrompts.orEmpty(),
+                inChatExtensions = inChatExtensions,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,

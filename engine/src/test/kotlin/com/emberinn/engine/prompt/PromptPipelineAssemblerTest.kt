@@ -201,4 +201,26 @@ class PromptPipelineAssemblerTest {
         )
         assertEquals(listOf("你好", "人设文本", "回应"), injected.map { it.content })
     }
+
+    @Test
+    fun `in chat extensions are injected through prepare pipeline`() {
+        val result = PromptPipeline.prepare(
+            PromptPipeline.PrepareInput(
+                name2 = "柳春娘",
+                charDescription = "描述",
+                messages = listOf(
+                    PromptMessage("user", "你好"),
+                    PromptMessage("assistant", "回应"),
+                ),
+                env = env,
+                maxContextTokens = 10000,
+                maxTokens = 256,
+                tokenCounter = TokenCounter { it.length },
+                inChatExtensions = listOf(
+                    PromptItem("groupDepthPrompt0", "群聊深度提示 1", content = "群聊深度提示文本", role = "system", injectionDepth = 1, injectionOrder = 100),
+                ),
+            ),
+        )
+        assertTrue(result.messages.any { it.content == "群聊深度提示文本" })
+    }
 }

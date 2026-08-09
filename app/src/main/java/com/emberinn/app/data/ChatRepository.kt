@@ -11,6 +11,7 @@ import com.emberinn.engine.worldinfo.VectorFileRef
 import com.emberinn.engine.worldinfo.VectorSettings
 import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.provider.ProviderStore
+import com.emberinn.engine.prompt.PromptItem
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,6 +96,7 @@ class ChatRepository(context: Context) {
         vectorWorldSettings: VectorSettings = VectorSettings(),
         vectorDataBank: List<VectorFileRef> = emptyList(),
         vectorFileText: (String) -> String? = { null },
+        inChatExtensions: List<PromptItem> = emptyList(),
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -151,6 +153,7 @@ class ChatRepository(context: Context) {
             vectorWorldSettings = vectorWorldSettings,
             vectorDataBank = vectorDataBank,
             vectorFileText = vectorFileText,
+            inChatExtensions = inChatExtensions,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。
