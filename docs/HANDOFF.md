@@ -219,7 +219,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 引擎测试 267 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
-- ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine：自动续写判定 + 每人生成类型 + 队列号）官方差分 11 例；🟡 多人回复拼接/组提示/nudge 链的 App 调度仍待做。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
+- ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 第 84 轮：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；🟡 natural/pooled 激活、narrator、队列 UI、深度提示 App 接线、群聊 continue 链。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
 - ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
 
 ## 4. App / UI 进度
@@ -346,7 +346,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊完整调度（引擎激活/合并/深度/循环已 1:1，App 调度层待做）；✅ 人设管理 UI 已做（2026-08-10 第 83 轮）；聊天书签/快照（背景已做，见 3.8/4.3）
+9. 群聊：✅ App 调度层已接（2026-08-10 第 84 轮：GroupStore + 新建群聊 + GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成；SWAP 用本人卡、APPEND 用合并卡）；🟡 未做：自然/池化激活策略、narrator、队列 UI、群聊深度提示接线（引擎已有，App 未接）、群聊 continue 多轮链；✅ 人设管理 UI（第 83 轮）；聊天书签/快照（背景已做，见 3.8/4.3）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
 
 **备注（不能纯引擎做 / 需 App 或外部）**
@@ -390,6 +390,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+
+## 最近一轮 84（2026-08-10：群聊 App 调度层——P2-9 大项）
+
+- 数据模型：SessionRecord.groupId + GroupRecord（members/disabledMembers/generationMode，官方 group 核心字段）
+  + GroupStore（filesDir/groups/*.json）
+- 新建群聊 UI：聊天 Tab FAB → 新建群聊（名称 + 勾选角色，≥2）→ GroupRecord + 会话
+- 调度：send/regenerate/continue 群聊分支——
+  - APPEND：全部启用成员顺序生成（每人生成后落盘再接下一人，流式逐条）
+  - SWAP：GroupScheduler.nextSpeaker（上一位 AI 后循环）
+  - regenerate/continue：只对最后发言成员
+  - APPEND 用 GroupCharacterCardsEngine.cards 合并卡（描述/性格/场景/示例）合成卡 JSON 喂总装；
+    SWAP 用成员本人卡
+- 边界登记（第 8 节）：natural/pooled 激活策略、narrator、队列 UI、群聊深度提示 App 接线、
+  群聊 continue 多轮链、自动续写（GroupLoopEngine.shouldAutoContinue）未接；多人回复为顺序逐条而非官方同轮拼接
+- 引擎无改动；全量引擎测试本地跑绿；App 编译走 CI
 
 ## 最近一轮 83（2026-08-10：人设管理 UI + persona 注入接线——P2-9 部分）
 

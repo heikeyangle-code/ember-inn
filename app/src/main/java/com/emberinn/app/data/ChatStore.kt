@@ -26,6 +26,8 @@ data class SessionRecord(
     val name: String,
     val updatedAt: Long = System.currentTimeMillis(),
     val pinned: Boolean = false,
+    /** 群聊会话：groupId 非空时 characterId 为空，成员来自 GroupStore。 */
+    val groupId: String? = null,
 )
 
 /** 聊天会话存储：sessions 目录（*.json）+ chats 目录（*.jsonl）（对齐官方 jsonl：每行一条消息 JSON）。 */

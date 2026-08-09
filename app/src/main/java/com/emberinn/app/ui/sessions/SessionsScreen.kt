@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +77,9 @@ fun SessionsScreen(
     val context = LocalContext.current
 
     var showNewSheet by rememberSaveable { mutableStateOf(false) }
+    var showGroupSheet by rememberSaveable { mutableStateOf(false) }
+    var groupName by rememberSaveable { mutableStateOf("") }
+    var groupMemberIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     var menuSession by remember { mutableStateOf<SessionRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<SessionRecord?>(null) }
 
@@ -162,9 +169,75 @@ fun SessionsScreen(
             },
             onGroup = {
                 showNewSheet = false
-                Toast.makeText(context, "群聊调度还在 P2 接线中，暂未开放", Toast.LENGTH_SHORT).show()
+                groupName = ""
+                groupMemberIds = emptySet()
+                showGroupSheet = true
             },
             onDismiss = { showNewSheet = false },
+        )
+    }
+
+    if (showGroupSheet) {
+        AlertDialog(
+            onDismissRequest = { showGroupSheet = false },
+            title = { Text("新建群聊") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = groupName,
+                        onValueChange = { groupName = it },
+                        label = { Text("群聊名称") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "选择成员（至少 2 个）",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    characters.forEach { character ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                groupMemberIds = if (character.id in groupMemberIds) {
+                                    groupMemberIds - character.id
+                                } else {
+                                    groupMemberIds + character.id
+                                }
+                            }.padding(vertical = 8.dp),
+                        ) {
+                            Text(
+                                character.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                if (character.id in groupMemberIds) "✓" else "",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (characters.isEmpty()) {
+                        Text(
+                            "还没有角色卡，先去角色页导入。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val session = vm.newGroupSession(groupMemberIds.toList(), groupName)
+                    showGroupSheet = false
+                    if (session != null) onOpenSession(session)
+                }) { Text("创建") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGroupSheet = false }) { Text("取消") }
+            },
         )
     }
 

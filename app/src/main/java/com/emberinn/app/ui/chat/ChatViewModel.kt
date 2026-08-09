@@ -14,6 +14,8 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
+import com.emberinn.app.data.GroupRecord
+import com.emberinn.app.data.GroupStore
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
@@ -22,6 +24,9 @@ import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.group.GroupCardMember
+import com.emberinn.engine.group.GroupCharacterCardsEngine
+import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.slash.QuickReplyExecutor
 import com.emberinn.engine.slash.QuickReplySlot
@@ -33,6 +38,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonPrimitive
@@ -52,6 +59,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val chatRepository = ChatRepository(application)
     private val quickReplyStore = QuickReplyStore(application)
     private val personaStore = PersonaStore(application)
+    private val groupStore = GroupStore(application)
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -232,13 +240,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val character: CharacterRecord? =
         characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
 
+    /** 群聊：会话 groupId → GroupRecord + 成员角色卡。 */
+    val group: GroupRecord? = chatStore.get(sessionId)?.groupId?.let { groupStore.get(it) }
+    val groupMembers: List<CharacterRecord> =
+        group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
+
     val accentColor: Long? = character?.seedColor
     val avatarPath: String? = character?.avatarPath
 
     init {
         // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
         // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”
-        if (chatStore.messages(sessionId).isEmpty()) {
+        val isGroupSession = chatStore.get(sessionId)?.groupId != null
+        if (chatStore.messages(sessionId).isEmpty() && !isGroupSession) {
             val charName = chatStore.get(sessionId)?.name ?: "Assistant"
             val firstMes = if (character != null) {
                 firstMesOf(character.rawJson)
@@ -289,10 +303,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (voice.enabled && voice.narrateUser) {
             narrateText(text)
         }
-        startStream(
-            history = chatStore.messages(sessionId),
-            mediaInlining = media.isNotEmpty(),
-        )
+        if (group != null) {
+            startGroupTurn(type = "generate")
+        } else {
+            startStream(
+                history = chatStore.messages(sessionId),
+                mediaInlining = media.isNotEmpty(),
+            )
+        }
     }
 
     /** 停止按钮：取消请求并保留已生成的部分（官方 abortController + mes_stop 语义）。 */
@@ -351,7 +369,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
-        startStream(history = chatStore.messages(sessionId))
+        if (group != null) {
+            startGroupTurn(type = "regenerate")
+        } else {
+            startStream(history = chatStore.messages(sessionId))
+        }
     }
 
     /**
@@ -375,12 +397,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
-        startStream(
-            history = msgs,
-            type = "continue",
-            cyclePrompt = lastText,
-            continueMode = true,
-        )
+        if (group != null) {
+            startGroupTurn(type = "continue", cyclePrompt = lastText)
+        } else {
+            startStream(
+                history = msgs,
+                type = "continue",
+                cyclePrompt = lastText,
+                continueMode = true,
+            )
+        }
     }
 
     /** 滑动切回复：左滑 = 上一个变体（对齐官方 swipe_left，越界 wrap 回最后一条）。 */
@@ -586,6 +612,114 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 导出聊天原始 JSONL（官方聊天文件格式，可直接进酒馆）。 */
     fun exportJsonl(): String? = chatStore.exportJsonl(sessionId)
 
+    // ---- 群聊调度（P2-9）：官方 GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成 ----
+
+    private data class GroupStep(
+        val speaker: CharacterRecord,
+        val cardJson: String,
+        val type: String,
+        val cyclePrompt: String = "",
+    )
+
+    private fun startGroupTurn(type: String, cyclePrompt: String = "") {
+        val members = groupMembers
+        if (members.isEmpty()) {
+            _notice.value = "（群聊成员缺失，请检查群聊设置。）"
+            return
+        }
+        val history = chatStore.messages(sessionId)
+        val disabled = group?.disabledMembers.orEmpty()
+        val enabled = members.filter { it.id !in disabled }
+        if (enabled.isEmpty()) {
+            _notice.value = "（群聊没有可用成员。）"
+            return
+        }
+        val speakers = when (type) {
+            "regenerate", "continue" -> {
+                val lastName = history.lastOrNull { !isUser(it) }
+                    ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+                enabled.filter { it.name == lastName }.ifEmpty { listOf(enabled.last()) }
+            }
+            else -> {
+                if (group?.generationMode == GroupGenerationMode.SWAP) {
+                    val lastSpeaker = history.lastOrNull { !isUser(it) }
+                        ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+                    val idx = enabled.indexOfFirst { it.name == lastSpeaker }
+                    listOf(enabled[(idx + 1).coerceAtMost(enabled.lastIndex)])
+                } else {
+                    enabled
+                }
+            }
+        }
+        val steps = speakers.map { speaker ->
+            val cardJson = if (group?.generationMode == GroupGenerationMode.SWAP) {
+                speaker.rawJson
+            } else {
+                buildGroupCardJson(speaker)
+            }
+            GroupStep(speaker, cardJson, if (type == "regenerate" || type == "continue") type else "generate", cyclePrompt)
+        }
+        runGroupStep(steps, 0, history)
+    }
+
+    private fun runGroupStep(steps: List<GroupStep>, index: Int, history: List<JsonElement>) {
+        if (index >= steps.size) return
+        val step = steps[index]
+        currentCharName = step.speaker.name
+        val isLastStep = index == steps.lastIndex
+        startStream(
+            history = history,
+            type = step.type,
+            cyclePrompt = step.cyclePrompt,
+            continueMode = step.type == "continue",
+            characterRawJsonOverride = step.cardJson,
+            onFinished = {
+                if (!isLastStep) {
+                    runGroupStep(steps, index + 1, chatStore.messages(sessionId))
+                }
+            },
+        )
+    }
+
+    /** APPEND 模式：官方 getGroupCharacterCards 合并成员卡字段 → 合成卡 JSON 喂总装。 */
+    private fun buildGroupCardJson(speaker: CharacterRecord): String {
+        val merged = GroupCharacterCardsEngine.cards(
+            groupId = group?.id ?: "",
+            generationMode = GroupGenerationMode.APPEND,
+            members = groupMembers.map { it.id },
+            disabledMembers = group?.disabledMembers.orEmpty(),
+            joinPrefix = "",
+            joinSuffix = "",
+            characterCards = groupMembers.map { m ->
+                GroupCardMember(
+                    avatar = m.id,
+                    name = m.name,
+                    description = CharacterCardEdit.readFields(m.rawJson, m.name, m.description).description,
+                    personality = CharacterCardEdit.readFields(m.rawJson, m.name, m.description).personality,
+                    scenario = CharacterCardEdit.readFields(m.rawJson, m.name, m.description).scenario,
+                    mesExample = CharacterCardEdit.readFields(m.rawJson, m.name, m.description).mesExample,
+                )
+            },
+        )
+        val d = merged?.description.orEmpty()
+        val p = merged?.personality.orEmpty()
+        val s = merged?.scenario.orEmpty()
+        val e = merged?.mesExamples.orEmpty()
+        return buildJsonObject {
+            put("spec", JsonPrimitive("chara_card_v2"))
+            put(
+                "data",
+                buildJsonObject {
+                    put("name", JsonPrimitive(speaker.name))
+                    put("description", JsonPrimitive(d))
+                    put("personality", JsonPrimitive(p))
+                    put("scenario", JsonPrimitive(s))
+                    put("mes_example", JsonPrimitive(e))
+                },
+            )
+        }.toString()
+    }
+
     private fun startStream(
         history: List<JsonElement>,
         type: String = "generate",
@@ -595,6 +729,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         continueMode: Boolean = false,
         swipeMode: Boolean = false,
         mediaInlining: Boolean = false,
+        characterRawJsonOverride: String? = null,
         onFinished: (() -> Unit)? = null,
     ) {
         streamStartedAt = java.time.Instant.now().toString()
@@ -615,7 +750,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // 直接透传给协程会崩溃——这里统一兜底转 notice，绝不崩。
             try {
             val session = chatRepository.streamPrepared(
-                characterRawJson = character?.rawJson,
+                characterRawJson = characterRawJsonOverride ?: character?.rawJson,
                 history = history,
                 userName = currentUserName,
                 charName = currentCharName,
