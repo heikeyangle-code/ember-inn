@@ -255,7 +255,7 @@ class LlmClient(
         stream: Boolean,
         options: ProviderRequestOptions = ProviderRequestOptions(),
     ): Request {
-        val base = resolveBase(provider, profile)
+        val base = requireHttpScheme(resolveBase(provider, profile))
         val builder = Request.Builder()
         when (provider.protocol) {
             "anthropic" -> {
@@ -494,6 +494,14 @@ class LlmClient(
         return provider.baseUrl
     }
 
+    /** 接口地址必须以 http(s):// 开头；否则 OkHttp 抛 IllegalArgumentException 会崩溃（配置错位时把 Key 当地址）。 */
+    private fun requireHttpScheme(base: String): String {
+        if (base.isNotBlank() && !base.startsWith("http://") && !base.startsWith("https://")) {
+            error("接口地址无效：\"$base\" 应以 http:// 或 https:// 开头，请检查 设置→提供商→接口地址。")
+        }
+        return base
+    }
+
     private fun applyAuth(
         builder: Request.Builder,
         provider: ProviderSpec,
@@ -517,7 +525,7 @@ class LlmClient(
     }
 
     private fun modelsUrl(provider: ProviderSpec, profile: ConnectionProfile): String? {
-        val base = resolveBase(provider, profile)
+        val base = requireHttpScheme(resolveBase(provider, profile))
         if (base.isBlank()) return null
         return when (provider.id) {
             "azure" -> {
