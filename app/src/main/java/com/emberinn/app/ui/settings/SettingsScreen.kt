@@ -51,7 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, VOICE, SERVICES, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -107,6 +107,8 @@ fun SettingsScreen(
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )
+        SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
         else -> SettingsHome(
@@ -115,6 +117,8 @@ fun SettingsScreen(
             themePreset = themePreset,
             onOpenProviders = { page = SettingsPage.PROVIDERS },
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenVoice = { page = SettingsPage.VOICE },
+            onOpenServices = { page = SettingsPage.SERVICES },
             onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
         )
@@ -134,6 +138,8 @@ private fun SettingsHome(
     themePreset: ThemePreset,
     onOpenProviders: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onOpenVoice: () -> Unit,
+    onOpenServices: () -> Unit,
     onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
@@ -157,7 +163,7 @@ private fun SettingsHome(
     val quickActions = listOf(
         QuickAction("主题", PhosphorIcons.Star, onOpenAppearance),
         QuickAction("模型", PhosphorIcons.Settings, onOpenProviders),
-        QuickAction("语音", PhosphorIcons.Bell, { openComingSoon(context) }),
+        QuickAction("语音", PhosphorIcons.SpeakerHigh, onOpenVoice),
         QuickAction("备份", PhosphorIcons.Refresh, { openComingSoon(context) }),
     )
 
@@ -178,11 +184,20 @@ private fun SettingsHome(
         ),
         SettingsGroup(
             "语音",
-            listOf(SettingRow("语音输入与朗读", "开发中", Color.Unspecified)),
+            listOf(
+                SettingRow(
+                    "语音朗读（TTS）",
+                    if (VoicePrefs.enabled(context)) "已启用 · 本机引擎可试听" else "本机引擎试听 · 聊天朗读后续接入",
+                    Color.Unspecified,
+                    onOpenVoice,
+                ),
+            ),
         ),
         SettingsGroup(
             "服务",
-            listOf(SettingRow("翻译 · 图像 · 向量", "开发中", Color.Unspecified)),
+            listOf(
+                SettingRow("翻译 · 图像 · 向量", "配置已持久化 · 执行层 P3 接入", Color.Unspecified, onOpenServices),
+            ),
         ),
         SettingsGroup(
             "数据与隐私",
