@@ -24,10 +24,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 /** 全局搜索结果（README：角色 + 会话 + 世界书 + 设置）。 */
 data class SearchResults(
@@ -50,6 +55,39 @@ data class SettingsHit(
     val label: String,
     val description: String,
     val route: String? = null,
+)
+
+/** 角色详情页可编辑字段快照（官方 readFromV2/charaFormatData 归一后的 v2 字段全集）。 */
+data class CharacterDetailFields(
+    val name: String,
+    val description: String,
+    val personality: String,
+    val scenario: String,
+    val firstMes: String,
+    val mesExample: String,
+    val systemPrompt: String,
+    val postHistoryInstructions: String,
+    val creatorNotes: String,
+    val creator: String,
+    val characterVersion: String,
+    val tags: String,
+    val depthPrompt: String,
+    val depthPromptDepth: String,
+    val depthPromptRole: String,
+    val talkativeness: Float,
+    val alternateGreetings: List<String>,
+)
+
+/** 世界书条目编辑草稿（字段对齐官方 v2DataWorldInfoEntry 常用项）。 */
+data class WorldEntryDraft(
+    val id: Int,
+    val keys: String,
+    val content: String,
+    val comment: String,
+    val constant: Boolean,
+    val selective: Boolean,
+    val enabled: Boolean,
+    val insertionOrder: Int,
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -197,20 +235,167 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun exportJson(record: CharacterRecord): String =
         CharacterCardExporter.exportToV2Json(record.rawJson)
 
-    /** 编辑角色字段（README：分字段展示 + 点击展开编辑）：改写 rawJson 对应键，同步角色名与已有会话名。 */
-    fun updateCharacter(record: CharacterRecord, newName: String, fields: Map<String, String>) {
+    /** 通用角色卡 data 层改写（V2 的 data 对象或 V1 的 root）：transform 返回新 data，落盘并同步名字。 */
+    fun updateCharacterData(record: CharacterRecord, transform: (JsonObject) -> JsonObject) {
         runCatching {
             val root = json.parseToJsonElement(record.rawJson).jsonObject.toMutableMap()
-            val data = (root["data"] as? JsonObject)?.toMutableMap() ?: root
-            fields.forEach { (key, value) -> data[key] = JsonPrimitive(value) }
-            if (root["data"] is JsonObject) root["data"] = JsonObject(data)
-            val newJson = json.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), JsonObject(root))
-            val updated = record.copy(rawJson = newJson, name = newName)
-            store.save(updated)
+            val hadData = root["data"] is JsonObject
+            val newData = transform((root["data"] as? JsonObject) ?: JsonObject(root))
+            if (hadData) {
+                root["data"] = newData
+            } else {
+                root.clear()
+                root.putAll(newData)
+            }
+            saveJson(record, JsonObject(root))
+        }
+    }
+
+    private fun saveJson(record: CharacterRecord, root: JsonObject) {
+        val newJson = json.encodeToString(JsonObject.serializer(), root)
+        val newName = ((root["data"] as? JsonObject) ?: root)["name"]?.jsonPrimitive?.contentOrNull
+        val updated = record.copy(rawJson = newJson, name = newName?.ifBlank { record.name } ?: record.name)
+        store.save(updated)
+        if (newName != null && newName != record.name) {
             chatStore.list().filter { it.characterId == record.id }.forEach { session ->
                 chatStore.upsert(session.copy(name = newName))
             }
-            refresh()
+        }
+        refresh()
+    }
+
+    private fun dataLayer(raw: String): JsonObject {
+        val root = json.parseToJsonElement(raw).jsonObject
+        return root["data"]?.jsonObject ?: root
+    }
+
+    // ---- 角色详情页（P1-4）----
+
+    /** 读取角色卡字段（官方 v2 归一后字段；tags 逗号拼接、depth_prompt 兼容对象/字符串、talkativeness 读 extensions）。 */
+    fun readCharacterFields(record: CharacterRecord): CharacterDetailFields = runCatching {
+        val data = dataLayer(record.rawJson)
+        val ext = data["extensions"]?.jsonObject
+        fun str(key: String): String = data[key]?.jsonPrimitive?.contentOrNull ?: ""
+        val dp = data["depth_prompt"]
+        val dpObj = (dp as? JsonObject)
+        CharacterDetailFields(
+            name = str("name"),
+            description = str("description"),
+            personality = str("personality"),
+            scenario = str("scenario"),
+            firstMes = str("first_mes"),
+            mesExample = str("mes_example"),
+            systemPrompt = str("system_prompt"),
+            postHistoryInstructions = str("post_history_instructions"),
+            creatorNotes = str("creator_notes"),
+            creator = str("creator"),
+            characterVersion = str("character_version"),
+            tags = data["tags"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.joinToString(", ") ?: "",
+            depthPrompt = dpObj?.get("prompt")?.jsonPrimitive?.contentOrNull ?: dp?.jsonPrimitive?.contentOrNull ?: "",
+            depthPromptDepth = dpObj?.get("depth")?.jsonPrimitive?.contentOrNull ?: "4",
+            depthPromptRole = dpObj?.get("role")?.jsonPrimitive?.contentOrNull ?: "system",
+            talkativeness = ext?.get("talkativeness")?.jsonPrimitive?.floatOrNull
+                ?: data["talkativeness"]?.jsonPrimitive?.floatOrNull ?: 0.5f,
+            alternateGreetings = data["alternate_greetings"]?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+        )
+    }.getOrElse {
+        CharacterDetailFields(
+            name = record.name,
+            description = record.description,
+            personality = "", scenario = "", firstMes = "", mesExample = "",
+            systemPrompt = "", postHistoryInstructions = "", creatorNotes = "",
+            creator = "", characterVersion = "", tags = "", depthPrompt = "",
+            depthPromptDepth = "4", depthPromptRole = "system", talkativeness = 0.5f,
+            alternateGreetings = emptyList(),
+        )
+    }
+
+    /** 保存角色字段：v2 归一写回（tags 数组、depth_prompt 对象、talkativeness 进 extensions、alternate_greetings 数组）。 */
+    fun saveCharacterFields(record: CharacterRecord, fields: CharacterDetailFields) {
+        updateCharacterData(record) { data ->
+            val m = data.toMutableMap()
+            fun put(key: String, v: String) { m[key] = JsonPrimitive(v) }
+            put("name", fields.name)
+            put("description", fields.description)
+            put("personality", fields.personality)
+            put("scenario", fields.scenario)
+            put("first_mes", fields.firstMes)
+            put("mes_example", fields.mesExample)
+            put("system_prompt", fields.systemPrompt)
+            put("post_history_instructions", fields.postHistoryInstructions)
+            put("creator_notes", fields.creatorNotes)
+            put("creator", fields.creator)
+            put("character_version", fields.characterVersion)
+            val tags = fields.tags.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            if (tags.isEmpty()) m.remove("tags") else m["tags"] = JsonArray(tags.map(::JsonPrimitive))
+            m["depth_prompt"] = buildJsonObject {
+                put("prompt", JsonPrimitive(fields.depthPrompt))
+                put("depth", JsonPrimitive(fields.depthPromptDepth))
+                put("role", JsonPrimitive(fields.depthPromptRole))
+            }
+            val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+            if (ext.isNotEmpty() || m["extensions"] is JsonObject) {
+                ext["talkativeness"] = JsonPrimitive(fields.talkativeness)
+                m["extensions"] = JsonObject(ext)
+            } else {
+                m["talkativeness"] = JsonPrimitive(fields.talkativeness)
+            }
+            if (fields.alternateGreetings.isEmpty()) {
+                m.remove("alternate_greetings")
+            } else {
+                m["alternate_greetings"] = JsonArray(fields.alternateGreetings.map(::JsonPrimitive))
+            }
+            JsonObject(m)
+        }
+    }
+
+    /** 读取角色卡内嵌世界书条目（兼容 v2 keys / v1 key、enabled / disable 反向）。 */
+    fun readWorldEntries(record: CharacterRecord): List<WorldEntryDraft> = runCatching {
+        val data = dataLayer(record.rawJson)
+        val entries = data["character_book"]?.jsonObject?.get("entries") as? JsonArray ?: return@runCatching emptyList()
+        entries.mapNotNull { el ->
+            val e = (el as? JsonObject) ?: return@mapNotNull null
+            val keys = (e["keys"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                ?: listOfNotNull(e["key"]?.jsonPrimitive?.contentOrNull)
+            val enabledRaw = e["enabled"]?.jsonPrimitive?.booleanOrNull
+            val disableRaw = e["disable"]?.jsonPrimitive?.booleanOrNull
+            WorldEntryDraft(
+                id = e["id"]?.jsonPrimitive?.intOrNull ?: 0,
+                keys = keys.joinToString(", "),
+                content = e["content"]?.jsonPrimitive?.contentOrNull ?: "",
+                comment = e["comment"]?.jsonPrimitive?.contentOrNull ?: "",
+                constant = e["constant"]?.jsonPrimitive?.booleanOrNull ?: false,
+                selective = e["selective"]?.jsonPrimitive?.booleanOrNull ?: true,
+                enabled = enabledRaw ?: (disableRaw?.let { !it } ?: true),
+                insertionOrder = e["insertion_order"]?.jsonPrimitive?.intOrNull
+                    ?: e["order"]?.jsonPrimitive?.intOrNull ?: 100,
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    /** 保存世界书条目（v2 格式：keys/comment/content/constant/selective/enabled/insertion_order/position）。 */
+    fun saveWorldEntries(record: CharacterRecord, entries: List<WorldEntryDraft>) {
+        updateCharacterData(record) { data ->
+            val m = data.toMutableMap()
+            val entriesJson = JsonArray(entries.map { d ->
+                buildJsonObject {
+                    put("id", JsonPrimitive(d.id))
+                    put("keys", JsonArray(d.keys.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map(::JsonPrimitive)))
+                    put("content", JsonPrimitive(d.content))
+                    put("comment", JsonPrimitive(d.comment))
+                    put("constant", JsonPrimitive(d.constant))
+                    put("selective", JsonPrimitive(d.selective))
+                    put("enabled", JsonPrimitive(d.enabled))
+                    put("insertion_order", JsonPrimitive(d.insertionOrder))
+                    put("position", JsonPrimitive("before_char"))
+                }
+            })
+            val book = (m["character_book"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+            book["name"] = JsonPrimitive(book["name"]?.jsonPrimitive?.contentOrNull ?: "Character Book")
+            book["entries"] = entriesJson
+            m["character_book"] = JsonObject(book)
+            JsonObject(m)
         }
     }
 

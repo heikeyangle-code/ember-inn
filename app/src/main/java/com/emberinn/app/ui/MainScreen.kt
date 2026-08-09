@@ -47,6 +47,7 @@ fun MainScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var openSessionId by rememberSaveable { mutableStateOf<String?>(null) }
     var openName by rememberSaveable { mutableStateOf("") }
+    var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
     var settingsDeepLink by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val homeVm: HomeViewModel = viewModel()
@@ -87,6 +88,26 @@ fun MainScreen(
             },
         )
         return
+    }
+
+    val detailId = openDetailId
+    if (detailId != null) {
+        val detailRecord = homeVm.characters.value.firstOrNull { it.id == detailId }
+        if (detailRecord != null) {
+            com.emberinn.app.ui.home.CharacterDetailScreen(
+                record = detailRecord,
+                vm = homeVm,
+                onBack = { openDetailId = null },
+                onOpenChat = { session ->
+                    openDetailId = null
+                    openSessionId = session.id
+                    openName = session.name
+                },
+            )
+            return
+        }
+        // 角色已被删除：退回首页
+        androidx.compose.runtime.SideEffect { if (openDetailId != null) openDetailId = null }
     }
 
     val sessionId = openSessionId
@@ -133,6 +154,7 @@ fun MainScreen(
                         selectedTab = 2
                         if (route != null) settingsDeepLink = route
                     },
+                    onOpenDetail = { record -> openDetailId = record.id },
                 )
                 1 -> com.emberinn.app.ui.sessions.SessionsScreen(
                     onOpenSession = { session ->
