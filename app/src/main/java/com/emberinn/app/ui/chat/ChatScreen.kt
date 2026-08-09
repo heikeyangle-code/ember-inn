@@ -995,29 +995,10 @@ private fun StreamingRow(
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.size(4.dp))
-            // 思考过程中完整展开（低调灰色卡片，不抢戏）；生成完折叠到正文底部（ReasoningCard）
+            // 流式思考中：默认折叠成"思考中 ▸"一行（与生成完一致的折叠规范），点开展开
             if (reasoning.isNotBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        Text(
-                            text = "思考中",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Spacer(Modifier.size(4.dp))
-                        Text(
-                            text = reasoning,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.size(8.dp))
+                ReasoningCard(text = reasoning, label = "思考中")
+                Spacer(Modifier.size(6.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ChatMarkdown(
@@ -1241,9 +1222,9 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
     )
 }
 
-/** 生成完的思考过程：默认弱化为灰色折叠行，点开查看（不抢戏）。 */
+/** 思考过程：默认折叠成一行（流式/生成完共用），点开展开；显示在正文上方。 */
 @Composable
-private fun ReasoningCard(text: String) {
+private fun ReasoningCard(text: String, label: String = "思考过程") {
     var expanded by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1253,7 +1234,7 @@ private fun ReasoningCard(text: String) {
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
-            text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
+            text = if (expanded) "$label ▾" else "$label ▸",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             fontWeight = FontWeight.Medium,
