@@ -97,6 +97,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var streamActive = false
     private var streamStartedAt: String = java.time.Instant.now().toString()
     private var streamContinueMode = false
+    /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
+    @Volatile
+    private var generatingSwipe = false
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
@@ -172,6 +175,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val partial = _streamingText.value
         val wasImpersonating = _isImpersonating.value
         val wasContinue = streamContinueMode
+        val wasSwipe = generatingSwipe
         _isStreaming.value = false
         _isImpersonating.value = false
         if (!wasImpersonating && _streamingReasoning.value.isNotBlank()) {
@@ -180,6 +184,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (partial.isNotBlank()) {
             when {
                 wasImpersonating -> _impersonated.value = partial
+                wasSwipe -> appendGeneratedSwipe(partial)
                 wasContinue -> {
                     // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                     val after = chatStore.messages(sessionId).toMutableList()
@@ -200,6 +205,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _streamingText.value = ""
         _streamingReasoning.value = ""
         streamContinueMode = false
+        generatingSwipe = false
     }
 
     /** 重新生成（官方 option_regenerate）：只对最后一条 AI 生效——先删掉它，再按剩余历史重新请求。 */
@@ -242,6 +248,75 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             cyclePrompt = lastText,
             continueMode = true,
         )
+    }
+
+    /** 滑动切回复：左滑 = 上一个变体（对齐官方 swipe_left，越界 wrap 回最后一条）。 */
+    fun swipeLeft(index: Int) {
+        if (_isStreaming.value) return
+        if (!chatStore.ensureSwipes(sessionId, index)) return
+        val el = chatStore.messages(sessionId).getOrNull(index) ?: return
+        val count = chatStore.swipeCount(el)
+        if (count <= 0) return
+        val cur = chatStore.currentSwipeId(el)
+        val newId = (cur - 1 + count) % count
+        chatStore.swipeTo(sessionId, index, newId)
+        refreshMessages()
+    }
+
+    /** 滑动切回复：右滑 = 下一个变体；越界时最后一条 AI 生成新变体（对齐官方 overswipe REGENERATE），其余 wrap 回第一条。 */
+    fun swipeRight(index: Int) {
+        if (_isStreaming.value) return
+        if (!chatStore.ensureSwipes(sessionId, index)) return
+        val msgs = chatStore.messages(sessionId)
+        val el = msgs.getOrNull(index) ?: return
+        val count = chatStore.swipeCount(el)
+        if (count <= 0) return
+        val cur = chatStore.currentSwipeId(el)
+        if (cur + 1 < count) {
+            chatStore.swipeTo(sessionId, index, cur + 1)
+            refreshMessages()
+        } else if (index == msgs.lastIndex && !isUser(el)) {
+            generateSwipe()
+        } else {
+            chatStore.swipeTo(sessionId, index, 0)
+            refreshMessages()
+        }
+    }
+
+    /**
+     * 生成新变体：对齐官方 Generate('swipe')——coreChat.pop() 排除最后一条消息再组装，
+     * 结果追加进最后一条 AI 的 swipes（不新增消息）。
+     */
+    fun generateSwipe() {
+        if (_isStreaming.value) return
+        val msgs = chatStore.messages(sessionId)
+        val last = msgs.lastOrNull() ?: return
+        if (isUser(last)) return
+        _notice.value = null
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            _notice.value = "（未配置模型，请先选一个模型再滑动生成。）"
+            return
+        }
+        chatStore.ensureSwipes(sessionId, msgs.lastIndex)
+        startStream(
+            history = msgs.dropLast(1),
+            type = "swipe",
+            swipeMode = true,
+        )
+    }
+
+    /** 读取消息的 swipes 变体数（UI 计数 chip 用）。 */
+    fun swipeCountOf(el: JsonElement): Int = chatStore.swipeCount(el)
+
+    /** 当前 swipes 下标（UI 计数 chip 用）。 */
+    fun currentSwipeOf(el: JsonElement): Int = chatStore.currentSwipeId(el)
+
+    /** 删除当前消息的指定 swipes 变体（对齐官方 deleteSwipe）。 */
+    fun deleteSwipe(index: Int, swipeIndex: Int) {
+        if (_isStreaming.value) return
+        chatStore.deleteSwipe(sessionId, index, swipeIndex)
+        refreshMessages()
     }
 
     fun deleteMessage(index: Int) {
@@ -385,6 +460,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         impersonation: Boolean = false,
         cyclePrompt: String = "",
         continueMode: Boolean = false,
+        swipeMode: Boolean = false,
         mediaInlining: Boolean = false,
         onFinished: (() -> Unit)? = null,
     ) {
@@ -397,6 +473,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isStreaming.value = true
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
+        generatingSwipe = swipeMode
         streamActive = true
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
@@ -469,6 +546,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     _isStreaming.value = false
                     _isImpersonating.value = false
                     _streamingReasoning.value = ""
+                    streamContinueMode = false
+                    generatingSwipe = false
                     _notice.value = "（未配置模型，请先选一个模型。）"
                 }
             } else {
@@ -483,6 +562,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamSession = null
         val reply = _streamingText.value
         val wasImpersonating = _isImpersonating.value
+        val wasSwipe = generatingSwipe
         when {
             wasImpersonating -> {
                 // 官方：冒充结果进输入框，不写历史
@@ -497,6 +577,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 }
                 _isImpersonating.value = false
+            }
+            wasSwipe -> {
+                // 对齐官方 swipe 生成：结果追加进最后一条 AI 的 swipes，不新增消息
+                if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
+                if (reply.isNotBlank()) {
+                    appendGeneratedSwipe(reply)
+                } else if (_streamingReasoning.value.isBlank()) {
+                    _notice.value = "（滑动生成没有新内容，已保留当前回复。）"
+                }
             }
             continueMode && reply.isNotBlank() -> {
                 // 官方 mes_continue：saveReply('continue') lastMessage.mes += getMessage，紧贴追加不插换行
@@ -528,6 +617,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _streamingText.value = ""
         _streamingReasoning.value = ""
         streamContinueMode = false
+        generatingSwipe = false
+    }
+
+    /** 滑动生成完成落盘：追加为新变体（对齐官方 swipe 生成 saveReply）。 */
+    private fun appendGeneratedSwipe(reply: String) {
+        val msgs = chatStore.messages(sessionId)
+        val aiIdx = msgs.indexOfLast { !isUser(it) }
+        if (aiIdx >= 0) {
+            val profile = chatRepository.profile()
+            chatStore.appendSwipe(
+                sessionId = sessionId,
+                index = aiIdx,
+                content = reply,
+                api = profile?.providerId,
+                model = profile?.model,
+                genStarted = streamStartedAt,
+                genFinished = java.time.Instant.now().toString(),
+                reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+            )
+            refreshMessages()
+        }
     }
 
     /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning）。 */

@@ -21,6 +21,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -160,6 +162,7 @@ fun ChatScreen(
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
+    var deleteSwipeTargetIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -297,6 +300,8 @@ fun ChatScreen(
                             val isUserMsg = isUser(el)
                             val text = textOf(el)
                             val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg
+                            val swipeCount = vm.swipeCountOf(el)
+                            val curSwipe = vm.currentSwipeOf(el)
                             val dateLabel = if (item.index == 0) {
                                 dateLabelOf(el)
                             } else {
@@ -315,6 +320,10 @@ fun ChatScreen(
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 accent = accent,
                                 showActions = showActions,
+                                swipeCount = swipeCount,
+                                curSwipe = curSwipe,
+                                onSwipeLeft = { vm.swipeLeft(item.index) },
+                                onSwipeRight = { vm.swipeRight(item.index) },
                                 onCopy = {
                                     clipboard.setText(AnnotatedString(text))
                                     Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
@@ -510,6 +519,7 @@ fun ChatScreen(
                     MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
                         editIndex = index; editDraft = text; menuMessageIndex = null
                     }
+                    val swipeCount = vm.swipeCountOf(el)
                     if (!isUserMsg) {
                         MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
@@ -520,6 +530,24 @@ fun ChatScreen(
                             }
                             MenuRow(PhosphorIcons.Continue, "继续生成") {
                                 vm.continueGeneration(); menuMessageIndex = null
+                            }
+                            if (swipeCount == 0) {
+                                MenuRow(PhosphorIcons.CaretRight, "生成新回复（变体）") {
+                                    vm.generateSwipe(); menuMessageIndex = null
+                                }
+                            }
+                        }
+                    }
+                    if (swipeCount >= 1) {
+                        MenuRow(PhosphorIcons.CaretLeft, "上一个回复") {
+                            vm.swipeLeft(index); menuMessageIndex = null
+                        }
+                        MenuRow(PhosphorIcons.CaretRight, "下一个回复") {
+                            vm.swipeRight(index); menuMessageIndex = null
+                        }
+                        if (swipeCount > 1) {
+                            MenuRow(PhosphorIcons.Delete, "删除当前回复", danger = true) {
+                                deleteSwipeTargetIndex = index; menuMessageIndex = null
                             }
                         }
                     }
@@ -545,6 +573,28 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { deleteTargetIndex = null }) { Text("取消") }
+            },
+        )
+    }
+
+    deleteSwipeTargetIndex?.let { index ->
+        val el = messages.getOrNull(index)
+        val cur = if (el != null) vm.currentSwipeOf(el) + 1 else 0
+        AlertDialog(
+            onDismissRequest = { deleteSwipeTargetIndex = null },
+            title = { Text("删除这个回复？") },
+            text = { Text("将删除该消息的第 $cur 个回复变体，删除后不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (el != null) {
+                        vm.deleteSwipe(index, vm.currentSwipeOf(el))
+                        Toast.makeText(context, "已删除该回复", Toast.LENGTH_SHORT).show()
+                    }
+                    deleteSwipeTargetIndex = null
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteSwipeTargetIndex = null }) { Text("取消") }
             },
         )
     }
@@ -744,6 +794,10 @@ private fun MessageRow(
     accent: Color,
     dateLabel: String?,
     showActions: Boolean,
+    swipeCount: Int = 0,
+    curSwipe: Int = 0,
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
     onCopy: () -> Unit,
     onRegenerate: () -> Unit,
     onContinue: () -> Unit,
@@ -787,6 +841,26 @@ private fun MessageRow(
                 )
             }
             Spacer(Modifier.size(4.dp))
+            // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动
+            var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
+            if (!isUser) {
+                val threshold = with(LocalDensity.current) { 56.dp.toPx() }
+                bubbleModifier = bubbleModifier.then(
+                    Modifier.pointerInput(Unit) {
+                        var total = 0f
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (total > threshold) onSwipeLeft()
+                                else if (total < -threshold) onSwipeRight()
+                                total = 0f
+                            },
+                        ) { change, dragAmount ->
+                            change.consume()
+                            total += dragAmount
+                        }
+                    },
+                )
+            }
             Surface(
                 shape = RoundedCornerShape(
                     topStart = 18.dp,
@@ -796,7 +870,7 @@ private fun MessageRow(
                 ),
                 color = if (isUser) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress),
+                modifier = bubbleModifier,
             ) {
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     if (isUser) {
@@ -809,6 +883,39 @@ private fun MessageRow(
                         ChatMarkdown(
                             content = text,
                             onSurface = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            // 回复变体计数条（对齐官方 swipes-counter：n/total + 左右箭头；仅在已有变体时显示）
+            if (swipeCount >= 1) {
+                Spacer(Modifier.size(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onSwipeLeft,
+                        modifier = Modifier.size(26.dp),
+                    ) {
+                        Icon(
+                            PhosphorIcons.CaretLeft,
+                            contentDescription = "上一个回复",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                    Text(
+                        text = "${curSwipe + 1}/${swipeCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                    IconButton(
+                        onClick = onSwipeRight,
+                        modifier = Modifier.size(26.dp),
+                    ) {
+                        Icon(
+                            PhosphorIcons.CaretRight,
+                            contentDescription = "下一个回复",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
                         )
                     }
                 }
