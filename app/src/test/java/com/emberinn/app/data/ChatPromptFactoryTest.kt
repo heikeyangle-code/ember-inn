@@ -155,4 +155,23 @@ class ChatPromptFactoryTest {
         assertTrue(contents.any { it.contains("旧回复") })
         assertEquals("[Continue your last message without repeating its original content.]", contents.last())
     }
+
+    @Test
+    fun `chardepthprompt macro expands from extensions depth prompt`() {
+        // 官方位置 data.extensions.depth_prompt（char-data.js）；parseCard 必须解析对象而非返回空串
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"depth_prompt":{"prompt":"深层设定文本","depth":4,"role":"system"}}}}
+        """.trimIndent()
+        val history = listOf(msg(true, "{{chardepthprompt}}", "User"))
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = card,
+            history = history,
+            userName = "User",
+            charName = "角色",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+        )
+        assertTrue(result.messages.any { it.content.contains("深层设定文本") })
+    }
 }

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
+import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.icons.PhosphorIcons
 import java.io.File
 
@@ -139,7 +140,7 @@ fun CharacterDetailScreen(
             // 顶栏：返回 + 名称 + 菜单（开始聊天/导出/置顶/删除）
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 10.dp),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
@@ -175,7 +176,7 @@ fun CharacterDetailScreen(
                             leadingIcon = { Icon(PhosphorIcons.Share, contentDescription = null) },
                             onClick = {
                                 showMenu = false
-                                exportLauncher.launch("${record.name}.json")
+                                exportLauncher.launch("${fields.name.ifBlank { record.name }}.json")
                             },
                         )
                         DropdownMenuItem(
@@ -200,7 +201,7 @@ fun CharacterDetailScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 168.dp),
             ) {
                 // 头部：大头像 + 名字 + 描述 + 统计
                 item {
@@ -236,7 +237,7 @@ fun CharacterDetailScreen(
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                record.description.ifBlank { "（无描述）" },
+                                fields.description.ifBlank { "（无描述）" },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 3,
@@ -277,6 +278,11 @@ fun CharacterDetailScreen(
                     }
                 }
                 item {
+                    FieldRow("开场白", fields.firstMes) {
+                        editingKey = "first_mes"; fieldDraft = fields.firstMes
+                    }
+                }
+                item {
                     FieldRow("示例对话", fields.mesExample) {
                         editingKey = "mes_example"; fieldDraft = fields.mesExample
                     }
@@ -291,7 +297,7 @@ fun CharacterDetailScreen(
                             "没有备用开场白。点击下方按钮新增，新会话可从备用开场白开始。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(vertical = 4.dp),
+                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                         )
                     }
                 }
@@ -308,7 +314,7 @@ fun CharacterDetailScreen(
                 item {
                     OutlinedButton(
                         onClick = { editingGreetingIdx = fields.alternateGreetings.size; greetingDraft = "" },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增开场白") }
                 }
 
@@ -321,7 +327,7 @@ fun CharacterDetailScreen(
                             "没有世界书条目。新增关键词条目后，聊到关键词时内容会自动注入上下文。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(vertical = 4.dp),
+                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                         )
                     }
                 }
@@ -338,7 +344,7 @@ fun CharacterDetailScreen(
                 item {
                     OutlinedButton(
                         onClick = { addingEntry = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增条目") }
                 }
 
@@ -408,17 +414,22 @@ fun CharacterDetailScreen(
 
         // 底部固定保存栏
         Surface(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(28.dp),
-            shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            shape = RoundedCornerShape(24.dp),
+            shadowElevation = 12.dp,
+            color = MaterialTheme.colorScheme.surfaceContainer,
         ) {
             Button(
                 onClick = save,
                 enabled = dirty,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                shape = RoundedCornerShape(20.dp),
-            ) { Text(if (dirty) "保存修改" else "没有修改") }
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).height(52.dp),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Text(
+                    if (dirty) "保存修改" else "没有修改",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
         }
     }
 
@@ -574,9 +585,11 @@ fun CharacterDetailScreen(
                 editingEntryIdx = null
             },
             onDelete = {
-                val i = editingEntryIdx ?: 0
-                entries = entries.filterIndexed { j, _ -> j != i }
-                dirty = true
+                val i = editingEntryIdx
+                if (i != null && i in entries.indices) {
+                    entries = entries.filterIndexed { j, _ -> j != i }
+                    dirty = true
+                }
                 addingEntry = false
                 editingEntryIdx = null
             },
@@ -611,7 +624,7 @@ fun CharacterDetailScreen(
 private fun SectionHeader(title: String, count: String? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         if (count != null) {
@@ -640,7 +653,7 @@ private fun StatChip(text: String) {
 private fun FieldRow(label: String, value: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -678,45 +691,72 @@ private fun GreetingRow(text: String, onEdit: () -> Unit, onDelete: () -> Unit) 
 
 @Composable
 private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (entry.enabled) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
-        Column(
-            modifier = Modifier.weight(1f).clickable(onClick = onEdit).padding(vertical = 6.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit).padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        entry.keys.ifBlank { "（无触发词）" },
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (entry.keys.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (entry.constant) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "恒",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                    if (entry.selective) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "选",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    entry.keys.ifBlank { "（无触发词）" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (entry.keys.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
+                    entry.content.ifBlank { entry.comment.ifBlank { "（空内容）" } },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
-                if (entry.constant) {
-                    Spacer(Modifier.width(6.dp))
-                    Text("恒", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (entry.selective) {
-                    Spacer(Modifier.width(4.dp))
-                    Text("选", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    "插入顺序 ${entry.insertionOrder}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
-            Text(
-                entry.content.ifBlank { entry.comment.ifBlank { "（空内容）" } },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(PhosphorIcons.Edit, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+            }
+            Switch(checked = entry.enabled, onCheckedChange = { onToggle() })
         }
-        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-            Icon(PhosphorIcons.Edit, contentDescription = "编辑条目", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
-        }
-        Switch(checked = entry.enabled, onCheckedChange = { onToggle() })
     }
-    HorizontalDivider()
 }
 
 @Composable
@@ -791,10 +831,12 @@ private fun WorldEntryEditorSheet(
             SwitchRow("启用", enabled) { enabled = it }
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f),
-                ) { Text("删除条目", color = MaterialTheme.colorScheme.error) }
+                if (!isNew) {
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("删除条目", color = MaterialTheme.colorScheme.error) }
+                }
                 Button(
                     onClick = {
                         onSave(

@@ -1,7 +1,9 @@
 package com.emberinn.app.data
 
 import com.emberinn.engine.macros.ChatMessage
+import com.emberinn.engine.macros.CharacterFields
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.macros.SystemFields
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaDisplay
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
@@ -19,6 +21,7 @@ import com.emberinn.engine.worldinfo.WorldInfoSettings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -64,7 +67,26 @@ class ChatPromptFactory {
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(parsed?.source)
-        val env = MacroEnv(user = userName, char = charName)
+        // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）
+        val env = MacroEnv(
+            user = userName,
+            char = charName,
+            character = CharacterFields(
+                charPrompt = fields.system,
+                charInstruction = fields.jailbreak,
+                description = fields.description,
+                personality = fields.personality,
+                scenario = fields.scenario,
+                persona = fields.persona,
+                mesExamplesRaw = fields.mesExamples,
+                charDepthPrompt = fields.charDepthPrompt,
+                creatorNotes = fields.creatorNotes,
+                firstMessage = fields.firstMessage,
+                alternateGreetings = fields.alternateGreetings,
+                version = fields.version,
+            ),
+            system = SystemFields(model = model),
+        )
         val tokenCounter = TokenCounterFactory.forModel(model)
 
         // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）
@@ -178,15 +200,28 @@ class ChatPromptFactory {
             postHistoryInstructions = str(data, "post_history_instructions"),
             characterVersion = str(data, "character_version"),
             creatorNotes = str(data, "creator_notes"),
-            depthPrompt = str(data, "depth_prompt"),
+            depthPrompt = depthPromptOf(data),
             alternateGreetings = data["alternate_greetings"]?.jsonArray
                 ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
         )
-        val entries = data["character_book"]?.jsonObject?.get("entries")?.jsonArray
+        // 官方位置 data.character_book；兼容历史卡把 character_book 放根部的写法
+        val book = data["character_book"]?.jsonObject ?: root["character_book"]?.jsonObject
+        val entries = book?.get("entries")?.jsonArray
             ?.mapIndexedNotNull { i, el ->
                 runCatching { WorldBookEntryParser.parse(el.jsonObject, "character", i) }.getOrNull()
             } ?: emptyList()
         return ParsedCard(source, entries)
+    }
+
+    /** 官方位置：data.extensions.depth_prompt.prompt；兼容旧版 data.depth_prompt 字符串/对象。 */
+    private fun depthPromptOf(data: JsonObject): String {
+        val fromExt = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
+            ?.get("prompt")?.jsonPrimitive?.contentOrNull
+        if (!fromExt.isNullOrBlank()) return fromExt
+        val legacy = data["depth_prompt"]
+        val legacyObj = legacy as? JsonObject
+        return legacyObj?.get("prompt")?.jsonPrimitive?.contentOrNull
+            ?: (legacy as? JsonPrimitive)?.contentOrNull ?: ""
     }
 
     private fun mimeFromPath(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {

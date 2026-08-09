@@ -186,11 +186,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 wasImpersonating -> _impersonated.value = partial
                 wasSwipe -> appendGeneratedSwipe(partial)
                 wasContinue -> {
-                    // 续写追加回最后一条 AI 消息：换行分隔（回退 7f3a42a 的紧贴追加）
+                    // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                     val after = chatStore.messages(sessionId).toMutableList()
                     val aiIdx = after.indexOfLast { !isUser(it) }
                     if (aiIdx >= 0) {
-                        val combined = textOf(after[aiIdx]) + "\n" + partial
+                        val combined = textOf(after[aiIdx]) + partial
                         after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                         chatStore.replace(sessionId, after)
                         refreshMessages()
@@ -609,12 +609,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             }
             continueMode && reply.isNotBlank() -> {
-                // 续写追加回最后一条 AI 消息：换行分隔（回退 7f3a42a 的紧贴追加）
+                // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                 if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
-                    val combined = textOf(after[aiIdx]) + "\n" + reply
+                    val combined = textOf(after[aiIdx]) + reply
                     after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
                     chatStore.replace(sessionId, after)
                     refreshMessages()

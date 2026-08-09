@@ -136,7 +136,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 ### 3.1 角色卡 ✅
 PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；JSON 导入 5 例 + JSON 导出 4 例（getCharaCardV2+unsetPrivateFields）、YAML 3 例、CharX 5 例、BYAF 14+5+4+4 例；V2 归一（readFromV2，官方差分 5 例 + 多轮补真 bug）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord；URL 导入未做）。
+✅ 导入保留世界书回归锁（2026-08-10 WorldBookImportTest：JSON/PNG 导入后 data.character_book.entries 可读可解析）；✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord；URL 导入未做）。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
@@ -150,7 +150,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ### 3.3 宏 ✅（含作用域宏）
 通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例；!?~> flags 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
-✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；🟡 完整 MacroEnv（聊天/角色/系统状态）边界；!?~> 官方标 TBD 无需补。
+✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（2026-08-10：App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 10 例。
@@ -159,7 +159,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
-✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
+✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ 角色宏环境接线（2026-08-10：ChatPromptFactory env.character=CharacterFields(system/jailbreak/description/…/charDepthPrompt)+system.model，官方 MacroEnvBuilder 映射 1:1，{{chardepthprompt}} 等历史消息宏可用）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s、非法 flags）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
@@ -229,7 +229,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 4.2 首页（角色 Tab）🟡
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
-✅ 角色详情编辑页已初步完成（待复验，2026-08-09 c8b22e4）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天；字段读写按 V2 归一化（readFromV2 对齐，V3 卡导入即归一为 V2）。
+✅ 角色详情编辑页已完成（2026-08-10 复验修复，c8b22e4 起）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。本轮修复：depth_prompt/talkativeness 读写改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；“新增条目”弹层删除按钮误删第一条的 bug 已修；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
 ❌ 正则/变量/快捷回复 UI、模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
 
@@ -335,12 +335,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P0（“打开即聊”体验短板）**
 1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
 2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装/滑动切回复~~ → 已做；剩 swipe picker（变体历史跳转，P2）
-3. ~~全局搜索~~ → 首页搜索已接角色/会话/世界书/设置；设置结果深链到具体子页未做（目前跳设置 Tab）
+3. ~~全局搜索~~ → 已做；设置结果深链已实现（首页搜索 route → SettingsScreen deepLink：外观/提供商/数据/关于，MainScreen settingsDeepLink 接线）
 
 **P1（功能完整）**
-4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已初步完成（待复验）；剩正则/变量/快捷回复 UI、模型覆盖、主题配方（后两者为 README 角色页承诺的项目自定义功能，官方角色编辑器无对应字段）
-5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；剩 Splash 原生启动 / Lottie 品牌开场 / 余烬火花 mark（README 对账发现的未做项）
-6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）、服务（翻译/图像/向量）~~ → 设置/配置页已初步完成（待复验），剩执行层（TTS 聊天朗读 / 翻译 / 图像请求）P3 接入；官方 1.18 无 STT
+4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；剩正则/变量/快捷回复 UI、模型覆盖、主题配方（后两者为 README 角色页承诺的项目自定义功能，官方角色编辑器无对应字段）
+5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；Splash 原生启动待做（Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺，3641185 移除）
+6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）、服务（翻译/图像/向量）~~ → 设置/配置页已复验通过（2026-08-10），剩执行层（TTS 聊天朗读 / 翻译 / 图像请求）P3 接入；官方 1.18 无 STT
 
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
@@ -367,6 +367,30 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 最近一轮 73（2026-08-10：角色详情页复验修复 + 接线审计——世界书读不到/布局/官方位置/宏环境/continue 1:1）
+
+- 用户反馈：角色详情页看不到内嵌世界书、上下太挤。复验 c8b22e4/fa08e53 并全量修复：
+  1. **世界书读取**：detail 页与聊天扫描都只读 data.character_book；历史卡（V2 带 data 但书在根部）读不到
+     → CharacterCardEdit/parseCard/搜索三处兼容根级 character_book；新增引擎回归 WorldBookImportTest
+     （JSON/PNG 导入后 entries 可读可解析，含 v1 key/disable 与 v2 keys/enabled）。
+  2. **保存丢字段**：saveWorldEntries 重建条目时丢弃 probability/vectorized/automationId/displayIndex/extensions 等
+     → 改为只覆盖编辑字段、未知字段原样保留；v1（key/order/disable）归一 v2（keys/insertion_order/enabled），
+     position 缺失才补 before_char。
+  3. **官方位置错误**：depth_prompt/talkativeness 旧实现读写 data 顶层，官方是 data.extensions.depth_prompt /
+     data.extensions.talkativeness（char-data.js + slash-commands.js 核实）→ 读写都改到 extensions，
+     兼容旧顶层回退；depth 存数字；保存后按 readFromV2 fieldMappings 同步根字段（name/description/…/tags/talkativeness/fav）。
+  4. **开场白缺失**：详情页自称“v2 字段全集”但没有 first_mes 编辑行 → 补上。
+  5. **新增世界书条目弹层“删除条目”误删第一条**（editingEntryIdx=null 时 i=0）→ 新增态隐藏删除按钮 + 删除回调加下标守卫。
+  6. **continue 1:1 破坏**：349cb45 把官方 saveReply('continue') 的 mes += getMessage 改成加换行 → 回退为紧贴追加（官方逐字核实）。
+  7. **宏环境接线**：ChatPromptFactory env 只有 user/char，{{description}}/{{chardepthprompt}} 等恒空
+     → 按官方 MacroEnvBuilder 的 fieldMappings 填 character（system/jailbreak/description/personality/scenario/
+     persona/mesExamplesRaw/charDepthPrompt/creatorNotes/firstMessage/alternateGreetings/version）+ system.model。
+  8. **布局**：上下留白加大（顶栏 16dp、内容 20dp、底部保存栏 20dp 且按钮 52dp、列表底 padding 168dp），
+     世界书条目改卡片式（禁用态降透明），保持世界书在字段下方（用户要求不移动）。
+- 纯逻辑抽到 `app/data/CharacterCardEdit.kt`（可单测）；新增 App 单测 CharacterCardEditTest 5 例
+  （extensions 读写/根级书/v1 归一/未知字段保留/无 data 卡）+ ChatPromptFactoryTest 补 {{chardepthprompt}} 1 例。
+- 引擎 267 测全绿（含新增 WorldBookImportTest）；App 编译走 CI。
 
 ## 最近一轮 72（2026-08-09：上下文预算对齐官方修复——默认 32K / 预算恒正 / Claude 缓存接线）
 
