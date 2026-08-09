@@ -198,6 +198,7 @@ fun ChatScreen(
     var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
     var deleteSwipeTargetIndex by remember { mutableStateOf<Int?>(null) }
+    var swipePickerIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
