@@ -259,7 +259,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索）/ 上下文上限（tokens，占比胶囊分母）/ 最大回复 tokens（推理模型思考会占额度，512 太小正文被掐空；默认按 providers.json default_max_tokens）/ 测试连接 / 保存 / 删除确认
 - 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
 - 语音（TTS）✅（2026-08-10 第 80 轮执行层已接）：Android 系统 TTS 本机引擎，语音选择/语速/试听真实可用；朗读选项字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；聊天自动朗读（auto_generation）、消息长按“朗读这条消息”、narrate_user 已接；文本处理对齐官方（跳代码块/标签、去星号、正则 /pat/flags、去图片、按行分段排队），纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装（未做）
-- 服务页 ✅（2026-08-10 第 86 轮执行层已接）：翻译（LibreTranslate/DeepL/DeepLX 已实现，接口地址可配；Google/Lingva/Bing/OneRing/Yandex 登记未实现）、图像（AUTOMATIC1111 已实现；ComfyUI/SDCPP/Horde/NovelAI/OpenAI/HF 登记未实现）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）；向量 App 接线待做（引擎已就绪）
+- 服务页 ✅（2026-08-10 第 86 轮执行层已接）：翻译（LibreTranslate/DeepL/DeepLX 已实现，接口地址可配；Google/Lingva/Bing/OneRing/Yandex 登记未实现）、图像（AUTOMATIC1111 已实现；ComfyUI/SDCPP/Horde/NovelAI/OpenAI/HF 登记未实现）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）——✅ 2026-08-10 第 88 轮已接线：设置页开关（启用/聊天历史重排/文件数据银行 + query/insert/protect/阈值）、发送时 VectorChatRearranger 重排+数据银行检索、世界书 vectorized 条目经 externalActivations 强制激活、聊天 ⋮ 数据银行管理；OpenAI 配置不完整时本轮禁用并人话提示
 
 ### 4.4.5 应用图标 ✅
 launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
@@ -299,6 +299,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → Lottie/sprite 动画渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
 | 人设 | `public/scripts/personas.js` | ✅ 2026-08-10 第 83 轮：PersonaStore（filesDir/personas.json，官方 Persona Management 语义）+ 聊天 ⋮ 人设选择/新建/编辑/删除；选中人设时 personaDescription 注入（personaInPrompt=true，官方 persona_in_prompt 语义；引擎 PromptPipeline 补同名透传参数，默认 false 行为不变） |
+| 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ 2026-08-10 第 88 轮：VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
 | 作者注释 | `public/scripts/authors-note.js` | AuthorsNoteEngine.resolve 每 N 条消息刷新，ANWithWI 合并世界书结果后注入 |
 | tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
 | 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
@@ -341,7 +342,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **P1（功能完整）**
 4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；~~模型覆盖~~（第 81 轮）；主题配方已做存储+UI+聊天背景应用（第 82 轮）；全局形状/字体/锁定管线与配方导出分享 P3
 5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；✅ Splash 原生启动已做（2026-08-10 第 78 轮：主题级启动窗口，windowBackground 层叠图标 + Android 12+ windowSplashScreen*，MainActivity setTheme 切换；无新依赖）；Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺（3641185）
-6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（第 80 轮）；~~服务（翻译/图像）~~ → 执行层已接（2026-08-10 第 86 轮：翻译 LibreTranslate/DeepL/DeepLX、图像 AUTOMATIC1111，聊天长按翻译 + 快捷工具盘“图像”）；向量 App 接线待做；官方 1.18 无 STT
+6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（第 80 轮）；~~服务（翻译/图像）~~ → 执行层已接（2026-08-10 第 86 轮：翻译 LibreTranslate/DeepL/DeepLX、图像 AUTOMATIC1111，聊天长按翻译 + 快捷工具盘“图像”）；向量 App 接线已做（第 88 轮：设置开关 + 聊天/文件/世界书 RAG + 数据银行 UI）；官方 1.18 无 STT
 
 **P2（引擎边界）**
 7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
@@ -389,7 +390,20 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 无作者注释/记忆 UI（官方默认 AN 空则不注入），暂等价 | 🟡 待 UI |
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
-| 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id），未实现 | ❌ 待做 |
+| 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
+| 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 88（2026-08-10：向量 App 接线——P1-6 收尾）
+
+- 引擎侧早已 1:1（VectorChatRearranger / WorldInfoVectorActivation / FileVectorStore），本轮把 App 层接上：
+  1. **VectorRagService**（app/data）：嵌入来源 OpenAI 兼容 /embeddings 或本地 BagOfGram；FileVectorStore 磁盘持久化（filesDir/vector，对齐 vectra 目录）；数据银行 filesDir/databank/
+  2. **ChatPromptFactory.prepare 增向量参数**：vectorStore/vectorChatSettings/vectorWorldSettings/vectorDataBank/vectorFileText/extensionPrompts；总装前跑 VectorChatRearranger（聊天历史重排、文件/数据银行分块检索、世界书向量激活），重排结果进历史（保留原 JSONL 下标取 extra.media）、命中条目经 scanner externalActivations 强制激活、扩展提示 3_vectors/4_vectors_data_bank 注入 PromptPipeline（官方 preparePromptsForChatCompletion 已知标识符，非空才注入）
+  3. **查询文本宏替换**：vectorChatSettings.macroSubstituter = MacroEngine.substitute(env)（对齐官方 substituteParamsExtended）
+  4. **设置页向量卡升级**：启用 RAG / 聊天历史重排 / 文件数据银行 开关 + 最近消息数(query)/插入条数(insert)/保护条数(protect)/相似度阈值；OpenAI 配置不完整时发送本轮禁用并人话提示（不报错不崩溃）
+  5. **聊天 ⋮ 数据银行**：添加/删除文本文件（txt/md/json），发送时按官方 chunk 语义向量化+检索注入
+- App 单测 +2：向量记忆重排注入记忆提示（旧消息移出历史）、vectorized 世界书条目无关键词也强制激活（externalActivations）；引擎 281 测全绿不变
+- 边界登记（第 8 节）：数据银行为本地文本文件（官方 Data Bank 浏览器附件/URL，App 不做 URL 下载）；sizeThresholdDb/chunkCountDb 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底近似
+- App 编译走 CI
 
 ## 最近一轮 87（2026-08-10：群聊 natural/pooled 激活 + 队列提示 + 分词器撤回归档）
 

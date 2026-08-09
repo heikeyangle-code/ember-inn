@@ -165,6 +165,7 @@ fun ChatScreen(
     val personas by vm.personas.collectAsState()
     val activePersona by vm.activePersona.collectAsState()
     val bookmarks by vm.bookmarks.collectAsState()
+    val dataBank by vm.dataBank.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -185,6 +186,7 @@ fun ChatScreen(
     var showBookmarksSheet by remember { mutableStateOf(false) }
     var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
+    var showDataBank by remember { mutableStateOf(false) }
     var imagePrompt by remember { mutableStateOf("") }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editDraft by remember { mutableStateOf("") }
@@ -226,6 +228,12 @@ fun ChatScreen(
             val mime = context.contentResolver.getType(uri)
             vm.addPendingMedia(uri, mime)
         }
+    }
+
+    val dataBankPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let { vm.addDataBankFile(it) }
     }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
@@ -760,6 +768,10 @@ fun ChatScreen(
                     showMore = false
                     showBookmarksSheet = true
                 }
+                MenuRow(PhosphorIcons.FileText, "数据银行（向量检索）") {
+                    showMore = false
+                    showDataBank = true
+                }
                 MenuRow(PhosphorIcons.Person, "人设") {
                     showMore = false
                     showPersonaPicker = true
@@ -975,6 +987,51 @@ fun ChatScreen(
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                }
+            }
+        }
+    }
+
+    if (showDataBank) {
+        ModalBottomSheet(onDismissRequest = { showDataBank = false }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "数据银行（向量检索）",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+                Text(
+                    "把文本文件放进数据银行，发送消息时会按官方 vectors 扩展分块检索，把相关内容注入提示词（设置→服务→向量 开启）。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                if (dataBank.isEmpty()) {
+                    Text(
+                        "还没有文件。点下面“添加文件”选一个 txt / md 文档。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    )
+                }
+                dataBank.forEach { name ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                    ) {
+                        Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { vm.removeDataBankFile(name) }) {
+                            Text("删除", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = { dataBankPicker.launch(arrayOf("text/plain", "text/markdown", "application/json")) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) {
+                    Text("添加文件")
                 }
             }
         }

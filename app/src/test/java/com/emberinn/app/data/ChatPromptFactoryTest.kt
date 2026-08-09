@@ -2,11 +2,18 @@ package com.emberinn.app.data
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.emberinn.engine.worldinfo.EmbeddingProvider
+import com.emberinn.engine.worldinfo.InMemoryVectorStore
+import com.emberinn.engine.worldinfo.StringHash
+import com.emberinn.engine.worldinfo.VectorChatSettings
+import com.emberinn.engine.worldinfo.VectorItem
+import com.emberinn.engine.worldinfo.VectorSettings
 
 /**
  * 锁住“App→引擎”接线契约（曾因“旧的在前”导致 continue 错当最老消息）：
@@ -272,5 +279,104 @@ class ChatPromptFactoryTest {
             personaInPrompt = true,
         )
         assertTrue(result.messages.any { it.content.contains("话痨模式") })
+    }
+
+    @Test
+    fun `vector memory rearranges history and injects memory prompt`() {
+        val store = InMemoryVectorStore(TestEmbedding())
+        val oldMessage = "森林里的故事"
+        store.insert(
+            "chat",
+            listOf(VectorItem(StringHash.get(oldMessage), oldMessage, 0)),
+        )
+        val history = listOf(
+            msg(false, "篝火旁的余烬", "小炭"),
+            msg(false, oldMessage, "小炭"),
+            msg(true, "今天下雨", "User"),
+        )
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            vectorStore = store,
+            vectorChatSettings = VectorChatSettings(
+                enabledChats = true,
+                query = 1,
+                protect = 1,
+                insert = 2,
+                scoreThreshold = 0.0,
+            ),
+            vectorWorldSettings = VectorSettings(),
+        )
+        val all = result.messages.joinToString("\n") { it.content }
+        assertTrue(all.contains("Past events:"))
+        assertTrue(all.contains(oldMessage))
+        // 旧消息被移出历史进入记忆提示，不再以聊天消息形式出现
+        assertTrue(result.messages.none { it.content == oldMessage })
+    }
+
+    @Test
+    fun `vectorized world info entry is force activated without keyword match`() {
+        val store = InMemoryVectorStore(TestEmbedding())
+        val content = "常驻知识：森林里住着白鹿"
+        // 官方 activateWorldInfo 按 world 分组：collectionId = world_<hash(world)>（角色卡内嵌书 world=character）
+        store.insert(
+            "world_" + StringHash.get("character"),
+            listOf(VectorItem(StringHash.get(content), content, 1)),
+        )
+        val characterJson = buildJsonObject {
+            put("spec", "chara_card_v2")
+            put(
+                "data",
+                buildJsonObject {
+                    put("name", "小炭")
+                    put(
+                        "character_book",
+                        buildJsonObject {
+                            put(
+                                "entries",
+                                JsonArray(
+                                    listOf(
+                                        buildJsonObject {
+                                            put("keys", JsonArray(listOf(JsonPrimitive("完全不匹配"))))
+                                            put("content", JsonPrimitive(content))
+                                            put("vectorized", JsonPrimitive(true))
+                                        },
+                                    ),
+                                ),
+                            )
+                        },
+                    )
+                },
+            )
+        }.toString()
+        val history = listOf(msg(true, "今天聊下雨", "User"))
+        val result = ChatPromptFactory().prepare(
+            characterRawJson = characterJson,
+            history = history,
+            userName = "User",
+            charName = "小炭",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            vectorStore = store,
+            vectorChatSettings = VectorChatSettings(),
+            vectorWorldSettings = VectorSettings(enabled = true, query = 1, maxEntries = 5, scoreThreshold = 0.0),
+        )
+        assertTrue(result.activatedWorldInfo.any { it.content == content })
+    }
+
+    /** 确定性测试嵌入：字符哈希到 64 维单位向量（相似性不参与断言，只验证接线）。 */
+    private class TestEmbedding : EmbeddingProvider {
+        override fun embed(texts: List<String>): List<List<Double>> = texts.map { text ->
+            val v = DoubleArray(64)
+            text.forEach { ch -> v[ch.code and 0x3F] += 1.0 }
+            val norm = kotlin.math.sqrt(v.sumOf { it * it })
+            v.map { if (norm > 0.0) it / norm else 0.0 }
+        }
     }
 }

@@ -23,6 +23,7 @@ import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
+import com.emberinn.app.data.VectorRagService
 import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
@@ -68,6 +69,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val groupStore = GroupStore(application)
     private val translateClient = TranslateClient()
     private val imageGenClient = ImageGenClient()
+    private val vectorRag = VectorRagService(application)
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -196,6 +198,38 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun deleteBookmark(name: String) {
         chatStore.deleteBookmark(sessionId, name)
         _bookmarks.value = chatStore.bookmarkNames(sessionId)
+    }
+
+    // ---- 向量检索 / 数据银行（官方 vectors 扩展 Data Bank；本 App 存 filesDir/databank/）----
+
+    private val _dataBank = MutableStateFlow(vectorRag.dataBankNames())
+    val dataBank: StateFlow<List<String>> = _dataBank
+
+    fun refreshDataBank() {
+        _dataBank.value = vectorRag.dataBankNames()
+    }
+
+    fun addDataBankFile(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val app = getApplication<Application>()
+                val resolver = app.contentResolver
+                val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
+                if (bytes.isEmpty()) return@launch
+                val displayName = runCatching {
+                    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                        if (c.moveToFirst()) c.getString(0) else null
+                    }
+                }.getOrNull() ?: "data-${System.currentTimeMillis()}.txt"
+                vectorRag.saveDataBankFile(displayName, bytes)
+            }
+            withContext(Dispatchers.Main) { refreshDataBank() }
+        }
+    }
+
+    fun removeDataBankFile(name: String) {
+        vectorRag.deleteDataBankFile(name)
+        refreshDataBank()
     }
 
     private fun narrateText(text: String) {
@@ -862,6 +896,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // buildRequest 阶段异常（如接口地址 scheme 非法）在 newCall 之前抛出，不经过 onError，
             // 直接透传给协程会崩溃——这里统一兜底转 notice，绝不崩。
             try {
+            // 向量 RAG（官方 vectors 扩展）：设置页开关 + 数据银行；嵌入配置不完整时本轮禁用并提示
+            val rag = VectorRagService(getApplication())
+            val vectorStore = rag.store()
+            val vectorSettings = rag.chatSettings()
+            val vectorWorldSettings = rag.worldSettings()
+            val vectorDataBank = rag.dataBankFiles()
+            if (rag.enabled() && vectorStore == null) {
+                _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
+            }
             val session = chatRepository.streamPrepared(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
                 history = history,
@@ -909,6 +952,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 chatMetadata = chatStore.metadata(sessionId),
                 personaDescription = _activePersona.value?.description.orEmpty(),
                 personaInPrompt = _activePersona.value != null,
+                vectorStore = vectorStore,
+                vectorChatSettings = vectorSettings,
+                vectorWorldSettings = vectorWorldSettings,
+                vectorDataBank = vectorDataBank,
+                vectorFileText = { path -> rag.readDataBankText(path) },
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

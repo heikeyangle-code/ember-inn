@@ -19,6 +19,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -93,7 +94,7 @@ fun ServicesScreen(onBack: () -> Unit) {
         ) {
             Text("翻译 · 图像 · 向量", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Text(
-                "字段对齐官方扩展设置；翻译 / 图像请求执行在 P3 引擎层接入，本页先持久化配置。",
+                "字段对齐官方扩展设置；翻译 / 图像执行层已接入，向量检索已 1:1 接线。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -119,7 +120,7 @@ private fun TranslateCard() {
     fun saveUrl(v: String) { url = v; ServicesPrefs.saveTranslateUrl(context, v) }
 
     ServiceCard(title = "翻译") {
-        ServiceNote("官方 translate 扩展：自动模式 / 提供商 / 目标语言 / API Key。翻译执行在 P3 接入。")
+        ServiceNote("官方 translate 扩展：自动模式 / 提供商 / 目标语言 / API Key。聊天长按消息可翻译。")
         MenuPicker("自动翻译", labelOf(TRANSLATE_MODES, autoMode), TRANSLATE_MODES) { autoMode = it; save() }
         MenuPicker("提供商", labelOf(TRANSLATE_PROVIDERS, provider), TRANSLATE_PROVIDERS) { provider = it; save() }
         MenuPicker("目标语言", labelOf(TARGET_LANGUAGES, target), TARGET_LANGUAGES) { target = it; save() }
@@ -144,7 +145,7 @@ private fun ImageCard() {
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
 
     ServiceCard(title = "图像生成") {
-        ServiceNote("官方 stable-diffusion 扩展：来源 / 接口地址 / 模型 / 采样步数。图像生成执行在 P3 接入。")
+        ServiceNote("官方 stable-diffusion 扩展：来源 / 接口地址 / 模型 / 采样步数。快捷工具盘可生成图像。")
         MenuPicker("来源", labelOf(IMAGE_SOURCES, source), IMAGE_SOURCES) { source = it; save() }
         TextFieldRow("接口地址", url) { url = it; save() }
         TextFieldRow("模型", model) { model = it; save() }
@@ -166,21 +167,48 @@ private fun VectorCard() {
     var url by rememberSaveable { mutableStateOf(ServicesPrefs.vectorUrl(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.vectorApiKey(context)) }
     var model by rememberSaveable { mutableStateOf(ServicesPrefs.vectorModel(context)) }
+    var enabled by rememberSaveable { mutableStateOf(ServicesPrefs.vectorEnabled(context)) }
+    var enabledChats by rememberSaveable { mutableStateOf(ServicesPrefs.vectorEnabledChats(context)) }
+    var enabledFiles by rememberSaveable { mutableStateOf(ServicesPrefs.vectorEnabledFiles(context)) }
+    var query by rememberSaveable { mutableStateOf(ServicesPrefs.vectorQuery(context).toString()) }
+    var insert by rememberSaveable { mutableStateOf(ServicesPrefs.vectorInsert(context).toString()) }
+    var protect by rememberSaveable { mutableStateOf(ServicesPrefs.vectorProtect(context).toString()) }
+    var threshold by rememberSaveable { mutableStateOf(ServicesPrefs.vectorThreshold(context).toString()) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
-    fun save() = ServicesPrefs.saveVector(context, provider, url, apiKey, model)
+    fun save() = ServicesPrefs.saveVector(
+        context,
+        provider,
+        url,
+        apiKey,
+        model,
+        enabled,
+        enabledChats,
+        enabledFiles,
+        query.toIntOrNull()?.coerceAtLeast(1) ?: 2,
+        insert.toIntOrNull()?.coerceAtLeast(1) ?: 3,
+        protect.toIntOrNull()?.coerceAtLeast(0) ?: 5,
+        threshold.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 0.25,
+    )
 
     ServiceCard(title = "向量检索（RAG）") {
-        ServiceNote("世界书 / 文件向量化引擎已就绪（官方 vectors 扩展 1:1）；聊天接线在 P3。选择嵌入来源：")
+        ServiceNote("引擎（聊天重排 / 世界书强制激活 / 文件分块检索）已 1:1 接线；数据银行文件在聊天 ⋮ 菜单管理。")
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            VECTOR_PROVIDERS.forEach { p ->
+            VECTOR_PROVIDERS.forEach { pv ->
                 FilterChip(
-                    selected = provider == p.value,
-                    onClick = { provider = p.value; save() },
-                    label = { Text(p.label) },
+                    selected = provider == pv.value,
+                    onClick = { provider = pv.value; save() },
+                    label = { Text(pv.label) },
                 )
                 Spacer(Modifier.width(8.dp))
             }
         }
+        ToggleRow("启用向量检索（RAG）", enabled) { enabled = it; save() }
+        ToggleRow("聊天历史重排（向量记忆）", enabledChats) { enabledChats = it; save() }
+        ToggleRow("文件 / 数据银行检索", enabledFiles) { enabledFiles = it; save() }
+        NumberRow("最近消息数（query）", query) { query = it; save() }
+        NumberRow("插入条数（insert）", insert) { insert = it; save() }
+        NumberRow("保护最近条数（protect）", protect) { protect = it; save() }
+        DecimalRow("相似度阈值（0–1）", threshold) { threshold = it; save() }
         if (provider == "openai") {
             TextFieldRow("接口地址", url) { url = it; save() }
             KeyRow(
@@ -200,6 +228,7 @@ private fun VectorCard() {
             )
         }
     }
+
 }
 
 @Composable
@@ -229,6 +258,41 @@ private fun ServiceNote(text: String) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun NumberRow(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun DecimalRow(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
     )
 }
 
