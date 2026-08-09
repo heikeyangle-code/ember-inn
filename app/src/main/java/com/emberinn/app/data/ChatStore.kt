@@ -235,7 +235,7 @@ class ChatStore(private val context: Context) {
 
     /**
      * 对齐官方 swipe 生成落盘（Generate('swipe') + saveReply）：swipes 追加新文本 + swipe_info 追加，
-     * swipe_id 移到新下标，消息级 mes/send_date/gen_*/extra 同步为新 swipe（extra 保留媒体等非生成字段）。
+     * swipe_id 移到新下标，消息级 mes/send_date/gen_started/extra 同步为新 swipe（extra 保留媒体等非生成字段）。
      * 返回是否成功。
      */
     fun appendSwipe(
