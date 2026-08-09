@@ -14,6 +14,9 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.TtsReader
+import com.emberinn.app.data.TtsTextProcessor
+import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.media.MediaAttachment
@@ -101,6 +104,38 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
+
+    /** 朗读指定消息（长按菜单）；文本处理与分段对齐官方 tts 扩展。 */
+    fun narrateMessage(index: Int) {
+        val msgs = chatStore.messages(sessionId)
+        val text = msgs.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
+        narrateText(text)
+    }
+
+    /** 朗读最后一条 AI 消息（自动朗读）。 */
+    fun narrateLastMessage() {
+        val msgs = chatStore.messages(sessionId)
+        val last = msgs.lastOrNull()?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
+        narrateText(last)
+    }
+
+    fun stopNarration() { TtsReader.stop() }
+
+    private fun narrateText(text: String) {
+        val voice = VoicePrefs.read(getApplication())
+        if (!voice.enabled) return
+        val cleaned = TtsTextProcessor.prepare(
+            text = text,
+            skipCodeblocks = voice.skipCodeblocks,
+            skipTags = voice.skipTags,
+            applyRegex = voice.applyRegex,
+            regexPattern = voice.regexPattern,
+        )
+        val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
+        if (!ok && cleaned.isNotBlank()) {
+            _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+        }
+    }
 
     /** 聊天背景（官方 chat_metadata.custom_background，本地文件路径）。 */
     private val _chatBackground = MutableStateFlow(
@@ -215,6 +250,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.append(sessionId, true, text, userName, media)
         _pendingMedia.value = emptyList()
         refreshMessages()
+        val voice = VoicePrefs.read(getApplication())
+        if (voice.enabled && voice.narrateUser) {
+            narrateText(text)
+        }
         startStream(
             history = chatStore.messages(sessionId),
             mediaInlining = media.isNotEmpty(),
@@ -689,6 +728,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             reply.isNotBlank() -> {
                 appendAiReply(reply)
                 refreshMessages()
+                val voice = VoicePrefs.read(getApplication())
+                if (voice.enabled && voice.autoGeneration) {
+                    narrateLastMessage()
+                }
             }
         }
         _streamingText.value = ""

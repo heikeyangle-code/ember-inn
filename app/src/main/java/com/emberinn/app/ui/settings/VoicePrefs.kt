@@ -10,6 +10,33 @@ object VoicePrefs {
 
     private const val NAME = "ember_voice"
 
+    /** 朗读所需全部配置（TtsReader 读取用）。 */
+    data class Values(
+        val enabled: Boolean,
+        val voice: String,
+        val rate: Float,
+        val autoGeneration: Boolean,
+        val narrateUser: Boolean,
+        val narrateByParagraphs: Boolean,
+        val skipCodeblocks: Boolean,
+        val skipTags: Boolean,
+        val applyRegex: Boolean,
+        val regexPattern: String,
+    )
+
+    fun read(context: Context): Values = Values(
+        enabled = enabled(context),
+        voice = voice(context),
+        rate = rate(context),
+        autoGeneration = autoGeneration(context),
+        narrateUser = narrateUser(context),
+        narrateByParagraphs = narrateByParagraphs(context),
+        skipCodeblocks = skipCodeblocks(context),
+        skipTags = skipTags(context),
+        applyRegex = applyRegex(context),
+        regexPattern = regexPattern(context),
+    )
+
     fun enabled(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("tts_enabled", false)
 

@@ -596,6 +596,10 @@ fun ChatScreen(
                     MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
                         editIndex = index; editDraft = text; menuMessageIndex = null
                     }
+                    MenuRow(PhosphorIcons.SpeakerHigh, "朗读这条消息") {
+                        vm.narrateMessage(index)
+                        menuMessageIndex = null
+                    }
                     val swipeCount = vm.swipeCountOf(el)
                     if (!isUserMsg) {
                         MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
