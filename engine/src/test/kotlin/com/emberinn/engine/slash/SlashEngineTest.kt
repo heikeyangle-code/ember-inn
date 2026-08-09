@@ -52,7 +52,7 @@ class SlashEngineTest {
     @Test
     fun `echo keeps raw quotes per official`() {
         assertEquals("\"hello world\"", SlashEngine.execute("/echo \"hello world\""))
-        assertEquals("OK:sys:hello world", SlashEngine.execute("/sys \"hello world\""))
+        assertEquals("OK:sys:\"hello world\"", SlashEngine.execute("/sys \"hello world\""))
     }
 
     @Test
@@ -95,4 +95,23 @@ class SlashEngineTest {
     fun `getvar macro in arguments resolves via macro engine`() {
         assertEquals("value", SlashEngine.execute("/let key=x value || /echo {{getvar::x}}"))
     }
+
+    @Test
+    fun `new pure commands follow official semantics`() {
+        assertEquals("HELLO", SlashEngine.execute("/upper hello"))
+        assertEquals("hello", SlashEngine.execute("/lower HELLO"))
+        assertEquals("bcd", SlashEngine.execute("/substr start=1 end=4 abcdef"))
+        assertEquals("xx", SlashEngine.execute("/replace pattern=abc replacer=x abcabc"))
+        assertEquals("red house", SlashEngine.execute("/replace mode=regex pattern=/blue/i replacer=red Blue house"))
+        assertEquals("你好。", SlashEngine.execute("/trimend 你好。世界"))
+        assertEquals("World", SlashEngine.execute("/trimstart Hello. World"))
+        assertEquals("3", SlashEngine.execute("/let key=score 1 || /addvar key=score 2"))
+        assertEquals("4", SlashEngine.execute("/let key=score 3 || /incvar score"))
+        assertEquals("2", SlashEngine.execute("/let key=score 3 || /decvar score"))
+        assertEquals("6", SlashEngine.execute("/add 1 2 3"))
+        assertEquals("24", SlashEngine.execute("/mul 2 3 4"))
+        assertEquals("yes", SlashEngine.execute("/if left=a right=a rule=eq yes"))
+        assertEquals("no", SlashEngine.execute("/if left=a right=b rule=eq else=no yes"))
+    }
+
 }

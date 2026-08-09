@@ -117,8 +117,6 @@ class SlashTokenizer(
         while (!char.isWhitespace() && !testCommandEnd()) name.append(take())
         val cmdName = name.toString()
         discardWhitespace()
-        rawQuotes = false
-        if (rawQuotesFor(cmdName)) rawQuotes = true
         val (split, splitCount) = splitFor(cmdName)
 
         // 命名参数
@@ -131,6 +129,12 @@ class SlashTokenizer(
             discardWhitespace()
         }
         discardWhitespace()
+
+        // 官方：raw= 命名参数可覆盖命令的 rawQuotes（仅对 rawQuotes 命令生效；isFalseBoolean）
+        rawQuotes = false
+        if (rawQuotesFor(cmdName)) {
+            rawQuotes = named["raw"]?.let { rawArg -> !isFalseBoolean(rawArg) } ?: true
+        }
 
         // 无名参数
         val unnamed = if (testUnnamedArgument()) parseUnnamedArgument(split, splitCount) else emptyList()
@@ -317,4 +321,8 @@ class SlashTokenizer(
 
     private fun isTrueBoolean(value: String): Boolean =
         value.lowercase() in setOf("on", "true", "1", "yes", "y")
+
+    /** 对齐官方 isFalseBoolean（slash-commands.js）。 */
+    private fun isFalseBoolean(value: String): Boolean =
+        value.lowercase() in setOf("false", "off", "no", "0")
 }

@@ -31,13 +31,46 @@ function isFalseBoolean(value) { return ['false', 'off', 'no', '0'].includes(Str
 
 const COMMANDS = {
     echo:   { rawQuotes: true,  unnamedArgumentList: [{}], splitUnnamedArgument: false },
-    sys:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
-    sendas: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    sys:    { rawQuotes: true,  unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    sendas: { rawQuotes: true,  unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    send:   { rawQuotes: true,  unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    comment:{ rawQuotes: true,  unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    sysname:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
     persona:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
     pass:   { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
     let:    { rawQuotes: false, unnamedArgumentList: [{}, {}], splitUnnamedArgument: true, splitUnnamedArgumentCount: 1 },
     setvar: { rawQuotes: false, unnamedArgumentList: [{}, {}], splitUnnamedArgument: true, splitUnnamedArgumentCount: 1 },
     'qr-arg': { rawQuotes: false, unnamedArgumentList: [{}, {}], splitUnnamedArgument: true, splitUnnamedArgumentCount: 2 },
+    'message-role': { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    'message-name': { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    hide:   { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    unhide: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    delname:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    addswipe:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    delswipe:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    getvar: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    addvar: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    incvar: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    decvar: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    if:     { rawQuotes: false, unnamedArgumentList: [{}, {}], splitUnnamedArgument: false },
+    upper:  { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    lower:  { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    substr: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    replace:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    trimstart:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    trimend:{ rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    tokens: { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: false },
+    add:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    sub:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    mul:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    div:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    mod:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    pow:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    max:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    min:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    abs:    { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    sqrt:   { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
+    round:  { rawQuotes: false, unnamedArgumentList: [{}], splitUnnamedArgument: true },
 };
 
 class Parser {
@@ -375,6 +408,32 @@ await add('quoted-escaped-quote-strict', { text: '/persona name="a\\"b"', strict
 await add('quoted-two-escape-strict', { text: '/persona name="a\\\\"b"', strict: true });
 await add('named-empty-value', { text: '/persona name=' });
 await add('echo-escaped-closure-text', { text: '/echo \\{:' });
+await add('sendas-rawquotes-quoted', { text: '/sendas name=小红 "你好 呀"' });
+await add('sendas-raw-false-override', { text: '/sendas raw=false name=小红 "你好 呀"' });
+await add('sys-rawquotes-name', { text: '/sys name=旁白 雪很大。' });
+await add('comment-rawquotes', { text: '/comment 这条是评论消息' });
+await add('send-rawquotes', { text: '/send "我 想 说"' });
+await add('message-role-negative-at', { text: '/message-role at=-1 assistant' });
+await add('message-name-at', { text: '/message-name at=0 小红' });
+await add('hide-range', { text: '/hide 2-4' });
+await add('hide-name', { text: '/hide name=小炭 3' });
+await add('unhide-last', { text: '/unhide' });
+await add('delname', { text: '/delname 小明' });
+await add('addswipe-switch', { text: '/addswipe switch=true 新回复' });
+await add('delswipe-id', { text: '/delswipe 2' });
+await add('getvar-named', { text: '/getvar key=height' });
+await add('addvar-named', { text: '/addvar key=score 10' });
+await add('incvar', { text: '/incvar score' });
+await add('upper', { text: '/upper 你好' });
+await add('lower', { text: '/lower HELLO' });
+await add('substr', { text: '/substr start=1 end=3 abcdef' });
+await add('replace', { text: '/replace pattern=abc replacer=x abcabc' });
+await add('trimstart', { text: '/trimstart 这是第一句。第二句。' });
+await add('tokens', { text: '/tokens 你好世界' });
+await add('add-split', { text: '/add 1 2 3' });
+await add('mul-split', { text: '/mul 2 3 4' });
+await add('if-then-else', { text: '/if left=a right=b rule=eq {:x:} {:y:}' });
+
 
 writeFileSync(outFile, JSON.stringify({ source: 'SlashCommandParser parseCommand core', cases }, null, 2));
 console.log('slash-parser:', cases.length, 'cases ->', outFile);

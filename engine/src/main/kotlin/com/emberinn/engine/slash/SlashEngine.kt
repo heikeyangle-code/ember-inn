@@ -13,8 +13,12 @@ import com.emberinn.engine.macros.MacroEnv
  */
 object SlashEngine {
 
-    fun execute(text: String, state: SlashState = SlashState()): String {
-        val resolved = resolveClosures(text)
+    fun execute(
+        text: String,
+        state: SlashState = SlashState(),
+        resolver: SlashCommandResolver = SlashRegistry,
+    ): String {
+        val resolved = resolveClosures(text, resolver)
         val tok = SlashTokenizer(resolved, strictEscaping = state.strictEscaping)
         var injectPipe = true
         while (true) {
@@ -26,13 +30,13 @@ object SlashEngine {
                 tok.testParserFlag() -> tok.parseParserFlag(state)
                 tok.testCommand() -> {
                     val inv = tok.parseCommand(
-                        rawQuotesFor = { name -> SlashRegistry.get(name)?.rawQuotes == true },
+                        rawQuotesFor = { name -> resolver.resolve(name)?.rawQuotes == true },
                         splitFor = { name ->
-                            val def = SlashRegistry.get(name)
+                            val def = resolver.resolve(name)
                             (def?.splitUnnamedArgument == true) to def?.splitUnnamedArgumentCount
                         },
                     )
-                    val def = SlashRegistry.get(inv.name)
+                    val def = resolver.resolve(inv.name)
                         ?: throw SlashParseException("未知命令: /${inv.name}")
                     var finalInv = inv
                     if (injectPipe && inv.unnamedArgs.isEmpty()) {
@@ -78,7 +82,7 @@ object SlashEngine {
      * 把 {: 链 :} 替换为其执行输出（加控制字符占位，保持单个参数）。
      * 转义判定对齐官方 testSymbol：{ 前反斜杠为奇数个时不是闭包。
      */
-    private fun resolveClosures(text: String): String {
+    private fun resolveClosures(text: String, resolver: SlashCommandResolver): String {
         val sb = StringBuilder()
         var i = 0
         while (i < text.length) {
@@ -105,7 +109,7 @@ object SlashEngine {
                 }
                 if (end < 0) { sb.append(text, i, text.length); break }
                 val inner = text.substring(i + 2, end)
-                val output = runCatching { execute(inner) }.getOrElse { "" }
+                val output = runCatching { execute(inner, resolver = resolver) }.getOrElse { "" }
                 sb.append('\u0001').append(output).append('\u0001')
                 i = end + 2
             } else {

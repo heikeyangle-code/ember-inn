@@ -354,6 +354,264 @@ class ChatStore(private val context: Context) {
         return safeId
     }
 
+    // ---- 消息类斜杠命令（官方 slash-commands.js sendMessageAs / sendNarratorMessage / sendCommentMessage）----
+
+    /** 系统/旁白消息：extra.type=narrator、is_system=false（官方仅 bias-only 消息置 system）。 */
+    fun appendNarratorMessage(sessionId: String, content: String, name: String, at: Int? = null) {
+        val now = java.time.Instant.now().toString()
+        val message = buildJsonObject {
+            put("name", JsonPrimitive(name))
+            put("is_user", JsonPrimitive(false))
+            put("is_system", JsonPrimitive(false))
+            put("send_date", JsonPrimitive(now))
+            put("mes", JsonPrimitive(content))
+            put(
+                "extra",
+                buildJsonObject {
+                    put("type", JsonPrimitive("narrator"))
+                    put("api", JsonPrimitive("manual"))
+                    put("model", JsonPrimitive("slash command"))
+                },
+            )
+        }
+        insertMessage(sessionId, message, at)
+    }
+
+    /** 评论消息：name=Comment、is_system=true、extra.type=comment（官方 COMMENT_NAME_DEFAULT）。 */
+    fun appendCommentMessage(sessionId: String, content: String, at: Int? = null) {
+        val now = java.time.Instant.now().toString()
+        val message = buildJsonObject {
+            put("name", JsonPrimitive("Comment"))
+            put("is_user", JsonPrimitive(false))
+            put("is_system", JsonPrimitive(true))
+            put("send_date", JsonPrimitive(now))
+            put("mes", JsonPrimitive(content))
+            put(
+                "extra",
+                buildJsonObject {
+                    put("type", JsonPrimitive("comment"))
+                    put("api", JsonPrimitive("manual"))
+                    put("model", JsonPrimitive("slash command"))
+                },
+            )
+        }
+        insertMessage(sessionId, message, at)
+    }
+
+    /** 手动角色消息（/sendas：is_user=false；/send：is_user=true）；带 swipes 初始化，对齐官方 sendMessageAs。 */
+    fun appendManualMessage(sessionId: String, isUser: Boolean, content: String, name: String, at: Int? = null) {
+        val now = java.time.Instant.now().toString()
+        val message = buildJsonObject {
+            put("name", JsonPrimitive(name))
+            put("is_user", JsonPrimitive(isUser))
+            put("is_system", JsonPrimitive(false))
+            put("send_date", JsonPrimitive(now))
+            put("mes", JsonPrimitive(content))
+            put(
+                "extra",
+                buildJsonObject {
+                    put("api", JsonPrimitive("manual"))
+                    put("model", JsonPrimitive("slash command"))
+                },
+            )
+            put("swipe_id", JsonPrimitive(0))
+            put("swipes", JsonArray(listOf(JsonPrimitive(content))))
+            put(
+                "swipe_info",
+                JsonArray(
+                    listOf(
+                        buildJsonObject {
+                            put("send_date", JsonPrimitive(now))
+                            put("gen_started", JsonNull)
+                            put("gen_finished", JsonNull)
+                            put(
+                                "extra",
+                                buildJsonObject {
+                                    put("api", JsonPrimitive("manual"))
+                                    put("model", JsonPrimitive("slash command"))
+                                },
+                            )
+                        },
+                    ),
+                ),
+            )
+        }
+        insertMessage(sessionId, message, at)
+    }
+
+    /** 对齐官方 at= 插入语义：负数 = chat.length + at；越界/缺省追加到末尾。 */
+    private fun insertMessage(sessionId: String, message: JsonObject, at: Int?) {
+        val list = messages(sessionId).toMutableList()
+        var insertAt = at
+        if (insertAt != null && insertAt < 0) insertAt = list.size + insertAt
+        if (insertAt != null && insertAt in 0..list.size) {
+            list.add(insertAt, message)
+        } else {
+            list += message
+        }
+        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
+    fun sessionName(sessionId: String): String = get(sessionId)?.name ?: ""
+
+    fun renameSession(sessionId: String, name: String) {
+        get(sessionId)?.let { upsert(it.copy(name = name)) }
+    }
+
+    fun narratorName(sessionId: String): String =
+        metadata(sessionId)["narrator_name"]?.jsonPrimitive?.contentOrNull ?: "System"
+
+    fun setNarratorName(sessionId: String, name: String) {
+        val meta = metadata(sessionId).toMutableMap()
+        if (name.isBlank()) meta.remove("narrator_name") else meta["narrator_name"] = JsonPrimitive(name)
+        saveMetadata(sessionId, JsonObject(meta))
+    }
+
+    /** 对齐官方 message-role：system → extra.type=narrator；user/assistant → 删除 extra.type。返回新角色；无角色参数返回当前。 */
+    fun setMessageRole(sessionId: String, at: Int, role: String): String {
+        val list = messages(sessionId).toMutableList()
+        val index = resolveIndex(at, list.size) ?: return ""
+        val el = list[index].jsonObject
+        val current = currentRoleOf(el)
+        val normalized = role.trim().lowercase()
+        if (normalized !in setOf("user", "assistant", "system")) return current
+        val oldExtra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (normalized == "system") oldExtra["type"] = JsonPrimitive("narrator") else oldExtra.remove("type")
+        list[index] = JsonObject(
+            el + mapOf(
+                "is_user" to JsonPrimitive(normalized == "user"),
+                "extra" to JsonObject(oldExtra),
+            ),
+        )
+        save(sessionId, list)
+        return normalized
+    }
+
+    fun currentRoleOf(el: JsonObject): String {
+        val isNarrator = (el["extra"] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+        val isSystem = el["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        if (isSystem || isNarrator) return "system"
+        val isUser = el["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        return if (isUser) "user" else "assistant"
+    }
+
+    fun setMessageName(sessionId: String, at: Int, name: String): String {
+        val list = messages(sessionId).toMutableList()
+        val index = resolveIndex(at, list.size) ?: return ""
+        val el = list[index].jsonObject
+        val current = el["name"]?.jsonPrimitive?.contentOrNull ?: ""
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return current
+        list[index] = JsonObject(el + ("name" to JsonPrimitive(trimmed)))
+        save(sessionId, list)
+        return trimmed
+    }
+
+    fun setMessageHidden(sessionId: String, at: Int, hidden: Boolean) {
+        val list = messages(sessionId).toMutableList()
+        val index = resolveIndex(at, list.size) ?: return
+        list[index] = JsonObject(list[index].jsonObject + ("is_hidden" to JsonPrimitive(hidden)))
+        save(sessionId, list)
+    }
+
+    /** /delname：删除指定名字的全部消息；返回删除条数。 */
+    fun deleteMessagesByName(sessionId: String, name: String): Int {
+        if (name.isBlank()) return 0
+        val list = messages(sessionId).toMutableList()
+        val before = list.size
+        list.removeAll { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull == name }
+        val removed = before - list.size
+        if (removed > 0) {
+            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+            get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        }
+        return removed
+    }
+
+    /** /addswipe：给最后一条 AI 消息追加手动变体；返回新 swipe_id 字符串（失败返回 ""）。 */
+    fun addSwipeManual(sessionId: String, text: String, switchTo: Boolean): String {
+        val list = messages(sessionId).toMutableList()
+        if (list.isEmpty() || text.isBlank()) return ""
+        val idx = list.lastIndex
+        val el = list[idx].jsonObject
+        val isUser = el["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        val isSystem = el["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        if (isUser || isSystem) return ""
+        if (el["swipes"] !is JsonArray) {
+            val mes = el["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+            val info = buildJsonObject {
+                el["send_date"]?.jsonPrimitive?.contentOrNull?.let { v -> put("send_date", JsonPrimitive(v)) }
+                put("extra", (el["extra"] as? JsonObject) ?: buildJsonObject {})
+            }
+            list[idx] = JsonObject(el + mapOf(
+                "swipes" to JsonArray(listOf(JsonPrimitive(mes))),
+                "swipe_info" to JsonArray(listOf(info)),
+                "swipe_id" to JsonPrimitive(0),
+            ))
+        }
+        val updated = list[idx].jsonObject
+        val swipes = swipesOf(updated).toMutableList()
+        val swipeInfo = swipeInfoOf(updated).toMutableList()
+        val now = java.time.Instant.now().toString()
+        swipes += text
+        swipeInfo += buildJsonObject {
+            put("send_date", JsonPrimitive(now))
+            put("gen_started", JsonNull)
+            put("gen_finished", JsonNull)
+            put(
+                "extra",
+                buildJsonObject {
+                    put("api", JsonPrimitive("manual"))
+                    put("model", JsonPrimitive("slash command"))
+                },
+            )
+        }
+        val newId = swipes.lastIndex
+        var newObj = JsonObject(updated + mapOf(
+            "swipes" to JsonArray(swipes.map { JsonPrimitive(it) }),
+            "swipe_info" to JsonArray(swipeInfo.map { it }),
+            "swipe_id" to JsonPrimitive(newId),
+        ))
+        if (switchTo) {
+            newObj = JsonObject(
+                newObj +
+                    mapOf(
+                        "mes" to JsonPrimitive(text),
+                        "send_date" to JsonPrimitive(now),
+                        "extra" to JsonObject(
+                            ((updated["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()).apply {
+                                put("api", JsonPrimitive("manual"))
+                                put("model", JsonPrimitive("slash command"))
+                            },
+                        ),
+                    ),
+            )
+        }
+        list[idx] = newObj
+        save(sessionId, list)
+        return newId.toString()
+    }
+
+    /** /delswipe：id 1 起（null 删当前）；返回新的当前 swipe_id 字符串（失败返回 ""）。 */
+    fun deleteSwipeManual(sessionId: String, id: Int?): String {
+        val list = messages(sessionId).toMutableList()
+        if (list.isEmpty()) return ""
+        val idx = list.lastIndex
+        val swipes = swipesOf(list[idx].jsonObject)
+        if (swipes.size <= 1) return ""
+        val target = if (id != null) id - 1 else currentSwipeId(list[idx].jsonObject).coerceIn(0, swipes.lastIndex)
+        val newId = deleteSwipe(sessionId, idx, target)
+        return if (newId >= 0) newId.toString() else ""
+    }
+
+    /** 对齐官方负数 at：chat.length + at；越界返回 null。 */
+    private fun resolveIndex(at: Int, size: Int): Int? {
+        if (size == 0) return null
+        val idx = if (at < 0) size + at else at
+        return idx.takeIf { it in 0 until size }
+    }
+
     /** 从 swipe_info 单项同步消息级字段（对齐 syncSwipeToMes 的后半段）。 */
     private fun syncFromInfo(info: JsonObject): Map<String, JsonElement> = buildMap {
         info["send_date"]?.let { put("send_date", it) }

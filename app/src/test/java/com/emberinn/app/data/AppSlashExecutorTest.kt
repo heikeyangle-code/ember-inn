@@ -1,0 +1,77 @@
+package com.emberinn.app.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/** 锁住“消息类斜杠命令 → App 动作”的接线契约（解析器由引擎差分覆盖）。 */
+class AppSlashExecutorTest {
+
+    private class FakeActions : SlashMessageActions {
+        val calls = mutableListOf<String>()
+
+        override fun sendAsCharacter(name: String, text: String): String { calls += "sendas:$name:$text"; return "" }
+        override fun sendAsUser(text: String): String { calls += "send:$text"; return "" }
+        override fun sendSystemMessage(text: String, name: String): String { calls += "sys:$name:$text"; return "" }
+        override fun setNarratorName(name: String): String { calls += "sysname:$name"; return "" }
+        override fun sendComment(text: String): String { calls += "comment:$text"; return "" }
+        override fun getSetMessageRole(at: Int, role: String): String { calls += "role:$at:$role"; return "assistant" }
+        override fun getSetMessageName(at: Int, name: String): String { calls += "name:$at:$name"; return "小红" }
+        override fun hideMessage(index: Int, hidden: Boolean): String { calls += "hide:$index:$hidden"; return "" }
+        override fun deleteMessagesByName(name: String): Int { calls += "delname:$name"; return 2 }
+        override fun addSwipe(text: String, switch: Boolean): String { calls += "addswipe:$switch:$text"; return "1" }
+        override fun deleteSwipe(id: Int?): String { calls += "delswipe:$id"; return "0" }
+        override fun notify(text: String) { calls += "notify:$text" }
+    }
+
+    @Test
+    fun `sendas requires name and forwards text`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/sendas name=小炭 你好 世界")
+        assertEquals(listOf("sendas:小炭:你好 世界"), a.calls)
+    }
+
+    @Test
+    fun `sendas without name returns hint and does not send`() {
+        val a = FakeActions()
+        val out = AppSlashExecutor(a).execute("/sendas 你好")
+        assertEquals(0, a.calls.size)
+        assertTrue(out.contains("name="))
+    }
+
+    @Test
+    fun `sys and comment insert messages in chain`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/sys 雪很大 | /comment 这是评论")
+        assertEquals(listOf("sys::雪很大", "comment:这是评论"), a.calls)
+    }
+
+    @Test
+    fun `message role and name target at`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/message-role at=-1 assistant | /message-name at=0 小红")
+        assertEquals(listOf("role:-1:assistant", "name:0:小红"), a.calls)
+    }
+
+    @Test
+    fun `hide unhide and delname with notify`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/hide 2-4 | /unhide | /delname 小明")
+        assertEquals(listOf("hide:2:true", "hide:-1:false", "delname:小明", "notify:已删除 2 条消息"), a.calls)
+    }
+
+    @Test
+    fun `swipe add and delete`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/addswipe switch=true 新回复 | /delswipe 2")
+        assertEquals(listOf("addswipe:true:新回复", "delswipe:2"), a.calls)
+    }
+
+    @Test
+    fun `pure engine commands still work through app executor`() {
+        val a = FakeActions()
+        val out = AppSlashExecutor(a).execute("/upper 你好 | /echo")
+        assertEquals("你好", out)
+        assertEquals(0, a.calls.size)
+    }
+}

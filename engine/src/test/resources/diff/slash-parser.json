@@ -31,7 +31,7 @@
         "name": "sys",
         "named": {},
         "unnamed": [
-          "hello world"
+          "\"hello world\""
         ],
         "index": 18
       }
@@ -302,6 +302,435 @@
           "\\{:"
         ],
         "index": 9
+      }
+    },
+    {
+      "id": "sendas-rawquotes-quoted",
+      "args": {
+        "body": {
+          "text": "/sendas name=小红 \"你好 呀\""
+        }
+      },
+      "expected": {
+        "name": "sendas",
+        "named": {
+          "name": "小红"
+        },
+        "unnamed": [
+          "\"你好 呀\""
+        ],
+        "index": 22
+      }
+    },
+    {
+      "id": "sendas-raw-false-override",
+      "args": {
+        "body": {
+          "text": "/sendas raw=false name=小红 \"你好 呀\""
+        }
+      },
+      "expected": {
+        "name": "sendas",
+        "named": {
+          "raw": "false",
+          "name": "小红"
+        },
+        "unnamed": [
+          "你好 呀"
+        ],
+        "index": 32
+      }
+    },
+    {
+      "id": "sys-rawquotes-name",
+      "args": {
+        "body": {
+          "text": "/sys name=旁白 雪很大。"
+        }
+      },
+      "expected": {
+        "name": "sys",
+        "named": {
+          "name": "旁白"
+        },
+        "unnamed": [
+          "雪很大。"
+        ],
+        "index": 17
+      }
+    },
+    {
+      "id": "comment-rawquotes",
+      "args": {
+        "body": {
+          "text": "/comment 这条是评论消息"
+        }
+      },
+      "expected": {
+        "name": "comment",
+        "named": {},
+        "unnamed": [
+          "这条是评论消息"
+        ],
+        "index": 16
+      }
+    },
+    {
+      "id": "send-rawquotes",
+      "args": {
+        "body": {
+          "text": "/send \"我 想 说\""
+        }
+      },
+      "expected": {
+        "name": "send",
+        "named": {},
+        "unnamed": [
+          "\"我 想 说\""
+        ],
+        "index": 13
+      }
+    },
+    {
+      "id": "message-role-negative-at",
+      "args": {
+        "body": {
+          "text": "/message-role at=-1 assistant"
+        }
+      },
+      "expected": {
+        "name": "message-role",
+        "named": {
+          "at": "-1"
+        },
+        "unnamed": [
+          "assistant"
+        ],
+        "index": 29
+      }
+    },
+    {
+      "id": "message-name-at",
+      "args": {
+        "body": {
+          "text": "/message-name at=0 小红"
+        }
+      },
+      "expected": {
+        "name": "message-name",
+        "named": {
+          "at": "0"
+        },
+        "unnamed": [
+          "小红"
+        ],
+        "index": 21
+      }
+    },
+    {
+      "id": "hide-range",
+      "args": {
+        "body": {
+          "text": "/hide 2-4"
+        }
+      },
+      "expected": {
+        "name": "hide",
+        "named": {},
+        "unnamed": [
+          "2-4"
+        ],
+        "index": 9
+      }
+    },
+    {
+      "id": "hide-name",
+      "args": {
+        "body": {
+          "text": "/hide name=小炭 3"
+        }
+      },
+      "expected": {
+        "name": "hide",
+        "named": {
+          "name": "小炭"
+        },
+        "unnamed": [
+          "3"
+        ],
+        "index": 15
+      }
+    },
+    {
+      "id": "unhide-last",
+      "args": {
+        "body": {
+          "text": "/unhide"
+        }
+      },
+      "expected": {
+        "name": "unhide",
+        "named": {},
+        "unnamed": [],
+        "index": 7
+      }
+    },
+    {
+      "id": "delname",
+      "args": {
+        "body": {
+          "text": "/delname 小明"
+        }
+      },
+      "expected": {
+        "name": "delname",
+        "named": {},
+        "unnamed": [
+          "小明"
+        ],
+        "index": 11
+      }
+    },
+    {
+      "id": "addswipe-switch",
+      "args": {
+        "body": {
+          "text": "/addswipe switch=true 新回复"
+        }
+      },
+      "expected": {
+        "name": "addswipe",
+        "named": {
+          "switch": "true"
+        },
+        "unnamed": [
+          "新回复"
+        ],
+        "index": 25
+      }
+    },
+    {
+      "id": "delswipe-id",
+      "args": {
+        "body": {
+          "text": "/delswipe 2"
+        }
+      },
+      "expected": {
+        "name": "delswipe",
+        "named": {},
+        "unnamed": [
+          "2"
+        ],
+        "index": 11
+      }
+    },
+    {
+      "id": "getvar-named",
+      "args": {
+        "body": {
+          "text": "/getvar key=height"
+        }
+      },
+      "expected": {
+        "name": "getvar",
+        "named": {
+          "key": "height"
+        },
+        "unnamed": [],
+        "index": 18
+      }
+    },
+    {
+      "id": "addvar-named",
+      "args": {
+        "body": {
+          "text": "/addvar key=score 10"
+        }
+      },
+      "expected": {
+        "name": "addvar",
+        "named": {
+          "key": "score"
+        },
+        "unnamed": [
+          "10"
+        ],
+        "index": 20
+      }
+    },
+    {
+      "id": "incvar",
+      "args": {
+        "body": {
+          "text": "/incvar score"
+        }
+      },
+      "expected": {
+        "name": "incvar",
+        "named": {},
+        "unnamed": [
+          "score"
+        ],
+        "index": 13
+      }
+    },
+    {
+      "id": "upper",
+      "args": {
+        "body": {
+          "text": "/upper 你好"
+        }
+      },
+      "expected": {
+        "name": "upper",
+        "named": {},
+        "unnamed": [
+          "你好"
+        ],
+        "index": 9
+      }
+    },
+    {
+      "id": "lower",
+      "args": {
+        "body": {
+          "text": "/lower HELLO"
+        }
+      },
+      "expected": {
+        "name": "lower",
+        "named": {},
+        "unnamed": [
+          "HELLO"
+        ],
+        "index": 12
+      }
+    },
+    {
+      "id": "substr",
+      "args": {
+        "body": {
+          "text": "/substr start=1 end=3 abcdef"
+        }
+      },
+      "expected": {
+        "name": "substr",
+        "named": {
+          "start": "1",
+          "end": "3"
+        },
+        "unnamed": [
+          "abcdef"
+        ],
+        "index": 28
+      }
+    },
+    {
+      "id": "replace",
+      "args": {
+        "body": {
+          "text": "/replace pattern=abc replacer=x abcabc"
+        }
+      },
+      "expected": {
+        "name": "replace",
+        "named": {
+          "pattern": "abc",
+          "replacer": "x"
+        },
+        "unnamed": [
+          "abcabc"
+        ],
+        "index": 38
+      }
+    },
+    {
+      "id": "trimstart",
+      "args": {
+        "body": {
+          "text": "/trimstart 这是第一句。第二句。"
+        }
+      },
+      "expected": {
+        "name": "trimstart",
+        "named": {},
+        "unnamed": [
+          "这是第一句。第二句。"
+        ],
+        "index": 21
+      }
+    },
+    {
+      "id": "tokens",
+      "args": {
+        "body": {
+          "text": "/tokens 你好世界"
+        }
+      },
+      "expected": {
+        "name": "tokens",
+        "named": {},
+        "unnamed": [
+          "你好世界"
+        ],
+        "index": 12
+      }
+    },
+    {
+      "id": "add-split",
+      "args": {
+        "body": {
+          "text": "/add 1 2 3"
+        }
+      },
+      "expected": {
+        "name": "add",
+        "named": {},
+        "unnamed": [
+          "1",
+          "2",
+          "3"
+        ],
+        "index": 10
+      }
+    },
+    {
+      "id": "mul-split",
+      "args": {
+        "body": {
+          "text": "/mul 2 3 4"
+        }
+      },
+      "expected": {
+        "name": "mul",
+        "named": {},
+        "unnamed": [
+          "2",
+          "3",
+          "4"
+        ],
+        "index": 10
+      }
+    },
+    {
+      "id": "if-then-else",
+      "args": {
+        "body": {
+          "text": "/if left=a right=b rule=eq {:x:} {:y:}"
+        }
+      },
+      "expected": {
+        "name": "if",
+        "named": {
+          "left": "a",
+          "right": "b",
+          "rule": "eq"
+        },
+        "unnamed": [
+          "{:x:} {:y:}"
+        ],
+        "index": 38
       }
     }
   ]

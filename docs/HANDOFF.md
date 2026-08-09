@@ -156,7 +156,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 27 例。
 ✅ 2026-08-10 按官方 SlashCommandParser 逐字移植 tokenizer：parseCommand/parseNamedArgument/parseUnnamedArgument（split+splitUnnamedArgumentCount，/let、/setvar=1、/qr-arg=2）/parseQuotedValue/parseListValue/parseValue；STRICT_ESCAPING 完整语义（/parser-flag 可切换，影响后续命令解析）；REPLACE_GETVAR 官方新宏引擎下为 no-op（{{getvar::}} 由 MacroEngine 展开，已测）；rawQuotes 官方语义（整段到命令结束、保留引号）；注释（//、/#、块注释）与命令间普通文本丢弃；闭包转义（\{:）按官方消费反斜杠。
-🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似，闭包仍预解析）；命令数远少于官方（150+ 官方命令多数依赖 App 状态，未实现）。差分：参数解析核心 18 例 + testSymbol 27 例（scripts/diff/slash-parser-official.mjs / slash-escape-official.mjs 从官方逐字提取，SlashParserDiffTest/SlashEscapeDiffTest 对拍）；执行链/闭包/注释仍源码对照 + 单测（依赖 DOM/模块无法逐字提取）。
+🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似，闭包仍预解析）；命令数仍少于官方（UI 已能做到的不补；异步/生成类 /gen /genraw /trigger /inject /while 未实现，登记 P2）。差分：参数解析核心 43 例 + testSymbol 27 例（scripts/diff/slash-parser-official.mjs / slash-escape-official.mjs 从官方逐字提取，SlashParserDiffTest/SlashEscapeDiffTest 对拍）；执行链/闭包/注释仍源码对照 + 单测（依赖 DOM/模块无法逐字提取）。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
@@ -345,7 +345,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（第 80 轮）；~~服务（翻译/图像）~~ → 执行层已接（2026-08-10 第 86 轮：翻译 LibreTranslate/DeepL/DeepLX、图像 AUTOMATIC1111，聊天长按翻译 + 快捷工具盘“图像”）；向量 App 接线已做（第 88 轮：设置开关 + 聊天/文件/世界书 RAG + 数据银行 UI）；官方 1.18 无 STT
 
 **P2（引擎边界）**
-7. SlashParser flags 完整语义 + 常用斜杠命令（需 App 状态）+ slash 差分 fixture
+7. SlashParser flags 完整语义 ✅ + 常用/消息类斜杠命令 ✅（第 89 轮：纯函数/变量/if + sendas/send/sys/sysname/comment/message-role/message-name/hide/unhide/delname/addswipe/delswipe；UI 已能做到的不做；/gen /genraw /trigger /inject /while 等异步生成类仍缺）+ slash 差分 fixture ✅（18→43 例）
 8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
 9. 群聊：✅ App 调度层已接（第 84 轮）+ natural/pooled 激活策略与队列提示（2026-08-10 第 87 轮：GroupRecord.activationStrategy 默认 natural，send 时按官方 GroupActivationEngine.natural/pooled 选人，空则回退全成员；多人时 notice 提示“本轮 X 位成员依次回复”）；🟡 未做：narrator、群聊深度提示 App 接线、自动续写（GroupLoopEngine.shouldAutoContinue）、群聊 continue 多轮链、策略切换 UI；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（第 85 轮）
 10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
@@ -376,7 +376,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 | 功能 | 与官方的差异 | 状态 |
 |---|---|---|
-| 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；150+ 官方命令多数未实现（占位）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
+| 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；`/if` 的 then/else 闭包同样预解析为文本（官方惰性）；150+ 官方命令多数未实现（占位，UI 已能做到的不补）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
 | 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
 | 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2）。差异：①官方在 sendMessageAsUser/saveReply **存前应用一次**，App 在 ChatPromptFactory prepare 每次应用 → 非幂等脚本可能双应用；②官方有 allowedOnly（character_allowed_regex 允许列表）与 global/preset/scoped 分桶，App 只做了该卡 scoped，global/preset/允许列表未做 | 🟡 应用时机近似，见 3.6 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
@@ -392,6 +392,28 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | App 用 WorldInfoSettings() 默认值（深度/递归/预算）；官方设置页可调 | 🟡 待设置 UI |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 89（2026-08-10：斜杠常用/消息类命令 + 解析差分扩到 43 例）
+
+- 用户口径：UI 已能做到的功能不补斜杠命令；重要命令（尤其消息类）补上
+- 引擎新增纯函数/变量命令（对齐官方 slash-commands.js / variables.js）：
+  upper/lower/substr/replace/trimstart/trimend/getvar/addvar/incvar/decvar/tokens/
+  add/sub/mul/div/mod/pow/max/min/abs/sqrt/round/if（then=无名、else=命名；闭包由 SlashEngine 预解析为文本，近似登记）
+- SlashEngine.execute 增加可注入 SlashCommandResolver（默认 SlashRegistry 不变）；闭包解析递归透传 resolver
+- SlashParser 补官方 raw= 命名参数覆盖 rawQuotes 语义（仅对 rawQuotes 命令生效，isFalseBoolean）
+- 消息类命令（App 侧 AppSlashExecutor + SlashMessageActions，ChatViewModel 实现）：
+  /sendas（name= 必填，is_user=false + swipes 初始化）、/send（用户消息，不触发生成）、
+  /sys（extra.type=narrator，name 缺省用会话旁白名）、/sysname（chat_metadata.narrator_name）、
+  /comment（is_system=true、extra.type=comment）、/message-role、/message-name、/hide、/unhide、
+  /delname、/addswipe、/delswipe；ChatStore 补齐对应读写（负数 at = chat.length + at）
+- 输入框以 / 开头直接执行斜杠命令（官方 ST 语义）；快捷回复走同一 AppSlashExecutor
+- **差分**：slash-parser-official.mjs 命令桩按官方补齐（sys/sendas/send/comment rawQuotes=true、
+  数值命令 splitUnnamedArgument=true 等），用例 18→43（sendas raw=false 覆盖、消息类/纯函数命令全测）；
+  fixture 重新生成，SlashParserDiffTest 43 例对拍全绿
+- 差分抓出旧桩不忠实：官方 sys 是 rawQuotes=true（旧脚本/测试按 false 打桩）→ 已按官方修正
+- App 单测 AppSlashExecutorTest 7 例（命令→动作映射）；引擎 283 测全绿
+- 边界登记（第 8 节）：/if 的 then/else 闭包被预解析为文本（官方惰性闭包，偏差保留）；
+  /while、/gen、/genraw、/trigger、/inject 等异步/生成类命令未做（登记 P2 剩余）
 
 ## 最近一轮 88（2026-08-10：向量 App 接线——P1-6 收尾）
 

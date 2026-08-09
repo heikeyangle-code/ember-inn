@@ -8,6 +8,7 @@ import java.io.File
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.emberinn.app.data.AppSlashExecutor
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
@@ -20,6 +21,7 @@ import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.SlashMessageActions
 import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
@@ -34,7 +36,6 @@ import com.emberinn.engine.group.GroupMessage
 import com.emberinn.engine.group.GroupCharacterCardsEngine
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.media.MediaAttachment
-import com.emberinn.engine.slash.QuickReplyExecutor
 import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
@@ -59,7 +60,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * 聊天页 ViewModel：消息读写 + PromptPipeline 总装流式发送。
  * 停止 = 取消 OkHttp call 并保留已生成文本（官方 mes_stop）；未配置模型只显示提示、不写历史。
  */
-class ChatViewModel(application: Application, private val sessionId: String) : AndroidViewModel(application) {
+class ChatViewModel(application: Application, private val sessionId: String) : AndroidViewModel(application), SlashMessageActions {
 
     private val chatStore = ChatStore(application)
     private val charStore = CharacterStore(application)
@@ -70,6 +71,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val translateClient = TranslateClient()
     private val imageGenClient = ImageGenClient()
     private val vectorRag = VectorRagService(application)
+    private val slashExecutor = AppSlashExecutor(this)
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
@@ -121,8 +123,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun runQuickReply(label: String) {
         if (_isStreaming.value) return
-        val output = QuickReplyExecutor.execute(quickReplyStore.load(), label)
-        if (output.isNotBlank()) _quickReplyOutput.value = output
+        val slot = quickReplyStore.load().slots.firstOrNull { it.label == label && it.enabled } ?: return
+        runSlash(slot.mes)
+    }
+
+    /** 输入框以 / 开头：走斜杠命令（官方 ST 输入即执行；未知命令给提示，不当作普通消息发送）。 */
+    fun runSlash(line: String) {
+        if (_isStreaming.value) return
+        _notice.value = null
+        try {
+            val output = slashExecutor.execute(line)
+            if (output.isNotBlank()) _quickReplyOutput.value = output
+        } catch (e: Exception) {
+            _notice.value = "（${e.message ?: "斜杠命令执行失败"}）"
+        }
     }
 
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
@@ -230,6 +244,86 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun removeDataBankFile(name: String) {
         vectorRag.deleteDataBankFile(name)
         refreshDataBank()
+    }
+
+    // ---- SlashMessageActions（消息类斜杠命令；对齐官方 slash-commands.js）----
+
+    override fun sendAsCharacter(name: String, text: String): String {
+        if (text.isBlank()) return ""
+        chatStore.appendManualMessage(sessionId, isUser = false, content = text, name = name)
+        refreshMessages()
+        return ""
+    }
+
+    override fun sendAsUser(text: String): String {
+        if (text.isBlank()) return ""
+        chatStore.appendManualMessage(sessionId, isUser = true, content = text, name = currentUserName)
+        refreshMessages()
+        return ""
+    }
+
+    override fun sendSystemMessage(text: String, name: String): String {
+        if (text.isBlank()) return ""
+        chatStore.appendNarratorMessage(
+            sessionId,
+            content = text,
+            name = name.ifBlank { chatStore.narratorName(sessionId) },
+        )
+        refreshMessages()
+        return ""
+    }
+
+    override fun setNarratorName(name: String): String {
+        chatStore.setNarratorName(sessionId, name.trim())
+        _notice.value = "（旁白显示名已设置为 ${name.trim().ifBlank { "System" }}）"
+        return ""
+    }
+
+    override fun sendComment(text: String): String {
+        if (text.isBlank()) return ""
+        chatStore.appendCommentMessage(sessionId, content = text)
+        refreshMessages()
+        return ""
+    }
+
+    override fun getSetMessageRole(at: Int, role: String): String {
+        val result = chatStore.setMessageRole(sessionId, at, role)
+        refreshMessages()
+        return result
+    }
+
+    override fun getSetMessageName(at: Int, name: String): String {
+        val result = chatStore.setMessageName(sessionId, at, name)
+        refreshMessages()
+        return result
+    }
+
+    override fun hideMessage(index: Int, hidden: Boolean): String {
+        chatStore.setMessageHidden(sessionId, index, hidden)
+        refreshMessages()
+        return ""
+    }
+
+    override fun deleteMessagesByName(name: String): Int {
+        val count = chatStore.deleteMessagesByName(sessionId, name)
+        refreshMessages()
+        return count
+    }
+
+    override fun addSwipe(text: String, switch: Boolean): String {
+        val id = chatStore.addSwipeManual(sessionId, text, switch)
+        refreshMessages()
+        return id
+    }
+
+    override fun deleteSwipe(id: Int?): String {
+        val newId = chatStore.deleteSwipeManual(sessionId, id)
+        refreshMessages()
+        return newId
+    }
+
+    override fun notify(text: String) {
+        _notice.value = "（$text）"
     }
 
     private fun narrateText(text: String) {
@@ -384,6 +478,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun send(text: String, userName: String = "User", media: List<MediaAttachment> = emptyList()) {
         if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return
+        // 官方 ST：输入以 / 开头即斜杠命令（消息类直接插消息，不触发生成；未知命令只提示不发送）
+        if (text.trimStart().startsWith("/") && media.isEmpty()) {
+            runSlash(text.trim())
+            return
+        }
         // 未配置模型先拦住：只显示提示，不写历史（避免悬空用户消息之后真的发给模型）。
         if (!isProviderConfigured()) {
             refreshProviderConfigured()

@@ -38,11 +38,14 @@ class SlashParserDiffTest {
             val inv = SlashParser.parse(
                 line = text,
                 strictEscaping = strict,
-                rawQuotesFor = { name -> name == "echo" },
+                rawQuotesFor = { name ->
+                    name in setOf("echo", "sys", "sendas", "send", "comment")
+                },
                 splitFor = { name ->
                     when (name) {
                         "let", "setvar" -> true to 1
                         "qr-arg" -> true to 2
+                        "add", "sub", "mul", "div", "mod", "pow", "max", "min", "abs", "sqrt", "round" -> true to null
                         else -> false to null
                     }
                 },
@@ -59,6 +62,6 @@ class SlashParserDiffTest {
             assertEquals("case $id", expected, actual)
             count++
         }
-        assertTrue("expected >= 18 cases, got $count", count >= 18)
+        assertTrue("expected >= 43 cases, got $count", count >= 43)
     }
 }
