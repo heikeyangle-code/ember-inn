@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 97（2026-08-10：平板/折叠屏双栏——大屏自适应）
+
+- MainScreen：屏幕宽度 >= 840dp 时聊天页不再全屏覆盖，改为左列表（当前 Tab）+ 右聊天（1:1.3）双栏；
+  底部导航保留在手机布局；窄屏行为不变
+- 抽 TabContent 组合（角色/会话/设置）供单栏 Scaffold 与双栏左侧复用；打开详情页仍全屏
+- 对应 README“大屏自适应：手机单栏底部导航；平板/折叠屏双栏（列表 + 聊天）”
+- 无引擎改动；App 编译走 CI
+
 ## 最近一轮 96（2026-08-10：从 URL 导入角色卡）
 
 - HomeViewModel.importCardFromUrl：OkHttp 下载（跟重定向 + UA）→ 按 URL 后缀/PNG 魔数识别 PNG/JSON/CharX → 走现有 importCard 入库

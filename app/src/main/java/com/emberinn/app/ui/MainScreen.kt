@@ -8,7 +8,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -23,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -112,6 +115,56 @@ fun MainScreen(
 
     val sessionId = openSessionId
     if (sessionId != null) {
+        val wide = LocalConfiguration.current.screenWidthDp >= 840
+        if (wide) {
+            // 平板/折叠屏双栏：左侧列表 + 右侧聊天（README 大屏自适应）
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    TabContent(
+                        selectedTab = selectedTab,
+                        onOpenChat = { session ->
+                            openSessionId = session.id
+                            openName = session.name
+                        },
+                        onOpenSettings = { route ->
+                            selectedTab = 2
+                            if (route != null) settingsDeepLink = route
+                        },
+                        onOpenDetail = { record -> openDetailId = record.id },
+                        onOpenSession = { session ->
+                            openSessionId = session.id
+                            openName = session.name
+                        },
+                        themeMode = themeMode,
+                        themePreset = themePreset,
+                        onThemeChanged = onThemeChanged,
+                        settingsDeepLink = settingsDeepLink,
+                        onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1.3f)
+                        .fillMaxHeight(),
+                ) {
+                    com.emberinn.app.ui.chat.ChatScreen(
+                        sessionId = sessionId,
+                        name = openName,
+                        onBack = { openSessionId = null },
+                        onOpenSettings = {
+                            openSessionId = null
+                            settingsDeepLink = "providers"
+                            selectedTab = 2
+                        },
+                    )
+                }
+            }
+            return
+        }
         com.emberinn.app.ui.chat.ChatScreen(
             sessionId = sessionId,
             name = openName,
@@ -144,33 +197,61 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            when (selectedTab) {
-                0 -> com.emberinn.app.ui.home.CharactersScreen(
-                    onOpenChat = { session ->
-                        openSessionId = session.id
-                        openName = session.name
-                    },
-                    onOpenSettings = { route ->
-                        selectedTab = 2
-                        if (route != null) settingsDeepLink = route
-                    },
-                    onOpenDetail = { record -> openDetailId = record.id },
-                )
-                1 -> com.emberinn.app.ui.sessions.SessionsScreen(
-                    onOpenSession = { session ->
-                        openSessionId = session.id
-                        openName = session.name
-                    },
-                )
-                else -> com.emberinn.app.ui.settings.SettingsScreen(
-                    themeMode = themeMode,
-                    themePreset = themePreset,
-                    onThemeChanged = onThemeChanged,
-                    deepLink = settingsDeepLink,
-                    onDeepLinkConsumed = { settingsDeepLink = null },
-                )
-            }
+            TabContent(
+                selectedTab = selectedTab,
+                onOpenChat = { session ->
+                    openSessionId = session.id
+                    openName = session.name
+                },
+                onOpenSettings = { route ->
+                    selectedTab = 2
+                    if (route != null) settingsDeepLink = route
+                },
+                onOpenDetail = { record -> openDetailId = record.id },
+                onOpenSession = { session ->
+                    openSessionId = session.id
+                    openName = session.name
+                },
+                themeMode = themeMode,
+                themePreset = themePreset,
+                onThemeChanged = onThemeChanged,
+                settingsDeepLink = settingsDeepLink,
+                onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+            )
         }
+    }
+}
+
+
+@Composable
+private fun TabContent(
+    selectedTab: Int,
+    onOpenChat: (com.emberinn.app.data.SessionRecord) -> Unit,
+    onOpenSettings: (String?) -> Unit,
+    onOpenDetail: (com.emberinn.app.data.CharacterRecord) -> Unit,
+    onOpenSession: (com.emberinn.app.data.SessionRecord) -> Unit,
+    themeMode: com.emberinn.app.ui.theme.ThemeMode,
+    themePreset: com.emberinn.app.ui.theme.ThemePreset,
+    onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit,
+    settingsDeepLink: String?,
+    onSettingsDeepLinkConsumed: () -> Unit,
+) {
+    when (selectedTab) {
+        0 -> com.emberinn.app.ui.home.CharactersScreen(
+            onOpenChat = onOpenChat,
+            onOpenSettings = onOpenSettings,
+            onOpenDetail = onOpenDetail,
+        )
+        1 -> com.emberinn.app.ui.sessions.SessionsScreen(
+            onOpenSession = onOpenSession,
+        )
+        else -> com.emberinn.app.ui.settings.SettingsScreen(
+            themeMode = themeMode,
+            themePreset = themePreset,
+            onThemeChanged = onThemeChanged,
+            deepLink = settingsDeepLink,
+            onDeepLinkConsumed = onSettingsDeepLinkConsumed,
+        )
     }
 }
 
