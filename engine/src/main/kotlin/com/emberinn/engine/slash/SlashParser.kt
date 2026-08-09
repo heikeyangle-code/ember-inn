@@ -140,8 +140,13 @@ class SlashTokenizer(
             namedLists = namedLists,
             unnamedArgs = unnamed,
             raw = text.substring(start),
+            endIndex = index,
         )
     }
+
+    /** 官方 \w = [A-Za-z0-9_]（ASCII）。 */
+    private fun isAsciiWordChar(c: Char): Boolean =
+        c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '_'
 
     /** 官方 testNamedArgument：/^\w+=/（\w = [A-Za-z0-9_]）。 */
     fun testNamedArgument(): Boolean =
@@ -150,7 +155,8 @@ class SlashTokenizer(
     /** 官方 parseNamedArgument：key= 后按 闭包/引号/list/普通值 取。 */
     private fun parseNamedArgument(): Triple<String, String, List<String>?> {
         val key = StringBuilder()
-        while (char.isLetterOrDigit() || char == '_') key.append(take())
+        // 官方 \w 仅 ASCII（[A-Za-z0-9_]）；Kotlin isLetterOrDigit 会收中文，必须按 ASCII 判定
+        while (isAsciiWordChar(char)) key.append(take())
         take() // discard "="
         val value = when {
             testClosure() -> throw SlashParseException("闭包参数需由 SlashEngine 预解析：{:")
@@ -188,8 +194,9 @@ class SlashTokenizer(
                 }
             }
             when {
-                testClosure() -> throw SlashParseException("闭包参数需由 SlashEngine 预解析：{:")
                 splitActive -> {
+                    // 官方 split 分支才判闭包；非 split 直接逐字符取值（转义闭包即普通文本）
+                    if (testClosure()) throw SlashParseException("闭包参数需由 SlashEngine 预解析：{:")
                     when {
                         testQuotedValue() -> listValues += parseQuotedValue()
                         testListValue() -> listValues += parseListValue()

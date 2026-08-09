@@ -87,8 +87,8 @@ class SlashEngineTest {
 
     @Test
     fun `escaped closure is not resolved`() {
-        // \{: ... :} 被转义：不执行；转义反斜杠被解析器消费（官方 testSymbol 语义），文本为 {: 
-        assertEquals("{:", SlashEngine.execute("/echo \\{:"))
+        // \{: 被转义：不执行；非 split 值不判闭包，反斜杠原样保留（官方 slash-parser 差分 18 例确认）
+        assertEquals("\\{:", SlashEngine.execute("/echo \\{:"))
     }
 
     @Test

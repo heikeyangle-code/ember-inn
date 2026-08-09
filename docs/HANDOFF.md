@@ -97,6 +97,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 10 |
 | BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
+| 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
@@ -155,7 +156,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 27 例。
 ✅ 2026-08-10 按官方 SlashCommandParser 逐字移植 tokenizer：parseCommand/parseNamedArgument/parseUnnamedArgument（split+splitUnnamedArgumentCount，/let、/setvar=1、/qr-arg=2）/parseQuotedValue/parseListValue/parseValue；STRICT_ESCAPING 完整语义（/parser-flag 可切换，影响后续命令解析）；REPLACE_GETVAR 官方新宏引擎下为 no-op（{{getvar::}} 由 MacroEngine 展开，已测）；rawQuotes 官方语义（整段到命令结束、保留引号）；注释（//、/#、块注释）与命令间普通文本丢弃；闭包转义（\{:）按官方消费反斜杠。
-🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似，闭包仍预解析）；命令数远少于官方（150+ 官方命令多数依赖 App 状态，未实现）；完整 SlashCommandParser 无法逐字差分（依赖数十模块与浏览器），testSymbol 差分 27 例 + 源码对照 + 单测。
+🟡 偏差：官方惰性闭包（传给命令对象）与 () 即时执行统一为即时求值（近似，闭包仍预解析）；命令数远少于官方（150+ 官方命令多数依赖 App 状态，未实现）。差分：参数解析核心 18 例 + testSymbol 27 例（scripts/diff/slash-parser-official.mjs / slash-escape-official.mjs 从官方逐字提取，SlashParserDiffTest/SlashEscapeDiffTest 对拍）；执行链/闭包/注释仍源码对照 + 单测（依赖 DOM/模块无法逐字提取）。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
@@ -230,7 +231,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
 ✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
 ✅ 角色详情编辑页已完成（2026-08-10 复验修复，c8b22e4 起）：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。本轮修复：depth_prompt/talkativeness 读写改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；“新增条目”弹层删除按钮误删第一条的 bug 已修；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；❌ 变量/快捷回复 UI（README 自定义扩展，排后）、模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
+✅ 正则（该卡）UI 已做（2026-08-10：data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见第 75 轮）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展）；✅ 快捷回复（该卡）UI 已做（槽位字段完全复用官方 QuickReplySlot：mes/label/enabled/automationId/preventAutoExecute，存 data.extensions.quick_replies，执行复用 QuickReplyExecutor；输入区快捷盘渲染 P3）；❌ 模型覆盖（README 角色页承诺：连接档案/采样/上下文长度，本角色覆盖全局）、主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题）；设置搜索结果目前只跳到设置 Tab（深链到具体子页未做）。
 注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
 
 ### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
@@ -367,6 +368,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
+
+## 最近一轮 76（2026-08-10：斜杠解析核心机器差分 18 例 + 该卡变量/快捷回复 UI）
+
+- 新增 scripts/diff/slash-parser-official.mjs：把官方 SlashCommandParser 的 parseCommand/parseNamedArgument/
+  parseUnnamedArgument（split+count）/parseQuotedValue/parseListValue/parseValue/testCommandEnd/
+  isInsideMacroBraces 方法体逐字提取（打桩：commands/根 scope/闭包=不判/宏索引=no-op/REPLACE_GETVAR=no-op），
+  生成 18 例 fixture；SlashParserDiffTest 对拍 Kotlin 输出（name/named/unnamed/endIndex）全绿
+- 差分抓出 2 处：
+  1. 官方 \w 仅 ASCII：Kotlin isLetterOrDigit 会收中文键名 → 改 isAsciiWordChar（[A-Za-z0-9_]）
+  2. 官方非 split 无名参数从不判闭包（\{: 原样保留反斜杠）→ 单测预期修正（此前按“反斜杠被消费”写错）
+- CommandInvocation 增 endIndex（对齐官方 SlashCommandExecutor.end，差分用）
+- 该卡变量（data.extensions.emberinn_variables，README 自定义扩展）+ 快捷回复（data.extensions.quick_replies，
+  槽位字段完全复用官方 QuickReplySlot：mes/label/enabled/automationId/preventAutoExecute，执行复用 QuickReplyExecutor）
+  读写 + 详情页 UI（列表/增删改/启用开关）；App 纯逻辑测试跑绿（引擎类路径）
+- 引擎测试全绿（含 SlashParserDiffTest 18 例差分）；App 编译走 CI
 
 ## 最近一轮 75（2026-08-10：该卡正则——官方 RegexScriptData 读写 + 详情页 UI + 聊天位点接线）
 

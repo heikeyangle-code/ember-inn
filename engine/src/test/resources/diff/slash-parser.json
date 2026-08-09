@@ -1,0 +1,308 @@
+{
+  "source": "SlashCommandParser parseCommand core",
+  "cases": [
+    {
+      "id": "basic-named-unnamed",
+      "args": {
+        "body": {
+          "text": "/sendas name=柳春娘 at=1 你好啊"
+        }
+      },
+      "expected": {
+        "name": "sendas",
+        "named": {
+          "name": "柳春娘",
+          "at": "1"
+        },
+        "unnamed": [
+          "你好啊"
+        ],
+        "index": 25
+      }
+    },
+    {
+      "id": "quoted-unnamed",
+      "args": {
+        "body": {
+          "text": "/sys \"hello world\""
+        }
+      },
+      "expected": {
+        "name": "sys",
+        "named": {},
+        "unnamed": [
+          "hello world"
+        ],
+        "index": 18
+      }
+    },
+    {
+      "id": "quoted-named",
+      "args": {
+        "body": {
+          "text": "/persona name=\"柳 春 娘\""
+        }
+      },
+      "expected": {
+        "name": "persona",
+        "named": {
+          "name": "柳 春 娘"
+        },
+        "unnamed": [],
+        "index": 21
+      }
+    },
+    {
+      "id": "echo-rawQuotes",
+      "args": {
+        "body": {
+          "text": "/echo \"hello world\""
+        }
+      },
+      "expected": {
+        "name": "echo",
+        "named": {},
+        "unnamed": [
+          "\"hello world\""
+        ],
+        "index": 19
+      }
+    },
+    {
+      "id": "echo-rawQuotes-one-escape-pipe",
+      "args": {
+        "body": {
+          "text": "/echo a \\| b"
+        }
+      },
+      "expected": {
+        "name": "echo",
+        "named": {},
+        "unnamed": [
+          "a | b"
+        ],
+        "index": 12
+      }
+    },
+    {
+      "id": "echo-rawQuotes-two-escape-pipe-loose",
+      "args": {
+        "body": {
+          "text": "/echo a \\\\| b"
+        }
+      },
+      "expected": {
+        "name": "echo",
+        "named": {},
+        "unnamed": [
+          "a \\| b"
+        ],
+        "index": 13
+      }
+    },
+    {
+      "id": "echo-rawQuotes-two-escape-pipe-strict",
+      "args": {
+        "body": {
+          "text": "/echo a \\\\| b",
+          "strict": true
+        }
+      },
+      "expected": {
+        "name": "echo",
+        "named": {},
+        "unnamed": [
+          "a \\"
+        ],
+        "index": 10
+      }
+    },
+    {
+      "id": "let-split-merge",
+      "args": {
+        "body": {
+          "text": "/let key=greeting Hello World"
+        }
+      },
+      "expected": {
+        "name": "let",
+        "named": {
+          "key": "greeting"
+        },
+        "unnamed": [
+          "Hello",
+          "World"
+        ],
+        "index": 29
+      }
+    },
+    {
+      "id": "let-named-list",
+      "args": {
+        "body": {
+          "text": "/let key=[a|b|c]"
+        }
+      },
+      "expected": {
+        "name": "let",
+        "named": {
+          "key": "[a|b|c]"
+        },
+        "unnamed": [],
+        "index": 16
+      }
+    },
+    {
+      "id": "qr-arg-split-two",
+      "args": {
+        "body": {
+          "text": "/qr-arg hello world"
+        }
+      },
+      "expected": {
+        "name": "qr-arg",
+        "named": {},
+        "unnamed": [
+          "hello",
+          "world"
+        ],
+        "index": 19
+      }
+    },
+    {
+      "id": "setvar-split-merge",
+      "args": {
+        "body": {
+          "text": "/setvar key=x a b c"
+        }
+      },
+      "expected": {
+        "name": "setvar",
+        "named": {
+          "key": "x"
+        },
+        "unnamed": [
+          "a",
+          "b c"
+        ],
+        "index": 19
+      }
+    },
+    {
+      "id": "sys-list-unnamed",
+      "args": {
+        "body": {
+          "text": "/sys [a|b|c]"
+        }
+      },
+      "expected": {
+        "name": "sys",
+        "named": {},
+        "unnamed": [
+          "[a"
+        ],
+        "index": 7
+      }
+    },
+    {
+      "id": "macro-braces-pipe-not-split",
+      "args": {
+        "body": {
+          "text": "/sys {{foo|bar}}"
+        }
+      },
+      "expected": {
+        "name": "sys",
+        "named": {},
+        "unnamed": [
+          "{{foo|bar}}"
+        ],
+        "index": 16
+      }
+    },
+    {
+      "id": "quoted-escaped-quote-loose",
+      "args": {
+        "body": {
+          "text": "/persona name=\"a\\\"b\""
+        }
+      },
+      "expected": {
+        "name": "persona",
+        "named": {
+          "name": "a\"b"
+        },
+        "unnamed": [],
+        "index": 20
+      }
+    },
+    {
+      "id": "quoted-escaped-quote-strict",
+      "args": {
+        "body": {
+          "text": "/persona name=\"a\\\"b\"",
+          "strict": true
+        }
+      },
+      "expected": {
+        "name": "persona",
+        "named": {
+          "name": "a\"b"
+        },
+        "unnamed": [],
+        "index": 20
+      }
+    },
+    {
+      "id": "quoted-two-escape-strict",
+      "args": {
+        "body": {
+          "text": "/persona name=\"a\\\\\"b\"",
+          "strict": true
+        }
+      },
+      "expected": {
+        "name": "persona",
+        "named": {
+          "name": "a\\"
+        },
+        "unnamed": [
+          "b\""
+        ],
+        "index": 21
+      }
+    },
+    {
+      "id": "named-empty-value",
+      "args": {
+        "body": {
+          "text": "/persona name="
+        }
+      },
+      "expected": {
+        "name": "persona",
+        "named": {
+          "name": ""
+        },
+        "unnamed": [],
+        "index": 14
+      }
+    },
+    {
+      "id": "echo-escaped-closure-text",
+      "args": {
+        "body": {
+          "text": "/echo \\{:"
+        }
+      },
+      "expected": {
+        "name": "echo",
+        "named": {},
+        "unnamed": [
+          "\\{:"
+        ],
+        "index": 9
+      }
+    }
+  ]
+}

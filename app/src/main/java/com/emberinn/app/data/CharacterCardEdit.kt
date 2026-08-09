@@ -66,6 +66,20 @@ data class CharacterRegexScript(
 )
 
 /**
+ * 该卡快捷回复（README 角色页承诺的 per-character 版）。
+ * 官方快捷回复是全局 preset（quick-replies 扩展，槽位字段 mes/label/enabled/automationId/preventAutoExecute，
+ * 引擎 QuickReplySlot 已 1:1）；官方没有“角色卡内嵌快捷回复”字段，本项目存 data.extensions.quick_replies，
+ * 槽位字段完全复用官方 QuickReplySlot，执行复用 QuickReplyExecutor。
+ */
+data class CharacterQuickReply(
+    val id: String,
+    val label: String,
+    val mes: String,
+    val enabled: Boolean = true,
+)
+
+
+/**
  * 角色卡 data 层读改写（纯逻辑，App 详情页 + 单元测试共用）。
  *
  * 关键点（对照官方 readFromV2 / char-data.js / slash-commands.js）：
@@ -293,6 +307,65 @@ object CharacterCardEdit {
         JsonObject(m)
     }
 
+
+    /** 读取该卡变量（README 自定义扩展，data.extensions.emberinn_variables，字符串值）。 */
+    fun readVariables(raw: String): Map<String, String> = runCatching {
+        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val ext = data["extensions"]?.jsonObject ?: return@runCatching emptyMap()
+        (ext["emberinn_variables"] as? JsonObject)?.mapNotNull { (k, v) ->
+            val value = (v as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+            k to value
+        }?.toMap() ?: emptyMap()
+    }.getOrDefault(emptyMap())
+
+    /** 保存该卡变量：JSON 对象，字符串值。 */
+    fun applyVariables(raw: String, variables: Map<String, String>): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (variables.isEmpty()) {
+            ext.remove("emberinn_variables")
+        } else {
+            ext["emberinn_variables"] = JsonObject(
+                variables.filterValues { it.isNotEmpty() }.mapValues { (_, v) -> JsonPrimitive(v) },
+            )
+        }
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
+    }
+
+    /** 读取该卡快捷回复（槽位字段对齐官方 QuickReplySlot）。 */
+    fun readQuickReplies(raw: String): List<CharacterQuickReply> = runCatching {
+        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val ext = data["extensions"]?.jsonObject ?: return@runCatching emptyList()
+        (ext["quick_replies"] as? JsonArray)?.mapIndexedNotNull { i, el ->
+            val e = el as? JsonObject ?: return@mapIndexedNotNull null
+            CharacterQuickReply(
+                id = (e["id"] as? JsonPrimitive)?.contentOrNull?.ifBlank { null } ?: (i + 1).toString(),
+                label = (e["label"] as? JsonPrimitive)?.contentOrNull ?: "",
+                mes = (e["mes"] as? JsonPrimitive)?.contentOrNull ?: "",
+                enabled = (e["enabled"] as? JsonPrimitive)?.booleanOrNull ?: true,
+            )
+        } ?: emptyList()
+    }.getOrDefault(emptyList())
+
+    /** 保存该卡快捷回复：字段对齐官方 QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute），未知字段保留。 */
+    fun applyQuickReplies(raw: String, replies: List<CharacterQuickReply>): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val original = (ext["quick_replies"] as? JsonArray)?.map { it as? JsonObject } ?: emptyList()
+        val repliesJson = JsonArray(replies.mapIndexed { i, r ->
+            val base = original.getOrNull(i)?.toMutableMap() ?: mutableMapOf()
+            base.remove("id"); base.remove("label"); base.remove("mes"); base.remove("enabled")
+            base["id"] = JsonPrimitive(r.id.ifBlank { (i + 1).toString() })
+            base["label"] = JsonPrimitive(r.label)
+            base["mes"] = JsonPrimitive(r.mes)
+            base["enabled"] = JsonPrimitive(r.enabled)
+            JsonObject(base)
+        })
+        if (repliesJson.isEmpty()) ext.remove("quick_replies") else ext["quick_replies"] = repliesJson
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
+    }
     /** 世界书官方位置是 data.character_book；兼容历史卡把 character_book 放在根部的写法。 */
     private fun bookOf(root: JsonObject, data: JsonObject): JsonObject? =
         data["character_book"]?.jsonObject ?: root["character_book"]?.jsonObject

@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
+import com.emberinn.app.data.CharacterQuickReply
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
@@ -87,6 +88,8 @@ fun CharacterDetailScreen(
     var fields by remember(record.id) { mutableStateOf(vm.readCharacterFields(record)) }
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
+    var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
+    var quickReplies by remember(record.id) { mutableStateOf(vm.readQuickReplies(record)) }
     var dirty by remember { mutableStateOf(false) }
 
     var editingKey by remember { mutableStateOf<String?>(null) }
@@ -98,6 +101,14 @@ fun CharacterDetailScreen(
     var editingDepth by remember { mutableStateOf(false) }
     var editingRegexIdx by remember { mutableStateOf<Int?>(null) }
     var addingRegex by remember { mutableStateOf(false) }
+    var editingVarKey by remember { mutableStateOf<String?>(null) }
+    var varDraftKey by remember { mutableStateOf("") }
+    var varDraftValue by remember { mutableStateOf("") }
+    var editingQrIdx by remember { mutableStateOf<Int?>(null) }
+    var addingQr by remember { mutableStateOf(false) }
+    var qrDraftLabel by remember { mutableStateOf("") }
+    var qrDraftMes by remember { mutableStateOf("") }
+    var qrDraftEnabled by remember { mutableStateOf(true) }
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -136,6 +147,8 @@ fun CharacterDetailScreen(
         vm.saveCharacterFields(record, fields)
         vm.saveWorldEntries(record, entries)
         vm.saveRegexScripts(record, regexScripts)
+        vm.saveVariables(record, variables)
+        vm.saveQuickReplies(record, quickReplies)
         dirty = false
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
@@ -381,6 +394,74 @@ fun CharacterDetailScreen(
                         onClick = { addingRegex = true },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增正则") }
+                }
+
+                item {
+                    SectionHeader("变量（该卡）", "${variables.size} 个")
+                }
+                if (variables.isEmpty()) {
+                    item {
+                        Text(
+                            "没有该卡变量。变量以 {{getvar::键}} 在提示词/宏里引用（README 自定义扩展）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                        )
+                    }
+                }
+                items(variables.toList().size) { i ->
+                    val pair = variables.toList()[i]
+                    SimpleEditRow(
+                        title = pair.first,
+                        subtitle = pair.second,
+                        onEdit = { editingVarKey = pair.first; varDraftKey = pair.first; varDraftValue = pair.second },
+                        onDelete = {
+                            variables = variables - pair.first
+                            dirty = true
+                        },
+                    )
+                }
+                item {
+                    OutlinedButton(
+                        onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    ) { Text("＋ 新增变量") }
+                }
+
+                item {
+                    SectionHeader("快捷回复（该卡）", "${quickReplies.size} 条")
+                }
+                if (quickReplies.isEmpty()) {
+                    item {
+                        Text(
+                            "没有该卡快捷回复。聊天输入区快捷盘后续按此列表渲染（README 自定义扩展，执行层 P3）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                        )
+                    }
+                }
+                items(quickReplies.size) { i ->
+                    SimpleEditRow(
+                        title = quickReplies[i].label,
+                        subtitle = quickReplies[i].mes,
+                        onEdit = {
+                            editingQrIdx = i
+                            qrDraftLabel = quickReplies[i].label
+                            qrDraftMes = quickReplies[i].mes
+                            qrDraftEnabled = quickReplies[i].enabled
+                        },
+                        onDelete = {
+                            quickReplies = quickReplies.filterIndexed { j, _ -> j != i }
+                            dirty = true
+                        },
+                    )
+                }
+                item {
+                    OutlinedButton(
+                        onClick = { addingQr = true; qrDraftLabel = ""; qrDraftMes = ""; qrDraftEnabled = true },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    ) { Text("＋ 新增快捷回复") }
                 }
 
                 item {
@@ -668,6 +749,101 @@ fun CharacterDetailScreen(
             onDismiss = {
                 addingRegex = false
                 editingRegexIdx = null
+            },
+        )
+    }
+
+    // ---- 变量编辑对话框 ----
+    editingVarKey?.let { _ ->
+        AlertDialog(
+            onDismissRequest = { editingVarKey = null },
+            title = { Text("编辑变量") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = varDraftKey,
+                        onValueChange = { varDraftKey = it },
+                        label = { Text("键（{{getvar::键}} 引用）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = varDraftValue,
+                        onValueChange = { varDraftValue = it },
+                        label = { Text("值") },
+                        minLines = 2,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val key = varDraftKey.trim()
+                    if (key.isNotEmpty()) {
+                        variables = variables + (key to varDraftValue)
+                        dirty = true
+                    }
+                    editingVarKey = null
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingVarKey = null }) { Text("取消") }
+            },
+        )
+    }
+
+    // ---- 快捷回复编辑对话框 ----
+    val editingQr = quickReplies.getOrNull(editingQrIdx ?: -1)
+    if (editingQr != null || addingQr) {
+        AlertDialog(
+            onDismissRequest = { addingQr = false; editingQrIdx = null },
+            title = { Text(if (addingQr) "新增快捷回复" else "编辑快捷回复") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = qrDraftLabel,
+                        onValueChange = { qrDraftLabel = it },
+                        label = { Text("按钮文案") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = qrDraftMes,
+                        onValueChange = { qrDraftMes = it },
+                        label = { Text("发送内容（斜杠链，如 /echo 你好）") },
+                        minLines = 2,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    SwitchRow("启用", qrDraftEnabled) { qrDraftEnabled = it }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val label = qrDraftLabel.trim()
+                    if (label.isNotEmpty()) {
+                        if (addingQr) {
+                            quickReplies = quickReplies + CharacterQuickReply(
+                                id = (quickReplies.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1,
+                                label = label,
+                                mes = qrDraftMes,
+                                enabled = qrDraftEnabled,
+                            )
+                        } else {
+                            val i = editingQrIdx ?: 0
+                            quickReplies = quickReplies.mapIndexed { j, r ->
+                                if (j == i) r.copy(label = label, mes = qrDraftMes, enabled = qrDraftEnabled) else r
+                            }
+                        }
+                        dirty = true
+                    }
+                    addingQr = false
+                    editingQrIdx = null
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { addingQr = false; editingQrIdx = null }) { Text("取消") }
             },
         )
     }
@@ -1152,4 +1328,41 @@ private fun RegexEditorSheet(
             }
         }
     }
+}
+
+@Composable
+private fun SimpleEditRow(
+    title: String,
+    subtitle: String,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f).clickable(onClick = onEdit).padding(vertical = 8.dp)) {
+            Text(
+                title.ifBlank { "（空）" },
+                style = MaterialTheme.typography.titleSmall,
+                color = if (title.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                subtitle.ifBlank { "（空）" },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
+            Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
+            Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+        }
+    }
+    HorizontalDivider()
 }

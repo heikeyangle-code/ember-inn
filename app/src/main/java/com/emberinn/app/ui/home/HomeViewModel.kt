@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.palette.graphics.Palette
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.data.CharacterQuickReply
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.CharacterDetailFields
 import com.emberinn.app.data.CharacterRecord
@@ -249,6 +250,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** 保存该卡正则脚本：只覆盖官方字段，未知字段原样保留。 */
     fun saveRegexScripts(record: CharacterRecord, scripts: List<CharacterRegexScript>) {
         val root = json.parseToJsonElement(CharacterCardEdit.applyRegexScripts(record.rawJson, scripts)).jsonObject
+        saveJson(record, root)
+    }
+
+    /** 读取该卡变量（README 自定义扩展）。 */
+    fun readVariables(record: CharacterRecord): Map<String, String> =
+        CharacterCardEdit.readVariables(record.rawJson)
+
+    /** 保存该卡变量。 */
+    fun saveVariables(record: CharacterRecord, variables: Map<String, String>) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyVariables(record.rawJson, variables)).jsonObject
+        saveJson(record, root)
+    }
+
+    /** 读取该卡快捷回复（README 自定义扩展）。 */
+    fun readQuickReplies(record: CharacterRecord): List<CharacterQuickReply> =
+        CharacterCardEdit.readQuickReplies(record.rawJson)
+
+    /** 保存该卡快捷回复。 */
+    fun saveQuickReplies(record: CharacterRecord, replies: List<CharacterQuickReply>) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyQuickReplies(record.rawJson, replies)).jsonObject
         saveJson(record, root)
     }
 

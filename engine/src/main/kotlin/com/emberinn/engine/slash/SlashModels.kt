@@ -12,6 +12,8 @@ data class CommandInvocation(
     val namedLists: Map<String, List<String>> = emptyMap(),
     val unnamedArgs: List<String>,
     val raw: String,
+    /** 解析结束位置（差分用，对齐官方 SlashCommandExecutor.end）。 */
+    val endIndex: Int = 0,
 )
 
 /** 命令定义：name / aliases / 描述 / 执行回调。 */
