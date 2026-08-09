@@ -617,14 +617,17 @@ private fun RecentChatCard(
 
 @Composable
 private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: () -> Unit, onMenu: () -> Unit) {
-    // README 角色卡驱动主题（第二层）：每张卡一眼不同——名字用该卡 seed、无头像占位用 seed 淡色渐变
+    // README 角色卡驱动主题（第二层）：每张卡一眼不同——卡片底色带该卡 seed 的极淡 tint
+    //（克制：混入 86% 底色，只体现"每卡专属氛围"，不喧宾夺主），名字用 seed、无头像占位用 seed 渐变
     val seed = record.seedColor?.let { Color(it.toInt()) }
+    val cardColor = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceVariant, 0.86f) }
+        ?: MaterialTheme.colorScheme.surfaceVariant
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onMenu),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
     ) {
         Box {
             Column {
