@@ -721,7 +721,7 @@ fun CharacterDetailScreen(
     if (editingRegex != null || addingRegex) {
         RegexEditorSheet(
             initial = editingRegex ?: CharacterRegexScript(
-                id = (regexScripts.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1,
+                id = ((regexScripts.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1).toString(),
                 scriptName = "", findRegex = "", replaceString = "",
                 placement = listOf(1, 2, 5, 6), runOnEdit = true,
             ),
@@ -825,7 +825,7 @@ fun CharacterDetailScreen(
                     if (label.isNotEmpty()) {
                         if (addingQr) {
                             quickReplies = quickReplies + CharacterQuickReply(
-                                id = (quickReplies.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1,
+                                id = ((quickReplies.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0) + 1).toString(),
                                 label = label,
                                 mes = qrDraftMes,
                                 enabled = qrDraftEnabled,
