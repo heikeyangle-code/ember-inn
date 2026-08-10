@@ -667,6 +667,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 依据：M3 1.4 稳定版（Expressive 仅 1.5 alpha），Cloudy 静态 sky 源原则，首页角色卡既有 seed 语言。
 - 影响：纯 App/UI 层，未动引擎。
 
+### 12.11 取色盘组件升级（2026-08-11 补充）
+- **`ColorPickerDialog` 重做（ui/components/ColorPickerSheet.kt）**：旧版“色板 + 三条普通 M3 滑杆”换成高级选色器——二维 HSV 取色板（横=饱和度、纵=明度，渐变底 + 可拖圆点）、色相渐变条、RGB 渐变滑杆（轨道渐变跟随另外两通道）、大预览色块（当前色 + 主题环 + 彩色阴影）、官方 SillyTavern 色板、hex 输入；容器从 AlertDialog 换成 `EmberBottomSheet`（28dp 圆角 + 拖拽把手）。
+- **`ColorField` 重做（ui/components/ColorField.kt）**：色块升级为 38dp 大色块（彩色阴影 + 白边内描边），整行可点开选色盘；保留 hex 输入 + 跟随主题 fallback 语义。
+- 使用点：消息渲染（官方 st* 字段）、外观（阴影/遮罩颜色）等全部自动生效；`ColorPickerDialog` 公共签名未变，调用方零改动。
+- 依据：HSV 取色是主流选色器范式（Android/iOS 系统取色器同构）；颜色全部取色自主题/所选色，11 套主题不受影响。
+- 影响：纯 App/UI 层，未动引擎。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
