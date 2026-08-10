@@ -245,6 +245,18 @@ class ChatPromptFactory {
                 .associateBy { "${it.world}.${it.uid}" },
         )
 
+        // 官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)
+        val worldInfoDepthPrompts = wiResult.depthEntries.mapIndexed { i, d ->
+            PromptItem(
+                identifier = "worldInfoDepth$i",
+                name = "世界书深度 ${d.depth}/${d.role}",
+                content = d.entries.joinToString("\n"),
+                role = d.role,
+                injectionDepth = d.depth,
+                injectionOrder = 100,
+            )
+        }
+
         // 示例对话
         val examples = if (fields.mesExamples.isNotEmpty()) {
             val blocks = PromptUtils.parseMesExamples(fields.mesExamples)
@@ -265,7 +277,7 @@ class ChatPromptFactory {
                 personaDescription = personaDescription,
                 personaInPrompt = personaInPrompt,
                 extensionPrompts = extensionPrompts + vectorTransform?.extensionPrompts.orEmpty(),
-                inChatExtensions = inChatExtensions,
+                inChatExtensions = inChatExtensions + worldInfoDepthPrompts,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,

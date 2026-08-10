@@ -223,4 +223,16 @@ class PromptPipelineAssemblerTest {
         )
         assertTrue(result.messages.any { it.content == "群聊深度提示文本" })
     }
+
+    @Test
+    fun `negative depth in chat extension is ignored`() {
+        val injected = PromptPipeline.populationInjectionPrompts(
+            absolutePrompts = emptyList(),
+            messages = listOf(PromptMessage("assistant", "回应"), PromptMessage("user", "你好")),
+            inChatExtensions = listOf(
+                PromptItem("neg", "负深度", content = "不应出现", role = "system", injectionDepth = -1, injectionOrder = 100),
+            ),
+        )
+        assertTrue(injected.none { it.content == "不应出现" })
+    }
 }

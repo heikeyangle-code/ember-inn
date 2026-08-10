@@ -23,12 +23,16 @@ class WorldInfoScannerTest {
         useGroupScoring: Boolean? = null,
         useProbability: Boolean = false,
         probability: Int = 100,
+        scanDepth: Int? = null,
+        depth: Int? = null,
+        role: String? = null,
     ) = WorldInfoEntry(
         world = "w", uid = uid, order = order, keys = keys, content = content,
         constant = constant, position = position, selective = selective, keySecondary = keySecondary,
         selectiveLogic = selectiveLogic, sticky = sticky, cooldown = cooldown,
         group = group, groupOverride = groupOverride, useGroupScoring = useGroupScoring,
         useProbability = useProbability, probability = probability, hash = uid.toLong(),
+        scanDepth = scanDepth, depth = depth, role = role,
     )
 
     @Test
@@ -222,5 +226,33 @@ class WorldInfoScannerTest {
         )
         assertEquals(1, result.activated.size)
         assertTrue(result.worldInfoBefore.contains("秘宝"))
+    }
+
+    @Test
+    fun `negative scan depth never activates (official invalid WI scan depth)`() {
+        val scanner = WorldInfoScanner()
+        val result = scanner.scan(
+            chat = listOf("钥匙"),
+            maxContext = 100,
+            entries = listOf(entry(1, 1, keys = listOf("钥匙"), content = "X", scanDepth = -1)),
+            settings = WorldInfoSettings(budgetPercent = 100),
+        )
+        assertTrue(result.activated.isEmpty())
+        assertEquals("", result.worldInfoBefore)
+    }
+
+    @Test
+    fun `negative at depth injection depth is ignored`() {
+        val scanner = WorldInfoScanner()
+        val result = scanner.scan(
+            chat = listOf("钥匙"),
+            maxContext = 100,
+            entries = listOf(entry(1, 1, keys = listOf("钥匙"), content = "X", position = WorldInfoConstants.POSITION_AT_DEPTH, depth = -1, role = "system")),
+            settings = WorldInfoSettings(budgetPercent = 100),
+        )
+        assertEquals(1, result.activated.size)
+        // 官方 WIDepthEntries 同样会收集负深度组；负深度在提示词总装层被忽略（populationInjectionPrompts 0..maxDepth）
+        assertEquals(1, result.depthEntries.size)
+        assertEquals(-1, result.depthEntries.first().depth)
     }
 }

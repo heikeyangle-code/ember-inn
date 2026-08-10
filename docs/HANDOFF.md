@@ -393,6 +393,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 101（2026-08-10：世界书深度注入真正接线 + 负深度 #3344 覆盖）
+
+- 审计发现真缺口：scanner 早已算出 depthEntries（POSITION_AT_DEPTH 分组），但 App 从未把它们送进提示词
+- 修复：ChatPromptFactory 把 wiResult.depthEntries → PromptItem（identifier worldInfoDepth{i}，
+  role/content/injectionDepth/order=100），并入 inChatExtensions 走 PromptPipeline populationInjectionPrompts
+  （官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)）
+- 负深度（#3344）：官方编辑器 min=0、扫描深度 <0 报错返回空、注入循环 0..maxDepth 天然忽略负深度；
+  引擎行为已对齐，新增回归：scanner 收集负深度组（同官方 WIDepthEntries）+ pipeline 忽略负深度注入
+- 引擎 288 测全绿；App 编译走 CI
+
 ## 最近一轮 100（2026-08-10：AI 生成聊天背景——README #937 P4 落地）
 
 - 角色详情 → 主题配方弹层新增“AI 生成背景（用图像服务）”：调 ImageGenClient（AUTOMATIC1111）生成低饱和氛围背景，
