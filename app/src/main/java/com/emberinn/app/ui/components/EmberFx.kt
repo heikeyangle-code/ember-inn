@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.ui.ExperimentalUiApi::class)
-
 package com.emberinn.app.ui.components
 
 import androidx.compose.animation.core.LinearEasing

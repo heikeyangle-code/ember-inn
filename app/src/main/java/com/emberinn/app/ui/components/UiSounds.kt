@@ -35,9 +35,9 @@ object UiSounds {
                     .build()
                 val p = SoundPool.Builder().setMaxStreams(3).setAudioAttributes(attrs).build()
                 val dir = File(context.cacheDir, "ui_sounds").apply { mkdirs() }
-                sendId = p.load(writeWav(File(dir, "send.wav"), 880f, 90), 1)
-                toggleId = p.load(writeWav(File(dir, "toggle.wav"), 1320f, 55), 1)
-                deleteId = p.load(writeWav(File(dir, "delete.wav"), 392f, 140), 1)
+                sendId = p.load(writeWav(File(dir, "send.wav"), 880f, 90).absolutePath, 1)
+                toggleId = p.load(writeWav(File(dir, "toggle.wav"), 1320f, 55).absolutePath, 1)
+                deleteId = p.load(writeWav(File(dir, "delete.wav"), 392f, 140).absolutePath, 1)
                 p.setOnLoadCompleteListener { _, _, _ -> ready = true }
                 pool = p
             }

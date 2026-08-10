@@ -1,8 +1,8 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
+package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberSwitch
-package com.emberinn.app.ui.home
 
 import android.content.Intent
 import android.widget.Toast

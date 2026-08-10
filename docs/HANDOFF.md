@@ -1,6 +1,6 @@
 # 交接清单（会话上下文耗尽时使用）
 
-> 最后更新：2026-08-09。接手顺序：第 0 节一眼看懂 → 1 常用命令 → 2 差分怎么用 → 3/4 现状 → 5 剩余工作 → 6 日志。
+> 最后更新：2026-08-10。接手顺序：第 0 节一眼看懂 → 1 常用命令 → 2 差分怎么用 → 3/4 现状 → 5 剩余工作 → 6 日志。
 
 ## 0. 一眼看懂：这是什么、怎么保证 1:1
 
@@ -385,10 +385,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **登记未做（README 要求但未实现）**：
 - LaTeX 渲染（KaTeX 资产未打包）；MeshGradient 氛围背景（API churn，用 seed 低饱和渐变替代中）；
-  骨架屏 shimmer（本地数据无加载态，收益低）；世界书命中灯四色分级（面板只展示已注入条目，常驻/关键词两色）；
-  每卡“消息样式”配方（引用色/斜体色）；触觉反馈仅聊天页（首页/设置未铺）；
+  世界书命中灯四色分级（面板只展示已注入条目，常驻/关键词两色）；
+  每卡“消息样式”配方（引用色/斜体色）；字体包（霞鹜文楷/思源宋体下载接入）；
   快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
-- 已在 README 路线图/清单登记，后续按批次补。
+- 骨架屏 shimmer / 触觉反馈铺满 / 音效 / 品牌空状态 / 彩色阴影 已落地（第 158-159 轮，见下节）。
 
 ## 8. 消息区布局调整（第 153 轮，OmniBot 对照 + 官方复核）
 
@@ -414,7 +414,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 官方流式（onProgressStreaming + Stopwatch(1000/streaming_fps=30)）：
 - 每 tick 整段 messageFormatting；App 对齐：流式显示 30fps 节流（snapshotFlow 33ms 限流，结束时补最终值）
 - 官方流式中补齐未配对定界符（* / " / ``` / ~~~，奇数时行尾补，多字符前加换行）→ 移植
-  balanceStreamingDelimiters，显示前再过 fixMarkdown + encode_tags（与 messageFormatting 同链路）
+  balanceStreamingDelimiters，显示前再过 fixMarkdown + encode_tags（与 messageFormatting 同链路）。
+  ⚠️ 2026-08-10 复核：官方 1.18 源码（sse-stream.js / streaming-display.js / script.js）**并无**
+  balanceStreamingDelimiters 函数，此为 App 层显示增强，非 1:1；规则定为“奇数且行尾未以该
+  定界符结尾才补”，避免把“你好*”补成“你好**”（第 159 轮与单测对齐）。
 - 落盘仍用原始流式文本（官方 saveReply 最后 cleanUpMessage，不落补齐痕迹）
 官方自动触底：|scrollHeight-clientHeight-scrollTop|<5；用户上滑→scrollLock 暂停，回底→恢复；
 App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复已实现，本轮未改）
@@ -521,6 +524,40 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   /hide name 过滤、narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；
   openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；
   表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
+
+## 8. UI 质感清单第一批/第二批落地（第 158–159 轮，2026-08-10，对照 EmberInn-UI质感提升方案）
+
+**新增共享组件**（`app/src/main/java/com/emberinn/app/ui/components/`）：
+- `EmberFx.kt`：EmberHaptics（Confirm/ToggleOn·Off/Reject/SegmentTick 语义触觉）、
+  `Modifier.emberShadow`（Compose 1.9+ 稳定 dropShadow，阴影色用元素自身颜色深色版，非纯黑）、
+  `EmberSkeletonBox`（rememberInfiniteTransition + 扫光渐变，颜色跟随主题强调色）、
+  `EmberSwitch`（全 App 开关统一封装：ToggleOn/Off 触觉 + 轻音效）
+- `EmberEmptyState.kt`：品牌化空状态（余烬微光 Canvas + 弱脉冲动效 + 语气文案 + 下一步按钮）
+- `UiSounds.kt`：SoundPool 运行时合成三段正弦衰减音（发送/切换/删除），USAGE_ASSISTANCE_SONIFICATION，
+  由 `AppearancePrefs.uiSounds`（默认开）控制；MainActivity.onCreate ensure 预加载
+
+**第一批落地（6257134）**：
+- 彩色阴影：首页 AI 对话卡（primary 光晕）、最近聊过（secondary）、角色卡（seed 色深版）全部换 emberShadow
+- 触觉铺满：发送=Confirm、删除=Reject、开关=ToggleOn/Off、点角色/会话/新建/导入=SegmentTick 轻选；
+  ChatScreen 原有 Confirm/Reject 保留并补音效
+- 骨架屏：提供商模型列表“测试连接中”显示 5 行主题色骨架（替代灰色转圈）
+- 空状态品牌化：首页（欢迎来到余烬酒馆）、会话（炉火还没点起来）、聊天（打招呼）全部换 EmberEmptyState
+- 音效：发送/删除/全部开关，外观设置新增「交互音效」开关
+
+**第二批落地（bfda115）**：
+- 六套预设主题各自形状性格：墨韵/青瓷=圆润 16dp、夜航/简约纸感=系统 12dp、丹砂=方正 4dp、琉璃=浑圆 24dp
+  （ThemePreset.shape；角色配方 > 用户全局档 > 预设性格）
+- 品牌滤镜：Theme.kt 新增 desaturate，算法取色后统一降饱和（浅色 0.20-0.22 / 深色 0.16-0.18），
+  任何 seed 都带余烬的低饱和气质
+- 形状语言真正区分角色：角色卡按自身主题配方 shape 取圆角（square=4 / circle=24 / rounded=16 / 默认 16），
+  与颜色一起形成每卡专属氛围
+
+**本轮 CI 修复**：
+- ChatViewModel 补 DisplayPipeline/AppearancePrefs 导入；CharacterDetailScreen SectionHeader 补 @Composable
+- DisplayPipelineTest 失败 → balanceStreamingDelimiters 补“行尾已以该定界符结尾则不补”规则（见上节登记）
+
+**剩余 UI 待办（下一批）**：字体包（霞鹜文楷/思源宋体下载接入）、世界书命中灯四色、每卡消息样式配方、
+快捷回复全屏编辑器、设置页再打磨（分组卡片已做）、排版层级拉大、LaTeX/MeshGradient（版本风险，待 spike）。
 
 ## 9. 维护速记（2026-08-10 精简归档）
 
