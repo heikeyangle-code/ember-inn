@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ProviderState
+import com.emberinn.app.data.SettingsSnapshotStore
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -48,6 +50,10 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
 
     var showClearConfirm by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
+    var snapshots by remember { mutableStateOf(SettingsSnapshotStore.list(context)) }
+    var showSnapshotDialog by remember { mutableStateOf(false) }
+    var snapshotName by remember { mutableStateOf("") }
+    var confirmRestoreName by remember { mutableStateOf<String?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
@@ -114,10 +120,93 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                 danger = true,
                 onClick = { showClearConfirm = true },
             )
+            // 设置快照（官方 user.js 设置快照语义：命名保存/恢复/删除 SharedPreferences + 提供商档案）
+            DataRow(
+                icon = PhosphorIcons.FileText,
+                title = "设置快照",
+                subtitle = "保存/恢复设置与提供商配置（不含聊天数据）；恢复后重启 App 完全生效",
+                trailing = "新建",
+                onClick = {
+                    snapshotName = ""
+                    showSnapshotDialog = true
+                },
+            )
+            snapshots.forEach { name ->
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = { confirmRestoreName = name }) { Text("恢复") }
+                        IconButton(onClick = {
+                            SettingsSnapshotStore.delete(context, name)
+                            snapshots = SettingsSnapshotStore.list(context)
+                            Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(PhosphorIcons.TrashSimple, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
         }
     }
 
+    if (showSnapshotDialog) {
+        AlertDialog(
+            onDismissRequest = { showSnapshotDialog = false },
+            title = { Text("新建设置快照") },
+            text = {
+                OutlinedTextField(
+                    value = snapshotName,
+                    onValueChange = { snapshotName = it },
+                    label = { Text("快照名称") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = SettingsSnapshotStore.create(context, snapshotName.trim())
+                    showSnapshotDialog = false
+                    snapshots = SettingsSnapshotStore.list(context)
+                    Toast.makeText(
+                        context,
+                        if (ok) "已创建快照" else "快照名称无效",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }) { Text("创建") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSnapshotDialog = false }) { Text("取消") }
+            },
+        )
+    }
+    confirmRestoreName?.let { name ->
+        AlertDialog(
+            onDismissRequest = { confirmRestoreName = null },
+            title = { Text("恢复快照“$name”？") },
+            text = { Text("会覆盖当前设置与提供商配置，建议先导出备份；恢复后需重启 App 完全生效。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = SettingsSnapshotStore.restore(context, name)
+                    confirmRestoreName = null
+                    ProviderState.refresh(null)
+                    Toast.makeText(context, if (ok) "已恢复快照，重启后完全生效" else "恢复失败", Toast.LENGTH_SHORT).show()
+                }) { Text("恢复") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRestoreName = null }) { Text("取消") }
+            },
+        )
+    }
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
