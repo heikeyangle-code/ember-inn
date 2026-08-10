@@ -58,6 +58,7 @@ class ChatPromptFactory {
         /** 官方 regex_placement（engine.js）：USER_INPUT=1 / AI_OUTPUT=2 / WORLD_INFO=5。 */
         const val REGEX_USER_INPUT = 1
         const val REGEX_AI_OUTPUT = 2
+        const val REGEX_SLASH_COMMAND = 3
         const val REGEX_WORLD_INFO = 5
 
         const val DEFAULT_IMPERSONATION_PROMPT =

@@ -832,14 +832,38 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
     }
 
-    /** 编辑消息（官方 updateMessage：substituteParams 宏替换 + 清 extra.bias；regex(isEdit)/bias 提取待正则 UI 接线）。 */
+    /** 编辑消息（官方 updateMessage：getRegexedString(isEdit) → extractMessageBias → substituteParams → 清/写 extra.bias）。 */
     fun editMessage(index: Int, newText: String) {
         if (_isStreaming.value) return
         val text = newText.trim()
         if (text.isEmpty()) return
+        val el = chatStore.messages(sessionId).getOrNull(index) ?: return
+        val obj = el.jsonObject
+        val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        val isNarrator = (obj["extra"] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+        // 官方 updateMessage：用户消息 USER_INPUT、旁白 SLASH_COMMAND、其余 AI_OUTPUT
+        val placement = when {
+            isUser -> ChatPromptFactory.REGEX_USER_INPUT
+            isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
+            else -> ChatPromptFactory.REGEX_AI_OUTPUT
+        }
+        val scripts = ChatPromptFactory().resolveRegexScripts(
+            characterRawJson = character?.rawJson,
+            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+        )
+        // 官方 updateMessage：getRegexedString(text, regexPlacement, { characterOverride, isEdit: true })；
+        // 旁白不传 characterOverride（官方 narrator 分支）
+        val regexed = RegexPipelineEngine.apply(
+            raw = text,
+            placement = placement,
+            scripts = scripts,
+            isEdit = true,
+            characterOverride = if (isNarrator) null else obj["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
+        )
         val env = MacroEnv(user = currentUserName, char = currentCharName)
-        // 官方 updateMessage：substituteParams + extractMessageBias（bias 宏移除并存入 extra.bias）
-        val (cleaned, bias) = extractEditBias(text)
+        // 官方 updateMessage：extractMessageBias 在 substituteParams 之前；bias 存入 extra.bias
+        val (cleaned, bias) = extractEditBias(regexed)
         val processed = MacroEngine.substitute(cleaned, env)
         chatStore.updateMessage(sessionId, index, processed, bias = bias)
         refreshMessages()
