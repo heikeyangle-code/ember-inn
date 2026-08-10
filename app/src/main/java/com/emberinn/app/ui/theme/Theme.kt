@@ -123,28 +123,29 @@ private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
 }
 
 private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
-    val bg = tinted(darkBg, vibe.warmth)
-    val primary = desaturate(lighten(seed, 0.24f), vibe.desaturateDark)
-    val onBackground = lighten(darkBg, 0.78f)
-    val onSurface = onBackground
-    val secondary = desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark)
-    val tertiary = desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark)
+    val bg = schemeBackground?.let { tinted(it, vibe.warmth) } ?: tinted(darkBg, vibe.warmth)
+    val primary = schemePrimary ?: desaturate(lighten(seed, 0.24f), vibe.desaturateDark)
+    val onBackground = schemeOnBackground ?: lighten(darkBg, 0.78f)
+    val onSurface = schemeOnSurface ?: onBackground
+    val secondary = schemeSecondary ?: desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark)
+    val tertiary = schemeTertiary ?: desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark)
+    val surface = schemeSurface ?: lighten(bg, 0.03f)
     return darkColorScheme(
         primary = primary,
-        onPrimary = darken(seed, 0.55f),
-        primaryContainer = darken(seed, 0.45f),
-        onPrimaryContainer = lighten(seed, 0.72f),
+        onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
+        primaryContainer = if (schemePrimary != null) darken(primary, 0.45f) else darken(seed, 0.45f),
+        onPrimaryContainer = if (schemePrimary != null) lighten(primary, 0.72f) else lighten(seed, 0.72f),
         secondary = secondary,
-        onSecondary = darken(this.secondary, 0.52f),
-        secondaryContainer = darken(this.secondary, 0.45f),
-        onSecondaryContainer = lighten(this.secondary, 0.68f),
+        onSecondary = if (schemeSecondary != null) readableOn(secondary) else darken(this.secondary, 0.52f),
+        secondaryContainer = if (schemeSecondary != null) darken(secondary, 0.45f) else darken(this.secondary, 0.45f),
+        onSecondaryContainer = if (schemeSecondary != null) lighten(secondary, 0.68f) else lighten(this.secondary, 0.68f),
         tertiary = tertiary,
-        onTertiary = darken(this.tertiary, 0.52f),
-        tertiaryContainer = darken(this.tertiary, 0.45f),
-        onTertiaryContainer = lighten(this.tertiary, 0.68f),
+        onTertiary = if (schemeTertiary != null) readableOn(tertiary) else darken(this.tertiary, 0.52f),
+        tertiaryContainer = if (schemeTertiary != null) darken(tertiary, 0.45f) else darken(this.tertiary, 0.45f),
+        onTertiaryContainer = if (schemeTertiary != null) lighten(tertiary, 0.68f) else lighten(this.tertiary, 0.68f),
         background = bg,
         onBackground = onBackground,
-        surface = lighten(bg, 0.03f),
+        surface = surface,
         onSurface = onSurface,
         surfaceVariant = lighten(bg, 0.12f),
         onSurfaceVariant = lighten(darkBg, 0.55f),

@@ -27,6 +27,14 @@ data class ThemePreset(
     val stBotBubble: Color? = null,
     val stBorder: Color? = null,
     val stShadow: Color? = null,
+    // ---- M3 角色覆盖（酒馆官方主题填官方 SmartTheme 真值；null=由 seed 生成） ----
+    val schemePrimary: Color? = null,
+    val schemeSecondary: Color? = null,
+    val schemeTertiary: Color? = null,
+    val schemeBackground: Color? = null,
+    val schemeOnBackground: Color? = null,
+    val schemeSurface: Color? = null,
+    val schemeOnSurface: Color? = null,
 )
 
 val ThemePresets: List<ThemePreset> = listOf(
@@ -126,6 +134,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         stBotBubble = Color(0x4D3C3C3C),
         stBorder = Color(0x80000000),
         stShadow = Color(0x80000000),
+        // M3 三色直接映射官方 SmartTheme 字段：主=引用橙、次=灰、第三=下划线绿
+        schemePrimary = Color(0xFFE18A24),
+        schemeSecondary = Color(0xFF919191),
+        schemeTertiary = Color(0xFFBCE7CF),
+        schemeBackground = Color(0xFF171717),
+        schemeOnBackground = Color(0xFFDCDCD2),
+        schemeSurface = Color(0xFF171717),
+        schemeOnSurface = Color(0xFFDCDCD2),
     ),
     ThemePreset(
         id = "bamboo",
