@@ -425,12 +425,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val avatarPath: String?
         get() = character?.avatarPath
 
-    /** 角色卡/主题编辑后返回聊天：刷新第三层主题与头像（字符 getter 实时读盘）。 */
+    /** 角色卡/主题编辑后返回聊天：刷新第三层主题、头像与聊天背景（character getter 实时读盘）。 */
     fun refreshTheme() {
         ThemeState.update(
             recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
             seedColor = character?.seedColor,
         )
+        _chatBackground.value = chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
+            ?: character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson).background }?.ifBlank { null }
     }
 
     /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
