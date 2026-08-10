@@ -625,7 +625,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     val after = chatStore.messages(sessionId).toMutableList()
                     val aiIdx = after.indexOfLast { !isUser(it) }
                     if (aiIdx >= 0) {
-                        chatStore.appendToCurrentSwipe(sessionId, aiIdx, partial)
+                        val profile = chatRepository.profile()
+                        chatStore.appendToCurrentSwipe(
+                            sessionId, aiIdx, partial,
+                            api = profile?.providerId,
+                            model = profile?.model,
+                            reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                        )
                         refreshMessages()
                     }
                 }
@@ -1356,7 +1362,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
-                    chatStore.appendToCurrentSwipe(sessionId, aiIdx, reply)
+                    val profile = chatRepository.profile()
+                    chatStore.appendToCurrentSwipe(
+                        sessionId, aiIdx, reply,
+                        api = profile?.providerId,
+                        model = profile?.model,
+                        reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                    )
                     refreshMessages()
                 }
             }

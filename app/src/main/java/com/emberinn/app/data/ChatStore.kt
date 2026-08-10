@@ -665,19 +665,47 @@ class ChatStore(private val context: Context) {
     }
 
     /** 删除指定下标的一条消息（重新生成/删除消息用；对齐官方删除消息后落盘 jsonl）。 */
-    /** continue 续写追加：mes 与 swipes[swipe_id] 同步更新（官方 saveReply('continue') 后滑走滑回不丢续写）。 */
-    fun appendToCurrentSwipe(sessionId: String, index: Int, text: String): Boolean {
+    /** continue 续写追加：mes/swipes[swipe_id]/swipe_info.extra 同步（官方 saveReply('continue') 尾部逐字段刷新）。 */
+    fun appendToCurrentSwipe(
+        sessionId: String,
+        index: Int,
+        text: String,
+        api: String? = null,
+        model: String? = null,
+        reasoning: String? = null,
+    ): Boolean {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return false
         val el = list[index].jsonObject
         val curMes = el["mes"]?.jsonPrimitive?.contentOrNull ?: return false
         val combined = curMes + text
         val swipes = swipesOf(el).toMutableList()
-        if (swipes.isNotEmpty()) {
-            val cur = currentSwipeId(el).coerceIn(0, swipes.lastIndex)
-            swipes[cur] = combined
+        val swipeInfo = swipeInfoOf(el).toMutableList()
+        val cur = if (swipes.isNotEmpty()) currentSwipeId(el).coerceIn(0, swipes.lastIndex) else 0
+        if (swipes.isNotEmpty()) swipes[cur] = combined
+        // 官方 saveReply('continue')：extra.api/model/reasoning 刷新，swipe_info 整体重写
+        val oldExtra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (!api.isNullOrBlank()) oldExtra["api"] = JsonPrimitive(api)
+        if (!model.isNullOrBlank()) oldExtra["model"] = JsonPrimitive(model)
+        if (!reasoning.isNullOrBlank()) oldExtra["reasoning"] = JsonPrimitive(reasoning)
+        val extra = JsonObject(oldExtra)
+        val now = java.time.Instant.now().toString()
+        while (swipeInfo.size <= cur) swipeInfo += buildJsonObject { put("extra", buildJsonObject {}) }
+        swipeInfo[cur] = buildJsonObject {
+            put("send_date", JsonPrimitive(now))
+            put("gen_started", el["gen_started"]?.jsonPrimitive ?: JsonPrimitive(now))
+            put("gen_finished", JsonPrimitive(now))
+            put("extra", extra)
         }
-        list[index] = JsonObject(el + ("mes" to JsonPrimitive(combined)) + ("swipes" to JsonArray(swipes.map { JsonPrimitive(it) })))
+        list[index] = JsonObject(
+            el +
+                mapOf(
+                    "mes" to JsonPrimitive(combined),
+                    "swipes" to JsonArray(swipes.map { JsonPrimitive(it) }),
+                    "swipe_info" to JsonArray(swipeInfo.map { it }),
+                    "extra" to extra,
+                ),
+        )
         save(sessionId, list)
         return true
     }
