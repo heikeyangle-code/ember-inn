@@ -1074,6 +1074,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val processed = MacroEngine.substitute(cleaned, env)
         chatStore.updateMessage(sessionId, index, processed, bias = bias)
         refreshMessages()
+        // 官方 translateMessageEdit：auto_mode=none 时清 display_text；否则按消息类型重译
+        val autoMode = translateAutoMode()
+        if (autoMode == "none") {
+            chatStore.setDisplayText(sessionId, index, displayText = null, reasoningDisplayText = null)
+            refreshMessages()
+        } else {
+            val edited = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return
+            if (isUser(edited)) translateOutgoing(index) else translateIncoming(index)
+        }
     }
 
     /** 对齐官方 extractMessageBias：提取 {{bias:...}} 并从文本移除。 */
