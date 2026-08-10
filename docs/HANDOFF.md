@@ -613,6 +613,18 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 
 
+
+## 8. 交互卡片/HTML 兜底显示修复：测高与 iframe 自适应（第 193 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 用户反馈：交互卡片不显示 / HTML 渲染不出来 / 文字像被框住看不全
+- 修复（ChatScreen WebViewHtml + embedInteractiveBlocks）：
+  1. 外层测高改取 `Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)`，
+     轮询上限 20→30 次（最长 6s）、连续 3 次同高才停——HTML 消息不再因首次量到 0 而整条不可见
+  2. 交互 iframe 从“onload 量一次”改为 onload + 150/500/1500ms 三次复测：
+     卡内脚本/图片延迟渲染后高度会更新，外层轮询同步撑高，不再“框住看不全”
+  3. 外层高度上限从固定 420dp 改为 `max(420dp, 屏幕高×75%)`，长交互页可见范围更大，超出部分卡内滚动
+- 说明：高度上限仍存在（防单条消息撑爆列表）；卡片内容超出上限时 WebView 内部可滚动
+
 ## 8. 修复消息含代码围栏崩溃：No group 1（第 192 轮，2026-08-11，App/UI 层，未动引擎）
 
 - 现象：聊天中消息出现 ``` 代码围栏时崩溃，

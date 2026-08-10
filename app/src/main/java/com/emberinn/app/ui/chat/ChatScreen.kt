@@ -110,6 +110,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
@@ -2957,6 +2958,7 @@ private fun WebViewHtml(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
     var heightPx by remember { mutableIntStateOf(0) }
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
@@ -2997,20 +2999,22 @@ private fun WebViewHtml(
 
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        // 自动测高：页面加载完先量一次，再轮询几百毫秒等交互 iframe 的 onload 测高
-                        // （iframe 内容高度稳定后停止，避免长驻轮询拖慢滚动）
+                        // 自动测高：取 body 与 documentElement 的最大值（body margin/iframe 场景更稳）；
+                        // 轮询最长 6s、连续 3 次同高才停，等交互 iframe 的多次测高结果
                         var stable = 0
                         var ticks = 0
                         fun measure() {
                             ticks++
-                            if (ticks > 20) return
-                            view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
+                            if (ticks > 30) return
+                            view?.evaluateJavascript(
+                                "(function(){return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);})()",
+                            ) { value ->
                                 val px = value.trim('"').toIntOrNull() ?: 0
                                 if (px > 0) {
                                     if (px == heightPx) stable++ else stable = 0
                                     heightPx = px
                                 }
-                                if (stable < 2) view?.postDelayed({ measure() }, 200)
+                                if (stable < 3) view?.postDelayed({ measure() }, 200)
                             }
                         }
                         measure()
@@ -3025,7 +3029,11 @@ private fun WebViewHtml(
         },
         modifier = modifier
             .fillMaxWidth()
-            .height(with(density) { heightPx.toDp().coerceAtMost(420.dp) })
+            .height(
+                with(density) {
+                    heightPx.toDp().coerceAtMost(maxOf(420.dp, (screenHeightDp * 0.75f).dp))
+                },
+            )
             .clip(RoundedCornerShape(12.dp)),
     )
 }
@@ -3053,7 +3061,7 @@ private fun embedInteractiveBlocks(raw: String): String {
                 .append("</code></pre></details>")
             out.append(
                 "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
-                    "onload=\"this.style.height=(this.contentWindow.document.documentElement.scrollHeight+5)+'px'\"></iframe>",
+                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500)\"></iframe>",
             )
         } else {
             out.append("<pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
