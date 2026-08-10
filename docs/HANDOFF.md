@@ -358,6 +358,22 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
 
+## 8. 半成品治理记录（第 137–139 轮，2026-08-10）
+
+针对“UI 有入口/执行没实现、字段没暴露、文档滞后”的半成品逐项核对官方源码并补齐：
+
+| 项 | 之前 | 现在（第 137–139 轮） |
+|---|---|---|
+| 翻译执行层 | UI 8 家、执行 3 家 | 8 家全实现（协议对齐 src/endpoints/translate.js；Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程） |
+| 图像执行层 | UI 8 来源、执行 2 家 | A1111/SDCPP/NovelAI/OpenAI/HuggingFace 已实现（NovelAI 请求体 1:1 + ZIP 取 PNG；HF 直连）；ComfyUI/DrawThings/Horde 在 UI 如实标“开发中” |
+| 图像 API Key | 无字段 | 设置→服务→图像新增 API Key（NovelAI/HF/Horde 用） |
+| 向量 Data Bank 高级参数 | 官方默认隐藏 | sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露（默认 5/5/0，接进 VectorChatSettings） |
+| 群聊入口文案 | “开发中” | 已实现并去文案 |
+| swipe picker / 书签 / URL 导入 | 文档标未做 | 复验已实现并更正文档 |
+| 死代码 | openComingSoon 未使用 | 已删除 |
+
+**剩余已知半成品（继续治理中）**：工具调用 App 注册表、世界书 outlet 宏接线、斜杠异步命令（/gen /genraw /trigger /inject /while，需异步执行器）、表情精灵 App 层、HTML/Mermaid 渲染、preset 正则存储/UI、快照、ComfyUI/DrawThings/Horde 图像来源。
+
 ## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
 > 规则：任何与官方 1:1 有出入的实现必须在此登记；未登记即视为未完成。

@@ -311,9 +311,6 @@ private fun SettingsHome(
     }
 }
 
-private fun openComingSoon(context: android.content.Context) {
-    android.widget.Toast.makeText(context, "开发中", android.widget.Toast.LENGTH_SHORT).show()
-}
 
 @Composable
 private fun QuickActionsCard(actions: List<QuickAction>) {
