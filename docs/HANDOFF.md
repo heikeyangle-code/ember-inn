@@ -605,6 +605,29 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+## 8. 交互代码块渲染器内嵌（第 179 轮，2026-08-11，用户要求调研并内嵌“能点的状态栏/按钮”）
+
+**调研结论（网上核对酒馆助手 Tavern Helper + 阡濯 HTML 代码注入器源码）**：
+- 官方本体不跑消息脚本；能点按钮/能动状态栏的卡片，靠“渲染器/注入器”把消息里 ``` 包起来、
+  内容像 HTML（带 <body> 或以 < 开头以 > 结尾）的代码块，塞进独立 iframe 网页运行——卡内
+  <script>/onclick/Vue/React 在 iframe 里正常执行。HTML 代码注入器用 iframe + contentWindow.scrollHeight 测高；
+  Tavern Helper 渲染器额外支持头像类（.char-avatar/.user-avatar）、{{charAvatarPath}}/{{userAvatarPath}} 宏、vh 换算、代码折叠
+- 酒馆助手的“脚本库”是页面级后台 JS（监听事件/改世界书/注入提示词），依赖酒馆页面 DOM 与 API，
+  无法照搬；我们 App 的等价物是 Kotlin 引擎 + 快捷回复/斜杠，不做内嵌
+
+**已实现（embedInteractiveBlocks）**：
+- ChatMarkdown 检测：``` 内以 < 开头以 > 结尾或含 <body> → 整条消息进 WebView（原条件 + interactiveBlock）
+- WebView 页面里把该代码块替换成 <iframe srcdoc>（内容 HTML 实体转义）+ onload 自动测高；
+  非交互代码块保留 <pre><code>；围栏外纯文本转义后按 pre-wrap 显示（保留换行）；本身含 < 的 HTML 段原样放行
+- WebViewHtml onPageFinished 改为轮询测高（≤20 次、200ms 间隔、稳定 2 次停），等 iframe 加载完再撑外层高度
+- 与 JS 全开联动：卡内脚本现在真的能跑，这就是“能点的状态栏/按钮”
+
+**登记（未做，后续需要再做）**：
+- 头像类 .char-avatar/.user-avatar 与 {{charAvatarPath}}/{{userAvatarPath}} 宏（需把角色/用户头像 URL 传进 WebView）
+- Tavern Helper 的 min-height: *vh 换算、代码折叠、显示原代码/摘要模式
+- 后台脚本库（页面级自动化）不内嵌
+- 安全：交互代码块 = 执行任意脚本，等同第 178 轮风险登记（消息可发网络请求，碰不到 Android API）
+
 ## 8. 交互页面全开 + 气泡关闭行为确认（第 178 轮，2026-08-11，用户明确“活动页=交互页面”）
 
 **用户决定**：之前说的“能点的卡片/交互页面”就是活动页（带脚本的网页），全部放开，JS 开启。

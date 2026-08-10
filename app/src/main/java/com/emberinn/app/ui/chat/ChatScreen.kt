@@ -2617,7 +2617,13 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b",
         RegexOption.IGNORE_CASE,
     ).containsMatchIn(outsideFence)
-    val rawHtml = if (mermaid == null && looksLikeHtml(displayContent) && (htmlEnabled || officialHtml)) content else null
+    // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
+    // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）
+    val interactiveBlock = Regex("```[a-zA-Z]*\\n[\\s\\S]*?```").findAll(content).any { m ->
+        val inner = m.groupValues[1].trim()
+        (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
+    }
+    val rawHtml = if (mermaid == null && (looksLikeHtml(displayContent) || interactiveBlock) && (htmlEnabled || officialHtml || interactiveBlock)) content else null
     val type = chatTypography()
     var annotatorSettingsRef: AnnotatorSettings? = null
     val emAnnotator = remember(emColor) {
@@ -2822,11 +2828,23 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
 
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        // 自动测高：页面加载完拿到 scrollHeight，把 Compose 高度撑起来
-                        view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
-                            val px = value.trim('"').toIntOrNull() ?: 0
-                            if (px > 0) heightPx = px
+                        // 自动测高：页面加载完先量一次，再轮询几百毫秒等交互 iframe 的 onload 测高
+                        // （iframe 内容高度稳定后停止，避免长驻轮询拖慢滚动）
+                        var stable = 0
+                        var ticks = 0
+                        fun measure() {
+                            ticks++
+                            if (ticks > 20) return
+                            view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
+                                val px = value.trim('"').toIntOrNull() ?: 0
+                                if (px > 0) {
+                                    if (px == heightPx) stable++ else stable = 0
+                                    heightPx = px
+                                }
+                                if (stable < 2) view?.postDelayed({ measure() }, 200)
+                            }
                         }
+                        measure()
                     }
                 }
                 layoutParams = ViewGroup.LayoutParams(
@@ -2841,6 +2859,47 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
             .height(with(density) { heightPx.toDp().coerceAtMost(420.dp) })
             .clip(RoundedCornerShape(12.dp)),
     )
+}
+
+/** 交互代码块渲染器（对齐 Tavern Helper 渲染器 / ST HTML 代码注入器机制）：
+ *  消息里 ``` 包裹、内容以 < 开头以 > 结尾（或含 <body>）的代码块 → 替换成独立 iframe 网页，
+ *  卡内 <script>/onclick/框架 JS 在 iframe 里正常运行（按钮/状态栏/表单可交互）；onload 自动按内容测高。
+ *  非交互代码块保留为 <pre><code>；围栏外的纯文本转义后按 pre-wrap 显示（保留换行）。
+ *  安全提示：交互代码块等同于执行任意脚本，与第 178 轮 JS 全开同等级，已在 HANDOFF 登记。 */
+private fun embedInteractiveBlocks(raw: String): String {
+    val fence = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
+    val out = StringBuilder()
+    var last = 0
+    for (m in fence.findAll(raw)) {
+        out.append(embedPlainText(raw.substring(last, m.range.first)))
+        val inner = m.groupValues[1].trim()
+        if ((inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)) {
+            val escaped = inner
+                .replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            out.append(
+                "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
+                    "onload=\"this.style.height=(this.contentWindow.document.documentElement.scrollHeight+5)+'px'\"></iframe>",
+            )
+        } else {
+            out.append("<pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
+                .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+                .append("</code></pre>")
+        }
+        last = m.range.last + 1
+    }
+    out.append(embedPlainText(raw.substring(last)))
+    return out.toString()
+}
+
+/** 围栏外纯文本：转义后按 pre-wrap 显示；若本身是 HTML（含 <）则原样放行。 */
+private fun embedPlainText(segment: String): String {
+    if (segment.isBlank() || segment.contains('<')) return segment
+    return "<div style=\"white-space:pre-wrap;word-break:break-word\">" +
+        segment.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") +
+        "</div>"
 }
 
 /** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
@@ -2861,6 +2920,7 @@ private fun officialStyledHtml(
     fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
         "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
     } ?: "inherit"
+    val bodyHtml = embedInteractiveBlocks(raw)
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
@@ -2870,7 +2930,7 @@ u{color:${css(underline)}}
 a{color:${css(quote)}}
 blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:6px 0}
 code{font-family:monospace}
-</style></head><body>$raw</body></html>"""
+</style></head><body>$bodyHtml</body></html>"""
 }
 
 
