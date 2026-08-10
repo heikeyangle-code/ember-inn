@@ -2999,22 +2999,27 @@ private fun WebViewHtml(
 
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        // 自动测高：取 body 与 documentElement 的最大值（body margin/iframe 场景更稳）；
-                        // 轮询最长 6s、连续 3 次同高才停，等交互 iframe 的多次测高结果
+                        // 自动测高：取 body 与 documentElement 的最大值；返回 JSON {h, p}，
+                        // p=未加载完的图片数——只要还有图片在加载就继续轮询（HTML 卡头像/插图常异步加载），
+                        // 连续 3 次“同高且图片全就绪”才停；总上限 15s
                         var stable = 0
                         var ticks = 0
                         fun measure() {
                             ticks++
-                            if (ticks > 30) return
+                            if (ticks > 60) return
                             view?.evaluateJavascript(
-                                "(function(){return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);})()",
+                                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return JSON.stringify({h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight),p:p});})()",
                             ) { value ->
-                                val px = value.trim('"').toIntOrNull() ?: 0
-                                if (px > 0) {
-                                    if (px == heightPx) stable++ else stable = 0
-                                    heightPx = px
+                                runCatching {
+                                    val o = org.json.JSONObject(value)
+                                    val px = o.optInt("h", 0)
+                                    val pending = o.optInt("p", 0)
+                                    if (px > 0) {
+                                        if (px == heightPx && pending == 0) stable++ else stable = 0
+                                        heightPx = px
+                                    }
+                                    if (stable < 3) view?.postDelayed({ measure() }, 250)
                                 }
-                                if (stable < 3) view?.postDelayed({ measure() }, 200)
                             }
                         }
                         measure()
@@ -3061,7 +3066,7 @@ private fun embedInteractiveBlocks(raw: String): String {
                 .append("</code></pre></details>")
             out.append(
                 "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
-                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500)\"></iframe>",
+                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500);setTimeout(h,3000)\"></iframe>",
             )
         } else {
             out.append("<pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
