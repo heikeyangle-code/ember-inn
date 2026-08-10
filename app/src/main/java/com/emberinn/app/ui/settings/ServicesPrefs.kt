@@ -44,6 +44,16 @@ object ServicesPrefs {
     fun imageApiKey(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_api_key", "") ?: ""
 
+    /** ComfyUI 用户 workflow JSON（官方 comfy_workflow 文件内容；含 %prompt% 等占位符）。 */
+    fun comfyWorkflow(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_workflow", "") ?: ""
+
+    fun saveComfyWorkflow(context: Context, workflow: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("sd_comfy_workflow", workflow)
+            .apply()
+    }
+
     fun saveImageApiKey(context: Context, key: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("sd_api_key", key)

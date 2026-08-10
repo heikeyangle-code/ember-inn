@@ -73,7 +73,7 @@ private val IMAGE_SOURCES = listOf(
     DropdownOption("openai", "OpenAI · gpt-image"),
     DropdownOption("huggingface", "Hugging Face Inference"),
     DropdownOption("horde", "Stable Horde"),
-    DropdownOption("comfy", "ComfyUI（开发中）"),
+    DropdownOption("comfy", "ComfyUI（需 workflow）"),
 )
 
 private val VECTOR_PROVIDERS = listOf(
@@ -146,6 +146,7 @@ private fun ImageCard() {
     var steps by rememberSaveable { mutableStateOf(ServicesPrefs.imageSteps(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
+    var comfyWorkflow by rememberSaveable { mutableStateOf(ServicesPrefs.comfyWorkflow(context)) }
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
 
     ServiceCard(title = "图像生成") {
@@ -160,11 +161,21 @@ private fun ImageCard() {
                 label = "API Key",
             )
         }
-        if (source == "auto" || source == "sdcpp") {
+        if (source == "auto" || source == "sdcpp" || source == "comfy") {
             TextFieldRow("接口地址", url) { url = it; save() }
         }
-        if (source == "novel" || source == "sdcpp" || source == "huggingface") {
+        if (source == "novel" || source == "sdcpp" || source == "huggingface" || source == "comfy") {
             TextFieldRow("模型", model) { model = it; save() }
+        }
+        if (source == "comfy") {
+            OutlinedTextField(
+                value = comfyWorkflow,
+                onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
+                label = { Text("ComfyUI workflow JSON（含 %prompt%/%model%/%steps%/%width%/%height% 等占位符）") },
+                minLines = 6,
+                maxLines = 12,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            )
         }
         OutlinedTextField(
             value = steps.toString(),

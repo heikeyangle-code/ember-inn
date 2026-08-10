@@ -46,6 +46,7 @@ class ImageGenClient {
                 "novel" -> novel(context, prompt, model, apiKey, steps)
                 "huggingface" -> huggingface(context, prompt, model, apiKey)
                 "horde" -> horde(context, prompt, model, apiKey, steps)
+                "comfy" -> comfy(context, url, prompt, model, steps)
                 else -> auto1111(context, url, prompt, steps, null)
             }
         }.getOrNull()
@@ -219,6 +220,84 @@ class ImageGenClient {
             }
         }
         return null
+    }
+
+    /**
+     * ComfyUI：官方 src/endpoints/stable-diffusion.js comfy.generate 1:1——
+     * POST {url}/prompt（workflow JSON 字符串，含 %prompt%/%model%/%steps%/%width% 等占位符），
+     * 轮询 /history 至 prompt_id 出现，取 outputs 第一张图，GET /view 下载。
+     * workflow 由用户在设置里提供（官方默认 Default_Comfy_Workflow.json 不在仓库，登记）。
+     */
+    private fun comfy(context: Context, url: String, prompt: String, model: String, steps: Int): String? {
+        if (url.isBlank()) return null
+        val workflow = ServicesPrefs.comfyWorkflow(context)
+        if (workflow.isBlank()) return null
+        val seed = kotlin.random.Random.nextLong(0, Long.MAX_VALUE).toString()
+        var replaced = workflow
+        val replacements = mapOf(
+            "%prompt%" to JSONObject().put("v", prompt).toString().removePrefix("{\"v\":").removeSuffix("}"),
+            "%negative_prompt%" to "\"\"",
+            "%seed%" to "\"$seed\"",
+            "%denoise%" to "1.0",
+            "%clip_skip%" to "-1",
+            "%model%" to JSONObject().put("v", model.ifBlank { "v1-5-pruned-emaonly.safetensors" }).toString().removePrefix("{\"v\":").removeSuffix("}"),
+            "%vae%" to "\"\"",
+            "%sampler%" to "\"euler\"",
+            "%scheduler%" to "\"normal\"",
+            "%steps%" to steps.toString(),
+            "%scale%" to "7",
+            "%width%" to "512",
+            "%height%" to "512",
+        )
+        for ((k, v) in replacements) replaced = replaced.replace(k, v)
+
+        // 1) 提交 prompt
+        val submit = Request.Builder()
+            .url(url.trimEnd('/') + "/prompt")
+            .post(replaced.toRequestBody(jsonMedia))
+            .build()
+        val id = client.newCall(submit).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            JSONObject(resp.body?.string().orEmpty()).optString("prompt_id").ifBlank { return null }
+        }
+
+        // 2) 轮询 /history（官方 100ms 间隔；上限 6000 次 ≈ 10 分钟）
+        var history: JSONObject? = null
+        repeat(6000) {
+            Thread.sleep(100)
+            history = client.newCall(
+                Request.Builder().url(url.trimEnd('/') + "/history").get().build(),
+            ).execute().use { resp ->
+                if (!resp.isSuccessful) return@use null
+                JSONObject(resp.body?.string().orEmpty())
+            }
+            if (history?.has(id) == true) return@repeat
+            history = null
+        }
+        val item = history?.optJSONObject(id) ?: return null
+        if (item.optJSONObject("status")?.optString("status_str") == "error") return null
+        val outputs = item.optJSONObject("outputs") ?: return null
+        val keys = outputs.keys()
+        var imgInfo: JSONObject? = null
+        while (keys.hasNext()) {
+            val out = outputs.optJSONObject(keys.next()) ?: continue
+            val images = out.optJSONArray("images") ?: out.optJSONArray("gifs") ?: continue
+            if (images.length() > 0) { imgInfo = images.optJSONObject(0); break }
+        }
+        val info = imgInfo ?: return null
+        val filename = info.optString("filename")
+        val subfolder = info.optString("subfolder")
+        val type = info.optString("type")
+        val ext = filename.substringAfterLast('.', "png").lowercase()
+
+        // 3) 下载图片
+        val viewUrl = url.trimEnd('/') + "/view?filename=${java.net.URLEncoder.encode(filename, "UTF-8")}" +
+            "&subfolder=${java.net.URLEncoder.encode(subfolder, "UTF-8")}&type=${java.net.URLEncoder.encode(type, "UTF-8")}"
+        val bytes = client.newCall(Request.Builder().url(viewUrl).get().build()).execute().use { resp ->
+            if (!resp.isSuccessful) return@use null
+            resp.body?.bytes()
+        } ?: return null
+        return saveBytes(context, bytes, ext)
     }
 
     /** 官方 sanitizeHordeImagePrompt（horde.js）：替换/移除高风险的年龄相关词。 */
