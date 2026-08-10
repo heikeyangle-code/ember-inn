@@ -362,21 +362,6 @@ class ChatPromptFactory {
                 )
             },
         )
-        val wiResult = scanner.scan(
-            chat = indexedChat.map { it.second.mes } + scriptScanInjections,
-            maxContext = maxContextTokens,
-            entries = parsed?.worldEntries ?: emptyList(),
-            settings = worldInfoSettings,
-            global = GlobalScanData(characterName = charName),
-            // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
-            externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
-                .associateBy { "${it.world}.${it.uid}" },
-        )
-
-        // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
-        // 仅供 {{outlet::key}} 宏读取（NONE 不注入提示词）
-        env = env.copy(outlets = wiResult.outletEntries.mapValues { (_, v) -> v.joinToString("\n") })
-
         // 官方 /inject：script_injects → setExtensionPrompt(script_inject_{id}, value, position, depth, scan, role)
         // before→start / after→end / chat→in_chat / none→不注入（仅存元数据，可配合 scan 触发世界书）
         val scriptExtensionPrompts = mutableMapOf<String, ExtensionPrompt>()
@@ -400,6 +385,21 @@ class ChatPromptFactory {
                 // none：官方不注入提示词
             }
         }
+
+        val wiResult = scanner.scan(
+            chat = indexedChat.map { it.second.mes } + scriptScanInjections,
+            maxContext = maxContextTokens,
+            entries = parsed?.worldEntries ?: emptyList(),
+            settings = worldInfoSettings,
+            global = GlobalScanData(characterName = charName),
+            // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
+            externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
+                .associateBy { "${it.world}.${it.uid}" },
+        )
+
+        // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
+        // 仅供 {{outlet::key}} 宏读取（NONE 不注入提示词）
+        env = env.copy(outlets = wiResult.outletEntries.mapValues { (_, v) -> v.joinToString("\n") })
 
         // 官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)
         val worldInfoDepthPrompts = wiResult.depthEntries.mapIndexed { i, d ->
@@ -446,6 +446,7 @@ class ChatPromptFactory {
         val anText = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
         // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），
         // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
+
         var effectiveInChat = inChatExtensions + scriptInChatPrompts
         var effectiveExtensions = extensionPrompts + scriptExtensionPrompts
         if (anText.isNotBlank()) {
