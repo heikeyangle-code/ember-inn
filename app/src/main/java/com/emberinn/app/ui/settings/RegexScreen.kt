@@ -24,7 +24,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.regex.RegexPipelineScript
 
 /** 全局正则脚本（对齐官方 regex 扩展 GLOBAL 分桶；聊天发送 USER_INPUT/AI_OUTPUT 位点生效）。 */
@@ -212,7 +212,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                OutlinedTextField(
+                EmberTextField(
                     value = newPresetName,
                     onValueChange = { newPresetName = it },
                     label = { Text("新预设集名") },
@@ -345,21 +345,21 @@ fun RegexScreen(onBack: () -> Unit) {
             },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftName,
                         onValueChange = { draftName = it },
                         label = { Text("名称") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftFind,
                         onValueChange = { draftFind = it },
                         label = { Text("匹配式（支持 /pat/flags）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftReplace,
                         onValueChange = { draftReplace = it },
                         label = { Text("替换串（留空=删除匹配）") },

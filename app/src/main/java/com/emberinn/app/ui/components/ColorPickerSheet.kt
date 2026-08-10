@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.components
 
+import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -103,7 +103,7 @@ fun ColorPickerDialog(
                 RgbSlider("红", red) { red = it; hex = Color(red, green, blue).toHex() }
                 RgbSlider("绿", green) { green = it; hex = Color(red, green, blue).toHex() }
                 RgbSlider("蓝", blue) { blue = it; hex = Color(red, green, blue).toHex() }
-                OutlinedTextField(
+                EmberTextField(
                     value = hex,
                     onValueChange = { hex = it },
                     label = { Text("#RRGGBB") },

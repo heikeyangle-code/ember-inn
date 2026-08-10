@@ -76,9 +76,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -160,6 +157,9 @@ import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.emberinn.app.ui.components.parseHexColor
+import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberTextFieldDefaults
+import com.emberinn.app.ui.components.EmberBottomSheet
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.markdownPadding
@@ -357,7 +357,7 @@ fun ChatScreen(
             onDismissRequest = { showUrlAttachmentDialog = false },
             title = { Text("从 URL 添加附件") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = urlAttachmentDraft,
                     onValueChange = { urlAttachmentDraft = it },
                     placeholder = { Text("https://…") },
@@ -849,7 +849,7 @@ fun ChatScreen(
     }
 
     if (worldPanel) {
-        ModalBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                 Text("世界书命中", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.size(4.dp))
@@ -915,7 +915,7 @@ fun ChatScreen(
     if (contextDetail) {
         val usage = contextUsage
         if (usage != null) {
-            ModalBottomSheet(onDismissRequest = { contextDetail = false }, sheetState = rememberModalBottomSheetState()) {
+            EmberBottomSheet(onDismissRequest = { contextDetail = false }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                     Text("上下文占用", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.size(12.dp))
@@ -946,7 +946,7 @@ fun ChatScreen(
         if (el != null) {
             val text = textOf(el)
             val isUserMsg = isUser(el)
-            ModalBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
+            EmberBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         if (isUserMsg) "我的消息" else currentName,
@@ -1069,7 +1069,7 @@ fun ChatScreen(
             onDismissRequest = { editIndex = null },
             title = { Text("编辑消息") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = editDraft,
                     onValueChange = { editDraft = it },
                     minLines = 3,
@@ -1096,7 +1096,7 @@ fun ChatScreen(
     }
 
     if (showMore) {
-        ModalBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "会话菜单",
@@ -1167,7 +1167,7 @@ fun ChatScreen(
             title = { Text("作者注释") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = anPrompt,
                         onValueChange = { anPrompt = it },
                         label = { Text("注释内容（留空清除）") },
@@ -1186,7 +1186,7 @@ fun ChatScreen(
                         FilterChip(selected = anPosition == 0, onClick = { anPosition = 0 }, label = { Text("提示词内") })
                         FilterChip(selected = anPosition == 1, onClick = { anPosition = 1 }, label = { Text("对话内") })
                     }
-                    OutlinedTextField(
+                    EmberTextField(
                         value = anDepth.toString(),
                         onValueChange = { anDepth = it.toIntOrNull() ?: 4 },
                         label = { Text("深度（对话内注入时生效）") },
@@ -1264,7 +1264,7 @@ fun ChatScreen(
     }
 
     if (showPersonaPicker) {
-        ModalBottomSheet(onDismissRequest = { showPersonaPicker = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { showPersonaPicker = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "人设",
@@ -1339,14 +1339,14 @@ fun ChatScreen(
             title = { Text(if (target.name.isBlank()) "新建人设" else "编辑人设") },
             text = {
                 Column {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = personaDraftName,
                         onValueChange = { personaDraftName = it },
                         label = { Text("人设名称") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = personaDraftDesc,
                         onValueChange = { personaDraftDesc = it },
                         label = { Text("描述（支持 {{char}}/{{user}} 宏）") },
@@ -1373,7 +1373,7 @@ fun ChatScreen(
             onDismissRequest = { showImageDialog = false },
             title = { Text("图像生成") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = imagePrompt,
                     onValueChange = { imagePrompt = it },
                     label = { Text("提示词（AUTOMATIC1111）") },
@@ -1401,7 +1401,7 @@ fun ChatScreen(
             onDismissRequest = { showBookmarkDialog = false },
             title = { Text("创建书签") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = bookmarkDraftName,
                     onValueChange = { bookmarkDraftName = it },
                     label = { Text("书签名（当前聊天存档）") },
@@ -1423,7 +1423,7 @@ fun ChatScreen(
     }
 
     if (showBookmarksSheet) {
-        ModalBottomSheet(onDismissRequest = { showBookmarksSheet = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { showBookmarksSheet = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "书签",
@@ -1462,7 +1462,7 @@ fun ChatScreen(
     }
 
     if (showDataBank) {
-        ModalBottomSheet(onDismissRequest = { showDataBank = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { showDataBank = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "数据银行（向量检索）",
@@ -1515,7 +1515,7 @@ fun ChatScreen(
             onDismissRequest = { showDataBankUrlDialog = false },
             title = { Text("从 URL 添加数据银行文件") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = dataBankUrlDraft,
                     onValueChange = { dataBankUrlDraft = it },
                     placeholder = { Text("https://…（文本/markdown）") },
@@ -1570,7 +1570,7 @@ fun ChatScreen(
         val variants = vm.swipeVariantsOf(index)
         if (variants.isNotEmpty() && currentEl != null) {
             val currentSwipe = vm.currentSwipeOf(currentEl)
-            ModalBottomSheet(onDismissRequest = { swipePickerIndex = null }, sheetState = rememberModalBottomSheetState()) {
+            EmberBottomSheet(onDismissRequest = { swipePickerIndex = null }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         "回复变体（${currentSwipe + 1}/${variants.size}）",
@@ -2230,7 +2230,7 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
             ).filter { it.second.isNotBlank() }
         }.getOrDefault(emptyList())
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp).fillMaxWidth(),
         ) {
@@ -3624,7 +3624,7 @@ private fun ChatInputBar(
             IconButton(onClick = onAttach, modifier = Modifier.size(36.dp)) {
                 Icon(PhosphorIcons.Plus, contentDescription = "附件 / 语音", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
             }
-            OutlinedTextField(
+            EmberTextField(
                 value = input,
                 onValueChange = onInputChange,
                 placeholder = {
@@ -3636,13 +3636,10 @@ private fun ChatInputBar(
                 },
                 shape = RoundedCornerShape(24.dp),
                 maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = accent.copy(alpha = 0.55f),
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
+                colors = EmberTextFieldDefaults.colors(
                     cursorColor = accent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.26f),
                 ),
                 modifier = Modifier
                     .weight(1f)

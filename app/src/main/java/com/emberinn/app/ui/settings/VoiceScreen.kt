@@ -2,6 +2,7 @@ package com.emberinn.app.ui.settings
 
 
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberTextField
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -23,7 +24,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -241,7 +241,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         EmberSwitch(checked = applyRegex, onCheckedChange = { applyRegex = it; save() })
                     }
                     if (applyRegex) {
-                        OutlinedTextField(
+                        EmberTextField(
                             value = regexPattern,
                             onValueChange = { regexPattern = it; save() },
                             label = { Text("正则（例：/[^\\u4e00-\\u9fa5a-zA-Z0-9\\s.,!?]/g）") },

@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.SettingsSnapshotStore
+import com.emberinn.app.ui.components.EmberTextField
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -165,7 +165,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             onDismissRequest = { showSnapshotDialog = false },
             title = { Text("新建设置快照") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = snapshotName,
                     onValueChange = { snapshotName = it },
                     label = { Text("快照名称") },

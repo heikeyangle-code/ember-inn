@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.components.EmberTextField
 
 /** 颜色字段：色块（即选色入口）+ 标签 + hex 等宽预览 + 编辑按钮 + hex 输入。
  *  选色盘支持 #RRGGBB / #AARRGGBB / 3 位简写。
@@ -79,7 +79,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                 )
             }
         }
-        OutlinedTextField(
+        EmberTextField(
             value = draft,
             onValueChange = { draft = it; onSave(it) },
             placeholder = { Text("#RRGGBB") },

@@ -23,7 +23,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.slash.QuickReplySlot
 
 /**
@@ -174,14 +174,14 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             title = { Text(if (adding) "新增快捷回复" else "编辑快捷回复") },
             text = {
                 Column {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftLabel,
                         onValueChange = { draftLabel = it },
                         label = { Text("按钮文案") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftMes,
                         onValueChange = { draftMes = it },
                         label = { Text("斜杠链（如 /echo 你好）") },
@@ -196,7 +196,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftEnabled, onCheckedChange = { draftEnabled = it })
                     }
-                    OutlinedTextField(
+                    EmberTextField(
                         value = draftAutomationId,
                         onValueChange = { draftAutomationId = it },
                         label = { Text("automationId（与世界书条目关联自动执行）") },

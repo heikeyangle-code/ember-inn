@@ -3,6 +3,7 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.data.GenerationPrefs
+import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -170,7 +170,7 @@ private fun ImageCard() {
             TextFieldRow("模型", model) { model = it; save() }
         }
         if (source == "comfy") {
-            OutlinedTextField(
+            EmberTextField(
                 value = comfyWorkflow,
                 onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
                 label = { Text("ComfyUI workflow JSON（含 %prompt%/%model%/%steps%/%width%/%height% 等占位符）") },
@@ -179,7 +179,7 @@ private fun ImageCard() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-        OutlinedTextField(
+        EmberTextField(
             value = steps.toString(),
             onValueChange = { steps = it.toIntOrNull() ?: 0; save() },
             label = { Text("采样步数") },
@@ -316,7 +316,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 
 @Composable
 private fun NumberRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -328,7 +328,7 @@ private fun NumberRow(label: String, value: String, onValueChange: (String) -> U
 
 @Composable
 private fun DecimalRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -375,7 +375,7 @@ private fun labelOf(options: List<DropdownOption>, value: String): String =
 
 @Composable
 private fun TextFieldRow(label: String, value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -392,7 +392,7 @@ private fun KeyRow(
     onValueChange: (String) -> Unit,
     label: String,
 ) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -414,7 +414,7 @@ private fun SendCard() {
     var sendIfEmpty by rememberSaveable { mutableStateOf(GenerationPrefs.sendIfEmpty(context)) }
     ServiceCard(title = "发送") {
         ServiceNote("官方 send_if_empty：当最后一条是 AI 回复且输入框为空时，用这段文本作为用户消息续聊；留空 = 关闭。")
-        OutlinedTextField(
+        EmberTextField(
             value = sendIfEmpty,
             onValueChange = { sendIfEmpty = it; GenerationPrefs.saveSendIfEmpty(context, it) },
             label = { Text("空输入时发送（send_if_empty）") },

@@ -53,8 +53,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -85,6 +83,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
+import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.card.CardFormat
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -277,7 +277,7 @@ fun CharactersScreen(
     }
 
     if (showImportSheet) {
-        ModalBottomSheet(onDismissRequest = { showImportSheet = false }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { showImportSheet = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "导入角色卡",
@@ -305,7 +305,7 @@ fun CharactersScreen(
             title = { Text("从 URL 导入角色卡") },
             text = {
                 Column {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = urlDraft,
                         onValueChange = { urlDraft = it },
                         label = { Text("角色卡直链（PNG / JSON / CharX）") },
@@ -341,7 +341,7 @@ fun CharactersScreen(
     }
 
     menuRecord?.let { record ->
-        ModalBottomSheet(onDismissRequest = { menuRecord = null }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { menuRecord = null }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     record.name,
@@ -371,7 +371,7 @@ fun CharactersScreen(
     }
 
     worldHit?.let { hit ->
-        ModalBottomSheet(onDismissRequest = { worldHit = null }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { worldHit = null }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
                 Text(
                     "世界书条目 · ${hit.characterName}",
@@ -625,7 +625,7 @@ private fun HomeTopBar(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
+            EmberTextField(
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = { Text("搜索角色 / 会话 / 世界书 / 设置") },

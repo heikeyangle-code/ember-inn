@@ -42,9 +42,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -81,6 +79,8 @@ import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberBottomSheet
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -701,7 +701,7 @@ fun CharacterDetailScreen(
             onDismissRequest = { editingKey = null },
             title = { Text("编辑$label") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = fieldDraft,
                     onValueChange = { fieldDraft = it },
                     minLines = if (multiline) 3 else 1,
@@ -731,7 +731,7 @@ fun CharacterDetailScreen(
             title = { Text("编辑深度提示") },
             text = {
                 Column {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = prompt,
                         onValueChange = { prompt = it },
                         placeholder = { Text("（空）") },
@@ -739,7 +739,7 @@ fun CharacterDetailScreen(
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = depth,
                         onValueChange = { depth = it.filter { c -> c.isDigit() } },
                         label = { Text("注入深度") },
@@ -782,7 +782,7 @@ fun CharacterDetailScreen(
             onDismissRequest = { editingGreetingIdx = null },
             title = { Text(if (isNew) "新增开场白" else "编辑开场白") },
             text = {
-                OutlinedTextField(
+                EmberTextField(
                     value = greetingDraft,
                     onValueChange = { greetingDraft = it },
                     minLines = 3,
@@ -910,14 +910,14 @@ fun CharacterDetailScreen(
             title = { Text("编辑变量") },
             text = {
                 Column {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = varDraftKey,
                         onValueChange = { varDraftKey = it },
                         label = { Text("键（{{getvar::键}} 引用）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = varDraftValue,
                         onValueChange = { varDraftValue = it },
                         label = { Text("值") },
@@ -957,14 +957,14 @@ fun CharacterDetailScreen(
             title = { Text("模型覆盖") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mModel,
                         onValueChange = { mModel = it },
                         label = { Text("模型（留空跟随全局）") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mContext,
                         onValueChange = { mContext = it.filter { c -> c.isDigit() } },
                         label = { Text("上下文上限（tokens）") },
@@ -972,7 +972,7 @@ fun CharacterDetailScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mMaxTokens,
                         onValueChange = { mMaxTokens = it.filter { c -> c.isDigit() } },
                         label = { Text("最大回复 tokens") },
@@ -980,7 +980,7 @@ fun CharacterDetailScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mTemp,
                         onValueChange = { mTemp = it },
                         label = { Text("温度 temperature") },
@@ -988,7 +988,7 @@ fun CharacterDetailScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mTopP,
                         onValueChange = { mTopP = it },
                         label = { Text("Top P") },
@@ -996,7 +996,7 @@ fun CharacterDetailScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mPres,
                         onValueChange = { mPres = it },
                         label = { Text("存在惩罚 presence_penalty") },
@@ -1004,7 +1004,7 @@ fun CharacterDetailScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    OutlinedTextField(
+                    EmberTextField(
                         value = mFreq,
                         onValueChange = { mFreq = it },
                         label = { Text("频率惩罚 frequency_penalty") },
@@ -1047,7 +1047,7 @@ fun CharacterDetailScreen(
             title = { Text("主题配方") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = tSeed,
                         onValueChange = { tSeed = it },
                         label = { Text("seed 色（#RRGGBB，留空用角色卡取色）") },
@@ -1359,7 +1359,7 @@ private fun WorldEntryEditorSheet(
     var enabled by remember(initial) { mutableStateOf(initial.enabled) }
     var order by remember(initial) { mutableStateOf(initial.insertionOrder.toString()) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1380,14 +1380,14 @@ private fun WorldEntryEditorSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = keys,
                 onValueChange = { keys = it },
                 label = { Text("触发词（逗号分隔）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = content,
                 onValueChange = { content = it },
                 label = { Text("内容") },
@@ -1395,14 +1395,14 @@ private fun WorldEntryEditorSheet(
                 maxLines = 12,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = comment,
                 onValueChange = { comment = it },
                 label = { Text("备注（仅作者可见）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = order,
                 onValueChange = { order = it.filter { c -> c.isDigit() } },
                 label = { Text("插入顺序") },
@@ -1527,7 +1527,7 @@ private fun RegexEditorSheet(
         6 to "推理",
     )
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1548,21 +1548,21 @@ private fun RegexEditorSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = scriptName,
                 onValueChange = { scriptName = it },
                 label = { Text("名称") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = findRegex,
                 onValueChange = { findRegex = it },
                 label = { Text("匹配式（支持 /pat/flags）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = replaceString,
                 onValueChange = { replaceString = it },
                 label = { Text("替换为（支持 $1 / $<name> / {{match}}）") },
@@ -1570,7 +1570,7 @@ private fun RegexEditorSheet(
                 maxLines = 5,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = trimStrings,
                 onValueChange = { trimStrings = it },
                 label = { Text("裁剪串（逗号分隔）") },
@@ -1599,7 +1599,7 @@ private fun RegexEditorSheet(
             SwitchRow("仅提示词", promptOnly) { promptOnly = it }
             SwitchRow("编辑消息时也执行", runOnEdit) { runOnEdit = it }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                OutlinedTextField(
+                EmberTextField(
                     value = minDepth,
                     onValueChange = { minDepth = it.filter { c -> c.isDigit() || c == '-' } },
                     label = { Text("最小深度") },
@@ -1607,7 +1607,7 @@ private fun RegexEditorSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
+                EmberTextField(
                     value = maxDepth,
                     onValueChange = { maxDepth = it.filter { c -> c.isDigit() || c == '-' } },
                     label = { Text("最大深度") },

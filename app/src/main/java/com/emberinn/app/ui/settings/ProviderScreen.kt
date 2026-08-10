@@ -36,9 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +56,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
+import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderSpec
 
@@ -87,7 +87,7 @@ fun ProviderListScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopBar(title = "提供商与模型", subtitle = "22 家服务商，点卡片配置", onBack = onBack)
-        OutlinedTextField(
+        EmberTextField(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text("搜索提供商") },
@@ -297,14 +297,14 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            OutlinedTextField(
+            EmberTextField(
                 value = name,
                 onValueChange = vm::setProfileName,
                 label = { Text("名称") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = apiKey,
                 onValueChange = vm::setApiKey,
                 label = { Text("API Key") },
@@ -317,7 +317,7 @@ fun ProviderDetailScreen(
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            OutlinedTextField(
+            EmberTextField(
                 value = baseUrl,
                 onValueChange = vm::setBaseUrl,
                 label = { Text("接口地址") },
@@ -345,7 +345,7 @@ fun ProviderDetailScreen(
                 }
             }
             if (spec.id == "workers-ai") {
-                OutlinedTextField(
+                EmberTextField(
                     value = accountId,
                     onValueChange = vm::setAccountId,
                     label = { Text("账户 ID") },
@@ -354,7 +354,7 @@ fun ProviderDetailScreen(
                 )
             }
             if (spec.id == "azure") {
-                OutlinedTextField(
+                EmberTextField(
                     value = apiVersion,
                     onValueChange = vm::setApiVersion,
                     label = { Text("API 版本") },
@@ -381,7 +381,7 @@ fun ProviderDetailScreen(
                     Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            OutlinedTextField(
+            EmberTextField(
                 value = maxTokens.toString(),
                 onValueChange = vm::setMaxTokens,
                 label = { Text("最大回复 tokens") },
@@ -402,7 +402,7 @@ fun ProviderDetailScreen(
             DecimalRow("频率惩罚（frequencyPenalty）", sampler.frequencyPenalty.toString()) { v ->
                 vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
             }
-            OutlinedTextField(
+            EmberTextField(
                 value = contextWindow.toString(),
                 onValueChange = vm::setContextWindow,
                 label = { Text("上下文上限（tokens）") },
@@ -492,12 +492,12 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
         models.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    EmberBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
         ) {
             Text("选择模型", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
+            EmberTextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text("搜索模型") },
@@ -584,7 +584,7 @@ private fun TopBar(
 
 @Composable
 private fun DecimalRow(label: String, value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },

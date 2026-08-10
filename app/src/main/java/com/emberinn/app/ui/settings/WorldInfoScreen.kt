@@ -2,6 +2,7 @@ package com.emberinn.app.ui.settings
 
 
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,7 +84,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
 
 @Composable
 private fun NumberRow(label: String, value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
+    EmberTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },

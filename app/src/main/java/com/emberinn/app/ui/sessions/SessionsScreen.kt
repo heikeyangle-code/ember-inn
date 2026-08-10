@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
@@ -38,7 +37,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +63,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
+import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.group.GroupGenerationMode
 import java.io.File
 import java.time.Instant
@@ -195,7 +195,7 @@ fun SessionsScreen(
             title = { Text("新建群聊") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
+                    EmberTextField(
                         value = groupName,
                         onValueChange = { groupName = it },
                         label = { Text("群聊名称") },
@@ -292,7 +292,7 @@ fun SessionsScreen(
     }
 
     menuSession?.let { session ->
-        ModalBottomSheet(onDismissRequest = { menuSession = null }, sheetState = rememberModalBottomSheetState()) {
+        EmberBottomSheet(onDismissRequest = { menuSession = null }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     session.name,
@@ -431,7 +431,7 @@ private fun NewChatSheet(
     onGroup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
         Column(modifier = Modifier.padding(bottom = 28.dp)) {
             Text(
                 text = "新建对话",
