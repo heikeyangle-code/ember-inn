@@ -71,6 +71,11 @@ fun SettingsScreen(
         when (deepLink) {
             "providers" -> page = SettingsPage.PROVIDERS
             "appearance" -> page = SettingsPage.APPEARANCE
+            "voice" -> page = SettingsPage.VOICE
+            "services" -> page = SettingsPage.SERVICES
+            "quickreplies" -> page = SettingsPage.QUICK_REPLIES
+            "worldinfo" -> page = SettingsPage.WORLD_INFO
+            "regex" -> page = SettingsPage.REGEX
             "about" -> page = SettingsPage.ABOUT
             "data" -> page = SettingsPage.DATA
             else -> {}

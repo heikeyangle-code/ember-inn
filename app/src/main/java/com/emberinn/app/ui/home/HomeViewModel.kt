@@ -149,8 +149,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsCatalog = listOf(
         SettingsHit("主题", "外观与主题：浅色/深色/跟随系统 + 预设主题", route = "appearance"),
         SettingsHit("模型", "提供商与模型：API Key / 接口地址 / 默认模型", route = "providers"),
-        SettingsHit("语音", "语音：TTS 朗读 / STT 输入（开发中）"),
-        SettingsHit("服务", "服务：翻译 / 图像 / 向量（开发中）"),
+        SettingsHit("语音", "语音：TTS 朗读配置与试听", route = "voice"),
+        SettingsHit("服务", "服务：翻译 / 图像 / 向量", route = "services"),
+        SettingsHit("快捷回复", "全局快捷回复槽位与 automationId", route = "quickreplies"),
+        SettingsHit("世界书", "扫描深度 / 递归 / 预算", route = "worldinfo"),
+        SettingsHit("正则脚本", "全局正则（GLOBAL 分桶）", route = "regex"),
         SettingsHit("数据与隐私", "数据与隐私：备份 / 导出 / 清除数据", route = "data"),
         SettingsHit("关于", "关于：版本 / 开源协议 / 数据说明", route = "about"),
     )
