@@ -393,6 +393,19 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 103（2026-08-10：设置深链补全 + 剩余清单审计）
+
+- 设置深链补全：voice/services/quickreplies/worldinfo/regex 可被首页搜索直达（SettingsScreen deepLink + HomeViewModel 设置目录）
+- README 路线图同步：滑动切回复/一键生成背景/无障碍/负深度/Persona+模型覆盖 状态更新
+- 剩余清单审计（边界登记，非本轮实现）：
+  - 斜杠异步/生成类命令 /gen /genraw /trigger /while（需要异步管线，登记 P2）
+  - 表情精灵 App 渲染（引擎 1:1，sprite 资产导入/情绪 UI 登记 P4）
+  - Room/DataStore 迁移（内部实现，行为不变，P3）
+  - 自有插件 API（P6 远期）、STT（官方 1.18 无）、翻译自动模式执行（官方默认关）、
+    网络代理/视觉小说（远期）、字体文件下载/风格档位映射（P3）、快捷回复全屏编辑器（P3，当前列表编辑可用）
+  - Vertex AI 服务账号认证（需外部项目配置）、Claude/Gemini 官方 tokenizer（用户豁免）
+- 引擎 288 测全绿；App 编译走 CI
+
 ## 最近一轮 102（2026-08-10：世界书 EM 锚点示例对话接线 + outlet 边界核实）
 
 - 审计发现 EM 锚点（POSITION_EM_TOP/EM_BOTTOM）也只在 scanner 算出、未进提示词
