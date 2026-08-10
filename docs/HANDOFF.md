@@ -387,6 +387,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 112（2026-08-10：审计第五/六批——路径安全 + 入口一致性）
+
+- 书签文件名消毒：name 中去掉 /\:*?"<>| 并防空串（防路径穿越/覆盖；create/open/delete 三处一致）
+- 变体生成入口：AI 消息落盘即带 swipes 后，长按“生成新回复（变体）”恒显示（官方任何 AI 消息可生成变体）
+- 群聊会话删除时清理无引用 GroupRecord（孤儿）
+- 启动直达上次聊天：用户明确不需要，已撤销（README 该条不实现）
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 111（2026-08-10：全量审视第四批——输入保留/重生成不丢回复/群聊配置实时生效/AI swipes）
 
 - **发送失败不丢输入**：ChatViewModel.send 返回 Boolean；未配置模型/流式中/空输入返回 false，

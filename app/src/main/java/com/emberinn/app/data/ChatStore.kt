@@ -711,9 +711,10 @@ class ChatStore(private val context: Context) {
 
     /** 创建书签：复制当前聊天为存档，并把最后一条 AI 消息 extra.bookmark_link 写入（官方 saveBookmark）。 */
     fun createBookmark(sessionId: String, name: String): Boolean {
+        val safeName = sanitizeBookmarkName(name)
         val src = File(chatsDir, "$sessionId.jsonl")
         if (!src.exists()) return false
-        val target = File(chatsDir, "$sessionId-Checkpoint-$name.jsonl")
+        val target = File(chatsDir, "$sessionId-Checkpoint-$safeName.jsonl")
         target.writeText(src.readText())
         // 官方：lastMes.extra.bookmark_link = name
         val list = messages(sessionId).toMutableList()
@@ -723,7 +724,7 @@ class ChatStore(private val context: Context) {
         if (aiIdx >= 0) {
             val el = list[aiIdx].jsonObject
             val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
-            extra["bookmark_link"] = JsonPrimitive(name)
+            extra["bookmark_link"] = JsonPrimitive(safeName)
             list[aiIdx] = JsonObject(el + ("extra" to JsonObject(extra)))
             File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
         }
@@ -732,7 +733,7 @@ class ChatStore(private val context: Context) {
 
     /** 打开书签：用存档内容替换当前聊天（官方切换 checkpoint chat；本 App 载入当前会话，调用方需二次确认）。 */
     fun openBookmark(sessionId: String, name: String): Boolean {
-        val target = File(chatsDir, "$sessionId-Checkpoint-$name.jsonl")
+        val target = File(chatsDir, "$sessionId-Checkpoint-${sanitizeBookmarkName(name)}.jsonl")
         if (!target.exists()) return false
         File(chatsDir, "$sessionId.jsonl").writeText(target.readText())
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
@@ -740,8 +741,12 @@ class ChatStore(private val context: Context) {
     }
 
     fun deleteBookmark(sessionId: String, name: String) {
-        File(chatsDir, "$sessionId-Checkpoint-$name.jsonl").delete()
+        File(chatsDir, "$sessionId-Checkpoint-${sanitizeBookmarkName(name)}.jsonl").delete()
     }
+
+    /** 书签名消毒：禁止路径分隔符与特殊字符（防路径穿越/覆盖）。 */
+    private fun sanitizeBookmarkName(name: String): String =
+        name.replace(Regex("""[\\/:*?"<>|]"""), "_").trim().ifBlank { "bookmark" }
     /** 清理被移除消息引用的本地附件文件（官方删除消息/附件会删文件；data URL 跳过）。 */
     private fun deleteMediaFiles(elements: List<JsonElement>) {
         elements.forEach { el ->
