@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -12,10 +13,10 @@ import kotlin.math.abs
  * 边缘滑动返回（左右均可）：从屏幕左/右 48dp 内起始的水平拖动，累计位移超过屏宽 22% 时触发 onBack。
  * 与列表滚动/消息横滑不冲突：只在边缘起始时接管拖动。
  */
-fun Modifier.edgeSwipeBack(enabled: Boolean = true, onBack: () -> Unit): Modifier {
-    if (!enabled) return this
+fun Modifier.edgeSwipeBack(enabled: Boolean = true, onBack: () -> Unit): Modifier = composed {
     val currentOnBack by rememberUpdatedState(onBack)
-    return this.pointerInput(Unit) {
+    if (!enabled) return@composed this
+    this.pointerInput(Unit) {
         val edge = 48.dp.toPx()
         var active = false
         var total = 0f
