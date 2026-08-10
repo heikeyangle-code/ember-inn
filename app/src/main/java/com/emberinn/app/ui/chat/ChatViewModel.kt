@@ -312,8 +312,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     override fun setNarratorName(name: String): String {
-        chatStore.setNarratorName(sessionId, name.trim())
-        _notice.value = "（旁白显示名已设置为 ${name.trim().ifBlank { "System" }}）"
+        // 官方 setNarratorName：空名重置为 System（写死默认值，不是删键）
+        val resolved = name.trim().ifBlank { "System" }
+        chatStore.setNarratorName(sessionId, resolved)
+        _notice.value = "（旁白显示名已设置为 $resolved）"
         return ""
     }
 

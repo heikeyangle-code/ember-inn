@@ -99,8 +99,8 @@ class ChatStore(private val context: Context) {
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
-            // 官方消息 extra 统一带 gen_id（Date.now()），jsonl 与 ST 互操作
-            put("gen_id", JsonPrimitive(System.currentTimeMillis()))
+            // 官方：普通用户消息带 gen_id（sendMessageAsUser）；单聊 AI 消息不带（saveReply 仅群聊有 group_generation_id）
+            if (isUser) put("gen_id", JsonPrimitive(System.currentTimeMillis()))
             if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
                 put("inline_image", JsonPrimitive(true))
@@ -222,18 +222,23 @@ class ChatStore(private val context: Context) {
         val swipes = if (hasSwipes) swipesOf(obj).toMutableList() else mutableListOf(mes)
         var swipeInfo = swipeInfoOf(obj).toMutableList()
         if (swipeInfo.isEmpty()) {
+            // 官方 ensureSwipes createSwipeInfo：send_date 复制消息级，gen_* 留空、extra 为空对象
             swipeInfo = swipes.map {
                 buildJsonObject {
                     obj["send_date"]?.jsonPrimitive?.contentOrNull?.let { v -> put("send_date", JsonPrimitive(v)) }
-                    obj["gen_started"]?.jsonPrimitive?.contentOrNull?.let { v -> put("gen_started", JsonPrimitive(v)) }
-                    obj["gen_finished"]?.jsonPrimitive?.contentOrNull?.let { v -> put("gen_finished", JsonPrimitive(v)) }
-                    put("extra", (obj["extra"] as? JsonObject) ?: buildJsonObject {})
+                    put("gen_started", JsonNull)
+                    put("gen_finished", JsonNull)
+                    put("extra", buildJsonObject {})
                 }
             }.toMutableList()
         }
         // 兜底：swipes 比 swipe_info 长时补齐（官方 syncSwipeToMes 的 backfill）
         while (swipeInfo.size < swipes.size) {
-            swipeInfo += buildJsonObject { put("extra", buildJsonObject {}) }
+            swipeInfo += buildJsonObject {
+                put("gen_started", JsonNull)
+                put("gen_finished", JsonNull)
+                put("extra", buildJsonObject {})
+            }
         }
         val swipeId = currentSwipeId(obj)
         list[index] = JsonObject(obj + mapOf(
@@ -402,11 +407,11 @@ class ChatStore(private val context: Context) {
         insertMessage(sessionId, message, at)
     }
 
-    /** 评论消息：name=Comment、is_system=true、extra.type=comment（官方 COMMENT_NAME_DEFAULT）。 */
+    /** 评论消息：name=Note、is_system=true、extra.type=comment（官方 COMMENT_NAME_DEFAULT）。 */
     fun appendCommentMessage(sessionId: String, content: String, at: Int? = null) {
         val now = java.time.Instant.now().toString()
         val message = buildJsonObject {
-            put("name", JsonPrimitive("Comment"))
+            put("name", JsonPrimitive("Note"))
             put("is_user", JsonPrimitive(false))
             put("is_system", JsonPrimitive(true))
             put("send_date", JsonPrimitive(now))

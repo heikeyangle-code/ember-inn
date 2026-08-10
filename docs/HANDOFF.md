@@ -387,6 +387,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 120（2026-08-10：审计修复官方对齐复核——逐项确认/纠偏）
+
+逐项复核结论（对照官方源码）：
+- ✅ 媒体内联白名单（差分 24 例）、AN interval 公式与默认 position=1、IN_CHAT 注入通道
+- ✅ ensureSwipes 只排除 user/isSmallSys；/hide=is_system；coreChat 过滤 is_system；comment 不进提示词、narrator 进
+- ✅ AI 消息落盘带 swipes；saveReply 尾部会把 mes 同步回 swipes[swipe_id] → continue 同步 swipes 是官方行为（保留）
+- ✅ deleteSwipe 新 id 规则、syncSwipeToMes 字段一致
+- 纠偏：
+  1. 普通用户消息带 gen_id、单聊 AI 消息不带（官方 saveReply 仅群聊写 group_generation_id）——已改
+  2. ensureSwipes 回填 swipe_info：gen_* 置 null、extra 为空对象（官方 createSwipeInfo）——已改
+  3. 官方 COMMENT_NAME_DEFAULT = 'Note'（我们原写 Comment）——已改
+  4. /sysname 空名按官方写 "System"（不删键）——已改
+- 边界登记维持：bias 存文本提取（官方存 extra.bias 回溯，等价近似）、/hide name 过滤、narrator/sendas bias-only is_system
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 119（2026-08-10：全界面滑动返回 + 返回按钮不贴最高处）
 
 - 新增通用 Modifier.edgeSwipeBack：左右边缘 48dp 起始、位移 >22% 屏宽触发返回（与列表滚动/消息横滑不冲突）
