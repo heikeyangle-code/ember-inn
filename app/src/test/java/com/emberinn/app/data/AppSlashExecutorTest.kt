@@ -26,6 +26,7 @@ class AppSlashExecutorTest {
         override fun setBackground(text: String): String { calls += "bg:$text"; return "bg.png" }
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
+        override fun triggerGeneration(): String { calls += "trigger"; return "" }
         override fun notify(text: String) { calls += "notify:$text" }
     }
 
@@ -89,6 +90,13 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/persona-set mode=lookup 小红 | /persona 小明")
         assertEquals(listOf("persona:lookup:小红", "persona:all:小明"), a.calls)
+    }
+
+    @Test
+    fun `trigger forwards to generation`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/trigger")
+        assertEquals(listOf("trigger"), a.calls)
     }
 
     @Test

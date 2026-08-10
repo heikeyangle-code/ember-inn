@@ -49,6 +49,8 @@ interface SlashMessageActions {
     fun impersonate(prompt: String): String
     /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
     fun selectPersona(name: String, mode: String): String
+    /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
+    fun triggerGeneration(): String
 }
 
 /**
@@ -182,6 +184,11 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "触发冒充生成（官方 impersonate；prompt 可选）",
             rawQuotes = true,
             callback = { inv, _ -> actions.impersonate(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "trigger",
+            description = "触发一次生成（官方 trigger；await 参数本实现不等待，登记）",
+            callback = { _, _ -> actions.triggerGeneration() },
         ),
         SlashCommandDef(
             "persona-set",

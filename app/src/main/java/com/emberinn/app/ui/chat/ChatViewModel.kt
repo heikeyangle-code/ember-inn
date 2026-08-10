@@ -431,6 +431,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    override fun triggerGeneration(): String {
+        if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            return "（未配置模型，请先选一个模型。）"
+        }
+        val msgs = chatStore.messages(sessionId)
+        val last = msgs.lastOrNull() ?: return "（还没有消息可触发生成。）"
+        return if (isUser(last)) {
+            // 官方 Generate('normal')：最后一条用户消息 → 正常生成回复
+            if (group != null) startGroupTurn(type = "generate") else startStream(history = msgs)
+            ""
+        } else if (!isSystemMsg(last)) {
+            // 官方发送按钮在最后一条为 AI 时走 continue（mes_continue）
+            continueGeneration()
+            ""
+        } else {
+            "（最后一条是系统消息，无法触发生成。）"
+        }
+    }
+
     override fun impersonate(prompt: String): String {
         if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
         if (!isProviderConfigured()) {
