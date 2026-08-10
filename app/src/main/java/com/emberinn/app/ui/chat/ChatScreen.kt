@@ -842,7 +842,7 @@ fun ChatScreen(
                 }
                 MenuRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
                     showMore = false
-                    exportChatLauncher.launch("$name-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
+                    exportChatLauncher.launch("$currentName-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
                 }
                 MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
                     showMore = false
