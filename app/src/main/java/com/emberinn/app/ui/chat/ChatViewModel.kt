@@ -521,6 +521,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 本轮落盘时使用的正则脚本集合（对齐官方 saveReply 的 getRegexScripts({allowedOnly:true})）。 */
     @Volatile
     private var saveRegexScripts: List<RegexPipelineScript> = emptyList()
+    /** 本轮群聊批次 ID（官方 group_generation_id：整批共享，regenerate 定位用）。 */
+    @Volatile
+    private var pendingGroupGenId: Long? = null
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
@@ -1011,6 +1014,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（群聊成员缺失，请检查群聊设置。）"
             return
         }
+        // 官方 generateGroupWrapper：group_generation_id = Date.now()，本轮所有成员消息共享
+        val groupGenId = System.currentTimeMillis()
         val history = chatStore.messages(sessionId)
         val disabled = group?.disabledMembers.orEmpty()
         val enabled = members.filter { it.id !in disabled }
@@ -1097,7 +1102,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 inChatExtensions = buildGroupDepthPrompts(speaker),
             )
         }
-        runGroupStep(steps, 0, history)
+        runGroupStep(steps, 0, history, groupGenId = groupGenId)
     }
 
     private fun runGroupStep(
@@ -1105,6 +1110,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         index: Int,
         history: List<JsonElement>,
         autoContinueRuns: Int = 0,
+        groupGenId: Long? = null,
     ) {
         if (index >= steps.size) return
         val step = steps[index]
@@ -1118,6 +1124,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             characterRawJsonOverride = step.cardJson,
             inChatExtensions = step.inChatExtensions,
             scopedRegexAvatar = step.speaker.id,
+            groupGenId = groupGenId,
             onFinished = {
                 val msgs = chatStore.messages(sessionId)
                 // 官方 generateGroupWrapper：每人生成后按 shouldAutoContinue 自动续写（power_user.auto_continue，默认关）
@@ -1145,6 +1152,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         0,
                         msgs,
                         autoContinueRuns + 1,
+                        groupGenId,
                     )
                     !isLastStep -> runGroupStep(steps, index + 1, msgs)
                 }
@@ -1246,6 +1254,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),
         scopedRegexAvatar: String? = null,
+        groupGenId: Long? = null,
         onFinished: (() -> Unit)? = null,
     ) {
         streamStartedAt = java.time.Instant.now().toString()
@@ -1258,6 +1267,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
         generatingSwipe = swipeMode
+        pendingGroupGenId = groupGenId
         streamActive = true
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
@@ -1499,8 +1509,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             genStarted = streamStartedAt,
             genFinished = java.time.Instant.now().toString(),
             reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
-            // 官方群聊 AI 消息带 gen_id（group_generation_id）；单聊不带
-            groupGenId = if (group != null) System.currentTimeMillis() else null,
+            // 官方群聊 AI 消息带 gen_id（group_generation_id，整批共享）；单聊不带
+            groupGenId = pendingGroupGenId,
         )
     }
 

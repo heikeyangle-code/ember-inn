@@ -25,7 +25,7 @@
 ## 角色卡
 - ✅ PNG/JSON 导入导出 + CharX/YAML/BYAF 导入全部对齐官方；JSON 导入 5 例 + 导出 4 例、YAML 3 例、CharX 5 例、BYAF 14+5+4+完整导入计划 4 例；V2 归一（官方差分 5 例 + 多轮补真 bug）、私有字段清理、PNG 字节差分（6 例）
 - ✅ CharX 资源提取（引擎 CharXImporter.CharXAssets：icon/assets，官方差分覆盖 uri 映射/storageCategory/baseName）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例，url-join 不折叠 ../）；App 层资源入库未做
-- ❌ URL 导入（App 层）
+- ✅ URL 导入（App 层：HomeViewModel.importCardFromUrl + 首页弹层，2026-08-10 复验）
 
 ## 世界书
 - ✅ 扫描/注入/递归/预算/分组/时间效果/过滤；整体扫描差分 17 例 + 纯逻辑 19 例

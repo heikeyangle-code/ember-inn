@@ -137,7 +137,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 
 ### 3.1 角色卡 ✅
 PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；JSON 导入 5 例 + JSON 导出 4 例（getCharaCardV2+unsetPrivateFields）、YAML 3 例、CharX 5 例、BYAF 14+5+4+4 例；V2 归一（readFromV2，官方差分 5 例 + 多轮补真 bug）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-✅ 导入保留世界书回归锁（2026-08-10 WorldBookImportTest：JSON/PNG 导入后 data.character_book.entries 可读可解析）；✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord；URL 导入未做）。
+✅ 导入保留世界书回归锁（2026-08-10 WorldBookImportTest：JSON/PNG 导入后 data.character_book.entries 可读可解析）；✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord）；✅ URL 导入角色卡（HomeViewModel.importCardFromUrl + 首页 FAB 弹层，PNG/CharX/JSON 按 URL 后缀/魔数探测，对齐官方 content-manager importURL；第 129 轮复验）。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
 buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
@@ -343,7 +343,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - P2：SlashParser flags + 常用/消息类斜杠命令 + 差分 18→43 例；群聊全部可做项（natural/pooled、深度提示、
   自动续写链、策略 UI）；世界书设置 UI；快捷回复 automationId 自动执行；JSON 导入导出差分 10→13/6→10；
   正则分桶差分 7 例；世界书深度注入/EM 锚点接线 + 负深度回归；HTML/Mermaid WebView；平板双栏；
-  图库 LIST/GALLERY；URL 导入角色卡
+  图库 LIST/GALLERY
 - P3/P4：主题全局管线（浅深锁定/seed/形状/字体）、配方导出/分享、无障碍基础达标
 
 **延迟/边界**：完整清单见第 8 节（不一致登记）与第 9 节；仅保留用户决策项——Claude/Gemini 官方 web tokenizer 用户明确豁免（cl100k 回退，只影响估算精度）。
@@ -389,7 +389,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   /hide=/message-role=is_system/narrator 语义；Comment 默认名 Note；/delswipe 1-based
 - 消息数据流：AI 消息落盘带 swipes 结构；saveReply 尾部 mes/swipes/swipe_info.extra 逐字段刷新（continue 同步）；
   deleteSwipe 新 id 规则；syncSwipeToMes 字段；send_date=ISO；AI extra 恒有
-  api/model/reasoning/reasoning_duration/reasoning_signature；群聊 AI 带 gen_id；
+  api/model/reasoning/reasoning_duration/reasoning_signature；群聊 AI 带 gen_id（第 129 轮起整批共享 group_generation_id）；
   普通用户消息 extra isSmallSys=false、无 gen_id；附件 media_index 恒写、inline_image=true
 - 提示词：默认提示集合/顺序、populationInjectionPrompts、历史消息 preparePrompt 宏替换、
   AN interval 公式与默认 position=1、Generate 类型（regenerate/continue/swipe/impersonate）
@@ -404,7 +404,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **登记边界（有意保留，非 bug）**
 - extra.api 存提供商 id（官方存 source）；落盘文本未过 regex/宏替换（发送时应用，请求等价）；
-  群聊 gen_id 为每条时间戳（官方整批）；bias 文本提取 vs extra.bias（双轨已接）；
+  bias 文本提取 vs extra.bias（双轨已接）；
   /hide name 过滤、narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；
   openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；/gen /genraw /trigger /while 异步命令；
   表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
