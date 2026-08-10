@@ -73,6 +73,7 @@ import com.emberinn.app.data.ModelOverride
 import com.emberinn.app.data.ThemeRecipe
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
+import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -202,12 +203,15 @@ fun CharacterDetailScreen(
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().edgeSwipeBack(onBack = onBack)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 顶栏：返回 + 名称 + 菜单（开始聊天/导出/置顶/删除）
+            // 顶栏：返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 10.dp),
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")

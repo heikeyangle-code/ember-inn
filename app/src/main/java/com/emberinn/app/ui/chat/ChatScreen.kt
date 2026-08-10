@@ -5,6 +5,7 @@ package com.emberinn.app.ui.chat
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
+import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.RenderPrefs
@@ -342,6 +343,8 @@ fun ChatScreen(
             .fillMaxSize()
             .systemBarsPadding()
             .imePadding()
+            // README 返回手势：左右边缘滑动退出
+            .edgeSwipeBack(onBack = onBack)
             .background(
                 // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
                 Brush.verticalGradient(
@@ -1298,9 +1301,10 @@ private fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 10.dp)
+                .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp)
                 .heightIn(min = 52.dp),
         ) {
+            // 返回按钮在左上角（配合边缘滑动返回），留足上下间距避免贴最高处
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                 Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
             }

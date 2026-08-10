@@ -544,8 +544,9 @@ private fun TopBar(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
     ) {
+        // 返回按钮在左上角，但留足上下间距
         IconButton(onClick = onBack) {
             Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
         }

@@ -3,6 +3,7 @@ package com.emberinn.app.ui.settings
 import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import com.emberinn.app.ui.components.edgeSwipeBack
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -83,14 +84,21 @@ fun SettingsScreen(
         onDeepLinkConsumed()
     }
 
-    // 系统返回：子页逐级返回（详情 → 列表 → 设置主页），主页返回交给系统退出
-    BackHandler(enabled = page != SettingsPage.HOME) {
+    fun goBack() {
         page = when (page) {
             SettingsPage.PROVIDER_DETAIL -> SettingsPage.PROVIDERS
             else -> SettingsPage.HOME
         }
     }
 
+    // 系统返回 + 边缘滑动返回（子页逐级返回；主页返回交给系统退出）
+    BackHandler(enabled = page != SettingsPage.HOME) { goBack() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .edgeSwipeBack(enabled = page != SettingsPage.HOME, onBack = ::goBack),
+    ) {
     when (page) {
         SettingsPage.PROVIDERS -> ProviderListScreen(
             vm = vm,
@@ -133,6 +141,7 @@ fun SettingsScreen(
             onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
         )
+    }
     }
 }
 
@@ -488,8 +497,9 @@ private fun InfoLine(label: String, value: String) {
 fun SettingsTopBar(title: String, onBack: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
     ) {
+        // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
         IconButton(onClick = onBack) {
             Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
         }

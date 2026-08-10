@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -75,8 +76,9 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
         ) {
+            // 返回按钮在左上角，留足上下间距
             IconButton(onClick = onBack) {
                 Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
             }

@@ -387,6 +387,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 119（2026-08-10：全界面滑动返回 + 返回按钮不贴最高处）
+
+- 新增通用 Modifier.edgeSwipeBack：左右边缘 48dp 起始、位移 >22% 屏宽触发返回（与列表滚动/消息横滑不冲突）
+- 应用：聊天页根、设置子页根（SettingsScreen page!=HOME 时）、角色详情根
+- 返回按钮统一保持在左上角（用户偏好），但不再贴“最高处”：各顶栏 top 间距加大到 12dp、
+  角色详情加 statusBarsPadding 避让状态栏（此前按钮可能被状态栏遮挡看不到）
+- 涉及：SettingsTopBar / ProviderScreen TopBar / ChatTopBar / CharacterDetailScreen / DataPrivacyScreen
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 118（2026-08-10：审计第十三批——/hide 语义 1:1 + comment 不进提示词）
 
 - 官方 hideChatMessageRange：隐藏 = 设 is_system=true（不是 is_hidden）；coreChat 过滤 !is_system
