@@ -12,6 +12,8 @@ data class ThemePreset(
     val tertiary: Color,
     val lightBg: Color,
     val darkBg: Color,
+    /** README 清单 9：六套主题各自性格——形状语言随预设变化（墨韵圆润/丹砂方正/琉璃浑圆）。 */
+    val shape: String = "default",
 )
 
 val ThemePresets: List<ThemePreset> = listOf(
@@ -24,6 +26,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFF3D5A6C),
         lightBg = Color(0xFFF7F2E8),
         darkBg = Color(0xFF171513),
+        shape = "rounded",
     ),
     ThemePreset(
         id = "celadon",
@@ -34,6 +37,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFFB49B6A),
         lightBg = Color(0xFFF5F3EC),
         darkBg = Color(0xFF15201D),
+        shape = "rounded",
     ),
     ThemePreset(
         id = "night",
@@ -44,6 +48,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFF2C4A6E),
         lightBg = Color(0xFFF4F5F6),
         darkBg = Color(0xFF101820),
+        shape = "default",
     ),
     ThemePreset(
         id = "cinnabar",
@@ -54,6 +59,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFFB08A3E),
         lightBg = Color(0xFFFBF4EF),
         darkBg = Color(0xFF1B1210),
+        shape = "square",
     ),
     ThemePreset(
         id = "glaze",
@@ -64,6 +70,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFF9B6BFF),
         lightBg = Color(0xFFF5F7FB),
         darkBg = Color(0xFF10131A),
+        shape = "circle",
     ),
     ThemePreset(
         id = "paper",
@@ -74,6 +81,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         tertiary = Color(0xFF808488),
         lightBg = Color(0xFFF6F4EF),
         darkBg = Color(0xFF161616),
+        shape = "default",
     ),
 )
 

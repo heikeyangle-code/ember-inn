@@ -6,6 +6,7 @@ import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.UiSounds
 import com.emberinn.app.ui.components.emberShadow
+import com.emberinn.app.data.CharacterCardEdit
 
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
@@ -700,6 +701,14 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
     val seed = record.seedColor?.let { Color(it.toInt()) }
     val cardColor = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceVariant, 0.86f) }
         ?: MaterialTheme.colorScheme.surfaceVariant
+    // README 清单 8：形状语言区分角色——每卡按自身主题配方 shape 取角（无配方=16dp 圆润）
+    val cardRecipe = remember(record) { CharacterCardEdit.readThemeRecipe(record.rawJson) }
+    val corner = when (cardRecipe.shape) {
+        "square" -> 4.dp
+        "circle" -> 24.dp
+        "rounded" -> 16.dp
+        else -> 16.dp
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -709,7 +718,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
     ) {
         Box {
@@ -719,7 +728,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                         model = File(record.avatarPath),
                         contentDescription = record.name,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(topStart = corner, topEnd = corner)),
                     )
                 } else {
                     Box(

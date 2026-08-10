@@ -69,11 +69,17 @@ class MainActivity : ComponentActivity() {
             }
             // 形状：角色配方优先，否则全局外观档；字体：衬线近似（M3 1.4 Typography 无 defaultFontFamily，只能整体换族）
             val globalRadius = AppearancePrefs.radius(this)
-            val radius = when (recipe?.shape ?: globalRadius) {
+            // 形状：角色配方 > 用户全局档 > 预设性格（README 清单 8/9）
+            val radius = when (recipe?.shape?.takeIf { it.isNotBlank() } ?: globalRadius) {
                 "square" -> 4.dp
                 "circle" -> 24.dp
                 "rounded" -> 16.dp
-                else -> 12.dp
+                else -> when (preset.shape) {
+                    "square" -> 4.dp
+                    "circle" -> 24.dp
+                    "rounded" -> 16.dp
+                    else -> 12.dp
+                }
             }
             val shapes = Shapes(
                 extraSmall = RoundedCornerShape(radius),

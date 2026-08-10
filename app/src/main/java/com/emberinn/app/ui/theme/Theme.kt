@@ -59,11 +59,12 @@ private fun typographyWith(fontFamily: FontFamily): Typography {
 }
 
 private fun ThemePreset.lightScheme(): ColorScheme {
-    val primary = darken(seed, 0.06f)
+    // README 清单 10：品牌滤镜——算法取色后统一降饱和，任何 seed 都带余烬的低饱和气质
+    val primary = desaturate(darken(seed, 0.06f), 0.22f)
     val onBackground = darken(lightBg, 0.82f)
     val onSurface = onBackground
-    val secondary = darken(this.secondary, 0.05f)
-    val tertiary = darken(this.tertiary, 0.05f)
+    val secondary = desaturate(darken(this.secondary, 0.05f), 0.20f)
+    val tertiary = desaturate(darken(this.tertiary, 0.05f), 0.20f)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
@@ -93,11 +94,11 @@ private fun ThemePreset.lightScheme(): ColorScheme {
 }
 
 private fun ThemePreset.darkScheme(): ColorScheme {
-    val primary = lighten(seed, 0.24f)
+    val primary = desaturate(lighten(seed, 0.24f), 0.18f)
     val onBackground = lighten(darkBg, 0.78f)
     val onSurface = onBackground
-    val secondary = lighten(this.secondary, 0.20f)
-    val tertiary = lighten(this.tertiary, 0.20f)
+    val secondary = desaturate(lighten(this.secondary, 0.20f), 0.16f)
+    val tertiary = desaturate(lighten(this.tertiary, 0.20f), 0.16f)
     return darkColorScheme(
         primary = primary,
         onPrimary = darken(seed, 0.55f),
@@ -132,3 +133,9 @@ private fun darken(color: Color, fraction: Float): Color = lerp(color, Color.Bla
 
 private fun readableOn(color: Color): Color =
     if (color.luminance() > 0.5f) Color(0xFF221A16) else Color.White
+
+/** 品牌滤镜：把颜色往同亮度中性色靠拢 amount 比例，降低饱和度。 */
+private fun desaturate(color: Color, amount: Float): Color {
+    val l = color.luminance()
+    return lerp(color, Color(l, l, l), amount.coerceIn(0f, 1f))
+}

@@ -47,7 +47,8 @@ object DisplayPipeline {
         if (isFinal) return text
         var out = text
         for (delimiter in listOf("*", "\"", "```", "~~~")) {
-            if (countOccurrences(out, delimiter) % 2 == 1) {
+            // 奇数且行尾未以该定界符结尾时才补：避免 "你好*" 被补成 "你好**"（视觉反而更怪）
+            if (countOccurrences(out, delimiter) % 2 == 1 && !out.trimEnd().endsWith(delimiter)) {
                 val separator = if (delimiter.length > 1) "\n" else ""
                 out = out.trimEnd() + separator + delimiter
             }
