@@ -34,6 +34,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -154,8 +155,8 @@ import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import com.mikepenz.markdown.compose.elements.MarkdownText
-import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
-import com.mikepenz.markdown.compose.elements.highlightedCodeFence
+import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
+import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.emberinn.app.ui.components.parseHexColor
 import com.emberinn.app.ui.components.EmberInputIcon
@@ -2890,6 +2891,57 @@ private fun buildMessageSegments(
     return out
 }
 
+/** 换行版高亮代码块（官方 style.css 代码块 pre-wrap）：长行自动换行，不再横向滚动截断。 */
+@Composable
+private fun WrappingHighlightedCode(
+    code: String,
+    language: String?,
+    style: androidx.compose.ui.text.TextStyle,
+) {
+    val dark = isSystemInDarkTheme()
+    val builder = remember(dark) {
+        dev.snipme.highlights.Highlights.Builder().theme(dev.snipme.highlights.model.SyntaxThemes.default(darkMode = dark))
+    }
+    val highlighted = remember(code, language, builder) {
+        val syntaxLanguage = language?.let { dev.snipme.highlights.model.SyntaxLanguage.getByName(it) }
+        val codeHighlights = builder.code(code)
+            .let { if (syntaxLanguage != null) it.language(syntaxLanguage) else it }
+            .build()
+            .getHighlights()
+        buildAnnotatedString {
+            append(code)
+            codeHighlights.forEach {
+                when (it) {
+                    is dev.snipme.highlights.model.ColorHighlight -> addStyle(
+                        SpanStyle(color = Color(it.rgb).copy(alpha = 1f)),
+                        it.location.start,
+                        it.location.end,
+                    )
+                    is dev.snipme.highlights.model.BoldHighlight -> addStyle(
+                        SpanStyle(fontWeight = FontWeight.Bold),
+                        it.location.start,
+                        it.location.end,
+                    )
+                }
+            }
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)),
+    ) {
+        Text(
+            text = highlighted,
+            style = style,
+            softWrap = true,
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+        )
+    }
+}
+
 /** 原生 Markdown 渲染：官方行内字段已由 preprocessOfficialHtml 转成原生标记。 */
 @Composable
 private fun NativeMarkdown(
@@ -2955,10 +3007,7 @@ private fun NativeMarkdown(
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
         ),
     )
-    // 代码高亮组件引用在组合上下文取好再进 remember（非组合 lambda 里不允许新建可组合函数引用）
-    val codeBlockRef = highlightedCodeBlock
-    val codeFenceRef = highlightedCodeFence
-    val components = remember(bodyColor, emColor, quoteColor, underlineColor, type, codeBlockRef, codeFenceRef) {
+    val components = remember(bodyColor, emColor, quoteColor, underlineColor, type) {
         markdownComponents(
             // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
             // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
@@ -2972,8 +3021,18 @@ private fun NativeMarkdown(
             heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
             setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
             setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-            codeBlock = codeBlockRef,
-            codeFence = codeFenceRef,
+            // 官方 style.css 代码块 pre-wrap 语义：换行版高亮代码块，避免 mikepenz 默认
+            // horizontalScroll 让长行（如 JSON 状态栏）被“框住、看不全”
+            codeBlock = { model ->
+                MarkdownCodeBlock(content = model.content, node = model.node, style = model.typography.code) { code, language, style ->
+                    WrappingHighlightedCode(code = code, language = language, style = style)
+                }
+            },
+            codeFence = { model ->
+                MarkdownCodeFence(content = model.content, node = model.node, style = model.typography.code) { code, language, style ->
+                    WrappingHighlightedCode(code = code, language = language, style = style)
+                }
+            },
             blockQuote = { model ->
                 Box(
                     modifier = Modifier
