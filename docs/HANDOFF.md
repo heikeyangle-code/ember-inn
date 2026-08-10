@@ -581,6 +581,8 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 | 14 | 图标一致性 | ✅ 全 Phosphor，无 Material 混用 |
 | 15 | 品牌视觉母题 | ➖ 按用户要求移除（空状态 ✦/微光/余烬文案已删），改为用户可调视觉氛围 |
 
+**第 161 轮 CI 修复**：字体下载状态原本声明在 LazyVerticalGrid 的 item 作用域内、弹窗在外面引用不到 → 提升到 AppearanceScreen 顶层（401a88f）。
+
 **第 161 轮新增**：
 - FontManager：霞鹜文楷下载（官方 Release zip → LXGWWenKai-Regular.ttf → filesDir/fonts），
   外观页字体新增“霞鹜文楷（下载）”chip：未下载点选→下载对话框→成功自动应用并持久化
