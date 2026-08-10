@@ -2674,6 +2674,59 @@ private fun applyOfficialMarkers(
     return out.toAnnotatedString()
 }
 
+/** 官方行内标记的最终渲染节点：必须在 Markdown 的 CompositionLocalProvider 内调用。
+ *  流程：buildMarkdownAnnotatedString 生成基础样式 → applyOfficialMarkers 剥 \uE001-\uE007 并上色。
+ *  text / paragraph / heading1-6 / setextHeading1-2 全部走这里，否则默认组件会绕过管线。 */
+@Composable
+private fun OfficialMarkdownNode(
+    model: com.mikepenz.markdown.compose.components.MarkdownComponentModel,
+    style: androidx.compose.ui.text.TextStyle,
+    emColor: Color,
+    quoteColor: Color,
+    underlineColor: Color,
+) {
+    // 斜体 annotator 递归构建时需要同一份 settings；用 holder 避免初始化顺序问题
+    val settingsHolder = remember { arrayOfNulls<AnnotatorSettings>(1) }
+    val emAnnotator = remember(emColor) {
+        markdownAnnotator(
+            annotate = { content, child ->
+                // 官方 .mes_text i/em { color: emColor }：斜体单独着色；引号/下划线/字体色由
+                // applyOfficialMarkers 在最终 AnnotatedString 上按官方 CSS 层级统一处理
+                if (child.type == MarkdownElementTypes.EMPH) {
+                    pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
+                    settingsHolder[0]?.let { buildMarkdownAnnotatedString(content, child, it) }
+                    pop()
+                    true
+                } else {
+                    false
+                }
+            },
+        )
+    }
+    val mdSettings = annotatorSettings(
+        annotator = emAnnotator,
+        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
+    )
+    settingsHolder[0] = mdSettings
+    val built = remember(model.content, model.node, emAnnotator, quoteColor) {
+        buildAnnotatedString {
+            pushStyle(style.toSpanStyle())
+            buildMarkdownAnnotatedString(model.content, model.node, mdSettings)
+            pop()
+        }
+    }
+    val styled = remember(built, quoteColor, underlineColor) {
+        applyOfficialMarkers(built, quoteColor, underlineColor)
+    }
+    MarkdownText(
+        content = styled,
+        node = model.node,
+        modifier = Modifier.fillMaxWidth(),
+        style = style,
+        sourceContent = model.content,
+    )
+}
+
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
  *  Mermaid 代码块与开启“HTML 消息”后的富文本走 WebView 兜底（README 高级渲染）。 */
 @Composable
@@ -2722,26 +2775,9 @@ private fun ChatMarkdown(
     }
     val rawHtml = if (mermaid == null && (looksLikeHtml(displayContent) || interactiveBlock) && (htmlEnabled || officialHtml || interactiveBlock)) content else null
     val type = chatTypography()
-    var annotatorSettingsRef: AnnotatorSettings? = null
-    val emAnnotator = remember(emColor) {
-        markdownAnnotator(
-            annotate = { content, child ->
-                // 官方 .mes_text i/em { color: emColor }：斜体单独着色；引号/下划线/字体色由
-                // applyOfficialMarkers 在最终 AnnotatedString 上按官方 CSS 层级统一处理
-                if (child.type == MarkdownElementTypes.EMPH) {
-                    pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
-                    annotatorSettingsRef?.let { buildMarkdownAnnotatedString(content, child, it) }
-                    pop()
-                    true
-                } else {
-                    false
-                }
-            },
-        )
-    }
     // 官方 a { color: quoteColor }：链接用引用色。
     // 注意：annotatorSettings 默认参数会读 LocalMarkdownTypography / LocalReferenceLinkHandler，
-    // 必须在 Markdown 组件的 CompositionLocalProvider 内部创建（放这里=裸调用，会抛 No local MarkdownTypography）
+    // 必须在 Markdown 组件的 CompositionLocalProvider 内部创建（由 OfficialMarkdownNode 负责）
     when {
         mermaid != null -> WebViewHtml(mermaid, modifier)
         rawHtml != null -> WebViewHtml(
@@ -2755,30 +2791,18 @@ private fun ChatMarkdown(
             modifier = modifier.fillMaxWidth(),
             imageTransformer = Coil3ImageTransformerImpl,
             components = markdownComponents(
-                text = { model ->
-                    val mdSettings = annotatorSettings(
-                        annotator = emAnnotator,
-                        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
-                    )
-                    annotatorSettingsRef = mdSettings
-                    val built = remember(model.content, model.node, emAnnotator, quoteColor) {
-                        buildAnnotatedString {
-                            pushStyle(model.typography.text.toSpanStyle())
-                            buildMarkdownAnnotatedString(model.content, model.node, mdSettings)
-                            pop()
-                        }
-                    }
-                    val styled = remember(built, quoteColor, underlineColor) {
-                        applyOfficialMarkers(built, quoteColor, underlineColor)
-                    }
-                    MarkdownText(
-                        content = styled,
-                        node = model.node,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = model.typography.text,
-                        sourceContent = model.content,
-                    )
-                },
+                // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
+                // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
+                text = { model -> OfficialMarkdownNode(model, model.typography.text, emColor, quoteColor, underlineColor) },
+                paragraph = { model -> OfficialMarkdownNode(model, model.typography.paragraph, emColor, quoteColor, underlineColor) },
+                heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor) },
+                heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor) },
+                heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, emColor, quoteColor, underlineColor) },
+                heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, emColor, quoteColor, underlineColor) },
+                heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, emColor, quoteColor, underlineColor) },
+                heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, emColor, quoteColor, underlineColor) },
+                setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor) },
+                setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor) },
                 codeBlock = highlightedCodeBlock,
                 codeFence = highlightedCodeFence,
                 blockQuote = { model ->

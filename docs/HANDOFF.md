@@ -608,6 +608,20 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 
 
+
+## 8. 修复流式有色/完成后无色+引号两侧方框（第 188 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 现象：流式输出时引号/斜体等有官方颜色；生成完成后颜色消失，引号外侧出现两个方框（复制后是看不见的私有区字符）
+- 根因（对照 mikepenz markdown 0.43 `MarkdownExtension.kt` + `MarkdownParagraph.kt` + `MarkdownHeader.kt`）：
+  `MarkdownElement` 对 PARAGRAPH 走 `components.paragraph`、对 ATX 标题走 `components.heading*`，
+  而默认 `MarkdownParagraph` / `MarkdownHeader` 直接调 `MarkdownText`，**绕过自定义 text 组件**；
+  `preprocessOfficialHtml` 插入的 - 占位符在最终渲染里没人剥离 → 方框 + 不上色
+- 修复（ChatScreen.kt）：新增 `OfficialMarkdownNode`（构建 AnnotatedString → `applyOfficialMarkers` 剥占位符并上色 → MarkdownText），
+  `markdownComponents` 覆盖 `text / paragraph / heading1-6 / setextHeading1-2` 全部走同一管线；
+  斜体 annotator 与 annotatorSettings 移入该节点内部（保持第 187 轮的 provider 内创建要求）
+- 对照官方 script.js messageFormatting：引号对 → `<q>"…"</q>` 保留引号字符并整段引用色，本实现一致
+- 登记（未做）：表格单元格（MarkdownTable 内部直绘 MarkdownText）与任务列表 checkbox 文本仍可能残留占位符，属低频边缘场景，后续如需 1:1 需重写 table/checkbox 组件
+
 ## 8. 修复进聊天崩溃：No local MarkdownTypography（第 187 轮，2026-08-11，App/UI 层，未动引擎）
 
 - 现象：一进聊天（有消息的会话）直接崩，异常 `java.lang.IllegalStateException: No local MarkdownTypography`，
