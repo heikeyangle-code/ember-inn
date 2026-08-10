@@ -609,9 +609,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     val after = chatStore.messages(sessionId).toMutableList()
                     val aiIdx = after.indexOfLast { !isUser(it) }
                     if (aiIdx >= 0) {
-                        val combined = textOf(after[aiIdx]) + partial
-                        after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
-                        chatStore.replace(sessionId, after)
+                        chatStore.appendToCurrentSwipe(sessionId, aiIdx, partial)
                         refreshMessages()
                     }
                 }
@@ -1330,9 +1328,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
-                    val combined = textOf(after[aiIdx]) + reply
-                    after[aiIdx] = JsonObject(after[aiIdx].jsonObject + ("mes" to JsonPrimitive(combined)))
-                    chatStore.replace(sessionId, after)
+                    chatStore.appendToCurrentSwipe(sessionId, aiIdx, reply)
                     refreshMessages()
                 }
             }

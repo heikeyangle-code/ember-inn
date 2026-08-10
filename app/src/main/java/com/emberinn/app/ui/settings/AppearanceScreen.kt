@@ -133,6 +133,27 @@ fun AppearanceScreen(
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
+                val immersiveContext = LocalContext.current
+                var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(immersiveContext)) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(immersiveContext, immersive) }
+                        .padding(vertical = 10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("沉浸模式（隐藏消息常驻操作按钮）", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "默认关=最后一条 AI 消息常驻 4 键；开=全部操作收进长按菜单",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it) })
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 ComingSoonCard()
             }
         }

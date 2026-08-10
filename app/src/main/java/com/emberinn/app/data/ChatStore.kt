@@ -655,6 +655,23 @@ class ChatStore(private val context: Context) {
     }
 
     /** 删除指定下标的一条消息（重新生成/删除消息用；对齐官方删除消息后落盘 jsonl）。 */
+    /** continue 续写追加：mes 与 swipes[swipe_id] 同步更新（官方 saveReply('continue') 后滑走滑回不丢续写）。 */
+    fun appendToCurrentSwipe(sessionId: String, index: Int, text: String): Boolean {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return false
+        val el = list[index].jsonObject
+        val curMes = el["mes"]?.jsonPrimitive?.contentOrNull ?: return false
+        val combined = curMes + text
+        val swipes = swipesOf(el).toMutableList()
+        if (swipes.isNotEmpty()) {
+            val cur = currentSwipeId(el).coerceIn(0, swipes.lastIndex)
+            swipes[cur] = combined
+        }
+        list[index] = JsonObject(el + ("mes" to JsonPrimitive(combined)) + ("swipes" to JsonArray(swipes.map { JsonPrimitive(it) })))
+        save(sessionId, list)
+        return true
+    }
+
     /** 整体替换某会话消息（重新生成/继续/清空会话用）。 */
     fun replace(sessionId: String, elements: List<JsonElement>) {
         val removed = messages(sessionId).filter { old -> elements.none { it == old } }

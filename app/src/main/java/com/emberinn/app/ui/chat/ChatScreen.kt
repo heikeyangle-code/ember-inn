@@ -6,6 +6,7 @@ import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -407,7 +408,8 @@ fun ChatScreen(
                             val el = item.element
                             val isUserMsg = isUser(el)
                             val text = textOf(el)
-                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg
+                            val immersiveActions = AppearancePrefs.immersiveActions(context)
+                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !immersiveActions
                             val swipeCount = vm.swipeCountOf(el)
                             val curSwipe = vm.currentSwipeOf(el)
                             val isPrevSameSender =

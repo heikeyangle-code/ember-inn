@@ -13,6 +13,15 @@ object AppearancePrefs {
     fun font(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("font", "default") ?: "default"
 
+    fun immersiveActions(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("immersive_actions", false)
+
+    fun setImmersiveActions(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("immersive_actions", enabled)
+            .apply()
+    }
+
     fun save(context: Context, radius: String, font: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("radius", radius)
