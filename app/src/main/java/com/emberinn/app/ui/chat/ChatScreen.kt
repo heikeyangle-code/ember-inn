@@ -112,7 +112,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.toSpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
@@ -2582,12 +2581,11 @@ private fun applyOfficialMarkers(
     }
     for (f in fontSpans) f.color?.let { finalSpans += AnnotatedString.Range(SpanStyle(color = it), f.start, f.end) }
 
-    return AnnotatedString(
-        text = stripped,
-        spanStyles = finalSpans,
-        paragraphStyles = mappedParagraphs,
-        inlineContent = source.inlineContent,
-    )
+    val out = AnnotatedString.Builder(stripped)
+    for (span in finalSpans) out.addStyle(span.item, span.start, span.end)
+    for (p in mappedParagraphs) out.addStyle(p.item, p.start, p.end)
+    out.inlineContent.putAll(source.inlineContent)
+    return out.toAnnotatedString()
 }
 
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
