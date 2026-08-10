@@ -214,6 +214,13 @@ object SlashRegistry : SlashCommandResolver {
             ),
         )
 
+        // ---- 会话/输入/背景/冒充命令（官方 slash-commands.js；真正执行由 App SlashMessageActions 注入，引擎占位）----
+        register(SlashCommandDef("renamechat", description = "重命名当前会话", callback = { _, _ -> "OK:renamechat" }))
+        register(SlashCommandDef("getchatname", description = "返回当前会话名（管道）", callback = { _, _ -> "OK:getchatname" }))
+        register(SlashCommandDef("setinput", description = "设置输入框文本并传给管道", rawQuotes = true, callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") }))
+        register(SlashCommandDef("bg", aliases = listOf("background"), description = "设置/清除/读取聊天背景", rawQuotes = true, callback = { inv, _ -> inv.unnamedArgs.joinToString(" ") }))
+        register(SlashCommandDef("impersonate", aliases = listOf("imp"), description = "触发冒充生成（prompt=可选冒充提示）", rawQuotes = true, callback = { inv, _ -> "OK:impersonate:${inv.unnamedArgs.joinToString(" ")}" }))
+
         // ---- 消息类命令（官方 slash-commands.js；真正执行由 App SlashMessageActions 注入，引擎占位）----
         register(SlashCommandDef("send", description = "以用户身份发送消息", rawQuotes = true, callback = { inv, _ -> "OK:send:${inv.namedArgs["name"] ?: ""}:${inv.unnamedArgs.joinToString(" ")}" }))
         register(SlashCommandDef("sysname", description = "设置本会话旁白显示名", callback = { inv, _ -> "OK:sysname:${inv.unnamedArgs.joinToString(" ")}" }))

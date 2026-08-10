@@ -175,6 +175,7 @@ fun ChatScreen(
     val contextUsage by vm.contextUsage.collectAsState()
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
+    val inputDraft by vm.inputDraft.collectAsState()
     val chatBackground by vm.chatBackground.collectAsState()
     val personas by vm.personas.collectAsState()
     val activePersona by vm.activePersona.collectAsState()
@@ -290,6 +291,14 @@ fun ChatScreen(
         impersonated?.let {
             input = it
             vm.consumeImpersonation()
+        }
+    }
+
+    // /setinput：官方 setinput 把文本写进输入框（用户可改可发）
+    LaunchedEffect(inputDraft) {
+        inputDraft?.let {
+            input = it
+            vm.clearInputDraft()
         }
     }
 

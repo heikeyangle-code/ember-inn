@@ -370,6 +370,49 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _notice.value = "（$text）"
     }
 
+    override fun renameChat(name: String): String {
+        if (name.isBlank()) return "（/renamechat 需要提供名字）"
+        chatStore.renameSession(sessionId, name.trim())
+        return ""
+    }
+
+    override fun chatName(): String = sessionName()
+
+    override fun setInput(text: String): String {
+        _inputDraft.value = text
+        return text
+    }
+
+    override fun setBackground(text: String): String {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return _chatBackground.value.orEmpty()
+        if (trimmed == "clear") {
+            clearChatBackground()
+            return ""
+        }
+        // 官方 /bg 按背景文件名匹配；App 直接存 URL/路径（近似，HANDOFF 登记）
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        meta["custom_background"] = JsonPrimitive(trimmed)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _chatBackground.value = trimmed
+        return trimmed
+    }
+
+    override fun impersonate(prompt: String): String {
+        if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            return "（未配置模型，请先选一个模型。）"
+        }
+        startStream(
+            history = chatStore.messages(sessionId),
+            type = "impersonate",
+            impersonation = true,
+            impersonationPrompt = prompt.trim().ifBlank { ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT },
+        )
+        return ""
+    }
+
     private fun narrateText(text: String) {
         val voice = VoicePrefs.read(getApplication())
         if (!voice.enabled) return
@@ -501,6 +544,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 瞬态提示（未配置模型 / 请求失败），只显示不落盘。 */
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice
+
+    /** /setinput 输入框草稿：ChatScreen 消费后清空。 */
+    private val _inputDraft = MutableStateFlow<String?>(null)
+    val inputDraft: StateFlow<String?> = _inputDraft
+
+    fun clearInputDraft() {
+        _inputDraft.value = null
+    }
 
     /** 每次进入聊天页调用：读盘刷新一次（设置页已保存过则直接由 ProviderState 同步）。 */
     fun refreshProviderConfigured() {

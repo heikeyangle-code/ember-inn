@@ -20,6 +20,11 @@ class AppSlashExecutorTest {
         override fun deleteMessagesByName(name: String): Int { calls += "delname:$name"; return 2 }
         override fun addSwipe(text: String, switch: Boolean): String { calls += "addswipe:$switch:$text"; return "1" }
         override fun deleteSwipe(id: Int?): String { calls += "delswipe:$id"; return "0" }
+        override fun renameChat(name: String): String { calls += "renamechat:$name"; return "" }
+        override fun chatName(): String { calls += "getchatname"; return "会话A" }
+        override fun setInput(text: String): String { calls += "setinput:$text"; return text }
+        override fun setBackground(text: String): String { calls += "bg:$text"; return "bg.png" }
+        override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
         override fun notify(text: String) { calls += "notify:$text" }
     }
 
@@ -64,6 +69,18 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/addswipe switch=true 新回复 | /delswipe 2")
         assertEquals(listOf("addswipe:true:新回复", "delswipe:2"), a.calls)
+    }
+
+    @Test
+    fun `renamechat getchatname setinput bg impersonate forward to actions`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute(
+            "/renamechat 新会话 | /getchatname | /setinput 你好世界 | /bg clear | /impersonate 写一句旁白",
+        )
+        assertEquals(
+            listOf("renamechat:新会话", "getchatname", "setinput:你好世界", "bg:clear", "impersonate:写一句旁白"),
+            a.calls,
+        )
     }
 
     @Test

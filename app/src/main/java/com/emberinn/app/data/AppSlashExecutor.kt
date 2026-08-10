@@ -37,6 +37,16 @@ interface SlashMessageActions {
     fun addSwipe(text: String, switch: Boolean): String
     /** /delswipe：id 1 起，null 删当前；返回新当前 swipe_id 文本。 */
     fun deleteSwipe(id: Int?): String
+    /** /renamechat：重命名当前会话；空名返回提示文本。 */
+    fun renameChat(name: String): String
+    /** /getchatname：返回当前会话名（进管道）。 */
+    fun chatName(): String
+    /** /setinput：设置输入框文本，并把文本传给管道。 */
+    fun setInput(text: String): String
+    /** /bg：无参返回当前背景；clear 清除；否则设置背景（URL/路径）。 */
+    fun setBackground(text: String): String
+    /** /impersonate：触发冒充生成（prompt 可选，覆盖默认冒充提示）；返回提示文本。 */
+    fun impersonate(prompt: String): String
 }
 
 /**
@@ -140,6 +150,36 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             callback = { inv, _ ->
                 actions.deleteSwipe(inv.unnamedArgs.firstOrNull()?.toIntOrNull())
             },
+        ),
+        SlashCommandDef(
+            "renamechat",
+            description = "重命名当前会话（官方 renamechat）",
+            callback = { inv, _ -> actions.renameChat(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "getchatname",
+            description = "返回当前会话名（官方 getchatname，进管道）",
+            callback = { _, _ -> actions.chatName() },
+        ),
+        SlashCommandDef(
+            "setinput",
+            description = "设置输入框文本并传给管道（官方 setinput）",
+            rawQuotes = true,
+            callback = { inv, _ -> actions.setInput(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "bg",
+            aliases = listOf("background"),
+            description = "设置/清除/读取聊天背景（官方 bg；无参=返回当前，clear=清除）",
+            rawQuotes = true,
+            callback = { inv, _ -> actions.setBackground(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "impersonate",
+            aliases = listOf("imp"),
+            description = "触发冒充生成（官方 impersonate；prompt 可选）",
+            rawQuotes = true,
+            callback = { inv, _ -> actions.impersonate(inv.unnamedArgs.joinToString(" ")) },
         ),
     )
 
