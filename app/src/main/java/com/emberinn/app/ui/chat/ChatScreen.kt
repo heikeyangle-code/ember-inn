@@ -2061,7 +2061,7 @@ private fun ChatInputBar(
                 if (pendingMedia.count { it.type == "image" } > 1) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, top = 6.dp),
+                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp),
                     ) {
                         Text("显示：", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(8.dp))
