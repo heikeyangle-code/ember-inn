@@ -376,7 +376,7 @@ fun AppearanceScreen(
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("聊天背景（头像玻璃 + 遮罩）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "优先级：显式背景 > 头像玻璃背景 > 氛围渐变；模糊与遮罩保证正文可读",
+                            "优先级：显式背景 > 头像玻璃背景 > 氛围渐变；模糊五档与遮罩保证正文可读",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -387,15 +387,18 @@ fun AppearanceScreen(
                                 onCheckedChange = { glassOn = it; AppearancePrefs.saveChatBgAvatarGlass(glassContext, it); onAppearanceChanged() },
                             )
                         }
-                        SliderRow(
-                            label = "模糊强度",
-                            hint = "0 = 不模糊；复杂头像建议 24+",
-                            value = bgBlur.toFloat(),
-                            range = 0f..48f,
-                        ) { v ->
-                            bgBlur = v.toInt()
-                            AppearancePrefs.saveChatBgBlur(glassContext, v.toInt())
-                            onAppearanceChanged()
+                        Text("模糊档位", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf(0 to "无", 12 to "轻", 24 to "标准", 36 to "重", 48 to "极").forEach { (v, label) ->
+                                FilterChip(
+                                    selected = bgBlur == v,
+                                    onClick = { bgBlur = v; AppearancePrefs.saveChatBgBlur(glassContext, v); onAppearanceChanged() },
+                                    label = { Text(label) },
+                                )
+                            }
                         }
                         ColorField(
                             label = "深色遮罩颜色",
@@ -426,6 +429,24 @@ fun AppearanceScreen(
                             scrimLight = v.toInt()
                             AppearancePrefs.saveChatBgScrimLight(glassContext, v.toInt())
                             onAppearanceChanged()
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        ) {
+                            TextButton(onClick = {
+                                glassOn = true
+                                bgBlur = 24
+                                scrimDark = 65
+                                scrimLight = 30
+                                AppearancePrefs.saveChatBgAvatarGlass(glassContext, true)
+                                AppearancePrefs.saveChatBgBlur(glassContext, 24)
+                                AppearancePrefs.saveChatBgScrimDark(glassContext, 65)
+                                AppearancePrefs.saveChatBgScrimLight(glassContext, 30)
+                                AppearancePrefs.saveChatBgScrimDarkColor(glassContext, "#000000")
+                                AppearancePrefs.saveChatBgScrimLightColor(glassContext, "#FFFFFF")
+                                onAppearanceChanged()
+                            }) { Text("恢复默认") }
                         }
                     }
                 }

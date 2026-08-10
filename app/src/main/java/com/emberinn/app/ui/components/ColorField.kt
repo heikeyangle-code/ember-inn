@@ -33,7 +33,7 @@ import com.emberinn.app.ui.icons.PhosphorIcons
  *  选色盘支持 #RRGGBB / #AARRGGBB / 3 位简写。 */
 @Composable
 fun ColorField(label: String, hint: String, value: String, onSave: (String) -> Unit) {
-    var draft by remember(label) { mutableStateOf(value) }
+    var draft by remember(label, value) { mutableStateOf(value) }
     var showPicker by remember { mutableStateOf(false) }
     val current = parseHexColor(draft)
     val swatchShape = RoundedCornerShape(8.dp)
