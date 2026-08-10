@@ -376,6 +376,53 @@ fun AppearanceScreen(
                     }
                 }
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val typeContext = LocalContext.current
+                var textSize by remember { mutableStateOf(AppearancePrefs.textSize(typeContext)) }
+                var lineHeight by remember { mutableStateOf(AppearancePrefs.lineHeight(typeContext)) }
+                var headingStyle by remember { mutableStateOf(AppearancePrefs.headingStyle(typeContext)) }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("文字排版", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "聊天正文与标题的层级、字号、行高，全部可调",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text("正文字号", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf("small" to "小 14", "normal" to "标准 16", "large" to "大 18", "xlarge" to "特大 20").forEach { (v, label) ->
+                                FilterChip(selected = textSize == v, onClick = { textSize = v; AppearancePrefs.saveTextSize(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
+                            }
+                        }
+                        Text("行高", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf("compact" to "紧凑 1.4", "normal" to "标准 1.55", "loose" to "宽松 1.7").forEach { (v, label) ->
+                                FilterChip(selected = lineHeight == v, onClick = { lineHeight = v; AppearancePrefs.saveLineHeight(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
+                            }
+                        }
+                        Text("标题层级", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf("flat" to "聊天风（标题缩小）", "real" to "正常层级（标题放大）").forEach { (v, label) ->
+                                FilterChip(selected = headingStyle == v, onClick = { headingStyle = v; AppearancePrefs.saveHeadingStyle(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
+                            }
+                        }
+                    }
+                }
+            }
         }
         if (fontDownloading) {
             AlertDialog(

@@ -565,6 +565,19 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 文字排版可调（第 168 轮，2026-08-11，用户反馈字体“平/一样大”）
+
+- 渲染组件确认：mikepenz multiplatform-markdown-renderer 0.43（m3 Markdown），ChatMarkdown 故意把
+  h1-h6 降级为 titleMedium/titleSmall、正文固定 bodyMedium 16sp/24.8 行高 → “平/一样大”是聊天风设计，不是坏
+- 已加设置（外观与主题 → 文字排版）：
+  - 正文字号：小 14 / 标准 16 / 大 18 / 特大 20
+  - 行高：紧凑 1.4 / 标准 1.55 / 宽松 1.7
+  - 标题层级：聊天风（标题缩小，默认）/ 正常层级（标题放大）
+- 实现：ChatMarkdown 用 chatTypography() 按设置构造 markdownTypography（h1-h6/text/paragraph/quote/code/inlineCode），
+  即时生效（onAppearanceChanged 贯通）
+- 调研：该库支持逐项 TextStyle 定制；Compose 聊天长列表要点=稳定 key + item 内不干重活（已做缓存）；
+  reverseLayout（键盘贴底）暂不动（影响滑动切回复/日期逻辑）
+
 ## 8. 进聊天滚底 + 缓存副作用修复（第 167 轮，2026-08-11）
 
 - 用户反馈：从角色卡进聊天，内容延迟约 1 秒才出现且不滚到底

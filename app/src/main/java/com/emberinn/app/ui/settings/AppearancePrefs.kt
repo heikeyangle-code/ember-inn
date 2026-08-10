@@ -73,6 +73,36 @@ object AppearancePrefs {
             .apply()
     }
 
+    /** 聊天文字排版：正文字号档（small/normal/large/xlarge）。 */
+    fun textSize(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("text_size", "normal") ?: "normal"
+
+    fun saveTextSize(context: Context, size: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("text_size", size)
+            .apply()
+    }
+
+    /** 行高档（compact/normal/loose）。 */
+    fun lineHeight(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("line_height", "normal") ?: "normal"
+
+    fun saveLineHeight(context: Context, height: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("line_height", height)
+            .apply()
+    }
+
+    /** 标题层级：flat=聊天风（标题缩小），real=正常层级（标题放大）。 */
+    fun headingStyle(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("heading_style", "flat") ?: "flat"
+
+    fun saveHeadingStyle(context: Context, style: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("heading_style", style)
+            .apply()
+    }
+
     fun saveLastSessionId(context: Context, sessionId: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("last_session_id", sessionId)
