@@ -2381,9 +2381,8 @@ private fun timeOf(el: JsonElement): String {
         Instant.parse(raw).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("HH:mm"))
     }.getOrDefault("")
-
+}
 
 /** 是否系统消息（/hide 隐藏、/comment 注释等；官方 coreChat 过滤 is_system）。 */
 private fun isSystem(el: JsonElement): Boolean =
     el.jsonObject["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
-}
