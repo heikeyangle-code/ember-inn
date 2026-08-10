@@ -654,7 +654,6 @@ fun CharacterDetailScreen(
                         }
                     }
                 }
-                }
             }
         }
 
