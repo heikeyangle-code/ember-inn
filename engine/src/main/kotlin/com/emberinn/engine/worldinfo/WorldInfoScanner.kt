@@ -319,11 +319,7 @@ class WorldInfoScanner(
 
         activated.sortedWith(compareByDescending { it.order }).forEach { entry ->
             // 对齐官方 BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO, ...)
-            val regexDepth = if (entry.position == WorldInfoConstants.POSITION_AT_DEPTH) {
-                entry.depth ?: WorldInfoConstants.DEFAULT_DEPTH
-            } else {
-                null
-            }
+            val regexDepth = WorldInfoConstants.regexDepthOf(entry.position, entry.depth)
             val content = contentTransformer(entry.content, regexDepth, entry.position)
             if (content.isEmpty()) return@forEach
             when (entry.position) {

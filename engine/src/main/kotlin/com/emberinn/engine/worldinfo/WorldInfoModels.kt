@@ -17,6 +17,10 @@ object WorldInfoConstants {
     const val POSITION_AN_TOP = 2
     const val POSITION_AN_BOTTOM = 3
     const val POSITION_AT_DEPTH = 4
+
+    /** 官方 world-info.js BUILDING PROMPT：regexDepth = position===atDepth ? (depth ?? DEFAULT_DEPTH) : null */
+    fun regexDepthOf(position: Int, depth: Int?): Int? =
+        if (position == POSITION_AT_DEPTH) depth ?: DEFAULT_DEPTH else null
     const val POSITION_EM_TOP = 5
     const val POSITION_EM_BOTTOM = 6
     const val POSITION_OUTLET = 7
