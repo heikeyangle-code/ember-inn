@@ -605,70 +605,10 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
-## 8. 扩展插件 10 个独立开关（第 181 轮，2026-08-11，用户改为“每个功能单独一个开关”，角色卡调研）
+## 8. 扩展插件体系（第 178–181 轮，2026-08-11）
 
-**角色卡常用插件调研（tavernsprite 榜 / 酒馆实用插件帖 / SimTracker / RPG Companion / MVU / CardForge / MagVarUpdate）**：
-- 角色卡常用能力 = 交互 HTML 状态栏（Tavern Helper/注入器）、变量系统（MVU/state 语法，HP/好感/背包）、
-  头像类、表情系统（Character Expressions）、TTS、记忆总结（Horae/Amily/表格记忆）、Quick Reply、文生图、对话着色
-- 我们已有等价物：TTS（语音页）、记忆（向量 RAG）、Quick Reply、文生图（服务页）、对话着色（消息渲染字段）、
-  交互 HTML 卡片 + 头像类（第 179/180 轮）
-- 变量系统（MVU）与表情系统涉及引擎层/大功能，登记不实现；用户头像宏暂空（官方 Persona 无头像字段）
-
-**已实现（10 个开关，默认全开，设置 → 扩展插件）**：
-| 开关 | 行为 |
-|---|---|
-| 交互 HTML 卡片 | ``` 内 HTML 代码块 → iframe 运行（关=按普通代码块显示） |
-| 消息内 JavaScript | WebView JS 开关（Mermaid 强制开） |
-| 远程图片与网络加载 | 关=http(s) 全部拦截 |
-| 链接用系统浏览器打开 | 关=WebView 内打开 |
-| 自动测高 | 关=量一次固定高度 |
-| 角色头像类 .char-avatar / {{charAvatarPath}} | 关=不注入头像 CSS/宏 |
-| 原代码折叠 | 关=只显示卡片不显示原代码 |
-| Mermaid 图表 | 关=按普通代码块显示 |
-| HTML 消息渲染 | 复用 RenderPrefs（外观页同一开关） |
-| 拦截 javascript: 链接 | 关=完全放行（不推荐） |
-
-## 8. 扩展插件总开关 + 必要能力补齐（第 180 轮，2026-08-11；用户随后改为每功能独立开关，见第 181 轮）
-
-**全网调研（tavernsprite 最佳扩展榜 / 小酒窝插件帖 / SillyTavern 扩展清单 / 酒馆助手文档）**：
-- 常用插件 = 交互 HTML 卡片（Tavern Helper/HTML 注入器）、表情系统（Character Expressions）、VN 视觉小说模式、
-  TTS/STT、记忆总结（Horae/Amily）、文生图、Quick Reply、追踪卡片（SimTracker/RPG Companion）、状态栏（Larson）、对话着色等
-- 我们已有等价物：TTS（语音页）、文生图（服务页 A1111/gpt-image）、记忆（向量 RAG）、Quick Reply、对话着色（消息渲染字段）、主题背景（VN 类氛围）
-- 决定：扩展区只做**一个总开关**（用户拍板），把最必要的卡片能力补齐；表情/VN/STT/EJS 变量等登记不实现
-
-**已实现（commit 待推）**：
-- ExtensionPrefs.interactiveCards + ExtensionsScreen（设置 → 扩展插件，一个主开关，默认开）
-- 关闭总开关 → ``` 内 HTML 代码块不再转 iframe，按普通代码块原生显示
-- 角色头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` 宏（对齐 Tavern Helper）：WebView 注入 CSS 背景图；
-  角色头像从 MessageRow 传入（vm.avatarPath）；用户头像字段官方 Persona 无头像，暂空
-- 原代码折叠：交互块上方 `<details><summary>原代码</summary>` 默认收起（对齐“启用代码折叠”）
-- allowFileAccess=true 保证 file:// 头像可加载
-
-**登记（未做）**：min-height: vh 换算；user 头像宏；Character Expressions/VN/STT；EJS/变量管理器（引擎层，需 JS 引擎+差分）；
-后台脚本库（页面级自动化）；插件市场/扩展安装器
-
-## 8. 交互代码块渲染器内嵌（第 179 轮，2026-08-11）
-
-- 已内嵌“交互 HTML 卡片”渲染器（commit 560f251）：消息里 ``` 包着、内容像 HTML 的代码块 → 独立 iframe 运行，卡内脚本可交互
-- 机制、对照源码、差分结论、能力对照、安全与许可证：全部见 **第 10 章 扩展插件（交互 HTML 卡片 / iframe 渲染器）**
-- 本轮只记录结论：App 层实现，引擎未动；CI 以 560f251 为准
-
-## 8. 交互页面全开 + 气泡关闭行为确认（第 178 轮，2026-08-11，用户明确“活动页=交互页面”）
-
-**用户决定**：之前说的“能点的卡片/交互页面”就是活动页（带脚本的网页），全部放开，JS 开启。
-- WebViewHtml 去掉 jsEnabled 参数，settings.javaScriptEnabled/domStorageEnabled 恒为 true（HTML 消息与 Mermaid 都开）
-- sanitizeHtmlForWebView 缩减为只把 javascript: URL 替换成 blocked:（防卡片内脚本导航）；script/iframe/object/embed/link/on* 全部放行
-- **安全风险登记（已知偏差）**：消息现在可运行任意 JS、可发网络请求；因没有 addJavascriptInterface/JS 桥，脚本碰不到 Android API 和本地文件（除 WebView 内的 asset）；官方 DOMPurify 禁脚本，此为有意偏差，后续若收紧先改这里
-- 链接行为不变：http(s) 顶层导航仍走系统浏览器（shouldOverrideUrlLoading）；页面内 AJAX/轮播/弹层/表单等 JS 行为在卡片内正常
-
-**网页式消息的嵌入表现（维护速记）**：
-- 整条 HTML 套进我们注入官方字段 CSS 的最小页面壳，在透明 WebView 里渲染；消息自带的 <html>/<head>/<body>/<title> 被浏览器忽略，按“网页片段”显示
-- 背景透明 + 圆角裁剪（12dp）+ 自动测高（onPageFinished 取 scrollHeight）；高度上限 420dp，超出后卡片内部自己滚动，不撑爆聊天列表
-- 消息自带 <style> 可改整卡背景/颜色（全放开后的正常行为）
-- 视频/音频 <video controls>/<audio controls> 可播放；无 controls 的不自动播
-- JS 交互页（轮播、按钮弹层、表单）现在能跑；<a> 点击仍走系统浏览器
-
-**气泡关闭时（气泡样式≠bubble）**：AI 消息直接走 ChatMarkdown 无 Surface 路径，WebView 仍透明底 + 自带圆角 + 自动测高，显示正常；combinedClickable 长按菜单不挡 WebView 内部触摸。用户消息始终是右侧胶囊气泡，不受影响。
+- JS 全开、iframe 交互卡片、头像类/宏、原代码折叠、10 个独立开关、角色卡插件调研、安全登记：全部并入 **第 10 章 扩展插件**。
+- 第 177 轮（Web 兜底全放开 + 官方字段映射后处理）属渲染层，保留在 177。
 
 ## 8. Web 兜底全部放开 + 官方映射后处理（第 177 轮，2026-08-11，用户要求全放开不加开关）
 
@@ -931,7 +871,7 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 - 官方本体通过 DOMPurify 剥掉消息里的 `<script>` 和 `on*`，所以“角色卡消息自带 JS 交互”在官方里跑不了。
 - 网上那些“能点的按钮、能动的状态栏”，靠的是第三方扩展：**Tavern Helper（酒馆助手）渲染器** 和 **阡濯《ST酒馆 html 代码注入器》**。
   机制都是同一个：消息里 ``` 包起来的 HTML 代码块 → 放进独立 iframe 网页运行，卡内 `<script>`/`onclick`/Vue/React 在 iframe 里正常执行。
-- 我们按同一机制在 App 里实现了等价渲染器（第 179 轮，commit 560f251），并且因为 WebView JS 已全开（第 178 轮），效果等同甚至更直接。
+- 我们按同一机制在 App 里实现了等价渲染器（commit 560f251），JS 全开（178 轮），设置页 10 个开关（commit b622473）。
 
 ### 10.2 对照了哪些源代码 / 差分结论
 | 参照 | 用途 | 是否差分 |
@@ -941,9 +881,9 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 | 阡濯《ST酒馆 html 代码注入器》userscript（greasyfork 503174，CC BY-NC 4.0） | ``` 内以 `<` 开头以 `>` 结尾 → iframe；contentWindow.scrollHeight 测高 | 否（只参考机制，未复制代码） |
 - **差分验证：未做、也不适用**。差分体系（60 组 / 961 例）只保证“官方引擎逻辑 1:1”；这是第三方扩展 + App/UI 层，按 README/HANDOFF 规则为 UI 自主。验证方式 = CI 编译 + 本文行为规则 + 手工回归清单（见 10.5）。
 - 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
-- 设置与开关是 App 层自主 UI，不参与差分；总开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
+- 设置与开关是 App 层自主 UI，不参与差分；10 个开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
 
-### 10.3 设置入口与开关（第 181 轮，每功能独立开关，默认全开）
+### 10.3 设置页与 10 个开关（“10 个开关”= 扩展插件页里的独立功能开关，默认全开）
 - 设置 → **扩展插件**（`ExtensionsScreen` / `ExtensionPrefs`，共 10 个开关）：
   1. 交互 HTML 卡片（interactiveCards）
   2. 消息内 JavaScript（messageJs；Mermaid 强制开）
@@ -955,6 +895,7 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
   8. Mermaid 图表（mermaid）
   9. HTML 消息渲染（复用 RenderPrefs.htmlEnabled）
   10. 拦截 javascript: 链接（blockJavascriptUrls；安全项，默认开）
+- 9 号复用外观页同一开关（RenderPrefs.htmlEnabled），避免双份状态。
 - 各开关接线点：ChatMarkdown（1/8/9/10）、WebViewHtml（2/3/4/5）、officialStyledHtml（6/7）。
 
 ### 10.4 实现位置与行为（维护必读）
@@ -966,28 +907,40 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 - `ChatScreen.kt / WebViewHtml`：JS 恒开（第 178 轮）、网络与外链放开（第 177 轮）；`onPageFinished` 轮询测高（≤20 次、200ms 间隔、连续 2 次相同即停），等 iframe 加载完再撑外层高度；外层高度上限仍 420dp，超出后卡片内部滚动。
 - 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
 
-### 10.4 与 Tavern Helper 能力对照
+### 10.5 与 Tavern Helper 能力对照
 | 能力 | 状态 |
 |---|---|
-| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
+| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现（受 interactiveCards 开关控制） |
 | 非交互代码块保留显示 | ✅ 已实现（pre/code） |
-| iframe 自动测高 | ✅ 已实现（onload + 外层轮询） |
+| iframe 自动测高 | ✅ 已实现（onload + 外层轮询；受 autoHeight 开关控制） |
 | 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
-| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
-| `{{charAvatarPath}}`/`{{userAvatarPath}}` 宏 | ➖ 未做（同上） |
+| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS，受 avatarClasses 开关控制；`{{userAvatarPath}}` 暂空，登记） |
 | `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
-| 原代码折叠（details 默认收起） | ✅ 已实现（第 180 轮） |
+| 原代码折叠（details 默认收起） | ✅ 已实现（受 codeFolding 开关控制） |
 | 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
-| 表情/VN/STT/EJS 变量/插件市场 | ➖ 登记（第 180 轮调研），不做 |
+| 表情/VN/STT/EJS 变量/插件市场 | ➖ 登记（见 10.6 调研），不做 |
 
-### 10.5 手工回归清单
+### 10.6 角色卡常用插件调研与对照（2026-08-11 全网调研）
+| 角色卡常用能力 | 代表插件 | 我们现状 |
+|---|---|---|
+| 交互 HTML 状态栏/按钮/追踪器 | Tavern Helper 渲染器、HTML 注入器、SimTracker、RPG Companion、Larson | ✅ 第 10 章 iframe 渲染器 + JS |
+| 变量系统（HP/好感/背包，MVU/state 语法） | MagVarUpdate、MVU Game Maker、CardForge | ➖ 引擎层，需变量存储与注入，登记不实现 |
+| 头像类/宏 | Tavern Helper | ✅ 角色头像；user 头像暂空 |
+| 表情系统 | Character Expressions | ➖ 登记不实现 |
+| TTS | 官方 TTS / Dynamic Audio | ✅ 语音页已实现 |
+| 记忆/总结 | Horae、Amily、表格记忆 | ✅ 向量 RAG 已实现 |
+| Quick Reply 快捷回复 | 官方 Quick Reply | ✅ 已实现 |
+| 文生图 | Stable Diffusion 扩展 | ✅ 服务页已接入 |
+| 对话着色 | Dialogue Colorize | ✅ 消息渲染字段已实现 |
+
+### 10.7 手工回归清单
 1. 消息 = 单个 ``` 包着 `<html><body><button onclick=...>`：卡片内按钮可点、脚本执行、高度自适应、不撑爆列表
 2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
 3. 纯 HTML 消息（无代码围栏）：行为同第 177/178 轮（透明底、图片加载、外链跳系统浏览器）
 4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
 5. 长交互页：外层 420dp 上限，内部滚动正常，聊天列表滚动不被卡死
 
-### 10.6 安全登记
+### 10.8 安全与许可证
 - 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；无 JS 桥，碰不到 Android API/本地文件（除 asset）。
 - 与第 178 轮 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
