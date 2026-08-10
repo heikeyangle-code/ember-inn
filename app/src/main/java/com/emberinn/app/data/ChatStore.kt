@@ -99,6 +99,8 @@ class ChatStore(private val context: Context) {
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
+            // 官方消息 extra 统一带 gen_id（Date.now()），jsonl 与 ST 互操作
+            put("gen_id", JsonPrimitive(System.currentTimeMillis()))
             if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
                 put("inline_image", JsonPrimitive(true))
@@ -297,6 +299,7 @@ class ChatStore(private val context: Context) {
         if (!api.isNullOrBlank()) oldExtra["api"] = JsonPrimitive(api)
         if (!model.isNullOrBlank()) oldExtra["model"] = JsonPrimitive(model)
         if (!reasoning.isNullOrBlank()) oldExtra["reasoning"] = JsonPrimitive(reasoning)
+        oldExtra["gen_id"] = JsonPrimitive(System.currentTimeMillis())
         val extra = JsonObject(oldExtra)
         val now = genStarted ?: java.time.Instant.now().toString()
         swipes += content
@@ -567,6 +570,7 @@ class ChatStore(private val context: Context) {
             put(
                 "extra",
                 buildJsonObject {
+                    put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
                 },
@@ -586,6 +590,7 @@ class ChatStore(private val context: Context) {
                         "send_date" to JsonPrimitive(now),
                         "extra" to JsonObject(
                             ((updated["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()).apply {
+                                put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                                 put("api", JsonPrimitive("manual"))
                                 put("model", JsonPrimitive("slash command"))
                             },
