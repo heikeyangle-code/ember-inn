@@ -257,11 +257,18 @@ class ChatPromptFactory {
             )
         }
 
-        // 示例对话
-        val examples = if (fields.mesExamples.isNotEmpty()) {
-            val blocks = PromptUtils.parseMesExamples(fields.mesExamples)
-            PromptPipeline.setOpenAIMessageExamples(blocks, userName, charName)
-        } else emptyList()
+        // 示例对话：官方先建卡内 mes_example，再把世界书 EM 锚点示例 unshift/push 进同一数组
+        val exampleBlocks = mutableListOf<String>()
+        exampleBlocks += PromptUtils.parseMesExamples(fields.mesExamples)
+        for (em in wiResult.emEntries) {
+            val parsed = PromptUtils.parseMesExamples(em.content)
+            if (em.position == 0) {
+                parsed.reversed().forEach { exampleBlocks.add(0, it) }
+            } else {
+                exampleBlocks += parsed
+            }
+        }
+        val examples = PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
 
         val result = PromptPipeline.prepare(
             PromptPipeline.PrepareInput(

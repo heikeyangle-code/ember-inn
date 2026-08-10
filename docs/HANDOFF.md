@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 102（2026-08-10：世界书 EM 锚点示例对话接线 + outlet 边界核实）
+
+- 审计发现 EM 锚点（POSITION_EM_TOP/EM_BOTTOM）也只在 scanner 算出、未进提示词
+- 修复：ChatPromptFactory 按官方 script.js 语义把 worldInfoExamples（EM 条目）parseMesExamples 后
+  before→unshift / after→push 进 mesExamples 数组（卡内示例在前，顺序与官方一致）
+- outlet：官方 setExtensionPrompt(CUSTOM_WI_OUTLET, NONE, 0) 不进提示词（仅扩展用），引擎返回 outletEntries 不注入 = 对齐
+- 引擎 288 测全绿；App 编译走 CI
+
 ## 最近一轮 101（2026-08-10：世界书深度注入真正接线 + 负深度 #3344 覆盖）
 
 - 审计发现真缺口：scanner 早已算出 depthEntries（POSITION_AT_DEPTH 分组），但 App 从未把它们送进提示词
