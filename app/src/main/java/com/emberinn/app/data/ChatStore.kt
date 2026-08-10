@@ -42,16 +42,23 @@ class ChatStore(private val context: Context) {
 
     fun get(id: String): SessionRecord? = list().firstOrNull { it.id == id }
 
-    fun list(): List<SessionRecord> =
-        sessionsDir.listFiles { f -> f.extension == "json" }
+    private var sessionsCache: List<SessionRecord>? = null
+
+    fun list(): List<SessionRecord> {
+        sessionsCache?.let { return it }
+        val loaded = sessionsDir.listFiles { f -> f.extension == "json" }
             ?.mapNotNull { f -> runCatching { json.decodeFromString<SessionRecord>(f.readText()) }.getOrNull() }
             ?.sortedWith(compareByDescending<SessionRecord> { it.pinned }.thenByDescending { it.updatedAt })
             ?: emptyList()
+        sessionsCache = loaded
+        return loaded
+    }
 
     fun recent(limit: Int): List<SessionRecord> = list().take(limit)
 
     fun upsert(record: SessionRecord) {
         File(sessionsDir, "${record.id}.json").writeText(json.encodeToString(SessionRecord.serializer(), record))
+        sessionsCache = null
     }
 
     /**
@@ -76,10 +83,21 @@ class ChatStore(private val context: Context) {
         File(chatsDir, "$sessionId.json").writeText(json.encodeToString(JsonObject.serializer(), header))
     }
 
+    private val messagesCache = mutableMapOf<String, List<JsonElement>>()
+
+    private fun writeMessages(sessionId: String, content: String) {
+        File(chatsDir, "$sessionId.jsonl").writeText(content)
+        messagesCache.remove(sessionId)
+    }
+
     fun messages(sessionId: String): List<JsonElement> {
+        messagesCache[sessionId]?.let { return it }
         val file = File(chatsDir, "$sessionId.jsonl")
         if (!file.exists()) return emptyList()
-        return ChatJsonl.import(file.readText())
+        val list = ChatJsonl.import(file.readText())
+        if (messagesCache.size > 32) messagesCache.clear()
+        messagesCache[sessionId] = list
+        return list
     }
 
     /** 消息字段对齐官方 script.js：name / is_user / is_system / send_date / mes / extra。 */
@@ -168,7 +186,8 @@ class ChatStore(private val context: Context) {
             put("mes", JsonPrimitive(content))
             put("extra", extra)
         }
-        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        writeMessages(sessionId, ChatJsonl.export(list))
+        messagesCache[sessionId] = list
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -525,7 +544,7 @@ class ChatStore(private val context: Context) {
         } else {
             list += message
         }
-        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        writeMessages(sessionId, ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -603,7 +622,7 @@ class ChatStore(private val context: Context) {
         val removedMessages = list.filter { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull == name }
         if (removedMessages.isEmpty()) return 0
         list.removeAll(removedMessages.toSet())
-        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        writeMessages(sessionId, ChatJsonl.export(list))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
         deleteMediaFiles(removedMessages)
         return removedMessages.size
@@ -703,7 +722,8 @@ class ChatStore(private val context: Context) {
     }
 
     private fun save(sessionId: String, list: List<JsonElement>) {
-        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        writeMessages(sessionId, ChatJsonl.export(list))
+        messagesCache[sessionId] = list
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -756,7 +776,7 @@ class ChatStore(private val context: Context) {
     /** 整体替换某会话消息（重新生成/继续/清空会话用）。 */
     fun replace(sessionId: String, elements: List<JsonElement>) {
         val removed = messages(sessionId).filter { old -> elements.none { it == old } }
-        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(elements))
+        writeMessages(sessionId, ChatJsonl.export(elements))
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
         deleteMediaFiles(removed)
     }
@@ -765,7 +785,7 @@ class ChatStore(private val context: Context) {
         val list = messages(sessionId).toMutableList()
         if (index in list.indices) {
             val removed = list.removeAt(index)
-            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+            writeMessages(sessionId, ChatJsonl.export(list))
             get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
             deleteMediaFiles(listOf(removed))
         }
@@ -791,6 +811,8 @@ class ChatStore(private val context: Context) {
         File(sessionsDir, "$sessionId.json").delete()
         File(chatsDir, "$sessionId.jsonl").delete()
         File(chatsDir, "$sessionId.json").delete()
+        messagesCache.remove(sessionId)
+        sessionsCache = null
     }
 
     fun deleteByCharacter(characterId: String?) {
@@ -800,6 +822,8 @@ class ChatStore(private val context: Context) {
             File(chatsDir, "${s.id}.jsonl").delete()
             File(chatsDir, "${s.id}.json").delete()
         }
+        messagesCache.clear()
+        sessionsCache = null
     }
 
 
@@ -828,7 +852,7 @@ class ChatStore(private val context: Context) {
             val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
             extra["bookmark_link"] = JsonPrimitive(safeName)
             list[aiIdx] = JsonObject(el + ("extra" to JsonObject(extra)))
-            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+            writeMessages(sessionId, ChatJsonl.export(list))
         }
         return true
     }
@@ -837,7 +861,7 @@ class ChatStore(private val context: Context) {
     fun openBookmark(sessionId: String, name: String): Boolean {
         val target = File(chatsDir, "$sessionId-Checkpoint-${sanitizeBookmarkName(name)}.jsonl")
         if (!target.exists()) return false
-        File(chatsDir, "$sessionId.jsonl").writeText(target.readText())
+        writeMessages(sessionId, target.readText())
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
         return true
     }
