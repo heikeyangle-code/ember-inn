@@ -246,7 +246,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     EmberSwitch(
                         checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
                         onCheckedChange = { on ->
-                            if (activePreset.isBlank()) return@Switch
+                            if (activePreset.isBlank()) return@EmberSwitch
                             val next = if (on) (presetAllowedOpenAI + activePreset).distinct() else presetAllowedOpenAI - activePreset
                             presetAllowedOpenAI = next
                             GlobalRegexPrefs.savePresetAllowed(context, "openai", next)
