@@ -3014,18 +3014,18 @@ private fun WebViewHtml(
                             ticks++
                             if (ticks > 60) return
                             view?.evaluateJavascript(
-                                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return JSON.stringify({h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight),p:p});})()",
+                                // 返回 "高度:未加载图片数" 纯字符串：evaluateJavascript 会包引号并转义，
+                                // 直接 JSONObject(value) 必失败（曾导致 HTML 消息高度恒 0 整条不可见）
+                                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()",
                             ) { value ->
-                                runCatching {
-                                    val o = org.json.JSONObject(value)
-                                    val px = o.optInt("h", 0)
-                                    val pending = o.optInt("p", 0)
-                                    if (px > 0) {
-                                        if (px == heightPx && pending == 0) stable++ else stable = 0
-                                        heightPx = px
-                                    }
-                                    if (stable < 3) view?.postDelayed({ measure() }, 250)
+                                val parts = value.trim('\"').split(':')
+                                val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                                val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                if (px > 0) {
+                                    if (px == heightPx && pending == 0) stable++ else stable = 0
+                                    heightPx = px
                                 }
+                                if (stable < 3) view?.postDelayed({ measure() }, 250)
                             }
                         }
                         measure()

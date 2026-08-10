@@ -585,7 +585,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
 | Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
 | reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
-| WebView 高度 | 官方 DOM 正常撑高 | onPageFinished 轮询 {h,p}（图片感知，最长 15s）+ iframe 150/500/1500/3000ms 复测；上限 75% 屏高 | ✅ 机制自研 |
+| WebView 高度 | 官方 DOM 正常撑高 | onPageFinished 轮询 `高度:图片数`（图片感知，最长 15s）+ iframe 150/500/1500/3000ms 复测；上限 75% 屏高；第 196 轮修复 evaluateJavascript 引号转义导致解析失败、高度恒 0 | ✅ 机制自研 |
 
 ### 11.2 已知 bug / 限制登记（继续治理清单）
 1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
