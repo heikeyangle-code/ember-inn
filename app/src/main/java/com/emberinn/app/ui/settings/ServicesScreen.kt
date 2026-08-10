@@ -103,6 +103,7 @@ fun ServicesScreen(onBack: () -> Unit) {
             ImageCard()
             VectorCard()
             ReasoningCard()
+            SendCard()
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -391,6 +392,23 @@ private fun KeyRow(
         },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     )
+}
+
+/** 发送行为（官方 oai_settings.send_if_empty：最后一条 AI 且输入为空时发送该文本续聊）。 */
+@Composable
+private fun SendCard() {
+    val context = LocalContext.current
+    var sendIfEmpty by rememberSaveable { mutableStateOf(GenerationPrefs.sendIfEmpty(context)) }
+    ServiceCard(title = "发送") {
+        ServiceNote("官方 send_if_empty：当最后一条是 AI 回复且输入框为空时，用这段文本作为用户消息续聊；留空 = 关闭。")
+        OutlinedTextField(
+            value = sendIfEmpty,
+            onValueChange = { sendIfEmpty = it; GenerationPrefs.saveSendIfEmpty(context, it) },
+            label = { Text("空输入时发送（send_if_empty）") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
 }
 
 /** 思考过程入提示词（官方 power_user.reasoning.add_to_prompts，默认关；prefix/suffix/separator 用官方默认）。 */

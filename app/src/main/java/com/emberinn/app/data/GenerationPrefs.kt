@@ -20,6 +20,16 @@ object GenerationPrefs {
     fun reasoningToPrompts(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("reasoning_to_prompts", false)
 
+    /** 官方 oai_settings.send_if_empty：最后一条是 AI 且输入为空时发送的默认消息（默认关）。 */
+    fun sendIfEmpty(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("send_if_empty", "") ?: ""
+
+    fun saveSendIfEmpty(context: Context, text: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("send_if_empty", text)
+            .apply()
+    }
+
     fun saveReasoningToPrompts(context: Context, enabled: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("reasoning_to_prompts", enabled)

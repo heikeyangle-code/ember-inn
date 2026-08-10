@@ -815,7 +815,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         mediaDisplay: String? = null,
         mediaIndex: Int? = null,
     ): Boolean {
-        if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return false
+        if (_isStreaming.value) return false
+        // 官方 oai_settings.send_if_empty：最后一条是 AI 且输入为空时，用配置文本发送（续聊）
+        var effectiveText = text
+        if (effectiveText.isBlank() && media.isEmpty()) {
+            val replacement = GenerationPrefs.sendIfEmpty(getApplication())
+            val last = chatStore.messages(sessionId).lastOrNull()
+            if (replacement.isNotBlank() && last != null && !isUser(last) && !isSystemMsg(last)) {
+                effectiveText = replacement
+            } else {
+                return false
+            }
+        }
+        if (effectiveText.isBlank() && media.isEmpty()) return false
         // 官方 ST：输入以 / 开头即斜杠命令（消息类直接插消息，不触发生成；未知命令只提示不发送）
         if (text.trimStart().startsWith("/") && media.isEmpty()) {
             runSlash(text.trim())
@@ -842,9 +854,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             presetAllowed = presetAllowed,
         )
         val regexedText = if (GlobalRegexPrefs.enabled(getApplication())) {
-            RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
+            RegexPipelineEngine.apply(effectiveText, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
         } else {
-            text
+            effectiveText
         }
         chatStore.append(sessionId, true, regexedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
         _pendingMedia.value = emptyList()
@@ -853,7 +865,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         translateOutgoing(chatStore.messages(sessionId).lastIndex)
         val voice = VoicePrefs.read(getApplication())
         if (voice.enabled && voice.narrateUser) {
-            narrateText(text)
+            narrateText(effectiveText)
         }
         if (group != null) {
             startGroupTurn(type = "generate")
