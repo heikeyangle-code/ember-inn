@@ -617,6 +617,8 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 全渲染字段核对（对照官方 script.js messageFormatting + style.css）：
   引号对/<q>、~下划线~/<u>、<em>/<i>、<b>/<strong>、<s>、<font color>、行内码、代码围栏保护、
   链接（引用色）、blockquote、列表、标题全部走同一剥标记+上色管线；WebView 兜底 CSS 不变
+- 正文字色收口：`model.typography.*` 本身不带颜色，最终渲染原来只有流式路径 push 了 bodyColor；
+  OfficialMarkdownNode 现在对无色样式补 `bodyColor`（引用等已指定色样式保持自身颜色），正文色设置两端一致
 - 主题优先级调整（用户反馈“全局主题覆盖不到角色卡聊天界面”，AI 聊天正常）：
   MainActivity 不再用角色自动取色 seedColor 整体替换全局主题；只有角色卡**显式主题配方 seed**
   优先于全局预设；自动取色保留为强调色（名字色/氛围光/气泡点缀，acc=vm.accentColor 不变）
