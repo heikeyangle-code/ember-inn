@@ -1,27 +1,37 @@
 package com.emberinn.app.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.ui.components.ColorPickerDialog
+import com.emberinn.app.ui.components.parseHexColor
+import com.emberinn.app.ui.components.toHex
 
 /**
  * 消息渲染（官方 SillyTavern 字段）：正文/次要/下划线/引用/气泡/边框/阴影色 + 毛玻璃强度。
@@ -52,14 +62,14 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        HexField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context)) { AppearancePrefs.saveStBodyColor(context, it) }
-                        HexField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context)) { AppearancePrefs.saveStEmColor(context, it) }
-                        HexField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context)) { AppearancePrefs.saveStUnderlineColor(context, it) }
-                        HexField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context)) { AppearancePrefs.saveStQuoteColor(context, it) }
-                        HexField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context)) { AppearancePrefs.saveStUserBubble(context, it) }
-                        HexField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context)) { AppearancePrefs.saveStBotBubble(context, it) }
-                        HexField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context)) { AppearancePrefs.saveStBorderColor(context, it) }
-                        HexField("阴影色", "官方 --SmartThemeShadowColor（例 #00000080）", AppearancePrefs.stShadowColor(context)) { AppearancePrefs.saveStShadowColor(context, it) }
+                        ColorField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context)) { AppearancePrefs.saveStBodyColor(context, it) }
+                        ColorField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context)) { AppearancePrefs.saveStEmColor(context, it) }
+                        ColorField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context)) { AppearancePrefs.saveStUnderlineColor(context, it) }
+                        ColorField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context)) { AppearancePrefs.saveStQuoteColor(context, it) }
+                        ColorField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context)) { AppearancePrefs.saveStUserBubble(context, it) }
+                        ColorField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context)) { AppearancePrefs.saveStBotBubble(context, it) }
+                        ColorField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context)) { AppearancePrefs.saveStBorderColor(context, it) }
+                        ColorField("阴影色", "官方 --SmartThemeShadowColor（例 #00000080）", AppearancePrefs.stShadowColor(context)) { AppearancePrefs.saveStShadowColor(context, it) }
                     }
                 }
             }
@@ -108,17 +118,48 @@ fun MessageRenderScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun HexField(label: String, hint: String, value: String, onSave: (String) -> Unit) {
+private fun ColorField(label: String, hint: String, value: String, onSave: (String) -> Unit) {
     var draft by remember(label) { mutableStateOf(value) }
+    var showPicker by remember { mutableStateOf(false) }
+    val current = parseHexColor(draft)
     Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it; onSave(it) },
-            placeholder = { Text("跟随主题") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            if (current != null) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(current),
+                )
+            } else {
+                Text("跟随主题", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it; onSave(it) },
+                placeholder = { Text("#RRGGBB") },
+                singleLine = true,
+                modifier = Modifier.weight(1f).padding(top = 4.dp),
+            )
+            TextButton(onClick = { showPicker = true }, modifier = Modifier.padding(start = 6.dp)) {
+                Text("选色盘")
+            }
+        }
         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (showPicker) {
+        ColorPickerDialog(
+            title = label,
+            initial = current,
+            onDismiss = { showPicker = false },
+            onConfirm = { color ->
+                draft = color.toHex()
+                onSave(draft)
+                showPicker = false
+            },
+        )
     }
 }

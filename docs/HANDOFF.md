@@ -565,6 +565,18 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 酒馆官方默认值 + 选色盘 + 原生化（第 175 轮，2026-08-11）
+
+- ThemePreset 新增官方字段默认值（null=跟随 M3）；酒馆官方主题填官方真值：
+  body #DCDCD2 / em #919191 / underline #BCE7CF / quote #E18A24 / 用户气泡 #4D000000 /
+  AI 气泡 #4D3C3C3C / 边框 #80000000 / 阴影 #80000000；用户设置留空时自动用主题默认
+- 选色盘：新增 ColorPickerDialog（官方色板 + 20 常用色 + RGB 滑杆 + hex 输入 + 预览），
+  消息渲染设置页每个字段改为“色块 + hex + 选色盘按钮”
+- 原生化（减少 WebView 兜底）：<q>/<u>/<em>/<i>/<b>/<strong>/<s>/<hr>/<br>/<font color="#hex">
+  和 Showdown ~text~ 全部预处理为原生 AnnotatedString 标记（引用色/下划线色/指定色），不再走 WebView；
+  WebView 只留给 font rgb()/span/div/table/img 等真正解析不了的任意 HTML
+- 兜底突兀度：WebView 已透明背景 + 官方 CSS 变量 + 自动测高 + 圆角裁剪 + 同字号行高
+
 ## 8. 渲染全面对齐官方（第 174 轮，2026-08-11，逐条核对 script.js + style.css）
 
 官方 messageFormatting（script.js）：引号对（"“«「『＂）→ <q>；Showdown：emoji/underline(~text~→<u>)/strikethrough/tables；

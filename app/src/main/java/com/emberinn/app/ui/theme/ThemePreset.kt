@@ -18,6 +18,15 @@ data class ThemePreset(
     val spacing: Float = 1f,
     /** 动效速度倍数（>1 更快，<1 更慢）；默认 1.0。 */
     val motionScale: Float = 1f,
+    // ---- 官方 SillyTavern 字段默认值（null=跟随 M3 自动生成；酒馆官方主题填官方真值） ----
+    val stBody: Color? = null,
+    val stEm: Color? = null,
+    val stUnderline: Color? = null,
+    val stQuote: Color? = null,
+    val stUserBubble: Color? = null,
+    val stBotBubble: Color? = null,
+    val stBorder: Color? = null,
+    val stShadow: Color? = null,
 )
 
 val ThemePresets: List<ThemePreset> = listOf(
@@ -108,6 +117,15 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFEDEBE2),
         darkBg = Color(0xFF171717),
         shape = "default",
+        // 官方 style.css :root 默认值（用户设置留空时使用）
+        stBody = Color(0xFFDCDCD2),
+        stEm = Color(0xFF919191),
+        stUnderline = Color(0xFFBCE7CF),
+        stQuote = Color(0xFFE18A24),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
     ),
     ThemePreset(
         id = "bamboo",

@@ -11,6 +11,7 @@ import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -115,6 +116,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1640,10 +1642,11 @@ private fun MessageRow(
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
-    val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: MaterialTheme.colorScheme.outline
-    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: MaterialTheme.colorScheme.primaryContainer
-    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: MaterialTheme.colorScheme.surfaceContainerLow
-    val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))?.let { BorderStroke(1.dp, it) }
+    val stTheme = LocalThemePreset.current
+    val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.outline
+    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: stTheme.stUserBubble ?: MaterialTheme.colorScheme.primaryContainer
+    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: stTheme.stBotBubble ?: MaterialTheme.colorScheme.surfaceContainerLow
+    val bubbleBorder = (parseHexColor(AppearancePrefs.stBorderColor(context)) ?: stTheme.stBorder)?.let { BorderStroke(1.dp, it) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
@@ -2263,18 +2266,48 @@ private data class ChatTypography(
     val inlineCodeMult: Float,
 )
 
-/** 官方 messageFormatting 的引号转 <q> 语义：把引号对染成引用色（原生 AnnotatedString 层）。 */
-private fun AnnotatedString.Builder.appendQuotedText(raw: String, quoteColor: Color) {
-    val regex = Regex("""\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂""")
+/** 官方 messageFormatting + CSS 的 Text 层着色：引号对→引用色；<q>/<u>/<font> 预处理标记→对应色。 */
+private fun AnnotatedString.Builder.appendStyledText(raw: String, quoteColor: Color, underlineColor: Color) {
+    val regex = Regex(
+        "\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂" +
+            "|\uE001([^\uE002]*)\uE002|\uE003([^\uE004]*)\uE004|\uE005([0-9a-fA-F#]{4,9})\uE006([^\uE007]*)\uE007",
+    )
     var last = 0
     for (m in regex.findAll(raw)) {
         append(raw.substring(last, m.range.first))
-        pushStyle(SpanStyle(color = quoteColor))
-        append(m.value)
+        val v = m.value
+        when {
+            v.startsWith("\uE003") -> pushStyle(
+                SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
+            )
+            v.startsWith("\uE005") -> {
+                val hex = v.substring(1, v.indexOf('\uE006'))
+                pushStyle(SpanStyle(color = parseHexColor(hex) ?: quoteColor))
+            }
+            else -> pushStyle(SpanStyle(color = quoteColor))
+        }
+        append(v)
         pop()
         last = m.range.last + 1
     }
     append(raw.substring(last))
+}
+
+/** 官方行内 HTML → 原生可渲染标记：<q>→引用色、<u>/~text~→下划线色、<font color>→指定色、em/b/s/hr/br→Markdown。 */
+private fun preprocessOfficialHtml(content: String): String {
+    var out = content
+    out = Regex("<q[^>]*>([\\s\\S]*?)</q>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE001${m.groupValues[1]}\uE002" }
+    out = Regex("<u[^>]*>([\\s\\S]*?)</u>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
+    out = Regex("<(em|i)[^>]*>([\\s\\S]*?)</(em|i)>", RegexOption.IGNORE_CASE).replace(out) { m -> "*${m.groupValues[2]}*" }
+    out = Regex("<(b|strong)[^>]*>([\\s\\S]*?)</(b|strong)>", RegexOption.IGNORE_CASE).replace(out) { m -> "**${m.groupValues[2]}**" }
+    out = Regex("<(s|strike|del)[^>]*>([\\s\\S]*?)</(s|strike|del)>", RegexOption.IGNORE_CASE).replace(out) { m -> "~~${m.groupValues[2]}~~" }
+    out = Regex("<font[^>]*color=[\"']?#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
+        .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
+    out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
+    out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n")
+    // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
+    out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
+    return out
 }
 
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
@@ -2286,18 +2319,16 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
     // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；
     // 开关只控制“任意 HTML 都渲染” vs “仅官方标签渲染”
-    val outsideFence = content.replace(Regex("```[\\s\\S]*?```"), "")
-    val officialHtml = Regex("<(q|u|font|blockquote|em|i|b|strong|s|sub|sup|br|hr|center|span|div)[\\s>]", RegexOption.IGNORE_CASE)
-        .containsMatchIn(outsideFence) ||
-        // Showdown underline:true：单波浪线 ~text~ → <u>（官方下划线色）
-        Regex("(?<!~)~[^~\\n]+~(?!~)").containsMatchIn(outsideFence)
-    val rawHtml = if (mermaid == null && looksLikeHtml(content) && (htmlEnabled || officialHtml)) content else null
+    val outsideFence = displayContent.replace(Regex("```[\\s\\S]*?```"), "")
+    // 剩下的才是原生渲染器真不支持的任意 HTML（font rgb/span/div/table/img/style…）
+    val officialHtml = Regex("<font\\b|</?span|</?div|<style|<table|<img", RegexOption.IGNORE_CASE)
+        .containsMatchIn(outsideFence)
+    val rawHtml = if (mermaid == null && looksLikeHtml(displayContent) && (htmlEnabled || officialHtml)) content else null
     val type = chatTypography()
-    // 官方 .mes_text i/em { color: emColor }：原生斜体单独着色（自定义 annotator）
-    val stEm = parseHexColor(AppearancePrefs.stEmColor(context))
-    val emColor = stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+    // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
+    val displayContent = remember(content) { preprocessOfficialHtml(content) }
     var annotatorSettingsRef: AnnotatorSettings? = null
-    val emAnnotator = remember(emColor, quoteColor) {
+    val emAnnotator = remember(emColor, quoteColor, underlineColor) {
         markdownAnnotator(
             annotate = { content, child ->
                 when (child.type) {
@@ -2310,7 +2341,7 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                     }
                     // 官方 messageFormatting：引号对 → <q>（引用色）；这里在 TEXT 层直接给引号上色
                     MarkdownTokenTypes.TEXT -> {
-                        appendQuotedText(child.getUnescapedTextInNode(content), quoteColor)
+                        appendStyledText(child.getUnescapedTextInNode(content), quoteColor, underlineColor)
                         true
                     }
                     else -> false
@@ -2328,7 +2359,7 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         mermaid != null -> WebViewHtml(mermaid, modifier, jsEnabled = true)
         rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier, jsEnabled = false)
         else -> Markdown(
-            content = content,
+            content = displayContent,
             modifier = modifier.fillMaxWidth(),
             imageTransformer = Coil3ImageTransformerImpl,
             components = markdownComponents(
@@ -2374,13 +2405,12 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                     )
                 },
             ),
-            // 官方字段：正文色 / 引用色 / 次要色（空=跟随主题）
-            val stBody = parseHexColor(AppearancePrefs.stBodyColor(context))
-            val stQuote = parseHexColor(AppearancePrefs.stQuoteColor(context))
-            val stEm = parseHexColor(AppearancePrefs.stEmColor(context))
-            val bodyColor = stBody ?: onSurface
-            val quoteColor = stQuote ?: MaterialTheme.colorScheme.primary
-            val emColor = stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+            // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
+            val stTheme = LocalThemePreset.current
+            val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stTheme.stBody ?: onSurface
+            val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote ?: MaterialTheme.colorScheme.primary
+            val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+            val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline ?: MaterialTheme.colorScheme.primary
             colors = markdownColor(
                 text = bodyColor,
                 codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
@@ -2472,7 +2502,12 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
     val context = LocalContext.current
     val density = LocalDensity.current
     var heightPx by remember { mutableIntStateOf(0) }
-    val styled = remember(html) { officialStyledHtml(html, context) }
+    val stTheme = LocalThemePreset.current
+    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stTheme.stBody
+    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm
+    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline
+    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote
+    val styled = remember(html, body, em, underline, quote) { officialStyledHtml(html, context, body, em, underline, quote) }
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
@@ -2515,11 +2550,14 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
 }
 
 /** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
-private fun officialStyledHtml(raw: String, context: android.content.Context): String {
-    val body = parseHexColor(AppearancePrefs.stBodyColor(context))
-    val em = parseHexColor(AppearancePrefs.stEmColor(context))
-    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context))
+private fun officialStyledHtml(
+    raw: String,
+    context: android.content.Context,
+    body: androidx.compose.ui.graphics.Color?,
+    em: androidx.compose.ui.graphics.Color?,
+    underline: androidx.compose.ui.graphics.Color?,
+    quote: androidx.compose.ui.graphics.Color?,
+): String {
     val fontSize = when (AppearancePrefs.textSize(context)) {
         "small" -> "14px"
         "large" -> "18px"

@@ -2,6 +2,9 @@ package com.emberinn.app.ui.components
 
 import androidx.compose.ui.graphics.Color
 
+/** Color → #RRGGBB。 */
+fun Color.toHex(): String = "#%02X%02X%02X".format((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt())
+
 /** 解析 #RRGGBB / #AARRGGBB（可带 #，允许 3 位简写）；失败返回 null。 */
 fun parseHexColor(hex: String): Color? = runCatching {
     var h = hex.trim().removePrefix("#")
