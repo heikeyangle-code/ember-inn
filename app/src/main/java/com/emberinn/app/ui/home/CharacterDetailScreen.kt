@@ -1182,7 +1182,6 @@ fun CharacterDetailScreen(
     }
 }
 
-@Composable
 /** 统一区块卡片：详情页所有分组（基础字段/开场白/正则/变量/模型覆盖/主题配方/高级/世界书）同一样式。 */
 @Composable
 private fun SectionCard(
