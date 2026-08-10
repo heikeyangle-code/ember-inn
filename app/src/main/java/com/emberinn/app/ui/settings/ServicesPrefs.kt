@@ -41,6 +41,15 @@ object ServicesPrefs {
     fun imageSteps(context: Context): Int =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_steps", 30)
 
+    fun imageApiKey(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_api_key", "") ?: ""
+
+    fun saveImageApiKey(context: Context, key: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("sd_api_key", key)
+            .apply()
+    }
+
     // 向量
     fun vectorProvider(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("vector_provider", "local") ?: "local"

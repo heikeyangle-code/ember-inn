@@ -68,13 +68,13 @@ private val TARGET_LANGUAGES = listOf(
 // 官方 stable-diffusion/index.js 的 sources（取主流自托管 / 云来源）
 private val IMAGE_SOURCES = listOf(
     DropdownOption("auto", "AUTOMATIC1111"),
-    DropdownOption("comfy", "ComfyUI"),
-    DropdownOption("sdcpp", "SDCPP"),
-    DropdownOption("drawthings", "Draw Things"),
-    DropdownOption("horde", "Stable Horde"),
+    DropdownOption("sdcpp", "SDCPP（本地 /sdapi/v1/txt2img）"),
     DropdownOption("novel", "NovelAI"),
     DropdownOption("openai", "OpenAI · gpt-image"),
-    DropdownOption("huggingface", "Hugging Face"),
+    DropdownOption("huggingface", "Hugging Face Inference"),
+    DropdownOption("comfy", "ComfyUI（开发中）"),
+    DropdownOption("drawthings", "Draw Things（开发中）"),
+    DropdownOption("horde", "Stable Horde（开发中）"),
 )
 
 private val VECTOR_PROVIDERS = listOf(
@@ -144,13 +144,28 @@ private fun ImageCard() {
     var url by rememberSaveable { mutableStateOf(ServicesPrefs.imageUrl(context)) }
     var model by rememberSaveable { mutableStateOf(ServicesPrefs.imageModel(context)) }
     var steps by rememberSaveable { mutableStateOf(ServicesPrefs.imageSteps(context)) }
+    var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
+    var keyVisible by rememberSaveable { mutableStateOf(false) }
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
 
     ServiceCard(title = "图像生成") {
         ServiceNote("官方 stable-diffusion 扩展：来源 / 接口地址 / 模型 / 采样步数。快捷工具盘可生成图像。")
         MenuPicker("来源", labelOf(IMAGE_SOURCES, source), IMAGE_SOURCES) { source = it; save() }
-        TextFieldRow("接口地址", url) { url = it; save() }
-        TextFieldRow("模型", model) { model = it; save() }
+        if (source == "novel" || source == "huggingface" || source == "horde") {
+            KeyRow(
+                value = apiKey,
+                visible = keyVisible,
+                onVisibleChange = { keyVisible = it },
+                onValueChange = { apiKey = it; ServicesPrefs.saveImageApiKey(context, it) },
+                label = "API Key",
+            )
+        }
+        if (source == "auto" || source == "sdcpp") {
+            TextFieldRow("接口地址", url) { url = it; save() }
+        }
+        if (source == "novel" || source == "sdcpp" || source == "huggingface") {
+            TextFieldRow("模型", model) { model = it; save() }
+        }
         OutlinedTextField(
             value = steps.toString(),
             onValueChange = { steps = it.toIntOrNull() ?: 0; save() },
