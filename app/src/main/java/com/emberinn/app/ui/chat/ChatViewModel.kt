@@ -598,14 +598,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             } else {
                 DEFAULT_AI_OPENING
             }
-            if (!firstMes.isNullOrBlank()) {
-                // 官方 getFirstMessage：开场白存前过 AI_OUTPUT 正则（getRegexedString）
+            val alternates = currentCharacter?.let { alternatesOf(it.rawJson) } ?: emptyList()
+            if (!firstMes.isNullOrBlank() || alternates.isNotEmpty()) {
+                // 官方 getFirstMessage：first_mes + alternate_greetings 全部存前过 AI_OUTPUT 正则，
+                // 作为第一条 AI 消息的 swipes（官方：swipes = [firstMes, ...alternateGreetings]）
                 val scripts = ChatPromptFactory().resolveRegexScripts(
                     characterRawJson = currentCharacter?.rawJson,
                     globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
                     scopedAllowed = currentCharacter?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
                 )
-                chatStore.append(sessionId, false, RegexPipelineEngine.apply(firstMes, ChatPromptFactory.REGEX_AI_OUTPUT, scripts), charName)
+                val greetings = (listOfNotNull(firstMes) + alternates)
+                    .map { RegexPipelineEngine.apply(it, ChatPromptFactory.REGEX_AI_OUTPUT, scripts) }
+                val content = greetings.firstOrNull { it.isNotBlank() } ?: greetings.firstOrNull().orEmpty()
+                chatStore.append(
+                    sessionId,
+                    isUser = false,
+                    content = content,
+                    name = charName,
+                    greetingSwipes = greetings,
+                )
                 refreshMessages()
             }
         }
@@ -622,6 +633,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val data = root["data"]?.jsonObject ?: root
         data["first_mes"]?.jsonPrimitive?.contentOrNull
     }.getOrNull()
+
+    private fun alternatesOf(rawJson: String): List<String> = runCatching {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val root = json.parseToJsonElement(rawJson).jsonObject
+        val data = root["data"]?.jsonObject ?: root
+        (data["alternate_greetings"] as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+    }.getOrDefault(emptyList())
 
     fun saveProvider(profile: ConnectionProfile) {
         chatRepository.saveProfile(profile)

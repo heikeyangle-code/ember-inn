@@ -97,6 +97,7 @@ class ChatStore(private val context: Context) {
         mediaDisplay: String? = null,
         mediaIndex: Int? = null,
         groupGenId: Long? = null,
+        greetingSwipes: List<String> = emptyList(),
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
@@ -147,18 +148,20 @@ class ChatStore(private val context: Context) {
                 put("gen_started", JsonPrimitive(genStarted ?: now))
                 put("gen_finished", JsonPrimitive(genFinished ?: now))
                 put("swipe_id", JsonPrimitive(0))
-                put("swipes", JsonArray(listOf(JsonPrimitive(content))))
+                // 官方 getFirstMessage：开场白 = [first_mes, ...alternate_greetings]，全部进 swipes
+                val swipesList = if (greetingSwipes.isNotEmpty()) greetingSwipes else listOf(content)
+                put("swipes", JsonArray(swipesList.map { JsonPrimitive(it) }))
                 put(
                     "swipe_info",
                     JsonArray(
-                        listOf(
+                        swipesList.indices.map { idx ->
                             buildJsonObject {
                                 put("send_date", JsonPrimitive(now))
                                 put("gen_started", JsonPrimitive(genStarted ?: now))
                                 put("gen_finished", JsonPrimitive(genFinished ?: now))
-                                put("extra", extra)
-                            },
-                        ),
+                                put("extra", if (idx == 0) extra else JsonObject(emptyMap()))
+                            }
+                        },
                     ),
                 )
             }
