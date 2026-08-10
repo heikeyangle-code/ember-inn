@@ -33,6 +33,7 @@ import com.emberinn.app.data.VectorRagService
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.ui.settings.VoicePrefs
+import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
 import com.emberinn.engine.macros.MacroEngine
@@ -302,6 +303,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 refreshMessages()
             }
         }
+    }
+
+    /** README 消息操作：token 统计（官方 option_toggle_logprobs；用当前模型 tokenizer 计数）。 */
+    fun messageTokenCount(index: Int): Pair<String, Int>? {
+        val el = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return null
+        val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return null
+        val model = chatRepository.profile()?.model.orEmpty()
+        val count = TokenCounterFactory.forModel(model).count(text)
+        return text to count
     }
 
     /** 翻译指定消息（P1-6 执行层；结果放 notice）。 */

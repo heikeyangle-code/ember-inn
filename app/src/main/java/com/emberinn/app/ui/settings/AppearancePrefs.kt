@@ -22,6 +22,53 @@ object AppearancePrefs {
             .apply()
     }
 
+    fun bubbleStyle(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("bubble_style", "paper") ?: "paper"
+
+    fun saveBubbleStyle(context: Context, style: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("bubble_style", style)
+            .apply()
+    }
+
+    fun density(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("density", "comfortable") ?: "comfortable"
+
+    fun saveDensity(context: Context, density: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("density", density)
+            .apply()
+    }
+
+    /** README 玻璃表面：背景模糊总开关（默认开；关闭后顶栏/输入栏用纯色表面）。 */
+    fun backgroundBlur(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("background_blur", true)
+
+    fun saveBackgroundBlur(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("background_blur", enabled)
+            .apply()
+    }
+
+    /** README 启动行为：启动时直接进入上次聊天（默认关）。 */
+    fun openLastChat(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("open_last_chat", false)
+
+    fun saveOpenLastChat(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("open_last_chat", enabled)
+            .apply()
+    }
+
+    fun lastSessionId(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("last_session_id", "") ?: ""
+
+    fun saveLastSessionId(context: Context, sessionId: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("last_session_id", sessionId)
+            .apply()
+    }
+
     fun save(context: Context, radius: String, font: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("radius", radius)

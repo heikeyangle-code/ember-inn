@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.settings.AppearancePrefs
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -220,7 +221,13 @@ fun CharactersScreen(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .onSizeChanged { topBarHeight = it.height }
-                    .cloudy(sky = sky, radius = 16, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)),
+                    .then(
+                        if (AppearancePrefs.backgroundBlur(context)) {
+                            Modifier.cloudy(sky = sky, radius = 16, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
+                        } else {
+                            Modifier.background(MaterialTheme.colorScheme.surface)
+                        },
+                    ),
             )
         }
 

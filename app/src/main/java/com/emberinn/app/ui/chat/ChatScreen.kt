@@ -189,6 +189,7 @@ fun ChatScreen(
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
     var showAttachOptions by remember { mutableStateOf(false) }
     var showUrlAttachmentDialog by remember { mutableStateOf(false) }
@@ -462,6 +463,9 @@ fun ChatScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(
+                    if (AppearancePrefs.density(context) == "compact") 4.dp else 8.dp,
+                ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -509,6 +513,7 @@ fun ChatScreen(
                                 dateLabel = dateLabel,
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 accent = accent,
+                                aiBubble = AppearancePrefs.bubbleStyle(context) == "bubble",
                                 showActions = showActions,
                                 swipeCount = swipeCount,
                                 curSwipe = curSwipe,
@@ -572,7 +577,13 @@ fun ChatScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .onSizeChanged { topBarHeight = it.height }
-                .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)),
+                .then(
+                    if (AppearancePrefs.backgroundBlur(context)) {
+                        Modifier.cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f))
+                    } else {
+                        Modifier.background(MaterialTheme.colorScheme.surface)
+                    },
+                ),
         )
 
         ChatInputBar(
@@ -625,7 +636,13 @@ fun ChatScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .onSizeChanged { inputBarHeight = it.height }
-                .cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f)),
+                .then(
+                    if (AppearancePrefs.backgroundBlur(context)) {
+                        Modifier.cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                    } else {
+                        Modifier.background(MaterialTheme.colorScheme.surface)
+                    },
+                ),
         )
     }
 
@@ -735,6 +752,10 @@ fun ChatScreen(
                     }
                     MenuRow(PhosphorIcons.FileText, "翻译这条消息") {
                         vm.translateMessage(index)
+                        menuMessageIndex = null
+                    }
+                    MenuRow(PhosphorIcons.ChartBar, "Token 统计") {
+                        tokenStatsIndex = index
                         menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.BookmarkSimple, "创建书签（存档到此）") {
@@ -1298,6 +1319,35 @@ fun ChatScreen(
         )
     }
 
+    tokenStatsIndex?.let { index ->
+        val stats = vm.messageTokenCount(index)
+        if (stats != null) {
+            AlertDialog(
+                onDismissRequest = { tokenStatsIndex = null },
+                title = { Text("Token 统计") },
+                text = {
+                    Column {
+                        Text(
+                            "按当前模型 tokenizer 估算：${stats.second} tokens",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                        Text(
+                            stats.first,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 10,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { tokenStatsIndex = null }) { Text("关闭") }
+                },
+            )
+        }
+    }
+
     swipePickerIndex?.let { index ->
         val currentEl = messages.getOrNull(index)
         val variants = vm.swipeVariantsOf(index)
@@ -1510,6 +1560,7 @@ private fun MessageRow(
     swipeCount: Int = 0,
     curSwipe: Int = 0,
     isPrevSameSender: Boolean = true,
+    aiBubble: Boolean = false,
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     onCopy: () -> Unit,
@@ -1606,6 +1657,19 @@ private fun MessageRow(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
+                }
+            } else if (aiBubble) {
+                // README 气泡样式=bubble：AI 也带低对比气泡
+                Surface(
+                    shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = bubbleModifier,
+                ) {
+                    ChatMarkdown(
+                        content = text,
+                        onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                    )
                 }
             } else {
                 // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）

@@ -154,7 +154,43 @@ fun AppearanceScreen(
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                ComingSoonCard()
+                val optContext = LocalContext.current
+                var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
+                var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
+                var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
+                var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
+                Text("气泡样式", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
+                    listOf("paper" to "纸面（AI 纯文本流）", "bubble" to "气泡（AI 也带气泡）").forEach { (v, label) ->
+                        FilterChip(selected = bubbleStyle == v, onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(optContext, v) }, label = { Text(label) })
+                    }
+                }
+                Text("密度", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
+                    listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
+                        FilterChip(selected = density == v, onClick = { density = v; AppearancePrefs.saveDensity(optContext, v) }, label = { Text(label) })
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { blur = !blur; AppearancePrefs.saveBackgroundBlur(optContext, blur) }.padding(vertical = 10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("背景模糊（玻璃表面）", style = MaterialTheme.typography.bodyLarge)
+                        Text("顶栏 / 输入栏 / 浮层的 Cloudy 毛玻璃总开关", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it) })
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { openLastChat = !openLastChat; AppearancePrefs.saveOpenLastChat(optContext, openLastChat) }.padding(vertical = 10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("启动进入上次聊天", style = MaterialTheme.typography.bodyLarge)
+                        Text("默认关；开启后启动直接回到上次会话", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it) })
+                }
             }
         }
     }
@@ -209,34 +245,4 @@ private fun PresetCard(
     }
 }
 
-@Composable
-private fun ComingSoonCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-    ) {
-        Column {
-            Text(
-                "更多选项",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            )
-            listOf("字体" to "已可调（系统 / 衬线）", "圆角" to "已可调（4/16/24dp）", "背景模糊" to "开发中").forEachIndexed { index, (label, status) ->
-                if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
-                ) {
-                    Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Text(
-                        status,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
-            }
-        }
-    }
-}
+

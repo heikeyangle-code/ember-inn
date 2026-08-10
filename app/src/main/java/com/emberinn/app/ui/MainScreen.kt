@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
+import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.home.HomeViewModel
 import com.emberinn.engine.card.CardFormat
 
@@ -49,13 +50,20 @@ fun MainScreen(
     themePreset: com.emberinn.app.ui.theme.ThemePreset = com.emberinn.app.ui.theme.ThemePresets.first(),
     onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit = { _, _ -> },
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    var openSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    // README 启动行为：启动直接进入上次聊天（默认关）
+    val initialLastSession = AppearancePrefs.openLastChat(context) && AppearancePrefs.lastSessionId(context).isNotBlank()
+    var selectedTab by rememberSaveable { mutableIntStateOf(if (initialLastSession) 1 else 0) }
+    var openSessionId by rememberSaveable { mutableStateOf(if (initialLastSession) AppearancePrefs.lastSessionId(context) else null) }
     var openName by rememberSaveable { mutableStateOf("") }
     var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
     var settingsDeepLink by rememberSaveable { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
     val homeVm: HomeViewModel = viewModel()
+
+    fun openSession(id: String) {
+        openSessionId = id
+        AppearancePrefs.saveLastSessionId(context, id)
+    }
     var showOnboarding by rememberSaveable { mutableStateOf(!OnboardingPrefs.done(context)) }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -82,7 +90,7 @@ fun MainScreen(
             onImport = { importLauncher.launch(arrayOf("*/*")) },
             onDirectChat = {
                 val session = homeVm.newSession(null, "AI 对话")
-                openSessionId = session.id
+                openSession(session.id)
                 openName = session.name
                 showOnboarding = false
                 OnboardingPrefs.markDone(context)
@@ -105,7 +113,7 @@ fun MainScreen(
                 onBack = { openDetailId = null },
                 onOpenChat = { session ->
                     openDetailId = null
-                    openSessionId = session.id
+                    openSession(session.id)
                     openName = session.name
                 },
             )
@@ -139,7 +147,7 @@ fun MainScreen(
                     TabContent(
                         selectedTab = selectedTab,
                         onOpenChat = { session ->
-                            openSessionId = session.id
+                            openSession(session.id)
                             openName = session.name
                         },
                         onOpenSettings = { route ->
@@ -148,7 +156,7 @@ fun MainScreen(
                         },
                         onOpenDetail = { record -> openDetailId = record.id },
                         onOpenSession = { session ->
-                            openSessionId = session.id
+                            openSession(session.id)
                             openName = session.name
                         },
                         themeMode = themeMode,
@@ -212,7 +220,7 @@ fun MainScreen(
             TabContent(
                 selectedTab = selectedTab,
                 onOpenChat = { session ->
-                    openSessionId = session.id
+                    openSession(session.id)
                     openName = session.name
                 },
                 onOpenSettings = { route ->
@@ -221,7 +229,7 @@ fun MainScreen(
                 },
                 onOpenDetail = { record -> openDetailId = record.id },
                 onOpenSession = { session ->
-                    openSessionId = session.id
+                    openSession(session.id)
                     openName = session.name
                 },
                 themeMode = themeMode,
