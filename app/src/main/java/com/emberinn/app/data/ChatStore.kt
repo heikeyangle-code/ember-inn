@@ -99,8 +99,8 @@ class ChatStore(private val context: Context) {
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
-            // 官方：普通用户消息带 gen_id（sendMessageAsUser）；单聊 AI 消息不带（saveReply 仅群聊有 group_generation_id）
-            if (isUser) put("gen_id", JsonPrimitive(System.currentTimeMillis()))
+            // 官方 sendMessageAsUser：extra 含 isSmallSys=false；普通发送不带 gen_id（仅 slash 手动消息有）
+            if (isUser) put("isSmallSys", JsonPrimitive(false))
             if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
                 put("inline_image", JsonPrimitive(true))
@@ -119,10 +119,18 @@ class ChatStore(private val context: Context) {
                 mediaDisplay?.takeIf { it == "list" || it == "gallery" }?.let { put("media_display", JsonPrimitive(it)) }
                 mediaIndex?.coerceAtLeast(0)?.let { put("media_index", JsonPrimitive(it)) }
             }
-            // 官方消息 extra 字段：api / model / reasoning（导出对齐官方 jsonl）
-            if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))
-            if (!model.isNullOrBlank()) put("model", JsonPrimitive(model))
-            if (!reasoning.isNullOrBlank()) put("reasoning", JsonPrimitive(reasoning))
+            // 官方 saveReply：AI 消息 extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature
+            if (!isUser) {
+                put("api", JsonPrimitive(api ?: "manual"))
+                put("model", JsonPrimitive(model ?: ""))
+                put("reasoning", JsonPrimitive(reasoning ?: ""))
+                put("reasoning_duration", JsonNull)
+                put("reasoning_signature", JsonNull)
+            } else {
+                if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))
+                if (!model.isNullOrBlank()) put("model", JsonPrimitive(model))
+                if (!reasoning.isNullOrBlank()) put("reasoning", JsonPrimitive(reasoning))
+            }
         }
         val now = java.time.Instant.now().toString()
         list += buildJsonObject {
@@ -159,12 +167,14 @@ class ChatStore(private val context: Context) {
 
     /** 编辑消息：更新文本并清空 extra.bias（对齐官方 editMessage 的 AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）。
      *  有 swipes 时同步写回 swipes[swipe_id]（官方 editMessage：mes.swipes[mes.swipe_id] = text），否则滑走再滑回会显示旧文本。 */
-    fun updateMessage(sessionId: String, index: Int, content: String) {
+    fun updateMessage(sessionId: String, index: Int, content: String, bias: String? = null) {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return
         val el = list[index].jsonObject
         val oldExtra = el["extra"] as? JsonObject
-        val newExtra = JsonObject((oldExtra?.toMap() ?: emptyMap()) + ("bias" to JsonNull))
+        // 官方 updateMessage：extra.bias = bias ?? null（编辑时提取 {{bias}} 存下来，供 regenerate 回溯）
+        val biasValue = bias?.takeIf { it.isNotBlank() }?.let { JsonPrimitive(it) } ?: JsonNull
+        val newExtra = JsonObject((oldExtra?.toMap() ?: emptyMap()) + ("bias" to biasValue))
         val withMes = el + ("mes" to JsonPrimitive(content)) + ("extra" to newExtra)
         val swipes = (el["swipes"] as? JsonArray)?.map { it.jsonPrimitive.contentOrNull ?: "" }?.toMutableList()
         if (swipes != null && swipes.isNotEmpty()) {

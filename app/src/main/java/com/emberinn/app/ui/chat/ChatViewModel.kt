@@ -819,9 +819,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val text = newText.trim()
         if (text.isEmpty()) return
         val env = MacroEnv(user = currentUserName, char = currentCharName)
-        val processed = MacroEngine.substitute(text, env)
-        chatStore.updateMessage(sessionId, index, processed)
+        // 官方 updateMessage：substituteParams + extractMessageBias（bias 宏移除并存入 extra.bias）
+        val (cleaned, bias) = extractEditBias(text)
+        val processed = MacroEngine.substitute(cleaned, env)
+        chatStore.updateMessage(sessionId, index, processed, bias = bias)
         refreshMessages()
+    }
+
+    /** 对齐官方 extractMessageBias：提取 {{bias:...}} 并从文本移除。 */
+    private fun extractEditBias(message: String): Pair<String, String> {
+        val pattern = Regex("""\{\{\s*bias\s*:([\s\S]*?)\s*\}\}""")
+        val matches = pattern.findAll(message).map { it.groupValues[1].trim() }.filter { it.isNotEmpty() }.toList()
+        val cleaned = pattern.replace(message, "")
+        val bias = if (matches.isEmpty()) "" else " " + matches.joinToString(" ")
+        return cleaned to bias
     }
 
     /** 冒充（官方 Generate('impersonate')）：模型以 {{user}} 视角写下一句，流式草稿进输入框，不落历史。 */

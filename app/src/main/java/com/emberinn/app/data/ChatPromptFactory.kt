@@ -185,7 +185,14 @@ class ChatPromptFactory {
             if (type != "impersonate" && type != "continue" && lastUserBias.isNotBlank()) found = lastUserBias
             cleaned to found
         }
-        val (indexedMessages, promptBias) = chatMessages
+        val (indexedMessages, textBias) = chatMessages
+        // 官方 getBiasStrings：优先回溯最后一条用户消息 extra.bias（编辑消息时官方把 {{bias}} 存进 extra.bias）
+        val storedBias = history.lastOrNull { el ->
+            val obj = el.jsonObject
+            val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+            isUser && (obj["extra"] as? JsonObject)?.get("bias")?.jsonPrimitive?.contentOrNull?.isNotBlank() == true
+        }?.jsonObject?.get("extra")?.jsonObject?.get("bias")?.jsonPrimitive?.contentOrNull
+        val promptBias = storedBias ?: textBias
         val cleanMessages = indexedMessages.map { it.second }
 
         // 向量 RAG（官方 extensions/vectors）：聊天历史重排 + 文件/数据银行 + 世界书向量激活。

@@ -387,6 +387,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 124（2026-08-10：审计第十八批——编辑消息 bias 1:1 + 消息 extra 字段对齐）
+
+- 官方 updateMessage：编辑时 extractMessageBias 存 extra.bias 并 removeMacros；regenerate 时 getBiasStrings 回溯 extra.bias
+  → ChatStore.updateMessage 支持 bias；ChatViewModel.editMessage 提取并保存；ChatPromptFactory 优先读最后用户消息 extra.bias
+- 官方 sendMessageAsUser：普通用户消息 extra 无 gen_id、有 isSmallSys=false → ChatStore.append 对齐
+- 官方 saveReply：AI 消息 extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature → append 补齐
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 123（2026-08-10：审计第十七批——continue 逐字段 1:1 + /sendas 缺省名）
 
 - 官方 saveReply('continue') 尾部：mes/swipes[swipe_id]/swipe_info 整体重写（send_date/gen_*/extra.api/model/reasoning）
