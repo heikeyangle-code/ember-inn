@@ -10,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 
@@ -33,28 +34,48 @@ fun EmberInnTheme(
     )
 }
 
-/** M3 1.4 没有 defaultFontFamily 参数：整体换字体族时逐样式 copy（默认族时原样）。 */
+/** M3 1.4 没有 defaultFontFamily 参数：整体换字体族时逐样式 copy。 */
 private fun typographyWith(fontFamily: FontFamily): Typography {
-    if (fontFamily == FontFamily.Default) return Typography()
     val base = Typography()
+    // README 清单 13：排版层级大胆——标题 Bold/SemiBold，正文保持常规，级差更鲜明
+    fun hierarchy(style: androidx.compose.ui.text.TextStyle, weight: FontWeight, size: androidx.compose.ui.unit.TextUnit = style.fontSize):
+        androidx.compose.ui.text.TextStyle = style.copy(fontWeight = weight, fontSize = size)
+    val ember = Typography(
+        displayLarge = hierarchy(base.displayLarge, FontWeight.Bold),
+        displayMedium = hierarchy(base.displayMedium, FontWeight.Bold),
+        displaySmall = hierarchy(base.displaySmall, FontWeight.Bold),
+        headlineLarge = hierarchy(base.headlineLarge, FontWeight.Bold),
+        headlineMedium = hierarchy(base.headlineMedium, FontWeight.Bold),
+        headlineSmall = hierarchy(base.headlineSmall, FontWeight.Bold),
+        titleLarge = hierarchy(base.titleLarge, FontWeight.Bold),
+        titleMedium = hierarchy(base.titleMedium, FontWeight.SemiBold),
+        titleSmall = hierarchy(base.titleSmall, FontWeight.Medium),
+        bodyLarge = hierarchy(base.bodyLarge, FontWeight.Normal),
+        bodyMedium = hierarchy(base.bodyMedium, FontWeight.Normal),
+        bodySmall = hierarchy(base.bodySmall, FontWeight.Normal),
+        labelLarge = hierarchy(base.labelLarge, FontWeight.SemiBold),
+        labelMedium = hierarchy(base.labelMedium, FontWeight.Medium),
+        labelSmall = hierarchy(base.labelSmall, FontWeight.Medium),
+    )
+    if (fontFamily == FontFamily.Default) return ember
     fun withFont(style: androidx.compose.ui.text.TextStyle): androidx.compose.ui.text.TextStyle =
         style.copy(fontFamily = fontFamily)
-    return Typography(
-        displayLarge = withFont(base.displayLarge),
-        displayMedium = withFont(base.displayMedium),
-        displaySmall = withFont(base.displaySmall),
-        headlineLarge = withFont(base.headlineLarge),
-        headlineMedium = withFont(base.headlineMedium),
-        headlineSmall = withFont(base.headlineSmall),
-        titleLarge = withFont(base.titleLarge),
-        titleMedium = withFont(base.titleMedium),
-        titleSmall = withFont(base.titleSmall),
-        bodyLarge = withFont(base.bodyLarge),
-        bodyMedium = withFont(base.bodyMedium),
-        bodySmall = withFont(base.bodySmall),
-        labelLarge = withFont(base.labelLarge),
-        labelMedium = withFont(base.labelMedium),
-        labelSmall = withFont(base.labelSmall),
+    return ember.copy(
+        displayLarge = withFont(ember.displayLarge),
+        displayMedium = withFont(ember.displayMedium),
+        displaySmall = withFont(ember.displaySmall),
+        headlineLarge = withFont(ember.headlineLarge),
+        headlineMedium = withFont(ember.headlineMedium),
+        headlineSmall = withFont(ember.headlineSmall),
+        titleLarge = withFont(ember.titleLarge),
+        titleMedium = withFont(ember.titleMedium),
+        titleSmall = withFont(ember.titleSmall),
+        bodyLarge = withFont(ember.bodyLarge),
+        bodyMedium = withFont(ember.bodyMedium),
+        bodySmall = withFont(ember.bodySmall),
+        labelLarge = withFont(ember.labelLarge),
+        labelMedium = withFont(ember.labelMedium),
+        labelSmall = withFont(ember.labelSmall),
     )
 }
 

@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -537,11 +538,11 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                         }
                     }
                 } else {
-                    Text(
-                        "暂无模型，请先测试连接",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
+                    EmberEmptyState(
+                        title = "还没有模型列表",
+                        body = "点「测试连接」拉取该服务商的模型列表",
+                        compact = true,
+                        modifier = Modifier.padding(top = 12.dp),
                     )
                 }
             }

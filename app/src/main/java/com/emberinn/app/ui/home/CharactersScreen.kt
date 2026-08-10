@@ -397,24 +397,11 @@ private fun SearchResultsColumn(
         val isEmpty = results.characters.isEmpty() && results.sessions.isEmpty() &&
             results.worldInfo.isEmpty() && results.settings.isEmpty()
         if (isEmpty) {
-            Column(
+            EmberEmptyState(
+                title = "没有找到「$query」",
+                body = "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
                 modifier = Modifier.fillMaxSize().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    "没有找到「$query」",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                )
-            }
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),

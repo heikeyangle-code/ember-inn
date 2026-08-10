@@ -41,6 +41,8 @@ fun EmberEmptyState(
     onAction: (() -> Unit)? = null,
     secondaryLabel: String? = null,
     onSecondary: (() -> Unit)? = null,
+    /** 紧凑模式：用于设置子页/弹层内的行内空状态，不抢主按钮。 */
+    compact: Boolean = false,
 ) {
     val transition = rememberInfiniteTransition(label = "ember-glow")
     val glow by transition.animateFloat(
@@ -54,28 +56,32 @@ fun EmberEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
-            Canvas(modifier = Modifier.size(58.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(if (compact) 48.dp else 72.dp)) {
+            Canvas(modifier = Modifier.size(if (compact) 38.dp else 58.dp)) {
                 drawCircle(accent.copy(alpha = 0.12f * glow), radius = size.minDimension / 2)
                 drawCircle(accent.copy(alpha = 0.22f * glow), radius = size.minDimension * 0.38f)
             }
-            Text("✦", style = MaterialTheme.typography.displayMedium, color = accent.copy(alpha = 0.9f))
+            Text(
+                "✦",
+                style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayMedium,
+                color = accent.copy(alpha = 0.9f),
+            )
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
         Text(
             title,
-            style = MaterialTheme.typography.titleLarge,
+            style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
         Text(
             body,
-            style = MaterialTheme.typography.bodyMedium,
+            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
-            modifier = Modifier.padding(horizontal = 24.dp),
+            lineHeight = (if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium).lineHeight,
+            modifier = Modifier.padding(horizontal = if (compact) 12.dp else 24.dp),
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(18.dp))

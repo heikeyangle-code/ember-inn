@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -79,11 +80,11 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
             if (slots.isEmpty()) {
-                Text(
-                    "还没有快捷回复。点击下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(top = 10.dp),
+                EmberEmptyState(
+                    title = "还没有快捷回复",
+                    body = "点下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
+                    compact = true,
+                    modifier = Modifier.padding(top = 12.dp),
                 )
             }
             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
