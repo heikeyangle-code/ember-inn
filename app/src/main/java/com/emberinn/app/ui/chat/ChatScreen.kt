@@ -2739,12 +2739,9 @@ private fun ChatMarkdown(
             },
         )
     }
-    // 官方 a { color: quoteColor }：链接用引用色
-    val mdSettings = annotatorSettings(
-        annotator = emAnnotator,
-        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
-    )
-    annotatorSettingsRef = mdSettings
+    // 官方 a { color: quoteColor }：链接用引用色。
+    // 注意：annotatorSettings 默认参数会读 LocalMarkdownTypography / LocalReferenceLinkHandler，
+    // 必须在 Markdown 组件的 CompositionLocalProvider 内部创建（放这里=裸调用，会抛 No local MarkdownTypography）
     when {
         mermaid != null -> WebViewHtml(mermaid, modifier)
         rawHtml != null -> WebViewHtml(
@@ -2759,6 +2756,11 @@ private fun ChatMarkdown(
             imageTransformer = Coil3ImageTransformerImpl,
             components = markdownComponents(
                 text = { model ->
+                    val mdSettings = annotatorSettings(
+                        annotator = emAnnotator,
+                        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
+                    )
+                    annotatorSettingsRef = mdSettings
                     val built = remember(model.content, model.node, emAnnotator, quoteColor) {
                         buildAnnotatedString {
                             pushStyle(model.typography.text.toSpanStyle())

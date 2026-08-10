@@ -607,6 +607,19 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 
 
+
+## 8. 修复进聊天崩溃：No local MarkdownTypography（第 187 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 现象：一进聊天（有消息的会话）直接崩，异常 `java.lang.IllegalStateException: No local MarkdownTypography`，
+  堆栈在 `LazyLayoutItemContentFactory$CachedItemContent.createContentLambda` 处
+- 根因：mikepenz markdown 0.43 的 `annotatorSettings()` 是 @Composable，默认参数 `codeSpanStyle` /
+  `referenceLinkHandler` 会读 `LocalMarkdownTypography` / `LocalReferenceLinkHandler`；
+  ChatMarkdown 在 `Markdown` 组件**外**（when 之前）创建了 mdSettings → 裸读本地上下文 → 崩溃
+- 修复：`annotatorSettings(...)` 移到 `Markdown(components = markdownComponents(text = { model -> ... }))`
+  的 text 组件内部创建（此时 CompositionLocalProvider 已生效），`annotatorSettingsRef` 同步在该处赋值
+- 对照源码：mikepenz/multiplatform-markdown-renderer v0.43.0 `AnnotatorSettings.kt`（annotatorSettings 默认参数）
+  + `Markdown.kt`（CompositionLocalProvider 包裹 success）
+
 ## 8. 不加深浅双套字段，修复 CI（第 186 轮，2026-08-11，App/UI 层，未动引擎）
 
 - 用户确认：主题本来就有深浅两种模式（lightBg/darkBg + M3 自动生成），不需要再为每套主题加一套“浅色 st*/scheme*”字段；
