@@ -53,9 +53,9 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         HexField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context)) { AppearancePrefs.saveStBodyColor(context, it) }
-                        HexField("次要文字色", "官方 --SmartThemeEmColor：时间戳/小字用（例 #919191，不是斜体色）", AppearancePrefs.stEmColor(context)) { AppearancePrefs.saveStEmColor(context, it) }
-                        HexField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 标签，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context)) { AppearancePrefs.saveStUnderlineColor(context, it) }
-                        HexField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote，例 #E18A24）", AppearancePrefs.stQuoteColor(context)) { AppearancePrefs.saveStQuoteColor(context, it) }
+                        HexField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context)) { AppearancePrefs.saveStEmColor(context, it) }
+                        HexField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context)) { AppearancePrefs.saveStUnderlineColor(context, it) }
+                        HexField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context)) { AppearancePrefs.saveStQuoteColor(context, it) }
                         HexField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context)) { AppearancePrefs.saveStUserBubble(context, it) }
                         HexField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context)) { AppearancePrefs.saveStBotBubble(context, it) }
                         HexField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context)) { AppearancePrefs.saveStBorderColor(context, it) }

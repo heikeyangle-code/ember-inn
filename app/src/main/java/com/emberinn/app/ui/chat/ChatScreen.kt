@@ -108,6 +108,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
@@ -130,7 +133,16 @@ import com.emberinn.engine.slash.QuickReplySlot
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.MarkdownTokenTypes
+import org.intellij.markdown.ast.ASTNode
 import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
+import com.mikepenz.markdown.annotator.AnnotatorSettings
+import com.mikepenz.markdown.annotator.annotatorSettings
+import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
+import com.mikepenz.markdown.annotator.markdownAnnotator
+import com.mikepenz.markdown.utils.getUnescapedTextInNode
+import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
@@ -2251,6 +2263,20 @@ private data class ChatTypography(
     val inlineCodeMult: Float,
 )
 
+/** 官方 messageFormatting 的引号转 <q> 语义：把引号对染成引用色（原生 AnnotatedString 层）。 */
+private fun AnnotatedString.Builder.appendQuotedText(raw: String, quoteColor: Color) {
+    val regex = Regex("""\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂""")
+    var last = 0
+    for (m in regex.findAll(raw)) {
+        append(raw.substring(last, m.range.first))
+        pushStyle(SpanStyle(color = quoteColor))
+        append(m.value)
+        pop()
+        last = m.range.last + 1
+    }
+    append(raw.substring(last))
+}
+
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
  *  Mermaid 代码块与开启“HTML 消息”后的富文本走 WebView 兜底（README 高级渲染）。 */
 @Composable
@@ -2258,8 +2284,46 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     val context = LocalContext.current
     val mermaid = mermaidHtmlOf(content)
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
-    val rawHtml = if (htmlEnabled && mermaid == null && looksLikeHtml(content)) content else null
+    // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；
+    // 开关只控制“任意 HTML 都渲染” vs “仅官方标签渲染”
+    val outsideFence = content.replace(Regex("```[\\s\\S]*?```"), "")
+    val officialHtml = Regex("<(q|u|font|blockquote|em|i|b|strong|s|sub|sup|br|hr|center|span|div)[\\s>]", RegexOption.IGNORE_CASE)
+        .containsMatchIn(outsideFence) ||
+        // Showdown underline:true：单波浪线 ~text~ → <u>（官方下划线色）
+        Regex("(?<!~)~[^~\\n]+~(?!~)").containsMatchIn(outsideFence)
+    val rawHtml = if (mermaid == null && looksLikeHtml(content) && (htmlEnabled || officialHtml)) content else null
     val type = chatTypography()
+    // 官方 .mes_text i/em { color: emColor }：原生斜体单独着色（自定义 annotator）
+    val stEm = parseHexColor(AppearancePrefs.stEmColor(context))
+    val emColor = stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+    var annotatorSettingsRef: AnnotatorSettings? = null
+    val emAnnotator = remember(emColor, quoteColor) {
+        markdownAnnotator(
+            annotate = { content, child ->
+                when (child.type) {
+                    // 官方 .mes_text i/em { color: emColor }：斜体单独着色
+                    MarkdownElementTypes.EMPH -> {
+                        pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
+                        annotatorSettingsRef?.let { buildMarkdownAnnotatedString(content, child, it) }
+                        pop()
+                        true
+                    }
+                    // 官方 messageFormatting：引号对 → <q>（引用色）；这里在 TEXT 层直接给引号上色
+                    MarkdownTokenTypes.TEXT -> {
+                        appendQuotedText(child.getUnescapedTextInNode(content), quoteColor)
+                        true
+                    }
+                    else -> false
+                }
+            },
+        )
+    }
+    // 官方 a { color: quoteColor }：链接用引用色
+    val mdSettings = annotatorSettings(
+        annotator = emAnnotator,
+        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
+    )
+    annotatorSettingsRef = mdSettings
     when {
         mermaid != null -> WebViewHtml(mermaid, modifier, jsEnabled = true)
         rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier, jsEnabled = false)
@@ -2268,6 +2332,14 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
             modifier = modifier.fillMaxWidth(),
             imageTransformer = Coil3ImageTransformerImpl,
             components = markdownComponents(
+                text = { model ->
+                    MarkdownText(
+                        content = model.content,
+                        node = model.node,
+                        style = model.typography.text,
+                        annotatorSettings = mdSettings,
+                    )
+                },
                 codeBlock = highlightedCodeBlock,
                 codeFence = highlightedCodeFence,
                 blockQuote = { model ->
@@ -2445,6 +2517,7 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
 /** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
 private fun officialStyledHtml(raw: String, context: android.content.Context): String {
     val body = parseHexColor(AppearancePrefs.stBodyColor(context))
+    val em = parseHexColor(AppearancePrefs.stEmColor(context))
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context))
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context))
     val fontSize = when (AppearancePrefs.textSize(context)) {
@@ -2459,8 +2532,10 @@ private fun officialStyledHtml(raw: String, context: android.content.Context): S
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
-q{color:${css(quote)}} u{color:${css(underline)}}
-a{color:${css(underline ?: quote)}}
+em,i{color:${css(em)}}
+q{color:${css(quote)}} q em,q i{color:inherit}
+u{color:${css(underline)}}
+a{color:${css(quote)}}
 blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:6px 0}
 code{font-family:monospace}
 </style></head><body>$raw</body></html>"""

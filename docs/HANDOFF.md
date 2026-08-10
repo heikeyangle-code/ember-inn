@@ -565,6 +565,19 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 渲染全面对齐官方（第 174 轮，2026-08-11，逐条核对 script.js + style.css）
+
+官方 messageFormatting（script.js）：引号对（"“«「『＂）→ <q>；Showdown：emoji/underline(~text~→<u>)/strikethrough/tables；
+CSS（style.css）：i/em=emColor；q=quoteColor 且 q i/em inherit；u=underlineColor；a=quoteColor（不是下划线色）；
+blockquote=左 3px quote + black30 底；body font-weight 500。
+
+本次对齐：
+- 原生：斜体（EMPH）→ emColor；引号对 → 引用色（自定义 annotator 的 TEXT 分支，含中英文引号）；
+  链接 → 引用色（linkTextSpanStyle）；blockquote/checkbox 沿用官方样式
+- WebView 兜底：<q>/<u>/<font>/blockquote/em/i 及 ~text~ 自动走官方 CSS（即使 HTML 开关关着，
+  官方永远渲染 HTML）；a 色修正为引用色；em/i 恢复着色；q 内斜体继承
+- 设置页提示修正：次要色=斜体+小字；下划线色含 ~text~；链接色=引用色
+
 ## 8. 官方字段设置页 + HTML 兜底修复（第 173 轮，2026-08-11）
 
 - 新增设置页「消息渲染（官方字段）」：正文色/次要文字色/下划线色/引用色/用户气泡底/AI 气泡底/
