@@ -96,6 +96,7 @@ class MainActivity : ComponentActivity() {
             )
             val fontFamily = when (recipe?.font ?: AppearancePrefs.font(this)) {
                 "lxgw" -> FontManager.lxgwFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Serif
+                "noto" -> FontManager.notoFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Default
                 "source", "serif" -> FontFamily.Serif
                 else -> FontFamily.Default
             }

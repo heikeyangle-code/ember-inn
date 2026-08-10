@@ -605,6 +605,24 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+## 8. 官方质感全局设置（第 184 轮，2026-08-11，全部对照官方 style.css 真值）
+
+**新增全局设置（外观与主题页 / 文字排版页）**：
+| 设置 | 官方对照（style.css :root） | 默认 |
+|---|---|---|
+| 文字阴影（开关 + 强度 0-4px） | `* { text-shadow: 0 0 calc(var(--shadowWidth)*1px) var(--SmartThemeShadowColor) }`，shadowWidth=2、shadow=rgba(0,0,0,.5) | 开 / 2px |
+| 头像形状（圆形 50% / 圆角 10px / 方形 2px） | `--avatar-base-border-radius:2px`、`-rounded:10px`、`-round:50%` | 圆形（保持原样） |
+| 正文字号“官方 15” | `--mainFontSize: calc(var(--fontScale)*15px)`，fontScale=1 | 标准 16（可选手动切官方 15） |
+| 字体“Noto Sans（官方·下载）” | `--mainFontFamily: "Noto Sans", sans-serif` | 系统（点下载后生效） |
+
+**Noto Sans 方案（用户拍板：只正文 Regular、点下载、不打包）**：
+- FontManager 新增 ensureNoto/notoFile：Google Fonts 官方 TTF 直下（约 570KB）→ filesDir/fonts/noto_sans_regular.ttf
+- 原生：MainActivity `"noto"` 分支 Typeface.createFromFile 加载；WebView 兜底：@font-face 指向同一份 file:// filesDir TTF
+- 同一份字体两个渲染器共用；woff2 方案已回退，字体不打包进 APK
+- 已知取舍：只含 Regular 面，粗体/斜体不合成（Compose 不会伪造）；后续要保真可加 Bold/Italic 下载
+
+**接线点**：chatTypography（15px + Shadow）、MessageRow 用户气泡（Shadow）、RoleAvatar（形状）、officialStyledHtml（@font-face + text-shadow + 15px）、MainActivity（noto）、AppearanceScreen（芯片 + 下载流程）。
+
 ## 8. 渲染审计修复（第 183 轮，2026-08-11，用户要求与官方任何边缘情况一致）
 
 **对照官方 script.js messageFormatting + style.css 逐条审计，修复 5 处**：

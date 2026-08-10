@@ -5,6 +5,7 @@ package com.emberinn.app.ui.chat
 import com.emberinn.app.ui.components.EmberEmptyState
 
 import com.emberinn.app.data.DisplayPipeline
+import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
@@ -1631,11 +1632,17 @@ private fun ChatTopBar(
 @Composable
 private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: Int) {
     val avatarFile = avatarPath?.let { File(it) }?.takeIf { it.exists() }
-    // 圆形 + accent 细描边：角色代入感的视觉锚点，描边叠在图片边缘
+    // 头像形状（全局设置，对齐官方 --avatar-base-border-radius：方形 2px / 圆角 10px / 圆形 50%）
+    val shape = when (AppearancePrefs.avatarShape(LocalContext.current)) {
+        "square" -> RoundedCornerShape(2.dp)
+        "rounded" -> RoundedCornerShape(10.dp)
+        else -> CircleShape
+    }
+    // accent 细描边：角色代入感的视觉锚点，描边叠在图片边缘
     val ring = Modifier
         .size(size.dp)
-        .clip(CircleShape)
-        .border(1.dp, accent.copy(alpha = 0.4f), CircleShape)
+        .clip(shape)
+        .border(1.dp, accent.copy(alpha = 0.4f), shape)
     if (avatarFile != null) {
         AsyncImage(
             model = avatarFile,
@@ -1723,6 +1730,7 @@ private fun MessageRow(
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
+    val textShadow = chatTextShadow()
     val stTheme = LocalThemePreset.current
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.outline
     val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: stTheme.stUserBubble ?: MaterialTheme.colorScheme.primaryContainer
@@ -1814,7 +1822,7 @@ private fun MessageRow(
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
                         Text(
                             text = text,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = (MaterialTheme.typography.bodyMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
@@ -2362,6 +2370,7 @@ private fun chatTypography(): ChatTypography {
     val context = LocalContext.current
     val textSizeSp = when (AppearancePrefs.textSize(context)) {
         "small" -> 14f
+        "official" -> 15f
         "large" -> 18f
         "xlarge" -> 20f
         else -> 16f
@@ -2388,7 +2397,7 @@ private fun chatTypography(): ChatTypography {
         lineHeight = line(1f),
         fontWeight = bodyWeight,
     )
-    return ChatTypography(
+    val typography = ChatTypography(
         body = body,
         h1 = if (realHeading) {
             MaterialTheme.typography.headlineMedium.copy(fontSize = size(1.5f * h1Mult), lineHeight = line(1.5f * h1Mult), fontWeight = FontWeight.Bold)
@@ -2411,6 +2420,31 @@ private fun chatTypography(): ChatTypography {
         quoteItalic = AppearancePrefs.quoteItalic(context),
         codeMult = codeMult,
         inlineCodeMult = inlineCodeMult,
+    )
+    // 官方 style.css：全站文字 text-shadow 0 0 2px rgba(0,0,0,.5)（--SmartThemeShadowColor），全局可调
+    val shadow = chatTextShadow()
+    return if (shadow == null) typography else typography.copy(
+        body = typography.body.copy(shadow = shadow),
+        h1 = typography.h1.copy(shadow = shadow),
+        h2 = typography.h2.copy(shadow = shadow),
+        h3 = typography.h3.copy(shadow = shadow),
+        h4 = typography.h4.copy(shadow = shadow),
+        h5 = typography.h5.copy(shadow = shadow),
+        h6 = typography.h6.copy(shadow = shadow),
+    )
+}
+
+/** 全局文字阴影（外观设置）：官方默认 0 0 2px rgba(0,0,0,.5)。 */
+@Composable
+private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
+    val context = LocalContext.current
+    if (!AppearancePrefs.textShadowEnabled(context)) return null
+    val blur = AppearancePrefs.textShadowStrength(context)
+    if (blur <= 0) return null
+    return androidx.compose.ui.graphics.Shadow(
+        color = Color(0x80000000),
+        offset = androidx.compose.ui.geometry.Offset.Zero,
+        blurRadius = blur.toFloat(),
     )
 }
 
@@ -2958,6 +2992,7 @@ private fun officialStyledHtml(
 ): String {
     val fontSize = when (AppearancePrefs.textSize(context)) {
         "small" -> "14px"
+        "official" -> "15px"
         "large" -> "18px"
         "xlarge" -> "20px"
         else -> "16px"
@@ -2965,6 +3000,16 @@ private fun officialStyledHtml(
     fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
         "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
     } ?: "inherit"
+    // 官方 --mainFontFamily Noto Sans：下载的同一份 TTF 供 WebView 兜底使用
+    val noto = FontManager.notoFile(context)
+    val notoFace = noto?.let { "@font-face{font-family:'Noto Sans';src:url('file://$it') format('truetype')}\n" } ?: ""
+    // 官方 * { text-shadow: 0 0 2px rgba(0,0,0,.5) }（--SmartThemeShadowColor），全局可调
+    val textShadowCss = if (AppearancePrefs.textShadowEnabled(context)) {
+        val blur = AppearancePrefs.textShadowStrength(context)
+        if (blur > 0) "text-shadow:0 0 ${blur}px rgba(0,0,0,.5);" else ""
+    } else {
+        ""
+    }
     val bodyHtml = embedInteractiveBlocks(raw)
         .replace("{{charAvatarPath}}", charAvatarPath ?: "")
         .replace("{{userAvatarPath}}", userAvatarPath ?: "")
@@ -2979,8 +3024,9 @@ private fun officialStyledHtml(
     }
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+$notoFace
 $avatarCss
-body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
+body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
 em,i{color:${css(em)}}
 q{color:${css(quote)}} q em,q i{color:inherit}
 u{color:${css(underline)}}

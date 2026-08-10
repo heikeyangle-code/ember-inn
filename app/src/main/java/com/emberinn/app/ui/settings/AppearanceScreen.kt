@@ -223,30 +223,53 @@ fun AppearanceScreen(
                                 "default" to "系统",
                                 "serif" to "衬线（思源宋体近似）",
                                 "lxgw" to "霞鹜文楷（下载）",
+                                "noto" to "Noto Sans（官方·下载）",
                             ).forEach { (v, label) ->
-                                val lxgwReady = v != "lxgw" || FontManager.lxgwFile(appearanceContext) != null
+                                val fontReady = when (v) {
+                                    "lxgw" -> FontManager.lxgwFile(appearanceContext) != null
+                                    "noto" -> FontManager.notoFile(appearanceContext) != null
+                                    else -> true
+                                }
                                 FilterChip(
                                     selected = font == v,
-                                    enabled = lxgwReady || v == "lxgw",
+                                    enabled = fontReady || v == "lxgw" || v == "noto",
                                     onClick = {
-                                        if (v == "lxgw" && FontManager.lxgwFile(appearanceContext) == null) {
-                                            font = "lxgw"
-                                            fontScope.launch {
-                                                fontDownloading = true
-                                                val result = FontManager.ensureLxgw(appearanceContext)
-                                                fontDownloading = false
-                                                result.onSuccess {
-                                                    AppearancePrefs.save(appearanceContext, radius, "lxgw")
-                                                    onAppearanceChanged()
-                                                }.onFailure { e ->
-                                                    font = AppearancePrefs.font(appearanceContext)
-                                                    fontError = e.message ?: "未知错误"
+                                        when {
+                                            v == "lxgw" && !fontReady -> {
+                                                font = "lxgw"
+                                                fontScope.launch {
+                                                    fontDownloading = true
+                                                    val result = FontManager.ensureLxgw(appearanceContext)
+                                                    fontDownloading = false
+                                                    result.onSuccess {
+                                                        AppearancePrefs.save(appearanceContext, radius, "lxgw")
+                                                        onAppearanceChanged()
+                                                    }.onFailure { e ->
+                                                        font = AppearancePrefs.font(appearanceContext)
+                                                        fontError = e.message ?: "未知错误"
+                                                    }
                                                 }
                                             }
-                                        } else {
-                                            font = v
-                                            AppearancePrefs.save(appearanceContext, radius, v)
-                                            onAppearanceChanged()
+                                            v == "noto" && !fontReady -> {
+                                                font = "noto"
+                                                fontScope.launch {
+                                                    fontDownloading = true
+                                                    val result = FontManager.ensureNoto(appearanceContext)
+                                                    fontDownloading = false
+                                                    result.onSuccess {
+                                                        AppearancePrefs.save(appearanceContext, radius, "noto")
+                                                        onAppearanceChanged()
+                                                    }.onFailure { e ->
+                                                        font = AppearancePrefs.font(appearanceContext)
+                                                        fontError = e.message ?: "未知错误"
+                                                    }
+                                                }
+                                            }
+                                            else -> {
+                                                font = v
+                                                AppearancePrefs.save(appearanceContext, radius, v)
+                                                onAppearanceChanged()
+                                            }
                                         }
                                     },
                                     label = { Text(label) },
@@ -398,7 +421,7 @@ fun AppearanceScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            listOf("small" to "小 14", "normal" to "标准 16", "large" to "大 18", "xlarge" to "特大 20").forEach { (v, label) ->
+                            listOf("small" to "小 14", "normal" to "标准 16", "official" to "官方 15", "large" to "大 18", "xlarge" to "特大 20").forEach { (v, label) ->
                                 FilterChip(selected = textSize == v, onClick = { textSize = v; AppearancePrefs.saveTextSize(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
                             }
                         }
@@ -423,12 +446,65 @@ fun AppearanceScreen(
                     }
                 }
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val fxContext = LocalContext.current
+                var shadowOn by remember { mutableStateOf(AppearancePrefs.textShadowEnabled(fxContext)) }
+                var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(fxContext)) }
+                var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(fxContext)) }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("头像形状", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "官方默认方形 2px；圆角 10px；圆形 50%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
+                        ) {
+                            listOf("circle" to "圆形 50%", "rounded" to "圆角 10px", "square" to "方形 2px（官方）").forEach { (v, label) ->
+                                FilterChip(
+                                    selected = avatarShape == v,
+                                    onClick = { avatarShape = v; AppearancePrefs.saveAvatarShape(fxContext, v); onAppearanceChanged() },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                        Text("文字阴影", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "对齐官方 style.css：全站文字 0 0 2px 黑 50% 阴影（--SmartThemeShadowColor）",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                            Text("启用", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            EmberSwitch(
+                                checked = shadowOn,
+                                onCheckedChange = { shadowOn = it; AppearancePrefs.saveTextShadowEnabled(fxContext, it); onAppearanceChanged() },
+                            )
+                        }
+                        Slider(
+                            value = shadowStrength.toFloat(),
+                            onValueChange = { shadowStrength = it.toInt(); AppearancePrefs.saveTextShadowStrength(fxContext, it.toInt()); onAppearanceChanged() },
+                            valueRange = 0f..4f,
+                            steps = 3,
+                        )
+                        Text("强度：$shadowStrength px", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
         if (fontDownloading) {
             AlertDialog(
                 onDismissRequest = {},
                 title = { Text("下载字体") },
-                text = { Text("正在下载霞鹜文楷（约 70MB），完成后自动应用，请稍候…") },
+                text = { Text("正在下载字体（Noto Sans 约 570KB / 霞鹜文楷约 70MB），完成后自动应用，请稍候…") },
                 confirmButton = {},
             )
         }

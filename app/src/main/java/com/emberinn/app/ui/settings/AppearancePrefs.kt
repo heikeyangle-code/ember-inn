@@ -73,7 +73,37 @@ object AppearancePrefs {
             .apply()
     }
 
-    /** 聊天文字排版：正文字号档（small/normal/large/xlarge）。 */
+    /** 全局文字阴影（对齐官方 style.css：* { text-shadow: 0 0 2px rgba(0,0,0,.5) }）。默认开、2px。 */
+    fun textShadowEnabled(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("text_shadow", true)
+
+    fun saveTextShadowEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("text_shadow", enabled)
+            .apply()
+    }
+
+    /** 文字阴影模糊半径（0-4px，官方默认 2）。 */
+    fun textShadowStrength(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("text_shadow_strength", 2)
+
+    fun saveTextShadowStrength(context: Context, strength: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("text_shadow_strength", strength)
+            .apply()
+    }
+
+    /** 头像形状：circle=圆形 50%（默认）、rounded=圆角 10px、square=方形 2px（官方默认）。 */
+    fun avatarShape(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("avatar_shape", "circle") ?: "circle"
+
+    fun saveAvatarShape(context: Context, shape: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("avatar_shape", shape)
+            .apply()
+    }
+
+    /** 聊天文字排版：正文字号档（small/normal/official/large/xlarge；official=官方 15px）。 */
     fun textSize(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("text_size", "normal") ?: "normal"
 

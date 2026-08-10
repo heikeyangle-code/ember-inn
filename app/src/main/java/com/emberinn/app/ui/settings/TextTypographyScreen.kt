@@ -54,7 +54,7 @@ fun TextTypographyScreen(onBack: () -> Unit) {
                 TypeCard("正文") {
                     TypeChips(
                         "字号",
-                        listOf("small" to "小 14", "normal" to "标准 16", "large" to "大 18", "xlarge" to "特大 20"),
+                        listOf("small" to "小 14", "normal" to "标准 16", "official" to "官方 15", "large" to "大 18", "xlarge" to "特大 20"),
                         textSize,
                     ) { textSize = it; AppearancePrefs.saveTextSize(context, it) }
                     TypeChips(
