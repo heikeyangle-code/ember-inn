@@ -102,6 +102,10 @@ class ChatRepository(context: Context) {
         inChatExtensions: List<PromptItem> = emptyList(),
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
+        regexScopedAllowed: Boolean = false,
+        regexPresetScripts: List<RegexPipelineScript> = emptyList(),
+        regexPresetAllowed: Boolean = false,
+        isContinue: Boolean = false,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -166,6 +170,10 @@ class ChatRepository(context: Context) {
             inChatExtensions = inChatExtensions,
             worldInfoSettings = worldInfoSettings,
             globalRegexScripts = globalRegexScripts,
+            regexScopedAllowed = regexScopedAllowed,
+            regexPresetScripts = regexPresetScripts,
+            regexPresetAllowed = regexPresetAllowed,
+            isContinue = isContinue,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

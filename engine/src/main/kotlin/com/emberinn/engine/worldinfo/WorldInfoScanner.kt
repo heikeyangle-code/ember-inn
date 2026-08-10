@@ -12,7 +12,10 @@ class WorldInfoScanner(
     private val random: RandomProvider = RandomProvider { kotlin.random.Random.nextDouble() },
     private val substitute: MacroSubstituter = MacroSubstituter { it },
     private val messageTransformer: (String) -> String = { it },
-    private val contentTransformer: (String) -> String = { it },
+    // 官方 world-info.js BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO,
+    // { depth: regexDepth, isMarkdown: false, isPrompt: true })；regexDepth 仅 atDepth 条目非空。
+    // 三个参数：内容、正则深度（atDepth 时 = entry.depth ?: DEFAULT_DEPTH，否则 null）、条目 position。
+    private val contentTransformer: (String, Int?, Int) -> String = { content, _, _ -> content },
 ) {
 
     fun scan(
@@ -316,7 +319,12 @@ class WorldInfoScanner(
 
         activated.sortedWith(compareByDescending { it.order }).forEach { entry ->
             // 对齐官方 BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO, ...)
-            val content = contentTransformer(entry.content)
+            val regexDepth = if (entry.position == WorldInfoConstants.POSITION_AT_DEPTH) {
+                entry.depth ?: WorldInfoConstants.DEFAULT_DEPTH
+            } else {
+                null
+            }
+            val content = contentTransformer(entry.content, regexDepth, entry.position)
             if (content.isEmpty()) return@forEach
             when (entry.position) {
                 WorldInfoConstants.POSITION_BEFORE -> before.add(0, content)

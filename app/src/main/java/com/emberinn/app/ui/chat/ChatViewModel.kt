@@ -1074,6 +1074,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             continueMode = step.type == "continue",
             characterRawJsonOverride = step.cardJson,
             inChatExtensions = step.inChatExtensions,
+            scopedRegexAvatar = step.speaker.id,
             onFinished = {
                 val msgs = chatStore.messages(sessionId)
                 // 官方 generateGroupWrapper：每人生成后按 shouldAutoContinue 自动续写（power_user.auto_continue，默认关）
@@ -1201,6 +1202,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         mediaInlining: Boolean = true,
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),
+        scopedRegexAvatar: String? = null,
         onFinished: (() -> Unit)? = null,
     ) {
         streamStartedAt = java.time.Instant.now().toString()
@@ -1228,6 +1230,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val vectorDataBank = rag.dataBankFiles()
             val worldInfoSettings = WorldInfoPrefs.read(getApplication())
             val globalRegexScripts = GlobalRegexPrefs.read(getApplication())
+            // 官方 regex getScriptsByType(SCOPED)：allowedOnly 时角色头像必须在 character_allowed_regex 中
+            val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
+            val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
             }
@@ -1286,6 +1291,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 inChatExtensions = inChatExtensions,
                 worldInfoSettings = worldInfoSettings,
                 globalRegexScripts = globalRegexScripts,
+                regexScopedAllowed = regexScopedAllowed,
+                isContinue = continueMode,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

@@ -216,7 +216,7 @@ class WorldInfoScannerTest {
     fun `regex transformer applies to chat and content`() {
         val scanner = WorldInfoScanner(
             messageTransformer = { it.replace("钥匙", "锁") },
-            contentTransformer = { it.replace("宝藏", "秘宝") },
+            contentTransformer = { content, _, _ -> content.replace("宝藏", "秘宝") },
         )
         val result = scanner.scan(
             chat = listOf("钥匙"),
@@ -254,5 +254,31 @@ class WorldInfoScannerTest {
         // 官方 WIDepthEntries 同样会收集负深度组；负深度在提示词总装层被忽略（populationInjectionPrompts 0..maxDepth）
         assertEquals(1, result.depthEntries.size)
         assertEquals(-1, result.depthEntries.first().depth)
+    }
+
+    @Test
+    fun `content transformer receives official regex depth for atDepth and null otherwise`() {
+        val depths = mutableListOf<Pair<Int?, Int>>()
+        val scanner = WorldInfoScanner(
+            contentTransformer = { content, depth, position ->
+                depths += depth to position
+                content
+            },
+        )
+        val result = scanner.scan(
+            chat = listOf("钥匙"),
+            maxContext = 100,
+            entries = listOf(
+                entry(1, 2, keys = listOf("钥匙"), content = "A", position = WorldInfoConstants.POSITION_BEFORE),
+                entry(2, 1, keys = listOf("钥匙"), content = "B", position = WorldInfoConstants.POSITION_AT_DEPTH, depth = 2, role = "system"),
+                entry(3, 1, keys = listOf("钥匙"), content = "C", position = WorldInfoConstants.POSITION_AT_DEPTH, role = "system"),
+            ),
+            settings = WorldInfoSettings(budgetPercent = 100),
+        )
+        assertEquals(3, result.activated.size)
+        // 排序按 order 降序：order=2 的 before 条目在前，两个 atDepth（order=1）随后
+        assertEquals(null to WorldInfoConstants.POSITION_BEFORE, depths[0])
+        assertEquals(2 to WorldInfoConstants.POSITION_AT_DEPTH, depths[1])
+        assertEquals(WorldInfoConstants.DEFAULT_DEPTH to WorldInfoConstants.POSITION_AT_DEPTH, depths[2])
     }
 }

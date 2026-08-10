@@ -55,9 +55,10 @@ class ChatPromptFactory {
 
     /** 对齐官方 openai.js default_impersonation_prompt。 */
     companion object {
-        /** 官方 regex_placement（engine.js）：USER_INPUT=1 / AI_OUTPUT=2。 */
+        /** 官方 regex_placement（engine.js）：USER_INPUT=1 / AI_OUTPUT=2 / WORLD_INFO=5。 */
         const val REGEX_USER_INPUT = 1
         const val REGEX_AI_OUTPUT = 2
+        const val REGEX_WORLD_INFO = 5
 
         const val DEFAULT_IMPERSONATION_PROMPT =
             "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
@@ -100,6 +101,10 @@ class ChatPromptFactory {
         inChatExtensions: List<PromptItem> = emptyList(),
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
+        regexScopedAllowed: Boolean = false,
+        regexPresetScripts: List<RegexPipelineScript> = emptyList(),
+        regexPresetAllowed: Boolean = false,
+        isContinue: Boolean = false,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -130,15 +135,21 @@ class ChatPromptFactory {
             system = SystemFields(model = model),
         )
         val tokenCounter = TokenCounterFactory.forModel(model)
-        // 官方 getRegexScripts：GLOBAL → PRESET → SCOPED（App 无预设分桶，preset 恒空；allowedOnly 未用）
+        // 官方 getRegexedString：getRegexScripts({ allowedOnly: true })，
+        // GLOBAL → PRESET → SCOPED；scoped 仅当角色头像在 character_allowed_regex 中、
+        // preset 仅当当前预设名在 preset_allowed_regex[api] 中（App 暂无预设脚本存储，preset 恒空）。
         val regexScripts = RegexScopeResolver.resolve(
             global = globalRegexScripts,
+            preset = regexPresetScripts,
             scoped = parsed?.regexScripts ?: emptyList(),
+            allowedOnly = true,
+            presetAllowed = regexPresetAllowed,
+            scopedAllowed = regexScopedAllowed,
         )
 
         // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）；Pair.first 保留原始 JSONL 下标，
         // 保证 extra.media 挂回正确的消息（曾有 mes 缺失导致下标错位、附件挂错消息的隐患）
-        val chatMessages = history.mapIndexedNotNull { index, el ->
+        val indexedChatMessages = history.mapIndexedNotNull { index, el ->
             val obj = el.jsonObject
             // 官方 script.js coreChat：is_system（含 /hide 隐藏、comment 注释消息）不进提示词；
             // 旧版 is_hidden 字段一并兼容排除
@@ -154,15 +165,19 @@ class ChatPromptFactory {
                 isUser = isUser,
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
             )
-        }.map { (index, m) ->
-            // 官方：用户输入存前过 USER_INPUT 正则、生成回复存前过 AI_OUTPUT 正则（script.js sendMessageAsUser/saveReply）；
-            // 本 App 在总装时统一应用（对幂等脚本等价；双应用边界见 HANDOFF）
+        }
+        // 官方 script.js generate coreChat.map：消息在存前已过一轮（sendMessageAsUser/saveReply，
+        // 本 App 未落盘改写、登记边界），总装时按官方再应用一次（isPrompt=true + depth）。
+        // depth = coreChat.length - index - (isContinue ? 2 : 1)，coreChat 不含系统消息。
+        val chatMessages = indexedChatMessages.mapIndexed { i, (index, m) ->
             if (regexScripts.isEmpty()) index to m
             else index to m.copy(
                 mes = RegexPipelineEngine.apply(
                     raw = m.mes,
                     placement = if (m.isUser) REGEX_USER_INPUT else REGEX_AI_OUTPUT,
                     scripts = regexScripts,
+                    isPrompt = true,
+                    depth = indexedChatMessages.size - i - (if (isContinue) 2 else 1),
                     characterOverride = charName,
                 ),
             )
@@ -256,7 +271,21 @@ class ChatPromptFactory {
             .asReversed()
 
         // 世界书扫描（角色卡内嵌 character_book）
-        val scanner = WorldInfoScanner(tokenCounter = tokenCounter)
+        val scanner = WorldInfoScanner(
+            tokenCounter = tokenCounter,
+            // 官方 world-info.js BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO,
+            // { depth: regexDepth, isMarkdown: false, isPrompt: true })
+            contentTransformer = { content, regexDepth, _ ->
+                RegexPipelineEngine.apply(
+                    raw = content,
+                    placement = REGEX_WORLD_INFO,
+                    scripts = regexScripts,
+                    isPrompt = true,
+                    depth = regexDepth,
+                    characterOverride = charName,
+                )
+            },
+        )
         val wiResult = scanner.scan(
             chat = indexedChat.map { it.second.mes },
             maxContext = maxContextTokens,

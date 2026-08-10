@@ -47,6 +47,21 @@ object GlobalRegexPrefs {
         }.getOrDefault(emptyList())
     }
 
+    /** 官方 regex 扩展 character_allowed_regex：允许该卡正则的角色头像名列表（空 = 全部禁用该卡正则）。 */
+    fun characterAllowedRegex(context: Context): List<String> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("character_allowed_regex", "[]") ?: "[]"
+        return runCatching {
+            json.parseToJsonElement(raw).jsonArray.mapNotNull { it.jsonPrimitive.contentOrNull }
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveCharacterAllowed(context: Context, avatars: List<String>) {
+        val arr = JsonArray(avatars.map { JsonPrimitive(it) })
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("character_allowed_regex", arr.toString())
+            .apply()
+    }
+
     fun save(context: Context, scripts: List<RegexPipelineScript>) {
         val arr = JsonArray(scripts.map { s ->
             buildJsonObject {

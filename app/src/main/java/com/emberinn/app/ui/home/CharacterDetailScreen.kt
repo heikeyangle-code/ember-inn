@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
@@ -98,6 +99,10 @@ fun CharacterDetailScreen(
     var fields by remember(record.id) { mutableStateOf(vm.readCharacterFields(record)) }
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
+    // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效（默认不允许）
+    var regexAllowed by remember(record.id) {
+        mutableStateOf(GlobalRegexPrefs.characterAllowedRegex(context).contains("${record.id}.png"))
+    }
     var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
     var modelOverride by remember(record.id) { mutableStateOf(vm.readModelOverride(record)) }
     var modelOverrideExpanded by remember { mutableStateOf(false) }
@@ -426,7 +431,7 @@ fun CharacterDetailScreen(
                 if (regexScripts.isEmpty()) {
                     item {
                         Text(
-                            "没有该卡正则。新增后，发送消息 / 生成回复时会自动应用（对齐官方 data.extensions.regex_scripts）。",
+                            "没有该卡正则。新增后需在下文开启“允许此角色应用该卡正则”才会生效（对齐官方 data.extensions.regex_scripts + character_allowed_regex）。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
@@ -448,6 +453,32 @@ fun CharacterDetailScreen(
                         onClick = { addingRegex = true },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) { Text("＋ 新增正则") }
+                }
+                item {
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("允许此角色应用该卡正则", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "对齐官方 character_allowed_regex：不勾选时该卡正则不会生效。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        Switch(
+                            checked = regexAllowed,
+                            onCheckedChange = { on ->
+                                regexAllowed = on
+                                val list = GlobalRegexPrefs.characterAllowedRegex(context).toMutableList()
+                                val key = "${record.id}.png"
+                                if (on && key !in list) list += key
+                                if (!on) list.remove(key)
+                                GlobalRegexPrefs.saveCharacterAllowed(context, list)
+                            },
+                        )
+                    }
                 }
 
                 item {
