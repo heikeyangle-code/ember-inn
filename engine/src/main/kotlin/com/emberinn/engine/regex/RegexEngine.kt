@@ -103,6 +103,10 @@ object RegexEngine {
             val flags = slash.groupValues[2]
             val validFlags = flags.toSet().size == flags.length && flags.all { it in "gmixXsuUAJ" }
             if (validFlags) {
+                // 官方 regexFromString：new RegExp(pattern, flags)；x/X/A/J/U 不是 JS 原生 flag，
+                // 构造抛 SyntaxError → 捕获后返回 undefined → RegexProvider.get 返回 null → 脚本整体跳过。
+                // u 是 JS 原生 flag，保留（Java 正则无等价物，近似忽略，登记边界）。
+                if (flags.any { it in "xXAJU" }) return null
                 val options = buildSet {
                     if ('i' in flags) add(RegexOption.IGNORE_CASE)
                     if ('m' in flags) add(RegexOption.MULTILINE)

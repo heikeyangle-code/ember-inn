@@ -11,7 +11,7 @@
 - LlmClient 网络层、ChatCompletionPipeline 整体、官方 tokenizer、向量库持久化、斜杠完整 parser、快捷回复/预设库、作用域宏配对（chevrotain CST）
 
 ### 已知边界与潜在风险（后续优先补）
-- 正则：JS 特有 flags x/X/u/U/A/J 未实现；trimStrings characterOverride 已接（官方差分覆盖）；RegexPipeline 宏替换已透传，App 层需接 MacroEngine
+- 正则：JS 特有 flags 已对齐（第 131 轮：x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过；u 原生 flag 保留、Java 近似忽略）；trimStrings characterOverride 已接（官方差分覆盖）；RegexPipeline 宏替换已透传，App 层需接 MacroEngine
 - SSE：choices.delta.content 数组 thinking、choices.message.content、not-primary 抛错已补；Cohere 完整分支与 choices.message 工具调用仍边界
 - 人设：resolve 的 autoLock 已按 persona_auto_lock 计算（官方差分覆盖）
 - 群聊：shouldAutoContinue 未含 is_send_press/abortController 状态；多人回复拼接/nudge 链属 App 调度

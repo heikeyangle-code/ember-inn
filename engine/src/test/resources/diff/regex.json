@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-08T08:13:59.576Z",
+  "generated": "2026-08-10T10:54:26.958Z",
   "source": "sillytavern-ref release",
   "cases": [
     {
@@ -191,6 +191,69 @@
         "raw": "foo foo"
       },
       "expected": "X foo"
+    },
+    {
+      "id": "flags_x_skip",
+      "args": {
+        "findRegex": "/foo/x",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "flags_X_skip",
+      "args": {
+        "findRegex": "/foo/X",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "flags_A_skip",
+      "args": {
+        "findRegex": "/foo/A",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "flags_J_skip",
+      "args": {
+        "findRegex": "/foo/J",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "flags_U_skip",
+      "args": {
+        "findRegex": "/foo/U",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
+    },
+    {
+      "id": "flags_u_apply",
+      "args": {
+        "findRegex": "/foo/u",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "X"
+    },
+    {
+      "id": "flags_dup_literal",
+      "args": {
+        "findRegex": "/foo/gg",
+        "replaceString": "X",
+        "raw": "foo"
+      },
+      "expected": "foo"
     }
   ]
 }

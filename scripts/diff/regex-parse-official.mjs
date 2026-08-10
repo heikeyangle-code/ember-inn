@@ -68,6 +68,12 @@ add('invalid-no-close', '/abc');
 add('unescaped-slash', '/a/b/i');
 add('escaped-slash', '/a\\\\/b/i');
 add('empty-pattern', '//');
+add('flags-x-invalid', '/abc/x');
+add('flags-X-invalid', '/abc/X');
+add('flags-A-invalid', '/abc/A');
+add('flags-J-invalid', '/abc/J');
+add('flags-U-invalid', '/abc/U');
+add('flags-dup-invalid', '/abc/gg');
 `;
 
 const dataUrl = 'data:text/javascript;base64,' + Buffer.from(code).toString('base64');

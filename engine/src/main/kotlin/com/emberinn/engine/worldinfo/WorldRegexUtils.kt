@@ -10,6 +10,8 @@ object WorldRegexUtils {
         if (Regex("""(^|[^\\])/""").containsMatchIn(pattern)) return null
         pattern = pattern.replace("\\/", "/")
         val flags = m.groupValues[2]
+        // 官方 new RegExp(pattern, flags)：重复 flag 抛 SyntaxError → null
+        if (flags.toSet().size != flags.length) return null
         val options = buildSet {
             if ('i' in flags) add(RegexOption.IGNORE_CASE)
             if ('m' in flags) add(RegexOption.MULTILINE)

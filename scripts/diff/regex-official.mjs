@@ -146,6 +146,15 @@ const cases = [
     { id: 'flags_dotall', args: { findRegex: '/a.b/s', replaceString: 'X', raw: 'a\nb' } },
     { id: 'flags_invalid', args: { findRegex: '/foo/zz', replaceString: 'X', raw: 'foo' } },
     { id: 'no_flags_first_only', args: { findRegex: 'foo', replaceString: 'X', raw: 'foo foo' } },
+
+    // 官方 regexFromString：x/X/A/J/U 通过校验但 new RegExp 抛错 → 脚本跳过；u 是原生 flag 正常应用
+    { id: 'flags_x_skip', args: { findRegex: '/foo/x', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_X_skip', args: { findRegex: '/foo/X', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_A_skip', args: { findRegex: '/foo/A', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_J_skip', args: { findRegex: '/foo/J', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_U_skip', args: { findRegex: '/foo/U', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_u_apply', args: { findRegex: '/foo/u', replaceString: 'X', raw: 'foo' } },
+    { id: 'flags_dup_literal', args: { findRegex: '/foo/gg', replaceString: 'X', raw: 'foo' } },
 ];
 
 

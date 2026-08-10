@@ -40,4 +40,20 @@ class RegexEngineTest {
         val script = RegexScript(findRegex = "/a/gi", replaceString = "x")
         assertEquals("xb", RegexEngine.apply(script, "Ab"))
     }
+
+    @Test
+    fun `non native js flags skip script like official RegExp constructor`() {
+        // 官方 new RegExp(pattern, 'x'/'X'/'A'/'J'/'U') 抛 SyntaxError → 脚本跳过（原样返回）
+        for (flag in listOf("x", "X", "A", "J", "U")) {
+            val script = RegexScript(findRegex = "/你好/$flag", replaceString = "哈喽")
+            assertEquals("flag $flag should skip", "你好", RegexEngine.apply(script, "你好"))
+        }
+    }
+
+    @Test
+    fun `unicode flag keeps script applying`() {
+        // 官方 u 是原生 flag；Java 正则无等价物，近似忽略但仍执行
+        val script = RegexScript(findRegex = "/你好/u", replaceString = "哈喽")
+        assertEquals("哈喽", RegexEngine.apply(script, "你好"))
+    }
 }
