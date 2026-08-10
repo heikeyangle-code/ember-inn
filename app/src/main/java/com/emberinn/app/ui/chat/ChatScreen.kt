@@ -2584,7 +2584,13 @@ private fun applyOfficialMarkers(
     val out = AnnotatedString.Builder(stripped)
     for (span in finalSpans) out.addStyle(span.item, span.start, span.end)
     for (p in mappedParagraphs) out.addStyle(p.item, p.start, p.end)
-    out.inlineContent.putAll(source.inlineContent)
+    // Compose 1.11+ 的行内内容（Markdown 图片等）是字符串注解，不是 inlineContent map，需原样平移
+    val inlineTag = "androidx.compose.foundation.text.inlineContent"
+    for (a in source.getStringAnnotations(inlineTag, 0, raw.length)) {
+        val start = map(a.start)
+        val end = map(a.end)
+        if (start < end) out.addStringAnnotation(inlineTag, a.item, start, end)
+    }
     return out.toAnnotatedString()
 }
 
