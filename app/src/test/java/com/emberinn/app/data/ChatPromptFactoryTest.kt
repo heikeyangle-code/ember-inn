@@ -14,6 +14,7 @@ import com.emberinn.engine.worldinfo.StringHash
 import com.emberinn.engine.worldinfo.VectorChatSettings
 import com.emberinn.engine.worldinfo.VectorItem
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.regex.RegexPipelineEngine
 import com.emberinn.engine.worldinfo.VectorSettings
 
 /**
@@ -184,15 +185,42 @@ class ChatPromptFactoryTest {
     }
 
     @Test
-    fun `character regex applies only when scoped allowed (official character_allowed_regex)`() {
+    fun `always regex script applies at save time not at prompt assembly (official)`() {
         val card = """
             {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
               {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽","placement":[1],"runOnEdit":true}
             ]}}}
         """.trimIndent()
         val history = listOf(msg(true, "你好", "User"))
-        // 官方 getScriptsByType(SCOPED)：allowedOnly 且角色不在 character_allowed_regex 中 → 不生效
-        val denied = ChatPromptFactory().prepare(
+        val factory = ChatPromptFactory()
+        // 总装 isPrompt=true：普通（非 promptOnly）脚本不应用（官方 script.js coreChat.map 语义）
+        val prepared = factory.prepare(
+            characterRawJson = card,
+            history = history,
+            userName = "User",
+            charName = "角色",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            regexScopedAllowed = true,
+        )
+        assertTrue(prepared.messages.none { it.content.contains("哈喽") })
+        // 存前（sendMessageAsUser，isPrompt 未设）：普通脚本应用一次
+        val scripts = factory.resolveRegexScripts(card, emptyList(), scopedAllowed = true)
+        val saved = RegexPipelineEngine.apply("你好", ChatPromptFactory.REGEX_USER_INPUT, scripts)
+        assertTrue(saved.contains("哈喽"))
+    }
+
+    @Test
+    fun `prompt only script applies at prompt assembly only when scoped allowed`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
+              {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽","placement":[1],"runOnEdit":true,"promptOnly":true}
+            ]}}}
+        """.trimIndent()
+        val history = listOf(msg(true, "你好", "User"))
+        val factory = ChatPromptFactory()
+        val denied = factory.prepare(
             characterRawJson = card,
             history = history,
             userName = "User",
@@ -202,8 +230,7 @@ class ChatPromptFactoryTest {
             maxTokens = 256,
         )
         assertTrue(denied.messages.none { it.content.contains("哈喽") })
-        // 角色在允许列表 → 生效
-        val allowed = ChatPromptFactory().prepare(
+        val allowed = factory.prepare(
             characterRawJson = card,
             history = history,
             userName = "User",
@@ -214,6 +241,18 @@ class ChatPromptFactoryTest {
             regexScopedAllowed = true,
         )
         assertTrue(allowed.messages.any { it.content.contains("哈喽") })
+    }
+
+    @Test
+    fun `scoped regex scripts resolve only when avatar in character_allowed_regex`() {
+        val card = """
+            {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
+              {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽","placement":[1]}
+            ]}}}
+        """.trimIndent()
+        val factory = ChatPromptFactory()
+        assertTrue(factory.resolveRegexScripts(card, emptyList(), scopedAllowed = false).isEmpty())
+        assertEquals(1, factory.resolveRegexScripts(card, emptyList(), scopedAllowed = true).size)
     }
 
     @Test

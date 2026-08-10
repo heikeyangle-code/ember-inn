@@ -73,6 +73,29 @@ class ChatPromptFactory {
         val maxContextTokens: Int = 8192,
     )
 
+    /**
+     * 官方 getRegexScripts({ allowedOnly: true }) 的 App 侧统一解析：
+     * GLOBAL → PRESET → SCOPED；scoped 仅当角色头像在 character_allowed_regex 中。
+     * 发送/落盘（sendMessageAsUser/saveReply/getFirstMessage）与总装共用同一脚本集合。
+     */
+    fun resolveRegexScripts(
+        characterRawJson: String?,
+        globalRegexScripts: List<RegexPipelineScript>,
+        scopedAllowed: Boolean = false,
+        presetScripts: List<RegexPipelineScript> = emptyList(),
+        presetAllowed: Boolean = false,
+    ): List<RegexPipelineScript> {
+        val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
+        return RegexScopeResolver.resolve(
+            global = globalRegexScripts,
+            preset = presetScripts,
+            scoped = parsed?.regexScripts ?: emptyList(),
+            allowedOnly = true,
+            presetAllowed = presetAllowed,
+            scopedAllowed = scopedAllowed,
+        )
+    }
+
     fun prepare(
         characterRawJson: String?,
         history: List<JsonElement>,
@@ -138,13 +161,12 @@ class ChatPromptFactory {
         // 官方 getRegexedString：getRegexScripts({ allowedOnly: true })，
         // GLOBAL → PRESET → SCOPED；scoped 仅当角色头像在 character_allowed_regex 中、
         // preset 仅当当前预设名在 preset_allowed_regex[api] 中（App 暂无预设脚本存储，preset 恒空）。
-        val regexScripts = RegexScopeResolver.resolve(
-            global = globalRegexScripts,
-            preset = regexPresetScripts,
-            scoped = parsed?.regexScripts ?: emptyList(),
-            allowedOnly = true,
-            presetAllowed = regexPresetAllowed,
+        val regexScripts = resolveRegexScripts(
+            characterRawJson = characterRawJson,
+            globalRegexScripts = globalRegexScripts,
             scopedAllowed = regexScopedAllowed,
+            presetScripts = regexPresetScripts,
+            presetAllowed = regexPresetAllowed,
         )
 
         // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）；Pair.first 保留原始 JSONL 下标，

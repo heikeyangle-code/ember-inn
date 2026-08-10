@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.AppSlashExecutor
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.data.ChatPromptFactory
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
@@ -35,6 +36,8 @@ import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.regex.RegexPipelineEngine
+import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.engine.group.GroupActivationEngine
 import com.emberinn.engine.group.GroupCardMember
 import com.emberinn.engine.group.GroupMember
@@ -515,6 +518,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
     @Volatile
     private var generatingSwipe = false
+    /** 本轮落盘时使用的正则脚本集合（对齐官方 saveReply 的 getRegexScripts({allowedOnly:true})）。 */
+    @Volatile
+    private var saveRegexScripts: List<RegexPipelineScript> = emptyList()
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
@@ -536,7 +542,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 DEFAULT_AI_OPENING
             }
             if (!firstMes.isNullOrBlank()) {
-                chatStore.append(sessionId, false, firstMes, charName)
+                // 官方 getFirstMessage：开场白存前过 AI_OUTPUT 正则（getRegexedString）
+                val scripts = ChatPromptFactory().resolveRegexScripts(
+                    characterRawJson = currentCharacter?.rawJson,
+                    globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+                    scopedAllowed = currentCharacter?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+                )
+                chatStore.append(sessionId, false, RegexPipelineEngine.apply(firstMes, ChatPromptFactory.REGEX_AI_OUTPUT, scripts), charName)
                 refreshMessages()
             }
         }
@@ -584,7 +596,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         currentUserName = userName
         _notice.value = null
         _impersonated.value = null
-        chatStore.append(sessionId, true, text, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
+        // 官方 sendMessageAsUser：USER_INPUT 正则存前应用一次；总装 isPrompt=true 只跑 promptOnly 脚本
+        saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
+            characterRawJson = character?.rawJson,
+            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+        )
+        val regexedText = RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
+        chatStore.append(sessionId, true, regexedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
         _pendingMedia.value = emptyList()
         refreshMessages()
         val voice = VoicePrefs.read(getApplication())
@@ -1233,6 +1252,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // 官方 regex getScriptsByType(SCOPED)：allowedOnly 时角色头像必须在 character_allowed_regex 中
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
             val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
+            // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
+            saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
+                characterRawJson = characterRawJsonOverride ?: character?.rawJson,
+                globalRegexScripts = globalRegexScripts,
+                scopedAllowed = regexScopedAllowed,
+            )
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
             }
@@ -1347,7 +1372,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun finalizeStream(continueMode: Boolean = false) {
         _isStreaming.value = false
         streamSession = null
-        val reply = _streamingText.value
+        // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
+        // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
+        val reply = RegexPipelineEngine.apply(_streamingText.value, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
         val wasImpersonating = _isImpersonating.value
         val wasSwipe = generatingSwipe
         when {
