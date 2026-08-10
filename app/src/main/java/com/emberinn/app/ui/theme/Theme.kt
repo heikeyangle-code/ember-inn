@@ -33,7 +33,8 @@ fun EmberInnTheme(
 ) {
     CompositionLocalProvider(LocalVibe provides vibe, LocalThemePreset provides preset) {
         MaterialTheme(
-            colorScheme = if (darkTheme) preset.darkScheme(vibe) else preset.lightScheme(vibe),
+            // 完整 scheme 覆盖的主题（酒馆官方=官方绝对色）没有浅色模式：浅/深都按官方深色渲染
+            colorScheme = if (preset.schemeBackground != null || darkTheme) preset.darkScheme(vibe) else preset.lightScheme(vibe),
             typography = typographyWith(fontFamily),
             shapes = shapes,
             content = content,

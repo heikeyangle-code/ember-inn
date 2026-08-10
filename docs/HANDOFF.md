@@ -605,6 +605,33 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+
+## 8. 主题强化 + 外观页重组（第 185 轮，2026-08-11，App/UI 层，未动引擎）
+
+**10 套非官方主题补齐 st*/scheme* 字段**（ThemePreset.kt；酒馆官方主题真值未动）：
+- st 系列由各主题色板派生：stBody=lighten(darkBg,0.78)、stEm=lighten(secondary,0.20)、
+  stUnderline=lighten(seed,0.55)、stQuote=lighten(seed,0.24)；用户/AI 气泡、边框、阴影沿用官方中性透明值
+  （#4D000000 / #4D3C3C3C / #80000000 / #80000000）
+- schemePrimary/Secondary/Tertiary = 与 darkScheme 自动派生同值（深色 M3 配色显式化）；
+  Background/OnBackground/Surface/OnSurface 仍为 null（浅色继续按 lightBg/seed 自动生成）
+- 对照：SillyTavern public/style.css :root 的 --SmartTheme* 字段名与语义；派生公式为 App 层自主设计
+
+**渲染器接线**（ChatScreen.kt）：
+- 预设 st* 是深色专属真值：新增 isDarkThemeSurface()（background.luminance()<0.5），
+  深色模式用主题预设 st*，浅色模式回退 M3 自动配色；消息渲染页用户手填值始终优先
+- 原生 StreamingMarkdown / ChatMarkdown / MessageRow / chatTextShadow 与 WebView 兜底全部同步
+
+**官方主题浅色模式**（Theme.kt）：
+- 完整 scheme 覆盖（schemeBackground != null）的主题没有浅色模式：EmberInnTheme 浅/深都走官方深色，
+  与官方一致（官方无浅色主题）
+
+**外观与主题页分组重组**（AppearanceScreen.kt，按 Material 设置页规范：9-16 项用 2+ 分区标题）：
+- 四大分组：主题（模式+11 预设）、视觉与质感（氛围 / 圆角字体 / 头像+文字阴影 / 背景模糊）、
+  消息外观（气泡+密度 / HTML 消息 / 文字排版）、行为与兼容（沉浸 / 启动上次聊天 / 转义标签）
+- 新增 SectionLabel 分区标题；气泡大卡拆出“背景模糊”到视觉组、“启动/转义”到行为组；
+  头像形状+文字阴影上移到视觉组（原在页面末尾）
+- 本轮 App/UI 层，未动引擎，差分不适用；验证 = CI 编译 + 手工过一遍四组卡片
+
 ## 8. 官方质感全局设置（第 184 轮，2026-08-11，全部对照官方 style.css 真值）
 
 **新增全局设置（外观与主题页 / 文字排版页）**：
@@ -623,7 +650,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 文字阴影颜色跟随官方 --SmartThemeShadowColor（消息渲染页“阴影色”设置，原生与 WebView 都生效）；毛玻璃强度已接聊天顶栏/输入栏（cloudy，官方 --SmartThemeBlurStrength）
 
 **接线点**：chatTypography（15px + Shadow）、MessageRow 用户气泡（Shadow）、RoleAvatar（形状）、officialStyledHtml（@font-face + text-shadow + 15px）、MainActivity（noto）、AppearanceScreen（芯片 + 下载流程）。
-- **酒馆官方主题 M3 三色直接映射官方 SmartTheme 字段**（ThemePreset.schemePrimary/Secondary/Tertiary/Background/OnBackground/Surface/OnSurface）：主色=引用橙 #E18A24（--SmartThemeQuoteColor）、次色=灰 #919191（--SmartThemeEmColor）、第三=下划线绿 #BCE7CF（--SmartThemeUnderlineColor）、背景/面板 #171717（--SmartThemeBlurTintColor）、文字 #DCDCD2（--SmartThemeBodyColor）；覆盖色时容器色与对比色也随主色派生。浅色模式仍为近似（官方无浅色）。
+- **酒馆官方主题 M3 三色直接映射官方 SmartTheme 字段**（ThemePreset.schemePrimary/Secondary/Tertiary/Background/OnBackground/Surface/OnSurface）：主色=引用橙 #E18A24（--SmartThemeQuoteColor）、次色=灰 #919191（--SmartThemeEmColor）、第三=下划线绿 #BCE7CF（--SmartThemeUnderlineColor）、背景/面板 #171717（--SmartThemeBlurTintColor）、文字 #DCDCD2（--SmartThemeBodyColor）；覆盖色时容器色与对比色也随主色派生。第 185 轮起：完整 scheme 覆盖的主题（酒馆官方）浅色模式也强制官方深色，不再近似。
 
 ## 8. 渲染审计修复（第 183 轮，2026-08-11，用户要求与官方任何边缘情况一致）
 

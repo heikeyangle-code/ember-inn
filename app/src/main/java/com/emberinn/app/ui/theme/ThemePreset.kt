@@ -50,6 +50,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "rounded",
         spacing = 1.12f,
         motionScale = 0.85f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCCCCCB),
+        stEm = Color(0xFF77756E),
+        stUnderline = Color(0xFFDCA69F),
+        stQuote = Color(0xFFC4695D),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFFC4695D),
+        schemeSecondary = Color(0xFF77756E),
+        schemeTertiary = Color(0xFF647B89),
+
     ),
     ThemePreset(
         id = "celadon",
@@ -63,6 +77,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "rounded",
         spacing = 1.05f,
         motionScale = 0.95f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCCCECD),
+        stEm = Color(0xFF7C8B88),
+        stUnderline = Color(0xFFA1C4BC),
+        stQuote = Color(0xFF609C8F),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF609C8F),
+        schemeSecondary = Color(0xFF7C8B88),
+        schemeTertiary = Color(0xFFC3AF88),
+
     ),
     ThemePreset(
         id = "night",
@@ -74,6 +102,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF4F5F6),
         darkBg = Color(0xFF101820),
         shape = "default",
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCACCCE),
+        stEm = Color(0xFF7D8995),
+        stUnderline = Color(0xFFE7CAA0),
+        stQuote = Color(0xFFD6A65E),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFFD6A65E),
+        schemeSecondary = Color(0xFF7D8995),
+        schemeTertiary = Color(0xFF566E8B),
+
     ),
     ThemePreset(
         id = "cinnabar",
@@ -87,6 +129,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "square",
         spacing = 0.92f,
         motionScale = 1.15f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCDCBCA),
+        stEm = Color(0xFFA17B69),
+        stUnderline = Color(0xFFE6A8A0),
+        stQuote = Color(0xFFD46C5E),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFFD46C5E),
+        schemeSecondary = Color(0xFFA17B69),
+        schemeTertiary = Color(0xFFC0A165),
+
     ),
     ThemePreset(
         id = "glaze",
@@ -100,6 +156,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "circle",
         spacing = 0.95f,
         motionScale = 1.05f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCACBCD),
+        stEm = Color(0xFF65B9C6),
+        stUnderline = Color(0xFFB5BDFF),
+        stQuote = Color(0xFF828FFF),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF828FFF),
+        schemeSecondary = Color(0xFF65B9C6),
+        schemeTertiary = Color(0xFFAF89FF),
+
     ),
     ThemePreset(
         id = "paper",
@@ -111,6 +181,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF6F4EF),
         darkBg = Color(0xFF161616),
         shape = "default",
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCCCCCC),
+        stEm = Color(0xFF8B8B8E),
+        stUnderline = Color(0xFFB5B5B7),
+        stQuote = Color(0xFF828285),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF828285),
+        schemeSecondary = Color(0xFF8B8B8E),
+        schemeTertiary = Color(0xFF999DA0),
+
     ),
     // 酒馆官方（SillyTavern 1.18 默认 SmartTheme，public/style.css :root 逐值核对）：
     // 墨黑底 #171717 · 象牙文字 rgb(220,220,210) · 次要 rgb(145,145,145)
@@ -155,6 +239,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "rounded",
         spacing = 1.05f,
         motionScale = 0.95f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCBCECD),
+        stEm = Color(0xFF95A28C),
+        stUnderline = Color(0xFFAFCCBD),
+        stQuote = Color(0xFF78A88F),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF78A88F),
+        schemeSecondary = Color(0xFF95A28C),
+        schemeTertiary = Color(0xFFD4B552),
+
     ),
     ThemePreset(
         id = "dusk",
@@ -166,6 +264,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF6F1F6),
         darkBg = Color(0xFF1A1522),
         shape = "rounded",
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCDCCCE),
+        stEm = Color(0xFFAE8CC0),
+        stUnderline = Color(0xFFC4B6E2),
+        stQuote = Color(0xFF9B83CE),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF9B83CE),
+        schemeSecondary = Color(0xFFAE8CC0),
+        schemeTertiary = Color(0xFFD99F8D),
+
     ),
     ThemePreset(
         id = "mist",
@@ -178,6 +290,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         darkBg = Color(0xFF141B21),
         shape = "default",
         motionScale = 0.95f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCBCDCE),
+        stEm = Color(0xFF97A9B9),
+        stUnderline = Color(0xFFB7C5D6),
+        stQuote = Color(0xFF859EB9),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFF859EB9),
+        schemeSecondary = Color(0xFF97A9B9),
+        schemeTertiary = Color(0xFFC0A479),
+
     ),
     ThemePreset(
         id = "sakura",
@@ -191,6 +317,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         shape = "rounded",
         spacing = 1.05f,
         motionScale = 1.05f,
+        // 官方字段（--SmartTheme*）：由主题色板派生，深色模式生效；浅色模式回退 M3 自动配色
+        stBody = Color(0xFFCECCCD),
+        stEm = Color(0xFFC4A1A5),
+        stUnderline = Color(0xFFE7BCCB),
+        stQuote = Color(0xFFD68EA8),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D3C3C3C),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        // M3 深色覆盖：与 darkScheme 自动派生同值，让深色配色显式化
+        schemePrimary = Color(0xFFD68EA8),
+        schemeSecondary = Color(0xFFC4A1A5),
+        schemeTertiary = Color(0xFFA596CF),
+
     ),
 )
 
