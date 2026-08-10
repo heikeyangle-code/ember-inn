@@ -40,6 +40,9 @@ class VectorRagService(context: Context) {
         insert = ServicesPrefs.vectorInsert(appContext),
         protect = ServicesPrefs.vectorProtect(appContext),
         scoreThreshold = ServicesPrefs.vectorThreshold(appContext),
+        sizeThresholdDb = ServicesPrefs.vectorSizeThresholdDb(appContext),
+        chunkCountDb = ServicesPrefs.vectorChunkCountDb(appContext),
+        overlapPercentDb = ServicesPrefs.vectorOverlapPercentDb(appContext),
     )
 
     fun worldSettings(): VectorSettings = VectorSettings(

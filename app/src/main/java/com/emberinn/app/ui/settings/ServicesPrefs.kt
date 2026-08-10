@@ -85,6 +85,24 @@ object ServicesPrefs {
     fun vectorThreshold(context: Context): Double =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("vector_threshold", 0.25f).toDouble()
 
+    // 向量 Data Bank 高级参数（官方 vectors 扩展默认值：sizeThresholdDb=5KB / chunkCountDb=5 / overlapPercentDb=0）
+    fun vectorSizeThresholdDb(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("vector_size_threshold_db", 5)
+
+    fun vectorChunkCountDb(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("vector_chunk_count_db", 5)
+
+    fun vectorOverlapPercentDb(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("vector_overlap_percent_db", 0)
+
+    fun saveVectorAdvanced(context: Context, sizeThresholdDb: Int, chunkCountDb: Int, overlapPercentDb: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("vector_size_threshold_db", sizeThresholdDb)
+            .putInt("vector_chunk_count_db", chunkCountDb)
+            .putInt("vector_overlap_percent_db", overlapPercentDb)
+            .apply()
+    }
+
     fun saveTranslate(
         context: Context,
         provider: String,

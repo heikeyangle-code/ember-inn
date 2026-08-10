@@ -191,7 +191,16 @@ private fun VectorCard() {
     var insert by rememberSaveable { mutableStateOf(ServicesPrefs.vectorInsert(context).toString()) }
     var protect by rememberSaveable { mutableStateOf(ServicesPrefs.vectorProtect(context).toString()) }
     var threshold by rememberSaveable { mutableStateOf(ServicesPrefs.vectorThreshold(context).toString()) }
+    var sizeThresholdDb by rememberSaveable { mutableStateOf(ServicesPrefs.vectorSizeThresholdDb(context).toString()) }
+    var chunkCountDb by rememberSaveable { mutableStateOf(ServicesPrefs.vectorChunkCountDb(context).toString()) }
+    var overlapPercentDb by rememberSaveable { mutableStateOf(ServicesPrefs.vectorOverlapPercentDb(context).toString()) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
+    fun saveAdvanced() = ServicesPrefs.saveVectorAdvanced(
+        context,
+        sizeThresholdDb.toIntOrNull()?.coerceAtLeast(1) ?: 5,
+        chunkCountDb.toIntOrNull()?.coerceAtLeast(1) ?: 5,
+        overlapPercentDb.toIntOrNull()?.coerceIn(0, 100) ?: 0,
+    )
     fun save() = ServicesPrefs.saveVector(
         context,
         provider,
@@ -226,6 +235,9 @@ private fun VectorCard() {
         NumberRow("插入条数（insert）", insert) { insert = it; save() }
         NumberRow("保护最近条数（protect）", protect) { protect = it; save() }
         DecimalRow("相似度阈值（0–1）", threshold) { threshold = it; save() }
+        NumberRow("文件入库阈值 KB（sizeThresholdDb）", sizeThresholdDb) { sizeThresholdDb = it; saveAdvanced() }
+        NumberRow("每文件检索块数（chunkCountDb）", chunkCountDb) { chunkCountDb = it; saveAdvanced() }
+        NumberRow("块重叠 %（overlapPercentDb）", overlapPercentDb) { overlapPercentDb = it; saveAdvanced() }
         if (provider == "openai") {
             TextFieldRow("接口地址", url) { url = it; save() }
             KeyRow(
