@@ -4,7 +4,9 @@ import com.emberinn.engine.macros.ChatMessage
 import com.emberinn.engine.macros.CharacterFields
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.macros.EmptyVariableStore
 import com.emberinn.engine.macros.MemoryVariableStore
+import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.macros.SystemFields
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
@@ -147,6 +149,8 @@ class ChatPromptFactory {
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
         scriptInjections: List<ScriptInject> = emptyList(),
+        /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
+        localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -157,10 +161,14 @@ class ChatPromptFactory {
             chatMetadataMesExample = chatMetadata?.get("mes_example")?.jsonPrimitive?.contentOrNull ?: "",
         )
         // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）。
-        // 变量宏接线：local = 本卡变量（extensions.emberinn_variables）作为初始值 + 会话内 setvar 的内存覆盖
-        // （官方 setvar/getvar 就是聊天级内存变量，不写回卡文件；global 无 UI 保持空）。
-        val localVariables = MemoryVariableStore().apply {
-            CharacterCardEdit.readVariables(characterRawJson.orEmpty()).forEach { (k, v) -> set(k, v) }
+        // 变量宏接线：优先用调用方传入的会话级存储（ChatRepository 每会话一份，setvar 跨消息保留）；
+        // 未传时回退为“每轮预置本卡变量（extensions.emberinn_variables）”的内存存储（getvar 可读）。
+        val local = if (localVariables === EmptyVariableStore) {
+            MemoryVariableStore().apply {
+                CharacterCardEdit.readVariables(characterRawJson.orEmpty()).forEach { (k, v) -> set(k, v) }
+            }
+        } else {
+            localVariables
         }
         var env = MacroEnv(
             user = userName,
@@ -180,7 +188,7 @@ class ChatPromptFactory {
                 version = fields.version,
             ),
             system = SystemFields(model = model),
-            local = localVariables,
+            local = local,
         )
         val tokenCounter = TokenCounterFactory.forModel(model)
         // 官方 getRegexedString：getRegexScripts({ allowedOnly: true })，

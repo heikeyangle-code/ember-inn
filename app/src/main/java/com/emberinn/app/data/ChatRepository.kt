@@ -12,6 +12,8 @@ import com.emberinn.engine.worldinfo.VectorSettings
 import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import com.emberinn.engine.media.MediaCapability
+import com.emberinn.engine.macros.MemoryVariableStore
+import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.regex.RegexPipelineScript
@@ -38,6 +40,19 @@ class ChatRepository(context: Context) {
     private val client = LlmClient()
     private val promptFactory = ChatPromptFactory()
     private val json = Json { ignoreUnknownKeys = true }
+
+    /** 会话级变量存储（官方聊天级 local variables）：预置本卡变量，setvar 跨消息保留。 */
+    private var localVariables: VariableStore = MemoryVariableStore()
+    private var seededCardRaw: String? = null
+
+    private fun syncLocalVariables(characterRawJson: String?) {
+        val raw = characterRawJson.orEmpty()
+        if (raw == seededCardRaw) return
+        seededCardRaw = raw
+        val next = MemoryVariableStore()
+        CharacterCardEdit.readVariables(raw).forEach { (k, v) -> next.set(k, v) }
+        localVariables = next
+    }
 
     companion object {
         /** 旧档案固定默认 8192 视为“未设置”：取保守中间档，避免自动拉满模型窗口导致提示词爆炸。 */
@@ -106,6 +121,7 @@ class ChatRepository(context: Context) {
      */
     fun streamPrepared(
         characterRawJson: String?,
+        localVariables: VariableStore? = null,
         history: List<JsonElement>,
         userName: String,
         charName: String,
@@ -174,6 +190,9 @@ class ChatRepository(context: Context) {
         val imageOk = mediaSource != null && MediaCapability.isImageInliningSupported(mediaSource, effectiveModel)
         val videoOk = mediaSource != null && MediaCapability.isVideoInliningSupported(mediaSource, effectiveModel)
         val audioOk = mediaSource != null && MediaCapability.isAudioInliningSupported(mediaSource, effectiveModel)
+        // 变量存储：调用方可注入（测试/特殊场景）；默认会话级一份，卡变化时重预置
+        if (localVariables != null) this.localVariables = localVariables
+        syncLocalVariables(characterRawJson)
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
@@ -208,6 +227,7 @@ class ChatRepository(context: Context) {
             regexEnabled = regexEnabled,
             reasoningToPrompts = reasoningToPrompts,
             scriptInjections = scriptInjections,
+            localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。
