@@ -2026,8 +2026,8 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
     val rawHtml = if (htmlEnabled && mermaid == null && looksLikeHtml(content)) content else null
     when {
-        mermaid != null -> WebViewHtml(mermaid, modifier)
-        rawHtml != null -> WebViewHtml(rawHtml, modifier)
+        mermaid != null -> WebViewHtml(mermaid, modifier, jsEnabled = true)
+        rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier, jsEnabled = false)
         else -> Markdown(
             content = content,
             modifier = modifier.fillMaxWidth(),
@@ -2084,7 +2084,7 @@ private fun mermaidHtmlOf(content: String): String? {
         ?: return null
     val diagram = m.groupValues[1].trim().replace("</", "&lt;/")
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="mermaid.min.js"></script>
 <style>body{margin:8px;background:transparent;color:#333} @media (prefers-color-scheme: dark){body{color:#ddd}}</style>
 </head><body><pre class="mermaid">$diagram</pre>
 <script>mermaid.initialize({startOnLoad:true,theme:'base'});</script></body></html>"""
@@ -2096,20 +2096,46 @@ private fun looksLikeHtml(content: String): Boolean {
     return Regex("<[a-zA-Z][^>]*>").containsMatchIn(outsideFence)
 }
 
-/** WebView 兜底渲染（HTML 消息 / Mermaid）。 */
+/** 简易 HTML 消毒（官方用 DOMPurify；本实现做等价白名单近似：去 script/iframe/object/embed/link、on* 属性、javascript: URL）。 */
+private fun sanitizeHtmlForWebView(html: String): String {
+    var out = html
+    out = Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<iframe[\\s\\S]*?</iframe>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<object[\\s\\S]*?</object>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<embed[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<link[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("\\son[a-z]+\\s*=\\s*\"[^\"]*\"|\\son[a-z]+\\s*=\\s*'[^']*'", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("javascript:", RegexOption.IGNORE_CASE).replace(out, "blocked:")
+    return out
+}
+
+/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启；网络一律拦截（只放行本地 asset）。 */
 @Composable
-private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
+private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: Boolean = false) {
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(0x00000000)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
+                settings.javaScriptEnabled = jsEnabled
+                settings.domStorageEnabled = jsEnabled
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: android.webkit.WebView?,
+                        request: android.webkit.WebResourceRequest?,
+                    ): android.webkit.WebResourceResponse? {
+                        val url = request?.url?.toString().orEmpty()
+                        if (url.startsWith("https://") || url.startsWith("http://")) {
+                            // 禁止远程网络：离线渲染 + 防跟踪/防外联
+                            return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                        }
+                        return null
+                    }
+                }
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 )
-                loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+                loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null)
             }
         },
         modifier = modifier

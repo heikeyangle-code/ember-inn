@@ -293,7 +293,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；❌ HTML 消息开关 / Mermaid 未实现（README 高级渲染节要求，HANDOFF 旧文误写已做） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（第 143 轮硬化：mermaid.min.js 本地资源离线渲染、WebView 网络全部拦截、HTML 简易消毒 script/iframe/object/embed/link/on*/javascript:、JS 仅 Mermaid 开启；官方 DOMPurify 为白名单近似，登记） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -373,7 +373,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | swipe picker / 书签 / URL 导入 | 文档标未做 | 复验已实现并更正文档 |
 | 死代码 | openComingSoon 未使用 | 已删除 |
 
-**剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /while，需异步执行器）、表情精灵 App 层、HTML/Mermaid 渲染、preset 正则存储/UI、快照、ComfyUI/DrawThings/Horde 图像来源。
+**剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /while，需异步执行器）、表情精灵 App 层、preset 正则存储/UI、快照、ComfyUI/DrawThings/Horde 图像来源。
 
 ## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
