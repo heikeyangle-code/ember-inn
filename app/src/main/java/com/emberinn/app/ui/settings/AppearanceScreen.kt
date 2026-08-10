@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.components.ColorField
 import com.emberinn.app.ui.components.EmberSwitch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -361,6 +362,75 @@ fun AppearanceScreen(
                 }
 
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val glassContext = LocalContext.current
+                var glassOn by remember { mutableStateOf(AppearancePrefs.chatBgAvatarGlass(glassContext)) }
+                var bgBlur by remember { mutableStateOf(AppearancePrefs.chatBgBlur(glassContext)) }
+                var scrimDark by remember { mutableStateOf(AppearancePrefs.chatBgScrimDark(glassContext)) }
+                var scrimLight by remember { mutableStateOf(AppearancePrefs.chatBgScrimLight(glassContext)) }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("聊天背景（头像玻璃 + 遮罩）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "优先级：显式背景 > 头像玻璃背景 > 氛围渐变；模糊与遮罩保证正文可读",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            Text("头像玻璃背景", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            EmberSwitch(
+                                checked = glassOn,
+                                onCheckedChange = { glassOn = it; AppearancePrefs.saveChatBgAvatarGlass(glassContext, it); onAppearanceChanged() },
+                            )
+                        }
+                        SliderRow(
+                            label = "模糊强度",
+                            hint = "0 = 不模糊；复杂头像建议 24+",
+                            value = bgBlur.toFloat(),
+                            range = 0f..48f,
+                        ) { v ->
+                            bgBlur = v.toInt()
+                            AppearancePrefs.saveChatBgBlur(glassContext, v.toInt())
+                            onAppearanceChanged()
+                        }
+                        ColorField(
+                            label = "深色遮罩颜色",
+                            hint = "深色主题下盖在背景图上的颜色（例 #000000）",
+                            AppearancePrefs.chatBgScrimDarkColor(glassContext),
+                        ) { AppearancePrefs.saveChatBgScrimDarkColor(glassContext, it) }
+                        SliderRow(
+                            label = "深色遮罩强度",
+                            hint = "不透明度（%），默认 65",
+                            value = scrimDark.toFloat(),
+                            range = 0f..90f,
+                        ) { v ->
+                            scrimDark = v.toInt()
+                            AppearancePrefs.saveChatBgScrimDark(glassContext, v.toInt())
+                            onAppearanceChanged()
+                        }
+                        ColorField(
+                            label = "浅色遮罩颜色",
+                            hint = "浅色主题下盖在背景图上的颜色（例 #FFFFFF）",
+                            AppearancePrefs.chatBgScrimLightColor(glassContext),
+                        ) { AppearancePrefs.saveChatBgScrimLightColor(glassContext, it) }
+                        SliderRow(
+                            label = "浅色遮罩强度",
+                            hint = "不透明度（%），默认 30",
+                            value = scrimLight.toFloat(),
+                            range = 0f..60f,
+                        ) { v ->
+                            scrimLight = v.toInt()
+                            AppearancePrefs.saveChatBgScrimLight(glassContext, v.toInt())
+                            onAppearanceChanged()
+                        }
+                    }
+                }
+            }
+
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionLabel("消息外观", "气泡、HTML 渲染与文字排版")
             }

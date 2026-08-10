@@ -550,23 +550,38 @@ fun ChatScreen(
                 ),
         )
         // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 外层氛围渐变兜底。
-        // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠 65% 黑、浅色叠 30% 纸白；复杂图必须模糊，避免干扰正文
+        // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
+        val glassOn = AppearancePrefs.chatBgAvatarGlass(context)
+        val bgBlur = AppearancePrefs.chatBgBlur(context)
+        val darkSurface = isDarkThemeSurface()
+        val bgScrim = if (darkSurface) {
+            AppearancePrefs.chatBgScrimDark(context) / 100f
+        } else {
+            AppearancePrefs.chatBgScrimLight(context) / 100f
+        }
+        val scrimBase = if (darkSurface) {
+            parseHexColor(AppearancePrefs.chatBgScrimDarkColor(context)) ?: Color.Black
+        } else {
+            parseHexColor(AppearancePrefs.chatBgScrimLightColor(context)) ?: Color.White
+        }
         val bgPath = chatBackground?.takeIf { java.io.File(it).exists() }
-            ?: vm.avatarPath?.takeIf { java.io.File(it).exists() }
+            ?: if (glassOn) vm.avatarPath?.takeIf { java.io.File(it).exists() } else null
         if (bgPath != null) {
             AsyncImage(
                 model = ImageRequest.Builder(context).data(java.io.File(bgPath)).size(1200).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(24.dp),
-            )
-            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        if (isDarkThemeSurface()) Color.Black.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.30f),
-                    ),
+                    .then(if (bgBlur > 0) Modifier.blur(bgBlur.dp) else Modifier),
             )
+            if (bgScrim > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(scrimBase.copy(alpha = scrimBase.alpha * bgScrim)),
+                )
+            }
         }
 
         // 源层：消息列表作为模糊来源，上下留出浮层高度

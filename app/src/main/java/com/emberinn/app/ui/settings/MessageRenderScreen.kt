@@ -30,9 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.components.ColorPickerDialog
-import com.emberinn.app.ui.components.parseHexColor
-import com.emberinn.app.ui.components.toHex
+import com.emberinn.app.ui.components.ColorField
 
 /**
  * 消息渲染（官方 SillyTavern 字段）：正文/次要/下划线/引用/气泡/边框/阴影色 + 毛玻璃强度。
@@ -116,49 +114,3 @@ fun MessageRenderScreen(onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun ColorField(label: String, hint: String, value: String, onSave: (String) -> Unit) {
-    var draft by remember(label) { mutableStateOf(value) }
-    var showPicker by remember { mutableStateOf(false) }
-    val current = parseHexColor(draft)
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            if (current != null) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(current),
-                )
-            } else {
-                Text("跟随主题", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it; onSave(it) },
-                placeholder = { Text("#RRGGBB") },
-                singleLine = true,
-                modifier = Modifier.weight(1f).padding(top = 4.dp),
-            )
-            TextButton(onClick = { showPicker = true }, modifier = Modifier.padding(start = 6.dp)) {
-                Text("选色盘")
-            }
-        }
-        Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    if (showPicker) {
-        ColorPickerDialog(
-            title = label,
-            initial = current,
-            onDismiss = { showPicker = false },
-            onConfirm = { color ->
-                draft = color.toHex()
-                onSave(draft)
-                showPicker = false
-            },
-        )
-    }
-}

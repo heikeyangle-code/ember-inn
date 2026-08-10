@@ -249,6 +249,64 @@ object AppearancePrefs {
     fun stShadowColor(context: Context): String = stField(context, "st_shadow_color")
     fun saveStShadowColor(context: Context, v: String) = saveStField(context, "st_shadow_color", v)
 
+    /** 聊天背景：头像玻璃背景总开关（默认开；关=显式背景仍显示，头像回退到氛围渐变）。 */
+    fun chatBgAvatarGlass(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("chat_bg_avatar_glass", true)
+
+    fun saveChatBgAvatarGlass(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("chat_bg_avatar_glass", enabled)
+            .apply()
+    }
+
+    /** 聊天背景图片模糊半径（px，0-48，默认 24）。 */
+    fun chatBgBlur(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("chat_bg_blur", 24)
+
+    fun saveChatBgBlur(context: Context, radius: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("chat_bg_blur", radius.coerceIn(0, 48))
+            .apply()
+    }
+
+    /** 聊天背景深色遮罩强度（%，0-90，默认 65；浅色底用白色遮罩同档默认 30）。 */
+    fun chatBgScrimDark(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("chat_bg_scrim_dark", 65)
+
+    fun saveChatBgScrimDark(context: Context, percent: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("chat_bg_scrim_dark", percent.coerceIn(0, 90))
+            .apply()
+    }
+
+    fun chatBgScrimLight(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("chat_bg_scrim_light", 30)
+
+    fun saveChatBgScrimLight(context: Context, percent: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("chat_bg_scrim_light", percent.coerceIn(0, 60))
+            .apply()
+    }
+
+    /** 聊天背景遮罩颜色（#RRGGBB / #AARRGGBB；最终不透明度 = 颜色 alpha × 强度%）。 */
+    fun chatBgScrimDarkColor(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("chat_bg_scrim_dark_color", "#000000") ?: "#000000"
+
+    fun saveChatBgScrimDarkColor(context: Context, v: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("chat_bg_scrim_dark_color", v.trim())
+            .apply()
+    }
+
+    fun chatBgScrimLightColor(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("chat_bg_scrim_light_color", "#FFFFFF") ?: "#FFFFFF"
+
+    fun saveChatBgScrimLightColor(context: Context, v: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("chat_bg_scrim_light_color", v.trim())
+            .apply()
+    }
+
     /** 毛玻璃模糊强度（Cloudy radius，0-40，默认 16）。 */
     fun blurStrength(context: Context): Int =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("blur_strength", 16)
