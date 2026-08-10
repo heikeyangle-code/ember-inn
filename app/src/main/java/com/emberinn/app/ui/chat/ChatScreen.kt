@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.chat
 
+import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
@@ -399,6 +400,27 @@ fun ChatScreen(
         }
     }
 
+    // 流式显示：30fps 节流（官方 streaming_fps=30）+ 定界符补齐 + fixMarkdown（官方 onProgressStreaming）
+    var displayStreaming by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        var lastNanos = 0L
+        snapshotFlow { streamingText }.collect { text ->
+            val now = System.nanoTime()
+            if (now - lastNanos >= 33_000_000L) {
+                displayStreaming = text
+                lastNanos = now
+            }
+        }
+    }
+    LaunchedEffect(isStreaming) {
+        if (!isStreaming) displayStreaming = streamingText
+    }
+    val streamingDisplay = remember(displayStreaming, isStreaming) {
+        val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
+        val fixed = DisplayPipeline.fixMarkdown(balanced)
+        if (AppearancePrefs.encodeTags(context)) DisplayPipeline.encodeTags(fixed) else fixed
+    }
+
     val sky = rememberSky()
     val density = LocalDensity.current
     var topBarHeight by remember { mutableStateOf(0) }
@@ -534,7 +556,7 @@ fun ChatScreen(
                         }
                         ChatItem.Streaming -> StreamingRow(
                             modifier = Modifier.animateItem(),
-                            text = streamingText,
+                            text = streamingDisplay,
                             reasoning = streamingReasoning,
                             reasoningExpanded = reasoningExpanded,
                             onReasoningToggle = { reasoningExpanded = !reasoningExpanded },

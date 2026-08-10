@@ -400,6 +400,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   点击图片在 LIST ↔ GALLERY 间切换并持久化 extra.media_display（官方 chats.js
   switchMessageMediaDisplay）；App 恢复内联大图（高限 320dp）+ 点击切换 + gallery 左右滑切
 
+## 8. 流式渲染/自动触底对齐官方（第 156 轮，对照 StreamingProcessor + scroll 逻辑）
+
+官方流式（onProgressStreaming + Stopwatch(1000/streaming_fps=30)）：
+- 每 tick 整段 messageFormatting；App 对齐：流式显示 30fps 节流（snapshotFlow 33ms 限流，结束时补最终值）
+- 官方流式中补齐未配对定界符（* / " / ``` / ~~~，奇数时行尾补，多字符前加换行）→ 移植
+  balanceStreamingDelimiters，显示前再过 fixMarkdown + encode_tags（与 messageFormatting 同链路）
+- 落盘仍用原始流式文本（官方 saveReply 最后 cleanUpMessage，不落补齐痕迹）
+官方自动触底：|scrollHeight-clientHeight-scrollTop|<5；用户上滑→scrollLock 暂停，回底→恢复；
+App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复已实现，本轮未改）
+- 登记：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、cleanUpMessage 停用词逐 token 裁剪未做
+
 ## 8. 文字渲染对齐官方（第 155 轮，对照 script.js messageFormatting）
 
 官方显示管线：显示位点正则（isMarkdown=true，仅 markdownOnly 生效）→ fixMarkdown(forDisplay=true)

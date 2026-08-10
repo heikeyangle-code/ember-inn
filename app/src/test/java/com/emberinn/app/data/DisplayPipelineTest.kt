@@ -28,6 +28,17 @@ class DisplayPipelineTest {
     }
 
     @Test
+    fun `streaming delimiters are balanced while not final`() {
+        assertEquals("你好*", DisplayPipeline.balanceStreamingDelimiters("你好*"))
+        assertEquals("他说\"你好\"", DisplayPipeline.balanceStreamingDelimiters("他说\"你好"))
+        assertEquals("code\n```", DisplayPipeline.balanceStreamingDelimiters("code\n```"))
+        assertEquals("wave\n~~~", DisplayPipeline.balanceStreamingDelimiters("wave\n~~~"))
+        // 偶数不改；final 不改
+        assertEquals("**ok**", DisplayPipeline.balanceStreamingDelimiters("**ok**"))
+        assertEquals("你好*", DisplayPipeline.balanceStreamingDelimiters("你好*", isFinal = true))
+    }
+
+    @Test
     fun `encode tags escapes angle brackets`() {
         assertEquals("&lt;b&gt;hi&lt;/b&gt;", DisplayPipeline.encodeTags("<b>hi</b>"))
     }

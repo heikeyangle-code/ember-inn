@@ -37,4 +37,33 @@ object DisplayPipeline {
 
     /** 官方 encode_tags fallback（无负向断言支持时）：先 < 后 > 全转义。 */
     fun encodeTags(text: String): String = text.replace("<", "&lt;").replace(">", "&gt;")
+
+    /**
+     * 官方 onProgressStreaming 的流式定界符补齐：* / " / ``` / ~~~ 出现奇数次时，
+     * 在行尾补一个（多字符定界符前加换行），避免流式途中 markdown 结构断裂。
+     * isFinal=true 时官方跳过补齐（保存时走 cleanUpMessage）。
+     */
+    fun balanceStreamingDelimiters(text: String, isFinal: Boolean = false): String {
+        if (isFinal) return text
+        var out = text
+        for (delimiter in listOf("*", "\"", "```", "~~~")) {
+            if (countOccurrences(out, delimiter) % 2 == 1) {
+                val separator = if (delimiter.length > 1) "\n" else ""
+                out = out.trimEnd() + separator + delimiter
+            }
+        }
+        return out
+    }
+
+    private fun countOccurrences(text: String, needle: String): Int {
+        var count = 0
+        var from = 0
+        while (true) {
+            val idx = text.indexOf(needle, from)
+            if (idx < 0) break
+            count++
+            from = idx + needle.length
+        }
+        return count
+    }
 }
