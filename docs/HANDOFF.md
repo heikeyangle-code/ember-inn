@@ -565,6 +565,27 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 官方渲染全支持调研与方案（第 172 轮，2026-08-11）
+
+**官方字段用法（public/style.css 核对）**：body 正文色、em 次要色、u 下划线色、q/blockquote 引用色
+（blockquote=左 3px 引用色 + 黑 30% 底 + 左内边距 10px）、font[color] 行内 HTML、checkbox 任务框、
+气泡半透明底、边框/阴影、模糊强度、Noto Sans/Mono 字体、代码背景、表格、分隔线。
+
+**mikepenz 0.43 能力核对**：markdownColor 只暴露 text/codeBackground/inlineCodeBackground/dividerColor/tableBackground；
+markdownComponents 暴露 text/eol/codeFence/codeBlock/heading1-6/blockQuote/paragraph/orderedList/unorderedList/image/
+horizontalRule/table/checkbox/custom——blockquote 与 checkbox 可自定义，行内 q/u/font[color] 没有直接字段。
+
+**方案**：
+- A 原生自定义组件：扩展主题模型（body/em/underline/quote/bubble/border 色）+ 自定义 blockQuote/checkbox/text
+  组件 + q/u/font 预处理着色。覆盖官方大部分字段；q/u 行内 HTML 需预处理，工作量大但可控。
+- B 消息区 WebView + 官方 Showdown/CSS：像素级 1:1（含 q/u/font/checkbox），但滚动/性能/无障碍/主题联动差。
+- C 换渲染器：Compose 生态无更全的现成方案（richeditor 偏编辑），不推荐。
+- D 混合（推荐）：默认原生 A 覆盖常见字段；检测到 q/u/font/复杂 HTML 时走已有本地 WebView 兜底 +
+  官方 CSS 变量注入 → 100% 覆盖官方字段，普通消息保持原生流畅。
+
+**落地批次（待做）**：1) ThemePreset 扩展可选官方字段 + 酒馆官方填真值；2) 自定义 blockQuote/checkbox/text 组件；
+3) q/u/font 检测切 WebView + 官方 CSS 变量注入；4) 气泡/边框/阴影/模糊强度接入；5) Noto 字体打包（增包体，待确认）。
+
 ## 8. 新增主题：酒馆官方 + 4 套（第 171 轮，2026-08-11）
 
 - 酒馆官方主题（id=st）：对照官方 release `public/style.css` :root 逐值核对——
