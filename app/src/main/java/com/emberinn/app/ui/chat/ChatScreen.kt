@@ -1780,7 +1780,7 @@ private fun MessageRow(
         if (dateLabel != null) {
             Text(
                 text = dateLabel,
-                style = MaterialTheme.typography.labelSmall,
+                style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                 color = emColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -1801,7 +1801,7 @@ private fun MessageRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = (MaterialTheme.typography.labelMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                     color = when {
                         isUser || isSystem -> MaterialTheme.colorScheme.onSurfaceVariant
                         else -> accent
@@ -1812,7 +1812,7 @@ private fun MessageRow(
                 Spacer(Modifier.size(8.dp))
                 Text(
                     text = time,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                     color = emColor,
                 )
             }
@@ -2385,6 +2385,7 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
 /** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。 */
 @Composable
 private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit) {
+    val textShadow = chatTextShadow()
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -2394,7 +2395,7 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
-                style = MaterialTheme.typography.labelSmall,
+                style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                 color = MaterialTheme.colorScheme.outline,
                 fontWeight = FontWeight.Medium,
             )
@@ -2403,7 +2404,7 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
             Spacer(Modifier.size(5.dp))
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodySmall,
+                style = (MaterialTheme.typography.bodySmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

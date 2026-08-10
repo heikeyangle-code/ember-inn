@@ -573,7 +573,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | u 与 em 层级（style.css u / em 优先级） | u 段 em 保持 em 色 | u 避开 em 段上色 | ✅ |
 | 代码块（style.css pre code） | display:block + overflow-x:auto | highlightedCodeBlock/Fence（库代码高亮）+ WebView pre code | ✅ 视觉 |
 | 表格/列表/p/li tt（style.css .mes_text） | border/padding/margin 定值 | WebView CSS 同官方；原生 mikepenz 为 M3 风格近似 | 🟡 原生视觉近似 |
-| 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + WebView text-shadow | 🟡 仅聊天正文，非全站 |
+| 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + 名字/时间/日期/思考卡（第 196 轮补）+ WebView text-shadow | 🟡 聊天内全文字；按钮/输入栏等 UI 未加 |
 | 阴影/边框色（style.css :root） | rgba(0,0,0,.5)=#80000000 | stShadow/stBorder #80000000 | ✅ |
 | 用户/AI 气泡底（style.css :root） | rgba(0,0,0,.3) / rgba(60,60,60,.3) | stUserBubble #4D000000 / stBotBubble #4D3C3C3C | ✅ 色值；气泡无官方玻璃模糊 🟡 |
 | 头像圆角（style.css :root） | 2px / 10px / 50% | avatarShape square/rounded/circle | ✅（默认圆形，官方默认方形，可改） |
@@ -589,7 +589,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 11.2 已知 bug / 限制登记（继续治理清单）
 1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
-2. 全站文字阴影只覆盖聊天正文/标题，时间戳/名字/按钮未加（官方 `*` 全站）
+2. 全站文字阴影覆盖聊天内全部文字（正文/标题/名字/时间/日期/思考卡）；按钮/输入栏等 UI 控件未加（官方 `*` 全站）
 3. 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）
 4. Markdown 表格单元格/任务列表 checkbox 文本仍走库内直绘，引号等官方字段可能残留占位符（低频）
 5. 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致
