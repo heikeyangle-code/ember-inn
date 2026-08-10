@@ -55,8 +55,9 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("enabled", enabled)
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 
     /** 官方 regex 扩展 character_allowed_regex：允许该卡正则的角色头像名列表（空 = 全部禁用该卡正则）。 */
     fun characterAllowedRegex(context: Context): List<String> {
@@ -71,8 +72,9 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("character_allowed_regex", arr.toString())
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 
     // ---- 预设正则（官方 preset 扩展：预设文件的 regex_scripts 扩展字段；App 用命名预设集模拟）----
 
@@ -90,8 +92,9 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("preset_sets", obj.toString())
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 
     fun activePresetSet(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("active_preset_set", "") ?: ""
@@ -100,8 +103,9 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("active_preset_set", name)
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 
     /** 官方 preset_allowed_regex[apiId]：允许生效的预设集名列表（App 固定 api=openai）。 */
     fun presetAllowed(context: Context, api: String): List<String> {
@@ -119,8 +123,9 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("preset_allowed_regex", JsonObject(map).toString())
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 
     private fun decodeScript(o: JsonObject): RegexPipelineScript = RegexPipelineScript(
         scriptName = o["scriptName"]?.jsonPrimitive?.contentOrNull ?: "",
@@ -172,6 +177,7 @@ object GlobalRegexPrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("scripts", arr.toString())
             .apply()
+
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
-    com.emberinn.app.data.DisplayCacheVersion.bump()
 }

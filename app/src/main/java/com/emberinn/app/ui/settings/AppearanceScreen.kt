@@ -403,8 +403,9 @@ fun AppearanceScreen(
                         ColorField(
                             label = "深色遮罩颜色",
                             hint = "深色主题下盖在背景图上的颜色（例 #000000）",
-                            AppearancePrefs.chatBgScrimDarkColor(glassContext),
-                        ) { AppearancePrefs.saveChatBgScrimDarkColor(glassContext, it) }
+                            value = AppearancePrefs.chatBgScrimDarkColor(glassContext),
+                            onSave = { AppearancePrefs.saveChatBgScrimDarkColor(glassContext, it) },
+                        )
                         SliderRow(
                             label = "深色遮罩强度",
                             hint = "不透明度（%），默认 65",
@@ -418,8 +419,9 @@ fun AppearanceScreen(
                         ColorField(
                             label = "浅色遮罩颜色",
                             hint = "浅色主题下盖在背景图上的颜色（例 #FFFFFF）",
-                            AppearancePrefs.chatBgScrimLightColor(glassContext),
-                        ) { AppearancePrefs.saveChatBgScrimLightColor(glassContext, it) }
+                            value = AppearancePrefs.chatBgScrimLightColor(glassContext),
+                            onSave = { AppearancePrefs.saveChatBgScrimLightColor(glassContext, it) },
+                        )
                         SliderRow(
                             label = "浅色遮罩强度",
                             hint = "不透明度（%），默认 30",
