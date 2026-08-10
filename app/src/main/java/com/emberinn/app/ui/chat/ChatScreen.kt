@@ -411,9 +411,10 @@ fun ChatScreen(
                         is ChatItem.Message -> {
                             val el = item.element
                             val isUserMsg = isUser(el)
+                            val isSystemMsg = isSystem(el)
                             val text = textOf(el)
                             val immersiveActions = AppearancePrefs.immersiveActions(context)
-                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !immersiveActions
+                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !isSystemMsg && !immersiveActions
                             val swipeCount = vm.swipeCountOf(el)
                             val curSwipe = vm.currentSwipeOf(el)
                             val isPrevSameSender =
@@ -428,6 +429,7 @@ fun ChatScreen(
                             MessageRow(
                                 modifier = Modifier.animateItem(),
                                 isUser = isUserMsg,
+                                isSystem = isSystemMsg,
                                 text = text,
                                 media = mediaOf(el),
                                 mediaDisplay = extraDisplayOf(el),
@@ -676,7 +678,8 @@ fun ChatScreen(
                         showBookmarkDialog = true
                     }
                     val swipeCount = vm.swipeCountOf(el)
-                    if (!isUserMsg) {
+                    val isSystemMsg = isSystem(el)
+                    if (!isUserMsg && !isSystemMsg) {
                         MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
@@ -693,7 +696,7 @@ fun ChatScreen(
                             }
                         }
                     }
-                    if (swipeCount >= 1) {
+                    if (swipeCount >= 1 && !isSystemMsg) {
                         MenuRow(PhosphorIcons.CaretLeft, "上一个回复") {
                             vm.swipeLeft(index); menuMessageIndex = null
                         }
@@ -1394,6 +1397,7 @@ private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
 private fun MessageRow(
     modifier: Modifier = Modifier,
     isUser: Boolean,
+    isSystem: Boolean = false,
     text: String,
     media: List<MediaAttachment>,
     mediaDisplay: String? = null,
@@ -1449,8 +1453,12 @@ private fun MessageRow(
                 Text(
                     text = name,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isUser) MaterialTheme.colorScheme.onSurfaceVariant else accent,
+                    color = when {
+                        isUser || isSystem -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> accent
+                    },
                     fontWeight = FontWeight.Medium,
+                    fontStyle = if (isSystem) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
                 )
                 Spacer(Modifier.size(8.dp))
                 Text(
@@ -1471,7 +1479,7 @@ private fun MessageRow(
             Spacer(Modifier.size(3.dp))
             // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动
             var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
-            if (!isUser) {
+            if (!isUser && !isSystem) {
                 val threshold = with(LocalDensity.current) { 56.dp.toPx() }
                 bubbleModifier = bubbleModifier.then(
                     Modifier.pointerInput(Unit) {
@@ -1508,12 +1516,12 @@ private fun MessageRow(
                 // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
                 ChatMarkdown(
                     content = text,
-                    onSurface = MaterialTheme.colorScheme.onSurface,
+                    onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                     modifier = bubbleModifier,
                 )
             }
             // 回复变体计数条（对齐官方 swipes-counter：n/total + 左右箭头；仅在已有变体时显示）
-            if (swipeCount >= 1) {
+            if (swipeCount >= 1 && !isSystem) {
                 Spacer(Modifier.size(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
@@ -2374,4 +2382,9 @@ private fun timeOf(el: JsonElement): String {
         Instant.parse(raw).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("HH:mm"))
     }.getOrDefault("")
+
+
+/** 是否系统消息（/hide 隐藏、/comment 注释等；官方 coreChat 过滤 is_system）。 */
+private fun isSystem(el: JsonElement): Boolean =
+    el.jsonObject["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
 }
