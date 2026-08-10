@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.chat
 
 import android.app.Application
+import androidx.compose.ui.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -727,10 +728,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         get() = character?.avatarPath
 
     /** 角色卡/主题编辑后返回聊天：刷新第三层主题、头像与聊天背景（character getter 实时读盘）。 */
+    /** 无头像取色时的稳定兜底：卡名哈希 → HSV 色（README：无头像卡用卡名哈希生成稳定 seed，可复现）。 */
+    private fun nameHashSeed(name: String): Long {
+        val h = name.hashCode()
+        val hue = ((h % 360) + 360) % 360
+        return Color.hsv(hue.toFloat(), 0.55f, 0.78f).value.toLong()
+    }
+
     fun refreshTheme() {
         ThemeState.update(
             recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
-            seedColor = character?.seedColor,
+            seedColor = character?.let { it.seedColor ?: nameHashSeed(it.name) },
         )
         _chatBackground.value = chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
             ?: character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson).background }?.ifBlank { null }
@@ -836,7 +844,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 第三层主题（角色配方）：当前角色进入全局主题管线；离开聊天由 ChatScreen 清空回全局
         ThemeState.update(
             recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
-            seedColor = character?.seedColor,
+            seedColor = character?.let { it.seedColor ?: nameHashSeed(it.name) },
         )
         // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
         // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”

@@ -97,6 +97,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -132,6 +133,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.slash.QuickReplySlot
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -547,18 +549,24 @@ fun ChatScreen(
                     ),
                 ),
         )
-        // 聊天背景（官方 chat_metadata.custom_background）：低饱和铺底，不影响正文可读性
-        chatBackground?.let { bgPath ->
-            val bgFile = java.io.File(bgPath)
-            if (bgFile.exists()) {
-                AsyncImage(
-                    model = bgFile,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alpha = 0.18f,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+        // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 外层氛围渐变兜底。
+        // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠 65% 黑、浅色叠 30% 纸白；复杂图必须模糊，避免干扰正文
+        val bgPath = chatBackground?.takeIf { java.io.File(it).exists() }
+            ?: vm.avatarPath?.takeIf { java.io.File(it).exists() }
+        if (bgPath != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context).data(java.io.File(bgPath)).size(1200).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(24.dp),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (isDarkThemeSurface()) Color.Black.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.30f),
+                    ),
+            )
         }
 
         // 源层：消息列表作为模糊来源，上下留出浮层高度

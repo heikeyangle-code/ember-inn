@@ -45,7 +45,8 @@ class MainActivity : ComponentActivity() {
             var appearanceRev by remember { mutableIntStateOf(0) }
             remember(appearanceRev) { Unit }
             val recipe by ThemeState.recipe.collectAsState()
-            // 第三层角色主题配方：浅深锁定 > 全局模式；显式配方 seed > 全局预设（角色自动取色只作强调色，不再整体替换全局主题）
+            val seedColor by ThemeState.seedColor.collectAsState()
+            // 第三层角色主题配方：浅深锁定 > 全局模式；显式配方 seed > 角色取色/名字哈希 > 全局预设
             val effectiveMode = when (recipe?.lockMode) {
                 "light" -> ThemeMode.LIGHT
                 "dark" -> ThemeMode.DARK
@@ -56,9 +57,10 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            val effectivePreset = remember(preset, recipe) {
+            val effectivePreset = remember(preset, recipe, seedColor) {
                 val seedHex = recipe?.seed?.trim()
                 val seed = seedHex?.takeIf { it.isNotEmpty() }?.let(::parseColor)
+                    ?: seedColor?.let { Color(it.toInt()) }
                     ?: preset.seed
                 if (seed != preset.seed) {
                     ThemePreset(
