@@ -30,12 +30,14 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.icons.PhosphorIcons
 
 /** 颜色字段：色块（即选色入口）+ 标签 + hex 等宽预览 + 编辑按钮 + hex 输入。
- *  选色盘支持 #RRGGBB / #AARRGGBB / 3 位简写。 */
+ *  选色盘支持 #RRGGBB / #AARRGGBB / 3 位简写。
+ *  fallback = 当前主题默认值：字段留空时显示主题默认（跟随主题），换主题即时更新。 */
 @Composable
-fun ColorField(label: String, hint: String, value: String, onSave: (String) -> Unit) {
+fun ColorField(label: String, hint: String, value: String, onSave: (String) -> Unit, fallback: androidx.compose.ui.graphics.Color? = null) {
     var draft by remember(label, value) { mutableStateOf(value) }
     var showPicker by remember { mutableStateOf(false) }
     val current = parseHexColor(draft)
+    val effective = current ?: fallback
     val swatchShape = RoundedCornerShape(8.dp)
     Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -44,7 +46,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                     .size(28.dp)
                     .clip(swatchShape)
                     .background(
-                        current ?: MaterialTheme.colorScheme.surfaceContainerHighest,
+                        effective ?: MaterialTheme.colorScheme.surfaceContainerHighest,
                     )
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, swatchShape)
                     .clickable { showPicker = true },
@@ -58,7 +60,11 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    if (current != null) draft.ifBlank { "#RRGGBB" } else "跟随主题",
+                    when {
+                        current != null -> draft.ifBlank { "#RRGGBB" }
+                        fallback != null -> fallback.toHex() + " · 跟随主题"
+                        else -> "跟随主题"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
@@ -92,7 +98,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
     if (showPicker) {
         ColorPickerDialog(
             title = label,
-            initial = current,
+            initial = effective,
             onDismiss = { showPicker = false },
             onConfirm = { color ->
                 draft = color.toHex()

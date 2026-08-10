@@ -31,15 +31,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ColorField
+import com.emberinn.app.ui.theme.LocalThemePreset
+import androidx.compose.ui.graphics.luminance
 
 /**
  * 消息渲染（官方 SillyTavern 字段）：正文/次要/下划线/引用/气泡/边框/阴影色 + 毛玻璃强度。
  * 空 = 跟随主题自动生成；填 #RRGGBB 即覆盖。
  */
 @Composable
-fun MessageRenderScreen(onBack: () -> Unit) {
+fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) {
     val context = LocalContext.current
     var blur by remember { mutableIntStateOf(AppearancePrefs.blurStrength(context)) }
+    // 当前主题的官方字段默认值：字段留空时显示“主题默认”预览（换主题即时更新，与渲染器解析同规则）
+    val stTheme = LocalThemePreset.current
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val bodyFallback = if (dark) stTheme.stBody else null ?: MaterialTheme.colorScheme.onSurface
+    val emFallback = if (dark) stTheme.stEm else null ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val underlineFallback = if (dark) stTheme.stUnderline else null ?: MaterialTheme.colorScheme.primary
+    val quoteFallback = if (dark) stTheme.stQuote else null ?: MaterialTheme.colorScheme.primary
+    val userBubbleFallback = if (dark) stTheme.stUserBubble else null ?: MaterialTheme.colorScheme.primaryContainer
+    val botBubbleFallback = if (dark) stTheme.stBotBubble else null ?: MaterialTheme.colorScheme.surfaceContainerLow
+    val borderFallback = if (dark) stTheme.stBorder else null ?: androidx.compose.ui.graphics.Color(0x80000000)
+    val shadowFallback = if (dark) stTheme.stShadow else null ?: androidx.compose.ui.graphics.Color(0x80000000)
 
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsTopBar(title = "消息渲染（官方字段）", onBack = onBack)
@@ -61,14 +74,14 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        ColorField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context)) { AppearancePrefs.saveStBodyColor(context, it) }
-                        ColorField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context)) { AppearancePrefs.saveStEmColor(context, it) }
-                        ColorField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context)) { AppearancePrefs.saveStUnderlineColor(context, it) }
-                        ColorField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context)) { AppearancePrefs.saveStQuoteColor(context, it) }
-                        ColorField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context)) { AppearancePrefs.saveStUserBubble(context, it) }
-                        ColorField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context)) { AppearancePrefs.saveStBotBubble(context, it) }
-                        ColorField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context)) { AppearancePrefs.saveStBorderColor(context, it) }
-                        ColorField("阴影色", "官方 --SmartThemeShadowColor（例 #00000080）", AppearancePrefs.stShadowColor(context)) { AppearancePrefs.saveStShadowColor(context, it) }
+                        ColorField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context), bodyFallback) { AppearancePrefs.saveStBodyColor(context, it); onAppearanceChanged() }
+                        ColorField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context), emFallback) { AppearancePrefs.saveStEmColor(context, it); onAppearanceChanged() }
+                        ColorField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context), underlineFallback) { AppearancePrefs.saveStUnderlineColor(context, it); onAppearanceChanged() }
+                        ColorField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context), quoteFallback) { AppearancePrefs.saveStQuoteColor(context, it); onAppearanceChanged() }
+                        ColorField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context), userBubbleFallback) { AppearancePrefs.saveStUserBubble(context, it); onAppearanceChanged() }
+                        ColorField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context), botBubbleFallback) { AppearancePrefs.saveStBotBubble(context, it); onAppearanceChanged() }
+                        ColorField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context), borderFallback) { AppearancePrefs.saveStBorderColor(context, it); onAppearanceChanged() }
+                        ColorField("阴影色", "官方 --SmartThemeShadowColor（例 #00000080）", AppearancePrefs.stShadowColor(context), shadowFallback) { AppearancePrefs.saveStShadowColor(context, it); onAppearanceChanged() }
                     }
                 }
             }
@@ -87,7 +100,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                         )
                         Slider(
                             value = blur.toFloat(),
-                            onValueChange = { blur = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()) },
+                            onValueChange = { blur = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()); onAppearanceChanged() },
                             valueRange = 0f..40f,
                         )
                         Text("$blur", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)

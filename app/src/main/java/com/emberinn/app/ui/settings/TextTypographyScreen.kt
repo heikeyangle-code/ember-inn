@@ -28,7 +28,7 @@ import com.emberinn.app.ui.components.EmberSwitch
  * 只影响聊天消息显示；保存即持久化，回聊天页立即生效。
  */
 @Composable
-fun TextTypographyScreen(onBack: () -> Unit) {
+fun TextTypographyScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) {
     val context = LocalContext.current
 
     var textSize by remember { mutableStateOf(AppearancePrefs.textSize(context)) }
@@ -56,17 +56,17 @@ fun TextTypographyScreen(onBack: () -> Unit) {
                         "字号",
                         listOf("small" to "小 14", "normal" to "标准 16", "official" to "官方 15", "large" to "大 18", "xlarge" to "特大 20"),
                         textSize,
-                    ) { textSize = it; AppearancePrefs.saveTextSize(context, it) }
+                    ) { textSize = it; AppearancePrefs.saveTextSize(context, it); onAppearanceChanged() }
                     TypeChips(
                         "行高",
                         listOf("compact" to "紧凑 1.4", "normal" to "标准 1.55", "loose" to "宽松 1.7"),
                         lineHeight,
-                    ) { lineHeight = it; AppearancePrefs.saveLineHeight(context, it) }
+                    ) { lineHeight = it; AppearancePrefs.saveLineHeight(context, it); onAppearanceChanged() }
                     TypeChips(
                         "字重",
                         listOf("normal" to "常规", "medium" to "中等", "semibold" to "半粗"),
                         bodyWeight,
-                    ) { bodyWeight = it; AppearancePrefs.saveBodyWeight(context, it) }
+                    ) { bodyWeight = it; AppearancePrefs.saveBodyWeight(context, it); onAppearanceChanged() }
                 }
             }
             item {
@@ -75,17 +75,17 @@ fun TextTypographyScreen(onBack: () -> Unit) {
                         "层级",
                         listOf("flat" to "聊天风（缩小）", "real" to "正常层级（放大）"),
                         headingStyle,
-                    ) { headingStyle = it; AppearancePrefs.saveHeadingStyle(context, it) }
+                    ) { headingStyle = it; AppearancePrefs.saveHeadingStyle(context, it); onAppearanceChanged() }
                     TypeChips(
                         "H1 大小",
                         listOf("0.9" to "小", "1.0" to "标准", "1.2" to "大", "1.5" to "特大"),
                         h1.toString(),
-                    ) { h1 = it.toFloat(); AppearancePrefs.saveHeadingH1(context, it.toFloat()) }
+                    ) { h1 = it.toFloat(); AppearancePrefs.saveHeadingH1(context, it.toFloat()); onAppearanceChanged() }
                     TypeChips(
                         "H2 大小",
                         listOf("0.9" to "小", "1.0" to "标准", "1.15" to "大", "1.35" to "特大"),
                         h2.toString(),
-                    ) { h2 = it.toFloat(); AppearancePrefs.saveHeadingH2(context, it.toFloat()) }
+                    ) { h2 = it.toFloat(); AppearancePrefs.saveHeadingH2(context, it.toFloat()); onAppearanceChanged() }
                 }
             }
             item {
@@ -94,19 +94,19 @@ fun TextTypographyScreen(onBack: () -> Unit) {
                         Text("引用斜体", style = MaterialTheme.typography.bodyMedium)
                         EmberSwitch(
                             checked = quoteItalic,
-                            onCheckedChange = { quoteItalic = it; AppearancePrefs.saveQuoteItalic(context, it) },
+                            onCheckedChange = { quoteItalic = it; AppearancePrefs.saveQuoteItalic(context, it); onAppearanceChanged() },
                         )
                     }
                     TypeChips(
                         "代码块字号",
                         listOf("0.8" to "小", "0.9" to "标准", "1.0" to "大"),
                         codeSize.toString(),
-                    ) { codeSize = it.toFloat(); AppearancePrefs.saveCodeSize(context, it.toFloat()) }
+                    ) { codeSize = it.toFloat(); AppearancePrefs.saveCodeSize(context, it.toFloat()); onAppearanceChanged() }
                     TypeChips(
                         "行内代码字号",
                         listOf("0.8" to "小", "0.9" to "标准", "1.0" to "大"),
                         inlineCodeSize.toString(),
-                    ) { inlineCodeSize = it.toFloat(); AppearancePrefs.saveInlineCodeSize(context, it.toFloat()) }
+                    ) { inlineCodeSize = it.toFloat(); AppearancePrefs.saveInlineCodeSize(context, it.toFloat()); onAppearanceChanged() }
                 }
             }
             item {
@@ -115,12 +115,12 @@ fun TextTypographyScreen(onBack: () -> Unit) {
                         "块间距",
                         listOf("compact" to "紧凑", "normal" to "标准", "loose" to "宽松"),
                         blockSpacing,
-                    ) { blockSpacing = it; AppearancePrefs.saveBlockSpacing(context, it) }
+                    ) { blockSpacing = it; AppearancePrefs.saveBlockSpacing(context, it); onAppearanceChanged() }
                     TypeChips(
                         "列表缩进",
                         listOf("8" to "8dp", "10" to "10dp", "12" to "12dp"),
                         listIndent,
-                    ) { listIndent = it; AppearancePrefs.saveListIndent(context, it) }
+                    ) { listIndent = it; AppearancePrefs.saveListIndent(context, it); onAppearanceChanged() }
                 }
             }
         }

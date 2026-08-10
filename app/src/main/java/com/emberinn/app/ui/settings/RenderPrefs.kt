@@ -8,7 +8,7 @@ object RenderPrefs {
     private const val NAME = "ember_render"
 
     fun htmlEnabled(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("html_enabled", false)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("html_enabled", true)
 
     fun setHtmlEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()

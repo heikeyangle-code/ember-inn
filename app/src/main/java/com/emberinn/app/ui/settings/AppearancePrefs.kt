@@ -71,6 +71,7 @@ object AppearancePrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("encode_tags", enabled)
             .apply()
+        com.emberinn.app.data.DisplayCacheVersion.bump()
     }
 
     /** 全局文字阴影（对齐官方 style.css：* { text-shadow: 0 0 2px rgba(0,0,0,.5) }）。默认开、2px。 */

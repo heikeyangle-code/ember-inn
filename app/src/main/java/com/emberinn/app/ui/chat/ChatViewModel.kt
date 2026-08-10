@@ -17,6 +17,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
+import com.emberinn.app.data.DisplayCacheVersion
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GenerationPrefs
@@ -102,8 +103,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
 
-    /** 显示文本缓存：displayTextOf 只在消息刷新时算一次，组合期不再读盘/跑正则（性能）。 */
+    /** 显示文本缓存：displayTextOf 只在消息刷新时算一次，组合期不再读盘/跑正则（性能）。
+     *  设置（encode_tags/正则/允许列表）变更时 DisplayCacheVersion.bump()，这里整体失效即时生效。 */
     private val displayCache = mutableMapOf<Int, String>()
+    private var displayCacheVersion = -1
 
     private val _streamingText = MutableStateFlow("")
     val streamingText: StateFlow<String> = _streamingText
@@ -318,6 +321,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * 只影响显示，不改落盘文本。
      */
     fun displayTextOf(index: Int): String {
+        if (displayCacheVersion != DisplayCacheVersion.version) {
+            displayCache.clear()
+            displayCacheVersion = DisplayCacheVersion.version
+        }
         displayCache[index]?.let { return it }
         val el = _messages.value.getOrNull(index)?.jsonObject ?: return ""
         val extra = el["extra"] as? JsonObject

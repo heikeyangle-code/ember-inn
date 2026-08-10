@@ -90,7 +90,7 @@ fun AppearanceScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -135,7 +135,7 @@ fun AppearanceScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val vibeContext = LocalContext.current
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -205,7 +205,7 @@ fun AppearanceScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -292,7 +292,7 @@ fun AppearanceScreen(
                 var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(fxContext)) }
                 var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(fxContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -343,20 +343,20 @@ fun AppearanceScreen(
                 val optContext = LocalContext.current
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                         Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { blur = !blur; AppearancePrefs.saveBackgroundBlur(optContext, blur) }.padding(vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { blur = !blur; AppearancePrefs.saveBackgroundBlur(optContext, blur); onAppearanceChanged() }.padding(vertical = 6.dp),
                         ) {
                         Column(modifier = Modifier.weight(1f)) {
                         Text("背景模糊（玻璃表面）", style = MaterialTheme.typography.bodyLarge)
                         Text("顶栏 / 输入栏 / 浮层的 Cloudy 毛玻璃总开关", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        EmberSwitch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it) })
+                        EmberSwitch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it); onAppearanceChanged() })
                         }
                     }
                 }
@@ -369,7 +369,7 @@ fun AppearanceScreen(
                 var scrimDark by remember { mutableStateOf(AppearancePrefs.chatBgScrimDark(glassContext)) }
                 var scrimLight by remember { mutableStateOf(AppearancePrefs.chatBgScrimLight(glassContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -460,7 +460,7 @@ fun AppearanceScreen(
                 var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
                 var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -472,7 +472,7 @@ fun AppearanceScreen(
                             modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
                         ) {
                             listOf("paper" to "纸面（AI 纯文本流）", "bubble" to "气泡（AI 也带气泡）").forEach { (v, label) ->
-                                FilterChip(selected = bubbleStyle == v, onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(optContext, v) }, label = { Text(label) })
+                                FilterChip(selected = bubbleStyle == v, onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(optContext, v); onAppearanceChanged() }, label = { Text(label) })
                             }
                         }
                         Text("密度", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
@@ -482,7 +482,7 @@ fun AppearanceScreen(
                             modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
                         ) {
                             listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
-                                FilterChip(selected = density == v, onClick = { density = v; AppearancePrefs.saveDensity(optContext, v) }, label = { Text(label) })
+                                FilterChip(selected = density == v, onClick = { density = v; AppearancePrefs.saveDensity(optContext, v); onAppearanceChanged() }, label = { Text(label) })
                             }
                         }
                         
@@ -495,7 +495,7 @@ fun AppearanceScreen(
                 val renderContext = LocalContext.current
                 var htmlEnabled by remember { mutableStateOf(RenderPrefs.htmlEnabled(renderContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -503,7 +503,7 @@ fun AppearanceScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { htmlEnabled = !htmlEnabled; RenderPrefs.setHtmlEnabled(renderContext, htmlEnabled) }
+                            .clickable { htmlEnabled = !htmlEnabled; RenderPrefs.setHtmlEnabled(renderContext, htmlEnabled); onAppearanceChanged() }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -514,7 +514,7 @@ fun AppearanceScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        EmberSwitch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it) })
+                        EmberSwitch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it); onAppearanceChanged() })
                     }
                 }
             }
@@ -524,7 +524,7 @@ fun AppearanceScreen(
                 var lineHeight by remember { mutableStateOf(AppearancePrefs.lineHeight(typeContext)) }
                 var headingStyle by remember { mutableStateOf(AppearancePrefs.headingStyle(typeContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -572,7 +572,7 @@ fun AppearanceScreen(
                 val immersiveContext = LocalContext.current
                 var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(immersiveContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -580,7 +580,7 @@ fun AppearanceScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(immersiveContext, immersive) }
+                            .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(immersiveContext, immersive); onAppearanceChanged() }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -591,7 +591,7 @@ fun AppearanceScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it) })
+                        EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it); onAppearanceChanged() })
                     }
                 }
             }
@@ -600,30 +600,30 @@ fun AppearanceScreen(
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                         Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { openLastChat = !openLastChat; AppearancePrefs.saveOpenLastChat(optContext, openLastChat) }.padding(vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { openLastChat = !openLastChat; AppearancePrefs.saveOpenLastChat(optContext, openLastChat); onAppearanceChanged() }.padding(vertical = 6.dp),
                         ) {
                         Column(modifier = Modifier.weight(1f)) {
                         Text("启动进入上次聊天", style = MaterialTheme.typography.bodyLarge)
                         Text("默认关；开启后启动直接回到上次会话", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        EmberSwitch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it) })
+                        EmberSwitch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it); onAppearanceChanged() })
                         }
                         Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { encodeTags = !encodeTags; AppearancePrefs.saveEncodeTags(optContext, encodeTags) }.padding(vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { encodeTags = !encodeTags; AppearancePrefs.saveEncodeTags(optContext, encodeTags); onAppearanceChanged() }.padding(vertical = 6.dp),
                         ) {
                         Column(modifier = Modifier.weight(1f)) {
                         Text("转义标签（encode_tags）", style = MaterialTheme.typography.bodyLarge)
                         Text("官方 power_user.encode_tags：显示时把 < > 转义为 &lt; &gt;（默认关）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it) })
+                        EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it); onAppearanceChanged() })
                         }
                     }
                 }

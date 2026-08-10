@@ -489,6 +489,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；
   表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
 
+
+### 8.8 设置即时生效与默认值（第 196 轮）
+- HTML 消息开关默认改为开（RenderPrefs html_enabled=true）
+- 角色卡“允许此角色应用该卡正则”默认改为开（CharacterDetailScreen regexAllowed=true；显式关闭仍会写入允许列表移除）
+- 即时生效补全：
+  - TextTypographyScreen / MessageRenderScreen 接入 onAppearanceChanged（原来保存后不触发刷新）
+  - AppearanceScreen 的 HTML/沉浸/气泡/密度/背景模糊/启动/转义保存全部补 onAppearanceChanged
+  - 新增 DisplayCacheVersion：encode_tags / 全局正则 / 角色允许列表变更时 bump，displayTextOf 缓存整体失效（转义/正则设置即时生效）
+  - OfficialMarkdownNode 的 remember 增加 style 键：字号/行高/阴影等排版改动对已渲染消息即时生效
+  - 外观页卡片圆角从写死 18dp 改为 MaterialTheme.shapes.medium：切“全局圆角”档位时设置页即时预览
+  - ColorField 支持 fallback=当前主题默认色：消息渲染页字段留空时显示主题默认值（#hex · 跟随主题），换主题即时更新
+
 ## 10. 扩展插件：交互 HTML 卡片 / iframe 渲染器（App 层）
 
 ### 10.1 定位与结论（先读）

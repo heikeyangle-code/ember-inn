@@ -2747,7 +2747,7 @@ private fun OfficialMarkdownNode(
     val targetNode = contentChildType?.let { model.node.findChildOfType(it) } ?: model.node
     // 官方正文色：无色样式（正文/标题/代码）补 bodyColor；引用等已指定色的样式保持自身颜色
     val resolvedStyle = if (style.color.isSpecified) style else style.copy(color = bodyColor)
-    val built = remember(model.content, model.node, targetNode, emAnnotator, bodyColor, quoteColor) {
+    val built = remember(model.content, model.node, targetNode, emAnnotator, style, bodyColor, quoteColor) {
         buildAnnotatedString {
             pushStyle(resolvedStyle.toSpanStyle())
             buildMarkdownAnnotatedString(model.content, targetNode, mdSettings)

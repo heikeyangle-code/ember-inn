@@ -104,9 +104,10 @@ fun CharacterDetailScreen(
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
     var worldBookExpanded by remember { mutableStateOf(false) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
-    // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效（默认不允许）
+    // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效
+    // 用户要求默认打开；显式关闭后从允许列表移除（GlobalRegexPrefs）
     var regexAllowed by remember(record.id) {
-        mutableStateOf(GlobalRegexPrefs.characterAllowedRegex(context).contains("${record.id}.png"))
+        mutableStateOf(true)
     }
     var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
     var modelOverride by remember(record.id) { mutableStateOf(vm.readModelOverride(record)) }

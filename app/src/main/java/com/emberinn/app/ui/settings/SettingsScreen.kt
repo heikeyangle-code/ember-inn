@@ -128,8 +128,8 @@ fun SettingsScreen(
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )
-        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
         SettingsPage.EXTENSIONS -> ExtensionsScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
