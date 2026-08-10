@@ -10,6 +10,10 @@ import com.emberinn.engine.media.MediaDisplay
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.ExtensionPrompt
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.AuthorsNoteBuilder
+import com.emberinn.engine.prompt.AuthorsNoteEngine
+import com.emberinn.engine.prompt.AuthorsNoteMetadata
+import com.emberinn.engine.prompt.AuthorsNoteSettings
 import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptAssembler
@@ -21,6 +25,7 @@ import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.engine.worldinfo.GlobalScanData
 import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.VectorChatMessage
+import com.emberinn.engine.worldinfo.mapExtensionPosition
 import com.emberinn.engine.worldinfo.VectorChatRearranger
 import com.emberinn.engine.worldinfo.VectorChatSettings
 import com.emberinn.engine.worldinfo.VectorFileRef
@@ -270,6 +275,24 @@ class ChatPromptFactory {
         }
         val examples = PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
 
+        // 官方 authors-note.js：note_prompt/note_position/note_depth/note_role + ANWithWI 合并世界书 AN 前后注入
+        val note = AuthorsNoteEngine.resolve(
+            meta = AuthorsNoteMetadata(
+                prompt = chatMetadata?.get("note_prompt")?.jsonPrimitive?.contentOrNull,
+                interval = chatMetadata?.get("note_interval")?.jsonPrimitive?.content?.toIntOrNull(),
+                position = chatMetadata?.get("note_position")?.jsonPrimitive?.content?.toIntOrNull(),
+                depth = chatMetadata?.get("note_depth")?.jsonPrimitive?.content?.toIntOrNull(),
+                role = chatMetadata?.get("note_role")?.jsonPrimitive?.content?.toIntOrNull(),
+            ),
+            settings = AuthorsNoteSettings(),
+        )
+        val anText = AuthorsNoteBuilder.compose(note.content, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
+        val anPrompt = if (anText.isNotBlank()) {
+            mapExtensionPosition(note.position)?.let { pos ->
+                mapOf("2_floating_prompt" to ExtensionPrompt("2_floating_prompt", note.role, anText, pos, note.depth))
+            }.orEmpty()
+        } else emptyMap()
+
         val result = PromptPipeline.prepare(
             PromptPipeline.PrepareInput(
                 name2 = charName,
@@ -283,7 +306,7 @@ class ChatPromptFactory {
                 env = env,
                 personaDescription = personaDescription,
                 personaInPrompt = personaInPrompt,
-                extensionPrompts = extensionPrompts + vectorTransform?.extensionPrompts.orEmpty(),
+                extensionPrompts = extensionPrompts + vectorTransform?.extensionPrompts.orEmpty() + anPrompt,
                 inChatExtensions = inChatExtensions + worldInfoDepthPrompts,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,

@@ -424,6 +424,29 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     )
     val chatBackground: StateFlow<String?> = _chatBackground
 
+    /** 作者注释（官方 authors-note.js 元数据键：note_prompt/note_position/note_depth/note_role）。 */
+    data class AuthorsNoteDraft(val prompt: String, val position: Int, val depth: Int, val role: Int)
+
+    fun authorsNoteDraft(): AuthorsNoteDraft {
+        val meta = chatStore.metadata(sessionId)
+        return AuthorsNoteDraft(
+            prompt = meta["note_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
+            position = meta["note_position"]?.jsonPrimitive?.content?.toIntOrNull() ?: 2,
+            depth = meta["note_depth"]?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
+            role = meta["note_role"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+        )
+    }
+
+    fun saveAuthorsNote(prompt: String, position: Int, depth: Int, role: Int) {
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        if (prompt.isBlank()) meta.remove("note_prompt") else meta["note_prompt"] = JsonPrimitive(prompt)
+        meta["note_position"] = JsonPrimitive(position)
+        meta["note_depth"] = JsonPrimitive(depth)
+        meta["note_role"] = JsonPrimitive(role)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _notice.value = if (prompt.isBlank()) "（作者注释已清除）" else "（作者注释已保存，下次发送生效）"
+    }
+
     fun setChatBackground(uri: Uri) {
         val bytes = runCatching {
             getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }

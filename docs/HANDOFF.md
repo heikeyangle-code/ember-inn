@@ -387,11 +387,22 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | {{bias}} 提示词 | 官方 getBiasStrings 从输入/最近用户消息 extra.bias 提取；App 此前不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ 已修 |
 | chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 此前恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
 | 人设 personaDescription | ✅ 已接（2026-08-10 第 83 轮）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
-| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 无作者注释/记忆 UI（官方默认 AN 空则不注入），暂等价 | 🟡 待 UI |
+| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 作者注释已接（第 105 轮：聊天 ⋮ 作者注释 + ANWithWI）；记忆 UI 未做（官方默认关） | 🟡 记忆 UI 待做 |
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | 已做（第 94 轮：设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 105（2026-08-10：作者注释 App 接线——note_prompt/位置/深度/ANWithWI）
+
+- 审计发现 AN 只算不注入；现按官方 authors-note.js 接线：
+  ChatPromptFactory 读 chat_metadata note_prompt/note_interval/note_depth/note_position/note_role →
+  AuthorsNoteEngine.resolve（默认 position=2 提示词前 / depth=4 / role=system）→
+  AuthorsNoteBuilder.compose 合并世界书 AN 前后（ANWithWI）→ ExtensionPrompt("2_floating_prompt") 注入
+  （位置 start/end/in_chat 映射官方 extension_prompt_types）
+- 聊天 ⋮ 新增“作者注释”：内容（留空清除）/ 注入位置（提示词前/内/对话内）/ 深度，保存进 chat_metadata
+- 边界：interval 仅默认 1（官方按消息计数刷新，App 每轮都注入，等价 interval=1）；chara_note 全局备注未做
+- 无引擎改动（AuthorsNoteEngine 已有 7 例差分）；App 编译走 CI
 
 ## 最近一轮 104（2026-08-10：默认采样参数设置——README“开发中”落地）
 

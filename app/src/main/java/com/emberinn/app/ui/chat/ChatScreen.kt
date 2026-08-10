@@ -97,6 +97,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -194,6 +195,10 @@ fun ChatScreen(
     var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     var showDataBank by remember { mutableStateOf(false) }
+    var showAuthorsNote by remember { mutableStateOf(false) }
+    var anPrompt by remember { mutableStateOf("") }
+    var anPosition by remember { mutableStateOf(2) }
+    var anDepth by remember { mutableStateOf(4) }
     var showGroupSettings by remember { mutableStateOf(false) }
     var pendingDisplay by remember { mutableStateOf<String?>(null) }
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
@@ -798,6 +803,14 @@ fun ChatScreen(
                     showMore = false
                     showDataBank = true
                 }
+                MenuRow(PhosphorIcons.Edit, "作者注释") {
+                    showMore = false
+                    val draft = vm.authorsNoteDraft()
+                    anPrompt = draft.prompt
+                    anPosition = draft.position
+                    anDepth = draft.depth
+                    showAuthorsNote = true
+                }
                 if (vm.group != null) {
                     MenuRow(PhosphorIcons.Person, "群聊设置") {
                         showMore = false
@@ -826,6 +839,53 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showAuthorsNote) {
+        AlertDialog(
+            onDismissRequest = { showAuthorsNote = false },
+            title = { Text("作者注释") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = anPrompt,
+                        onValueChange = { anPrompt = it },
+                        label = { Text("注释内容（留空清除）") },
+                        minLines = 3,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "注入位置",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = anPosition == 2, onClick = { anPosition = 2 }, label = { Text("提示词前") })
+                        FilterChip(selected = anPosition == 0, onClick = { anPosition = 0 }, label = { Text("提示词内") })
+                        FilterChip(selected = anPosition == 1, onClick = { anPosition = 1 }, label = { Text("对话内") })
+                    }
+                    OutlinedTextField(
+                        value = anDepth.toString(),
+                        onValueChange = { anDepth = it.toIntOrNull() ?: 4 },
+                        label = { Text("深度（对话内注入时生效）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.saveAuthorsNote(anPrompt.trim(), anPosition, anDepth, 0)
+                    showAuthorsNote = false
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAuthorsNote = false }) { Text("取消") }
+            },
+        )
     }
 
     if (showGroupSettings) {
