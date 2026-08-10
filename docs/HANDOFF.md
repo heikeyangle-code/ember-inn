@@ -387,6 +387,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 126（2026-08-10：审计第二十批——复核结论补记）
+
+- 确认：send_date = Date.toISOString()（Instant.toString 一致）；Generate 类型 regenerate/continue/swipe/impersonate 与官方一致；
+  regenerate 前删最后 AI 与官方 UI 行为一致；引擎 ChatHistoryPopulator 对历史消息 preparePrompt 宏替换（first_mes 宏发送时替换）
+- 边界补记：extra.api 存提供商 id（官方存 chat_completion_source，如 openai/deepseek 官方为 openai）；落盘文本未过 regex/宏替换
+  （官方存前应用；我们发送时应用，请求等价）；群聊 gen_id 为每条生成时间戳（官方整批 group_generation_id）
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 125（2026-08-10：审计第十九批——附件 media_index + 群聊 gen_id）
 
 - 官方 populateFileAttachment：上传附件即写 extra.media_index（新附件下标）→ ChatStore.append 默认 lastIndex
