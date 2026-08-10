@@ -30,7 +30,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,12 +54,6 @@ fun AppearanceScreen(
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
 ) {
-    // 本地选中态兜底：即使父级状态延迟刷新，选中指示也立即移动
-    var localMode by remember { mutableStateOf(themeMode) }
-    var localPresetId by remember { mutableStateOf(themePreset.id) }
-    LaunchedEffect(themeMode) { localMode = themeMode }
-    LaunchedEffect(themePreset.id) { localPresetId = themePreset.id }
-
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsTopBar(title = "外观与主题", onBack = onBack)
         LazyVerticalGrid(
@@ -85,11 +78,8 @@ fun AppearanceScreen(
                         ) {
                             ThemeMode.entries.forEach { mode ->
                                 FilterChip(
-                                    selected = localMode == mode,
-                                    onClick = {
-                                        localMode = mode
-                                        onThemeChanged(mode, themePreset)
-                                    },
+                                    selected = themeMode == mode,
+                                    onClick = { onThemeChanged(mode, themePreset) },
                                     label = { Text(mode.label) },
                                 )
                             }
@@ -110,11 +100,8 @@ fun AppearanceScreen(
             items(ThemePresets, key = { it.id }) { preset ->
                 PresetCard(
                     preset = preset,
-                    selected = preset.id == localPresetId,
-                    onClick = {
-                        localPresetId = preset.id
-                        onThemeChanged(localMode, preset)
-                    },
+                    selected = preset.id == themePreset.id,
+                    onClick = { onThemeChanged(themeMode, preset) },
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

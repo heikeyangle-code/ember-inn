@@ -405,8 +405,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 重叠根因：2 列 LazyVerticalGrid 混全宽项 + FilterChip 单行放不下溢出
 - 修复：主题模式/圆角/字体/气泡样式/密度改用 FlowRow 自动换行；HTML/沉浸/选项块统一包进
   18dp Surface 卡片（surfaceContainerLow + 一致内边距），消除重叠与样式混乱
-- 主题选中态：新增本地 localMode/localPresetId 兜底，点击卡片/模式立即移动选中指示，
-  父级状态刷新慢也不影响；同时保留 onThemeChanged 上报与持久化
+- 主题选中态根因：MainActivity 调 MainScreen 时漏传 themeMode/themePreset（只用默认值），
+  导致全局主题已切但页面选中指示不动；已改为把真实状态传入 MainScreen（单一数据源），
+  并删除页面本地兜底状态，避免双份状态漂移
 
 ## 8. 流式渲染/自动触底对齐官方（第 156 轮，对照 StreamingProcessor + scroll 逻辑）
 

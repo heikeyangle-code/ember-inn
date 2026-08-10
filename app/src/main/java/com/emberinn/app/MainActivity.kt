@@ -85,6 +85,8 @@ class MainActivity : ComponentActivity() {
             }
             EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, shapes = shapes, fontFamily = fontFamily) {
                 MainScreen(
+                    themeMode = mode,
+                    themePreset = preset,
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode
                         preset = newPreset
