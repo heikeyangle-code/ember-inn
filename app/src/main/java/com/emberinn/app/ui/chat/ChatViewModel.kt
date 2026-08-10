@@ -101,6 +101,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
 
+    /** 显示文本缓存：displayTextOf 只在消息刷新时算一次，组合期不再读盘/跑正则（性能）。 */
+    private val displayCache = mutableMapOf<Int, String>()
+
     private val _streamingText = MutableStateFlow("")
     val streamingText: StateFlow<String> = _streamingText
 
@@ -314,11 +317,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * 只影响显示，不改落盘文本。
      */
     fun displayTextOf(index: Int): String {
-        val el = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return ""
+        displayCache[index]?.let { return it }
+        val el = _messages.value.getOrNull(index)?.jsonObject ?: return ""
         val extra = el["extra"] as? JsonObject
         val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
             ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
-        if (!GlobalRegexPrefs.enabled(getApplication())) return base
+        if (!GlobalRegexPrefs.enabled(getApplication())) {
+            displayCache[index] = base
+            return base
+        }
 
         val (presetScripts, presetAllowed) = presetRegex()
         val scripts = ChatPromptFactory().resolveRegexScripts(
@@ -336,7 +343,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             else -> ChatPromptFactory.REGEX_AI_OUTPUT
         }
         // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）
-        val usable = chatStore.messages(sessionId).filterNot { isSystemMsg(it) }
+        val usable = _messages.value.filterNot { isSystemMsg(it) }
         val pos = usable.indexOfFirst { it == el }
         val depth = if (pos >= 0) usable.size - pos - 1 else null
         val regexed = RegexPipelineEngine.apply(
@@ -349,6 +356,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         )
         var out = DisplayPipeline.fixMarkdown(regexed)
         if (AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
+        displayCache[index] = out
         return out
     }
 
@@ -2016,6 +2024,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)
+        displayCache.clear()
     }
 
     /** 世界书命中面板行（README 状态面板：名字/关键词/常驻/位置/token）。 */
