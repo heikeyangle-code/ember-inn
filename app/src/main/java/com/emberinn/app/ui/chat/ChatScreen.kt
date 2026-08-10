@@ -1628,6 +1628,7 @@ private fun MessageRow(
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
+    val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: MaterialTheme.colorScheme.outline
     val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: MaterialTheme.colorScheme.primaryContainer
     val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: MaterialTheme.colorScheme.surfaceContainerLow
     val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))?.let { BorderStroke(1.dp, it) }
@@ -1641,7 +1642,7 @@ private fun MessageRow(
             Text(
                 text = dateLabel,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = emColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
             )
@@ -1673,7 +1674,7 @@ private fun MessageRow(
                 Text(
                     text = time,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = emColor,
                 )
             }
             // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
@@ -2444,7 +2445,6 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
 /** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
 private fun officialStyledHtml(raw: String, context: android.content.Context): String {
     val body = parseHexColor(AppearancePrefs.stBodyColor(context))
-    val em = parseHexColor(AppearancePrefs.stEmColor(context))
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context))
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context))
     val fontSize = when (AppearancePrefs.textSize(context)) {
@@ -2459,7 +2459,7 @@ private fun officialStyledHtml(raw: String, context: android.content.Context): S
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
-q{color:${css(quote)}} u{color:${css(underline)}} em{color:${css(em)}}
+q{color:${css(quote)}} u{color:${css(underline)}}
 a{color:${css(underline ?: quote)}}
 blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:6px 0}
 code{font-family:monospace}
