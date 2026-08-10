@@ -140,6 +140,13 @@ class ChatPromptFactory {
         // 保证 extra.media 挂回正确的消息（曾有 mes 缺失导致下标错位、附件挂错消息的隐患）
         val chatMessages = history.mapIndexedNotNull { index, el ->
             val obj = el.jsonObject
+            // 官方 script.js coreChat：is_system（含 /hide 隐藏、comment 注释消息）不进提示词；
+            // 旧版 is_hidden 字段一并兼容排除
+            if (obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true ||
+                obj["is_hidden"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+            ) {
+                return@mapIndexedNotNull null
+            }
             val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
             val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: return@mapIndexedNotNull null
             index to ChatMessage(

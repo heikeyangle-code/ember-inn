@@ -539,7 +539,12 @@ class ChatStore(private val context: Context) {
     fun setMessageHidden(sessionId: String, at: Int, hidden: Boolean) {
         val list = messages(sessionId).toMutableList()
         val index = resolveIndex(at, list.size) ?: return
-        list[index] = JsonObject(list[index].jsonObject + ("is_hidden" to JsonPrimitive(hidden)))
+        // 官方 hideChatMessageRange：隐藏 = is_system=true（核心提示词过滤 is_system）；
+        // 顺手清理旧版 is_hidden 字段（兼容历史数据）
+        val obj = list[index].jsonObject.toMutableMap()
+        obj["is_system"] = JsonPrimitive(hidden)
+        obj.remove("is_hidden")
+        list[index] = JsonObject(obj)
         save(sessionId, list)
     }
 

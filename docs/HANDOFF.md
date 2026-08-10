@@ -387,6 +387,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 118（2026-08-10：审计第十三批——/hide 语义 1:1 + comment 不进提示词）
+
+- 官方 hideChatMessageRange：隐藏 = 设 is_system=true（不是 is_hidden）；coreChat 过滤 !is_system
+- ChatStore.setMessageHidden 改为设 is_system 并清理旧 is_hidden；ChatPromptFactory 历史过滤 is_system（兼容旧 is_hidden）
+- 连带修正：/comment 注释消息（is_system=true）此前会被发进提示词，现在按官方排除；
+  narrator（is_system=false、extra.type=narrator）保持进提示词（官方行为）
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 117（2026-08-10：审计第十二批——聊天背景随角色主题刷新）
 
 - refreshTheme() 同时重算 _chatBackground（会话锁定 custom_background 优先，否则角色配方背景）
