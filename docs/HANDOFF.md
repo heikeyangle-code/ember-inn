@@ -546,6 +546,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
 | 表情/VN/STT/EJS 变量/插件市场 | ➖ 未实现（登记） |
 
+### 10.8 渲染性能与混排（第 199 轮，2026-08-11）
+- **分段渲染（修复混排丢 Markdown）**：`ChatScreen.kt / buildMessageSegments` 把消息切成段——围栏外文本/普通代码块走原生 Markdown，交互卡 ``` 段、Mermaid 段、富 HTML 段各自进独立 WebView。此前“文字 + 交互卡”整条进 WebView，围栏外 `**粗体**` 等 Markdown 语法会原样显示；现在围栏外正常 Markdown 渲染，卡片仍走 iframe 交互。纯 Markdown 消息仍整条一次原生渲染，不拆散列表/引用结构。
+- **WebView 复用池（修复滚动/发送卡顿）**：新增 `WebViewPool.kt`。`WebViewHtml` 的实例改为从池里取、滚出屏幕时经 `AndroidView.onRelease` 停掉回池，不再每个 HTML 消息销毁重建 WebView（AndroidView 在 LazyColumn 中不复用 View，是滚动卡顿主因）。闲置池上限 6 个，超出销毁。
+- **ResizeObserver 测高（替换高频轮询）**：兜底页注入 `WEBVIEW_MEASURE_SCRIPT`，用 `ResizeObserver` 监听 `documentElement`，图片未就绪时 1s 低频兜底，高度经自定义 scheme `emberinnh://measure?h=..&p=..` 由 `WebViewClient.shouldOverrideUrlLoading` 拦截上报；旧版每 250ms `evaluateJavascript` 轮询已移除（仅保留 onPageFinished 一次兜底读取）。页面级行为不变：上限仍 75% 屏高、超长卡内滚动。
+- 对照源码：本项为 App/UI 层性能改造；渲染语义仍对照 SillyTavern 1.18.0 `style.css` + `script.js`（第 11 章表格），不参与引擎差分。
+
 ### 10.6 手工回归清单
 1. 消息 = 单个 ``` 包着 `<html><body><button onclick=...>`：卡片内按钮可点、脚本执行、高度自适应、不撑爆列表
 2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
@@ -597,7 +603,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
 | Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
 | reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
-| WebView 高度 | 官方 DOM 正常撑高 | onPageFinished 轮询 `高度:图片数`（图片感知，最长 15s）+ iframe 150/500/1500/3000ms 复测；上限 75% 屏高；第 196 轮修复 evaluateJavascript 引号转义导致解析失败、高度恒 0 | ✅ 机制自研 |
+| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver 事件上报（emberinnh:// scheme）+ 图片未就绪 1s 低频兜底 + onPageFinished 一次兜底读取；iframe 150/500/1500/3000ms 复测；上限 75% 屏高（第 199 轮，替换旧 250ms 轮询） | ✅ 机制自研 |
 
 ### 11.2 已知 bug / 限制登记（继续治理清单）
 1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）

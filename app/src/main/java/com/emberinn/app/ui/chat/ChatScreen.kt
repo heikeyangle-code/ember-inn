@@ -2766,15 +2766,77 @@ private fun OfficialMarkdownNode(
     )
 }
 
-/** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
- *  Mermaid 代码块与开启“HTML 消息”后的富文本走 WebView 兜底（README 高级渲染）。 */
+/** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
+private val OFFICIAL_HTML_TAG = Regex(
+    "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b" +
+        "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b",
+    RegexOption.IGNORE_CASE,
+)
+
+/** 分段渲染的段类型：原生 Markdown / WebView HTML / 交互卡片 / Mermaid。 */
+private enum class SegmentKind { Native, WebHtml, Interactive, Mermaid }
+
+private class ChatSegment(val kind: SegmentKind, val raw: String, val display: String? = null)
+
+private val ANY_FENCE = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
+private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
+private val MERMAID_FENCE = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
+
+/** 交互卡片判定：与 embedInteractiveBlocks 同一套正则，避免分段器与 iframe 转换器不一致。 */
+private fun isInteractiveFence(raw: String): Boolean {
+    if (!raw.startsWith("```")) return false
+    val m = INTERACTIVE_FENCE.find(raw) ?: return false
+    val inner = m.groupValues[1].trim()
+    return (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
+}
+
+private fun appendTextSegment(
+    out: MutableList<ChatSegment>,
+    text: String,
+    isSystem: Boolean,
+    htmlEnabled: Boolean,
+) {
+    if (text.isBlank()) return
+    val pre = preprocessOfficialHtml(text, convertQuotes = !isSystem)
+    val officialHtml = OFFICIAL_HTML_TAG.containsMatchIn(pre)
+    val looksHtml = looksLikeHtml(pre)
+    if (officialHtml || (looksHtml && htmlEnabled)) {
+        out += ChatSegment(SegmentKind.WebHtml, text)
+    } else {
+        out += ChatSegment(SegmentKind.Native, text, pre)
+    }
+}
+
+/** 把一条消息切成段：围栏外 Markdown 原生渲染，交互卡/Mermaid/富 HTML 各进独立 WebView。
+ *  修复“文字+卡片混排时整条进 WebView，围栏外 **粗体** 等 Markdown 语法失效”。 */
+private fun buildMessageSegments(
+    content: String,
+    isSystem: Boolean,
+    htmlEnabled: Boolean,
+    interactiveCardsOn: Boolean,
+): List<ChatSegment> {
+    val out = mutableListOf<ChatSegment>()
+    var last = 0
+    for (m in ANY_FENCE.findAll(content)) {
+        appendTextSegment(out, content.substring(last, m.range.first), isSystem, htmlEnabled)
+        val raw = m.value
+        when {
+            interactiveCardsOn && isInteractiveFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
+            MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
+            else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
+        }
+        last = m.range.last + 1
+    }
+    appendTextSegment(out, content.substring(last), isSystem, htmlEnabled)
+    return out
+}
+
+/** 原生 Markdown 渲染：官方行内字段已由 preprocessOfficialHtml 转成原生标记。 */
 @Composable
-private fun ChatMarkdown(
+private fun NativeMarkdown(
     content: String,
     onSurface: Color,
     isSystem: Boolean = false,
-    charAvatarPath: String? = null,
-    userAvatarPath: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -2793,139 +2855,188 @@ private fun ChatMarkdown(
     val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
         ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
-    // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
-    val displayContent = remember(content, isSystem) { preprocessOfficialHtml(content, convertQuotes = !isSystem) }
-    val mermaid = mermaidHtmlOf(content)
-    val htmlEnabled = RenderPrefs.htmlEnabled(context)
-    // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；
-    // 开关只控制“任意 HTML 都渲染” vs “仅官方标签渲染”
-    val outsideFence = displayContent.replace(Regex("```[\\s\\S]*?```"), "")
-    // 剩下的才是原生渲染器真不支持的任意 HTML（font rgb/span/div/table/img/style/a/blockquote/列表/标题…）
-    val officialHtml = Regex(
-        "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b" +
-            "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b",
-        RegexOption.IGNORE_CASE,
-    ).containsMatchIn(outsideFence)
-    // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
-    // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）。受扩展插件总开关控制
-    val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
-    val interactiveBlock = interactiveCardsOn && Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```").findAll(content).any { m ->
-        val inner = m.groupValues[1].trim()
-        (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
-    }
-    val rawHtml = if (mermaid == null && (looksLikeHtml(displayContent) || interactiveBlock) && (htmlEnabled || officialHtml || interactiveBlock)) content else null
     val type = chatTypography()
-    // 官方 a { color: quoteColor }：链接用引用色。
-    // 注意：annotatorSettings 默认参数会读 LocalMarkdownTypography / LocalReferenceLinkHandler，
-    // 必须在 Markdown 组件的 CompositionLocalProvider 内部创建（由 OfficialMarkdownNode 负责）
-    when {
-        mermaid != null -> WebViewHtml(mermaid, modifier)
-        rawHtml != null -> WebViewHtml(
-            sanitizeHtmlForWebView(rawHtml),
-            modifier,
+    Markdown(
+        content = content,
+        modifier = modifier.fillMaxWidth(),
+        imageTransformer = Coil3ImageTransformerImpl,
+        components = markdownComponents(
+            // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
+            // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
+            text = { model -> OfficialMarkdownNode(model, model.typography.text, bodyColor, emColor, quoteColor, underlineColor) },
+            paragraph = { model -> OfficialMarkdownNode(model, model.typography.paragraph, bodyColor, emColor, quoteColor, underlineColor) },
+            heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+            setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
+            setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
+            codeBlock = highlightedCodeBlock,
+            codeFence = highlightedCodeFence,
+            blockQuote = { model ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.30f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    MarkdownBlockQuote(model.content, model.node, style = model.typography.quote)
+                }
+            },
+            checkbox = { model ->
+                MarkdownCheckBox(
+                    content = model.content,
+                    node = model.node,
+                    style = type.body,
+                    checkedIndicator = { checked, modifier ->
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = modifier
+                                .size(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(if (checked) quoteColor else Color.Transparent)
+                                .border(1.dp, quoteColor, RoundedCornerShape(4.dp)),
+                        ) {
+                            if (checked) {
+                                Text("✓", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            }
+                        }
+                    },
+                )
+            },
+        ),
+        colors = markdownColor(
+            text = bodyColor,
+            codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
+            inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
+            dividerColor = MaterialTheme.colorScheme.outlineVariant,
+            tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
+        ),
+        typography = markdownTypography(
+            h1 = type.h1,
+            h2 = type.h2,
+            h3 = type.h3,
+            h4 = type.h4,
+            h5 = type.h5,
+            h6 = type.h6,
+            text = type.body,
+            paragraph = type.body,
+            ordered = type.body,
+            bullet = type.body,
+            list = type.body,
+            quote = type.body.copy(
+                color = quoteColor,
+                fontStyle = if (type.quoteItalic) {
+                    androidx.compose.ui.text.font.FontStyle.Italic
+                } else {
+                    androidx.compose.ui.text.font.FontStyle.Normal
+                },
+            ),
+            code = type.body.copy(
+                fontSize = (type.body.fontSize.value * type.codeMult).sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+            inlineCode = type.body.copy(
+                fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+        ),
+        padding = markdownPadding(
+            block = when (AppearancePrefs.blockSpacing(context)) {
+                "compact" -> 2.dp
+                "loose" -> 5.dp
+                else -> 3.dp
+            },
+            list = 2.dp,
+            listItemTop = 2.dp,
+            listItemBottom = 2.dp,
+            listIndent = AppearancePrefs.listIndent(context).toFloatOrNull()?.dp ?: 10.dp,
+            codeBlock = PaddingValues(10.dp),
+            blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+        ),
+    )
+}
+
+/** 分段渲染：围栏外 Markdown 走原生，交互卡/Mermaid/富 HTML 段各自进独立 WebView。 */
+@Composable
+private fun SegmentedMarkdown(
+    segments: List<ChatSegment>,
+    modifier: Modifier = Modifier,
+    onSurface: Color,
+    isSystem: Boolean = false,
+    charAvatarPath: String? = null,
+    userAvatarPath: String? = null,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        segments.forEach { seg ->
+            when (seg.kind) {
+                SegmentKind.Native -> NativeMarkdown(
+                    content = seg.display ?: seg.raw,
+                    onSurface = onSurface,
+                    isSystem = isSystem,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                SegmentKind.WebHtml -> WebViewHtml(
+                    html = sanitizeHtmlForWebView(seg.raw),
+                    modifier = Modifier.fillMaxWidth(),
+                    charAvatarPath = charAvatarPath,
+                    userAvatarPath = userAvatarPath,
+                )
+                SegmentKind.Interactive -> WebViewHtml(
+                    html = sanitizeHtmlForWebView(seg.raw),
+                    modifier = Modifier.fillMaxWidth(),
+                    charAvatarPath = charAvatarPath,
+                    userAvatarPath = userAvatarPath,
+                )
+                SegmentKind.Mermaid -> WebViewHtml(
+                    html = mermaidHtmlOf(seg.raw) ?: sanitizeHtmlForWebView(seg.raw),
+                    modifier = Modifier.fillMaxWidth(),
+                    charAvatarPath = charAvatarPath,
+                    userAvatarPath = userAvatarPath,
+                )
+            }
+        }
+    }
+}
+
+/** 聊天里的 Markdown：官方行内字段原生渲染；富 HTML / 交互卡片 / Mermaid 分段进 WebView 兜底（README 高级渲染）。 */
+@Composable
+private fun ChatMarkdown(
+    content: String,
+    onSurface: Color,
+    isSystem: Boolean = false,
+    charAvatarPath: String? = null,
+    userAvatarPath: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val htmlEnabled = RenderPrefs.htmlEnabled(context)
+    val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
+    val segments = remember(content, isSystem, htmlEnabled, interactiveCardsOn) {
+        buildMessageSegments(content, isSystem, htmlEnabled, interactiveCardsOn)
+    }
+    // 全原生段（纯 Markdown/普通代码块/官方行内字段）仍按整条一次渲染，保持原有排版；
+    // 只有出现 WebView 段（富 HTML/交互卡/Mermaid）才分段，避免拆散列表/引用等跨段 Markdown 结构
+    if (segments.none { it.kind != SegmentKind.Native }) {
+        val displayContent = remember(content, isSystem) {
+            preprocessOfficialHtml(content, convertQuotes = !isSystem)
+        }
+        NativeMarkdown(
+            content = displayContent,
+            onSurface = onSurface,
+            isSystem = isSystem,
+            modifier = modifier,
+        )
+    } else {
+        SegmentedMarkdown(
+            segments = segments,
+            modifier = modifier,
+            onSurface = onSurface,
+            isSystem = isSystem,
             charAvatarPath = charAvatarPath,
             userAvatarPath = userAvatarPath,
-        )
-        else -> Markdown(
-            content = displayContent,
-            modifier = modifier.fillMaxWidth(),
-            imageTransformer = Coil3ImageTransformerImpl,
-            components = markdownComponents(
-                // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
-                // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
-                text = { model -> OfficialMarkdownNode(model, model.typography.text, bodyColor, emColor, quoteColor, underlineColor) },
-                paragraph = { model -> OfficialMarkdownNode(model, model.typography.paragraph, bodyColor, emColor, quoteColor, underlineColor) },
-                heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-                setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-                setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-                codeBlock = highlightedCodeBlock,
-                codeFence = highlightedCodeFence,
-                blockQuote = { model ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.30f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                    ) {
-                        MarkdownBlockQuote(model.content, model.node, style = model.typography.quote)
-                    }
-                },
-                checkbox = { model ->
-                    MarkdownCheckBox(
-                        content = model.content,
-                        node = model.node,
-                        style = type.body,
-                        checkedIndicator = { checked, modifier ->
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = modifier
-                                    .size(16.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (checked) quoteColor else Color.Transparent)
-                                    .border(1.dp, quoteColor, RoundedCornerShape(4.dp)),
-                            ) {
-                                if (checked) {
-                                    Text("✓", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                                }
-                            }
-                        },
-                    )
-                },
-            ),
-            colors = markdownColor(
-                text = bodyColor,
-                codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
-                inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
-                dividerColor = MaterialTheme.colorScheme.outlineVariant,
-                tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
-            ),
-            typography = markdownTypography(
-                h1 = type.h1,
-                h2 = type.h2,
-                h3 = type.h3,
-                h4 = type.h4,
-                h5 = type.h5,
-                h6 = type.h6,
-                text = type.body,
-                paragraph = type.body,
-                ordered = type.body,
-                bullet = type.body,
-                list = type.body,
-                quote = type.body.copy(
-                    color = quoteColor,
-                    fontStyle = if (type.quoteItalic) {
-                        androidx.compose.ui.text.font.FontStyle.Italic
-                    } else {
-                        androidx.compose.ui.text.font.FontStyle.Normal
-                    },
-                ),
-                code = type.body.copy(
-                    fontSize = (type.body.fontSize.value * type.codeMult).sp,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                ),
-                inlineCode = type.body.copy(
-                    fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                ),
-            ),
-            padding = markdownPadding(
-                block = when (AppearancePrefs.blockSpacing(context)) {
-                    "compact" -> 2.dp
-                    "loose" -> 5.dp
-                    else -> 3.dp
-                },
-                list = 2.dp,
-                listItemTop = 2.dp,
-                listItemBottom = 2.dp,
-                listIndent = AppearancePrefs.listIndent(context).toFloatOrNull()?.dp ?: 10.dp,
-                codeBlock = PaddingValues(10.dp),
-                blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            ),
         )
     }
 }
@@ -2953,9 +3064,112 @@ private fun looksLikeHtml(content: String): Boolean {
 private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
 
-/** WebView 兜底渲染（HTML 消息 / Mermaid）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
+/** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时 1s 低速兜底。
+ *  高度经自定义 scheme emberinnh://measure?h=..&p=.. 上报，由 WebViewClient 拦截解析。
+ *  相比旧版 evaluateJavascript 每 250ms 轮询，滚动和发送消息时不再让每个 WebView 空转。 */
+private val WEBVIEW_MEASURE_SCRIPT = """<script>
+(function(){
+  var last='';
+  function report(){
+    var imgs=document.images,p=0;
+    for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}
+    var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
+    var url='emberinnh://measure?h='+h+'&p='+p;
+    if(url!==last){last=url;location.href=url;}
+    return p===0;
+  }
+  if(window.ResizeObserver){new ResizeObserver(report).observe(document.documentElement);}
+  window.addEventListener('load',report);
+  var t=setInterval(function(){if(report())clearInterval(t);},1000);
+  setTimeout(function(){clearInterval(t);report();},15000);
+})();
+</script>"""
+
+private fun injectMeasureScript(html: String): String {
+    val idx = html.lastIndexOf("</body>")
+    return if (idx >= 0) {
+        html.substring(0, idx) + WEBVIEW_MEASURE_SCRIPT + html.substring(idx)
+    } else {
+        html + WEBVIEW_MEASURE_SCRIPT
+    }
+}
+
+/** 一次 WebView 加载会话：token 用于丢弃旧页面回调，html 用于判断是否需要重载。 */
+private class WebViewSession {
+    var token: Any = Any()
+    var html: String? = null
+}
+
+private fun configureWebView(
+    view: WebView,
+    ctx: android.content.Context,
+    session: WebViewSession,
+    page: String,
+    onMeasure: (Int, Int) -> Unit,
+) {
+    val token = session.token
+    view.tag = session
+    view.setBackgroundColor(0x00000000)
+    view.settings.javaScriptEnabled = true
+    view.settings.domStorageEnabled = true
+    view.settings.allowFileAccess = true
+    view.webViewClient = object : android.webkit.WebViewClient() {
+        // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
+        // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
+        override fun shouldOverrideUrlLoading(
+            view: android.webkit.WebView?,
+            request: android.webkit.WebResourceRequest?,
+        ): Boolean {
+            val url = request?.url?.toString().orEmpty()
+            val uri = Uri.parse(url)
+            if (uri.scheme == "emberinnh") {
+                if (view?.tag === session && session.token === token) {
+                    val px = uri.getQueryParameter("h")?.toIntOrNull()
+                    val pending = uri.getQueryParameter("p")?.toIntOrNull() ?: 0
+                    if (px != null && px > 0) onMeasure(px, pending)
+                }
+                return true
+            }
+            if (url.startsWith("https://") || url.startsWith("http://")) {
+                try {
+                    ctx.startActivity(
+                        android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                } catch (_: Exception) {
+                }
+                return true
+            }
+            return false
+        }
+
+        override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            // 页面脚本正常时 ResizeObserver 已上报；这里只兜底读一次初始高度
+            view?.evaluateJavascript(
+                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()",
+            ) { value ->
+                if (view?.tag === session && session.token === token) {
+                    val parts = value.trim('"').split(':')
+                    val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                    val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                    if (px > 0) onMeasure(px, pending)
+                }
+            }
+        }
+    }
+    view.layoutParams = ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.WRAP_CONTENT,
+    )
+    session.html = page
+    view.loadDataWithBaseURL("file:///android_asset/", page, "text/html", "utf-8", null)
+}
+
+/** WebView 兜底渲染（HTML 消息 / Mermaid / 交互卡片）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
  *  官方 DOMPurify 禁脚本，此为已知偏差）；网络与外链已放开，http(s) 链接用系统浏览器打开。
- *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。 */
+ *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。
+ *  实例来自 WebViewPool 复用，避免 LazyColumn 滚动时反复创建 WebView 导致卡顿。 */
 @Composable
 private fun WebViewHtml(
     html: String,
@@ -2974,71 +3188,42 @@ private fun WebViewHtml(
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: (if (stDark) stTheme.stUnderline else null)
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: (if (stDark) stTheme.stQuote else null)
     val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath) {
-        officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath)
+        injectMeasureScript(
+            officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath),
+        )
+    }
+    val webView = remember { WebViewPool.acquire(context) }
+    fun onMeasure(px: Int, pending: Int) {
+        if (px > 0) heightPx = px
     }
     AndroidView(
         factory = { ctx ->
-            WebView(ctx).apply {
-                setBackgroundColor(0x00000000)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                webViewClient = object : android.webkit.WebViewClient() {
-                    // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
-                    // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
-                    override fun shouldOverrideUrlLoading(
-                        view: android.webkit.WebView?,
-                        request: android.webkit.WebResourceRequest?,
-                    ): Boolean {
-                        val url = request?.url?.toString().orEmpty()
-                        if (url.startsWith("https://") || url.startsWith("http://")) {
-                            try {
-                                ctx.startActivity(
-                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
-                            } catch (_: Exception) {
-                            }
-                            return true
-                        }
-                        return false
-                    }
-
-                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        // 自动测高：取 body 与 documentElement 的最大值；返回 JSON {h, p}，
-                        // p=未加载完的图片数——只要还有图片在加载就继续轮询（HTML 卡头像/插图常异步加载），
-                        // 连续 3 次“同高且图片全就绪”才停；总上限 15s
-                        var stable = 0
-                        var ticks = 0
-                        fun measure() {
-                            ticks++
-                            if (ticks > 60) return
-                            view?.evaluateJavascript(
-                                // 返回 "高度:未加载图片数" 纯字符串：evaluateJavascript 会包引号并转义，
-                                // 直接 JSONObject(value) 必失败（曾导致 HTML 消息高度恒 0 整条不可见）
-                                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()",
-                            ) { value ->
-                                val parts = value.trim('\"').split(':')
-                                val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                                val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                                if (px > 0) {
-                                    if (px == heightPx && pending == 0) stable++ else stable = 0
-                                    heightPx = px
-                                }
-                                if (stable < 3) view?.postDelayed({ measure() }, 250)
-                            }
-                        }
-                        measure()
-                    }
+            val session = WebViewSession()
+            configureWebView(
+                view = webView,
+                ctx = ctx,
+                session = session,
+                page = styled,
+                onMeasure = { px, pending -> onMeasure(px, pending) },
+            )
+            webView
+        },
+        update = { view ->
+            val session = view.tag as? WebViewSession
+            if (session?.html != styled) {
+                session?.let {
+                    it.token = Any()
+                    configureWebView(
+                        view = view,
+                        ctx = context,
+                        session = it,
+                        page = styled,
+                        onMeasure = { px, pending -> onMeasure(px, pending) },
+                    )
                 }
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
-                loadDataWithBaseURL("file:///android_asset/", styled, "text/html", "utf-8", null)
             }
         },
+        onRelease = { view -> WebViewPool.release(view) },
         modifier = modifier
             .fillMaxWidth()
             .height(
