@@ -609,6 +609,20 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 
 
+
+## 8. 全渲染字段管线收口 + 主题覆盖角色聊天（第 189 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 第 188 轮基础上补标题节点：`OfficialMarkdownNode` 增加 `contentChildType`，heading1-6 / setextHeading1-2
+  只渲染 ATX_CONTENT / SETEXT_CONTENT 子节点（对齐 mikepenz `MarkdownHeader`），避免 `#` 号原样输出
+- 全渲染字段核对（对照官方 script.js messageFormatting + style.css）：
+  引号对/<q>、~下划线~/<u>、<em>/<i>、<b>/<strong>、<s>、<font color>、行内码、代码围栏保护、
+  链接（引用色）、blockquote、列表、标题全部走同一剥标记+上色管线；WebView 兜底 CSS 不变
+- 主题优先级调整（用户反馈“全局主题覆盖不到角色卡聊天界面”，AI 聊天正常）：
+  MainActivity 不再用角色自动取色 seedColor 整体替换全局主题；只有角色卡**显式主题配方 seed**
+  优先于全局预设；自动取色保留为强调色（名字色/氛围光/气泡点缀，acc=vm.accentColor 不变）
+- 登记（未做）：Markdown 表格单元格与任务列表 checkbox 文本仍走库内直绘，若含引号等官方字段
+  可能残留占位符，属低频边缘场景；后续需重写 table/checkbox 组件
+
 ## 8. 修复流式有色/完成后无色+引号两侧方框（第 188 轮，2026-08-11，App/UI 层，未动引擎）
 
 - 现象：流式输出时引号/斜体等有官方颜色；生成完成后颜色消失，引号外侧出现两个方框（复制后是看不见的私有区字符）

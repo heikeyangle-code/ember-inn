@@ -106,12 +106,12 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 优先级：角色卡 > 全局预设 > 系统默认
 ```
 
-### 配色流程（角色卡接管主题）
+### 配色流程（角色显式配方接管；自动取色作强调色）
 
 1. 卡图 → **Palette** 取色（浅色取 `Muted` 低饱和色，深色取 `Vibrant` 高饱和色）
-2. 取到的颜色作为 seed → **MaterialKolor** 生成整套 M3 配色（light / dark 两套）
-3. 无头像卡 → 用卡名哈希生成稳定 seed 色（可复现、每卡不同）
-4. 结果缓存到 Room（角色表 `theme_seed` / `bg_uri` / `mode_override`），只算一次
+2. 取色结果作为角色强调色（名字色 / 氛围光 / 气泡点缀）；**不整体替换全局主题**
+3. 角色卡在「详情 → 主题配方」显式设置的 seed 优先于全局预设，生成整套 M3 配色（light / dark 两套）
+4. 无头像卡 → 用卡名哈希生成稳定强调色（可复现、每卡不同）
 5. 切换角色：配色 `animateColorAsState` 过渡 + 背景 crossfade（200–300ms）
 
 ### 背景系统（敲定）
@@ -162,7 +162,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 ### 动态色基线
 
 - 未导入卡 / 未取色时：全局默认跟随系统壁纸动态色（Material You）
-- 角色卡 seed **永远优先覆盖**
+- 角色卡**显式主题配方 seed** 优先于全局预设；自动取色只作强调色，不整体替换全局主题
 
 ### 主题配方可分享
 

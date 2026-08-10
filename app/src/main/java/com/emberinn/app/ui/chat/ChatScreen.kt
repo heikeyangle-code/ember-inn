@@ -137,7 +137,9 @@ import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
 import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.ast.findChildOfType
 import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
 import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
@@ -2684,6 +2686,7 @@ private fun OfficialMarkdownNode(
     emColor: Color,
     quoteColor: Color,
     underlineColor: Color,
+    contentChildType: org.intellij.markdown.IElementType? = null,
 ) {
     // 斜体 annotator 递归构建时需要同一份 settings；用 holder 避免初始化顺序问题
     val settingsHolder = remember { arrayOfNulls<AnnotatorSettings>(1) }
@@ -2708,10 +2711,12 @@ private fun OfficialMarkdownNode(
         linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
     )
     settingsHolder[0] = mdSettings
-    val built = remember(model.content, model.node, emAnnotator, quoteColor) {
+    // 对齐 MarkdownHeader：ATX/SETEXT 标题只渲染内容子节点，否则 # 号会原样输出
+    val targetNode = contentChildType?.let { model.node.findChildOfType(it) } ?: model.node
+    val built = remember(model.content, model.node, targetNode, emAnnotator, quoteColor) {
         buildAnnotatedString {
             pushStyle(style.toSpanStyle())
-            buildMarkdownAnnotatedString(model.content, model.node, mdSettings)
+            buildMarkdownAnnotatedString(model.content, targetNode, mdSettings)
             pop()
         }
     }
@@ -2795,14 +2800,14 @@ private fun ChatMarkdown(
                 // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
                 text = { model -> OfficialMarkdownNode(model, model.typography.text, emColor, quoteColor, underlineColor) },
                 paragraph = { model -> OfficialMarkdownNode(model, model.typography.paragraph, emColor, quoteColor, underlineColor) },
-                heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor) },
-                heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor) },
-                heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, emColor, quoteColor, underlineColor) },
-                heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, emColor, quoteColor, underlineColor) },
-                heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, emColor, quoteColor, underlineColor) },
-                heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, emColor, quoteColor, underlineColor) },
-                setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor) },
-                setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor) },
+                heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
+                setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
+                setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
                 codeBlock = highlightedCodeBlock,
                 codeFence = highlightedCodeFence,
                 blockQuote = { model ->
