@@ -400,6 +400,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   点击图片在 LIST ↔ GALLERY 间切换并持久化 extra.media_display（官方 chats.js
   switchMessageMediaDisplay）；App 恢复内联大图（高限 320dp）+ 点击切换 + gallery 左右滑切
 
+## 8. 外观与主题页重构（第 157 轮，用户反馈 bug）
+
+- 重叠根因：2 列 LazyVerticalGrid 混全宽项 + FilterChip 单行放不下溢出
+- 修复：主题模式/圆角/字体/气泡样式/密度改用 FlowRow 自动换行；HTML/沉浸/选项块统一包进
+  18dp Surface 卡片（surfaceContainerLow + 一致内边距），消除重叠与样式混乱
+- 主题选中态：新增本地 localMode/localPresetId 兜底，点击卡片/模式立即移动选中指示，
+  父级状态刷新慢也不影响；同时保留 onThemeChanged 上报与持久化
+
 ## 8. 流式渲染/自动触底对齐官方（第 156 轮，对照 StreamingProcessor + scroll 逻辑）
 
 官方流式（onProgressStreaming + Stopwatch(1000/streaming_fps=30)）：
