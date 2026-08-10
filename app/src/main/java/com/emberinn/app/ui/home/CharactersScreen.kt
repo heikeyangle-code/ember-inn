@@ -49,7 +49,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -197,6 +196,8 @@ fun CharactersScreen(
                 onOpenSession = { onOpenChat(it) },
                 onOpenSettings = onOpenSettings,
                 onOpenWorldInfo = { worldHit = it },
+                sky = sky,
+                glassDark = glassDark,
             )
         } else if (characters.isEmpty()) {
             EmptyHome(
@@ -267,12 +268,12 @@ fun CharactersScreen(
             )
         }
 
-        FloatingActionButton(
+        GlassFab(
             onClick = { EmberHaptics.select(haptic); showImportSheet = true },
+            sky = sky,
+            dark = glassDark,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-        ) {
-            Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡")
-        }
+        )
     }
 
     if (showImportSheet) {
@@ -417,9 +418,26 @@ private fun SearchResultsColumn(
     onOpenSession: (SessionRecord) -> Unit,
     onOpenSettings: (String?) -> Unit,
     onOpenWorldInfo: (WorldInfoHit) -> Unit,
+    sky: com.skydoves.cloudy.Sky,
+    glassDark: Boolean,
 ) {
+    val searchContext = LocalContext.current
     Column(modifier = Modifier.fillMaxSize()) {
-        HomeTopBar(query = query, onQueryChange = onQueryChange)
+        HomeTopBar(
+            query = query,
+            onQueryChange = onQueryChange,
+            glass = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .glassEdgeHighlight(dark = glassDark, atTop = false)
+                .then(
+                    if (AppearancePrefs.backgroundBlur(searchContext)) {
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(searchContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
+                    } else {
+                        Modifier.background(MaterialTheme.colorScheme.surface)
+                    },
+                ),
+        )
         val isEmpty = results.characters.isEmpty() && results.sessions.isEmpty() &&
             results.worldInfo.isEmpty() && results.settings.isEmpty()
         if (isEmpty) {
@@ -616,6 +634,40 @@ private fun HomeTopBar(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+/** 玻璃悬浮按钮（README 浮层玻璃：主操作 + 毛玻璃 + 边缘高光，正文区不玻璃）。 */
+@Composable
+private fun GlassFab(
+    onClick: () -> Unit,
+    sky: com.skydoves.cloudy.Sky,
+    dark: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val fabContext = LocalContext.current
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .emberShadow(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                radius = 12.dp,
+                offset = DpOffset(0.dp, 5.dp),
+                alpha = 0.18f + 0.12f * LocalVibe.current.glow,
+            )
+            .clip(RoundedCornerShape(18.dp))
+            .glassEdgeHighlight(dark = dark, atTop = true)
+            .then(
+                if (AppearancePrefs.backgroundBlur(fabContext)) {
+                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.52f))
+                } else {
+                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                },
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡", tint = MaterialTheme.colorScheme.primary)
     }
 }
 
