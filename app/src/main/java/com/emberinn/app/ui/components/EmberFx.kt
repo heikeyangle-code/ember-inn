@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
@@ -102,7 +101,7 @@ fun EmberSkeletonBox(
     )
 }
 
-/** 全局开关封装：切换时补 ToggleOn/ToggleOff 触觉 + 轻音效（README 清单 3/6）。 */
+/** 全局开关封装：切换时补 ToggleOn/ToggleOff 触觉（README 清单 3）。 */
 @Composable
 fun EmberSwitch(
     checked: Boolean,
@@ -112,12 +111,10 @@ fun EmberSwitch(
     colors: SwitchColors = SwitchDefaults.colors(),
 ) {
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
     Switch(
         checked = checked,
         onCheckedChange = {
             EmberHaptics.toggle(haptic, it)
-            UiSounds.toggle(context, it)
             onCheckedChange(it)
         },
         modifier = modifier,

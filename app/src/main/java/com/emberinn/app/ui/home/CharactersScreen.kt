@@ -4,7 +4,6 @@ package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberHaptics
-import com.emberinn.app.ui.components.UiSounds
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.theme.LocalThemePreset
@@ -372,7 +371,6 @@ fun CharactersScreen(
             confirmButton = {
                 TextButton(onClick = {
                     EmberHaptics.reject(haptic)
-                    UiSounds.delete(context)
                     vm.delete(record); deleteTarget = null
                     Toast.makeText(context, "已删除：${record.name}", Toast.LENGTH_SHORT).show()
                 }) { Text("删除", color = MaterialTheme.colorScheme.error) }

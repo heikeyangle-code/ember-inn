@@ -86,13 +86,4 @@ object AppearancePrefs {
             .apply()
     }
 
-    /** README UI 质感清单 6：交互音效（默认开，克制、可关闭）。 */
-    fun uiSounds(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("ui_sounds", true)
-
-    fun saveUiSounds(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean("ui_sounds", enabled)
-            .apply()
-    }
 }

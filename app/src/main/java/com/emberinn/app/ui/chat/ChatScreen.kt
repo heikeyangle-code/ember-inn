@@ -3,7 +3,6 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.ui.components.EmberEmptyState
-import com.emberinn.app.ui.components.UiSounds
 
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.Persona
@@ -645,7 +644,6 @@ fun ChatScreen(
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
                     followBottom = true
                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    UiSounds.send(context)
                     val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
                     if (accepted) {
                         input = ""
@@ -857,7 +855,6 @@ fun ChatScreen(
             confirmButton = {
                 TextButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                    UiSounds.delete(context)
                     vm.deleteMessage(index)
                     deleteTargetIndex = null
                     Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()

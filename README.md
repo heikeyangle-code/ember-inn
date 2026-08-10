@@ -240,7 +240,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 3. **触觉反馈铺满关键交互**：`LocalHapticFeedback.performHapticFeedback()` 按语义匹配（确认用 `Confirm`、开关用 `ToggleOn/Off`、删除用 `Reject`、点选用极轻反馈）；覆盖发送/切换角色/删除确认/开关
 4. **骨架屏替换转圈 Loading**：自写 `shimmerEffect()`（rememberInfiniteTransition + 扫光渐变，约 20 行），颜色跟随角色主题色而非灰色默认（现成库灰骨架无法适配动态取色）
 5. **首页角色卡直接用取色结果做底色**：取色系统已接（seedColor），卡片底色必须体现"每角色专属氛围"，禁止统一灰白底
-6. **声音反馈**：`SoundPool` 预加载极短反馈音（发送/切换），克制、可关闭
+6. **声音反馈**：已按用户要求移除（2026-08-11，不再实现）
 
 **第二批（需设计判断）**
 7. **字体真正落地**：氛围字体（霞鹜文楷/思源宋体）不只"可下载"，角色名/旁白优先接入，正文保持清晰无衬线

@@ -317,7 +317,6 @@ fun AppearanceScreen(
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
-                var uiSounds by remember { mutableStateOf(AppearancePrefs.uiSounds(optContext)) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -373,16 +372,6 @@ fun AppearanceScreen(
                                 Text("官方 power_user.encode_tags：显示时把 < > 转义为 &lt; &gt;（默认关）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it) })
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().clickable { uiSounds = !uiSounds; AppearancePrefs.saveUiSounds(optContext, uiSounds) }.padding(vertical = 6.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("交互音效", style = MaterialTheme.typography.bodyLarge)
-                                Text("发送 / 开关 / 删除的极短提示音，克制可关闭", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            EmberSwitch(checked = uiSounds, onCheckedChange = { uiSounds = it; AppearancePrefs.saveUiSounds(optContext, it) })
                         }
                     }
                 }

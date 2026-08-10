@@ -4,7 +4,6 @@ package com.emberinn.app.ui.sessions
 
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberHaptics
-import com.emberinn.app.ui.components.UiSounds
 import com.emberinn.app.ui.theme.LocalThemePreset
 
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -323,7 +322,6 @@ fun SessionsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     EmberHaptics.reject(haptic)
-                    UiSounds.delete(context)
                     vm.delete(session); deleteTarget = null
                     Toast.makeText(context, "已删除：${session.name}", Toast.LENGTH_SHORT).show()
                 }) { Text("删除", color = MaterialTheme.colorScheme.error) }

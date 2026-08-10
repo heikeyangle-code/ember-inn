@@ -386,7 +386,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 **登记未做（README 要求但未实现）**：
 - LaTeX 渲染（KaTeX 资产未打包）；MeshGradient 氛围背景（API churn，用 seed 低饱和渐变替代中）；
   每卡“消息样式”配方（引用色/斜体色）；快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
-- 骨架屏 / 触觉 / 音效 / 空状态 / 彩色阴影 / 霞鹜文楷下载 / 六主题间距+动效 已落地（第 158-161 轮，见下节）。
+- 骨架屏 / 触觉 / 空状态 / 彩色阴影 / 霞鹜文楷下载 / 六主题间距+动效 已落地（第 158-161 轮，见下节）。
 
 ## 8. 消息区布局调整（第 153 轮，OmniBot 对照 + 官方复核）
 
@@ -529,18 +529,16 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - `EmberFx.kt`：EmberHaptics（Confirm/ToggleOn·Off/Reject/SegmentTick 语义触觉）、
   `Modifier.emberShadow`（Compose 1.9+ 稳定 dropShadow，阴影色用元素自身颜色深色版，非纯黑）、
   `EmberSkeletonBox`（rememberInfiniteTransition + 扫光渐变，颜色跟随主题强调色）、
-  `EmberSwitch`（全 App 开关统一封装：ToggleOn/Off 触觉 + 轻音效）
-- `EmberEmptyState.kt`：品牌化空状态（余烬微光 Canvas + 弱脉冲动效 + 语气文案 + 下一步按钮）
-- `UiSounds.kt`：SoundPool 运行时合成三段正弦衰减音（发送/切换/删除），USAGE_ASSISTANCE_SONIFICATION，
-  由 `AppearancePrefs.uiSounds`（默认开）控制；MainActivity.onCreate ensure 预加载
+  `EmberSwitch`（全 App 开关统一封装：ToggleOn/Off 触觉）
+- `EmberEmptyState.kt`：中性空状态（可选图标 + 引导按钮 + 语气文案，无品牌符号/动画）
 
 **第一批落地（6257134）**：
 - 彩色阴影：首页 AI 对话卡（primary 光晕）、最近聊过（secondary）、角色卡（seed 色深版）全部换 emberShadow
 - 触觉铺满：发送=Confirm、删除=Reject、开关=ToggleOn/Off、点角色/会话/新建/导入=SegmentTick 轻选；
-  ChatScreen 原有 Confirm/Reject 保留并补音效
+  ChatScreen 原有 Confirm/Reject 保留
 - 骨架屏：提供商模型列表“测试连接中”显示 5 行主题色骨架（替代灰色转圈）
 - 空状态统一：首页/会话/聊天全部换 EmberEmptyState（中性图标 + 引导按钮，无品牌符号/动画）
-- 音效：发送/删除/全部开关，外观设置新增「交互音效」开关
+- 声音反馈：已按用户要求整体删除（第 163 轮）
 
 **第二批落地（bfda115）**：
 - 六套预设主题各自形状性格：墨韵/青瓷=圆润 16dp、夜航/简约纸感=系统 12dp、丹砂=方正 4dp、琉璃=浑圆 24dp
@@ -561,17 +559,23 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
 - Switch→EmberSwitch 全局改名后，RegexScreen 里 `return@Switch` 标签不同步 → 已改 `return@EmberSwitch`（dbf321d）
 
+## 8. 音效整套删除（第 163 轮，2026-08-11，用户要求）
+
+- 删除 UiSounds.kt（SoundPool + WAV 合成）、MainActivity 初始化、EmberSwitch 切换音、
+  ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
+- 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
+
 ## 8. 性能修复（第 162 轮，2026-08-11，用户反馈发消息/多处变卡）
 
 **根因排查**：
 - 每张角色卡都挂了 `emberShadow`（Compose dropShadow = 离屏模糊渲染），首页网格里同时 4-6 张卡 → 帧率明显下降
 - 流式渲染每 33ms tick 对整段文本跑 `fixMarkdown` 正则 + `balanceStreamingDelimiters` 四次全量扫描，纯文本消息白花钱
-- UiSounds.ensure 在 MainActivity.onCreate 同步生成 3 段 WAV + 建 SoundPool，启动首帧前有额外开销
+- （音效整套已于第 163 轮删除，此项不再适用）
 
 **已修（commit 待推）**：
 - 角色卡改回普通 Card 阴影（只保留 AI 对话卡/最近聊过 2 处彩色阴影，首页不再逐卡模糊）
 - DisplayPipeline 加快路径：文本不含 `* _ "` 或 ``` ~~~ 时直接返回，流式纯文本不再跑正则/扫描
-- UiSounds.ensure 延到 `window.decorView.post {}` 首帧后执行，启动不卡
+- （音效删除后此项不再适用）
 - 登记：若仍卡，下一步把彩色阴影整体做成“性能开关/低端模式”，并把流式 markdown 重渲染降频（官方 30fps 上限内）
 
 ## 8. UI 质感方案 15 项清点（第 161 轮，2026-08-11，《EmberInn-UI质感提升方案》全清单）
@@ -583,7 +587,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 | 3 | 触觉反馈铺满关键交互 | ✅ Confirm/ToggleOn·Off/Reject/SegmentTick 全 App 开关+发送+删除+点选 |
 | 4 | 骨架屏替换转圈 Loading | ✅ 模型列表骨架屏；剩余 CircularProgress 为上下文胶囊环/测试连接按钮内嵌指示（有意保留） |
 | 5 | 首页角色卡用取色做底色 | ✅ seed 极淡 tint + 名字/占位渐变 |
-| 6 | 声音反馈 | ✅ SoundPool 三段合成音 + 外观开关（默认开） |
+| 6 | 声音反馈 | ➖ 已按用户要求删除（第 163 轮，UiSounds/开关/调用点全移除） |
 | 7 | 字体真正落地 | ✅ 霞鹜文楷（LXGW WenKai）下载→解包→filesDir 缓存→Typeface 即时生效；衬线=思源宋体近似 |
 | 8 | 形状语言区分角色 | ✅ 每卡配方 shape（4/16/24dp）+ 六预设形状性格 |
 | 9 | 六套主题各自独立性格 | ✅ 形状 + 间距节奏（墨韵 1.12 / 丹砂 0.92…）+ 动效速度（丹砂 1.15 / 墨韵 0.85…） |
