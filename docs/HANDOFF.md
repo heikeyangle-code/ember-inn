@@ -332,39 +332,33 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 上下文预算对齐官方（commit `131d5c6`）：默认 32K（旧 8192 视为未设置）、maxTokens 钳制保证预算为正、
 必选提示词装不下时走 `ContextBudgetException` 人话报错；Claude 直连缓存参数已接线（详见第 6 节日志 72）。
 
-## 5. 剩余工作（按优先级）
+## 5. 完成度总览（截至第 107 轮，2026-08-10）
 
-**P0（“打开即聊”体验短板）**
-1. ~~聊天 Tab 占位~~ → 会话列表 / 新建对话已做；剩群聊 App 调度层（引擎已 1:1，排 P2）
-2. ~~流式/停止/重新生成/继续/复制/删除/编辑/冒充/提示词总装/滑动切回复~~ → 已做；剩 swipe picker（变体历史跳转，P2）
-3. ~~全局搜索~~ → 已做；设置结果深链已实现（首页搜索 route → SettingsScreen deepLink：外观/提供商/数据/关于，MainScreen settingsDeepLink 接线）；~~swipe picker~~ → 已做（第 91 轮：长按消息→变体列表弹层）
+**已完成（全部经 CI 验证 / 引擎测试全绿）**
+- P0：会话列表/新建对话、流式/停止/重生成/继续/复制/删除/编辑/冒充/提示词总装、滑动切回复 + swipe picker、
+  全局搜索 + 设置深链（含服务/正则/世界书/快捷回复/语音）、群聊调度层
+- P1：角色详情编辑页（字段/世界书/正则/变量/模型覆盖/主题配方 + 导出分享/AI 生成背景）、聊天页（胶囊/命中面板/媒体/
+  滑动/行高）、Splash、数据与隐私、首启引导、TTS、翻译/图像执行层（Libre/DeepL/DeepLX/A1111/gpt-image）、
+  向量 App 接线（聊天重排/世界书 RAG/数据银行）、默认采样参数、全局字体/圆角、作者注释、全局正则
+- P2：SlashParser flags + 常用/消息类斜杠命令 + 差分 18→43 例；群聊全部可做项（natural/pooled、深度提示、
+  自动续写链、策略 UI）；世界书设置 UI；快捷回复 automationId 自动执行；JSON 导入导出差分 10→13/6→10；
+  正则分桶差分 7 例；世界书深度注入/EM 锚点接线 + 负深度回归；HTML/Mermaid WebView；平板双栏；
+  图库 LIST/GALLERY；URL 导入角色卡
+- P3/P4：主题全局管线（浅深锁定/seed/形状/字体）、配方导出/分享、无障碍基础达标
 
-**P1（功能完整）**
-4. 角色详情编辑页：~~卡字段编辑、世界书管理 UI~~ → 已完成（2026-08-10 复验并修复一轮，见 4.2/第 73 轮）；~~正则（该卡）UI~~（第 75 轮）；~~变量（该卡）UI~~（第 76 轮）；快捷回复按官方改为全局（第 77 轮，per-character 已删）；~~模型覆盖~~（第 81 轮）；主题配方已做存储+UI+聊天背景应用（第 82 轮）；全局形状/字体/锁定管线与配方导出分享 P3
-5. 聊天页（上下文胶囊 / 世界书命中面板 / 媒体附件渲染 / 滑动切回复 / 中文行高 1.55 已完成）；✅ Splash 原生启动已做（2026-08-10 第 78 轮：主题级启动窗口，windowBackground 层叠图标 + Android 12+ windowSplashScreen*，MainActivity setTheme 切换；无新依赖）；Lottie 品牌开场 / 余烬火花 mark 已随 README 删除品牌承诺（3641185）
-6. 设置剩余组：~~数据与隐私（备份/导出）、首启引导~~ → 已做；~~语音（TTS）~~ → 配置页 + 执行层已接（第 80 轮）；~~服务（翻译/图像）~~ → 执行层已接（2026-08-10 第 86 轮：翻译 LibreTranslate/DeepL/DeepLX、图像 AUTOMATIC1111，聊天长按翻译 + 快捷工具盘“图像”）；向量 App 接线已做（第 88 轮：设置开关 + 聊天/文件/世界书 RAG + 数据银行 UI）；官方 1.18 无 STT
+**延迟/边界（有明确理由，非缺失实现）**
+- Claude/Gemini 官方 web tokenizer：用户明确豁免（当前 cl100k 回退，只影响估算精度）
+- Vertex AI 服务账号认证：需外部项目/服务账号配置
+- 斜杠 /gen /genraw /trigger /while /inject：需要异步生成管线，登记 P2 后续
+- 表情精灵 App 渲染：引擎 1:1，缺 sprite 资产导入/情绪 UI（P4）
+- Room/DataStore 迁移：内部实现，行为不变（P3）
+- 自有插件 API（P6 远期）、网络代理（P5）、视觉小说（远期）、STT（官方 1.18 无）
+- 翻译自动模式执行（官方默认关）、记忆/聊天摘要 summarize（官方默认关）、快捷回复全屏编辑器（列表编辑可用）
+- 预设分桶与 allowedOnly 允许列表（正则）、chara_note 全局备注、密度档位（M3 无全局概念）、Mermaid 离线（需 CDN）
 
-**P2（引擎边界）**
-7. SlashParser flags 完整语义 ✅ + 常用/消息类斜杠命令 ✅（第 89 轮：纯函数/变量/if + sendas/send/sys/sysname/comment/message-role/message-name/hide/unhide/delname/addswipe/delswipe；UI 已能做到的不做；/gen /genraw /trigger /inject /while 等异步生成类仍缺）+ slash 差分 fixture ✅（18→43 例）
-8. Claude/Gemini 官方 web tokenizer（当前回退 cl100k）
-9. 群聊：✅ App 调度层（第 84 轮）+ natural/pooled 激活与队列提示（第 87 轮）+ 深度提示接线 + 自动续写链 + 策略切换 UI（第 90 轮）；narrator 按官方 1.18 无独立模式（/sys 旁白消息可用）；✅ 人设管理 UI（第 83 轮）；✅ 聊天书签（第 85 轮）
-10. Vertex AI 服务账号认证（无法纯引擎实现，需服务账号/项目配置）；Claude/Gemini 官方 web tokenizer（当前回退 cl100k）；斜杠完整 parser 与命令；聊天书签/快照；群聊多人回复拼接；BYAF 资源提取
-
-**备注（不能纯引擎做 / 需 App 或外部）**
-- Vertex AI 服务账号认证（需服务账号 JSON + 项目配置，引擎无法实现）
-- Claude/Gemini 官方 tokenizer（可做但用户同意暂时搁置；只影响 token 估算精度，不影响聊天）
-- 150+ 斜杠命令（多数依赖 App 状态/生成流程）；斜杠 REPLACE_GETVAR 等解析语义（部分可做，排 P2）
-- 群聊多人回复拼接 / 组提示 / nudge 链（App 调度层，引擎激活/合并/深度/循环已 1:1）
-- 聊天书签 / 快照 / 背景（引擎逻辑待做，且需 App 数据模型）
-- TTS / STT / 图像 / 翻译 / 聊天摘要 summarize（服务层 P3/P4，官方默认关）
-
-**P3/P4（服务与扩展）**
-11. TTS/STT/图像生成/翻译/向量库（services 接口已规划）
-12. 自有插件 API、无障碍贯穿、平板双栏
-
-**差分跟进**
-- 官方发版：重跑 `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs`，再全量 `:engine:test`
-- 补 slash / JSON / CharX 导入导出的差分 fixture
+**差分跟进（机制就绪，官方发版时执行）**
+- 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
+- 54 组差分 fixture / 801+ 例对拍全绿（slash-parser 43、regex-scope 7、json-import 13、json-export 10 等）
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
