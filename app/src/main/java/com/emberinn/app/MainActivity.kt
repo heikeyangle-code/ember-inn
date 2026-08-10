@@ -2,6 +2,7 @@ package com.emberinn.app
 
 import com.emberinn.app.ui.components.UiSounds
 
+import android.graphics.Typeface
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -17,6 +19,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontFamily
+import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.MainScreen
@@ -37,6 +40,8 @@ class MainActivity : ComponentActivity() {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
             var vibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
+            var appearanceRev by remember { mutableIntStateOf(0) }
+            remember(appearanceRev) { Unit }
             val recipe by ThemeState.recipe.collectAsState()
             val seedColor by ThemeState.seedColor.collectAsState()
             // 第三层角色主题配方：浅深锁定 > 全局模式；seed > 角色取色 > 全局预设
@@ -92,6 +97,7 @@ class MainActivity : ComponentActivity() {
                 extraLarge = RoundedCornerShape(radius + 12.dp),
             )
             val fontFamily = when (recipe?.font ?: AppearancePrefs.font(this)) {
+                "lxgw" -> FontManager.lxgwFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Serif
                 "source", "serif" -> FontFamily.Serif
                 else -> FontFamily.Default
             }
@@ -104,6 +110,7 @@ class MainActivity : ComponentActivity() {
                         vibe = newVibe
                         VibePrefs.save(this, newVibe)
                     },
+                    onAppearanceChanged = { appearanceRev++ },
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode
                         preset = newPreset

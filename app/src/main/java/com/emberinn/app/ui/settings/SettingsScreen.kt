@@ -63,6 +63,7 @@ fun SettingsScreen(
     themePreset: ThemePreset,
     vibe: VibePreset = VibePresets.first(),
     onVibeChanged: (VibePreset) -> Unit = {},
+    onAppearanceChanged: () -> Unit = {},
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     deepLink: String? = null,
     onDeepLinkConsumed: () -> Unit = {},
@@ -123,6 +124,7 @@ fun SettingsScreen(
             themePreset = themePreset,
             vibe = vibe,
             onVibeChanged = onVibeChanged,
+            onAppearanceChanged = onAppearanceChanged,
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )

@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.luminance
 /** 当前视觉氛围：供空状态/阴影等组件读取；默认标准=无品牌滤镜。 */
 val LocalVibe = staticCompositionLocalOf { VibePresets.first() }
 
+/** 当前预设主题：供间距节奏/动效速度等组件读取（README 清单 9）。 */
+val LocalThemePreset = staticCompositionLocalOf { ThemePresets.first() }
+
 @Composable
 fun EmberInnTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -28,7 +31,7 @@ fun EmberInnTheme(
     fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalVibe provides vibe) {
+    CompositionLocalProvider(LocalVibe provides vibe, LocalThemePreset provides preset) {
         MaterialTheme(
             colorScheme = if (darkTheme) preset.darkScheme(vibe) else preset.lightScheme(vibe),
             typography = typographyWith(fontFamily),

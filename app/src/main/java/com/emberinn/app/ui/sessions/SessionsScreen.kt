@@ -5,6 +5,7 @@ package com.emberinn.app.ui.sessions
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.UiSounds
+import com.emberinn.app.ui.theme.LocalThemePreset
 
 import com.emberinn.app.ui.icons.PhosphorIcons
 import android.widget.Toast
@@ -146,7 +147,7 @@ fun SessionsScreen(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp * LocalThemePreset.current.spacing),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(sessions, key = { it.id }) { session ->

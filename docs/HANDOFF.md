@@ -385,10 +385,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **登记未做（README 要求但未实现）**：
 - LaTeX 渲染（KaTeX 资产未打包）；MeshGradient 氛围背景（API churn，用 seed 低饱和渐变替代中）；
-  世界书命中灯四色分级（面板只展示已注入条目，常驻/关键词两色）；
-  每卡“消息样式”配方（引用色/斜体色）；字体包（霞鹜文楷/思源宋体下载接入）；
-  快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
-- 骨架屏 shimmer / 触觉反馈铺满 / 音效 / 品牌空状态 / 彩色阴影 已落地（第 158-159 轮，见下节）。
+  每卡“消息样式”配方（引用色/斜体色）；快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
+- 骨架屏 / 触觉 / 音效 / 空状态 / 彩色阴影 / 霞鹜文楷下载 / 六主题间距+动效 已落地（第 158-161 轮，见下节）。
 
 ## 8. 消息区布局调整（第 153 轮，OmniBot 对照 + 官方复核）
 
@@ -562,6 +560,34 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - @file:OptIn 文件里 import 插到 package 前导致 CharacterDetailScreen 语法错误 → 已移回 package 后；
   EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
 - Switch→EmberSwitch 全局改名后，RegexScreen 里 `return@Switch` 标签不同步 → 已改 `return@EmberSwitch`（dbf321d）
+
+## 8. UI 质感方案 15 项清点（第 161 轮，2026-08-11，《EmberInn-UI质感提升方案》全清单）
+
+| # | 项 | 状态 |
+|---|---|---|
+| 1 | 阴影升级新 API（dropShadow 彩色阴影） | ✅ emberShadow（seed 色深版，非纯黑） |
+| 2 | 组件走主题强调色 | ✅ Switch/Chip/Button 全部读 colorScheme 角色，视觉氛围可调 |
+| 3 | 触觉反馈铺满关键交互 | ✅ Confirm/ToggleOn·Off/Reject/SegmentTick 全 App 开关+发送+删除+点选 |
+| 4 | 骨架屏替换转圈 Loading | ✅ 模型列表骨架屏；剩余 CircularProgress 为上下文胶囊环/测试连接按钮内嵌指示（有意保留） |
+| 5 | 首页角色卡用取色做底色 | ✅ seed 极淡 tint + 名字/占位渐变 |
+| 6 | 声音反馈 | ✅ SoundPool 三段合成音 + 外观开关（默认开） |
+| 7 | 字体真正落地 | ✅ 霞鹜文楷（LXGW WenKai）下载→解包→filesDir 缓存→Typeface 即时生效；衬线=思源宋体近似 |
+| 8 | 形状语言区分角色 | ✅ 每卡配方 shape（4/16/24dp）+ 六预设形状性格 |
+| 9 | 六套主题各自独立性格 | ✅ 形状 + 间距节奏（墨韵 1.12 / 丹砂 0.92…）+ 动效速度（丹砂 1.15 / 墨韵 0.85…） |
+| 10 | 算法取色后统一滤镜 | ✅ 改为可调“视觉氛围”（标准/柔和/清冷/明快/自定义：降饱和/冷暖/光效）；按用户要求默认标准=无滤镜、无强制品牌气质 |
+| 11 | 空状态设计 | ✅ 全 App 主要空状态统一组件（图标+引导按钮+语气文案），无品牌符号 |
+| 12 | 设置页重新设计 | ✅ 六组语义卡片 + 常用快捷区 + 搜索 + 分组标题 |
+| 13 | 排版层级大胆 | ✅ 全局 Typography 标题 Bold/SemiBold、正文常规 |
+| 14 | 图标一致性 | ✅ 全 Phosphor，无 Material 混用 |
+| 15 | 品牌视觉母题 | ➖ 按用户要求移除（空状态 ✦/微光/余烬文案已删），改为用户可调视觉氛围 |
+
+**第 161 轮新增**：
+- FontManager：霞鹜文楷下载（官方 Release zip → LXGWWenKai-Regular.ttf → filesDir/fonts），
+  外观页字体新增“霞鹜文楷（下载）”chip：未下载点选→下载对话框→成功自动应用并持久化
+- 外观改动即时生效：MainActivity appearanceRev 状态贯通 MainScreen→SettingsScreen→AppearanceScreen，
+  字体/圆角保存后不再需要重启
+- 六主题独立性格补全：ThemePreset.spacing（列表/网格间距倍数）+ motionScale（骨架屏等动效速度）；
+  墨韵留白大动效慢、丹砂紧凑动效快、琉璃轻快、青瓷舒展
 
 ## 8. 去掉强制品牌气质，视觉氛围可调（第 160 轮，2026-08-11，用户要求）
 

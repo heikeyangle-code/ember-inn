@@ -7,6 +7,7 @@ import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.UiSounds
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.theme.LocalVibe
 
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -182,8 +183,8 @@ fun CharactersScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topBarPad + 8.dp, bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
+                verticalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
                 modifier = Modifier.fillMaxSize().sky(sky),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {

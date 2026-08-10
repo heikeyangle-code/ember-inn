@@ -14,6 +14,10 @@ data class ThemePreset(
     val darkBg: Color,
     /** README 清单 9：六套主题各自性格——形状语言随预设变化（墨韵圆润/丹砂方正/琉璃浑圆）。 */
     val shape: String = "default",
+    /** 间距节奏倍数（>1 更松散，<1 更紧凑）；默认 1.0。 */
+    val spacing: Float = 1f,
+    /** 动效速度倍数（>1 更快，<1 更慢）；默认 1.0。 */
+    val motionScale: Float = 1f,
 )
 
 val ThemePresets: List<ThemePreset> = listOf(
@@ -27,6 +31,8 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF7F2E8),
         darkBg = Color(0xFF171513),
         shape = "rounded",
+        spacing = 1.12f,
+        motionScale = 0.85f,
     ),
     ThemePreset(
         id = "celadon",
@@ -38,6 +44,8 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF5F3EC),
         darkBg = Color(0xFF15201D),
         shape = "rounded",
+        spacing = 1.05f,
+        motionScale = 0.95f,
     ),
     ThemePreset(
         id = "night",
@@ -60,6 +68,8 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFFBF4EF),
         darkBg = Color(0xFF1B1210),
         shape = "square",
+        spacing = 0.92f,
+        motionScale = 1.15f,
     ),
     ThemePreset(
         id = "glaze",
@@ -71,6 +81,8 @@ val ThemePresets: List<ThemePreset> = listOf(
         lightBg = Color(0xFFF5F7FB),
         darkBg = Color(0xFF10131A),
         shape = "circle",
+        spacing = 0.95f,
+        motionScale = 1.05f,
     ),
     ThemePreset(
         id = "paper",

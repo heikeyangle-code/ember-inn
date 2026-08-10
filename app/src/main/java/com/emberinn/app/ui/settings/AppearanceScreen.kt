@@ -23,12 +23,14 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +53,9 @@ import com.emberinn.app.ui.theme.ThemePresets
 import com.emberinn.app.ui.theme.VibePrefs
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
+import com.emberinn.app.data.FontManager
 import com.emberinn.app.ui.settings.AppearancePrefs
+import kotlinx.coroutines.launch
 
 /** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
 @Composable
@@ -59,6 +64,7 @@ fun AppearanceScreen(
     themePreset: ThemePreset,
     vibe: VibePreset,
     onVibeChanged: (VibePreset) -> Unit,
+    onAppearanceChanged: () -> Unit = {},
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -187,6 +193,9 @@ fun AppearanceScreen(
                 val appearanceContext = LocalContext.current
                 var radius by remember { mutableStateOf(AppearancePrefs.radius(appearanceContext)) }
                 var font by remember { mutableStateOf(AppearancePrefs.font(appearanceContext)) }
+                val fontScope = rememberCoroutineScope()
+                var fontDownloading by remember { mutableStateOf(false) }
+                var fontError by remember { mutableStateOf<String?>(null) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -200,7 +209,7 @@ fun AppearanceScreen(
                             modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
                         ) {
                             listOf("default" to "系统", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
-                                FilterChip(selected = radius == v, onClick = { radius = v; AppearancePrefs.save(appearanceContext, radius, font) }, label = { Text(label) })
+                                FilterChip(selected = radius == v, onClick = { radius = v; AppearancePrefs.save(appearanceContext, radius, font); onAppearanceChanged() }, label = { Text(label) })
                             }
                         }
                         Text("全局字体", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
@@ -209,8 +218,38 @@ fun AppearanceScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.padding(top = 6.dp, bottom = 4.dp),
                         ) {
-                            listOf("default" to "系统", "serif" to "衬线（思源宋体近似）").forEach { (v, label) ->
-                                FilterChip(selected = font == v, onClick = { font = v; AppearancePrefs.save(appearanceContext, radius, font) }, label = { Text(label) })
+                            listOf(
+                                "default" to "系统",
+                                "serif" to "衬线（思源宋体近似）",
+                                "lxgw" to "霞鹜文楷（下载）",
+                            ).forEach { (v, label) ->
+                                val lxgwReady = v != "lxgw" || FontManager.lxgwFile(appearanceContext) != null
+                                FilterChip(
+                                    selected = font == v,
+                                    enabled = lxgwReady || v == "lxgw",
+                                    onClick = {
+                                        if (v == "lxgw" && FontManager.lxgwFile(appearanceContext) == null) {
+                                            font = "lxgw"
+                                            fontScope.launch {
+                                                fontDownloading = true
+                                                val result = FontManager.ensureLxgw(appearanceContext)
+                                                fontDownloading = false
+                                                result.onSuccess {
+                                                    AppearancePrefs.save(appearanceContext, radius, "lxgw")
+                                                    onAppearanceChanged()
+                                                }.onFailure { e ->
+                                                    font = AppearancePrefs.font(appearanceContext)
+                                                    fontError = e.message ?: "未知错误"
+                                                }
+                                            }
+                                        } else {
+                                            font = v
+                                            AppearancePrefs.save(appearanceContext, radius, v)
+                                            onAppearanceChanged()
+                                        }
+                                    },
+                                    label = { Text(label) },
+                                )
                             }
                         }
                     }
@@ -347,6 +386,24 @@ fun AppearanceScreen(
                     }
                 }
             }
+        }
+        if (fontDownloading) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("下载字体") },
+                text = { Text("正在下载霞鹜文楷（约 70MB），完成后自动应用，请稍候…") },
+                confirmButton = {},
+            )
+        }
+        fontError?.let { err ->
+            AlertDialog(
+                onDismissRequest = { fontError = null },
+                title = { Text("字体下载失败") },
+                text = { Text(err) },
+                confirmButton = {
+                    TextButton(onClick = { fontError = null }) { Text("知道了") }
+                },
+            )
         }
     }
 }
