@@ -35,8 +35,9 @@ fun WorldInfoScreen(onBack: () -> Unit) {
     var settings by remember { mutableStateOf(WorldInfoPrefs.read(context)) }
     fun save() = WorldInfoPrefs.save(context, settings)
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "世界书", onBack = onBack)
+        SettingsTopBar(title = "世界书", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,6 +80,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(16.dp))
         }
+    }
     }
 }
 

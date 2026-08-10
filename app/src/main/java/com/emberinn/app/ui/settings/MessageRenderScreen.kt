@@ -54,8 +54,9 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
     val borderFallback = if (dark) stTheme.stBorder else null ?: androidx.compose.ui.graphics.Color(0x80000000)
     val shadowFallback = if (dark) stTheme.stShadow else null ?: androidx.compose.ui.graphics.Color(0x80000000)
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "消息渲染（官方字段）", onBack = onBack)
+        SettingsTopBar(title = "消息渲染（官方字段）", onBack = onBack, sky = settingsSky)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -148,6 +149,7 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                 }
             }
         }
+    }
     }
 }
 

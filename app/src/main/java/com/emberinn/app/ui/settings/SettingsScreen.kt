@@ -4,6 +4,7 @@ import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import com.emberinn.app.ui.components.edgeSwipeBack
+import com.emberinn.app.ui.components.glassEdgeHighlight
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,12 +43,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.skydoves.cloudy.cloudy
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.VibePreset
@@ -463,8 +468,9 @@ private fun SettingRowView(row: SettingRow) {
 @Composable
 private fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "关于", onBack = onBack)
+        SettingsTopBar(title = "关于", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         ) {
@@ -501,6 +507,7 @@ private fun AboutScreen(onBack: () -> Unit) {
             }
         }
     }
+    }
 }
 
 @Composable
@@ -512,17 +519,69 @@ private fun InfoLine(label: String, value: String) {
     }
 }
 
-/** 设置子页通用顶栏。 */
+/** 设置页玻璃容器：静态背景层作为顶栏毛玻璃的 sky 源（内容滚动不触发整屏重捕）。 */
 @Composable
-fun SettingsTopBar(title: String, onBack: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+fun SettingsGlassPage(content: @Composable (com.skydoves.cloudy.Sky) -> Unit) {
+    val sky = rememberSky()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .sky(sky)
+                .background(MaterialTheme.colorScheme.background),
+        )
+        content(sky)
+    }
+}
+
+/** 设置子页通用顶栏（玻璃模式：传 sky 后为毛玻璃 + 边缘高光；不传保持透明）。 */
+@Composable
+fun SettingsTopBar(
+    title: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    sky: com.skydoves.cloudy.Sky? = null,
+) {
+    val topBarContext = LocalContext.current
+    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    Surface(
+        color = if (sky != null) MaterialTheme.colorScheme.surface.copy(alpha = 0.16f) else Color.Transparent,
+        shadowElevation = if (sky != null) 1.dp else 0.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (sky != null) {
+                    Modifier
+                        .glassEdgeHighlight(dark = glassDark, atTop = false)
+                        .then(
+                            if (AppearancePrefs.backgroundBlur(topBarContext)) {
+                                Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(topBarContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                            } else {
+                                Modifier.background(MaterialTheme.colorScheme.surface)
+                            },
+                        )
+                } else {
+                    Modifier
+                },
+            ),
     ) {
-        // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
-        IconButton(onClick = onBack) {
-            Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+        ) {
+            // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
+            IconButton(onClick = onBack) {
+                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            trailing?.invoke()
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
     }
 }

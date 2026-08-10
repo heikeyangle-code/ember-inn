@@ -85,8 +85,9 @@ fun ProviderListScreen(
         }
     }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title = "提供商与模型", subtitle = "22 家服务商，点卡片配置", onBack = onBack)
+        SettingsTopBar(title = "提供商与模型", subtitle = "22 家服务商，点卡片配置", onBack = onBack, sky = settingsSky)
         EmberTextField(
             value = query,
             onValueChange = { query = it },
@@ -129,6 +130,7 @@ fun ProviderListScreen(
                 )
             }
         }
+    }
     }
 }
 
@@ -264,8 +266,9 @@ fun ProviderDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     val existing = profiles.firstOrNull { it.providerId == spec.id }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(
+        SettingsTopBar(
             title = spec.displayName,
             onBack = onBack,
             trailing = if (existing != null) {
@@ -275,6 +278,7 @@ fun ProviderDetailScreen(
                     }
                 }
             } else null,
+            sky = settingsSky,
         )
         Column(
             modifier = Modifier
@@ -458,6 +462,7 @@ fun ProviderDetailScreen(
             }
             Spacer(Modifier.size(24.dp))
         }
+    }
     }
 
     if (showModelSheet) {

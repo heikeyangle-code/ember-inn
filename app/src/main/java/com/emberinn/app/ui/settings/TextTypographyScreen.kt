@@ -43,8 +43,9 @@ fun TextTypographyScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {
     var blockSpacing by remember { mutableStateOf(AppearancePrefs.blockSpacing(context)) }
     var listIndent by remember { mutableStateOf(AppearancePrefs.listIndent(context)) }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "文字排版", onBack = onBack)
+        SettingsTopBar(title = "文字排版", onBack = onBack, sky = settingsSky)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -124,6 +125,7 @@ fun TextTypographyScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {
                 }
             }
         }
+    }
     }
 }
 

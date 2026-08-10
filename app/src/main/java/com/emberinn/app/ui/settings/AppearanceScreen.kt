@@ -76,8 +76,9 @@ fun AppearanceScreen(
     var fontDownloading by remember { mutableStateOf(false) }
     var fontError by remember { mutableStateOf<String?>(null) }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "外观与主题", onBack = onBack)
+        SettingsTopBar(title = "外观与主题", onBack = onBack, sky = settingsSky)
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
@@ -651,6 +652,7 @@ fun AppearanceScreen(
                 },
             )
         }
+    }
     }
 }
 

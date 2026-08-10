@@ -83,8 +83,9 @@ fun RegexScreen(onBack: () -> Unit) {
         scripts = next
     }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "正则脚本（全局）", onBack = onBack)
+        SettingsTopBar(title = "正则脚本（全局）", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -323,6 +324,7 @@ fun RegexScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
         }
+    }
     }
 
     if (adding || editing != null || presetEditingIndex != null) {

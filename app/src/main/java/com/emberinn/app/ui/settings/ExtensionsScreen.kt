@@ -30,8 +30,9 @@ fun ExtensionsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var interactiveCards by remember { mutableStateOf(ExtensionPrefs.interactiveCards(context)) }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "扩展插件", onBack = onBack)
+        SettingsTopBar(title = "扩展插件", onBack = onBack, sky = settingsSky)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -91,5 +92,6 @@ fun ExtensionsScreen(onBack: () -> Unit) {
                 }
             }
         }
+    }
     }
 }

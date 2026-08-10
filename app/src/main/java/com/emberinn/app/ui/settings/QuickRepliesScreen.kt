@@ -64,8 +64,9 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
         slots = next
     }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "快捷回复", onBack = onBack)
+        SettingsTopBar(title = "快捷回复", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -166,6 +167,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             ) { Text("＋ 新增快捷回复") }
             Spacer(Modifier.height(12.dp))
         }
+    }
     }
 
     if (adding || editing != null) {

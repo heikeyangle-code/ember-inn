@@ -79,20 +79,9 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
         }
     }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
-        ) {
-            // 返回按钮在左上角，留足上下间距
-            IconButton(onClick = onBack) {
-                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
-            }
-            Column {
-                Text("数据与隐私", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("备份 / 导出 / 清除数据", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        SettingsTopBar(title = "数据与隐私", onBack = onBack, sky = settingsSky)
 
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -174,7 +163,8 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val ok = SettingsSnapshotStore.create(context, snapshotName.trim())
+                    val ok = SettingsSnapshotStore.create(context, snapshot
+    }Name.trim())
                     showSnapshotDialog = false
                     snapshots = SettingsSnapshotStore.list(context)
                     Toast.makeText(

@@ -92,8 +92,9 @@ fun VoiceScreen(onBack: () -> Unit) {
         }
     }
 
+    SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "语音", onBack = onBack)
+        SettingsTopBar(title = "语音", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -253,6 +254,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                 }
             }
         }
+    }
     }
 }
 

@@ -659,6 +659,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 依据：M3 Expressive 全组件（Glow/ButtonGroup/新 FAB 等）在 1.4.0 稳定版已移除、仅 1.5.x alpha 可用，生产不引入 alpha；改用 1.4 稳定 API 自研封装达到同类质感（tonal 容器 + 大圆角 + 拖拽把手），零依赖新增、旧设备无降级。
 - 影响：纯 App/UI 层，未动引擎；官方渲染语义不受影响。
 
+### 12.10 UI 质感整体升级（2026-08-11 补充）
+- **聊天输入区重做**：输入框 `EmberTextField` 聚焦时 1.5dp 描边 + `emberShadow` 柔光环（默认主题主色，聊天输入框传角色 seed 的 accent，180ms 淡入）；快捷工具/快捷回复统一成 999 圆角胶囊流；附件/语音/快捷工具按钮换成 40dp tonal 圆钮（`EmberInputIcon`）；发送钮保留角色 seed 取色（accent 底 + 自适应亮暗图标 + accent 柔光），停止钮同规格 error 柔光。
+- **聊天列表页（Sessions）**：补静态背景层 + 玻璃顶栏 + 玻璃新建 FAB（`EmberGlassFab` 共享组件）；会话卡升级为 seed 专属配色——60dp 圆角头像块 + seed 描边、角色头像整卡淡背景（alpha 0.15）、卡片底 seed tint、左侧 seed 竖条、彩色发光阴影（与首页角色卡同一套语言）。
+- **设置页全量玻璃顶栏**：`SettingsGlassPage` 提供静态背景层（内容滚动不触发整屏重捕），`SettingsTopBar` 升级支持 glass（sky + 边缘高光 + Cloudy 背板模糊）/ subtitle / trailing；11 个子页（外观/文字排版/消息渲染/扩展/语音/快捷回复/世界书/正则/数据隐私/关于/提供商列表+详情）全部接入，ProviderScreen 原私有 `TopBar` 并入 `SettingsTopBar`。
+- 主题影响：所有新颜色均取色自 `MaterialTheme.colorScheme` / 角色 seed accent，11 套主题与深浅模式自动适配，无硬编码色值。
+- 依据：M3 1.4 稳定版（Expressive 仅 1.5 alpha），Cloudy 静态 sky 源原则，首页角色卡既有 seed 语言。
+- 影响：纯 App/UI 层，未动引擎。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
