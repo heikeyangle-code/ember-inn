@@ -125,11 +125,15 @@ private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
 
 private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
     val bg = schemeBackground?.let { tinted(it, vibe.warmth) } ?: tinted(darkBg, vibe.warmth)
-    val primary = schemePrimary ?: desaturate(lighten(seed, 0.24f), vibe.desaturateDark)
+    // 官方主题（完整 scheme 覆盖）色值绝对精确、不经过降饱和；其余主题的 scheme* 只是显式化的派生值，仍跟随视觉氛围
+    val officialOverride = schemeBackground != null
+    fun accent(scheme: Color?, auto: Color): Color =
+        if (scheme != null && !officialOverride) desaturate(scheme, vibe.desaturateDark) else scheme ?: auto
+    val primary = accent(schemePrimary, desaturate(lighten(seed, 0.24f), vibe.desaturateDark))
     val onBackground = schemeOnBackground ?: lighten(darkBg, 0.78f)
     val onSurface = schemeOnSurface ?: onBackground
-    val secondary = schemeSecondary ?: desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark)
-    val tertiary = schemeTertiary ?: desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark)
+    val secondary = accent(schemeSecondary, desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark))
+    val tertiary = accent(schemeTertiary, desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark))
     val surface = schemeSurface ?: lighten(bg, 0.03f)
     return darkColorScheme(
         primary = primary,

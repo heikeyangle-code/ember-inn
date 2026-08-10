@@ -87,7 +87,7 @@ fun AppearanceScreen(
                         item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionLabel("主题", "主题模式与 11 套预设，点选立即全局生效")
             }
-item(span = { GridItemSpan(maxLineSpan) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -127,10 +127,11 @@ item(span = { GridItemSpan(maxLineSpan) }) {
                     selected = preset.id == themePreset.id,
                     onClick = { onThemeChanged(themeMode, preset) },
                 )
-            }            item(span = { GridItemSpan(maxLineSpan) }) {
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionLabel("视觉与质感", "氛围滤镜、圆角字体、头像与文字阴影")
             }
-item(span = { GridItemSpan(maxLineSpan) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 val vibeContext = LocalContext.current
                 Surface(
                     shape = RoundedCornerShape(18.dp),
@@ -336,7 +337,8 @@ item(span = { GridItemSpan(maxLineSpan) }) {
                         Text("强度：$shadowStrength px", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }            item(span = { GridItemSpan(maxLineSpan) }) {
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 val optContext = LocalContext.current
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 Surface(
@@ -362,7 +364,7 @@ item(span = { GridItemSpan(maxLineSpan) }) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionLabel("消息外观", "气泡、HTML 渲染与文字排版")
             }
-item(span = { GridItemSpan(maxLineSpan) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 val optContext = LocalContext.current
                 var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
                 var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
@@ -471,10 +473,11 @@ item(span = { GridItemSpan(maxLineSpan) }) {
                         }
                     }
                 }
-            }            item(span = { GridItemSpan(maxLineSpan) }) {
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionLabel("行为与兼容", "沉浸模式、启动行为与官方转义")
             }
-item(span = { GridItemSpan(maxLineSpan) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 val immersiveContext = LocalContext.current
                 var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(immersiveContext)) }
                 Surface(
@@ -500,7 +503,8 @@ item(span = { GridItemSpan(maxLineSpan) }) {
                         EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it) })
                     }
                 }
-            }            item(span = { GridItemSpan(maxLineSpan) }) {
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 val optContext = LocalContext.current
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }

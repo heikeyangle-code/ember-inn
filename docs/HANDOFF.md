@@ -606,6 +606,18 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
 
+
+## 8. 不加深浅双套字段，修复 CI（第 186 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 用户确认：主题本来就有深浅两种模式（lightBg/darkBg + M3 自动生成），不需要再为每套主题加一套“浅色 st*/scheme*”字段；
+  本轮未新增任何字段，第 185 轮加的深色套保留，浅色模式继续回退 M3 自动配色
+- 修复 185 轮 CI 红：
+  1. ChatScreen 的 `?: if (stDark) ... else null` 不加括号会把整条 elvis 链推断成可空 Color，
+     17 处全部加括号 `?: (if (stDark) ... else null)`（MessageRow/StreamingMarkdown/ChatMarkdown/WebViewHtml/chatTextShadow）
+  2. AppearanceScreen 重组时 `}` 与下一个 `item(` 挤在同一行，Kotlin 把后续 item 当成上一 lambda 的表达式 → 全部补换行
+- 修复暗色“视觉氛围”回归：第 185 轮把 10 套主题的 scheme* 显式化后，暗色模式的主/次/第三色不再经过 vibe 降饱和；
+  darkScheme 改为“官方主题（完整 scheme 覆盖）绝对精确，其余主题的 scheme* 仍走 desaturate”，恢复自定义降饱和对暗色主题生效
+
 ## 8. 主题强化 + 外观页重组（第 185 轮，2026-08-11，App/UI 层，未动引擎）
 
 **10 套非官方主题补齐 st*/scheme* 字段**（ThemePreset.kt；酒馆官方主题真值未动）：

@@ -1734,16 +1734,16 @@ private fun MessageRow(
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: if (stDark) stTheme.stEm else null
+        ?: (if (stDark) stTheme.stEm else null)
         ?: MaterialTheme.colorScheme.outline
     val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context))
-        ?: if (stDark) stTheme.stUserBubble else null
+        ?: (if (stDark) stTheme.stUserBubble else null)
         ?: MaterialTheme.colorScheme.primaryContainer
     val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context))
-        ?: if (stDark) stTheme.stBotBubble else null
+        ?: (if (stDark) stTheme.stBotBubble else null)
         ?: MaterialTheme.colorScheme.surfaceContainerLow
     val bubbleBorder = (parseHexColor(AppearancePrefs.stBorderColor(context))
-        ?: if (stDark) stTheme.stBorder else null)?.let { BorderStroke(1.dp, it) }
+        ?: (if (stDark) stTheme.stBorder else null))?.let { BorderStroke(1.dp, it) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
@@ -1989,16 +1989,16 @@ private fun StreamingMarkdown(content: String) {
     val stDark = isDarkThemeSurface()
     val onSurface = MaterialTheme.colorScheme.onSurface
     val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: if (stDark) stTheme.stBody else null
+        ?: (if (stDark) stTheme.stBody else null)
         ?: onSurface
     val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: if (stDark) stTheme.stQuote else null
+        ?: (if (stDark) stTheme.stQuote else null)
         ?: MaterialTheme.colorScheme.primary
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: if (stDark) stTheme.stEm else null
+        ?: (if (stDark) stTheme.stEm else null)
         ?: MaterialTheme.colorScheme.onSurfaceVariant
     val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: if (stDark) stTheme.stUnderline else null
+        ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
     val styled = remember(content, bodyColor, quoteColor, emColor, underlineColor) {
         streamingStyledText(content, bodyColor, quoteColor, emColor, underlineColor)
@@ -2466,7 +2466,7 @@ private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
     val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context))
-        ?: if (stDark) stTheme.stShadow else null
+        ?: (if (stDark) stTheme.stShadow else null)
         ?: Color(0x80000000)
     return androidx.compose.ui.graphics.Shadow(
         color = shadowColor,
@@ -2689,16 +2689,16 @@ private fun ChatMarkdown(
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
     val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: if (stDark) stTheme.stBody else null
+        ?: (if (stDark) stTheme.stBody else null)
         ?: onSurface
     val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: if (stDark) stTheme.stQuote else null
+        ?: (if (stDark) stTheme.stQuote else null)
         ?: MaterialTheme.colorScheme.primary
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: if (stDark) stTheme.stEm else null
+        ?: (if (stDark) stTheme.stEm else null)
         ?: MaterialTheme.colorScheme.onSurfaceVariant
     val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: if (stDark) stTheme.stUnderline else null
+        ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
     // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
     val displayContent = remember(content) { preprocessOfficialHtml(content) }
@@ -2902,10 +2902,10 @@ private fun WebViewHtml(
     var heightPx by remember { mutableIntStateOf(0) }
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
-    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: if (stDark) stTheme.stBody else null
-    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: if (stDark) stTheme.stEm else null
-    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: if (stDark) stTheme.stUnderline else null
-    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: if (stDark) stTheme.stQuote else null
+    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: (if (stDark) stTheme.stBody else null)
+    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: (if (stDark) stTheme.stEm else null)
+    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: (if (stDark) stTheme.stUnderline else null)
+    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: (if (stDark) stTheme.stQuote else null)
     val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath) {
         officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath)
     }
