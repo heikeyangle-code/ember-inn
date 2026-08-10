@@ -57,11 +57,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（54 组差分 fixture，共 801 例对拍，全部通过）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 54 组 / 801 例（机器数）为准。
+**已覆盖（57 组差分 fixture，共 909 例对拍，全部通过；2026-08-10 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 57 组 / 909 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 54 个（prompt-converters 一行脚本覆盖三行范围）；合计 801 例。
+> 注：脚本数 57 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 909 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
@@ -350,7 +350,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 54 组差分 fixture / 801+ 例对拍全绿（slash-parser 43、regex-scope 7、json-import 13、json-export 10 等）
+- 57 组差分 fixture / 909 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
@@ -394,7 +394,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 提示词：默认提示集合/顺序、populationInjectionPrompts、历史消息 preparePrompt 宏替换、
   AN interval 公式与默认 position=1、Generate 类型（regenerate/continue/swipe/impersonate）
 - 正则分桶：GLOBAL→PRESET→SCOPED 顺序 + allowedOnly（差分 7 例）；JSON 导入导出（13/10 例）；
-  slash-parser（43 例）；向量工具（14 例）等 54 组差分
+  slash-parser（43 例）；向量工具（14 例）等 57 组差分
 
 **审计修复（bug/偏差已修）**
 - 历史索引错位（media 挂错）、bias 提取最后用户消息 + 编辑存 extra.bias 回溯、
