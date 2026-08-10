@@ -565,6 +565,20 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 官方字段设置页 + HTML 兜底修复（第 173 轮，2026-08-11）
+
+- 新增设置页「消息渲染（官方字段）」：正文色/次要文字色/下划线色/引用色/用户气泡底/AI 气泡底/
+  边框色/阴影色（#RRGGBB，空=跟随主题）+ 毛玻璃强度滑块（0-40，官方 --SmartThemeBlurStrength）
+- 接入：
+  - 原生 Markdown：正文色（markdownColor.text）、引用色（quote style color → blockquote 左栏）、
+    自定义 blockQuote（黑 30% 底 + 官方内边距）、自定义 checkbox（引用色勾选框）
+  - 气泡：用户/AI 气泡底 + 边框色（MessageRow）
+  - 毛玻璃：顶栏/输入栏/首页顶栏 cloudy radius 走 blurStrength
+  - WebView 兜底：注入官方 CSS 变量（body/q/u/em/a/blockquote/code）
+- 修复 HTML 渲染不出来：根因是 WebView WRAP_CONTENT 在 Compose 里高度塌成 0；
+  onPageFinished 测 scrollHeight 撑高，HTML 消息现在能正常显示
+- 边界：行内 <q>/<u>/font[color] 依赖 HTML 兜底（WebView）；原生渲染里 em 颜色暂未单独生效（无字段）
+
 ## 8. 官方渲染全支持调研与方案（第 172 轮，2026-08-11）
 
 **官方字段用法（public/style.css 核对）**：body 正文色、em 次要色、u 下划线色、q/blockquote 引用色

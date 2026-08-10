@@ -233,7 +233,7 @@ fun CharactersScreen(
                     .onSizeChanged { topBarHeight = it.height }
                     .then(
                         if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = 16, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
                         },

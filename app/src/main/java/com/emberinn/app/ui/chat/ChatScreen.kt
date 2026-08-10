@@ -30,6 +30,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -42,6 +43,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
@@ -83,6 +85,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
@@ -126,9 +129,12 @@ import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.slash.QuickReplySlot
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
+import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
+import com.emberinn.app.ui.components.parseHexColor
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.markdownPadding
@@ -615,7 +621,7 @@ fun ChatScreen(
                 .onSizeChanged { topBarHeight = it.height }
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f))
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     },
@@ -674,7 +680,7 @@ fun ChatScreen(
                 .onSizeChanged { inputBarHeight = it.height }
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = 18, tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     },
@@ -1621,6 +1627,11 @@ private fun MessageRow(
     onDelete: () -> Unit,
     onLongPress: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: MaterialTheme.colorScheme.primaryContainer
+    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: MaterialTheme.colorScheme.surfaceContainerLow
+    val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))?.let { BorderStroke(1.dp, it) }
+
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
         if (dateLabel == null && !isPrevSameSender) {
@@ -1699,7 +1710,8 @@ private fun MessageRow(
                 // 用户消息保留右侧胶囊：对话分隔锚点，和 AI 纯文本流形成对比
                 Surface(
                     shape = RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = userBubbleColor,
+                    border = bubbleBorder,
                     modifier = bubbleModifier,
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
@@ -1714,7 +1726,8 @@ private fun MessageRow(
                 // README 气泡样式=bubble：AI 也带低对比气泡
                 Surface(
                     shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = botBubbleColor,
+                    border = bubbleBorder,
                     modifier = bubbleModifier,
                 ) {
                     ChatMarkdown(
@@ -2256,9 +2269,47 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
             components = markdownComponents(
                 codeBlock = highlightedCodeBlock,
                 codeFence = highlightedCodeFence,
+                blockQuote = { model ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.30f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        MarkdownBlockQuote(model.content, model.node, style = model.typography.quote)
+                    }
+                },
+                checkbox = { model ->
+                    MarkdownCheckBox(
+                        content = model.content,
+                        node = model.node,
+                        style = type.body,
+                        checkedIndicator = { checked, modifier ->
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = modifier
+                                    .size(16.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (checked) quoteColor else Color.Transparent)
+                                    .border(1.dp, quoteColor, RoundedCornerShape(4.dp)),
+                            ) {
+                                if (checked) {
+                                    Text("✓", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                                }
+                            }
+                        },
+                    )
+                },
             ),
+            // 官方字段：正文色 / 引用色 / 次要色（空=跟随主题）
+            val stBody = parseHexColor(AppearancePrefs.stBodyColor(context))
+            val stQuote = parseHexColor(AppearancePrefs.stQuoteColor(context))
+            val stEm = parseHexColor(AppearancePrefs.stEmColor(context))
+            val bodyColor = stBody ?: onSurface
+            val quoteColor = stQuote ?: MaterialTheme.colorScheme.primary
+            val emColor = stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
             colors = markdownColor(
-                text = onSurface,
+                text = bodyColor,
                 codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
                 inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
                 dividerColor = MaterialTheme.colorScheme.outlineVariant,
@@ -2277,6 +2328,7 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                 bullet = type.body,
                 list = type.body,
                 quote = type.body.copy(
+                    color = quoteColor,
                     fontStyle = if (type.quoteItalic) {
                         androidx.compose.ui.text.font.FontStyle.Italic
                     } else {
@@ -2303,7 +2355,7 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                 listItemBottom = 2.dp,
                 listIndent = AppearancePrefs.listIndent(context).toFloatOrNull()?.dp ?: 10.dp,
                 codeBlock = PaddingValues(10.dp),
-                blockQuote = PaddingValues(horizontal = 8.dp),
+                blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
             ),
         )
     }
@@ -2340,9 +2392,14 @@ private fun sanitizeHtmlForWebView(html: String): String {
     return out
 }
 
-/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启；网络一律拦截（只放行本地 asset）。 */
+/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启；网络一律拦截（只放行本地 asset）。
+ *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。 */
 @Composable
 private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: Boolean = false) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    var heightPx by remember { mutableIntStateOf(0) }
+    val styled = remember(html) { officialStyledHtml(html, context) }
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
@@ -2356,24 +2413,57 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
                     ): android.webkit.WebResourceResponse? {
                         val url = request?.url?.toString().orEmpty()
                         if (url.startsWith("https://") || url.startsWith("http://")) {
-                            // 禁止远程网络：离线渲染 + 防跟踪/防外联
                             return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
                         }
                         return null
+                    }
+
+                    override fun onPageFinished(view: android.webkit.WebView?) {
+                        super.onPageFinished(view)
+                        // 自动测高：页面加载完拿到 scrollHeight，把 Compose 高度撑起来
+                        view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
+                            val px = value.trim('"').toIntOrNull() ?: 0
+                            if (px > 0) heightPx = px
+                        }
                     }
                 }
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 )
-                loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null)
+                loadDataWithBaseURL("file:///android_asset/", styled, "text/html", "utf-8", null)
             }
         },
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 420.dp)
+            .height(with(density) { heightPx.toDp().coerceAtMost(420.dp) })
             .clip(RoundedCornerShape(12.dp)),
     )
+}
+
+/** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
+private fun officialStyledHtml(raw: String, context: android.content.Context): String {
+    val body = parseHexColor(AppearancePrefs.stBodyColor(context))
+    val em = parseHexColor(AppearancePrefs.stEmColor(context))
+    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context))
+    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context))
+    val fontSize = when (AppearancePrefs.textSize(context)) {
+        "small" -> "14px"
+        "large" -> "18px"
+        "xlarge" -> "20px"
+        else -> "16px"
+    }
+    fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
+        "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
+    } ?: "inherit"
+    return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
+q{color:${css(quote)}} u{color:${css(underline)}} em{color:${css(em)}}
+a{color:${css(underline ?: quote)}}
+blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:6px 0}
+code{font-family:monospace}
+</style></head><body>$raw</body></html>"""
 }
 
 

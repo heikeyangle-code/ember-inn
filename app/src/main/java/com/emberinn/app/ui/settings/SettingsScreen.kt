@@ -54,7 +54,7 @@ import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -129,6 +129,7 @@ fun SettingsScreen(
             onBack = { page = SettingsPage.HOME },
         )
         SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
@@ -143,6 +144,7 @@ fun SettingsScreen(
             onOpenProviders = { page = SettingsPage.PROVIDERS },
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
             onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
+            onOpenRender = { page = SettingsPage.RENDER },
             onOpenVoice = { page = SettingsPage.VOICE },
             onOpenServices = { page = SettingsPage.SERVICES },
             onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
@@ -169,6 +171,7 @@ private fun SettingsHome(
     onOpenProviders: () -> Unit,
     onOpenAppearance: () -> Unit,
     onOpenTypography: () -> Unit,
+    onOpenRender: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenQuickReplies: () -> Unit,
@@ -207,6 +210,7 @@ private fun SettingsHome(
             listOf(
                 SettingRow("主题与视觉", "预设主题 · 视觉氛围 · 圆角 · 字体", Color.Unspecified, onOpenAppearance),
                 SettingRow("文字排版", "字号 · 行高 · 标题 · 引用 · 代码 · 间距", Color.Unspecified, onOpenTypography),
+                SettingRow("消息渲染（官方字段）", "正文/引用/下划线/气泡/边框/阴影/模糊强度", Color.Unspecified, onOpenRender),
             ),
         ),
         SettingsGroup(

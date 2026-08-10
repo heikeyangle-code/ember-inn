@@ -183,6 +183,52 @@ object AppearancePrefs {
             .apply()
     }
 
+    // ---- 官方 SillyTavern 字段（public/style.css SmartTheme；空串 = 跟随主题自动生成） ----
+
+    /** 官方字段：hex 字符串（如 #E1E1D2），空 = 跟随主题。 */
+    fun stField(context: Context, key: String): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(key, "") ?: ""
+
+    fun saveStField(context: Context, key: String, value: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString(key, value.trim())
+            .apply()
+    }
+
+    fun stBodyColor(context: Context): String = stField(context, "st_body_color")
+    fun saveStBodyColor(context: Context, v: String) = saveStField(context, "st_body_color", v)
+
+    fun stEmColor(context: Context): String = stField(context, "st_em_color")
+    fun saveStEmColor(context: Context, v: String) = saveStField(context, "st_em_color", v)
+
+    fun stUnderlineColor(context: Context): String = stField(context, "st_underline_color")
+    fun saveStUnderlineColor(context: Context, v: String) = saveStField(context, "st_underline_color", v)
+
+    fun stQuoteColor(context: Context): String = stField(context, "st_quote_color")
+    fun saveStQuoteColor(context: Context, v: String) = saveStField(context, "st_quote_color", v)
+
+    fun stUserBubble(context: Context): String = stField(context, "st_user_bubble")
+    fun saveStUserBubble(context: Context, v: String) = saveStField(context, "st_user_bubble", v)
+
+    fun stBotBubble(context: Context): String = stField(context, "st_bot_bubble")
+    fun saveStBotBubble(context: Context, v: String) = saveStField(context, "st_bot_bubble", v)
+
+    fun stBorderColor(context: Context): String = stField(context, "st_border_color")
+    fun saveStBorderColor(context: Context, v: String) = saveStField(context, "st_border_color", v)
+
+    fun stShadowColor(context: Context): String = stField(context, "st_shadow_color")
+    fun saveStShadowColor(context: Context, v: String) = saveStField(context, "st_shadow_color", v)
+
+    /** 毛玻璃模糊强度（Cloudy radius，0-40，默认 16）。 */
+    fun blurStrength(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("blur_strength", 16)
+
+    fun saveBlurStrength(context: Context, strength: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("blur_strength", strength.coerceIn(0, 40))
+            .apply()
+    }
+
     fun saveLastSessionId(context: Context, sessionId: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("last_session_id", sessionId)
