@@ -166,11 +166,12 @@ class ChatPromptFactory {
             // bias 只取最后一条用户消息，且仅 generate/swipe 注入（官方 getBiasStrings 对 impersonate/continue 返回空）
             var found = ""
             var lastUserBias = ""
-            val cleaned = msgs.mapIndexed { i, pair ->
+            val cleaned = msgs.map { pair ->
                 val (index, m) = pair
                 if (m.isUser && m.mes.contains("{{bias")) {
                     val (text, bias) = extractMessageBias(m.mes)
-                    if (i == msgs.lastIndex) lastUserBias = bias
+                    // 官方 getBiasStrings 取“最后一条用户消息”的 bias；逐条覆盖，最后一条用户消息胜出
+                    if (bias.isNotBlank()) lastUserBias = bias
                     index to m.copy(mes = text)
                 } else pair
             }

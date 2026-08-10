@@ -136,6 +136,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _quickReplyOutput = MutableStateFlow<String?>(null)
     val quickReplyOutput: StateFlow<String?> = _quickReplyOutput
 
+    /** 设置页改动快捷回复后刷新（聊天页 LaunchedEffect 调用）。 */
+    fun refreshQuickReplies() {
+        _quickReplies.value = quickReplyStore.slots()
+    }
+
     fun runQuickReply(label: String) {
         if (_isStreaming.value) return
         val slot = quickReplyStore.load().slots.firstOrNull { it.label == label && it.enabled } ?: return

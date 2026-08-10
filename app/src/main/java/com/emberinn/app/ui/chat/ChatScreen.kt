@@ -289,8 +289,11 @@ fun ChatScreen(
         }
     }
 
-    // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”
-    LaunchedEffect(Unit) { vm.refreshProviderConfigured() }
+    // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”；设置页改快捷回复后同步刷新
+    LaunchedEffect(Unit) {
+        vm.refreshProviderConfigured()
+        vm.refreshQuickReplies()
+    }
 
     // 离开聊天页：角色主题配方还原为全局主题
     DisposableEffect(Unit) {
