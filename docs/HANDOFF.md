@@ -605,6 +605,15 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+## 8. 渲染审计修复（第 183 轮，2026-08-11，用户要求与官方任何边缘情况一致）
+
+**对照官方 script.js messageFormatting + style.css 逐条审计，修复 5 处**：
+1. **代码块保护**：preprocessOfficialHtml 先占位保护 ``` / ~~~ / `` / ` / <style> 块，再做引号对/波浪线/行内 HTML 转换——官方 messageFormatting 的正则同样把代码与 style 放在引号匹配之前；修复了代码块内 `~x~`、引号、`<em>` 被污染的问题
+2. **q/u 嵌套着色**：applyOfficialMarkers 改为 q 与 u 互相避让（元素自身颜色优先于继承，对齐 style.css 的 .mes_text q / .mes_text u 规则），修复“引号内下划线”与“下划线内引号”的颜色错乱
+3. **系统消息管线**：displayTextOf 对齐官方——系统消息不走显示位点正则、不做 encode_tags，但 fixMarkdown 仍执行；同时修复“关闭全局正则后 encode_tags 也不生效”的问题
+4. **WebView CSS 对齐 style.css**：补 font[color] em/i/u/q inherit、blockquote margin:0、p 上下边距、table 边框、ol/ul 边距、li tt、pre code 块级、strong em 加粗
+5. **HTML 兜底标签清单补全**：officialHtml 检测补 HTML5 全量标签（section/header/footer/main/nav/aside/article/form/input/select/textarea/label/details/summary/canvas/svg/math/template/mark/progress/meter/output/fieldset/legend/dialog/menu/picture/source/track/map/area/iframe/hgroup/address/figcaption/data/time/var/samp/kbd/abbr/bdi/bdo/ruby/rt/rp），开关关着时也不再把这些标签显示成原文
+
 ## 8. 扩展插件体系（第 178–181 轮，2026-08-11）
 
 - JS 全开、iframe 交互卡片、头像类/宏、原代码折叠、安全登记：全部并入 **第 10 章 扩展插件**。

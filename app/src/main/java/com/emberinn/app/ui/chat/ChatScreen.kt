@@ -2429,9 +2429,19 @@ private data class ChatTypography(
 
 /** 官方行内 HTML → 原生可渲染标记：<q>→引用色、<u>/~text~→下划线色、<font color>→指定色、
  *  引号对→引用色（官方 messageFormatting 先转 <q> 再交给 Showdown）；em/b/s/hr/br→Markdown。
- *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。 */
+ *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。
+ *  代码围栏/行内代码/<style> 块先占位保护，避免引号、波浪线、HTML 标签转换污染代码内容
+ *  （官方 messageFormatting 的正则同样把 ``` / ~~~ / `` / ` / <style> 放在引号匹配之前）。 */
 private fun preprocessOfficialHtml(content: String): String {
+    val protected = mutableListOf<String>()
     var out = content
+    out = Regex(
+        "```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|``[^`\\n]*``|`[^`\\n]*`|<style>[\\s\\S]*?</style>",
+        RegexOption.IGNORE_CASE,
+    ).replace(out) { m ->
+        protected += m.value
+        "\uE100${protected.lastIndex}\uE101"
+    }
     out = Regex("<q[^>]*>([\\s\\S]*?)</q>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE001${m.groupValues[1]}\uE002" }
     out = Regex("<u[^>]*>([\\s\\S]*?)</u>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
     out = Regex("<(em|i)[^>]*>([\\s\\S]*?)</(em|i)>", RegexOption.IGNORE_CASE).replace(out) { m -> "*${m.groupValues[2]}*" }
@@ -2446,6 +2456,7 @@ private fun preprocessOfficialHtml(content: String): String {
         .replace(out) { m -> "\uE001${m.value}\uE002" }
     // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
     out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
+    for ((i, seg) in protected.withIndex()) out = out.replace("\uE100$i\uE101", seg)
     return out
 }
 
@@ -2460,6 +2471,20 @@ private data class OfficialMarker(
 
 /** 已映射坐标的区间（开区间）。 */
 private data class OfficialSpan(val start: Int, val end: Int, val color: Color? = null)
+
+/** outer 区间去掉 holes 覆盖后剩下的分段（holes 为已映射坐标，开区间）。 */
+private fun minus(outer: OfficialSpan, holes: List<OfficialSpan>): List<OfficialSpan> {
+    val res = mutableListOf<OfficialSpan>()
+    var cursor = outer.start
+    for (h in holes.sortedBy { it.start }) {
+        if (h.end <= cursor) continue
+        if (h.start > cursor) res += OfficialSpan(cursor, minOf(h.start, outer.end))
+        cursor = maxOf(cursor, h.end)
+        if (cursor >= outer.end) break
+    }
+    if (cursor < outer.end) res += OfficialSpan(cursor, outer.end)
+    return res
+}
 
 /** 官方 CSS 语义的标记后处理：剥掉 \uE001-\uE007 标记字符，并按层上色。
  *  分层顺序对齐 style.css：
@@ -2555,30 +2580,21 @@ private fun applyOfficialMarkers(
         }
     }
 
-    // 分层：基础 spans → q → u（em 段避让）→ font
+    // 分层（官方 CSS：元素自身的颜色规则优先于继承，因此 q 与 u 互相避让）：
+    // em 基色 → q（避开 u 段）→ u 下划线+色（避开 q 与 em 段）→ font 最后全覆盖
     val finalSpans = mappedSpans.toMutableList()
-    for (q in qSpans) finalSpans += AnnotatedString.Range(SpanStyle(color = quoteColor), q.start, q.end)
+    for (q in qSpans) {
+        for (seg in minus(q, uSpans)) {
+            finalSpans += AnnotatedString.Range(SpanStyle(color = quoteColor), seg.start, seg.end)
+        }
+    }
     for (u in uSpans) {
         finalSpans += AnnotatedString.Range(SpanStyle(textDecoration = TextDecoration.Underline), u.start, u.end)
-        var cursor = u.start
-        val orderedEm = emSpans.filter { it.end > u.start && it.start < u.end }.sortedBy { it.start }
-        for (em in orderedEm) {
-            if (em.end <= cursor) continue
-            if (em.start > cursor) {
-                finalSpans += AnnotatedString.Range(
-                    SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
-                    cursor,
-                    minOf(em.start, u.end),
-                )
-            }
-            cursor = maxOf(cursor, em.end)
-            if (cursor >= u.end) break
-        }
-        if (cursor < u.end) {
+        for (seg in minus(u, qSpans).flatMap { minus(it, emSpans) }) {
             finalSpans += AnnotatedString.Range(
                 SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
-                cursor,
-                u.end,
+                seg.start,
+                seg.end,
             )
         }
     }
@@ -2623,7 +2639,8 @@ private fun ChatMarkdown(
     val outsideFence = displayContent.replace(Regex("```[\\s\\S]*?```"), "")
     // 剩下的才是原生渲染器真不支持的任意 HTML（font rgb/span/div/table/img/style/a/blockquote/列表/标题…）
     val officialHtml = Regex(
-        "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b",
+        "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b" +
+            "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b",
         RegexOption.IGNORE_CASE,
     ).containsMatchIn(outsideFence)
     // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
@@ -2968,7 +2985,16 @@ em,i{color:${css(em)}}
 q{color:${css(quote)}} q em,q i{color:inherit}
 u{color:${css(underline)}}
 a{color:${css(quote)}}
-blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:6px 0}
+font[color] em,font[color] i,font[color] u,font[color] q{color:inherit}
+blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:0}
+p{margin-top:0;margin-bottom:10px}
+p:last-child{margin-bottom:0}
+table{border-spacing:0;border-collapse:collapse;margin-bottom:10px}
+td,th{border:1px solid;padding:.25em}
+ol,ul{margin-top:5px;margin-bottom:5px}
+li tt{display:inline-block}
+pre code{display:block;overflow-x:auto}
+strong em,strong,h1,h2{font-weight:bold}
 code{font-family:monospace}
 </style></head><body>$bodyHtml</body></html>"""
 }

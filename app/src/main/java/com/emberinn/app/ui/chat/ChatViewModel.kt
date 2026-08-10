@@ -322,40 +322,40 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val extra = el["extra"] as? JsonObject
         val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
             ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
-        if (!GlobalRegexPrefs.enabled(getApplication())) {
-            displayCache[index] = base
-            return base
+        // 官方 messageFormatting：系统消息不走显示位点正则、不做 encode_tags；fixMarkdown 仍然执行
+        val isSystem = isSystemMsg(el)
+        var out = base
+        if (!isSystem && GlobalRegexPrefs.enabled(getApplication())) {
+            val (presetScripts, presetAllowed) = presetRegex()
+            val scripts = ChatPromptFactory().resolveRegexScripts(
+                characterRawJson = character?.rawJson,
+                globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+                scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+                presetScripts = presetScripts,
+                presetAllowed = presetAllowed,
+            )
+            val isUser = isUser(el)
+            val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+            val placement = when {
+                isUser -> ChatPromptFactory.REGEX_USER_INPUT
+                isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
+                else -> ChatPromptFactory.REGEX_AI_OUTPUT
+            }
+            // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）
+            val usable = _messages.value.filterNot { isSystemMsg(it) }
+            val pos = usable.indexOfFirst { it == el }
+            val depth = if (pos >= 0) usable.size - pos - 1 else null
+            out = RegexPipelineEngine.apply(
+                raw = base,
+                placement = placement,
+                scripts = scripts,
+                isMarkdown = true,
+                depth = depth,
+                characterOverride = el["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
+            )
         }
-
-        val (presetScripts, presetAllowed) = presetRegex()
-        val scripts = ChatPromptFactory().resolveRegexScripts(
-            characterRawJson = character?.rawJson,
-            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
-            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
-            presetScripts = presetScripts,
-            presetAllowed = presetAllowed,
-        )
-        val isUser = isUser(el)
-        val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
-        val placement = when {
-            isUser -> ChatPromptFactory.REGEX_USER_INPUT
-            isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
-            else -> ChatPromptFactory.REGEX_AI_OUTPUT
-        }
-        // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）
-        val usable = _messages.value.filterNot { isSystemMsg(it) }
-        val pos = usable.indexOfFirst { it == el }
-        val depth = if (pos >= 0) usable.size - pos - 1 else null
-        val regexed = RegexPipelineEngine.apply(
-            raw = base,
-            placement = placement,
-            scripts = scripts,
-            isMarkdown = true,
-            depth = depth,
-            characterOverride = el["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
-        )
-        var out = DisplayPipeline.fixMarkdown(regexed)
-        if (AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
+        out = DisplayPipeline.fixMarkdown(out)
+        if (!isSystem && AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
         displayCache[index] = out
         return out
     }
