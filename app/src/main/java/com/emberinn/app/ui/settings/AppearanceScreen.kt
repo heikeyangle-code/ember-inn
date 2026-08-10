@@ -159,6 +159,7 @@ fun AppearanceScreen(
                 var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
+                var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
                 Text("气泡样式", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
                     listOf("paper" to "纸面（AI 纯文本流）", "bubble" to "气泡（AI 也带气泡）").forEach { (v, label) ->
@@ -190,6 +191,16 @@ fun AppearanceScreen(
                         Text("默认关；开启后启动直接回到上次会话", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it) })
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { encodeTags = !encodeTags; AppearancePrefs.saveEncodeTags(optContext, encodeTags) }.padding(vertical = 10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("转义标签（encode_tags）", style = MaterialTheme.typography.bodyLarge)
+                        Text("官方 power_user.encode_tags：显示时把 < > 转义为 &lt; &gt;（默认关）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it) })
                 }
             }
         }

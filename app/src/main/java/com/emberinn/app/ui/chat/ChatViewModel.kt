@@ -305,6 +305,51 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /**
+     * 显示文本管线，对齐官方 script.js messageFormatting：
+     * 显示位点正则（isMarkdown=true，仅 markdownOnly 脚本生效，depth=可用消息数-位置-1）
+     * → fixMarkdown(forDisplay=true) → encode_tags（可选）。
+     * 只影响显示，不改落盘文本。
+     */
+    fun displayTextOf(index: Int): String {
+        val el = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return ""
+        val extra = el["extra"] as? JsonObject
+        val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
+            ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
+        if (!GlobalRegexPrefs.enabled(getApplication())) return base
+
+        val (presetScripts, presetAllowed) = presetRegex()
+        val scripts = ChatPromptFactory().resolveRegexScripts(
+            characterRawJson = character?.rawJson,
+            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+            presetScripts = presetScripts,
+            presetAllowed = presetAllowed,
+        )
+        val isUser = isUser(el)
+        val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+        val placement = when {
+            isUser -> ChatPromptFactory.REGEX_USER_INPUT
+            isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
+            else -> ChatPromptFactory.REGEX_AI_OUTPUT
+        }
+        // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）
+        val usable = chatStore.messages(sessionId).filterNot { isSystemMsg(it) }
+        val pos = usable.indexOfFirst { it == el }
+        val depth = if (pos >= 0) usable.size - pos - 1 else null
+        val regexed = RegexPipelineEngine.apply(
+            raw = base,
+            placement = placement,
+            scripts = scripts,
+            isMarkdown = true,
+            depth = depth,
+            characterOverride = el["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
+        )
+        var out = DisplayPipeline.fixMarkdown(regexed)
+        if (AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
+        return out
+    }
+
     /** README 消息操作：token 统计（官方 option_toggle_logprobs；用当前模型 tokenizer 计数）。 */
     fun messageTokenCount(index: Int): Pair<String, Int>? {
         val el = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return null

@@ -400,6 +400,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   点击图片在 LIST ↔ GALLERY 间切换并持久化 extra.media_display（官方 chats.js
   switchMessageMediaDisplay）；App 恢复内联大图（高限 320dp）+ 点击切换 + gallery 左右滑切
 
+## 8. 文字渲染对齐官方（第 155 轮，对照 script.js messageFormatting）
+
+官方显示管线：显示位点正则（isMarkdown=true，仅 markdownOnly 生效）→ fixMarkdown(forDisplay=true)
+→ encode_tags（可选）→ 引号转 <q> → Showdown → DOMPurify。App 对齐项：
+- ✅ 显示文本走 vm.displayTextOf：显示位点正则（用户/旁白/AI 分位点 + 官方 depth）+ fixMarkdown
+  （power-user.js 1:1 移植，含配对符号去空格、奇数 * / " 行尾补齐）+ encode_tags（默认关，外观新增开关）
+- ✅ 复制/编辑仍用原始落盘文本（菜单 textOf），显示与操作分离
+- 登记未做：引号转 <q>（视觉样式）、流式 30fps 节流（官方 streaming_fps=30，我们逐 delta 重渲染）、
+  DOMPurify 白名单（WebView 简易消毒近似）、LaTeX、Showdown 的 emoji/underline/dinkus 扩展差异
+
 ## 8. 输入栏按钮借鉴 OmniBot（第 154 轮）
 
 对照 chat_input_area_composer.dart 的按钮体系：

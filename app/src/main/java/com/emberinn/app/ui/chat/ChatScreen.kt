@@ -482,7 +482,8 @@ fun ChatScreen(
                             val el = item.element
                             val isUserMsg = isUser(el)
                             val isSystemMsg = isSystem(el)
-                            val text = textOf(el)
+                            // 官方 messageFormatting 显示管线：显示位点正则 + fixMarkdown + encode_tags
+                            val text = vm.displayTextOf(item.index)
                             val immersiveActions = AppearancePrefs.immersiveActions(context)
                             val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !isSystemMsg && !immersiveActions
                             val swipeCount = vm.swipeCountOf(el)

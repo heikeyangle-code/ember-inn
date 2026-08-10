@@ -63,6 +63,16 @@ object AppearancePrefs {
     fun lastSessionId(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("last_session_id", "") ?: ""
 
+    /** 官方 power_user.encode_tags（默认关）：显示时把 < > 转义为 &lt; &gt;。 */
+    fun encodeTags(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("encode_tags", false)
+
+    fun saveEncodeTags(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("encode_tags", enabled)
+            .apply()
+    }
+
     fun saveLastSessionId(context: Context, sessionId: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("last_session_id", sessionId)
