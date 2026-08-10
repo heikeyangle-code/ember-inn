@@ -44,6 +44,7 @@ import com.emberinn.engine.regex.RegexPipelineScript
 fun RegexScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var scripts by remember { mutableStateOf(GlobalRegexPrefs.read(context)) }
+    var regexEnabled by remember { mutableStateOf(GlobalRegexPrefs.enabled(context)) }
     var editing by remember { mutableStateOf<Int?>(null) }
     var adding by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf("") }
@@ -72,6 +73,26 @@ fun RegexScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("启用正则脚本", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "关闭后所有位点不应用正则（官方 disabledExtensions.regex）。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = regexEnabled,
+                    onCheckedChange = { on ->
+                        regexEnabled = on
+                        GlobalRegexPrefs.saveEnabled(context, on)
+                    },
+                )
+            }
             if (scripts.isEmpty()) {
                 Text(
                     "还没有全局正则。可用来统一清理输入输出，例如去掉“*”强调。",

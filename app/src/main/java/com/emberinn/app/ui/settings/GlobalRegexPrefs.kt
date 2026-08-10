@@ -47,6 +47,16 @@ object GlobalRegexPrefs {
         }.getOrDefault(emptyList())
     }
 
+    /** 官方 extension_settings.disabledExtensions 的 regex 开关（默认启用）。 */
+    fun enabled(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("enabled", true)
+
+    fun saveEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("enabled", enabled)
+            .apply()
+    }
+
     /** 官方 regex 扩展 character_allowed_regex：允许该卡正则的角色头像名列表（空 = 全部禁用该卡正则）。 */
     fun characterAllowedRegex(context: Context): List<String> {
         val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("character_allowed_regex", "[]") ?: "[]"

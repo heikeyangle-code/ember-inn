@@ -129,6 +129,7 @@ class ChatPromptFactory {
         regexPresetScripts: List<RegexPipelineScript> = emptyList(),
         regexPresetAllowed: Boolean = false,
         isContinue: Boolean = false,
+        regexEnabled: Boolean = true,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -193,7 +194,7 @@ class ChatPromptFactory {
         // 本 App 未落盘改写、登记边界），总装时按官方再应用一次（isPrompt=true + depth）。
         // depth = coreChat.length - index - (isContinue ? 2 : 1)，coreChat 不含系统消息。
         val chatMessages = indexedChatMessages.mapIndexed { i, (index, m) ->
-            if (regexScripts.isEmpty()) index to m
+            if (regexScripts.isEmpty() || !regexEnabled) index to m
             else index to m.copy(
                 mes = RegexPipelineEngine.apply(
                     raw = m.mes,
@@ -202,6 +203,7 @@ class ChatPromptFactory {
                     isPrompt = true,
                     depth = indexedChatMessages.size - i - (if (isContinue) 2 else 1),
                     characterOverride = charName,
+                    disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
                 ),
             )
         }.let { msgs ->
@@ -306,6 +308,7 @@ class ChatPromptFactory {
                     isPrompt = true,
                     depth = regexDepth,
                     characterOverride = charName,
+                    disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
                 )
             },
         )

@@ -637,8 +637,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
                     scopedAllowed = currentCharacter?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
                 )
+                val regexOn = GlobalRegexPrefs.enabled(getApplication())
                 val greetings = (listOfNotNull(firstMes) + alternates)
-                    .map { RegexPipelineEngine.apply(it, ChatPromptFactory.REGEX_AI_OUTPUT, scripts) }
+                    .map { if (regexOn) RegexPipelineEngine.apply(it, ChatPromptFactory.REGEX_AI_OUTPUT, scripts) else it }
                 val content = greetings.firstOrNull { it.isNotBlank() } ?: greetings.firstOrNull().orEmpty()
                 chatStore.append(
                     sessionId,
@@ -708,7 +709,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
             scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
         )
-        val regexedText = RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
+        val regexedText = if (GlobalRegexPrefs.enabled(getApplication())) {
+            RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
+        } else {
+            text
+        }
         chatStore.append(sessionId, true, regexedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
         _pendingMedia.value = emptyList()
         refreshMessages()
@@ -959,14 +964,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
         )
         // 官方 updateMessage：getRegexedString(text, regexPlacement, { characterOverride, isEdit: true })；
-        // 旁白不传 characterOverride（官方 narrator 分支）
-        val regexed = RegexPipelineEngine.apply(
-            raw = text,
-            placement = placement,
-            scripts = scripts,
-            isEdit = true,
-            characterOverride = if (isNarrator) null else obj["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
-        )
+        // 旁白不传 characterOverride（官方 narrator 分支）；disabledExtensions.regex 关闭时不应用
+        val regexed = if (GlobalRegexPrefs.enabled(getApplication())) {
+            RegexPipelineEngine.apply(
+                raw = text,
+                placement = placement,
+                scripts = scripts,
+                isEdit = true,
+                characterOverride = if (isNarrator) null else obj["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
+            )
+        } else {
+            text
+        }
         val env = MacroEnv(user = currentUserName, char = currentCharName)
         // 官方 updateMessage：extractMessageBias 在 substituteParams 之前；bias 存入 extra.bias
         val (cleaned, bias) = extractEditBias(regexed)
@@ -1467,6 +1476,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // 官方 regex getScriptsByType(SCOPED)：allowedOnly 时角色头像必须在 character_allowed_regex 中
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
             val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
+            val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
             // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
             saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
@@ -1534,6 +1544,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 globalRegexScripts = globalRegexScripts,
                 regexScopedAllowed = regexScopedAllowed,
                 isContinue = continueMode,
+                regexEnabled = regexEnabled,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
@@ -1590,7 +1601,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamSession = null
         // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
         // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
-        val reply = RegexPipelineEngine.apply(_streamingText.value, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
+        val reply = if (GlobalRegexPrefs.enabled(getApplication())) {
+            RegexPipelineEngine.apply(_streamingText.value, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
+        } else {
+            _streamingText.value
+        }
         val wasImpersonating = _isImpersonating.value
         val wasSwipe = generatingSwipe
         when {
