@@ -577,6 +577,34 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   WebView 只留给 font rgb()/span/div/table/img 等真正解析不了的任意 HTML
 - 兜底突兀度：WebView 已透明背景 + 官方 CSS 变量 + 自动测高 + 圆角裁剪 + 同字号行高
 
+## 8. 聊天全链路流畅性（第 176 轮，2026-08-11，用户要求先搜同类问题再全链条排查）
+
+**联网调研结论（Compose 聊天高频坑，已逐一对照本实现）**：
+1. LazyColumn item 无稳定 key / 索引 key → 增删时 Compose 复用错位、触发错位动画 → 本实现流式项与最终消息共用 key 修复
+2. `scrollToItem` 每 token 调用 / 首帧未测量被吞 → 首帧滚底改为读当前 layoutInfo，流式滚动与显示同频节流
+3. 流式每 tick 整段 Markdown 重解析（mikepenz 官方 issue：LaunchedEffect 每次 cancel/restart，短流式 parse 全被丢弃）→ 本实现流式走轻量渲染，结束才完整解析
+4. `animateItem()` + 索引 key 在流式结束“删一行插一行”时闪跳（Google issue 395536917/352584409）→ 流式项与完成消息同 key + 同 contentType，原地替换
+5. WebView 在 LazyColumn 内高度突变会拽滚动（LemmyNet 案例）→ 已不在流式路径；HTML 消息仍走自动测高，登记为后续观察点
+
+**已修（本机验证结构 + CI 验证中）**：
+- **编译红修复**（HEAD 9319e68 实际会红的三处）：
+  ChatMarkdown 的 `Markdown(...)` 参数列表里误插 `val stTheme/bodyColor/...` 且颜色用在声明之前 → 提升到函数头部；
+  WebViewClient `onPageFinished` 改双参签名；MessageRenderScreen 字符串字面量裸换行 → 单行
+- **流式输出降载**：显示节流 33ms→120ms（官方 streaming_fps=30 是上限不是目标）；
+  流式中只 `balanceStreamingDelimiters`，不再每 tick `fixMarkdown`/`encodeTags`，结束后一次性走完整管线
+- **流式轻量渲染 StreamingMarkdown**：AnnotatedString 一次构建（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、
+  `行内码`、六种引号对→引用色、链接→引用色），不启动 mikepenz 解析器；生成结束 ChatMarkdown 完整重渲染
+- **滚动**：贴底跟随从“最后一项可见”改为滚动方向判定——长消息流式途中上滑阅读不再被拽回，
+  滚回内容末端才恢复；流式滚动 120ms 节流；新消息/流式结束滚到消息底边；首帧滚底读当前布局总数
+  （不再用组合期捕获的空 items，异步加载时也能一次到位）
+- **列表 key**：Streaming/ReasoningOnly 与最终消息共用 `m-末尾索引` + contentType=`chat-message`，
+  StreamingRow 去掉 `animateItem()` → 流式结束是内容原地替换，不再删行插行闪跳
+- **每 tick 重算归零**：MessageRow 派生字段（media/name/time/swipe/displayText）`remember(el)` 一次缓存，
+  dateLabel `remember`；items 构建不再依赖 streamingText（每 token 不再重建整表）
+
+**登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
+下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
+
 ## 8. 渲染全面对齐官方（第 174 轮，2026-08-11，逐条核对 script.js + style.css）
 
 官方 messageFormatting（script.js）：引号对（"“«「『＂）→ <q>；Showdown：emoji/underline(~text~→<u>)/strikethrough/tables；

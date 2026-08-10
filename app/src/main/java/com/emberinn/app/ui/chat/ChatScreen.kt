@@ -172,6 +172,28 @@ private sealed interface ChatItem {
     data object ReasoningOnly : ChatItem
 }
 
+/** 贴底跟随采样：滚动方向 + 是否真正处于内容末端（最后一项底边贴近视口底）。 */
+private data class ScrollSample(
+    val inProgress: Boolean,
+    val firstIndex: Int,
+    val firstOffset: Int,
+    val atTrueEnd: Boolean,
+)
+
+/** 一条消息在组合期的派生字段缓存（元素不变即复用，流式 tick 不重复解析）。 */
+private data class ChatItemDerived(
+    val isUser: Boolean,
+    val isSystem: Boolean,
+    val text: String,
+    val media: List<MediaAttachment>,
+    val mediaDisplay: String?,
+    val mediaIndex: Int?,
+    val name: String,
+    val time: String,
+    val swipeCount: Int,
+    val curSwipe: Int,
+)
+
 @Composable
 fun ChatScreen(
     sessionId: String,
@@ -345,7 +367,7 @@ fun ChatScreen(
     }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
-    val items = remember(messages, isStreaming, streamingText, lastReasoning) {
+    val items = remember(messages, isStreaming, lastReasoning) {
         buildList {
             messages.forEachIndexed { i, el -> add(ChatItem.Message(i, el)) }
             if (isStreaming) {
@@ -401,44 +423,74 @@ fun ChatScreen(
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
+    // 贴底跟随：改为滚动方向判定。长消息流式途中上滑阅读不会因“最后一项仍可见”被拽回；
+    // 只有真正滚回内容末端（最后一项底边贴近视口底）才恢复跟随。
+    val scrollDensity = LocalDensity.current
     LaunchedEffect(listState, isStreaming) {
+        var prevFirstIndex = -1
+        var prevFirstOffset = 0
         snapshotFlow {
             val info = listState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return@snapshotFlow true
-            lastVisible.index >= info.totalItemsCount - 1
-        }.collect { atBottom ->
-            if (listState.isScrollInProgress && !atBottom) followBottom = false
-            if (atBottom) followBottom = true
+            val first = info.visibleItemsInfo.firstOrNull()
+            val last = info.visibleItemsInfo.lastOrNull()
+            val atTrueEnd = last != null && last.index >= info.totalItemsCount - 1 &&
+                last.offset + last.size <= info.viewportEndOffset + with(scrollDensity) { 36.dp.toPx() }
+            ScrollSample(
+                inProgress = listState.isScrollInProgress,
+                firstIndex = first?.index ?: -1,
+                firstOffset = first?.offset ?: 0,
+                atTrueEnd = atTrueEnd,
+            )
+        }.collect { s ->
+            if (s.inProgress) {
+                val movedUp = s.firstIndex < prevFirstIndex ||
+                    (s.firstIndex == prevFirstIndex && s.firstOffset < prevFirstOffset)
+                if (movedUp) followBottom = false
+            } else if (s.atTrueEnd) {
+                followBottom = true
+            }
+            prevFirstIndex = s.firstIndex
+            prevFirstOffset = s.firstOffset
         }
     }
-    // 只有处于“贴底跟随”状态才滚底；用户上滑查看历史时不拽走
+    // 只有处于“贴底跟随”状态才滚底；用户上滑查看历史时不拽走。
+    // 新消息/流式结束都滚到消息底边（长消息停在底部而不是顶部）。
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty() && followBottom) {
-            listState.scrollToItem(messages.lastIndex)
+            listState.scrollToItem(messages.lastIndex, scrollOffset = Int.MAX_VALUE)
         }
     }
-    // 进入聊天：首帧布局完成后直接滚到底（首帧未测量时 scrollToItem 会被吞，内容先空后跳）
+    // 进入聊天：首帧布局完成后直接滚到底（首帧未测量时 scrollToItem 会被吞，内容先空后跳）。
+    // 不用组合期捕获的 items（消息异步加载时可能仍是空列表），直接读当前布局总数。
     LaunchedEffect(Unit) {
         snapshotFlow { listState.layoutInfo.totalItemsCount }
             .first { it > 0 }
-        if (items.isNotEmpty()) {
-            listState.scrollToItem(items.lastIndex, scrollOffset = Int.MAX_VALUE)
+        val target = listState.layoutInfo.totalItemsCount - 1
+        if (target >= 0) {
+            listState.scrollToItem(target, scrollOffset = Int.MAX_VALUE)
         }
     }
-    // 流式：贴底时用即时滚动到流式项末尾（正文变长不再跳顶，也不逐 token 动画）
-    LaunchedEffect(streamingText, streamingReasoning) {
-        if (isStreaming && followBottom) {
-            listState.scrollToItem(items.lastIndex, scrollOffset = Int.MAX_VALUE)
+    // 流式：贴底时以 120ms 节流滚动到流式项末尾（与显示同频，不再每 token 强制布局/跳动）。
+    LaunchedEffect(Unit) {
+        var lastScrollNanos = 0L
+        snapshotFlow { streamingText to streamingReasoning }.collect { _ ->
+            val now = System.nanoTime()
+            if (isStreaming && followBottom && now - lastScrollNanos >= 120_000_000L) {
+                val target = listState.layoutInfo.totalItemsCount - 1
+                if (target >= 0) listState.scrollToItem(target, scrollOffset = Int.MAX_VALUE)
+                lastScrollNanos = now
+            }
         }
     }
 
-    // 流式显示：30fps 节流（官方 streaming_fps=30）+ 定界符补齐 + fixMarkdown（官方 onProgressStreaming）
+    // 流式显示：120ms 节流（官方 streaming_fps=30 是上限不是目标；每 tick 全量解析的成本远高于 30fps 的收益）。
+    // 流式中只补定界符，不跑 fixMarkdown/encodeTags（交给轻量流式渲染器），结束后一次性走完整管线。
     var displayStreaming by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         var lastNanos = 0L
         snapshotFlow { streamingText }.collect { text ->
             val now = System.nanoTime()
-            if (now - lastNanos >= 33_000_000L) {
+            if (now - lastNanos >= 120_000_000L) {
                 displayStreaming = text
                 lastNanos = now
             }
@@ -449,8 +501,12 @@ fun ChatScreen(
     }
     val streamingDisplay = remember(displayStreaming, isStreaming) {
         val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
-        val fixed = DisplayPipeline.fixMarkdown(balanced)
-        if (AppearancePrefs.encodeTags(context)) DisplayPipeline.encodeTags(fixed) else fixed
+        if (!isStreaming) {
+            val fixed = DisplayPipeline.fixMarkdown(balanced)
+            if (AppearancePrefs.encodeTags(context)) DisplayPipeline.encodeTags(fixed) else fixed
+        } else {
+            balanced
+        }
     }
 
     val sky = rememberSky()
@@ -526,53 +582,79 @@ fun ChatScreen(
                 if (items.isEmpty()) {
                     item { EmptyChat(name = currentName, accent = accent) }
                 }
-                itemsIndexed(items, key = { _, item -> when (item) {
-                    is ChatItem.Message -> "m-${item.index}"
-                    ChatItem.Streaming -> "streaming"
-                    ChatItem.ReasoningOnly -> "reasoning-only"
-                } }) { _, item ->
+                itemsIndexed(
+                    items,
+                    key = { _, item -> when (item) {
+                        is ChatItem.Message -> "m-${item.index}"
+                        // 流式项与生成完成的最后一条消息共用同一 key + contentType：
+                        // 结束瞬间是“内容原地替换”而不是“删一行+插一行”，不触发位移动画/闪跳
+                        ChatItem.Streaming -> "m-${items.lastIndex}"
+                        ChatItem.ReasoningOnly -> "m-${items.lastIndex}"
+                    } },
+                    contentType = { _, item -> when (item) {
+                        is ChatItem.Message -> "chat-message"
+                        ChatItem.Streaming -> "chat-message"
+                        ChatItem.ReasoningOnly -> "chat-message"
+                    } },
+                ) { _, item ->
                     when (item) {
                         is ChatItem.Message -> {
                             val el = item.element
-                            val isUserMsg = isUser(el)
-                            val isSystemMsg = isSystem(el)
-                            // 官方 messageFormatting 显示管线：显示位点正则 + fixMarkdown + encode_tags
-                            val text = vm.displayTextOf(item.index)
+                            // 派生字段只随消息元素变化重算：流式 tick 不再为历史消息反复解析 JSON/读缓存
+                            val derived = remember(el) {
+                                val user = isUser(el)
+                                ChatItemDerived(
+                                    isUser = user,
+                                    isSystem = isSystem(el),
+                                    text = vm.displayTextOf(item.index),
+                                    media = mediaOf(el),
+                                    mediaDisplay = extraDisplayOf(el),
+                                    mediaIndex = extraIndexOf(el),
+                                    name = nameOf(el, user),
+                                    time = timeOf(el),
+                                    swipeCount = vm.swipeCountOf(el),
+                                    curSwipe = vm.currentSwipeOf(el),
+                                )
+                            }
+                            val isUserMsg = derived.isUser
+                            val isSystemMsg = derived.isSystem
+                            val text = derived.text
                             val immersiveActions = AppearancePrefs.immersiveActions(context)
                             val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !isSystemMsg && !immersiveActions
-                            val swipeCount = vm.swipeCountOf(el)
-                            val curSwipe = vm.currentSwipeOf(el)
                             val isPrevSameSender =
                                 item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
-                            val dateLabel = if (item.index == 0) {
-                                dateLabelOf(el)
-                            } else {
-                                val prev = dateLabelOf(messages[item.index - 1])
-                                val cur = dateLabelOf(el)
-                                if (prev == cur) null else cur
+                            val prevEl = if (item.index == 0) null else messages[item.index - 1]
+                            val dateLabel = remember(item.index, el, prevEl) {
+                                if (prevEl == null) {
+                                    dateLabelOf(el)
+                                } else {
+                                    val prev = dateLabelOf(prevEl)
+                                    val cur = dateLabelOf(el)
+                                    if (prev == cur) null else cur
+                                }
                             }
                             MessageRow(
                                 modifier = Modifier.animateItem(),
                                 isUser = isUserMsg,
                                 isSystem = isSystemMsg,
                                 text = text,
-                                media = mediaOf(el),
-                                mediaDisplay = extraDisplayOf(el),
-                                mediaIndex = extraIndexOf(el),
+                                media = derived.media,
+                                mediaDisplay = derived.mediaDisplay,
+                                mediaIndex = derived.mediaIndex,
                                 onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
                                 reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
                                 reasoningExpanded = reasoningExpanded,
                                 onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
-                                name = nameOf(el, isUserMsg),
-                                time = timeOf(el),
+                                name = derived.name,
+                                time = derived.time,
                                 dateLabel = dateLabel,
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 accent = accent,
                                 aiBubble = AppearancePrefs.bubbleStyle(context) == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
-                                swipeCount = swipeCount,
-                                curSwipe = curSwipe,
+                                swipeCount = derived.swipeCount,
+                                curSwipe = derived.curSwipe,
                                 isPrevSameSender = isPrevSameSender,
                                 onSwipeLeft = { vm.swipeLeft(item.index) },
                                 onSwipeRight = { vm.swipeRight(item.index) },
@@ -587,7 +669,7 @@ fun ChatScreen(
                             )
                         }
                         ChatItem.Streaming -> StreamingRow(
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier,
                             text = streamingDisplay,
                             reasoning = streamingReasoning,
                             reasoningExpanded = reasoningExpanded,
@@ -1860,9 +1942,8 @@ private fun StreamingRow(
                 Spacer(Modifier.size(6.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ChatMarkdown(
+                StreamingMarkdown(
                     content = text.ifEmpty { "…" },
-                    onSurface = MaterialTheme.colorScheme.onSurface,
                 )
                 // 呼吸圆点光标：缩放 + 淡入淡出，比 ▍ 打字光标更细腻
                 Box(
@@ -1879,6 +1960,85 @@ private fun StreamingRow(
             }
         }
     }
+}
+
+/** 流式轻量渲染：流式中不跑完整 Markdown 解析（mikepenz 流式更新会 cancel/restart 空转，整段 parse 高概率被丢弃），
+ *  只做粗粒度着色（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、行内码、六种引号对、链接）。
+ *  生成结束后由 ChatMarkdown 一次性完整重渲染，视觉与最终一致。 */
+@Composable
+private fun StreamingMarkdown(content: String) {
+    val context = LocalContext.current
+    val stTheme = LocalThemePreset.current
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stTheme.stBody ?: onSurface
+    val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote ?: MaterialTheme.colorScheme.primary
+    val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline ?: MaterialTheme.colorScheme.primary
+    val styled = remember(content, bodyColor, quoteColor, emColor, underlineColor) {
+        streamingStyledText(content, bodyColor, quoteColor, emColor, underlineColor)
+    }
+    Text(
+        text = styled,
+        style = chatTypography().body,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** 轻量流式着色（见 StreamingMarkdown）。 */
+private fun streamingStyledText(
+    raw: String,
+    bodyColor: Color,
+    quoteColor: Color,
+    emColor: Color,
+    underlineColor: Color,
+): AnnotatedString {
+    val cleaned = Regex("""(?m)^\s{0,3}(#{1,6})\s+(.+)$""").replace(raw) { m -> "**${m.groupValues[2]}**" }
+    val out = AnnotatedString.Builder()
+    out.pushStyle(SpanStyle(color = bodyColor))
+    val pattern = Regex(
+        """\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|~~([^~\n]+)~~|(?<!~)~([^~\n]+)~(?!~)|`([^`\n]+)`|"([^"]*)"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂|\[([^\]\n]+)\]\(([^)\n]+)\)""",
+    )
+    var last = 0
+    for (m in pattern.findAll(cleaned)) {
+        out.append(cleaned.substring(last, m.range.first))
+        val g = m.groupValues
+        when {
+            g[1].isNotEmpty() -> {
+                out.pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+                out.append(g[1])
+                out.pop()
+            }
+            g[2].isNotEmpty() -> {
+                out.pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
+                out.append(g[2])
+                out.pop()
+            }
+            g[3].isNotEmpty() -> {
+                out.pushStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
+                out.append(g[3])
+                out.pop()
+            }
+            g[4].isNotEmpty() -> {
+                out.pushStyle(SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline))
+                out.append(g[4])
+                out.pop()
+            }
+            g[5].isNotEmpty() -> {
+                out.pushStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                out.append(g[5])
+                out.pop()
+            }
+            else -> {
+                val isLink = m.value.startsWith("[")
+                out.pushStyle(SpanStyle(color = quoteColor, fontWeight = if (isLink) FontWeight.Medium else null))
+                out.append(if (isLink) g[12] else m.value)
+                out.pop()
+            }
+        }
+        last = m.range.last + 1
+    }
+    out.append(cleaned.substring(last))
+    return out.toAnnotatedString()
 }
 
 /**
@@ -2315,6 +2475,14 @@ private fun preprocessOfficialHtml(content: String): String {
 @Composable
 private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
+    val stTheme = LocalThemePreset.current
+    val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stTheme.stBody ?: onSurface
+    val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote ?: MaterialTheme.colorScheme.primary
+    val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline ?: MaterialTheme.colorScheme.primary
+    // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
+    val displayContent = remember(content) { preprocessOfficialHtml(content) }
     val mermaid = mermaidHtmlOf(content)
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
     // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；
@@ -2325,8 +2493,6 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         .containsMatchIn(outsideFence)
     val rawHtml = if (mermaid == null && looksLikeHtml(displayContent) && (htmlEnabled || officialHtml)) content else null
     val type = chatTypography()
-    // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
-    val displayContent = remember(content) { preprocessOfficialHtml(content) }
     var annotatorSettingsRef: AnnotatorSettings? = null
     val emAnnotator = remember(emColor, quoteColor, underlineColor) {
         markdownAnnotator(
@@ -2405,12 +2571,6 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                     )
                 },
             ),
-            // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
-            val stTheme = LocalThemePreset.current
-            val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stTheme.stBody ?: onSurface
-            val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote ?: MaterialTheme.colorScheme.primary
-            val emColor = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm ?: MaterialTheme.colorScheme.onSurfaceVariant
-            val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline ?: MaterialTheme.colorScheme.primary
             colors = markdownColor(
                 text = bodyColor,
                 codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
@@ -2526,8 +2686,8 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
                         return null
                     }
 
-                    override fun onPageFinished(view: android.webkit.WebView?) {
-                        super.onPageFinished(view)
+                    override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                        super.onPageFinished(view, url)
                         // 自动测高：页面加载完拿到 scrollHeight，把 Compose 高度撑起来
                         view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
                             val px = value.trim('"').toIntOrNull() ?: 0

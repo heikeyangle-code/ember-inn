@@ -104,9 +104,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("HTML 兜底", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "含 <q>/<u>/<font color> 等官方行内 HTML 的消息走本地 WebView + 官方 CSS 变量渲染；
-" +
-                                "普通 Markdown 仍用原生渲染。此页颜色同时注入 WebView。",
+                            "含 <q>/<u>/<font color> 等官方行内 HTML 的消息走本地 WebView + 官方 CSS 变量渲染；普通 Markdown 仍用原生渲染。此页颜色同时注入 WebView。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
