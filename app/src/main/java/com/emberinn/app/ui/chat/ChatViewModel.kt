@@ -31,6 +31,7 @@ import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.data.VectorRagService
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
+import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
