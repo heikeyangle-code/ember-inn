@@ -1101,6 +1101,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (chatStore.swipeTo(sessionId, index, variant)) refreshMessages()
     }
 
+    /** 官方 chats.js：点击图片在 LIST ↔ GALLERY 间切换显示模式（持久化 extra.media_display）。 */
+    fun setMediaDisplay(messageIndex: Int) {
+        val list = chatStore.messages(sessionId).toMutableList()
+        if (messageIndex !in list.indices) return
+        val el = list[messageIndex].jsonObject
+        val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val current = extra["media_display"]?.jsonPrimitive?.contentOrNull
+        if (current == "gallery") {
+            extra.remove("media_display")
+        } else {
+            extra["media_display"] = JsonPrimitive("gallery")
+        }
+        list[messageIndex] = JsonObject(el + ("extra" to JsonObject(extra)))
+        chatStore.replace(sessionId, list)
+        refreshMessages()
+    }
+
     /** 图库模式左右滑：更新消息 extra.media_index（对齐官方 gallery media_index）。 */
     fun setMediaIndex(messageIndex: Int, mediaIndex: Int) {
         val list = chatStore.messages(sessionId).toMutableList()

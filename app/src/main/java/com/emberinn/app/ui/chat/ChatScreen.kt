@@ -34,7 +34,6 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -107,7 +106,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -192,7 +190,6 @@ fun ChatScreen(
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
-    var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var showMore by remember { mutableStateOf(false) }
     var showAttachOptions by remember { mutableStateOf(false) }
     var showUrlAttachmentDialog by remember { mutableStateOf(false) }
@@ -516,7 +513,7 @@ fun ChatScreen(
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 accent = accent,
                                 aiBubble = AppearancePrefs.bubbleStyle(context) == "bubble",
-                                onImageTap = { previewImageUrl = it },
+                                onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
                                 swipeCount = swipeCount,
                                 curSwipe = curSwipe,
@@ -1322,25 +1319,6 @@ fun ChatScreen(
         )
     }
 
-    previewImageUrl?.let { url ->
-        Dialog(onDismissRequest = { previewImageUrl = null }) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.9f))
-                    .clickable { previewImageUrl = null },
-                contentAlignment = Alignment.Center,
-            ) {
-                AsyncImage(
-                    model = mediaModel(url),
-                    contentDescription = "图片预览",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                )
-            }
-        }
-    }
-
     tokenStatsIndex?.let { index ->
         val stats = vm.messageTokenCount(index)
         if (stats != null) {
@@ -1583,7 +1561,7 @@ private fun MessageRow(
     curSwipe: Int = 0,
     isPrevSameSender: Boolean = true,
     aiBubble: Boolean = false,
-    onImageTap: (String) -> Unit = {},
+    onImageToggle: () -> Unit = {},
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     onCopy: () -> Unit,
@@ -1737,7 +1715,7 @@ private fun MessageRow(
             }
             if (media.isNotEmpty()) {
                 Spacer(Modifier.size(8.dp))
-                MessageMedia(media = media, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageTap = onImageTap)
+                MessageMedia(media = media, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
             }
             if (showActions) {
                 Spacer(Modifier.size(8.dp))
@@ -1987,7 +1965,7 @@ private fun MessageMedia(
     display: String? = null,
     index: Int? = null,
     onIndexChange: (Int) -> Unit = {},
-    onImageTap: (String) -> Unit = {},
+    onImageToggle: () -> Unit = {},
 ) {
     val images = media.filter { it.type == "image" }
     val others = media.filter { it.type != "image" }
@@ -2000,6 +1978,7 @@ private fun MessageMedia(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable(onClick = onImageToggle)
                     .pointerInput(images.size, safeIndex) {
                         detectHorizontalDragGestures(
                             onHorizontalDrag = { change, amount ->
@@ -2046,32 +2025,23 @@ private fun MessageMedia(
                 }
             }
         } else {
-            // list/缺省模式：图片瓦片化（84dp 小图 + 细边框 + 点击全屏预览，借鉴 OmniBot 附件布局），
-            // 音视频保持内联播放器
-            val tiles = media.filter { it.type == "image" }
-            val inline = media.filter { it.type != "image" }
-            if (tiles.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    tiles.forEach { m ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant,
-                            ),
-                            modifier = Modifier.size(84.dp).clip(RoundedCornerShape(12.dp)).clickable { onImageTap(m.url) },
-                        ) {
-                            AsyncImage(
-                                model = mediaModel(m.url),
-                                contentDescription = m.title.ifBlank { "图片" },
-                                contentScale = ContentScale.Crop,
-                            )
-                        }
-                    }
+            // 官方渲染：.mes_img 内联大图（max-width:100%、max-height:40vh、圆角 5px）；
+            // 点击图片在 LIST ↔ GALLERY 间切换（官方 chats.js switchMessageMediaDisplay）
+            media.forEach { m ->
+                when (m.type) {
+                    "image" -> AsyncImage(
+                        model = mediaModel(m.url),
+                        contentDescription = m.title.ifBlank { "图片" },
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 320.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(onClick = onImageToggle),
+                    )
+                    else -> MediaPlayer(m.url, isAudio = m.type == "audio")
                 }
             }
-            inline.forEach { m -> MediaPlayer(m.url, isAudio = m.type == "audio") }
         }
         // 图库模式：图片在图库区显示，非图媒体（音视频）统一在下方列出一次
         if (display == "gallery" && images.size > 1) {
