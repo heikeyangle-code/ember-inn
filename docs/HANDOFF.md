@@ -605,6 +605,25 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+## 8. 扩展插件总开关 + 必要能力补齐（第 180 轮，2026-08-11，用户要求“一个主开关”）
+
+**全网调研（tavernsprite 最佳扩展榜 / 小酒窝插件帖 / SillyTavern 扩展清单 / 酒馆助手文档）**：
+- 常用插件 = 交互 HTML 卡片（Tavern Helper/HTML 注入器）、表情系统（Character Expressions）、VN 视觉小说模式、
+  TTS/STT、记忆总结（Horae/Amily）、文生图、Quick Reply、追踪卡片（SimTracker/RPG Companion）、状态栏（Larson）、对话着色等
+- 我们已有等价物：TTS（语音页）、文生图（服务页 A1111/gpt-image）、记忆（向量 RAG）、Quick Reply、对话着色（消息渲染字段）、主题背景（VN 类氛围）
+- 决定：扩展区只做**一个总开关**（用户拍板），把最必要的卡片能力补齐；表情/VN/STT/EJS 变量等登记不实现
+
+**已实现（commit 待推）**：
+- ExtensionPrefs.interactiveCards + ExtensionsScreen（设置 → 扩展插件，一个主开关，默认开）
+- 关闭总开关 → ``` 内 HTML 代码块不再转 iframe，按普通代码块原生显示
+- 角色头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` 宏（对齐 Tavern Helper）：WebView 注入 CSS 背景图；
+  角色头像从 MessageRow 传入（vm.avatarPath）；用户头像字段官方 Persona 无头像，暂空
+- 原代码折叠：交互块上方 `<details><summary>原代码</summary>` 默认收起（对齐“启用代码折叠”）
+- allowFileAccess=true 保证 file:// 头像可加载
+
+**登记（未做）**：min-height: vh 换算；user 头像宏；Character Expressions/VN/STT；EJS/变量管理器（引擎层，需 JS 引擎+差分）；
+后台脚本库（页面级自动化）；插件市场/扩展安装器
+
 ## 8. 交互代码块渲染器内嵌（第 179 轮，2026-08-11）
 
 - 已内嵌“交互 HTML 卡片”渲染器（commit 560f251）：消息里 ``` 包着、内容像 HTML 的代码块 → 独立 iframe 运行，卡内脚本可交互
@@ -899,8 +918,13 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 | 阡濯《ST酒馆 html 代码注入器》userscript（greasyfork 503174，CC BY-NC 4.0） | ``` 内以 `<` 开头以 `>` 结尾 → iframe；contentWindow.scrollHeight 测高 | 否（只参考机制，未复制代码） |
 - **差分验证：未做、也不适用**。差分体系（60 组 / 961 例）只保证“官方引擎逻辑 1:1”；这是第三方扩展 + App/UI 层，按 README/HANDOFF 规则为 UI 自主。验证方式 = CI 编译 + 本文行为规则 + 手工回归清单（见 10.5）。
 - 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
+- 设置与开关是 App 层自主 UI，不参与差分；总开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
 
-### 10.3 实现位置与行为（维护必读）
+### 10.3 设置入口与总开关
+- 设置 → 扩展插件 → **交互 HTML 卡片**（`ExtensionPrefs.interactiveCards`，默认开）。关闭后 ``` 内 HTML 代码块按普通代码块原生显示。
+- 其余能力（JS 全开/网络/外链/测高）不属于本开关，见第 177/178 轮。
+
+### 10.4 实现位置与行为（维护必读）
 - `ChatScreen.kt / ChatMarkdown`：新增 `interactiveBlock` 检测——``` 内以 `<` 开头以 `>` 结尾 或 含 `<body>`（忽略大小写）→ 整条消息进 WebView（`rawHtml` 条件扩展为 `htmlEnabled || officialHtml || interactiveBlock`）。
 - `ChatScreen.kt / embedInteractiveBlocks`（在 officialStyledHtml 内对 WebView 页面调用）：
   - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度；
@@ -916,11 +940,12 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 | 非交互代码块保留显示 | ✅ 已实现（pre/code） |
 | iframe 自动测高 | ✅ 已实现（onload + 外层轮询） |
 | 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
-| 头像类 `.char-avatar`/`.user-avatar` | ➖ 未做（需把角色/用户头像 URL 传进 WebView，登记 P2） |
+| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
 | `{{charAvatarPath}}`/`{{userAvatarPath}}` 宏 | ➖ 未做（同上） |
 | `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
-| 代码折叠 / 显示原代码 / 摘要模式 | ➖ 未做（登记） |
+| 原代码折叠（details 默认收起） | ✅ 已实现（第 180 轮） |
 | 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
+| 表情/VN/STT/EJS 变量/插件市场 | ➖ 登记（第 180 轮调研），不做 |
 
 ### 10.5 手工回归清单
 1. 消息 = 单个 ``` 包着 `<html><body><button onclick=...>`：卡片内按钮可点、脚本执行、高度自适应、不撑爆列表

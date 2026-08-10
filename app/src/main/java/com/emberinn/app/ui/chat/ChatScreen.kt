@@ -11,6 +11,7 @@ import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
@@ -1829,6 +1830,7 @@ private fun MessageRow(
                     ChatMarkdown(
                         content = text,
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        charAvatarPath = avatarPath,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
                     )
                 }
@@ -1837,6 +1839,7 @@ private fun MessageRow(
                 ChatMarkdown(
                     content = text,
                     onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    charAvatarPath = avatarPath,
                     modifier = bubbleModifier,
                 )
             }
@@ -2597,7 +2600,13 @@ private fun applyOfficialMarkers(
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
  *  Mermaid 代码块与开启“HTML 消息”后的富文本走 WebView 兜底（README 高级渲染）。 */
 @Composable
-private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier = Modifier) {
+private fun ChatMarkdown(
+    content: String,
+    onSurface: Color,
+    charAvatarPath: String? = null,
+    userAvatarPath: String? = null,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
     val stTheme = LocalThemePreset.current
@@ -2618,8 +2627,9 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
         RegexOption.IGNORE_CASE,
     ).containsMatchIn(outsideFence)
     // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
-    // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）
-    val interactiveBlock = Regex("```[a-zA-Z]*\\n[\\s\\S]*?```").findAll(content).any { m ->
+    // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）。受扩展插件总开关控制
+    val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
+    val interactiveBlock = interactiveCardsOn && Regex("```[a-zA-Z]*\\n[\\s\\S]*?```").findAll(content).any { m ->
         val inner = m.groupValues[1].trim()
         (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
     }
@@ -2650,7 +2660,12 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     annotatorSettingsRef = mdSettings
     when {
         mermaid != null -> WebViewHtml(mermaid, modifier)
-        rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier)
+        rawHtml != null -> WebViewHtml(
+            sanitizeHtmlForWebView(rawHtml),
+            modifier,
+            charAvatarPath = charAvatarPath,
+            userAvatarPath = userAvatarPath,
+        )
         else -> Markdown(
             content = displayContent,
             modifier = modifier.fillMaxWidth(),
@@ -2789,7 +2804,12 @@ private fun sanitizeHtmlForWebView(html: String): String =
  *  官方 DOMPurify 禁脚本，此为已知偏差）；网络与外链已放开，http(s) 链接用系统浏览器打开。
  *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。 */
 @Composable
-private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
+private fun WebViewHtml(
+    html: String,
+    modifier: Modifier = Modifier,
+    charAvatarPath: String? = null,
+    userAvatarPath: String? = null,
+) {
     val context = LocalContext.current
     val density = LocalDensity.current
     var heightPx by remember { mutableIntStateOf(0) }
@@ -2798,13 +2818,16 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
     val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote
-    val styled = remember(html, body, em, underline, quote) { officialStyledHtml(html, context, body, em, underline, quote) }
+    val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath) {
+        officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath)
+    }
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(0x00000000)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.allowFileAccess = true
                 webViewClient = object : android.webkit.WebViewClient() {
                     // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
                     // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
@@ -2879,6 +2902,9 @@ private fun embedInteractiveBlocks(raw: String): String {
                 .replace("\"", "&quot;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
+            out.append("<details style=\"margin-bottom:4px\"><summary>原代码</summary><pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
+                .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+                .append("</code></pre></details>")
             out.append(
                 "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
                     "onload=\"this.style.height=(this.contentWindow.document.documentElement.scrollHeight+5)+'px'\"></iframe>",
@@ -2910,6 +2936,8 @@ private fun officialStyledHtml(
     em: androidx.compose.ui.graphics.Color?,
     underline: androidx.compose.ui.graphics.Color?,
     quote: androidx.compose.ui.graphics.Color?,
+    charAvatarPath: String? = null,
+    userAvatarPath: String? = null,
 ): String {
     val fontSize = when (AppearancePrefs.textSize(context)) {
         "small" -> "14px"
@@ -2921,8 +2949,20 @@ private fun officialStyledHtml(
         "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
     } ?: "inherit"
     val bodyHtml = embedInteractiveBlocks(raw)
+        .replace("{{charAvatarPath}}", charAvatarPath ?: "")
+        .replace("{{userAvatarPath}}", userAvatarPath ?: "")
+    fun avatarUrl(path: String?): String? = path?.let {
+        if (it.startsWith("file://") || it.startsWith("content://")) it else "file://$it"
+    }
+    val charUrl = avatarUrl(charAvatarPath)
+    val userUrl = avatarUrl(userAvatarPath)
+    val avatarCss = buildString {
+        charUrl?.let { append(".char-avatar,.char_avatar{background-image:url('$it')}\n") }
+        userUrl?.let { append(".user-avatar,.user_avatar{background-image:url('$it')}\n") }
+    }
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+$avatarCss
 body{color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
 em,i{color:${css(em)}}
 q{color:${css(quote)}} q em,q i{color:inherit}

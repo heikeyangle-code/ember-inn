@@ -54,7 +54,7 @@ import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -130,6 +130,7 @@ fun SettingsScreen(
         )
         SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.EXTENSIONS -> ExtensionsScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
@@ -145,6 +146,7 @@ fun SettingsScreen(
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
             onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
             onOpenRender = { page = SettingsPage.RENDER },
+            onOpenExtensions = { page = SettingsPage.EXTENSIONS },
             onOpenVoice = { page = SettingsPage.VOICE },
             onOpenServices = { page = SettingsPage.SERVICES },
             onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
@@ -172,6 +174,7 @@ private fun SettingsHome(
     onOpenAppearance: () -> Unit,
     onOpenTypography: () -> Unit,
     onOpenRender: () -> Unit,
+    onOpenExtensions: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenQuickReplies: () -> Unit,
@@ -228,6 +231,12 @@ private fun SettingsHome(
                     Color.Unspecified,
                     onOpenVoice,
                 ),
+            ),
+        ),
+        SettingsGroup(
+            "扩展插件",
+            listOf(
+                SettingRow("扩展插件（交互 HTML 卡片）", "iframe 渲染器 · 头像类 · 原代码折叠", Color.Unspecified, onOpenExtensions),
             ),
         ),
         SettingsGroup(
