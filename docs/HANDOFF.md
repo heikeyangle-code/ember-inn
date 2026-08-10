@@ -387,6 +387,17 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 109（2026-08-10：全量审视第二批）
+
+- **bias 提取修复**：官方 getBiasStrings 取“最后一条用户消息”的 bias；原实现只在上一条消息就是用户消息时提取，
+  历史以 AI 结尾时 bias 丢失 → 改为逐条用户消息覆盖（最后一条用户消息胜出）
+- **快捷回复同步**：设置页改动后已打开的聊天页不刷新 → ChatViewModel.refreshQuickReplies + 聊天页进入时调用
+- 1:1 复核结论：媒体内联（MediaCapability 差分 24 例）、AN interval 公式、ensureSwipes 官方语义（不排除 is_system）、
+  GALLERY/LIST 内联、RegexScope 顺序、世界书深度/EM 注入均已对照官方源码
+- 边界复核（维持登记）：openrouter/mistral/moonshot 等模型元数据（App 未拉取，回退 false/前缀列表）、
+  远程 URL 附件（官方 fetch，App 仅本地/data URL）、平板双栏返回详情后角色状态刷新（VM 保留，边界登记）
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 108.5（2026-08-10：全量审视第一批修复——Bug + 官方 1:1 核实）
 
 - **历史索引错位修复**：ChatPromptFactory 保留原始 JSONL 下标（Pair<Int,ChatMessage>），
