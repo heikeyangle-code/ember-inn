@@ -164,7 +164,7 @@ PromptManagerCore（默认/用户顺序、enabled、injection_trigger、prepareP
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 20 例差分（含 g/首匹配、i/m/s、非法 flags）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
-✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData；ChatPromptFactory 总装前对用户消息过 USER_INPUT、AI 消息过 AI_OUTPUT 位点——官方 script.js sendMessageAsUser/saveReply 的近似，双应用边界登记）；✅ 允许列表（第 127 轮：character_allowed_regex 存储 + 角色详情开关 + ChatPromptFactory allowedOnly=true 全链路，scoped 默认不生效，对齐官方 getScriptsByType(SCOPED)）；✅ 总装历史正则补 isPrompt=true + 官方 depth 公式、世界书内容过 WORLD_INFO 正则（第 127 轮）；🟡 preset 脚本存储/UI（preset 恒空，结构已留）。
+✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（第 128 轮：sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（第 127 轮：isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（第 127 轮：character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；🟡 preset 脚本存储/UI（preset 恒空，结构已留）。
 
 ### 3.7 预设 ✅
 官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包。
@@ -294,7 +294,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
-| 正则 | `public/scripts/regex/` | 消息编辑/发送扫描接入 RegexPipelineEngine（placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth）；设置页做 global/preset/scoped 分桶 |
+| 正则 | `public/scripts/regex/` | 存前（sendMessageAsUser/saveReply/getFirstMessage）+ 总装（isPrompt=true/depth）双位点接入 RegexPipelineEngine；允许列表 character_allowed_regex；设置页做 global/preset/scoped 分桶（preset 存储待做） |
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
@@ -364,7 +364,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|---|
 | 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；`/if` 的 then/else 闭包同样预解析为文本（官方惰性）；150+ 官方命令多数未实现（占位，UI 已能做到的不补）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
 | 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
-| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2/WORLD_INFO=5）。差异：①官方在 sendMessageAsUser/saveReply **存前应用一次**，App 在 ChatPromptFactory prepare 每次应用 → 非幂等脚本可能双应用（登记边界）；②允许列表已接（第 127 轮：character_allowed_regex + 角色详情开关 + allowedOnly=true），preset 脚本存储/UI 未做（preset 恒空）；③历史正则已补 isPrompt=true+depth、世界书内容已过 WORLD_INFO 正则 | 🟡 存前应用 + preset 边界，见 3.6 |
+| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2/WORLD_INFO=5）。✅ 存前应用已接（第 128 轮：sendMessageAsUser/saveReply/getFirstMessage）；✅ 总装 isPrompt=true 只跑 promptOnly（第 127/128 轮），普通脚本不再双应用；✅ 允许列表 character_allowed_regex + 角色详情开关（第 127 轮）；剩余差异：①落盘文本宏未替换（发送时应用、请求等价，登记边界）；②preset 脚本存储/UI 未做（preset 恒空）；③编辑消息 isEdit 正则未接 | 🟡 宏落盘 + preset + isEdit 边界，见 3.6 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
 | 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 已编辑 automationId/preventAutoExecute（第 93 轮）；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |
