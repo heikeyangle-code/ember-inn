@@ -205,6 +205,8 @@ fun ChatScreen(
     var bookmarkToOpen by remember { mutableStateOf<String?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     var showDataBank by remember { mutableStateOf(false) }
+    var showDataBankUrlDialog by remember { mutableStateOf(false) }
+    var dataBankUrlDraft by rememberSaveable { mutableStateOf("") }
     var showAuthorsNote by remember { mutableStateOf(false) }
     var anPrompt by remember { mutableStateOf("") }
     var anPosition by remember { mutableStateOf(1) }
@@ -1256,14 +1258,44 @@ fun ChatScreen(
                         }
                     }
                 }
-                TextButton(
-                    onClick = { dataBankPicker.launch(arrayOf("text/plain", "text/markdown", "application/json")) },
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                ) {
-                    Text("添加文件")
+                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    TextButton(
+                        onClick = { dataBankPicker.launch(arrayOf("text/plain", "text/markdown", "application/json")) },
+                    ) {
+                        Text("添加文件")
+                    }
+                    TextButton(onClick = { showDataBankUrlDialog = true; dataBankUrlDraft = "" }) {
+                        Text("从 URL 添加")
+                    }
                 }
             }
         }
+    }
+
+    if (showDataBankUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showDataBankUrlDialog = false },
+            title = { Text("从 URL 添加数据银行文件") },
+            text = {
+                OutlinedTextField(
+                    value = dataBankUrlDraft,
+                    onValueChange = { dataBankUrlDraft = it },
+                    placeholder = { Text("https://…（文本/markdown）") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val u = dataBankUrlDraft.trim()
+                    if (u.isNotBlank()) vm.addDataBankUrl(u)
+                    dataBankUrlDraft = ""
+                    showDataBankUrlDialog = false
+                }) { Text("添加") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDataBankUrlDialog = false }) { Text("取消") }
+            },
+        )
     }
 
     swipePickerIndex?.let { index ->

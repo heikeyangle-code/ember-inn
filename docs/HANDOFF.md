@@ -374,6 +374,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 死代码 | openComingSoon 未使用 | 已删除 |
 | 快照 | 未做 | ✅ 设置快照（第 144 轮：命名 zip 保存/恢复/删除设置+提供商档案，官方 user.js 语义；恢复需重启，登记） |
 | 预设正则 | preset 恒空 | ✅ 命名预设集 + 允许列表 + 全位点接线（第 146 轮，结构等价官方 preset 扩展字段） |
+| 数据银行 URL 上传 | 仅本地文件 | ✅ 从 URL 添加（第 147 轮，官方 vectors Data Bank URL 上传语义） |
 
 **剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /while，需异步执行器）、表情精灵 App 层、ComfyUI 图像来源（需 workflow 管理）。
 
@@ -398,7 +399,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
 | 世界书设置 | 已做（第 94 轮：设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/浅深锁定管线已做（第 92/106 轮）；配方导出/分享已做 | ✅ |
-| 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（第 138 轮，官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+| 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）；✅ URL 下载已做（第 147 轮：数据银行对话框“从 URL 添加”，对齐官方 vectors 扩展 Data Bank URL 上传语义）；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（第 138 轮，官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
 ## 官方对齐确认总表（2026-08-10 全量审计结论）
 

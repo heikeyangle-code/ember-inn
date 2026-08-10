@@ -340,6 +340,33 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 vectors 扩展 Data Bank 支持 URL 上传：下载文本内容入库（本 App 存 filesDir/databank/）。 */
+    fun addDataBankUrl(url: String) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val client = OkHttpClient.Builder()
+                    .followRedirects(true)
+                    .connectTimeout(20, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .build()
+                val request = Request.Builder().url(trimmed).header("User-Agent", "EmberInn/0.1").build()
+                val bytes = client.newCall(request).execute().use { resp ->
+                    if (!resp.isSuccessful) error("HTTP ${resp.code}")
+                    resp.body?.bytes() ?: error("空响应")
+                }
+                if (bytes.isEmpty()) return@runCatching
+                val name = trimmed.substringAfterLast('/').substringBefore('?')
+                    .ifBlank { "data-${System.currentTimeMillis()}.txt" }
+                vectorRag.saveDataBankFile(name, bytes)
+            }.onFailure { e ->
+                _notice.value = "（数据银行下载失败：${e.message ?: "未知错误"}）"
+            }
+            withContext(Dispatchers.Main) { refreshDataBank() }
+        }
+    }
+
     fun removeDataBankFile(name: String) {
         vectorRag.deleteDataBankFile(name)
         refreshDataBank()
