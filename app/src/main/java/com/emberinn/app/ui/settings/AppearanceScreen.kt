@@ -68,6 +68,13 @@ fun AppearanceScreen(
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
 ) {
+    val appearanceContext = LocalContext.current
+    var radius by remember { mutableStateOf(AppearancePrefs.radius(appearanceContext)) }
+    var font by remember { mutableStateOf(AppearancePrefs.font(appearanceContext)) }
+    val fontScope = rememberCoroutineScope()
+    var fontDownloading by remember { mutableStateOf(false) }
+    var fontError by remember { mutableStateOf<String?>(null) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsTopBar(title = "外观与主题", onBack = onBack)
         LazyVerticalGrid(
@@ -190,12 +197,6 @@ fun AppearanceScreen(
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                val appearanceContext = LocalContext.current
-                var radius by remember { mutableStateOf(AppearancePrefs.radius(appearanceContext)) }
-                var font by remember { mutableStateOf(AppearancePrefs.font(appearanceContext)) }
-                val fontScope = rememberCoroutineScope()
-                var fontDownloading by remember { mutableStateOf(false) }
-                var fontError by remember { mutableStateOf<String?>(null) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
