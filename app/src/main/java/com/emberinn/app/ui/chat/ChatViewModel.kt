@@ -645,7 +645,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
-        if (isUser(last)) return
+        if (isUser(last) || isSystemMsg(last)) {
+            _notice.value = "（最后一条不是可重新生成的 AI 回复。）"
+            return
+        }
         // 先检查配置再删回复：未配置时绝不丢最后一条 AI 回复
         _notice.value = null
         if (!isProviderConfigured()) {
@@ -674,6 +677,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (isUser(last)) {
             // 不再静默失败：最后一条是用户消息时明确提示，否则点“继续”毫无反应
             _notice.value = "（最后一条是你发的消息，先让对方回复或发送后再继续。）"
+            return
+        }
+        if (isSystemMsg(last)) {
+            _notice.value = "（最后一条是系统/隐藏消息，不能继续生成。）"
             return
         }
         val lastText = textOf(last)
@@ -947,7 +954,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
         val speakers = when (type) {
             "regenerate", "continue" -> {
-                val lastName = history.lastOrNull { !isUser(it) }
+                val lastName = history.lastOrNull { !isUser(it) && !isSystemMsg(it) }
                     ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
                 enabled.filter { it.name == lastName }.ifEmpty { listOf(enabled.last()) }
             }
@@ -998,7 +1005,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     val byId = activated.mapNotNull { id -> members.firstOrNull { it.id == id } }
                     byId.ifEmpty { enabled }
                 } else if (group?.generationMode == GroupGenerationMode.SWAP) {
-                    val lastSpeaker = history.lastOrNull { !isUser(it) }
+                    val lastSpeaker = history.lastOrNull { !isUser(it) && !isSystemMsg(it) }
                         ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
                     val idx = enabled.indexOfFirst { it.name == lastSpeaker }
                     listOf(enabled[(idx + 1).coerceAtMost(enabled.lastIndex)])
@@ -1439,6 +1446,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun isUser(el: JsonElement): Boolean {
         val v = el.jsonObject["is_user"] ?: return false
         return v.jsonPrimitive.let { it.booleanOrNull ?: (it.content == "true") }
+    }
+
+    /** 系统消息（/hide 隐藏、/comment 注释；官方 coreChat 过滤 is_system）。 */
+    private fun isSystemMsg(el: JsonElement): Boolean {
+        val v = el.jsonObject["is_system"] ?: return false
+        return v.jsonPrimitive.let { it.booleanOrNull ?: (it.content == "true") }
+    }
+
+    /** 最后一条是否为可继续的 AI 消息（非用户、非系统；官方 coreChat 语义）。 */
+    fun canContinueGeneration(): Boolean {
+        val msgs = chatStore.messages(sessionId)
+        val last = msgs.lastOrNull() ?: return false
+        return !isUser(last) && !isSystemMsg(last)
     }
 
     private fun textOf(el: JsonElement): String =

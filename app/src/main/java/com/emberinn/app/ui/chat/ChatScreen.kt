@@ -518,8 +518,7 @@ fun ChatScreen(
             onDisplayChange = { pendingDisplay = it },
             onRemoveMedia = { index -> vm.removePendingMedia(index) },
             isStreaming = isStreaming,
-            canQuickContinue = !isStreaming && lastAiIndex >= 0 &&
-                messages.lastOrNull()?.let { !isUser(it) } == true,
+            canQuickContinue = !isStreaming && vm.canContinueGeneration(),
             quickBarOpen = showQuickBar,
             worldHitsCount = worldHits.size,
             contextUsage = contextUsage,
