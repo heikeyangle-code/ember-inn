@@ -392,6 +392,7 @@ class ChatStore(private val context: Context) {
             put(
                 "extra",
                 buildJsonObject {
+                    put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("type", JsonPrimitive("narrator"))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
@@ -413,6 +414,7 @@ class ChatStore(private val context: Context) {
             put(
                 "extra",
                 buildJsonObject {
+                    put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("type", JsonPrimitive("comment"))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
@@ -434,6 +436,7 @@ class ChatStore(private val context: Context) {
             put(
                 "extra",
                 buildJsonObject {
+                    put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
                 },
@@ -451,6 +454,7 @@ class ChatStore(private val context: Context) {
                             put(
                                 "extra",
                                 buildJsonObject {
+                                    put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                                     put("api", JsonPrimitive("manual"))
                                     put("model", JsonPrimitive("slash command"))
                                 },

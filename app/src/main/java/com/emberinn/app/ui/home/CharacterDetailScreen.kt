@@ -108,6 +108,7 @@ fun CharacterDetailScreen(
     var editingKey by remember { mutableStateOf<String?>(null) }
     var fieldDraft by remember { mutableStateOf("") }
     var editingEntryIdx by remember { mutableStateOf<Int?>(null) }
+    var confirmDeleteEntry by remember { mutableStateOf(false) }
     var addingEntry by remember { mutableStateOf(false) }
     var editingGreetingIdx by remember { mutableStateOf<Int?>(null) }
     var greetingDraft by remember { mutableStateOf("") }
@@ -823,17 +824,35 @@ fun CharacterDetailScreen(
                 editingEntryIdx = null
             },
             onDelete = {
-                val i = editingEntryIdx
-                if (i != null && i in entries.indices) {
-                    entries = entries.filterIndexed { j, _ -> j != i }
-                    dirty = true
-                }
-                addingEntry = false
-                editingEntryIdx = null
+                // README 守则 6：世界书条目删除二次确认
+                confirmDeleteEntry = true
             },
             onDismiss = {
                 addingEntry = false
                 editingEntryIdx = null
+            },
+        )
+    }
+
+    if (confirmDeleteEntry) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteEntry = false },
+            title = { Text("删除这条世界书条目？") },
+            text = { Text("删除后不可恢复（保存角色时生效）。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val i = editingEntryIdx
+                    if (i != null && i in entries.indices) {
+                        entries = entries.filterIndexed { j, _ -> j != i }
+                        dirty = true
+                    }
+                    addingEntry = false
+                    editingEntryIdx = null
+                    confirmDeleteEntry = false
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteEntry = false }) { Text("取消") }
             },
         )
     }
