@@ -3,13 +3,18 @@
 package com.emberinn.app.ui.sessions
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
+import com.emberinn.app.ui.components.emberShadow
+import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.theme.LocalThemePreset
 
 import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.settings.AppearancePrefs
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +37,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,12 +62,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.components.EmberTextField
+import com.skydoves.cloudy.cloudy
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.group.GroupGenerationMode
 import java.io.File
@@ -124,21 +133,45 @@ fun SessionsScreen(
         }
     }
 
+    val sky = rememberSky()
+    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize()) {
+        // 静态背景层：聊天列表毛玻璃顶栏的静态模糊源（列表滚动不触发整屏重捕）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .sky(sky)
+                .background(MaterialTheme.colorScheme.background),
+        )
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp)) {
-                Text(
-                    text = "聊天",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "全部会话 · 长按可置顶 / 导出 / 删除",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .glassEdgeHighlight(dark = glassDark, atTop = false)
+                    .then(
+                        if (AppearancePrefs.backgroundBlur(context)) {
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                        } else {
+                            Modifier.background(MaterialTheme.colorScheme.surface)
+                        },
+                    ),
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp)) {
+                    Text(
+                        text = "聊天",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "全部会话 · 长按可置顶 / 导出 / 删除",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             if (sessions.isEmpty()) {
@@ -161,12 +194,14 @@ fun SessionsScreen(
             }
         }
 
-        FloatingActionButton(
+        EmberGlassFab(
+            icon = PhosphorIcons.Plus,
+            contentDescription = "新建对话",
             onClick = { EmberHaptics.select(haptic); showNewSheet = true },
+            sky = sky,
+            dark = glassDark,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-        ) {
-            Icon(PhosphorIcons.Plus, contentDescription = "新建对话")
-        }
+        )
     }
 
     if (showNewSheet) {
@@ -342,8 +377,16 @@ private fun SessionRow(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onMenu),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier
+            .fillMaxWidth()
+            .emberShadow(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                radius = 10.dp,
+                offset = DpOffset(0.dp, 4.dp),
+                alpha = 0.08f + 0.16f * com.emberinn.app.ui.theme.LocalVibe.current.glow,
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onMenu),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

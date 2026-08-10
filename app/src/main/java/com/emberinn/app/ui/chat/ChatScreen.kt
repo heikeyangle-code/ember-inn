@@ -125,6 +125,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -157,8 +158,10 @@ import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.emberinn.app.ui.components.parseHexColor
+import com.emberinn.app.ui.components.EmberInputIcon
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberTextFieldDefaults
+import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
@@ -3556,74 +3559,37 @@ private fun ChatInputBar(
             ) {
             if (quickBarOpen) {
                 val enabledReplies = quickReplies.filter { it.enabled }
-                if (enabledReplies.isNotEmpty()) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    ) {
-                        items(enabledReplies, key = { it.label }) { slot ->
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .clickable { onQuickReply(slot.label) },
-                            ) {
-                                Text(
-                                    slot.label.ifBlank { "（未命名）" },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                )
-                            }
-                        }
+                // 快捷工具 + 快捷回复统一成一条横向胶囊流（图像/继续/冒充 + 角色预设），
+                // 比原来的“竖排文字按钮”更轻、更整齐
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                ) {
+                    item(key = "quick-image") {
+                        EmberQuickPill("图像", onClick = onQuickImage, enabled = true)
                     }
-                }
-                Column(modifier = Modifier.padding(end = 4.dp)) {
-                    TextButton(
-                        onClick = onQuickImage,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            "图像",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                        )
+                    item(key = "quick-continue") {
+                        EmberQuickPill("继续", onClick = onQuickContinue, enabled = canQuickContinue)
                     }
-                    TextButton(
-                        onClick = onQuickContinue,
-                        enabled = canQuickContinue,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            "继续",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (canQuickContinue) {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                            } else {
-                                MaterialTheme.colorScheme.outlineVariant
-                            },
-                        )
+                    item(key = "quick-impersonate") {
+                        EmberQuickPill("冒充", onClick = onQuickImpersonate, enabled = true)
                     }
-                    TextButton(
-                        onClick = onQuickImpersonate,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            "冒充",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                        )
+                    items(enabledReplies, key = { it.label }) { slot ->
+                        EmberQuickPill(slot.label.ifBlank { "（未命名）" }, onClick = { onQuickReply(slot.label) }, enabled = true)
                     }
                 }
             }
-            IconButton(onClick = onToggleQuickBar, modifier = Modifier.size(36.dp)) {
-                Icon(PhosphorIcons.Book, contentDescription = "快捷工具盘", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
-            }
-            IconButton(onClick = onAttach, modifier = Modifier.size(36.dp)) {
-                Icon(PhosphorIcons.Plus, contentDescription = "附件 / 语音", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
-            }
+            EmberInputIcon(
+                onClick = onToggleQuickBar,
+                icon = PhosphorIcons.Book,
+                contentDescription = "快捷工具盘",
+            )
+            EmberInputIcon(
+                onClick = onAttach,
+                icon = PhosphorIcons.Plus,
+                contentDescription = "附件 / 语音",
+            )
             EmberTextField(
                 value = input,
                 onValueChange = onInputChange,
@@ -3641,52 +3607,96 @@ private fun ChatInputBar(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.26f),
                 ),
+                focusGlow = accent,
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                IconButton(onClick = onVoice, modifier = Modifier.size(36.dp)) {
-                    Icon(PhosphorIcons.Mic, contentDescription = "语音输入", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
-                }
+                EmberInputIcon(
+                    onClick = onVoice,
+                    icon = PhosphorIcons.Mic,
+                    contentDescription = "语音输入",
+                )
                 val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
-                // 借鉴 OmniBot：发送=实心圆钮，可发送时 accent 底 + 自适应亮色图标，不可发送时浅灰
-                val onAccent = if (accent.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else Color.White
-                IconButton(
-                    onClick = onSend,
-                    enabled = canSend,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (canSend) accent else MaterialTheme.colorScheme.surfaceContainerHighest,
-                            ),
-                    ) {
-                        Icon(
-                            PhosphorIcons.Send,
-                            contentDescription = "发送",
-                            tint = if (canSend) onAccent else MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
-                }
+                ChatSendButton(accent = accent, canSend = canSend, onSend = onSend)
             } else {
-                IconButton(onClick = onStop, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(38.dp)
+                            .emberShadow(color = MaterialTheme.colorScheme.error.copy(alpha = 0.4f), radius = 10.dp, offset = DpOffset(0.dp, 3.dp), alpha = 0.35f)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.error),
                     ) {
-                        Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError)
+                        Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(18.dp))
                     }
                 }
             }
             }
+        }
+    }
+}
+
+/** 输入区快捷胶囊（快捷工具/快捷回复共用）：999 圆角 tonal 小胶囊，禁用态自动降级。 */
+@Composable
+private fun EmberQuickPill(label: String, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (enabled) {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f)
+        },
+        modifier = modifier.clip(RoundedCornerShape(999.dp)).clickable(enabled = enabled, onClick = onClick),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        )
+    }
+}
+
+/** 发送按钮：保留角色 seed 取色（accent 底 + 自适应亮/暗图标），升级为 38dp 圆钮 + accent 柔光。 */
+@Composable
+private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) {
+    val onAccent = if (accent.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else Color.White
+    IconButton(
+        onClick = onSend,
+        enabled = canSend,
+        modifier = Modifier.size(42.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(38.dp)
+                .then(
+                    if (canSend) {
+                        Modifier.emberShadow(
+                            color = accent.copy(alpha = 0.45f),
+                            radius = 10.dp,
+                            spread = 1.dp,
+                            offset = DpOffset(0.dp, 3.dp),
+                            alpha = 0.4f,
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .clip(CircleShape)
+                .background(
+                    if (canSend) accent else MaterialTheme.colorScheme.surfaceContainerHighest,
+                ),
+        ) {
+            Icon(
+                PhosphorIcons.Send,
+                contentDescription = "发送",
+                tint = if (canSend) onAccent else MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
