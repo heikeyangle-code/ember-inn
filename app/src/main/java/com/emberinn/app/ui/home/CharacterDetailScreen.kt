@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterRegexScript
 import com.emberinn.app.data.ModelOverride
@@ -73,6 +75,9 @@ import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.icons.PhosphorIcons
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 角色详情编辑页（P1-4）：官方 v2 字段全集编辑 + 世界书条目管理 + 备用开场白。
@@ -1030,6 +1035,30 @@ fun CharacterDetailScreen(
                             OutlinedButton(onClick = { themeRecipe = themeRecipe.copy(background = ""); dirty = true }, modifier = Modifier.weight(1f)) {
                                 Text("清除", color = MaterialTheme.colorScheme.error)
                             }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                        val bgScope = rememberCoroutineScope()
+                        OutlinedButton(
+                            onClick = {
+                                bgScope.launch {
+                                    val path = withContext(Dispatchers.IO) {
+                                        ImageGenClient().generate(
+                                            context,
+                                            "低饱和渐变氛围背景，柔和光晕，适合聊天界面，无文字无人物",
+                                        )
+                                    }
+                                    if (path != null) {
+                                        themeRecipe = themeRecipe.copy(background = path)
+                                        dirty = true
+                                    } else {
+                                        Toast.makeText(context, "背景生成失败：请先配置 设置→服务→图像", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("AI 生成背景（用图像服务）")
                         }
                     }
                     Text("形状", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))

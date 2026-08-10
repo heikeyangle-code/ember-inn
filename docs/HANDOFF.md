@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 100（2026-08-10：AI 生成聊天背景——README #937 P4 落地）
+
+- 角色详情 → 主题配方弹层新增“AI 生成背景（用图像服务）”：调 ImageGenClient（AUTOMATIC1111）生成低饱和氛围背景，
+  成功后写主题配方 background 并标记脏；失败给配置提示
+- 对应 README“一键生成聊天背景 #937（P4：主题：背景生成（接图像服务））”
+- 无障碍审计：主要界面图标按钮均有 contentDescription、按钮为文本标签（读屏可达）；复杂滑动手势边界登记
+- 无引擎改动；App 编译走 CI
+
 ## 最近一轮 99（2026-08-10：全局正则分桶——引擎差分 + App 设置/接线）
 
 - 引擎 RegexPipelineScript 补官方 scriptName 字段；新增 RegexScopeResolver（GLOBAL→PRESET→SCOPED 顺序 + allowedOnly 过滤）
