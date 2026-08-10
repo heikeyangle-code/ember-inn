@@ -607,7 +607,8 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 ## 8. 扩展插件体系（第 178–181 轮，2026-08-11）
 
-- JS 全开、iframe 交互卡片、头像类/宏、原代码折叠、10 个独立开关、安全登记：全部并入 **第 10 章 扩展插件**。
+- JS 全开、iframe 交互卡片、头像类/宏、原代码折叠、安全登记：全部并入 **第 10 章 扩展插件**。
+- 第 182 轮：按用户要求收回“10 个开关”，扩展插件页只留 **1 个总开关（交互 HTML 卡片）**；JS/网络/外链/测高等行为恢复为常开，不再单独开关。
 - 第 177 轮（Web 兜底全放开 + 官方字段映射后处理）属渲染层，保留在 177。
 
 ## 8. Web 兜底全部放开 + 官方映射后处理（第 177 轮，2026-08-11，用户要求全放开不加开关）
@@ -870,7 +871,7 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 - **这是 App/UI 层功能，不是引擎层**。engine 未改一行；官方 SillyTavern 本体也没有这个功能。
 - 官方本体通过 DOMPurify 剥掉消息里的 `<script>` 和 `on*`，所以“角色卡消息自带 JS 交互”在官方里跑不了。
 - 实现参照的第三方扩展机制：**Tavern Helper（酒馆助手）渲染器** 与 **阡濯《ST酒馆 html 代码注入器》** 都是同一个机制——消息里 ``` 包起来的 HTML 代码块 → 放进独立 iframe 网页运行，卡内 `<script>`/`onclick`/Vue/React 在 iframe 里正常执行。
-- 我们按同一机制在 App 里实现了等价渲染器（commit 560f251），JS 全开（178 轮），设置页 10 个开关（commit b622473）。
+- 我们按同一机制在 App 里实现了等价渲染器（commit 560f251），JS 全开（178 轮），设置页 1 个总开关（第 182 轮修订）。
 
 ### 10.2 对照了哪些源代码 / 差分结论
 | 参照 | 用途 | 是否差分 |
@@ -880,22 +881,12 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 | 阡濯《ST酒馆 html 代码注入器》userscript（greasyfork 503174，CC BY-NC 4.0） | ``` 内以 `<` 开头以 `>` 结尾 → iframe；contentWindow.scrollHeight 测高 | 否（只参考机制，未复制代码） |
 - **差分验证：未做、也不适用**。差分体系（60 组 / 961 例）只保证“官方引擎逻辑 1:1”；这是第三方扩展 + App/UI 层，按 README/HANDOFF 规则为 UI 自主。验证方式 = CI 编译 + 本文行为规则 + 手工回归清单（见 10.5）。
 - 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
-- 设置与开关是 App 层自主 UI，不参与差分；10 个开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
+- 设置与开关是 App 层自主 UI，不参与差分；总开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
 
-### 10.3 设置页与 10 个开关（“10 个开关”= 扩展插件页里的独立功能开关，默认全开）
-- 设置 → **扩展插件**（`ExtensionsScreen` / `ExtensionPrefs`，共 10 个开关）：
-  1. 交互 HTML 卡片（interactiveCards）
-  2. 消息内 JavaScript（messageJs；Mermaid 强制开）
-  3. 远程图片与网络加载（networkMedia；关=http(s) 拦截）
-  4. 链接用系统浏览器打开（externalLinks；关=WebView 内打开）
-  5. 自动测高（autoHeight；关=量一次固定高度）
-  6. 角色头像类 .char-avatar / {{charAvatarPath}}（avatarClasses）
-  7. 原代码折叠（codeFolding）
-  8. Mermaid 图表（mermaid）
-  9. HTML 消息渲染（复用 RenderPrefs.htmlEnabled）
-  10. 拦截 javascript: 链接（blockJavascriptUrls；安全项，默认开）
-- 9 号复用外观页同一开关（RenderPrefs.htmlEnabled），避免双份状态。
-- 各开关接线点：ChatMarkdown（1/8/9/10）、WebViewHtml（2/3/4/5）、officialStyledHtml（6/7）。
+### 10.3 设置入口与总开关（第 182 轮：只留 1 个开关）
+- 设置 → **扩展插件** → **交互 HTML 卡片**（`ExtensionPrefs.interactiveCards`，默认开）。
+- 关闭后：``` 内 HTML 代码块不再转 iframe，按普通代码块原生显示。
+- 头像类/宏、原代码折叠、自动测高随总开关一起生效；JS 全开、网络/外链放开、Mermaid、HTML 消息均不是独立开关（见第 177/178 轮）。
 
 ### 10.4 实现位置与行为（维护必读）
 - `ChatScreen.kt / ChatMarkdown`：新增 `interactiveBlock` 检测——``` 内以 `<` 开头以 `>` 结尾 或 含 `<body>`（忽略大小写）→ 整条消息进 WebView（`rawHtml` 条件扩展为 `htmlEnabled || officialHtml || interactiveBlock`）。
@@ -909,13 +900,13 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 ### 10.5 与 Tavern Helper 能力对照
 | 能力 | 状态 |
 |---|---|
-| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现（受 interactiveCards 开关控制） |
+| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
 | 非交互代码块保留显示 | ✅ 已实现（pre/code） |
-| iframe 自动测高 | ✅ 已实现（onload + 外层轮询；受 autoHeight 开关控制） |
+| iframe 自动测高 | ✅ 已实现（onload + 外层轮询） |
 | 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
-| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS，受 avatarClasses 开关控制；`{{userAvatarPath}}` 暂空，登记） |
+| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
 | `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
-| 原代码折叠（details 默认收起） | ✅ 已实现（受 codeFolding 开关控制） |
+| 原代码折叠（details 默认收起） | ✅ 已实现 |
 | 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
 | 表情/VN/STT/EJS 变量/插件市场 | ➖ 未实现（登记） |
 
