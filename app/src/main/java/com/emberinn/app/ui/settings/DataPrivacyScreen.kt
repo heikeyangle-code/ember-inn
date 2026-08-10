@@ -163,8 +163,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val ok = SettingsSnapshotStore.create(context, snapshot
-    }Name.trim())
+                    val ok = SettingsSnapshotStore.create(context, snapshotName.trim())
                     showSnapshotDialog = false
                     snapshots = SettingsSnapshotStore.list(context)
                     Toast.makeText(
@@ -218,6 +217,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                 TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
             },
         )
+    }
     }
 }
 
