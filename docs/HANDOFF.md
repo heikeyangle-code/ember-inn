@@ -270,7 +270,7 @@ launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfe
 
 ### 4.5 主题系统 ✅（全局层）
 ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成整套 M3 ColorScheme（含 surfaceContainer 系列，浅色低饱和容器、深色提亮主色）；MainActivity 持有 themeMode/preset 状态，贯通 MainScreen → SettingsScreen → AppearanceScreen。
-✅ 玻璃表面：聊天页顶栏/输入栏 + 首页顶栏已接 Cloudy 0.7.1（背板模糊 + 半透明 tint，GPU + 旧设备 CPU 降级）；1px 高光描边/内阴影与其余页面待铺开。
+✅ 玻璃表面：聊天页顶栏/输入栏 + 首页顶栏已接 Cloudy 0.7.1（背板模糊 + 半透明 tint，GPU + 旧设备 CPU 降级）；三处真毛玻璃 + AI 对话玻璃渐变卡均已补 1px 边缘高光，其余页面暂无毛玻璃。
 ✅ 角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；🟡 MeshGradient 氛围背景未做（README 可选）。
 
 ### 4.5.5 图标系统 ✅
@@ -643,6 +643,22 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - `WebViewHtml` 里 `onPageFinished` 每 250ms 轮询（≤60 次）+ stable 计数已删除。
 - 每消息 `WebView(ctx)` 新建已改为 `WebViewPool.acquire`；除 WebViewPool 内部外不再直建 WebView。
 - 保留：`officialStyledHtml` / `embedInteractiveBlocks` / `embedPlainText`（iframe 转换与 CSS 样式仍按原机制），`sanitizeHtmlForWebView`（只拦 javascript:）。
+
+### 12.7 滚动 / 键盘卡顿治理（2026-08-11 更新）
+- **animateItem 移除（“每条消息都在动”根因）**：消息行原本挂 `Modifier.animateItem()`，对应 Google Issue Tracker 395536917（BOM 2025.01.01 复现，2026-03 仍 Not started）：上下滚动时条目位移动画持续触发，表现为“列表自己在动 / 每条消息都在动”。聊天列表不需要位移动画（google compose-samples 的 Jetchat 消息行不用），已移除。
+- **毛玻璃静态化（滚动卡顿主因之二）**：原实现把“消息列表”整列作为 Cloudy `sky` 模糊源；Cloudy 0.7.1 的 SkyFrameDriver 检测到滚动活动后，滚动期间每帧重捕整屏并重模糊。现改为只把“静态背景层”（氛围渐变 + 光晕 + 显式/头像背景）作为 sky 源，消息列表不再参与模糊重绘；顶栏/输入栏保留玻璃质感，只是不再实时模糊滚过的消息文字。
+- **发送后先滚底再收键盘**：`scrollToItem(last, Int.MAX_VALUE)` 在键盘未收起的小视口内完成，键盘收起后视口向下扩展、最后一条仍钉在底部；删掉了原来“等 280ms 再滚”的猜时长逻辑。
+- **热路径缓存**：`chatTypography()` / `chatTextShadow()` 按设置值 `remember`（流式每 tick、每条消息重组时不再重建几十个 TextStyle / Shadow）；`NativeMarkdown` 的 colors / typography / padding / components 按实际值缓存，参数不变即复用同一实例（对照 mikepenz 官方 PR #408 的 remember 复用方向）。
+- **行级参数稳定化**：`immersiveActions` / `bubbleStyle` / `density` 在 ChatScreen 层读一次传入列表，避免每条消息组合时各自读 SharedPreferences；`List<MediaAttachment>` 包成 `@Immutable ChatMedia`，让 MessageRow 可跳过重组（Compose 把 List 判为不稳定参数）。
+- **玻璃边缘高光（毛玻璃美化，全量铺开）**：共用 `EmberFx.glassEdgeHighlight` 画 1dp 白色渐变细线（深色 0.16 / 浅色 0.30）——聊天顶栏下缘、聊天输入栏上缘、首页顶栏下缘、AI 对话玻璃渐变卡上缘；补上 README 遗留的“1px 高光描边”。边缘反光是毛玻璃“高级感”的主要来源，tint / 阴影保持克制（README 格调守则）。全 app 真模糊玻璃仅这 3 处（聊天顶栏/输入栏 + 首页顶栏），已全部覆盖。
+- 影响：纯 App/UI 层，不动引擎；`backgroundBlur` 开关仍生效（关=纯色表面）；渲染语义仍对照官方（第 11 章），不参与差分。
+
+### 12.8 性能治理权威依据（调研结论）
+- **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
+- **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
+- **重组 / 分配**：skydoves compose-performance-skills（optimizing-lazy-layouts / deferring-state-reads / choosing-derivedstateof）——分配重的值移出 items lambda 并 remember；滚动/动画状态读进 `LaunchedEffect` / `snapshotFlow` 或 `graphicsLayer`（Draw 阶段），不在 Composition 阶段读滚动值。本项目 followBottom 只在 effect 里消费、光标动画已走 graphicsLayer，符合该规范。
+- **Markdown**：mikepenz PR #408 官方性能方向——解析/参数 remember 复用，内容未变不重建组件模型；本项目流式走轻量渲染器、结束后一次性完整渲染，与官方 streaming_fps 语义一致。
+- **键盘 / 滚底**：先滚底再收键盘（小视口滚底、大视口锚底）避免“滚到旧视口”。聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat）可彻底消除键盘开合/新消息的底部跳动，但需重写滚动跟随与 key 逻辑，风险高，列为后续方案（当前未采用）。
 
 ### 12.6 已知边界
 - 交互卡 + 围栏外“非官方任意 HTML”（如 `<foo>`）且 HTML 开关关闭时，围栏外文本走原生（旧实现整条 WebView）；属低频边缘，结果仍符合“HTML 开关关闭 = 不渲染任意 HTML”。

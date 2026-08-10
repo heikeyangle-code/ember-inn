@@ -10,6 +10,7 @@ import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.components.edgeSwipeBack
+import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
@@ -86,10 +87,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,6 +115,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -199,6 +203,10 @@ private data class ChatItemDerived(
     val swipeCount: Int,
     val curSwipe: Int,
 )
+
+/** 消息附件列表的稳定包装：Compose 把 List 视为不稳定参数，包一层 @Immutable 让 MessageRow 可跳过重组。 */
+@Immutable
+private data class ChatMedia(val items: List<MediaAttachment>)
 
 @Composable
 fun ChatScreen(
@@ -516,7 +524,15 @@ fun ChatScreen(
     }
 
     val sky = rememberSky()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    // 行级外观设置：在 ChatScreen 层读一次传给列表，避免每条消息组合时各自读 SharedPreferences
+    val rowDensity = AppearancePrefs.density(context)
+    val rowImmersiveActions = AppearancePrefs.immersiveActions(context)
+    val rowBubbleStyle = AppearancePrefs.bubbleStyle(context)
+    // 玻璃边缘高光用到的深浅判断（同屏只有顶栏/输入栏两处玻璃，正文区保持干净）
+    val glassDark = isDarkThemeSurface()
     var topBarHeight by remember { mutableStateOf(0) }
     var inputBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
@@ -528,28 +544,35 @@ fun ChatScreen(
             .systemBarsPadding()
             .imePadding()
             // README 返回手势：左右边缘滑动退出
-            .edgeSwipeBack(onBack = onBack)
-            .background(
-                // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
-                Brush.verticalGradient(
-                    0f to MaterialTheme.colorScheme.background,
-                    0.6f to MaterialTheme.colorScheme.background,
-                    1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
-                ),
-            ),
+            .edgeSwipeBack(onBack = onBack),
     ) {
-        // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）
+        // 静态背景层：氛围渐变 + 光晕 + 显式/头像背景。作为顶栏/输入栏毛玻璃的静态模糊源；
+        // 不再把消息列表当 sky 源，避免每次滚动/键盘动画都重捕整屏模糊（滚动/收键盘卡顿主因）。
         Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .size(380.dp)
-                .offset(x = (-140).dp, y = 60.dp)
+                .fillMaxSize()
+                .sky(sky)
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(accent.copy(alpha = 0.09f), Color.Transparent),
+                    // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
+                    Brush.verticalGradient(
+                        0f to MaterialTheme.colorScheme.background,
+                        0.6f to MaterialTheme.colorScheme.background,
+                        1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
                     ),
                 ),
-        )
+        ) {
+            // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .size(380.dp)
+                    .offset(x = (-140).dp, y = 60.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(accent.copy(alpha = 0.09f), Color.Transparent),
+                        ),
+                    ),
+            )
         // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 外层氛围渐变兜底。
         // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
         val glassOn = AppearancePrefs.chatBgAvatarGlass(context)
@@ -585,11 +608,12 @@ fun ChatScreen(
             }
         }
 
-        // 源层：消息列表作为模糊来源，上下留出浮层高度
+        } // 静态背景层结束
+
+        // 消息列表：上下留出浮层高度（不再是模糊源，滚动/键盘动画不再触发整屏模糊重绘）
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .sky(sky)
                 // 最小安全留白：浮层实测高度未就绪（首帧/键盘变化）时也不会盖住消息
                 .padding(top = maxOf(topBarPad, 64.dp))
                 .padding(bottom = maxOf(inputBarPad, 96.dp)),
@@ -602,7 +626,7 @@ fun ChatScreen(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(
-                    if (AppearancePrefs.density(context) == "compact") 4.dp else 8.dp,
+                    if (rowDensity == "compact") 4.dp else 8.dp,
                 ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             ) {
@@ -646,7 +670,9 @@ fun ChatScreen(
                             val isUserMsg = derived.isUser
                             val isSystemMsg = derived.isSystem
                             val text = derived.text
-                            val immersiveActions = AppearancePrefs.immersiveActions(context)
+                            // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
+                            val mediaList = remember(derived.media) { ChatMedia(derived.media) }
+                            val immersiveActions = rowImmersiveActions
                             val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !isSystemMsg && !immersiveActions
                             val isPrevSameSender =
                                 item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
@@ -661,11 +687,11 @@ fun ChatScreen(
                                 }
                             }
                             MessageRow(
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier,
                                 isUser = isUserMsg,
                                 isSystem = isSystemMsg,
                                 text = text,
-                                media = derived.media,
+                                media = mediaList,
                                 mediaDisplay = derived.mediaDisplay,
                                 mediaIndex = derived.mediaIndex,
                                 onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
@@ -677,7 +703,7 @@ fun ChatScreen(
                                 dateLabel = dateLabel,
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 accent = accent,
-                                aiBubble = AppearancePrefs.bubbleStyle(context) == "bubble",
+                                aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
                                 swipeCount = derived.swipeCount,
@@ -742,6 +768,7 @@ fun ChatScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .onSizeChanged { topBarHeight = it.height }
+                .glassEdgeHighlight(dark = glassDark, atTop = false)
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
                         Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f))
@@ -787,6 +814,14 @@ fun ChatScreen(
                     if (accepted) {
                         input = ""
                         pendingDisplay = null
+                        // 发完先滚底再收键盘：滚动在键盘未收起的小视口里完成，键盘收起后视口向下扩展，
+                        // 最后一条仍钉在底部——不猜动画时长，也没有“滚到旧视口”的中间态
+                        scope.launch {
+                            if (messages.isNotEmpty()) {
+                                listState.scrollToItem(messages.lastIndex, scrollOffset = Int.MAX_VALUE)
+                            }
+                            keyboardController?.hide()
+                        }
                     }
                 }
             },
@@ -801,6 +836,7 @@ fun ChatScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .onSizeChanged { inputBarHeight = it.height }
+                .glassEdgeHighlight(dark = glassDark, atTop = true)
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
                         Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
@@ -1730,7 +1766,7 @@ private fun MessageRow(
     isUser: Boolean,
     isSystem: Boolean = false,
     text: String,
-    media: List<MediaAttachment>,
+    media: ChatMedia,
     mediaDisplay: String? = null,
     mediaIndex: Int? = null,
     onMediaIndexChange: (Int) -> Unit = {},
@@ -1921,9 +1957,9 @@ private fun MessageRow(
                     }
                 }
             }
-            if (media.isNotEmpty()) {
+            if (media.items.isNotEmpty()) {
                 Spacer(Modifier.size(8.dp))
-                MessageMedia(media = media, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
+                MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
             }
             if (showActions) {
                 Spacer(Modifier.size(8.dp))
@@ -2415,70 +2451,83 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
 @Composable
 private fun chatTypography(): ChatTypography {
     val context = LocalContext.current
-    val textSizeSp = when (AppearancePrefs.textSize(context)) {
-        "small" -> 14f
-        "official" -> 15f
-        "large" -> 18f
-        "xlarge" -> 20f
-        else -> 16f
-    }
-    val lineFactor = when (AppearancePrefs.lineHeight(context)) {
-        "compact" -> 1.4f
-        "loose" -> 1.7f
-        else -> 1.55f
-    }
-    val bodyWeight = when (AppearancePrefs.bodyWeight(context)) {
-        "medium" -> FontWeight.Medium
-        "semibold" -> FontWeight.SemiBold
-        else -> FontWeight.Normal
-    }
-    val realHeading = AppearancePrefs.headingStyle(context) == "real"
+    val textSize = AppearancePrefs.textSize(context)
+    val lineHeight = AppearancePrefs.lineHeight(context)
+    val bodyWeightPref = AppearancePrefs.bodyWeight(context)
+    val headingStyle = AppearancePrefs.headingStyle(context)
     val h1Mult = AppearancePrefs.headingH1(context)
     val h2Mult = AppearancePrefs.headingH2(context)
     val codeMult = AppearancePrefs.codeSize(context)
     val inlineCodeMult = AppearancePrefs.inlineCodeSize(context)
-    fun size(mult: Float) = (textSizeSp * mult).sp
-    fun line(mult: Float) = (textSizeSp * mult * lineFactor).sp
-    val body = MaterialTheme.typography.bodyMedium.copy(
-        fontSize = size(1f),
-        lineHeight = line(1f),
-        fontWeight = bodyWeight,
-    )
-    val typography = ChatTypography(
-        body = body,
-        h1 = if (realHeading) {
-            MaterialTheme.typography.headlineMedium.copy(fontSize = size(1.5f * h1Mult), lineHeight = line(1.5f * h1Mult), fontWeight = FontWeight.Bold)
-        } else {
-            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f * h1Mult), lineHeight = line(1.15f * h1Mult), fontWeight = FontWeight.SemiBold)
-        },
-        h2 = if (realHeading) {
-            MaterialTheme.typography.headlineSmall.copy(fontSize = size(1.3f * h2Mult), lineHeight = line(1.3f * h2Mult), fontWeight = FontWeight.Bold)
-        } else {
-            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f * h2Mult), lineHeight = line(1.15f * h2Mult), fontWeight = FontWeight.SemiBold)
-        },
-        h3 = if (realHeading) {
-            MaterialTheme.typography.titleLarge.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
-        } else {
-            MaterialTheme.typography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium)
-        },
-        h4 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium),
-        h5 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
-        h6 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
-        quoteItalic = AppearancePrefs.quoteItalic(context),
-        codeMult = codeMult,
-        inlineCodeMult = inlineCodeMult,
-    )
-    // 官方 style.css：全站文字 text-shadow 0 0 2px rgba(0,0,0,.5)（--SmartThemeShadowColor），全局可调
+    val quoteItalic = AppearancePrefs.quoteItalic(context)
+    val baseTypography = MaterialTheme.typography
     val shadow = chatTextShadow()
-    return if (shadow == null) typography else typography.copy(
-        body = typography.body.copy(shadow = shadow),
-        h1 = typography.h1.copy(shadow = shadow),
-        h2 = typography.h2.copy(shadow = shadow),
-        h3 = typography.h3.copy(shadow = shadow),
-        h4 = typography.h4.copy(shadow = shadow),
-        h5 = typography.h5.copy(shadow = shadow),
-        h6 = typography.h6.copy(shadow = shadow),
-    )
+    // 排版参数不变就复用整套 TextStyle：流式每 tick / 每条消息重组时不再重复分配几十个对象
+    return remember(textSize, lineHeight, bodyWeightPref, headingStyle, h1Mult, h2Mult, codeMult, inlineCodeMult, quoteItalic, shadow, baseTypography) {
+        val textSizeSp = when (textSize) {
+            "small" -> 14f
+            "official" -> 15f
+            "large" -> 18f
+            "xlarge" -> 20f
+            else -> 16f
+        }
+        val lineFactor = when (lineHeight) {
+            "compact" -> 1.4f
+            "loose" -> 1.7f
+            else -> 1.55f
+        }
+        val bodyWeight = when (bodyWeightPref) {
+            "medium" -> FontWeight.Medium
+            "semibold" -> FontWeight.SemiBold
+            else -> FontWeight.Normal
+        }
+        val realHeading = headingStyle == "real"
+        fun size(mult: Float) = (textSizeSp * mult).sp
+        fun line(mult: Float) = (textSizeSp * mult * lineFactor).sp
+        val body = baseTypography.bodyMedium.copy(
+            fontSize = size(1f),
+            lineHeight = line(1f),
+            fontWeight = bodyWeight,
+        )
+        val typography = ChatTypography(
+            body = body,
+            h1 = if (realHeading) {
+                baseTypography.headlineMedium.copy(fontSize = size(1.5f * h1Mult), lineHeight = line(1.5f * h1Mult), fontWeight = FontWeight.Bold)
+            } else {
+                baseTypography.titleMedium.copy(fontSize = size(1.15f * h1Mult), lineHeight = line(1.15f * h1Mult), fontWeight = FontWeight.SemiBold)
+            },
+            h2 = if (realHeading) {
+                baseTypography.headlineSmall.copy(fontSize = size(1.3f * h2Mult), lineHeight = line(1.3f * h2Mult), fontWeight = FontWeight.Bold)
+            } else {
+                baseTypography.titleMedium.copy(fontSize = size(1.15f * h2Mult), lineHeight = line(1.15f * h2Mult), fontWeight = FontWeight.SemiBold)
+            },
+            h3 = if (realHeading) {
+                baseTypography.titleLarge.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
+            } else {
+                baseTypography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium)
+            },
+            h4 = baseTypography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium),
+            h5 = baseTypography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
+            h6 = baseTypography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
+            quoteItalic = quoteItalic,
+            codeMult = codeMult,
+            inlineCodeMult = inlineCodeMult,
+        )
+        // 官方 style.css：全站文字 text-shadow 0 0 2px rgba(0,0,0,.5)（--SmartThemeShadowColor），全局可调
+        if (shadow == null) {
+            typography
+        } else {
+            typography.copy(
+                body = typography.body.copy(shadow = shadow),
+                h1 = typography.h1.copy(shadow = shadow),
+                h2 = typography.h2.copy(shadow = shadow),
+                h3 = typography.h3.copy(shadow = shadow),
+                h4 = typography.h4.copy(shadow = shadow),
+                h5 = typography.h5.copy(shadow = shadow),
+                h6 = typography.h6.copy(shadow = shadow),
+            )
+        }
+    }
 }
 
 /** 深色表面判断：主题预设的官方 st* 字段是深色专属真值（官方无浅色），浅色模式回退 M3 自动配色。 */
@@ -2490,19 +2539,25 @@ private fun isDarkThemeSurface(): Boolean =
 @Composable
 private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
     val context = LocalContext.current
-    if (!AppearancePrefs.textShadowEnabled(context)) return null
+    val enabled = AppearancePrefs.textShadowEnabled(context)
     val blur = AppearancePrefs.textShadowStrength(context)
-    if (blur <= 0) return null
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
     val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context))
         ?: (if (stDark) stTheme.stShadow else null)
         ?: Color(0x80000000)
-    return androidx.compose.ui.graphics.Shadow(
-        color = shadowColor,
-        offset = androidx.compose.ui.geometry.Offset.Zero,
-        blurRadius = blur.toFloat(),
-    )
+    // 设置值不变就复用同一个 Shadow：滚动/流式高频重组时不再每次分配
+    return remember(enabled, blur, shadowColor) {
+        if (!enabled || blur <= 0) {
+            null
+        } else {
+            androidx.compose.ui.graphics.Shadow(
+                color = shadowColor,
+                offset = androidx.compose.ui.geometry.Offset.Zero,
+                blurRadius = blur.toFloat(),
+            )
+        }
+    }
 }
 
 private data class ChatTypography(
@@ -2856,11 +2911,54 @@ private fun NativeMarkdown(
         ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
     val type = chatTypography()
-    Markdown(
-        content = content,
-        modifier = modifier.fillMaxWidth(),
-        imageTransformer = Coil3ImageTransformerImpl,
-        components = markdownComponents(
+    // 渲染参数按实际值缓存：参数不变就复用同一实例，避免每条消息/每次重组重建整套组件 lambda 与样式
+    val codeBg = MaterialTheme.colorScheme.surfaceContainerHighest
+    val divider = MaterialTheme.colorScheme.outlineVariant
+    val colors = remember(bodyColor, quoteColor, emColor, underlineColor, codeBg, divider) {
+        markdownColor(
+            text = bodyColor,
+            codeBackground = codeBg.copy(alpha = 0.55f),
+            inlineCodeBackground = codeBg.copy(alpha = 0.45f),
+            dividerColor = divider,
+            tableBackground = codeBg.copy(alpha = 0.25f),
+        )
+    }
+    val typography = remember(type, quoteColor) {
+        markdownTypography(
+            h1 = type.h1,
+            h2 = type.h2,
+            h3 = type.h3,
+            h4 = type.h4,
+            h5 = type.h5,
+            h6 = type.h6,
+            text = type.body,
+            paragraph = type.body,
+            ordered = type.body,
+            bullet = type.body,
+            list = type.body,
+            quote = type.body.copy(
+                color = quoteColor,
+                fontStyle = if (type.quoteItalic) {
+                    androidx.compose.ui.text.font.FontStyle.Italic
+                } else {
+                    androidx.compose.ui.text.font.FontStyle.Normal
+                },
+            ),
+            code = type.body.copy(
+                fontSize = (type.body.fontSize.value * type.codeMult).sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+            inlineCode = type.body.copy(
+                fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+        )
+    }
+    // 代码高亮组件引用在组合上下文取好再进 remember（非组合 lambda 里不允许新建可组合函数引用）
+    val codeBlockRef = highlightedCodeBlock
+    val codeFenceRef = highlightedCodeFence
+    val components = remember(bodyColor, emColor, quoteColor, underlineColor, type, codeBlockRef, codeFenceRef) {
+        markdownComponents(
             // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
             // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
             text = { model -> OfficialMarkdownNode(model, model.typography.text, bodyColor, emColor, quoteColor, underlineColor) },
@@ -2873,8 +2971,8 @@ private fun NativeMarkdown(
             heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
             setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
             setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-            codeBlock = highlightedCodeBlock,
-            codeFence = highlightedCodeFence,
+            codeBlock = codeBlockRef,
+            codeFence = codeFenceRef,
             blockQuote = { model ->
                 Box(
                     modifier = Modifier
@@ -2906,45 +3004,13 @@ private fun NativeMarkdown(
                     },
                 )
             },
-        ),
-        colors = markdownColor(
-            text = bodyColor,
-            codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
-            inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
-            dividerColor = MaterialTheme.colorScheme.outlineVariant,
-            tableBackground = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.25f),
-        ),
-        typography = markdownTypography(
-            h1 = type.h1,
-            h2 = type.h2,
-            h3 = type.h3,
-            h4 = type.h4,
-            h5 = type.h5,
-            h6 = type.h6,
-            text = type.body,
-            paragraph = type.body,
-            ordered = type.body,
-            bullet = type.body,
-            list = type.body,
-            quote = type.body.copy(
-                color = quoteColor,
-                fontStyle = if (type.quoteItalic) {
-                    androidx.compose.ui.text.font.FontStyle.Italic
-                } else {
-                    androidx.compose.ui.text.font.FontStyle.Normal
-                },
-            ),
-            code = type.body.copy(
-                fontSize = (type.body.fontSize.value * type.codeMult).sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            ),
-            inlineCode = type.body.copy(
-                fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            ),
-        ),
-        padding = markdownPadding(
-            block = when (AppearancePrefs.blockSpacing(context)) {
+        )
+    }
+    val blockSpacing = AppearancePrefs.blockSpacing(context)
+    val listIndent = AppearancePrefs.listIndent(context)
+    val padding = remember(blockSpacing, listIndent) {
+        markdownPadding(
+            block = when (blockSpacing) {
                 "compact" -> 2.dp
                 "loose" -> 5.dp
                 else -> 3.dp
@@ -2952,10 +3018,19 @@ private fun NativeMarkdown(
             list = 2.dp,
             listItemTop = 2.dp,
             listItemBottom = 2.dp,
-            listIndent = AppearancePrefs.listIndent(context).toFloatOrNull()?.dp ?: 10.dp,
+            listIndent = listIndent.toFloatOrNull()?.dp ?: 10.dp,
             codeBlock = PaddingValues(10.dp),
             blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-        ),
+        )
+    }
+    Markdown(
+        content = content,
+        modifier = modifier.fillMaxWidth(),
+        imageTransformer = Coil3ImageTransformerImpl,
+        components = components,
+        colors = colors,
+        typography = typography,
+        padding = padding,
     )
 }
 

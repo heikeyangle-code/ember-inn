@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -72,6 +74,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -115,6 +118,8 @@ fun CharactersScreen(
 
     // README 首页：毛玻璃顶栏（Cloudy 背板模糊，正文区干净）
     val sky = rememberSky()
+    // 玻璃边缘高光深浅判断（首页只有顶栏一处真玻璃 + AI 对话玻璃渐变卡）
+    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val density = LocalDensity.current
     var topBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
@@ -163,6 +168,26 @@ fun CharactersScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 静态背景层：首页顶栏毛玻璃的静态模糊源（列表滚动不再触发整屏重捕/重模糊）。
+        // 左下低饱和主色光晕给玻璃一层可模糊的氛围底，避免纯色背景模糊后看不出玻璃质感。
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .sky(sky)
+                .background(MaterialTheme.colorScheme.background),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .size(360.dp)
+                    .offset(x = (-130).dp, y = 60.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f), Color.Transparent),
+                        ),
+                    ),
+            )
+        }
         if (query.isNotBlank()) {
             SearchResultsColumn(
                 query = query,
@@ -184,7 +209,7 @@ fun CharactersScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topBarPad + 8.dp, bottom = 88.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
                 verticalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
-                modifier = Modifier.fillMaxSize().sky(sky),
+                modifier = Modifier.fillMaxSize(),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     AiChatCard(onClick = { EmberHaptics.select(haptic); onOpenChat(vm.newSession(null, "AI 对话")) })
@@ -231,6 +256,7 @@ fun CharactersScreen(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .onSizeChanged { topBarHeight = it.height }
+                    .glassEdgeHighlight(dark = glassDark, atTop = false)
                     .then(
                         if (AppearancePrefs.backgroundBlur(context)) {
                             Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
@@ -611,6 +637,7 @@ private fun AiChatCard(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .glassEdgeHighlight(dark = MaterialTheme.colorScheme.background.luminance() < 0.5f, atTop = true)
                 .background(
                     Brush.linearGradient(
                         listOf(

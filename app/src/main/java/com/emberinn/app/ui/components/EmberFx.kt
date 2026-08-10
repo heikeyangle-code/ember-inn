@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -64,6 +65,27 @@ fun Modifier.emberShadow(
         Shadow(radius = radius, color = color, spread = spread, offset = offset, alpha = alpha)
     },
 )
+
+/**
+ * README 玻璃表面：1dp 白色渐变边缘高光（毛玻璃高级感主要来自边缘反光，调研共识）。
+ * `atTop=true` 画上缘（输入栏 / 玻璃卡），`atTop=false` 画下缘（顶栏）。
+ */
+fun Modifier.glassEdgeHighlight(dark: Boolean, atTop: Boolean): Modifier = drawWithContent {
+    drawContent()
+    val alpha = if (dark) 0.16f else 0.30f
+    val y = if (atTop) 0.5.dp.toPx() else size.height - 0.5.dp.toPx()
+    drawLine(
+        brush = Brush.horizontalGradient(
+            0.0f to Color.White.copy(alpha = 0f),
+            0.10f to Color.White.copy(alpha = alpha),
+            0.90f to Color.White.copy(alpha = alpha),
+            1.0f to Color.White.copy(alpha = 0f),
+        ),
+        start = Offset(0f, y),
+        end = Offset(size.width, y),
+        strokeWidth = 1.dp.toPx(),
+    )
+}
 
 /**
  * README UI 质感清单 4：自绘骨架屏（不用现成库的灰骨架），
