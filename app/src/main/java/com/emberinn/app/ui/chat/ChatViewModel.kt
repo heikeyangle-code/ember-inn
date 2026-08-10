@@ -414,10 +414,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val character: CharacterRecord? =
         characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
 
-    /** 群聊：会话 groupId → GroupRecord + 成员角色卡。 */
-    val group: GroupRecord? = chatStore.get(sessionId)?.groupId?.let { groupStore.get(it) }
-    val groupMembers: List<CharacterRecord> =
-        group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
+    /** 群聊：每次访问实时读（群聊设置保存后立即生效，不缓存旧模式/策略）。 */
+    val group: GroupRecord?
+        get() = chatStore.get(sessionId)?.groupId?.let { groupStore.get(it) }
+    val groupMembers: List<CharacterRecord>
+        get() = group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
 
     val accentColor: Long? = character?.seedColor
     val avatarPath: String? = character?.avatarPath
@@ -542,24 +543,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ProviderState.refresh(profile)
     }
 
+    /** @return 是否已接受（成功发送/执行斜杠）；false 时调用方不要清空输入框。 */
     fun send(
         text: String,
         userName: String = "User",
         media: List<MediaAttachment> = emptyList(),
         mediaDisplay: String? = null,
         mediaIndex: Int? = null,
-    ) {
-        if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return
+    ): Boolean {
+        if ((text.isBlank() && media.isEmpty()) || _isStreaming.value) return false
         // 官方 ST：输入以 / 开头即斜杠命令（消息类直接插消息，不触发生成；未知命令只提示不发送）
         if (text.trimStart().startsWith("/") && media.isEmpty()) {
             runSlash(text.trim())
-            return
+            return true
         }
         // 未配置模型先拦住：只显示提示，不写历史（避免悬空用户消息之后真的发给模型）。
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
-            return
+            return false
         }
         val charName = chatStore.get(sessionId)?.name ?: "Assistant"
         currentCharName = charName
@@ -580,6 +582,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 history = chatStore.messages(sessionId),
             )
         }
+        return true
     }
 
     /** 停止按钮：取消请求并保留已生成的部分（官方 abortController + mes_stop 语义）。 */
@@ -630,14 +633,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
         if (isUser(last)) return
-        chatStore.removeAt(sessionId, msgs.lastIndex)
-        refreshMessages()
+        // 先检查配置再删回复：未配置时绝不丢最后一条 AI 回复
         _notice.value = null
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
-            _notice.value = "（未配置模型，请先选一个模型再发送。）"
+            _notice.value = "（未配置模型，请先选一个模型再重新生成。）"
             return
         }
+        chatStore.removeAt(sessionId, msgs.lastIndex)
+        refreshMessages()
         if (group != null) {
             startGroupTurn(type = "regenerate")
         } else {

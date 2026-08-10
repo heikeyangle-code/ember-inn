@@ -532,9 +532,11 @@ fun ChatScreen(
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
                     followBottom = true
                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay, mediaIndex = 0)
-                    input = ""
-                    pendingDisplay = null
+                    val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay, mediaIndex = 0)
+                    if (accepted) {
+                        input = ""
+                        pendingDisplay = null
+                    }
                 }
             },
             onStop = { vm.stop() },

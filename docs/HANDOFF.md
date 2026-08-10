@@ -387,6 +387,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 111（2026-08-10：全量审视第四批——输入保留/重生成不丢回复/群聊配置实时生效/AI swipes）
+
+- **发送失败不丢输入**：ChatViewModel.send 返回 Boolean；未配置模型/流式中/空输入返回 false，
+  聊天页只在 accepted 时清空输入框与待发显示模式（README 人话报错 + 不吞用户输入）
+- **重新生成先查配置再删回复**：原实现先删最后一条 AI 再检查配置，未配置时会丢回复 → 顺序已换
+- **群聊设置实时生效**：group/groupMembers 由构造缓存改为每次访问实时读（保存模式/策略后下一轮立即生效）
+- **AI 消息 swipes 结构**：ChatStore.append 对 AI 消息落盘即带 swipe_id/swipes/swipe_info
+  （官方 Message 构造即带；jsonl 导出更贴近 ST）
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 110（2026-08-10：全量审视第三批——消息字段互操作）
 
 - ChatStore.append：普通用户/AI 消息 extra 补官方 gen_id（Date.now()，jsonl 与 ST 互操作）

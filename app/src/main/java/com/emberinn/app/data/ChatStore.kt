@@ -131,9 +131,24 @@ class ChatStore(private val context: Context) {
             put("is_system", JsonPrimitive(false))
             put("send_date", JsonPrimitive(now))
             if (!isUser) {
-                // 官方 AI 消息：gen_started / gen_finished
+                // 官方 AI 消息：gen_started / gen_finished + swipes 结构（官方 Message 构造即带）
                 put("gen_started", JsonPrimitive(genStarted ?: now))
                 put("gen_finished", JsonPrimitive(genFinished ?: now))
+                put("swipe_id", JsonPrimitive(0))
+                put("swipes", JsonArray(listOf(JsonPrimitive(content))))
+                put(
+                    "swipe_info",
+                    JsonArray(
+                        listOf(
+                            buildJsonObject {
+                                put("send_date", JsonPrimitive(now))
+                                put("gen_started", JsonPrimitive(genStarted ?: now))
+                                put("gen_finished", JsonPrimitive(genFinished ?: now))
+                                put("extra", extra)
+                            },
+                        ),
+                    ),
+                )
             }
             put("mes", JsonPrimitive(content))
             put("extra", extra)
