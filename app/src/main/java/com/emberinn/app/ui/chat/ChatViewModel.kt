@@ -526,8 +526,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val isGroupSession = chatStore.get(sessionId)?.groupId != null
         if (chatStore.messages(sessionId).isEmpty() && !isGroupSession) {
             val charName = chatStore.get(sessionId)?.name ?: "Assistant"
-            val firstMes = if (character != null) {
-                firstMesOf(character.rawJson)
+            val currentCharacter = character
+            val firstMes = if (currentCharacter != null) {
+                firstMesOf(currentCharacter.rawJson)
             } else {
                 DEFAULT_AI_OPENING
             }
