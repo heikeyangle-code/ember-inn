@@ -565,6 +565,16 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 新增主题：酒馆官方 + 4 套（第 171 轮，2026-08-11）
+
+- 酒馆官方主题（id=st）：对照官方 release `public/style.css` :root 逐值核对——
+  `--SmartThemeBodyColor: rgb(220,220,210)` 象牙文字、`--SmartThemeBlurTintColor: rgba(23,23,23,1)` 墨黑底、
+  `--SmartThemeUnderlineColor: rgb(188,231,207)` 青绿点缀、`--SmartThemeQuoteColor: rgb(225,138,36)` 引用橙、
+  `--SmartThemeEmColor: rgb(145,145,145)` 次要文字；官方字体 Noto Sans 15px（正文默认 16sp 近似）、
+  Noto Sans Mono（等宽）
+- 新增：竹青（晨光青绿）、暮紫（紫调沉静）、晨雾（雾蓝清冷）、樱粉（粉紫温柔）
+- 现在共 11 套预设（默认仍为墨韵，不动用户默认）；README 主题表已同步
+
 ## 8. 主题卡“椭圆冒方角”修复（第 170 轮，2026-08-11）
 
 - 根因：PresetCard 用 `Modifier.clickable()`，波纹按方形绘制，卡片背景却是圆角 → 点选/悬停时
