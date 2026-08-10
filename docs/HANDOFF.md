@@ -681,6 +681,19 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
 - 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。
 
+### 12.13 引擎接线迁移（2026-08-11 补充）
+- **媒体纯逻辑 → MediaEngine（官方 script.js getMediaDisplay/getMediaIndex + constants.js getFromMime）**：
+  - ChatPromptFactory 历史消息：`media_display` 手写白名单 → `MediaEngine.getMediaDisplay`（extra 优先、无效回退 LIST）；`media_index` 手写 `toIntOrNull` → `MediaEngine.getMediaIndex`（数字/字符串原样、越界/负数/NaN 回退 0、null 透传），再转 Int? 供 UI 使用。
+  - ChatViewModel 本地附件 / URL 附件：手写 mime 前缀分类 → `MediaEngine.typeFromMime`（未知类型拒绝，与原来一致）。
+  - 保留 `mimeFromPath`（引擎无扩展名→具体 mime 表，OpenAI/Claude 请求需要）。
+- **变量宏接线（{{getvar}} 读角色卡变量）**：`MacroEnv.local` 由默认 `EmptyVariableStore` 改为 `MemoryVariableStore`，预置本卡 `extensions.emberinn_variables`（CharacterCardEdit.readVariables）；`{{getvar::x}}` 现在能读到角色变量；`{{setvar}}` 走内存（官方 setvar 是聊天级内存变量，不写回卡文件，语义正确）。global 无 UI 保持空。
+- **明确不做（无收益/高风险）**：
+  - ChatJsonl：`ChatStore.messages` 早已用 `ChatJsonl.import`；导出保留原文件直读（格式零改动，不再序列化一遍）。
+  - PersonaEngine：App 无人设连接/聊天锁/默认锁 UI，接 `resolve` 后行为与现状完全相同，纯增风险，跳过。
+  - WorldInfoConverter：App 编辑器“只覆盖编辑字段、未知字段透传”的保存策略优于整表归一；转换器补的 secondary_keys/position 无 UI 展示，跳过。
+  - 群聊队列（GroupChat/GroupQueue）、工具调用、Instruct 模式、表情立绘：功能新增而非迁移，未做。
+- 影响：纯 App/UI 层，引擎零改动；变量宏行为从“读不到”变为“可读”，属于修复。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。

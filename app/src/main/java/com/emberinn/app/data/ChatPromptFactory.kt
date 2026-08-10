@@ -4,9 +4,10 @@ import com.emberinn.engine.macros.ChatMessage
 import com.emberinn.engine.macros.CharacterFields
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.SystemFields
 import com.emberinn.engine.media.MediaAttachment
-import com.emberinn.engine.media.MediaDisplay
+import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.ExtensionPrompt
 import com.emberinn.engine.prompt.PromptItem
@@ -41,6 +42,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -154,7 +156,12 @@ class ChatPromptFactory {
             chatMetadataScenario = chatMetadata?.get("scenario")?.jsonPrimitive?.contentOrNull ?: "",
             chatMetadataMesExample = chatMetadata?.get("mes_example")?.jsonPrimitive?.contentOrNull ?: "",
         )
-        // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）
+        // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）。
+        // 变量宏接线：local = 本卡变量（extensions.emberinn_variables）作为初始值 + 会话内 setvar 的内存覆盖
+        // （官方 setvar/getvar 就是聊天级内存变量，不写回卡文件；global 无 UI 保持空）。
+        val localVariables = MemoryVariableStore().apply {
+            CharacterCardEdit.readVariables(characterRawJson.orEmpty()).forEach { (k, v) -> set(k, v) }
+        }
         var env = MacroEnv(
             user = userName,
             char = charName,
@@ -173,6 +180,7 @@ class ChatPromptFactory {
                 version = fields.version,
             ),
             system = SystemFields(model = model),
+            local = localVariables,
         )
         val tokenCounter = TokenCounterFactory.forModel(model)
         // 官方 getRegexedString：getRegexScripts({ allowedOnly: true })，
@@ -318,29 +326,39 @@ class ChatPromptFactory {
         val historyMessages = openAiMessages.mapIndexed { i, pm ->
             val el = history.getOrNull(indexedChat[i].first)?.jsonObject
             val extra = el?.get("extra") as? JsonObject
+            val media = extra?.get("media")?.jsonArray?.mapNotNull { me ->
+                val mo = me.jsonObject
+                val rawUrl = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                // 官方存储路径、请求时才 fetch→base64；本地文件直接读成 data URL 再进链内联
+                val url = if (rawUrl.startsWith("data:")) {
+                    rawUrl
+                } else {
+                    val f = java.io.File(rawUrl)
+                    if (!f.exists()) return@mapNotNull null
+                    val mime = mimeFromPath(rawUrl)
+                    "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(f.readBytes())
+                }
+                MediaAttachment(
+                    type = mo["type"]?.jsonPrimitive?.contentOrNull?.ifBlank { "image" } ?: "image",
+                    url = url,
+                    title = mo["title"]?.jsonPrimitive?.contentOrNull ?: "",
+                )
+            }.orEmpty()
             pm.copy(
                 identifier = "chatHistory",
-                media = extra?.get("media")?.jsonArray?.mapNotNull { me ->
-                    val mo = me.jsonObject
-                    val rawUrl = mo["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                    // 官方存储路径、请求时才 fetch→base64；本地文件直接读成 data URL 再进链内联
-                    val url = if (rawUrl.startsWith("data:")) {
-                        rawUrl
-                    } else {
-                        val f = java.io.File(rawUrl)
-                        if (!f.exists()) return@mapNotNull null
-                        val mime = mimeFromPath(rawUrl)
-                        "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(f.readBytes())
-                    }
-                    MediaAttachment(
-                        type = mo["type"]?.jsonPrimitive?.contentOrNull?.ifBlank { "image" } ?: "image",
-                        url = url,
-                        title = mo["title"]?.jsonPrimitive?.contentOrNull ?: "",
-                    )
+                media = media,
+                // 对齐官方 script.js getMediaDisplay：extra 优先、无效回退 LIST（不再手写白名单）
+                mediaDisplay = MediaEngine.getMediaDisplay(
+                    extraMediaDisplay = extra?.get("media_display")?.jsonPrimitive?.contentOrNull,
+                    powerUserMediaDisplay = null,
+                ),
+                // 对齐官方 getMediaIndex：数字/字符串原样、越界/负数/NaN 回退 0，null 透传
+                mediaIndex = MediaEngine.getMediaIndex(
+                    mediaCount = media.size,
+                    mediaIndex = extra?.get("media_index"),
+                ).let { el ->
+                    if (el is JsonNull) null else el.jsonPrimitive.content.toIntOrNull() ?: 0
                 },
-                mediaDisplay = extra?.get("media_display")?.jsonPrimitive?.contentOrNull
-                    ?.takeIf { it == MediaDisplay.LIST || it == MediaDisplay.GALLERY },
-                mediaIndex = extra?.get("media_index")?.jsonPrimitive?.content?.toIntOrNull(),
             )
         }
             .asReversed()

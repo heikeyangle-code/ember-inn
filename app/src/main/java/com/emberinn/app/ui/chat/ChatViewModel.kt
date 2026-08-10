@@ -55,6 +55,7 @@ import com.emberinn.engine.group.GroupDepthPromptsEngine
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.group.GroupLoopEngine
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.slash.AutoExecuteHandler
 import com.emberinn.engine.slash.QuickReplySlot
@@ -1308,12 +1309,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 val type = mime?.ifBlank { null }
                     ?: resolver.getType(uri)
                     ?: "application/octet-stream"
-                val mediaType = when {
-                    type.startsWith("image/") -> "image"
-                    type.startsWith("video/") -> "video"
-                    type.startsWith("audio/") -> "audio"
-                    else -> return@launch
-                }
+                // 对齐官方 constants.js getFromMime：前缀分类，未知类型拒绝
+                val mediaType = MediaEngine.typeFromMime(type) ?: return@launch
                 val displayName = runCatching {
                     resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
                         if (c.moveToFirst()) c.getString(0) else null
@@ -1354,12 +1351,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 }.getOrElse { e -> throw IllegalArgumentException(e.message ?: "下载失败") }
                 val (type, displayName) = guessMediaFromUrl(trimmed, bytes)
-                val mediaType = when {
-                    type.startsWith("image/") -> "image"
-                    type.startsWith("video/") -> "video"
-                    type.startsWith("audio/") -> "audio"
-                    else -> return@runCatching
-                }
+                // 对齐官方 constants.js getFromMime：前缀分类，未知类型拒绝
+                val mediaType = MediaEngine.typeFromMime(type) ?: return@runCatching
                 // 与本地附件同一条处理链：非 jpeg/png/webp 图片压缩
                 val safeMime = type == "image/jpeg" || type == "image/png" || type == "image/webp"
                 val processedBytes = if (mediaType == "image" && !safeMime) compressToJpeg(bytes) else bytes
