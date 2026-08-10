@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.verticalScroll
@@ -62,6 +64,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -185,6 +190,7 @@ fun SessionsScreen(
                     items(sessions, key = { it.id }) { session ->
                         SessionRow(
                             session = session,
+                            character = characters.firstOrNull { it.id == session.characterId },
                             preview = remember(session) { vm.previewOf(session.id) },
                             onClick = { EmberHaptics.select(haptic); onOpenSession(session) },
                             onMenu = { menuSession = session },
@@ -371,96 +377,151 @@ fun SessionsScreen(
 @Composable
 private fun SessionRow(
     session: SessionRecord,
+    character: CharacterRecord?,
     preview: String?,
     onClick: () -> Unit,
     onMenu: () -> Unit,
 ) {
+    // 每张会话卡都带角色 seed：卡片底 tint + 左侧 seed 竖条 + 彩色发光阴影（与首页角色卡同一套语言）
+    val seed = character?.seedColor?.let { Color(it.toInt()) }
+    val corner = RoundedCornerShape(18.dp)
+    val glow = com.emberinn.app.ui.theme.LocalVibe.current.glow
+    val shadowBase = seed ?: MaterialTheme.colorScheme.primary
+    val avatarFile = character?.avatarPath?.let { File(it) }?.takeIf { it.exists() }
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = corner,
+        color = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceContainerLow, 0.90f) }
+            ?: MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
+            .clip(corner)
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                radius = 10.dp,
-                offset = DpOffset(0.dp, 4.dp),
-                alpha = 0.08f + 0.16f * com.emberinn.app.ui.theme.LocalVibe.current.glow,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        shadowBase.copy(alpha = 0.26f * glow),
+                        shadowBase.copy(alpha = 0.06f * glow),
+                        Color.Transparent,
+                    ),
+                ),
+                radius = 12.dp,
+                spread = 1.dp,
+                offset = DpOffset(0.dp, 5.dp),
             )
             .combinedClickable(onClick = onClick, onLongClick = onMenu),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-        ) {
-            SessionAvatar(name = session.name, characterId = session.characterId)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = session.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (session.pinned) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            PhosphorIcons.Star,
-                            contentDescription = "置顶",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = preview?.take(80) ?: "还没有消息，点开打个招呼吧",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+        Box {
+            // 角色头像作为整卡淡背景（每张卡都不一样）；无头像时保留 seed tint 底
+            if (avatarFile != null) {
+                AsyncImage(
+                    model = avatarFile,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.15f,
+                    modifier = Modifier.matchParentSize().clip(corner),
                 )
             }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = timeLabel(session.updatedAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+            // 左侧 seed 竖条：每卡专属色的视觉锚点
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(4.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(shadowBase, shadowBase.copy(alpha = 0.15f)),
+                        ),
+                    ),
             )
-            IconButton(onClick = onMenu, modifier = Modifier.size(28.dp)) {
-                Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+            ) {
+                SessionAvatar(name = session.name, character = character, seed = seed)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = session.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = seed ?: MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (session.pinned) {
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                PhosphorIcons.Star,
+                                contentDescription = "置顶",
+                                tint = seed ?: MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = preview?.take(80) ?: "还没有消息，点开打个招呼吧",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = timeLabel(session.updatedAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+                IconButton(onClick = onMenu, modifier = Modifier.size(28.dp)) {
+                    Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SessionAvatar(name: String, characterId: String?) {
+private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color?) {
+    val avatarFile = character?.avatarPath?.let { File(it) }?.takeIf { it.exists() }
+    val corner = RoundedCornerShape(14.dp)
     Box(
-        modifier = Modifier.size(40.dp).clip(CircleShape),
+        modifier = Modifier
+            .size(60.dp)
+            .clip(corner)
+            .border(1.5.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.45f), corner),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            shape = CircleShape,
-            color = if (characterId == null) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.secondaryContainer
-            },
-            modifier = Modifier.size(40.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
+        if (avatarFile != null) {
+            AsyncImage(
+                model = avatarFile,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(corner),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            if (seed != null) {
+                                listOf(
+                                    lerp(seed, MaterialTheme.colorScheme.surfaceContainerLow, 0.55f),
+                                    lerp(seed, MaterialTheme.colorScheme.surfaceContainerLow, 0.80f),
+                                )
+                            } else {
+                                listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)
+                            },
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
                     text = name.take(1).ifBlank { "✦" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (characterId == null) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.secondary
-                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = seed ?: MaterialTheme.colorScheme.primary,
                 )
             }
         }
