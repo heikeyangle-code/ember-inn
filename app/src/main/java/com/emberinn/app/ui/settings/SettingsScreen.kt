@@ -186,14 +186,14 @@ private fun SettingsHome(
             "外观与主题",
             listOf(
                 SettingRow("主题", themeSummary, Color.Unspecified, onOpenAppearance),
-                SettingRow("字体 / 圆角 / 密度", "开发中", Color.Unspecified),
+                SettingRow("字体 / 圆角", "全局档位 · 角色配方优先", Color.Unspecified, onOpenAppearance),
             ),
         ),
         SettingsGroup(
             "提供商与模型",
             listOf(
                 SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders),
-                SettingRow("默认采样参数", "开发中", Color.Unspecified),
+                SettingRow("默认采样参数", "温度 / 核采样 / 惩罚", Color.Unspecified, onOpenProviders),
             ),
         ),
         SettingsGroup(

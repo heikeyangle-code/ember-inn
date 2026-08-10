@@ -202,7 +202,7 @@ private fun ComingSoonCard() {
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
-            listOf("字体", "圆角与密度", "背景模糊").forEachIndexed { index, label ->
+            listOf("字体" to "已可调（系统 / 衬线）", "圆角" to "已可调（4/16/24dp）", "背景模糊" to "开发中").forEachIndexed { index, (label, status) ->
                 if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -210,7 +210,7 @@ private fun ComingSoonCard() {
                 ) {
                     Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Text(
-                        "开发中",
+                        status,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                     )
