@@ -29,6 +29,7 @@ import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.data.VectorRagService
+import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.VoicePrefs
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
@@ -1149,6 +1150,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val vectorWorldSettings = rag.worldSettings()
             val vectorDataBank = rag.dataBankFiles()
             val worldInfoSettings = WorldInfoPrefs.read(getApplication())
+            val globalRegexScripts = GlobalRegexPrefs.read(getApplication())
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
             }
@@ -1206,6 +1208,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorFileText = { path -> rag.readDataBankText(path) },
                 inChatExtensions = inChatExtensions,
                 worldInfoSettings = worldInfoSettings,
+                globalRegexScripts = globalRegexScripts,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

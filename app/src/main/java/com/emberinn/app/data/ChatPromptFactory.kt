@@ -16,6 +16,7 @@ import com.emberinn.engine.prompt.PromptAssembler
 import com.emberinn.engine.prompt.PromptPipeline
 import com.emberinn.engine.prompt.PromptUtils
 import com.emberinn.engine.regex.RegexPipelineEngine
+import com.emberinn.engine.regex.RegexScopeResolver
 import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.engine.worldinfo.GlobalScanData
 import com.emberinn.engine.worldinfo.TokenCounterFactory
@@ -93,6 +94,7 @@ class ChatPromptFactory {
         extensionPrompts: Map<String, ExtensionPrompt> = emptyMap(),
         inChatExtensions: List<PromptItem> = emptyList(),
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
+        globalRegexScripts: List<RegexPipelineScript> = emptyList(),
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -123,7 +125,11 @@ class ChatPromptFactory {
             system = SystemFields(model = model),
         )
         val tokenCounter = TokenCounterFactory.forModel(model)
-        val regexScripts = parsed?.regexScripts ?: emptyList()
+        // 官方 getRegexScripts：GLOBAL → PRESET → SCOPED（App 无预设分桶，preset 恒空；allowedOnly 未用）
+        val regexScripts = RegexScopeResolver.resolve(
+            global = globalRegexScripts,
+            scoped = parsed?.regexScripts ?: emptyList(),
+        )
 
         // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）
         val chatMessages = history.mapNotNull { el ->

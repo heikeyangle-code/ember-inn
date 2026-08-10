@@ -13,6 +13,7 @@ import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.regex.RegexPipelineScript
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,6 +100,7 @@ class ChatRepository(context: Context) {
         vectorFileText: (String) -> String? = { null },
         inChatExtensions: List<PromptItem> = emptyList(),
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
+        globalRegexScripts: List<RegexPipelineScript> = emptyList(),
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -157,6 +159,7 @@ class ChatRepository(context: Context) {
             vectorFileText = vectorFileText,
             inChatExtensions = inChatExtensions,
             worldInfoSettings = worldInfoSettings,
+            globalRegexScripts = globalRegexScripts,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

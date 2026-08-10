@@ -378,7 +378,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|---|
 | 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；`/if` 的 then/else 闭包同样预解析为文本（官方惰性）；150+ 官方命令多数未实现（占位，UI 已能做到的不补）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
 | 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
-| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2）。差异：①官方在 sendMessageAsUser/saveReply **存前应用一次**，App 在 ChatPromptFactory prepare 每次应用 → 非幂等脚本可能双应用；②官方有 allowedOnly（character_allowed_regex 允许列表）与 global/preset/scoped 分桶，App 只做了该卡 scoped，global/preset/允许列表未做 | 🟡 应用时机近似，见 3.6 |
+| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2）。差异：①官方在 sendMessageAsUser/saveReply **存前应用一次**，App 在 ChatPromptFactory prepare 每次应用 → 非幂等脚本可能双应用；②global 分桶已做（第 99 轮，RegexScopeResolver 差分 7 例），preset 分桶与 allowedOnly 允许列表未做 | 🟡 应用时机近似 + preset/允许列表边界，见 3.6 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
 | 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 未编辑 automationId/preventAutoExecute；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |
@@ -392,6 +392,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | 已做（第 94 轮：设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+
+## 最近一轮 99（2026-08-10：全局正则分桶——引擎差分 + App 设置/接线）
+
+- 引擎 RegexPipelineScript 补官方 scriptName 字段；新增 RegexScopeResolver（GLOBAL→PRESET→SCOPED 顺序 + allowedOnly 过滤）
+- **差分**：scripts/diff/regex-scope-official.mjs 从官方 regex/engine.js 逐字提取 getRegexScripts+getScriptsByType
+  （打桩 extension_settings/characters/presetManager），7 例对拍全绿（全允许/单桶禁用/空桶/他卡）
+- App：GlobalRegexPrefs（全局脚本 JSON）+ RegexScreen（设置→服务→正则脚本（全局）：增删改/启用/位点 chips）；
+  ChatPromptFactory 发送前按 RegexScopeResolver 合并全局+该卡（preset 恒空），USER_INPUT/AI_OUTPUT 位点生效
+- 边界登记：allowedOnly（character_allowed_regex 允许列表）与 preset 分桶未做 UI（官方默认允许）；运行位点默认 1/2
+- 引擎 286 测全绿；App 编译走 CI
 
 ## 最近一轮 98（2026-08-10：HTML 消息 + Mermaid WebView 兜底渲染）
 

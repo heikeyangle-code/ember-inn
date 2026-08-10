@@ -2,6 +2,8 @@ package com.emberinn.engine.regex
 
 /** 正则脚本完整字段（对齐 getRegexedString 所需）。 */
 data class RegexPipelineScript(
+    /** 官方 RegexScriptData.scriptName（UI/差分标识用）。 */
+    val scriptName: String = "",
     val findRegex: String,
     val replaceString: String,
     val trimStrings: List<String> = emptyList(),
@@ -14,6 +16,28 @@ data class RegexPipelineScript(
     val minDepth: Int? = null,
     val maxDepth: Int? = null,
 )
+
+/**
+ * 官方 regex SCRIPT_TYPES 优先级：GLOBAL(0) → PRESET(2) → SCOPED(1)（Object.values 顺序），
+ * allowedOnly 时按 character_allowed_regex / preset_allowed_regex 过滤（getScriptsByType 纯逻辑，差分覆盖）。
+ */
+object RegexScopeResolver {
+
+    fun resolve(
+        global: List<RegexPipelineScript> = emptyList(),
+        preset: List<RegexPipelineScript> = emptyList(),
+        scoped: List<RegexPipelineScript> = emptyList(),
+        allowedOnly: Boolean = false,
+        scopedAllowed: Boolean = false,
+        presetAllowed: Boolean = false,
+    ): List<RegexPipelineScript> {
+        val result = mutableListOf<RegexPipelineScript>()
+        result += global
+        if (!allowedOnly || presetAllowed) result += preset
+        if (!allowedOnly || scopedAllowed) result += scoped
+        return result
+    }
+}
 
 /** 对齐官方 regex/engine.js getRegexedString：placement/markdown/prompt/编辑/深度/禁用扩展 过滤后逐条执行。 */
 object RegexPipelineEngine {
