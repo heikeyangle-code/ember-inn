@@ -111,6 +111,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.toSpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
@@ -134,7 +136,6 @@ import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
 import org.intellij.markdown.MarkdownElementTypes
-import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
 import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
 import com.mikepenz.markdown.annotator.AnnotatorSettings
@@ -2424,34 +2425,9 @@ private data class ChatTypography(
     val inlineCodeMult: Float,
 )
 
-/** 官方 messageFormatting + CSS 的 Text 层着色：引号对→引用色；<q>/<u>/<font> 预处理标记→对应色。 */
-private fun AnnotatedString.Builder.appendStyledText(raw: String, quoteColor: Color, underlineColor: Color) {
-    val regex = Regex(
-        "\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂" +
-            "|\uE001([^\uE002]*)\uE002|\uE003([^\uE004]*)\uE004|\uE005([0-9a-fA-F#]{4,9})\uE006([^\uE007]*)\uE007",
-    )
-    var last = 0
-    for (m in regex.findAll(raw)) {
-        append(raw.substring(last, m.range.first))
-        val v = m.value
-        when {
-            v.startsWith("\uE003") -> pushStyle(
-                SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
-            )
-            v.startsWith("\uE005") -> {
-                val hex = v.substring(1, v.indexOf('\uE006'))
-                pushStyle(SpanStyle(color = parseHexColor(hex) ?: quoteColor))
-            }
-            else -> pushStyle(SpanStyle(color = quoteColor))
-        }
-        append(v)
-        pop()
-        last = m.range.last + 1
-    }
-    append(raw.substring(last))
-}
-
-/** 官方行内 HTML → 原生可渲染标记：<q>→引用色、<u>/~text~→下划线色、<font color>→指定色、em/b/s/hr/br→Markdown。 */
+/** 官方行内 HTML → 原生可渲染标记：<q>→引用色、<u>/~text~→下划线色、<font color>→指定色、
+ *  引号对→引用色（官方 messageFormatting 先转 <q> 再交给 Showdown）；em/b/s/hr/br→Markdown。
+ *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。 */
 private fun preprocessOfficialHtml(content: String): String {
     var out = content
     out = Regex("<q[^>]*>([\\s\\S]*?)</q>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE001${m.groupValues[1]}\uE002" }
@@ -2463,9 +2439,155 @@ private fun preprocessOfficialHtml(content: String): String {
         .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
     out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
     out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n")
+    // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）
+    out = Regex("\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂")
+        .replace(out) { m -> "\uE001${m.value}\uE002" }
     // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
     out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
     return out
+}
+
+/** 标记区间（原始字符串坐标）。 */
+private data class OfficialMarker(
+    val open: Int,
+    val innerStart: Int,
+    val innerEnd: Int,
+    val close: Int,
+    val color: Color? = null,
+)
+
+/** 已映射坐标的区间（开区间）。 */
+private data class OfficialSpan(val start: Int, val end: Int, val color: Color? = null)
+
+/** 官方 CSS 语义的标记后处理：剥掉 \uE001-\uE007 标记字符，并按层上色。
+ *  分层顺序对齐 style.css：
+ *  - em/i 先按 emColor 着色（库的 annotator 完成）
+ *  - q/引号对 → 整段引用色（官方 q em 继承 → 覆盖 em；strong 无色 → 继承引用色）
+ *  - u/~text~ → 下划线色+下划线；em 段保留斜体色（官方 .mes_text em 优先于 u）
+ *  - font[color] → 最后整段指定色（官方 font[color] em/i/u/q 全部 inherit）
+ *  嵌套（引号内引号、font 内 em/u/q）由栈配对 + 层序解决。 */
+private fun applyOfficialMarkers(
+    source: AnnotatedString,
+    quoteColor: Color,
+    underlineColor: Color,
+): AnnotatedString {
+    val raw = source.text
+    val qStack = ArrayDeque<Int>()
+    val uStack = ArrayDeque<Int>()
+    val fontStack = ArrayDeque<Pair<Int, Int>>() // (open, sep)
+    val markers = mutableListOf<OfficialMarker>()
+    var i = 0
+    while (i < raw.length) {
+        when (raw[i]) {
+            '\uE001' -> qStack.addLast(i)
+            '\uE002' -> qStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE003' -> uStack.addLast(i)
+            '\uE004' -> uStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE005' -> fontStack.addLast(i to -1)
+            '\uE006' -> if (fontStack.isNotEmpty()) {
+                val (open, _) = fontStack.removeLast()
+                fontStack.addLast(open to i)
+            }
+            '\uE007' -> fontStack.removeLastOrNull()?.let { (open, sep) ->
+                if (sep > open) {
+                    val hex = raw.substring(open + 1, sep)
+                    markers += OfficialMarker(open, sep + 1, i, i, parseHexColor(hex) ?: quoteColor)
+                }
+            }
+        }
+        i++
+    }
+
+    // 剥标记字符并建立旧坐标→新坐标映射
+    val removed = BooleanArray(raw.length)
+    for (m in markers) {
+        removed[m.open] = true
+        removed[m.close] = true
+        if (m.color != null) {
+            // font：开标记与 hex/分隔符之间的字符也剥掉
+            for (j in m.open + 1 until m.innerStart) removed[j] = true
+        }
+    }
+    val removedBefore = IntArray(raw.length + 1)
+    var count = 0
+    for (idx in raw.indices) {
+        removedBefore[idx] = count
+        if (removed[idx]) count++
+    }
+    removedBefore[raw.length] = count
+    fun map(old: Int): Int = old - removedBefore[old]
+
+    val sb = StringBuilder(raw.length - count)
+    for (idx in raw.indices) if (!removed[idx]) sb.append(raw[idx])
+    val stripped = sb.toString()
+
+    val emSpans = mutableListOf<OfficialSpan>()
+    val mappedSpans = source.spanStyles.mapNotNull { span ->
+        val start = map(span.start)
+        val end = map(span.end)
+        if (start >= end) return@mapNotNull null
+        if (span.item.fontStyle == androidx.compose.ui.text.font.FontStyle.Italic) {
+            emSpans += OfficialSpan(start, end)
+        }
+        AnnotatedString.Range(span.item, start, end)
+    }
+    val mappedParagraphs = source.paragraphStyles.mapNotNull { p ->
+        val start = map(p.start)
+        val end = map(p.end)
+        if (start >= end) null else AnnotatedString.Range(p.item, start, end)
+    }
+
+    val qSpans = markers.filter { m ->
+        raw.getOrNull(m.open) == '\uE001' && m.close > m.open && m.innerStart < m.innerEnd
+    }.map { OfficialSpan(map(it.innerStart), map(it.innerEnd), quoteColor) }
+    val uSpans = mutableListOf<OfficialSpan>()
+    val fontSpans = mutableListOf<OfficialSpan>()
+    for (m in markers) {
+        if (m.innerStart >= m.innerEnd) continue
+        val start = map(m.innerStart)
+        val end = map(m.innerEnd)
+        if (start >= end) continue
+        when {
+            m.color != null -> fontSpans += OfficialSpan(start, end, m.color)
+            raw.getOrNull(m.open) == '\uE003' -> uSpans += OfficialSpan(start, end, underlineColor)
+        }
+    }
+
+    // 分层：基础 spans → q → u（em 段避让）→ font
+    val finalSpans = mappedSpans.toMutableList()
+    for (q in qSpans) finalSpans += AnnotatedString.Range(SpanStyle(color = quoteColor), q.start, q.end)
+    for (u in uSpans) {
+        finalSpans += AnnotatedString.Range(SpanStyle(textDecoration = TextDecoration.Underline), u.start, u.end)
+        var cursor = u.start
+        val orderedEm = emSpans.filter { it.end > u.start && it.start < u.end }.sortedBy { it.start }
+        for (em in orderedEm) {
+            if (em.end <= cursor) continue
+            if (em.start > cursor) {
+                finalSpans += AnnotatedString.Range(
+                    SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
+                    cursor,
+                    minOf(em.start, u.end),
+                )
+            }
+            cursor = maxOf(cursor, em.end)
+            if (cursor >= u.end) break
+        }
+        if (cursor < u.end) {
+            finalSpans += AnnotatedString.Range(
+                SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
+                cursor,
+                u.end,
+            )
+        }
+    }
+    for (f in fontSpans) f.color?.let { finalSpans += AnnotatedString.Range(SpanStyle(color = it), f.start, f.end) }
+
+    return AnnotatedString(
+        text = stripped,
+        spanStyles = finalSpans,
+        paragraphStyles = mappedParagraphs,
+        inlineContent = source.inlineContent,
+    )
 }
 
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
@@ -2486,29 +2608,26 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；
     // 开关只控制“任意 HTML 都渲染” vs “仅官方标签渲染”
     val outsideFence = displayContent.replace(Regex("```[\\s\\S]*?```"), "")
-    // 剩下的才是原生渲染器真不支持的任意 HTML（font rgb/span/div/table/img/style…）
-    val officialHtml = Regex("<font\\b|</?span|</?div|<style|<table|<img", RegexOption.IGNORE_CASE)
-        .containsMatchIn(outsideFence)
+    // 剩下的才是原生渲染器真不支持的任意 HTML（font rgb/span/div/table/img/style/a/blockquote/列表/标题…）
+    val officialHtml = Regex(
+        "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b",
+        RegexOption.IGNORE_CASE,
+    ).containsMatchIn(outsideFence)
     val rawHtml = if (mermaid == null && looksLikeHtml(displayContent) && (htmlEnabled || officialHtml)) content else null
     val type = chatTypography()
     var annotatorSettingsRef: AnnotatorSettings? = null
-    val emAnnotator = remember(emColor, quoteColor, underlineColor) {
+    val emAnnotator = remember(emColor) {
         markdownAnnotator(
             annotate = { content, child ->
-                when (child.type) {
-                    // 官方 .mes_text i/em { color: emColor }：斜体单独着色
-                    MarkdownElementTypes.EMPH -> {
-                        pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
-                        annotatorSettingsRef?.let { buildMarkdownAnnotatedString(content, child, it) }
-                        pop()
-                        true
-                    }
-                    // 官方 messageFormatting：引号对 → <q>（引用色）；这里在 TEXT 层直接给引号上色
-                    MarkdownTokenTypes.TEXT -> {
-                        appendStyledText(child.getUnescapedTextInNode(content), quoteColor, underlineColor)
-                        true
-                    }
-                    else -> false
+                // 官方 .mes_text i/em { color: emColor }：斜体单独着色；引号/下划线/字体色由
+                // applyOfficialMarkers 在最终 AnnotatedString 上按官方 CSS 层级统一处理
+                if (child.type == MarkdownElementTypes.EMPH) {
+                    pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
+                    annotatorSettingsRef?.let { buildMarkdownAnnotatedString(content, child, it) }
+                    pop()
+                    true
+                } else {
+                    false
                 }
             },
         )
@@ -2528,11 +2647,22 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
             imageTransformer = Coil3ImageTransformerImpl,
             components = markdownComponents(
                 text = { model ->
+                    val built = remember(model.content, model.node, emAnnotator, quoteColor) {
+                        buildAnnotatedString {
+                            pushStyle(model.typography.text.toSpanStyle())
+                            buildMarkdownAnnotatedString(model.content, model.node, mdSettings)
+                            pop()
+                        }
+                    }
+                    val styled = remember(built, quoteColor, underlineColor) {
+                        applyOfficialMarkers(built, quoteColor, underlineColor)
+                    }
                     MarkdownText(
-                        content = model.content,
+                        content = styled,
                         node = model.node,
+                        modifier = Modifier.fillMaxWidth(),
                         style = model.typography.text,
-                        annotatorSettings = mdSettings,
+                        sourceContent = model.content,
                     )
                 },
                 codeBlock = highlightedCodeBlock,
@@ -2653,7 +2783,8 @@ private fun sanitizeHtmlForWebView(html: String): String {
     return out
 }
 
-/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启；网络一律拦截（只放行本地 asset）。
+/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启（与官方一致：消息脚本被 DOMPurify 剥掉）；
+ *  网络与链接已放开：远程图片/资源可加载，http(s) 链接用系统浏览器打开。
  *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。 */
 @Composable
 private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: Boolean = false) {
@@ -2673,15 +2804,24 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
                 settings.javaScriptEnabled = jsEnabled
                 settings.domStorageEnabled = jsEnabled
                 webViewClient = object : android.webkit.WebViewClient() {
-                    override fun shouldInterceptRequest(
+                    // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
+                    // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
+                    override fun shouldOverrideUrlLoading(
                         view: android.webkit.WebView?,
                         request: android.webkit.WebResourceRequest?,
-                    ): android.webkit.WebResourceResponse? {
+                    ): Boolean {
                         val url = request?.url?.toString().orEmpty()
                         if (url.startsWith("https://") || url.startsWith("http://")) {
-                            return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                            try {
+                                ctx.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            } catch (_: Exception) {
+                            }
+                            return true
                         }
-                        return null
+                        return false
                     }
 
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {

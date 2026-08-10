@@ -294,7 +294,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（第 143 轮硬化：mermaid.min.js 本地资源离线渲染、WebView 网络全部拦截、HTML 简易消毒 script/iframe/object/embed/link/on*/javascript:、JS 仅 Mermaid 开启；官方 DOMPurify 为白名单近似，登记） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（第 143 轮硬化：mermaid.min.js 本地资源离线渲染、HTML 简易消毒 script/iframe/object/embed/link/on*/javascript:、JS 仅 Mermaid 开启；第 177 轮放开网络与外链——远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关；官方 DOMPurify 为白名单近似，登记） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -604,6 +604,52 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
+
+## 8. Web 兜底全部放开 + 官方映射后处理（第 177 轮，2026-08-11，用户要求全放开不加开关）
+
+**用户决定**：HTML 兜底不再拦网络/链接，全部放开，不加开关。
+- WebView 删掉 shouldInterceptRequest（远程图片/字体/媒体可正常加载）；http(s) 链接 shouldOverrideUrlLoading → 系统浏览器打开（FLAG_ACTIVITY_NEW_TASK）
+- JS 仍只有 Mermaid 开启——与官方一致：官方 DOMPurify 剥掉消息里的 script，消息本身不跑 JS；sanitize 仍剥 script/iframe/object/embed/link/on*/javascript:
+- 兜底标签检测补齐：font/span/div/style/table/img 之外，新增 a/blockquote/ul/ol/li/p/pre/h1-6/center/figure/video/audio/button（这些官方永远渲染，不能因“HTML 开关关着”变纯文本）
+
+**原生渲染架构升级：标记 + 最终 AnnotatedString 后处理（applyOfficialMarkers）**
+- 旧方案在 annotator 的 TEXT 层逐段上色：引号对/<q> 标记在“引号内含 Markdown（如 "a *b* c"）”时会被 AST 拆成多个 TEXT 节点，标记失配 → 私有字符泄漏 + 不上色；<q> 内 <em> 也会被 em 色盖掉
+- 新方案：preprocessOfficialHtml 只负责把 引号对/<q>/<u>/~text~/<font color> 转成私有标记 \uE001-\uE007；
+  text 组件先 buildAnnotatedString（库的 buildMarkdownAnnotatedString + mdSettings）拿到完整 AnnotatedString，
+  再 applyOfficialMarkers：剥标记字符（含 font 的 hex 段）、平移所有 span，按官方 style.css 层级上色：
+  基础 em 色 → q 整段引用色（覆盖 em，等价 .mes_text q em { color:inherit }）→ u 下划线色+下划线（em 段避让，
+  等价 .mes_text em 优先于 .mes_text u）→ font 整段指定色（等价 font[color] em/i/u/q { color:inherit }）
+- 嵌套（引号内引号、font 内 em/u/q、u 内 em）用栈配对 + 层序解决；标记字符不会出现在最终文本里
+
+**官方字段映射表（维护用）**
+| 官方字段/语法 | 我们的实现 |
+|---|---|
+| 正文色 --SmartThemeBodyColor | 原生：ChatTypography body + markdownColor text |
+| 斜体 <em>/<i> --SmartThemeEmColor | 原生：emAnnotator 斜体+emColor；引号/字体内的 em 按官方继承规则被外层色覆盖 |
+| 下划线 <u>/~text~ --SmartThemeUnderlineColor | 原生：\uE003..\uE004 → 下划线色+Underline；em 段保留 emColor |
+| 引用 <q>/引号对/blockquote/链接 --SmartThemeQuoteColor | 原生：\uE001..\uE002 → 整段引用色（含内部 Markdown）；blockquote 边框/链接色走 markdownColor/TextLinkStyles |
+| <font color="#hex"> | 原生：\uE005..\uE007 → 指定色，覆盖 em/u/q（官方 font[color] 全部 inherit） |
+| <font color="rgb(...)"> 等任意 HTML | WebView 兜底（透明底 + 官方 CSS 变量注入） |
+| 表格/代码块/标题/列表/图片（Markdown） | 原生 mikepenz + Coil；HTML 版表格/图片等走 WebView |
+| Mermaid | WebView + 本地 asset JS |
+| 气泡底色/边框/阴影/毛玻璃 | 原生 Compose 卡片（MessageRow） |
+
+**与官方 1:1 结论**：文本字段的映射与 style.css 逐条对齐；WebView 兜底是“官方 DOM 渲染的等价近似”。
+**已知偏差（登记）**：
+1. `<style>`：官方默认剥掉（需角色允许 custom-style 才恢复，选择器还加 .mes_text 前缀）；我们按用户“全放开”默认放行，且样式只影响该消息自己的 WebView
+2. 外部媒体：官方默认 forbid_external_media=true（要设置才开）；我们按“全放开”直接允许
+3. 官方页面级交互（click-to-edit、消息按钮、自定义样式按角色开关）未实现；消息内脚本双方都不执行
+4. 消毒是白名单近似（DOMPurify 更细），只覆盖常见危险标签/属性
+
+**边缘情况（已按官方语义处理/需回归）**：
+- 引号内含粗体/斜体/下划线/代码：整体引用色，内部 u 仍下划线色，em 在 u 外/内按 CSS 层级
+- 嵌套引号（不同引号类型）：栈配对，颜色一致
+- font 内 em/u/q：整段字体色
+- 代码围栏内的 HTML：looksLikeHtml 先剥 ```...```，不进 WebView
+- encode_tags 开：< 先转义，HTML 不渲染（与官方顺序一致：先 encode 再 markdown）
+- 半个标签/未闭合：looksLikeHtml 匹配到就整段 WebView，由浏览器容错
+- 空消息/纯文本：不走 WebView，零开销
+- WebView 高度突变仍是长 HTML 消息的潜在滚动跳变源（登记，观察）
 
 ## 8. 渲染全面对齐官方（第 174 轮，2026-08-11，逐条核对 script.js + style.css）
 
