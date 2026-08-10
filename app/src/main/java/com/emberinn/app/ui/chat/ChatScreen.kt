@@ -679,10 +679,9 @@ fun ChatScreen(
                             MenuRow(PhosphorIcons.Continue, "继续生成") {
                                 vm.continueGeneration(); menuMessageIndex = null
                             }
-                            if (swipeCount == 0) {
-                                MenuRow(PhosphorIcons.CaretRight, "生成新回复（变体）") {
-                                    vm.generateSwipe(); menuMessageIndex = null
-                                }
+                            // 官方 swipe：任何 AI 消息都能生成变体（AI 消息落盘即带 swipes，恒显示入口）
+                            MenuRow(PhosphorIcons.CaretRight, "生成新回复（变体）") {
+                                vm.generateSwipe(); menuMessageIndex = null
                             }
                         }
                     }

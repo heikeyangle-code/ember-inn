@@ -91,6 +91,11 @@ class SessionsViewModel(application: Application) : AndroidViewModel(application
 
     fun delete(record: SessionRecord) {
         chatStore.delete(record.id)
+        // 群聊会话删除后，若没有其他会话引用该群组则清理孤儿 GroupRecord
+        val groupId = record.groupId
+        if (groupId != null && chatStore.list().none { it.groupId == groupId }) {
+            groupStore.delete(groupId)
+        }
         refresh()
     }
 
