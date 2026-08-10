@@ -387,6 +387,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 125（2026-08-10：审计第十九批——附件 media_index + 群聊 gen_id）
+
+- 官方 populateFileAttachment：上传附件即写 extra.media_index（新附件下标）→ ChatStore.append 默认 lastIndex
+- 官方群聊 AI 消息 extra.gen_id（group_generation_id）→ ChatStore.append groupGenId + ChatViewModel 群聊落盘时写入
+- 复核：引擎 ChatHistoryPopulator 已对历史消息做 preparePrompt 宏替换（官方语义），first_mes 宏发送时替换 ✓
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 124（2026-08-10：审计第十八批——编辑消息 bias 1:1 + 消息 extra 字段对齐）
 
 - 官方 updateMessage：编辑时 extractMessageBias 存 extra.bias 并 removeMacros；regenerate 时 getBiasStrings 回溯 extra.bias

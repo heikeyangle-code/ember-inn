@@ -1441,6 +1441,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             genStarted = streamStartedAt,
             genFinished = java.time.Instant.now().toString(),
             reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+            // 官方群聊 AI 消息带 gen_id（group_generation_id）；单聊不带
+            groupGenId = if (group != null) System.currentTimeMillis() else null,
         )
     }
 

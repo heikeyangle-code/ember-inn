@@ -96,6 +96,7 @@ class ChatStore(private val context: Context) {
         reasoning: String? = null,
         mediaDisplay: String? = null,
         mediaIndex: Int? = null,
+        groupGenId: Long? = null,
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
@@ -115,12 +116,14 @@ class ChatStore(private val context: Context) {
                         }
                     }),
                 )
-                // 官方 extra.media_display：list / gallery；media_index 为 gallery 当前选中
+                // 官方 populateFileAttachment：上传即写 media_index（新附件下标）；media_display 仅在用户切换时写
                 mediaDisplay?.takeIf { it == "list" || it == "gallery" }?.let { put("media_display", JsonPrimitive(it)) }
-                mediaIndex?.coerceAtLeast(0)?.let { put("media_index", JsonPrimitive(it)) }
+                put("media_index", JsonPrimitive((mediaIndex ?: media.lastIndex).coerceAtLeast(0)))
             }
-            // 官方 saveReply：AI 消息 extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature
+            // 官方 saveReply：AI 消息 extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature；
+            // 群聊额外带 gen_id（group_generation_id）
             if (!isUser) {
+                groupGenId?.let { put("gen_id", JsonPrimitive(it)) }
                 put("api", JsonPrimitive(api ?: "manual"))
                 put("model", JsonPrimitive(model ?: ""))
                 put("reasoning", JsonPrimitive(reasoning ?: ""))
