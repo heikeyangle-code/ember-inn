@@ -462,7 +462,7 @@ private fun NewChatSheet(
                 }
             }
             HorizontalDivider(modifier = Modifier.padding(top = 10.dp))
-            SheetRow(PhosphorIcons.Plus, "新建群聊", subtitle = "勾选已有角色（开发中）", onClick = onGroup)
+            SheetRow(PhosphorIcons.Plus, "新建群聊", subtitle = "勾选已有角色，按 APPEND/SWAP 轮流生成", onClick = onGroup)
         }
     }
 }
