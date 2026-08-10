@@ -1,618 +1,625 @@
 {
- "source": "README 供应商表 + 官方 chat_completion_sources/src/endpoints/backends/chat-completions.js + 2026-08 联网核实",
- "verified_at": "2026-08-09",
- "providers": [
-  {
-   "id": "openai",
-   "display_name": "OpenAI",
-   "description": "ChatGPT 官方接口（GPT-5 系列）",
-   "icon": "openai.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.openai.com/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "gpt-5.5",
-    "gpt-5.4",
-    "gpt-5.4-mini",
-    "gpt-5-chat-latest"
-   ],
-   "requires_key": true,
-   "docs_url": "https://platform.openai.com/docs/api-reference/models/list",
-   "default_max_tokens": 16384,
-   "default_context_window": 272000,
-   "model_contexts": {
-    "gpt-5.5": 272000,
-    "gpt-5.4": 400000,
-    "gpt-5.4-mini": 400000
-   }
-  },
-  {
-   "id": "anthropic",
-   "display_name": "Anthropic",
-   "description": "Claude 官方接口（Opus / Sonnet / Haiku）",
-   "icon": "anthropic.svg",
-   "protocol": "anthropic",
-   "auth_type": "x-api-key",
-   "base_url": "https://api.anthropic.com/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "claude-opus-5",
-    "claude-sonnet-5",
-    "claude-haiku-4-5"
-   ],
-   "requires_key": true,
-   "docs_url": "https://platform.claude.com/docs/en/api/models/list",
-   "default_max_tokens": 8192,
-   "default_context_window": 1000000,
-   "model_contexts": {
-    "claude-opus-5": 1000000,
-    "claude-sonnet-5": 1000000,
-    "claude-haiku-4-5": 200000
-   }
-  },
-  {
-   "id": "google",
-   "display_name": "Gemini (AI Studio)",
-   "description": "Gemini 官方接口（AI Studio Key）",
-   "icon": "gemini-color.svg",
-   "protocol": "google",
-   "auth_type": "google-key",
-   "base_url": "https://generativelanguage.googleapis.com",
-   "api_version": "v1beta",
-   "models_endpoint": "models",
-   "models_format": "google",
-   "default_models": [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3-pro"
-   ],
-   "requires_key": true,
-   "docs_url": "https://ai.google.dev/gemini-api/docs/models",
-   "default_max_tokens": 8192,
-   "default_context_window": 1048576,
-   "model_contexts": {
-    "gemini-3.6-flash": 1048576,
-    "gemini-3.5-flash": 1048576,
-    "gemini-3-pro": 1048576
-   }
-  },
-  {
-   "id": "vertexai",
-   "display_name": "Gemini (Vertex)",
-   "description": "Google Cloud Vertex AI（需服务账号，暂走高级自定义）",
-   "icon": "google-color.svg",
-   "protocol": "google",
-   "auth_type": "bearer",
-   "base_url": "https://us-central1-aiplatform.googleapis.com",
-   "region_variants": [
-    "us-central1",
-    "europe-west4",
-    "asia-southeast1"
-   ],
-   "models_endpoint": "",
-   "models_format": "google",
-   "default_models": [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3-pro"
-   ],
-   "requires_key": true,
-   "docs_url": "https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal",
-   "default_max_tokens": 8192,
-   "default_context_window": 1048576,
-   "model_contexts": {
-    "gemini-3.6-flash": 1048576,
-    "gemini-3.5-flash": 1048576,
-    "gemini-3-pro": 2097152
-   }
-  },
-  {
-   "id": "deepseek",
-   "display_name": "DeepSeek",
-   "description": "DeepSeek 官方（V4 Flash / Pro）",
-   "icon": "deepseek-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.deepseek.com/beta",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "deepseek-v4-flash",
-    "deepseek-v4-pro"
-   ],
-   "requires_key": true,
-   "docs_url": "https://api-docs.deepseek.com/",
-   "default_max_tokens": 8192,
-   "default_context_window": 1000000,
-   "model_contexts": {
-    "deepseek-v4-flash": 1000000,
-    "deepseek-v4-pro": 1000000
-   }
-  },
-  {
-   "id": "openrouter",
-   "display_name": "OpenRouter",
-   "description": "聚合平台：一个 Key 用多家模型",
-   "icon": "openrouter.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://openrouter.ai/api/v1",
-   "extra_headers": {
-    "HTTP-Referer": "https://github.com/heikeyangle-code/ember-inn",
-    "X-Title": "EmberInn"
-   },
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "anthropic/claude-sonnet-5",
-    "openai/gpt-5.5",
-    "deepseek/deepseek-v4-flash"
-   ],
-   "requires_key": true,
-   "docs_url": "https://openrouter.ai/docs/api-reference/overview",
-   "default_max_tokens": 8192,
-   "model_contexts": {
-    "anthropic/claude-sonnet-5": 1000000,
-    "openai/gpt-5.5": 272000,
-    "deepseek/deepseek-v4-flash": 1000000
-   }
-  },
-  {
-   "id": "groq",
-   "display_name": "Groq",
-   "description": "极速推理（Llama 等开源模型）",
-   "icon": "groq.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.groq.com/openai/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant"
-   ],
-   "requires_key": true,
-   "docs_url": "https://console.groq.com/docs/models",
-   "default_max_tokens": 4096,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "llama-3.3-70b-versatile": 131072,
-    "llama-3.1-8b-instant": 131072
-   }
-  },
-  {
-   "id": "ollama",
-   "display_name": "Ollama (本地)",
-   "description": "本机跑模型，无需 Key",
-   "icon": "ollama.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "none",
-   "base_url": "http://localhost:11434/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "qwen3.5:32b",
-    "llama3.3:70b",
-    "qwen3-coder:30b"
-   ],
-   "requires_key": false,
-   "docs_url": "https://docs.ollama.com/",
-   "default_max_tokens": 4096,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "qwen3.5:32b": 262144,
-    "llama3.3:70b": 131072,
-    "qwen3-coder:30b": 262144
-   }
-  },
-  {
-   "id": "mistral",
-   "display_name": "Mistral",
-   "description": "Mistral 官方（Medium / Small / Large）",
-   "icon": "mistral-color.svg",
-   "protocol": "mistral",
-   "auth_type": "bearer",
-   "base_url": "https://api.mistral.ai/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "mistral-medium-3.5",
-    "mistral-small-4",
-    "mistral-large-latest"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.mistral.ai/",
-   "default_max_tokens": 4096,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "mistral-medium-3.5": 131072,
-    "mistral-small-4": 131072,
-    "mistral-large-latest": 262144
-   }
-  },
-  {
-   "id": "xai",
-   "display_name": "xAI",
-   "description": "Grok 系列（4.3 / 4 / Fast）",
-   "icon": "xai.svg",
-   "protocol": "xai",
-   "auth_type": "bearer",
-   "base_url": "https://api.x.ai/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "grok-4.3",
-    "grok-4",
-    "grok-4-fast"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.x.ai/",
-   "default_max_tokens": 8192,
-   "default_context_window": 1000000,
-   "model_contexts": {
-    "grok-4.3": 1000000,
-    "grok-4": 262144,
-    "grok-4-fast": 131072
-   }
-  },
-  {
-   "id": "moonshot",
-   "display_name": "Moonshot",
-   "description": "Kimi 官方（K3 / K2）",
-   "icon": "moonshot.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.moonshot.ai/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "kimi-k3",
-    "kimi-k2.6",
-    "kimi-k2.7-code"
-   ],
-   "requires_key": true,
-   "docs_url": "https://platform.moonshot.ai/docs/",
-   "default_max_tokens": 4096,
-   "default_context_window": 1000000,
-   "model_contexts": {
-    "kimi-k3": 1000000,
-    "kimi-k2.6": 262144,
-    "kimi-k2.7-code": 262144
-   }
-  },
-  {
-   "id": "zhipu",
-   "display_name": "智谱 AI",
-   "description": "智谱开放平台（GLM 系列，国内）",
-   "icon": "zhipu-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://open.bigmodel.cn/api/paas/v4",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "glm-5.2",
-    "glm-5.1",
-    "glm-5"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.bigmodel.cn/cn/guide/start/model-overview",
-   "default_max_tokens": 4096,
-   "default_context_window": 200000,
-   "model_contexts": {
-    "glm-5.2": 200000,
-    "glm-5.1": 200000,
-    "glm-5": 200000
-   }
-  },
-  {
-   "id": "dashscope",
-   "display_name": "通义千问",
-   "description": "阿里云 DashScope（Qwen 系列，国内）",
-   "icon": "qwen-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "qwen3.7-max",
-    "qwen3.7-plus",
-    "qwen-flash"
-   ],
-   "requires_key": true,
-   "docs_url": "https://help.aliyun.com/zh/model-studio/",
-   "default_max_tokens": 8192,
-   "default_context_window": 262144,
-   "model_contexts": {
-    "qwen3.7-max": 262144,
-    "qwen3.7-plus": 262144,
-    "qwen-flash": 131072
-   }
-  },
-  {
-   "id": "siliconflow",
-   "display_name": "硅基流动",
-   "description": "国内开源模型聚合（DeepSeek / GLM / Qwen）",
-   "icon": "siliconflow.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.siliconflow.com/v1",
-   "region_variants": [
-    "国际",
-    "国内"
-   ],
-   "region_bases": {
-    "国际": "https://api.siliconflow.com/v1",
-    "国内": "https://api.siliconflow.cn/v1"
-   },
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "models_query": {
-    "type": "text",
-    "sub_type": "chat"
-   },
-   "default_models": [
-    "deepseek-ai/DeepSeek-V3.2",
-    "Pro/zai-org/GLM-5.1",
-    "Qwen/Qwen3.6-35B-A3B"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.siliconflow.cn/cn/",
-   "default_max_tokens": 8192,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "deepseek-ai/DeepSeek-V3.2": 131072,
-    "Pro/zai-org/GLM-5.1": 200000,
-    "Qwen/Qwen3.6-35B-A3B": 262144
-   }
-  },
-  {
-   "id": "zai",
-   "display_name": "Z.AI",
-   "description": "Z.AI（原智谱国际），GLM 系列",
-   "icon": "zhipu-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.z.ai/api/paas/v4",
-   "region_variants": [
-    "通用",
-    "编码"
-   ],
-   "region_bases": {
-    "通用": "https://api.z.ai/api/paas/v4",
-    "编码": "https://api.z.ai/api/coding/paas/v4"
-   },
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "glm-5.2",
-    "glm-5.1",
-    "glm-5"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.z.ai/",
-   "default_max_tokens": 4096,
-   "default_context_window": 200000,
-   "model_contexts": {
-    "glm-5.2": 200000,
-    "glm-5.1": 200000,
-    "glm-5": 200000
-   }
-  },
-  {
-   "id": "minimax",
-   "display_name": "MiniMax",
-   "description": "MiniMax（M3 / M2.7 + 海螺）",
-   "icon": "minimax-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.minimax.io/v1",
-   "region_variants": [
-    "国际",
-    "国内"
-   ],
-   "region_bases": {
-    "国际": "https://api.minimax.io/v1",
-    "国内": "https://api.minimaxi.com/v1"
-   },
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "MiniMax-M3",
-    "MiniMax-M2.7",
-    "MiniMax-M2"
-   ],
-   "requires_key": true,
-   "docs_url": "https://platform.minimax.io/docs/guides/text-generation",
-   "default_max_tokens": 4096,
-   "default_context_window": 1000000,
-   "model_contexts": {
-    "MiniMax-M3": 1000000,
-    "MiniMax-M2.7": 1000000,
-    "MiniMax-M2": 1000000
-   }
-  },
-  {
-   "id": "fireworks",
-   "display_name": "Fireworks",
-   "description": "高性能模型托管（Qwen / Kimi / Step）",
-   "icon": "",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.fireworks.ai/inference/v1",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "accounts/fireworks/models/qwen3p7-plus",
-    "accounts/fireworks/models/kimi-k2-instruct",
-    "accounts/fireworks/models/step-3p7-flash-nvfp4"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.fireworks.ai/",
-   "default_max_tokens": 4096,
-   "default_context_window": 262144,
-   "model_contexts": {
-    "accounts/fireworks/models/qwen3p7-plus": 262144,
-    "accounts/fireworks/models/kimi-k2-instruct": 262144,
-    "accounts/fireworks/models/step-3p7-flash-nvfp4": 131072
-   }
-  },
-  {
-   "id": "perplexity",
-   "display_name": "Perplexity",
-   "description": "联网搜索模型（Sonar 系列）",
-   "icon": "perplexity-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.perplexity.ai",
-   "models_endpoint": "",
-   "models_format": "openai",
-   "default_models": [
-    "sonar-pro",
-    "sonar-reasoning-pro"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.perplexity.ai/guides/model-cards",
-   "default_max_tokens": 4096,
-   "default_context_window": 200000,
-   "model_contexts": {
-    "sonar-pro": 200000,
-    "sonar-reasoning-pro": 200000
-   }
-  },
-  {
-   "id": "workers-ai",
-   "display_name": "Cloudflare Workers AI",
-   "description": "Cloudflare（需账户 ID + Key）",
-   "icon": "cloudflare-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://api.cloudflare.com/client/v4/accounts",
-   "models_endpoint": "",
-   "models_format": "workers",
-   "default_models": [
-    "@cf/meta/llama-3.3-70b-instruct"
-   ],
-   "requires_key": true,
-   "docs_url": "https://developers.cloudflare.com/workers-ai/",
-   "default_max_tokens": 4096,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "@cf/meta/llama-3.3-70b-instruct": 131072
-   }
-  },
-  {
-   "id": "azure",
-   "display_name": "Azure OpenAI",
-   "description": "微软 Azure OpenAI（需资源名 / 部署名）",
-   "icon": "",
-   "protocol": "openai-compatible",
-   "auth_type": "api-key",
-   "base_url": "https://{resource}.openai.azure.com",
-   "api_version": "2024-12-01",
-   "models_endpoint": "openai/models",
-   "models_format": "azure",
-   "default_models": [],
-   "requires_key": true,
-   "docs_url": "https://learn.microsoft.com/azure/ai-services/openai/reference",
-   "default_max_tokens": 16384,
-   "default_context_window": 272000
-  },
-  {
-   "id": "volcengine",
-   "display_name": "火山方舟",
-   "description": "火山引擎 Ark（豆包系列，国内）",
-   "icon": "bytedance-color.svg",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "https://ark.cn-beijing.volces.com/api/v3",
-   "models_endpoint": "models",
-   "models_format": "openai",
-   "default_models": [
-    "doubao-seed-2.1-pro-preview",
-    "doubao-seed-2.0-pro",
-    "doubao-seed-2.0-lite"
-   ],
-   "requires_key": true,
-   "docs_url": "https://www.volcengine.com/docs/82379",
-   "default_max_tokens": 8192,
-   "default_context_window": 262144,
-   "model_contexts": {
-    "doubao-seed-2.1-pro-preview": 262144,
-    "doubao-seed-2.0-pro": 262144,
-    "doubao-seed-2.0-lite": 262144
-   }
-  },
-  {
-   "id": "custom",
-   "display_name": "自定义",
-   "description": "任意 OpenAI 兼容地址",
-   "icon": "",
-   "protocol": "openai-compatible",
-   "auth_type": "bearer",
-   "base_url": "",
-   "models_endpoint": "",
-   "models_format": "openai",
-   "default_models": [],
-   "requires_key": false,
-   "docs_url": "",
-   "default_max_tokens": 4096
-  },
-  {
-   "id": "cohere",
-   "display_name": "Cohere",
-   "description": "Command R+ / Aya 系列（官方独立 /v2/chat 协议）",
-   "icon": "cohere-color.svg",
-   "protocol": "cohere",
-   "auth_type": "bearer",
-   "base_url": "https://api.cohere.ai/v2",
-   "region_variants": [],
-   "region_bases": {},
-   "extra_headers": {},
-   "api_version": "",
-   "models_endpoint": "",
-   "models_format": "openai",
-   "models_query": {},
-   "default_models": [
-    "command-r-plus"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.cohere.com/reference/chat",
-   "default_max_tokens": 4096,
-   "default_context_window": 131072,
-   "model_contexts": {
-    "command-r-plus": 131072
-   }
-  },
-  {
-   "id": "ai21",
-   "display_name": "AI21",
-   "description": "Jamba 系列（官方 studio/v1/chat/completions）",
-   "icon": "",
-   "protocol": "ai21",
-   "auth_type": "bearer",
-   "base_url": "https://api.ai21.com/studio/v1",
-   "region_variants": [],
-   "region_bases": {},
-   "extra_headers": {},
-   "api_version": "",
-   "models_endpoint": "",
-   "models_format": "openai",
-   "models_query": {},
-   "default_models": [
-    "jamba-large"
-   ],
-   "requires_key": true,
-   "docs_url": "https://docs.ai21.com/docs/jamba-chat",
-   "default_max_tokens": 4096,
-   "default_context_window": 262144,
-   "model_contexts": {
-    "jamba-large": 262144
-   }
-  }
- ]
+  "source": "README 供应商表 + 官方 chat_completion_sources/src/endpoints/backends/chat-completions.js + 2026-08 联网核实",
+  "verified_at": "2026-08-09",
+  "providers": [
+    {
+      "id": "openai",
+      "display_name": "OpenAI",
+      "description": "ChatGPT 官方接口（GPT-5 系列）",
+      "icon": "openai.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.openai.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5-chat-latest"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.openai.com/docs/api-reference/models/list",
+      "default_max_tokens": 16384,
+      "default_context_window": 272000,
+      "model_contexts": {
+        "gpt-5.5": 272000,
+        "gpt-5.4": 400000,
+        "gpt-5.4-mini": 400000
+      }
+    },
+    {
+      "id": "anthropic",
+      "display_name": "Anthropic",
+      "description": "Claude 官方接口（Opus / Sonnet / Haiku）",
+      "icon": "anthropic.svg",
+      "protocol": "anthropic",
+      "auth_type": "x-api-key",
+      "base_url": "https://api.anthropic.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-haiku-4-5"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.claude.com/docs/en/api/models/list",
+      "default_max_tokens": 8192,
+      "default_context_window": 1000000,
+      "model_contexts": {
+        "claude-opus-5": 1000000,
+        "claude-sonnet-5": 1000000,
+        "claude-haiku-4-5": 200000
+      }
+    },
+    {
+      "id": "google",
+      "display_name": "Gemini (AI Studio)",
+      "description": "Gemini 官方接口（AI Studio Key）",
+      "icon": "gemini-color.svg",
+      "protocol": "google",
+      "auth_type": "google-key",
+      "base_url": "https://generativelanguage.googleapis.com",
+      "api_version": "v1beta",
+      "models_endpoint": "models",
+      "models_format": "google",
+      "default_models": [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3-pro"
+      ],
+      "requires_key": true,
+      "docs_url": "https://ai.google.dev/gemini-api/docs/models",
+      "default_max_tokens": 8192,
+      "default_context_window": 1048576,
+      "model_contexts": {
+        "gemini-3.6-flash": 1048576,
+        "gemini-3.5-flash": 1048576,
+        "gemini-3-pro": 1048576
+      }
+    },
+    {
+      "id": "vertexai",
+      "display_name": "Gemini (Vertex)",
+      "description": "Google Cloud Vertex AI（需服务账号，暂走高级自定义）",
+      "icon": "google-color.svg",
+      "protocol": "google",
+      "auth_type": "bearer",
+      "base_url": "https://us-central1-aiplatform.googleapis.com",
+      "region_variants": [
+        "us-central1",
+        "europe-west4",
+        "asia-southeast1"
+      ],
+      "models_endpoint": "",
+      "models_format": "google",
+      "default_models": [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3-pro"
+      ],
+      "requires_key": true,
+      "docs_url": "https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal",
+      "default_max_tokens": 8192,
+      "default_context_window": 1048576,
+      "model_contexts": {
+        "gemini-3.6-flash": 1048576,
+        "gemini-3.5-flash": 1048576,
+        "gemini-3-pro": 2097152
+      }
+    },
+    {
+      "id": "deepseek",
+      "display_name": "DeepSeek",
+      "description": "DeepSeek 官方（V4 Flash / Pro）",
+      "icon": "deepseek-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.deepseek.com/beta",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ],
+      "requires_key": true,
+      "docs_url": "https://api-docs.deepseek.com/",
+      "default_max_tokens": 8192,
+      "default_context_window": 1000000,
+      "model_contexts": {
+        "deepseek-v4-flash": 1000000,
+        "deepseek-v4-pro": 1000000
+      }
+    },
+    {
+      "id": "openrouter",
+      "display_name": "OpenRouter",
+      "description": "聚合平台：一个 Key 用多家模型",
+      "icon": "openrouter.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://openrouter.ai/api/v1",
+      "extra_headers": {
+        "HTTP-Referer": "https://github.com/heikeyangle-code/ember-inn",
+        "X-Title": "EmberInn"
+      },
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.5",
+        "deepseek/deepseek-v4-flash",
+        "google/gemini-3-pro",
+        "anthropic/claude-haiku-4-5"
+      ],
+      "requires_key": true,
+      "docs_url": "https://openrouter.ai/docs/api-reference/overview",
+      "default_max_tokens": 8192,
+      "model_contexts": {
+        "anthropic/claude-sonnet-5": 1000000,
+        "openai/gpt-5.5": 272000,
+        "deepseek/deepseek-v4-flash": 1000000
+      }
+    },
+    {
+      "id": "groq",
+      "display_name": "Groq",
+      "description": "极速推理（Llama 等开源模型）",
+      "icon": "groq.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.groq.com/openai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "qwen-qwq-32b",
+        "deepseek-r1-distill-llama-70b"
+      ],
+      "requires_key": true,
+      "docs_url": "https://console.groq.com/docs/models",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "llama-3.3-70b-versatile": 131072,
+        "llama-3.1-8b-instant": 131072
+      }
+    },
+    {
+      "id": "ollama",
+      "display_name": "Ollama (本地)",
+      "description": "本机跑模型，无需 Key",
+      "icon": "ollama.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "none",
+      "base_url": "http://localhost:11434/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "qwen3.5:32b",
+        "llama3.3:70b",
+        "qwen3-coder:30b"
+      ],
+      "requires_key": false,
+      "docs_url": "https://docs.ollama.com/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "qwen3.5:32b": 262144,
+        "llama3.3:70b": 131072,
+        "qwen3-coder:30b": 262144
+      }
+    },
+    {
+      "id": "mistral",
+      "display_name": "Mistral",
+      "description": "Mistral 官方（Medium / Small / Large）",
+      "icon": "mistral-color.svg",
+      "protocol": "mistral",
+      "auth_type": "bearer",
+      "base_url": "https://api.mistral.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "mistral-medium-3.5",
+        "mistral-small-4",
+        "mistral-large-latest"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.mistral.ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "mistral-medium-3.5": 131072,
+        "mistral-small-4": 131072,
+        "mistral-large-latest": 262144
+      }
+    },
+    {
+      "id": "xai",
+      "display_name": "xAI",
+      "description": "Grok 系列（4.3 / 4 / Fast）",
+      "icon": "xai.svg",
+      "protocol": "xai",
+      "auth_type": "bearer",
+      "base_url": "https://api.x.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "grok-4.3",
+        "grok-4",
+        "grok-4-fast"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.x.ai/",
+      "default_max_tokens": 8192,
+      "default_context_window": 1000000,
+      "model_contexts": {
+        "grok-4.3": 1000000,
+        "grok-4": 262144,
+        "grok-4-fast": 131072
+      }
+    },
+    {
+      "id": "moonshot",
+      "display_name": "Moonshot",
+      "description": "Kimi 官方（K3 / K2）",
+      "icon": "moonshot.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.moonshot.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "kimi-k3",
+        "kimi-k2.6",
+        "kimi-k2.7-code"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.moonshot.ai/docs/",
+      "default_max_tokens": 4096,
+      "default_context_window": 1000000,
+      "model_contexts": {
+        "kimi-k3": 1000000,
+        "kimi-k2.6": 262144,
+        "kimi-k2.7-code": 262144
+      }
+    },
+    {
+      "id": "zhipu",
+      "display_name": "智谱 AI",
+      "description": "智谱开放平台（GLM 系列，国内）",
+      "icon": "zhipu-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "glm-5.2",
+        "glm-5.1",
+        "glm-5"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.bigmodel.cn/cn/guide/start/model-overview",
+      "default_max_tokens": 4096,
+      "default_context_window": 200000,
+      "model_contexts": {
+        "glm-5.2": 200000,
+        "glm-5.1": 200000,
+        "glm-5": 200000
+      }
+    },
+    {
+      "id": "dashscope",
+      "display_name": "通义千问",
+      "description": "阿里云 DashScope（Qwen 系列，国内）",
+      "icon": "qwen-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "qwen3.7-max",
+        "qwen3.7-plus",
+        "qwen-flash"
+      ],
+      "requires_key": true,
+      "docs_url": "https://help.aliyun.com/zh/model-studio/",
+      "default_max_tokens": 8192,
+      "default_context_window": 262144,
+      "model_contexts": {
+        "qwen3.7-max": 262144,
+        "qwen3.7-plus": 262144,
+        "qwen-flash": 131072
+      }
+    },
+    {
+      "id": "siliconflow",
+      "display_name": "硅基流动",
+      "description": "国内开源模型聚合（DeepSeek / GLM / Qwen）",
+      "icon": "siliconflow.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.siliconflow.com/v1",
+      "region_variants": [
+        "国际",
+        "国内"
+      ],
+      "region_bases": {
+        "国际": "https://api.siliconflow.com/v1",
+        "国内": "https://api.siliconflow.cn/v1"
+      },
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "models_query": {
+        "type": "text",
+        "sub_type": "chat"
+      },
+      "default_models": [
+        "deepseek-ai/DeepSeek-V3.2",
+        "Pro/zai-org/GLM-5.1",
+        "Qwen/Qwen3.6-35B-A3B"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.siliconflow.cn/cn/",
+      "default_max_tokens": 8192,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "deepseek-ai/DeepSeek-V3.2": 131072,
+        "Pro/zai-org/GLM-5.1": 200000,
+        "Qwen/Qwen3.6-35B-A3B": 262144
+      }
+    },
+    {
+      "id": "zai",
+      "display_name": "Z.AI",
+      "description": "Z.AI（原智谱国际），GLM 系列",
+      "icon": "zhipu-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.z.ai/api/paas/v4",
+      "region_variants": [
+        "通用",
+        "编码"
+      ],
+      "region_bases": {
+        "通用": "https://api.z.ai/api/paas/v4",
+        "编码": "https://api.z.ai/api/coding/paas/v4"
+      },
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "glm-5.2",
+        "glm-5.1",
+        "glm-5"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.z.ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 200000,
+      "model_contexts": {
+        "glm-5.2": 200000,
+        "glm-5.1": 200000,
+        "glm-5": 200000
+      }
+    },
+    {
+      "id": "minimax",
+      "display_name": "MiniMax",
+      "description": "MiniMax（M3 / M2.7 + 海螺）",
+      "icon": "minimax-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.minimax.io/v1",
+      "region_variants": [
+        "国际",
+        "国内"
+      ],
+      "region_bases": {
+        "国际": "https://api.minimax.io/v1",
+        "国内": "https://api.minimaxi.com/v1"
+      },
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "MiniMax-M3",
+        "MiniMax-M2.7",
+        "MiniMax-M2"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.minimax.io/docs/guides/text-generation",
+      "default_max_tokens": 4096,
+      "default_context_window": 1000000,
+      "model_contexts": {
+        "MiniMax-M3": 1000000,
+        "MiniMax-M2.7": 1000000,
+        "MiniMax-M2": 1000000
+      }
+    },
+    {
+      "id": "fireworks",
+      "display_name": "Fireworks",
+      "description": "高性能模型托管（Qwen / Kimi / Step）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.fireworks.ai/inference/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "accounts/fireworks/models/qwen3p7-plus",
+        "accounts/fireworks/models/kimi-k2-instruct",
+        "accounts/fireworks/models/step-3p7-flash-nvfp4"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.fireworks.ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 262144,
+      "model_contexts": {
+        "accounts/fireworks/models/qwen3p7-plus": 262144,
+        "accounts/fireworks/models/kimi-k2-instruct": 262144,
+        "accounts/fireworks/models/step-3p7-flash-nvfp4": 131072
+      }
+    },
+    {
+      "id": "perplexity",
+      "display_name": "Perplexity",
+      "description": "联网搜索模型（Sonar 系列）",
+      "icon": "perplexity-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.perplexity.ai",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "default_models": [
+        "sonar-pro",
+        "sonar-reasoning-pro",
+        "sonar"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.perplexity.ai/guides/model-cards",
+      "default_max_tokens": 4096,
+      "default_context_window": 200000,
+      "model_contexts": {
+        "sonar-pro": 200000,
+        "sonar-reasoning-pro": 200000
+      }
+    },
+    {
+      "id": "workers-ai",
+      "display_name": "Cloudflare Workers AI",
+      "description": "Cloudflare（需账户 ID + Key）",
+      "icon": "cloudflare-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.cloudflare.com/client/v4/accounts",
+      "models_endpoint": "",
+      "models_format": "workers",
+      "default_models": [
+        "@cf/meta/llama-3.3-70b-instruct",
+        "@cf/qwen/qwen2.5-72b-instruct-awq",
+        "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
+      ],
+      "requires_key": true,
+      "docs_url": "https://developers.cloudflare.com/workers-ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "@cf/meta/llama-3.3-70b-instruct": 131072
+      }
+    },
+    {
+      "id": "azure",
+      "display_name": "Azure OpenAI",
+      "description": "微软 Azure OpenAI（需资源名 / 部署名）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "api-key",
+      "base_url": "https://{resource}.openai.azure.com",
+      "api_version": "2024-12-01",
+      "models_endpoint": "openai/models",
+      "models_format": "azure",
+      "default_models": [],
+      "requires_key": true,
+      "docs_url": "https://learn.microsoft.com/azure/ai-services/openai/reference",
+      "default_max_tokens": 16384,
+      "default_context_window": 272000
+    },
+    {
+      "id": "volcengine",
+      "display_name": "火山方舟",
+      "description": "火山引擎 Ark（豆包系列，国内）",
+      "icon": "bytedance-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "doubao-seed-2.1-pro-preview",
+        "doubao-seed-2.0-pro",
+        "doubao-seed-2.0-lite"
+      ],
+      "requires_key": true,
+      "docs_url": "https://www.volcengine.com/docs/82379",
+      "default_max_tokens": 8192,
+      "default_context_window": 262144,
+      "model_contexts": {
+        "doubao-seed-2.1-pro-preview": 262144,
+        "doubao-seed-2.0-pro": 262144,
+        "doubao-seed-2.0-lite": 262144
+      }
+    },
+    {
+      "id": "custom",
+      "display_name": "自定义",
+      "description": "任意 OpenAI 兼容地址",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "default_models": [],
+      "requires_key": false,
+      "docs_url": "",
+      "default_max_tokens": 4096
+    },
+    {
+      "id": "cohere",
+      "display_name": "Cohere",
+      "description": "Command R+ / Aya 系列（官方独立 /v2/chat 协议）",
+      "icon": "cohere-color.svg",
+      "protocol": "cohere",
+      "auth_type": "bearer",
+      "base_url": "https://api.cohere.ai/v2",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [
+        "command-r-plus"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.cohere.com/reference/chat",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "command-r-plus": 131072
+      }
+    },
+    {
+      "id": "ai21",
+      "display_name": "AI21",
+      "description": "Jamba 系列（官方 studio/v1/chat/completions）",
+      "icon": "",
+      "protocol": "ai21",
+      "auth_type": "bearer",
+      "base_url": "https://api.ai21.com/studio/v1",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [
+        "jamba-large"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.ai21.com/docs/jamba-chat",
+      "default_max_tokens": 4096,
+      "default_context_window": 262144,
+      "model_contexts": {
+        "jamba-large": 262144
+      }
+    }
+  ]
 }

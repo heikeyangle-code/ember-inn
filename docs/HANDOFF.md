@@ -674,6 +674,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 依据：HSV 取色是主流选色器范式（Android/iOS 系统取色器同构）；颜色全部取色自主题/所选色，11 套主题不受影响。
 - 影响：纯 App/UI 层，未动引擎。
 
+### 12.12 模型页 UI + 服务商默认值 + 官方字段审计（2026-08-11 补充）
+- **模型页（ProviderScreen）UI 升级**：ProviderCard 补彩色阴影、状态胶囊改 999 圆角、箭头换 PhosphorIcons；默认模型选择卡片同款阴影；ModelPickerSheet 选中行 tonal 高亮 + 主色 ✓ 圆点；服务商文案 22→24 家。
+- **providers.json 默认值**：24 家全部预置 base_url / default_models / default_context_window / default_max_tokens / docs_url；本次补 groq（qwen-qwq-32b、deepseek-r1-distill-llama-70b）、workers-ai（qwen2.5-72b、deepseek-r1-distill-qwen-32b）、openrouter（gemini-3-pro、claude-haiku-4-5）、perplexity（sonar）。azure/custom 保持空（Azure 部署名、自定义地址必须用户填，不硬编码）。
+- **官方字段审计（对照 SillyTavern V2 spec + char-data.js）**：角色详情页已 1:1 覆盖 V2 核心字段——name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings；extensions 已接线：talkativeness（话痨滑杆）、depth_prompt（深度提示）、regex_scripts（卡正则）、fav（置顶）、world（内嵌世界书，导入端处理 `embeded://`/`__asset:` 资源）。明确不做的两项（避免“无效接线”）：group_only（引擎无消费点，只加 UI 不生效）、官方“linked world name”字符串引用（本 App 用卡内嵌世界书，不依赖官方世界书文件体系）。
+- 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
+- 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。

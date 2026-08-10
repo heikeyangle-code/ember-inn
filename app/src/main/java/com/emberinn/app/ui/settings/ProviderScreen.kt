@@ -54,10 +54,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
+import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderSpec
 
@@ -87,7 +89,7 @@ fun ProviderListScreen(
 
     SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "提供商与模型", subtitle = "22 家服务商，点卡片配置", onBack = onBack, sky = settingsSky)
+        SettingsTopBar(title = "提供商与模型", subtitle = "24 家服务商，点卡片配置", onBack = onBack, sky = settingsSky)
         EmberTextField(
             value = query,
             onValueChange = { query = it },
@@ -178,7 +180,15 @@ private fun ProviderCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .emberShadow(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                radius = 10.dp,
+                offset = DpOffset(0.dp, 4.dp),
+                alpha = 0.08f,
+            ),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
@@ -198,7 +208,7 @@ private fun ProviderCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Surface(
-                        shape = MaterialTheme.shapes.small,
+                        shape = RoundedCornerShape(999.dp),
                         color = if (configured) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
@@ -226,7 +236,7 @@ private fun ProviderCard(
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -367,7 +377,16 @@ fun ProviderDetailScreen(
                 )
             }
             Card(
-                modifier = Modifier.fillMaxWidth().padding(top = 14.dp).clickable { showModelSheet = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp)
+                    .clickable { showModelSheet = true }
+                    .emberShadow(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        radius = 10.dp,
+                        offset = DpOffset(0.dp, 4.dp),
+                        alpha = 0.08f,
+                    ),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -382,7 +401,7 @@ fun ProviderDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
             EmberTextField(
@@ -512,25 +531,41 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
             )
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).padding(top = 4.dp)) {
                 items(filtered, key = { it }) { model ->
+                    val isSel = model == selected
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            vm.selectModel(model)
-                            onDismiss()
-                        }.padding(horizontal = 4.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (isSel) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else Color.Transparent,
+                            )
+                            .clickable {
+                                vm.selectModel(model)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 10.dp),
                     ) {
                         Text(
                             model,
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isSel) androidx.compose.ui.text.font.FontWeight.SemiBold else null,
                             modifier = Modifier.weight(1f),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        if (model == selected) {
-                            Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                        if (isSel) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                            ) {
+                                Text("✓", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
+                            }
                         }
                     }
-                    HorizontalDivider()
                 }
             }
             if (models.isEmpty()) {
