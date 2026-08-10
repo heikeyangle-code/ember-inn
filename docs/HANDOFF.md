@@ -294,7 +294,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（第 143 轮硬化：mermaid.min.js 本地资源离线渲染、HTML 简易消毒 script/iframe/object/embed/link/on*/javascript:、JS 仅 Mermaid 开启；第 177 轮放开网络与外链——远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关；官方 DOMPurify 为白名单近似，登记） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（第 143 轮硬化：mermaid.min.js 本地资源离线渲染、第 177 轮放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）；第 178 轮 JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记见 178）） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -605,11 +605,28 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
+## 8. 交互页面全开 + 气泡关闭行为确认（第 178 轮，2026-08-11，用户明确“活动页=交互页面”）
+
+**用户决定**：之前说的“能点的卡片/交互页面”就是活动页（带脚本的网页），全部放开，JS 开启。
+- WebViewHtml 去掉 jsEnabled 参数，settings.javaScriptEnabled/domStorageEnabled 恒为 true（HTML 消息与 Mermaid 都开）
+- sanitizeHtmlForWebView 缩减为只把 javascript: URL 替换成 blocked:（防卡片内脚本导航）；script/iframe/object/embed/link/on* 全部放行
+- **安全风险登记（已知偏差）**：消息现在可运行任意 JS、可发网络请求；因没有 addJavascriptInterface/JS 桥，脚本碰不到 Android API 和本地文件（除 WebView 内的 asset）；官方 DOMPurify 禁脚本，此为有意偏差，后续若收紧先改这里
+- 链接行为不变：http(s) 顶层导航仍走系统浏览器（shouldOverrideUrlLoading）；页面内 AJAX/轮播/弹层/表单等 JS 行为在卡片内正常
+
+**网页式消息的嵌入表现（维护速记）**：
+- 整条 HTML 套进我们注入官方字段 CSS 的最小页面壳，在透明 WebView 里渲染；消息自带的 <html>/<head>/<body>/<title> 被浏览器忽略，按“网页片段”显示
+- 背景透明 + 圆角裁剪（12dp）+ 自动测高（onPageFinished 取 scrollHeight）；高度上限 420dp，超出后卡片内部自己滚动，不撑爆聊天列表
+- 消息自带 <style> 可改整卡背景/颜色（全放开后的正常行为）
+- 视频/音频 <video controls>/<audio controls> 可播放；无 controls 的不自动播
+- JS 交互页（轮播、按钮弹层、表单）现在能跑；<a> 点击仍走系统浏览器
+
+**气泡关闭时（气泡样式≠bubble）**：AI 消息直接走 ChatMarkdown 无 Surface 路径，WebView 仍透明底 + 自带圆角 + 自动测高，显示正常；combinedClickable 长按菜单不挡 WebView 内部触摸。用户消息始终是右侧胶囊气泡，不受影响。
+
 ## 8. Web 兜底全部放开 + 官方映射后处理（第 177 轮，2026-08-11，用户要求全放开不加开关）
 
 **用户决定**：HTML 兜底不再拦网络/链接，全部放开，不加开关。
 - WebView 删掉 shouldInterceptRequest（远程图片/字体/媒体可正常加载）；http(s) 链接 shouldOverrideUrlLoading → 系统浏览器打开（FLAG_ACTIVITY_NEW_TASK）
-- JS 仍只有 Mermaid 开启——与官方一致：官方 DOMPurify 剥掉消息里的 script，消息本身不跑 JS；sanitize 仍剥 script/iframe/object/embed/link/on*/javascript:
+- JS 状态见第 178 轮：已全开（活动页/交互页面能跑），与官方 DOMPurify 禁脚本不同，登记为已知偏差 + 安全风险
 - 兜底标签检测补齐：font/span/div/style/table/img 之外，新增 a/blockquote/ul/ol/li/p/pre/h1-6/center/figure/video/audio/button（这些官方永远渲染，不能因“HTML 开关关着”变纯文本）
 
 **原生渲染架构升级：标记 + 最终 AnnotatedString 后处理（applyOfficialMarkers）**
@@ -638,8 +655,8 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **已知偏差（登记）**：
 1. `<style>`：官方默认剥掉（需角色允许 custom-style 才恢复，选择器还加 .mes_text 前缀）；我们按用户“全放开”默认放行，且样式只影响该消息自己的 WebView
 2. 外部媒体：官方默认 forbid_external_media=true（要设置才开）；我们按“全放开”直接允许
-3. 官方页面级交互（click-to-edit、消息按钮、自定义样式按角色开关）未实现；消息内脚本双方都不执行
-4. 消毒是白名单近似（DOMPurify 更细），只覆盖常见危险标签/属性
+3. 官方页面级交互（click-to-edit、消息按钮、自定义样式按角色开关）未实现；消息内脚本官方禁、我们已放开（第 178 轮，风险登记）
+4. 消毒原是白名单近似（DOMPurify 更细）；第 178 轮按用户要求全放开后只剩 javascript: URL 拦截
 
 **边缘情况（已按官方语义处理/需回归）**：
 - 引号内含粗体/斜体/下划线/代码：整体引用色，内部 u 仍下划线色，em 在 u 外/内按 CSS 层级

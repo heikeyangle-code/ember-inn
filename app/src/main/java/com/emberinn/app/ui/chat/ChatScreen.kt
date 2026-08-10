@@ -2639,8 +2639,8 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
     )
     annotatorSettingsRef = mdSettings
     when {
-        mermaid != null -> WebViewHtml(mermaid, modifier, jsEnabled = true)
-        rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier, jsEnabled = false)
+        mermaid != null -> WebViewHtml(mermaid, modifier)
+        rawHtml != null -> WebViewHtml(sanitizeHtmlForWebView(rawHtml), modifier)
         else -> Markdown(
             content = displayContent,
             modifier = modifier.fillMaxWidth(),
@@ -2770,24 +2770,16 @@ private fun looksLikeHtml(content: String): Boolean {
     return Regex("<[a-zA-Z][^>]*>").containsMatchIn(outsideFence)
 }
 
-/** 简易 HTML 消毒（官方用 DOMPurify；本实现做等价白名单近似：去 script/iframe/object/embed/link、on* 属性、javascript: URL）。 */
-private fun sanitizeHtmlForWebView(html: String): String {
-    var out = html
-    out = Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<iframe[\\s\\S]*?</iframe>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<object[\\s\\S]*?</object>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<embed[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<link[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("\\son[a-z]+\\s*=\\s*\"[^\"]*\"|\\son[a-z]+\\s*=\\s*'[^']*'", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("javascript:", RegexOption.IGNORE_CASE).replace(out, "blocked:")
-    return out
-}
+/** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
+ *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
+private fun sanitizeHtmlForWebView(html: String): String =
+    html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
 
-/** WebView 兜底渲染（HTML 消息 / Mermaid）。jsEnabled 仅 Mermaid 开启（与官方一致：消息脚本被 DOMPurify 剥掉）；
- *  网络与链接已放开：远程图片/资源可加载，http(s) 链接用系统浏览器打开。
+/** WebView 兜底渲染（HTML 消息 / Mermaid）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
+ *  官方 DOMPurify 禁脚本，此为已知偏差）；网络与外链已放开，http(s) 链接用系统浏览器打开。
  *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。 */
 @Composable
-private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: Boolean = false) {
+private fun WebViewHtml(html: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val density = LocalDensity.current
     var heightPx by remember { mutableIntStateOf(0) }
@@ -2801,8 +2793,8 @@ private fun WebViewHtml(html: String, modifier: Modifier = Modifier, jsEnabled: 
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(0x00000000)
-                settings.javaScriptEnabled = jsEnabled
-                settings.domStorageEnabled = jsEnabled
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
                 webViewClient = object : android.webkit.WebViewClient() {
                     // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
                     // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
