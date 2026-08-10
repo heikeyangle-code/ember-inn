@@ -72,6 +72,81 @@ object GlobalRegexPrefs {
             .apply()
     }
 
+    // ---- 预设正则（官方 preset 扩展：预设文件的 regex_scripts 扩展字段；App 用命名预设集模拟）----
+
+    fun presetSets(context: Context): Map<String, List<RegexPipelineScript>> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("preset_sets", "{}") ?: "{}"
+        return runCatching {
+            json.parseToJsonElement(raw).jsonObject.mapValues { (_, v) ->
+                (v as? JsonArray)?.mapNotNull { el -> runCatching { decodeScript(el.jsonObject) }.getOrNull() } ?: emptyList()
+            }
+        }.getOrDefault(emptyMap())
+    }
+
+    fun savePresetSets(context: Context, sets: Map<String, List<RegexPipelineScript>>) {
+        val obj = JsonObject(sets.mapValues { (_, v) -> JsonArray(v.map { encodeScript(it) }) })
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("preset_sets", obj.toString())
+            .apply()
+    }
+
+    fun activePresetSet(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("active_preset_set", "") ?: ""
+
+    fun saveActivePresetSet(context: Context, name: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("active_preset_set", name)
+            .apply()
+    }
+
+    /** 官方 preset_allowed_regex[apiId]：允许生效的预设集名列表（App 固定 api=openai）。 */
+    fun presetAllowed(context: Context, api: String): List<String> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("preset_allowed_regex", "{}") ?: "{}"
+        return runCatching {
+            json.parseToJsonElement(raw).jsonObject[api]?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        }.getOrDefault(emptyList())
+    }
+
+    fun savePresetAllowed(context: Context, api: String, names: List<String>) {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("preset_allowed_regex", "{}") ?: "{}"
+        val map = runCatching { json.parseToJsonElement(raw).jsonObject.toMutableMap() }.getOrDefault(mutableMapOf())
+        map[api] = JsonArray(names.map { JsonPrimitive(it) })
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("preset_allowed_regex", JsonObject(map).toString())
+            .apply()
+    }
+
+    private fun decodeScript(o: JsonObject): RegexPipelineScript = RegexPipelineScript(
+        scriptName = o["scriptName"]?.jsonPrimitive?.contentOrNull ?: "",
+        findRegex = o["findRegex"]?.jsonPrimitive?.contentOrNull ?: "",
+        replaceString = o["replaceString"]?.jsonPrimitive?.contentOrNull ?: "",
+        trimStrings = (o["trimStrings"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+        disabled = o["disabled"]?.jsonPrimitive?.booleanOrNull ?: false,
+        substituteRegex = o["substituteRegex"]?.jsonPrimitive?.intOrNull ?: 0,
+        placement = (o["placement"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.intOrNull } ?: listOf(1, 2, 5, 6),
+        markdownOnly = o["markdownOnly"]?.jsonPrimitive?.booleanOrNull ?: false,
+        promptOnly = o["promptOnly"]?.jsonPrimitive?.booleanOrNull ?: false,
+        runOnEdit = o["runOnEdit"]?.jsonPrimitive?.booleanOrNull ?: true,
+        minDepth = o["minDepth"]?.jsonPrimitive?.intOrNull,
+        maxDepth = o["maxDepth"]?.jsonPrimitive?.intOrNull,
+    )
+
+    private fun encodeScript(s: RegexPipelineScript): JsonObject = buildJsonObject {
+        put("scriptName", JsonPrimitive(s.scriptName))
+        put("findRegex", JsonPrimitive(s.findRegex))
+        put("replaceString", JsonPrimitive(s.replaceString))
+        put("trimStrings", JsonArray(s.trimStrings.map { JsonPrimitive(it) }))
+        put("disabled", JsonPrimitive(s.disabled))
+        put("substituteRegex", JsonPrimitive(s.substituteRegex))
+        put("placement", JsonArray(s.placement.map { JsonPrimitive(it) }))
+        put("markdownOnly", JsonPrimitive(s.markdownOnly))
+        put("promptOnly", JsonPrimitive(s.promptOnly))
+        put("runOnEdit", JsonPrimitive(s.runOnEdit))
+        s.minDepth?.let { put("minDepth", JsonPrimitive(it)) }
+        s.maxDepth?.let { put("maxDepth", JsonPrimitive(it)) }
+    }
+
     fun save(context: Context, scripts: List<RegexPipelineScript>) {
         val arr = JsonArray(scripts.map { s ->
             buildJsonObject {

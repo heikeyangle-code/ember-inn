@@ -219,6 +219,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 当前激活的预设正则集 + 允许标记（官方 preset_allowed_regex[api]，App 固定 openai）。 */
+    private fun presetRegex(): Pair<List<RegexPipelineScript>, Boolean> {
+        val sets = GlobalRegexPrefs.presetSets(getApplication())
+        val active = GlobalRegexPrefs.activePresetSet(getApplication())
+        val allowed = GlobalRegexPrefs.presetAllowed(getApplication(), "openai")
+        return (sets[active].orEmpty()) to (active.isNotBlank() && active in allowed)
+    }
+
     /** 官方 translate 扩展自动翻译模式（none/responses/inputs/both）。 */
     private fun translateAutoMode(): String = ServicesPrefs.translateAutoMode(getApplication())
 
@@ -722,10 +730,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             if (!firstMes.isNullOrBlank() || alternates.isNotEmpty()) {
                 // 官方 getFirstMessage：first_mes + alternate_greetings 全部存前过 AI_OUTPUT 正则，
                 // 作为第一条 AI 消息的 swipes（官方：swipes = [firstMes, ...alternateGreetings]）
+                val (presetScripts, presetAllowed) = presetRegex()
                 val scripts = ChatPromptFactory().resolveRegexScripts(
                     characterRawJson = currentCharacter?.rawJson,
                     globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
                     scopedAllowed = currentCharacter?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+                    presetScripts = presetScripts,
+                    presetAllowed = presetAllowed,
                 )
                 val regexOn = GlobalRegexPrefs.enabled(getApplication())
                 val greetings = (listOfNotNull(firstMes) + alternates)
@@ -794,10 +805,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _notice.value = null
         _impersonated.value = null
         // 官方 sendMessageAsUser：USER_INPUT 正则存前应用一次；总装 isPrompt=true 只跑 promptOnly 脚本
+        val (presetScripts, presetAllowed) = presetRegex()
         saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
             characterRawJson = character?.rawJson,
             globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
             scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+            presetScripts = presetScripts,
+            presetAllowed = presetAllowed,
         )
         val regexedText = if (GlobalRegexPrefs.enabled(getApplication())) {
             RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
@@ -1050,10 +1064,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
             else -> ChatPromptFactory.REGEX_AI_OUTPUT
         }
+        val (presetScripts, presetAllowed) = presetRegex()
         val scripts = ChatPromptFactory().resolveRegexScripts(
             characterRawJson = character?.rawJson,
             globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
             scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+            presetScripts = presetScripts,
+            presetAllowed = presetAllowed,
         )
         // 官方 updateMessage：getRegexedString(text, regexPlacement, { characterOverride, isEdit: true })；
         // 旁白不传 characterOverride（官方 narrator 分支）；disabledExtensions.regex 关闭时不应用
@@ -1594,10 +1611,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     )
                 } ?: emptyList()
             // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
+            val (presetScripts, presetAllowed) = presetRegex()
             saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
                 globalRegexScripts = globalRegexScripts,
                 scopedAllowed = regexScopedAllowed,
+                presetScripts = presetScripts,
+                presetAllowed = presetAllowed,
             )
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
@@ -1659,6 +1679,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 worldInfoSettings = worldInfoSettings,
                 globalRegexScripts = globalRegexScripts,
                 regexScopedAllowed = regexScopedAllowed,
+                regexPresetScripts = presetScripts,
+                regexPresetAllowed = presetAllowed,
                 isContinue = continueMode,
                 regexEnabled = regexEnabled,
                 reasoningToPrompts = reasoningToPrompts,

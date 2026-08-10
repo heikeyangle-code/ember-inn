@@ -167,7 +167,7 @@ PromptManagerCore（默认/用户顺序、enabled、injection_trigger、prepareP
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 27 例差分（第 132 轮扩：g/首匹配、i/m/s、x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过、u 原生 flag 应用、重复 flags 回退整体正则——全部对照官方 regexFromString 1:1）；世界书 key 解析 parseRegexFromString 差分 9→15 例（第 132 轮扩：x/X/A/J/U 无效 → null、重复 flag → null，WorldRegexUtils 已补重复 flag 拒绝；u/y 原生 flag 仍为边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
-✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（第 128 轮：sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（第 127 轮：isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（第 127 轮：character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（第 134 轮：设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；🟡 preset 脚本存储/UI（preset 恒空，结构已留）。
+✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（第 128 轮：sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（第 127 轮：isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（第 127 轮：character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（第 134 轮：设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；✅ preset 脚本存储/UI（第 146 轮：命名预设集保存/恢复/编辑 + preset_allowed_regex[openai] 允许开关 + 存前/总装/编辑/开场白全位点接线；App 无采样预设管理器，命名集为官方 preset 扩展 regex_scripts 字段的结构等价，登记）。
 
 ### 3.7 预设 ✅
 官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包。
@@ -373,8 +373,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | swipe picker / 书签 / URL 导入 | 文档标未做 | 复验已实现并更正文档 |
 | 死代码 | openComingSoon 未使用 | 已删除 |
 | 快照 | 未做 | ✅ 设置快照（第 144 轮：命名 zip 保存/恢复/删除设置+提供商档案，官方 user.js 语义；恢复需重启，登记） |
+| 预设正则 | preset 恒空 | ✅ 命名预设集 + 允许列表 + 全位点接线（第 146 轮，结构等价官方 preset 扩展字段） |
 
-**剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /while，需异步执行器）、表情精灵 App 层、preset 正则存储/UI、ComfyUI 图像来源（需 workflow 管理）。
+**剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /while，需异步执行器）、表情精灵 App 层、ComfyUI 图像来源（需 workflow 管理）。
 
 ## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
@@ -384,7 +385,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|---|
 | 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；`/if` 的 then/else 闭包同样预解析为文本（官方惰性）；命令数少于官方（第 130 轮补 renamechat/getchatname/setinput/bg/impersonate；/gen /genraw /trigger /inject /while 等异步类仍缺）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
 | 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
-| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2/SLASH_COMMAND=3/WORLD_INFO=5）。✅ 存前应用（第 128 轮）；✅ 总装 isPrompt=true 只跑 promptOnly（第 127/128 轮）；✅ 编辑 isEdit（第 129 轮）；✅ 允许列表（第 127 轮）；✅ 全局开关（第 134 轮）；剩余差异：①落盘文本宏未替换（发送时应用、请求等价，登记边界）；②preset 脚本存储/UI 未做（preset 恒空） | 🟡 宏落盘 + preset 边界，见 3.6 |
+| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2/SLASH_COMMAND=3/WORLD_INFO=5）。✅ 存前应用（第 128 轮）；✅ 总装 isPrompt=true 只跑 promptOnly（第 127/128 轮）；✅ 编辑 isEdit（第 129 轮）；✅ 允许列表（第 127 轮）；✅ 全局开关（第 134 轮）；剩余差异：①落盘文本宏未替换（发送时应用、请求等价，登记边界）；②preset 脚本存储/UI 已做（第 146 轮命名预设集，结构等价官方 preset 扩展字段；无采样预设管理器，登记） | 🟡 宏落盘 + preset 边界，见 3.6 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
 | 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 已编辑 automationId/preventAutoExecute（第 93 轮）；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |

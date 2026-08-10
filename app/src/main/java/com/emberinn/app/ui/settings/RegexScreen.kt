@@ -45,6 +45,28 @@ fun RegexScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var scripts by remember { mutableStateOf(GlobalRegexPrefs.read(context)) }
     var regexEnabled by remember { mutableStateOf(GlobalRegexPrefs.enabled(context)) }
+    // 预设正则（官方 preset 扩展 regex_scripts 字段；App 命名预设集模拟）
+    var presetSets by remember { mutableStateOf(GlobalRegexPrefs.presetSets(context)) }
+    var activePreset by remember { mutableStateOf(GlobalRegexPrefs.activePresetSet(context)) }
+    var presetAllowedOpenAI by remember { mutableStateOf(GlobalRegexPrefs.presetAllowed(context, "openai")) }
+    var newPresetName by remember { mutableStateOf("") }
+    var addingPreset by remember { mutableStateOf(false) }
+    var presetEditingIndex by remember { mutableStateOf<Int?>(null) }
+
+    fun savePresetSetsState(next: Map<String, List<RegexPipelineScript>>) {
+        GlobalRegexPrefs.savePresetSets(context, next)
+        presetSets = next
+    }
+
+    fun addPresetSet() {
+        val name = newPresetName.trim()
+        if (name.isBlank()) return
+        val next = if (presetSets.containsKey(name)) presetSets else presetSets + (name to emptyList())
+        savePresetSetsState(next)
+        activePreset = name
+        GlobalRegexPrefs.saveActivePresetSet(context, name)
+        newPresetName = ""
+    }
     var editing by remember { mutableStateOf<Int?>(null) }
     var adding by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf("") }
@@ -174,14 +196,150 @@ fun RegexScreen(onBack: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) { Text("＋ 新增全局正则") }
+
+            Spacer(Modifier.height(16.dp))
+            Text("预设正则", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "对齐官方 preset 扩展：脚本存于预设的 regex_scripts 扩展字段；App 用命名预设集模拟，允许列表按官方 preset_allowed_regex[api]（App 固定 openai）。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                OutlinedTextField(
+                    value = newPresetName,
+                    onValueChange = { newPresetName = it },
+                    label = { Text("新预设集名") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { addPresetSet() }) { Text("新建") }
+            }
+            if (presetSets.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    presetSets.keys.sorted().forEach { name ->
+                        FilterChip(
+                            selected = activePreset == name,
+                            onClick = {
+                                activePreset = name
+                                GlobalRegexPrefs.saveActivePresetSet(context, name)
+                            },
+                            label = { Text(name) },
+                        )
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
+                        onCheckedChange = { on ->
+                            if (activePreset.isBlank()) return@Switch
+                            val next = if (on) (presetAllowedOpenAI + activePreset).distinct() else presetAllowedOpenAI - activePreset
+                            presetAllowedOpenAI = next
+                            GlobalRegexPrefs.savePresetAllowed(context, "openai", next)
+                        },
+                    )
+                }
+                presetSets[activePreset].orEmpty().forEachIndexed { i, script ->
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    script.scriptName.ifBlank { "（未命名）" },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (script.scriptName.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    script.findRegex.ifBlank { "（空匹配式）" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = {
+                                presetEditingIndex = i
+                                draftName = script.scriptName
+                                draftFind = script.findRegex
+                                draftReplace = script.replaceString
+                                draftDisabled = script.disabled
+                                draftPlacement = script.placement
+                            }, modifier = Modifier.size(34.dp)) {
+                                Icon(PhosphorIcons.Edit, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                            }
+                            IconButton(onClick = {
+                                val list = presetSets[activePreset].orEmpty().filterIndexed { j, _ -> j != i }
+                                savePresetSetsState(presetSets + (activePreset to list))
+                            }, modifier = Modifier.size(34.dp)) {
+                                Icon(PhosphorIcons.Delete, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                            }
+                            Switch(
+                                checked = !script.disabled,
+                                onCheckedChange = { on ->
+                                    val list = presetSets[activePreset].orEmpty().mapIndexed { j, s -> if (j == i) s.copy(disabled = !on) else s }
+                                    savePresetSetsState(presetSets + (activePreset to list))
+                                },
+                            )
+                        }
+                    }
+                }
+                Button(
+                    onClick = {
+                        addingPreset = true
+                        adding = false
+                        editing = null
+                        presetEditingIndex = null
+                        draftName = ""
+                        draftFind = ""
+                        draftReplace = ""
+                        draftDisabled = false
+                        draftPlacement = listOf(1, 2)
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) { Text("＋ 新增预设正则") }
+            }
             Spacer(Modifier.height(12.dp))
         }
     }
 
-    if (adding || editing != null) {
+    if (adding || editing != null || presetEditingIndex != null) {
         AlertDialog(
-            onDismissRequest = { adding = false; editing = null },
-            title = { Text(if (adding) "新增全局正则" else "编辑全局正则") },
+            onDismissRequest = {
+                adding = false
+                editing = null
+                addingPreset = false
+                presetEditingIndex = null
+            },
+            title = {
+                Text(
+                    when {
+                        addingPreset || presetEditingIndex != null ->
+                            if (addingPreset) "新增预设正则" else "编辑预设正则"
+                        adding -> "新增全局正则"
+                        else -> "编辑全局正则"
+                    },
+                )
+            },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     OutlinedTextField(
@@ -246,17 +404,34 @@ fun RegexScreen(onBack: () -> Unit) {
                             disabled = draftDisabled,
                             placement = draftPlacement.ifEmpty { listOf(1, 2) },
                         )
-                        val next = if (adding) scripts + script else scripts.mapIndexed { i, s -> if (i == editing) script else s }
-                        persist(next)
+                        if (addingPreset || presetEditingIndex != null) {
+                            val list = presetSets[activePreset].orEmpty().toMutableList()
+                            val updated = if (addingPreset) {
+                                list + script
+                            } else {
+                                list.mapIndexed { i, s -> if (i == presetEditingIndex) script else s }
+                            }
+                            savePresetSetsState(presetSets + (activePreset to updated))
+                        } else {
+                            val next = if (adding) scripts + script else scripts.mapIndexed { i, s -> if (i == editing) script else s }
+                            persist(next)
+                        }
                     } else {
                         Toast.makeText(context, "匹配式不能为空", Toast.LENGTH_SHORT).show()
                     }
                     adding = false
                     editing = null
+                    addingPreset = false
+                    presetEditingIndex = null
                 }) { Text("确定") }
             },
             dismissButton = {
-                TextButton(onClick = { adding = false; editing = null }) { Text("取消") }
+                TextButton(onClick = {
+                    adding = false
+                    editing = null
+                    addingPreset = false
+                    presetEditingIndex = null
+                }) { Text("取消") }
             },
         )
     }
