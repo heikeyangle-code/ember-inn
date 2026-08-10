@@ -605,28 +605,11 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
-## 8. 交互代码块渲染器内嵌（第 179 轮，2026-08-11，用户要求调研并内嵌“能点的状态栏/按钮”）
+## 8. 交互代码块渲染器内嵌（第 179 轮，2026-08-11）
 
-**调研结论（网上核对酒馆助手 Tavern Helper + 阡濯 HTML 代码注入器源码）**：
-- 官方本体不跑消息脚本；能点按钮/能动状态栏的卡片，靠“渲染器/注入器”把消息里 ``` 包起来、
-  内容像 HTML（带 <body> 或以 < 开头以 > 结尾）的代码块，塞进独立 iframe 网页运行——卡内
-  <script>/onclick/Vue/React 在 iframe 里正常执行。HTML 代码注入器用 iframe + contentWindow.scrollHeight 测高；
-  Tavern Helper 渲染器额外支持头像类（.char-avatar/.user-avatar）、{{charAvatarPath}}/{{userAvatarPath}} 宏、vh 换算、代码折叠
-- 酒馆助手的“脚本库”是页面级后台 JS（监听事件/改世界书/注入提示词），依赖酒馆页面 DOM 与 API，
-  无法照搬；我们 App 的等价物是 Kotlin 引擎 + 快捷回复/斜杠，不做内嵌
-
-**已实现（embedInteractiveBlocks）**：
-- ChatMarkdown 检测：``` 内以 < 开头以 > 结尾或含 <body> → 整条消息进 WebView（原条件 + interactiveBlock）
-- WebView 页面里把该代码块替换成 <iframe srcdoc>（内容 HTML 实体转义）+ onload 自动测高；
-  非交互代码块保留 <pre><code>；围栏外纯文本转义后按 pre-wrap 显示（保留换行）；本身含 < 的 HTML 段原样放行
-- WebViewHtml onPageFinished 改为轮询测高（≤20 次、200ms 间隔、稳定 2 次停），等 iframe 加载完再撑外层高度
-- 与 JS 全开联动：卡内脚本现在真的能跑，这就是“能点的状态栏/按钮”
-
-**登记（未做，后续需要再做）**：
-- 头像类 .char-avatar/.user-avatar 与 {{charAvatarPath}}/{{userAvatarPath}} 宏（需把角色/用户头像 URL 传进 WebView）
-- Tavern Helper 的 min-height: *vh 换算、代码折叠、显示原代码/摘要模式
-- 后台脚本库（页面级自动化）不内嵌
-- 安全：交互代码块 = 执行任意脚本，等同第 178 轮风险登记（消息可发网络请求，碰不到 Android API）
+- 已内嵌“交互 HTML 卡片”渲染器（commit 560f251）：消息里 ``` 包着、内容像 HTML 的代码块 → 独立 iframe 运行，卡内脚本可交互
+- 机制、对照源码、差分结论、能力对照、安全与许可证：全部见 **第 10 章 扩展插件（交互 HTML 卡片 / iframe 渲染器）**
+- 本轮只记录结论：App 层实现，引擎未动；CI 以 560f251 为准
 
 ## 8. 交互页面全开 + 气泡关闭行为确认（第 178 轮，2026-08-11，用户明确“活动页=交互页面”）
 
@@ -898,6 +881,57 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 高级主题编辑器（P2 已登记，用户确认后开工）。
 - ✅ 世界书命中灯四色已做（8244c41：常驻/关键词/概率/向量，含图例）。
 - ✅ 字体包已做（7de20a3：霞鹜文楷下载 + 即时生效；衬线=思源宋体近似）。
+
+## 10. 扩展插件：交互 HTML 卡片 / iframe 渲染器（App 层）
+
+### 10.1 定位与结论（先读）
+- **这是 App/UI 层功能，不是引擎层**。engine 未改一行；官方 SillyTavern 本体也没有这个功能。
+- 官方本体通过 DOMPurify 剥掉消息里的 `<script>` 和 `on*`，所以“角色卡消息自带 JS 交互”在官方里跑不了。
+- 网上那些“能点的按钮、能动的状态栏”，靠的是第三方扩展：**Tavern Helper（酒馆助手）渲染器** 和 **阡濯《ST酒馆 html 代码注入器》**。
+  机制都是同一个：消息里 ``` 包起来的 HTML 代码块 → 放进独立 iframe 网页运行，卡内 `<script>`/`onclick`/Vue/React 在 iframe 里正常执行。
+- 我们按同一机制在 App 里实现了等价渲染器（第 179 轮，commit 560f251），并且因为 WebView JS 已全开（第 178 轮），效果等同甚至更直接。
+
+### 10.2 对照了哪些源代码 / 差分结论
+| 参照 | 用途 | 是否差分 |
+|---|---|---|
+| SillyTavern 1.18.0（~/sillytavern-ref，script.js messageFormatting + chats.js DOMPurify 钩子） | 确认官方禁消息脚本；本功能官方不存在 | 不适用（官方无此功能） |
+| Tavern Helper 渲染器文档（github.com/N0VI028/JS-Slash-Runner-Doc） | ``` + `<body>` 条件 → iframe；头像类/宏、vh 换算、代码折叠 | 否（文档级参考） |
+| 阡濯《ST酒馆 html 代码注入器》userscript（greasyfork 503174，CC BY-NC 4.0） | ``` 内以 `<` 开头以 `>` 结尾 → iframe；contentWindow.scrollHeight 测高 | 否（只参考机制，未复制代码） |
+- **差分验证：未做、也不适用**。差分体系（60 组 / 961 例）只保证“官方引擎逻辑 1:1”；这是第三方扩展 + App/UI 层，按 README/HANDOFF 规则为 UI 自主。验证方式 = CI 编译 + 本文行为规则 + 手工回归清单（见 10.5）。
+- 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
+
+### 10.3 实现位置与行为（维护必读）
+- `ChatScreen.kt / ChatMarkdown`：新增 `interactiveBlock` 检测——``` 内以 `<` 开头以 `>` 结尾 或 含 `<body>`（忽略大小写）→ 整条消息进 WebView（`rawHtml` 条件扩展为 `htmlEnabled || officialHtml || interactiveBlock`）。
+- `ChatScreen.kt / embedInteractiveBlocks`（在 officialStyledHtml 内对 WebView 页面调用）：
+  - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度；
+  - 非交互代码块 → `<pre><code>`（转义）；
+  - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
+- `ChatScreen.kt / WebViewHtml`：JS 恒开（第 178 轮）、网络与外链放开（第 177 轮）；`onPageFinished` 轮询测高（≤20 次、200ms 间隔、连续 2 次相同即停），等 iframe 加载完再撑外层高度；外层高度上限仍 420dp，超出后卡片内部滚动。
+- 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
+
+### 10.4 与 Tavern Helper 能力对照
+| 能力 | 状态 |
+|---|---|
+| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
+| 非交互代码块保留显示 | ✅ 已实现（pre/code） |
+| iframe 自动测高 | ✅ 已实现（onload + 外层轮询） |
+| 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
+| 头像类 `.char-avatar`/`.user-avatar` | ➖ 未做（需把角色/用户头像 URL 传进 WebView，登记 P2） |
+| `{{charAvatarPath}}`/`{{userAvatarPath}}` 宏 | ➖ 未做（同上） |
+| `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
+| 代码折叠 / 显示原代码 / 摘要模式 | ➖ 未做（登记） |
+| 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
+
+### 10.5 手工回归清单
+1. 消息 = 单个 ``` 包着 `<html><body><button onclick=...>`：卡片内按钮可点、脚本执行、高度自适应、不撑爆列表
+2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
+3. 纯 HTML 消息（无代码围栏）：行为同第 177/178 轮（透明底、图片加载、外链跳系统浏览器）
+4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
+5. 长交互页：外层 420dp 上限，内部滚动正常，聊天列表滚动不被卡死
+
+### 10.6 安全登记
+- 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；无 JS 桥，碰不到 Android API/本地文件（除 asset）。
+- 与第 178 轮 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
 ## 9. 维护速记（2026-08-10 精简归档）
 
