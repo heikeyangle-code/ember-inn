@@ -387,6 +387,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 122（2026-08-10：审计第十六批——系统消息防误操作）
+
+- 继续/重新生成/生成变体/滑动切回复对系统消息（is_system）一律拒绝并人话提示（官方 coreChat 过滤语义）
+- 群聊自动续写与 SWAP/natural 选人也排除系统消息
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 121（2026-08-10：系统消息 UI 语义对齐官方）
 
 - is_system 消息（/hide 隐藏、/comment 注释、系统旁白）渲染为系统样式：名字灰斜体、正文 onSurfaceVariant

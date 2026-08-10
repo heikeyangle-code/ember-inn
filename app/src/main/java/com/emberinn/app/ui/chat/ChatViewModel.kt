@@ -705,8 +705,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 滑动切回复：左滑 = 上一个变体（对齐官方 swipe_left，越界 wrap 回最后一条）。 */
     fun swipeLeft(index: Int) {
         if (_isStreaming.value) return
-        if (!chatStore.ensureSwipes(sessionId, index)) return
         val el = chatStore.messages(sessionId).getOrNull(index) ?: return
+        if (isSystemMsg(el)) return
+        if (!chatStore.ensureSwipes(sessionId, index)) return
         val count = chatStore.swipeCount(el)
         if (count <= 0) return
         val cur = chatStore.currentSwipeId(el)
@@ -718,9 +719,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 滑动切回复：右滑 = 下一个变体；越界时最后一条 AI 生成新变体（对齐官方 overswipe REGENERATE），其余 wrap 回第一条。 */
     fun swipeRight(index: Int) {
         if (_isStreaming.value) return
-        if (!chatStore.ensureSwipes(sessionId, index)) return
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index) ?: return
+        if (isSystemMsg(el)) return
+        if (!chatStore.ensureSwipes(sessionId, index)) return
         val count = chatStore.swipeCount(el)
         if (count <= 0) return
         val cur = chatStore.currentSwipeId(el)
@@ -743,7 +745,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
-        if (isUser(last)) return
+        if (isUser(last) || isSystemMsg(last)) {
+            _notice.value = "（最后一条不是可生成变体的 AI 回复。）"
+            return
+        }
         _notice.value = null
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
@@ -1054,7 +1059,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             onFinished = {
                 val msgs = chatStore.messages(sessionId)
                 // 官方 generateGroupWrapper：每人生成后按 shouldAutoContinue 自动续写（power_user.auto_continue，默认关）
-                val lastAi = msgs.lastOrNull { !isUser(it) }
+                val lastAi = msgs.lastOrNull { !isUser(it) && !isSystemMsg(it) }
                 val lastText = lastAi?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
                 val should = autoContinueRuns < 5 && GroupLoopEngine.shouldAutoContinue(
                     messageChunk = lastText.ifBlank { null },
