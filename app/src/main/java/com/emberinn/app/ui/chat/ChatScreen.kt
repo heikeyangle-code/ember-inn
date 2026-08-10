@@ -2801,7 +2801,7 @@ private fun ChatMarkdown(
     // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
     // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）。受扩展插件总开关控制
     val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
-    val interactiveBlock = interactiveCardsOn && Regex("```[a-zA-Z]*\\n[\\s\\S]*?```").findAll(content).any { m ->
+    val interactiveBlock = interactiveCardsOn && Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```").findAll(content).any { m ->
         val inner = m.groupValues[1].trim()
         (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
     }

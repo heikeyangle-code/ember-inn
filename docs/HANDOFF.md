@@ -612,6 +612,17 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 
 
+
+## 8. 修复消息含代码围栏崩溃：No group 1（第 192 轮，2026-08-11，App/UI 层，未动引擎）
+
+- 现象：聊天中消息出现 ``` 代码围栏时崩溃，
+  `java.lang.IndexOutOfBoundsException: No group 1` → MatcherMatchResult.groupValues[1] → ChatMarkdown
+- 根因：交互 HTML 卡片检测正则 `Regex("```[a-zA-Z]*\n[\s\S]*?```")` 没有捕获组，
+  却访问 `m.groupValues[1]`（embedInteractiveBlocks 的同名正则原本就带组，只有检测处漏了）
+- 修复：检测正则补捕获组 ```` ```[a-zA-Z]*
+([\s\S]*?)``` ````；
+  并全仓扫描 `groupValues[` 16 处，其余正则组数均匹配（标题/引号/下划线/font/mermaid/交互嵌入）
+
 ## 8. 聊天背景玻璃遮罩设置化 + 选色 + ColorField 美化（第 191 轮，2026-08-11，App/UI 层，未动引擎）
 
 - 用户要求“背景遮罩做成设置、强度之外还能选颜色”
