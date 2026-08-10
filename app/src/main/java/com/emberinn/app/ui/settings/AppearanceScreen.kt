@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
+import com.emberinn.app.ui.theme.VibePrefs
+import com.emberinn.app.ui.theme.VibePreset
+import com.emberinn.app.ui.theme.VibePresets
 import com.emberinn.app.ui.settings.AppearancePrefs
 
 /** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
@@ -53,6 +57,8 @@ import com.emberinn.app.ui.settings.AppearancePrefs
 fun AppearanceScreen(
     themeMode: ThemeMode,
     themePreset: ThemePreset,
+    vibe: VibePreset,
+    onVibeChanged: (VibePreset) -> Unit,
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -105,6 +111,77 @@ fun AppearanceScreen(
                     selected = preset.id == themePreset.id,
                     onClick = { onThemeChanged(themeMode, preset) },
                 )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val vibeContext = LocalContext.current
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("视觉氛围", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "配色性格：饱和度 / 冷暖 / 光效，全部可调，默认标准无滤镜",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) {
+                            VibePresets.forEach { p ->
+                                FilterChip(
+                                    selected = vibe.id == p.id,
+                                    onClick = {
+                                        if (p.id == "custom") {
+                                            val resolved = VibePrefs.resolve(vibeContext).copy(id = "custom")
+                                            VibePrefs.save(vibeContext, resolved)
+                                            onVibeChanged(resolved)
+                                        } else {
+                                            VibePrefs.save(vibeContext, p)
+                                            onVibeChanged(p)
+                                        }
+                                    },
+                                    label = { Text(p.name) },
+                                )
+                            }
+                        }
+                        if (vibe.id == "custom") {
+                            SliderRow(
+                                label = "降饱和",
+                                hint = "0 = 取色原样，0.5 = 接近灰",
+                                value = vibe.desaturateLight,
+                                range = 0f..0.5f,
+                            ) { v ->
+                                val next = VibePreset("custom", "自定义", "手动调节三项参数", v, v, vibe.warmth, vibe.glow)
+                                VibePrefs.save(vibeContext, next)
+                                onVibeChanged(next)
+                            }
+                            SliderRow(
+                                label = "冷暖",
+                                hint = "左冷右暖",
+                                value = vibe.warmth,
+                                range = -0.25f..0.25f,
+                            ) { v ->
+                                val next = VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, v, vibe.glow)
+                                VibePrefs.save(vibeContext, next)
+                                onVibeChanged(next)
+                            }
+                            SliderRow(
+                                label = "光效",
+                                hint = "空状态装饰与阴影强度（0 = 关闭）",
+                                value = vibe.glow,
+                                range = 0f..1f,
+                            ) { v ->
+                                val next = VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, vibe.warmth, v)
+                                VibePrefs.save(vibeContext, next)
+                                onVibeChanged(next)
+                            }
+                        }
+                    }
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val appearanceContext = LocalContext.current
@@ -271,6 +348,24 @@ fun AppearanceScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SliderRow(
+    label: String,
+    hint: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onChange: (Float) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(String.format("%.2f", value), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Slider(value = value, onValueChange = onChange, valueRange = range)
     }
 }
 

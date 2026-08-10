@@ -7,6 +7,7 @@ import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.UiSounds
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.ui.theme.LocalVibe
 
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
@@ -400,6 +401,7 @@ private fun SearchResultsColumn(
             EmberEmptyState(
                 title = "没有找到「$query」",
                 body = "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
+                icon = PhosphorIcons.Search,
                 modifier = Modifier.fillMaxSize().padding(32.dp),
             )
         } else {
@@ -600,6 +602,7 @@ private fun AiChatCard(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
+                alpha = 0.08f + 0.16f * LocalVibe.current.glow,
             ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -642,6 +645,7 @@ private fun RecentChatCard(
             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
             radius = 10.dp,
             offset = DpOffset(0.dp, 4.dp),
+            alpha = 0.08f + 0.16f * LocalVibe.current.glow,
         ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -704,6 +708,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                 color = seed?.copy(alpha = 0.22f) ?: MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
+                alpha = 0.08f + 0.16f * LocalVibe.current.glow,
             ),
         shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -787,11 +792,12 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
     EmberEmptyState(
         title = "欢迎来到余烬酒馆",
-        body = "导入第一张角色卡，故事会在余烬里继续",
+        body = "导入第一张角色卡，开始你的故事",
         actionLabel = "导入角色卡",
         onAction = onImport,
         secondaryLabel = "直接开始聊天",
         onSecondary = onDirectChat,
+        icon = PhosphorIcons.Person,
         modifier = Modifier.fillMaxSize().padding(32.dp),
     )
 }

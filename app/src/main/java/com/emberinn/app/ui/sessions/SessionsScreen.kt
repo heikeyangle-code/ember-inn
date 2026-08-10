@@ -536,10 +536,11 @@ private fun SheetRow(
 @Composable
 private fun EmptySessions(onNew: () -> Unit) {
     EmberEmptyState(
-        title = "炉火还没点起来",
-        body = "新建一个对话，或去角色页点一张角色卡，故事就从这里开始",
+        title = "还没有会话",
+        body = "新建一个对话，或去角色页点一张角色卡开始",
         actionLabel = "新建对话",
         onAction = onNew,
+        icon = PhosphorIcons.List,
         modifier = Modifier.fillMaxSize().padding(32.dp),
     )
 }

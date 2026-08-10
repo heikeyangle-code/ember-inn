@@ -1,11 +1,6 @@
 package com.emberinn.app.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,22 +9,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.ui.theme.LocalVibe
 
 /**
- * README UI 质感清单 11：品牌化空状态。
- * 余烬/炭火意象：微光圆环 + 弱脉冲动效，配"下一步做什么"按钮，绝不白屏。
+ * 通用空状态：中性配色 + 可选图标（默认不画品牌符号、无动画）。
+ * 装饰圆环的浓淡跟随“视觉氛围→光效”设置，默认标准档几乎不可见。
  */
 @Composable
 fun EmberEmptyState(
@@ -41,33 +40,32 @@ fun EmberEmptyState(
     onAction: (() -> Unit)? = null,
     secondaryLabel: String? = null,
     onSecondary: (() -> Unit)? = null,
-    /** 紧凑模式：用于设置子页/弹层内的行内空状态，不抢主按钮。 */
     compact: Boolean = false,
+    icon: ImageVector? = null,
 ) {
-    val transition = rememberInfiniteTransition(label = "ember-glow")
-    val glow by transition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 1500), RepeatMode.Reverse),
-        label = "ember-glow-alpha",
-    )
+    val glow = LocalVibe.current.glow
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(if (compact) 48.dp else 72.dp)) {
-            Canvas(modifier = Modifier.size(if (compact) 38.dp else 58.dp)) {
-                drawCircle(accent.copy(alpha = 0.12f * glow), radius = size.minDimension / 2)
-                drawCircle(accent.copy(alpha = 0.22f * glow), radius = size.minDimension * 0.38f)
+        if (icon != null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(if (compact) 44.dp else 60.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.06f + 0.06f * glow)),
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = accent.copy(alpha = 0.8f),
+                    modifier = Modifier.size(if (compact) 20.dp else 28.dp),
+                )
             }
-            Text(
-                "✦",
-                style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayMedium,
-                color = accent.copy(alpha = 0.9f),
-            )
+            Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
         }
-        Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
         Text(
             title,
             style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,

@@ -8,30 +8,34 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 
-/**
- * README 主题系统：1 个 seed（预设主题/角色卡取色）→ 生成整套 M3 配色。
- * 浅色取低饱和容器，深色取提亮主色；背景用各主题的纸色/夜色。
- */
+/** 当前视觉氛围：供空状态/阴影等组件读取；默认标准=无品牌滤镜。 */
+val LocalVibe = staticCompositionLocalOf { VibePresets.first() }
+
 @Composable
 fun EmberInnTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     preset: ThemePreset = ThemePresets.first(),
+    vibe: VibePreset = VibePresets.first(),
     shapes: Shapes = Shapes(),
     fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) preset.darkScheme() else preset.lightScheme(),
-        typography = typographyWith(fontFamily),
-        shapes = shapes,
-        content = content,
-    )
+    CompositionLocalProvider(LocalVibe provides vibe) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) preset.darkScheme(vibe) else preset.lightScheme(vibe),
+            typography = typographyWith(fontFamily),
+            shapes = shapes,
+            content = content,
+        )
+    }
 }
 
 /** M3 1.4 没有 defaultFontFamily 参数：整体换字体族时逐样式 copy。 */
@@ -79,13 +83,14 @@ private fun typographyWith(fontFamily: FontFamily): Typography {
     )
 }
 
-private fun ThemePreset.lightScheme(): ColorScheme {
-    // README 清单 10：品牌滤镜——算法取色后统一降饱和，任何 seed 都带余烬的低饱和气质
-    val primary = desaturate(darken(seed, 0.06f), 0.22f)
+private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
+    // 视觉氛围：降饱和强度 + 冷暖偏移来自 vibe（默认标准 = 0，取色原样输出）
+    val bg = tinted(lightBg, vibe.warmth)
+    val primary = desaturate(darken(seed, 0.06f), vibe.desaturateLight)
     val onBackground = darken(lightBg, 0.82f)
     val onSurface = onBackground
-    val secondary = desaturate(darken(this.secondary, 0.05f), 0.20f)
-    val tertiary = desaturate(darken(this.tertiary, 0.05f), 0.20f)
+    val secondary = desaturate(darken(this.secondary, 0.05f), vibe.desaturateLight)
+    val tertiary = desaturate(darken(this.tertiary, 0.05f), vibe.desaturateLight)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
@@ -99,27 +104,28 @@ private fun ThemePreset.lightScheme(): ColorScheme {
         onTertiary = readableOn(tertiary),
         tertiaryContainer = lighten(this.tertiary, 0.80f),
         onTertiaryContainer = darken(this.tertiary, 0.42f),
-        background = lightBg,
+        background = bg,
         onBackground = onBackground,
-        surface = lightBg,
+        surface = bg,
         onSurface = onSurface,
-        surfaceVariant = lerp(lightBg, onSurface, 0.08f),
+        surfaceVariant = lerp(bg, onSurface, 0.08f),
         onSurfaceVariant = darken(lightBg, 0.55f),
         outline = darken(lightBg, 0.38f),
-        surfaceContainerLowest = lightBg,
-        surfaceContainerLow = lerp(lightBg, onSurface, 0.035f),
-        surfaceContainer = lerp(lightBg, onSurface, 0.06f),
-        surfaceContainerHigh = lerp(lightBg, onSurface, 0.09f),
-        surfaceContainerHighest = lerp(lightBg, onSurface, 0.12f),
+        surfaceContainerLowest = bg,
+        surfaceContainerLow = lerp(bg, onSurface, 0.035f),
+        surfaceContainer = lerp(bg, onSurface, 0.06f),
+        surfaceContainerHigh = lerp(bg, onSurface, 0.09f),
+        surfaceContainerHighest = lerp(bg, onSurface, 0.12f),
     )
 }
 
-private fun ThemePreset.darkScheme(): ColorScheme {
-    val primary = desaturate(lighten(seed, 0.24f), 0.18f)
+private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
+    val bg = tinted(darkBg, vibe.warmth)
+    val primary = desaturate(lighten(seed, 0.24f), vibe.desaturateDark)
     val onBackground = lighten(darkBg, 0.78f)
     val onSurface = onBackground
-    val secondary = desaturate(lighten(this.secondary, 0.20f), 0.16f)
-    val tertiary = desaturate(lighten(this.tertiary, 0.20f), 0.16f)
+    val secondary = desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark)
+    val tertiary = desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark)
     return darkColorScheme(
         primary = primary,
         onPrimary = darken(seed, 0.55f),
@@ -133,18 +139,18 @@ private fun ThemePreset.darkScheme(): ColorScheme {
         onTertiary = darken(this.tertiary, 0.52f),
         tertiaryContainer = darken(this.tertiary, 0.45f),
         onTertiaryContainer = lighten(this.tertiary, 0.68f),
-        background = darkBg,
+        background = bg,
         onBackground = onBackground,
-        surface = lighten(darkBg, 0.03f),
+        surface = lighten(bg, 0.03f),
         onSurface = onSurface,
-        surfaceVariant = lighten(darkBg, 0.12f),
+        surfaceVariant = lighten(bg, 0.12f),
         onSurfaceVariant = lighten(darkBg, 0.55f),
         outline = lighten(darkBg, 0.32f),
-        surfaceContainerLowest = darkBg,
-        surfaceContainerLow = lighten(darkBg, 0.05f),
-        surfaceContainer = lighten(darkBg, 0.08f),
-        surfaceContainerHigh = lighten(darkBg, 0.11f),
-        surfaceContainerHighest = lighten(darkBg, 0.14f),
+        surfaceContainerLowest = bg,
+        surfaceContainerLow = lighten(bg, 0.05f),
+        surfaceContainer = lighten(bg, 0.08f),
+        surfaceContainerHigh = lighten(bg, 0.11f),
+        surfaceContainerHighest = lighten(bg, 0.14f),
     )
 }
 
@@ -155,7 +161,13 @@ private fun darken(color: Color, fraction: Float): Color = lerp(color, Color.Bla
 private fun readableOn(color: Color): Color =
     if (color.luminance() > 0.5f) Color(0xFF221A16) else Color.White
 
-/** 品牌滤镜：把颜色往同亮度中性色靠拢 amount 比例，降低饱和度。 */
+/** 冷暖偏移：>0 偏暖黄，<0 偏冷蓝，幅度由 vibe.warmth 决定（默认 0 = 不偏移）。 */
+private fun tinted(color: Color, warmth: Float): Color {
+    val target = if (warmth > 0) Color(0xFFFFDDB0) else Color(0xFFC7D8EC)
+    return lerp(color, target, kotlin.math.abs(warmth).coerceIn(0f, 1f))
+}
+
+/** 视觉氛围滤镜：把颜色往同亮度中性色靠拢 amount 比例，降低饱和度。 */
 private fun desaturate(color: Color, amount: Float): Color {
     val l = color.luminance()
     return lerp(color, Color(l, l, l), amount.coerceIn(0f, 1f))

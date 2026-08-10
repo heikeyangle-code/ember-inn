@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
+import com.emberinn.app.ui.theme.VibePreset
+import com.emberinn.app.ui.theme.VibePresets
 
 private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
 
@@ -59,6 +61,8 @@ private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, 
 fun SettingsScreen(
     themeMode: ThemeMode,
     themePreset: ThemePreset,
+    vibe: VibePreset = VibePresets.first(),
+    onVibeChanged: (VibePreset) -> Unit = {},
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     deepLink: String? = null,
     onDeepLinkConsumed: () -> Unit = {},
@@ -117,6 +121,8 @@ fun SettingsScreen(
         SettingsPage.APPEARANCE -> AppearanceScreen(
             themeMode = themeMode,
             themePreset = themePreset,
+            vibe = vibe,
+            onVibeChanged = onVibeChanged,
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )

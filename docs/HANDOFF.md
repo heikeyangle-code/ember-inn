@@ -541,14 +541,14 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 触觉铺满：发送=Confirm、删除=Reject、开关=ToggleOn/Off、点角色/会话/新建/导入=SegmentTick 轻选；
   ChatScreen 原有 Confirm/Reject 保留并补音效
 - 骨架屏：提供商模型列表“测试连接中”显示 5 行主题色骨架（替代灰色转圈）
-- 空状态品牌化：首页（欢迎来到余烬酒馆）、会话（炉火还没点起来）、聊天（打招呼）全部换 EmberEmptyState
+- 空状态统一：首页/会话/聊天全部换 EmberEmptyState（中性图标 + 引导按钮，无品牌符号/动画）
 - 音效：发送/删除/全部开关，外观设置新增「交互音效」开关
 
 **第二批落地（bfda115）**：
 - 六套预设主题各自形状性格：墨韵/青瓷=圆润 16dp、夜航/简约纸感=系统 12dp、丹砂=方正 4dp、琉璃=浑圆 24dp
   （ThemePreset.shape；角色配方 > 用户全局档 > 预设性格）
-- 品牌滤镜：Theme.kt 新增 desaturate，算法取色后统一降饱和（浅色 0.20-0.22 / 深色 0.16-0.18），
-  任何 seed 都带余烬的低饱和气质
+- 视觉氛围可调（vibe）：降饱和 / 冷暖 / 光效三项参数；预设=标准（无滤镜）、柔和、清冷、明快、自定义滑块；
+  默认“标准”取色原样输出，无强制品牌气质（用户要求，见第 160 轮）
 - 形状语言真正区分角色：角色卡按自身主题配方 shape 取圆角（square=4 / circle=24 / rounded=16 / 默认 16），
   与颜色一起形成每卡专属氛围
 
@@ -561,9 +561,20 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - DisplayPipelineTest 失败 → balanceStreamingDelimiters 补“行尾已以该定界符结尾则不补”规则（见上节登记）
 - @file:OptIn 文件里 import 插到 package 前导致 CharacterDetailScreen 语法错误 → 已移回 package 后；
   EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
+- Switch→EmberSwitch 全局改名后，RegexScreen 里 `return@Switch` 标签不同步 → 已改 `return@EmberSwitch`（dbf321d）
 
-**剩余 UI 待办（下一批）**：字体包（霞鹜文楷/思源宋体下载接入）、世界书命中灯四色、每卡消息样式配方、
+## 8. 去掉强制品牌气质，视觉氛围可调（第 160 轮，2026-08-11，用户要求）
+
+- 按用户要求移除上一轮加的“余烬品牌感”：空状态去掉 ✦/微光动画，改中性图标（Person/List/Book/Search）+ 中性文案；
+  去掉强制暖调降饱和“品牌滤镜”，默认“标准”= 算法取色原样输出（desat 0 / warmth 0）
+- 新增「视觉氛围」设置（外观与主题）：标准 / 柔和 / 清冷 / 明快 / 自定义；
+  自定义=降饱和（0–0.5）、冷暖（±0.25）、光效（0–1）三个滑块，实时生效并持久化（VibePrefs）
+- 阴影强度跟随光效设置（LocalVibe.glow → emberShadow alpha），标准档阴影自然
+- 数据流：MainActivity 持有 vibe → EmberInnTheme(vibe) + MainScreen → SettingsScreen → AppearanceScreen
+
+**剩余 UI 待办（下一批）**：字体包（霞鹜文楷/思源宋体下载接入）、每卡消息样式配方、
 快捷回复全屏编辑器、设置页再打磨（分组卡片已做）、LaTeX/MeshGradient（版本风险，待 spike）。
+- ✅ 世界书命中灯四色已做（8244c41：常驻/关键词/概率/向量，含图例）。
 
 ## 9. 维护速记（2026-08-10 精简归档）
 
@@ -575,6 +586,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 2. 缺 import、括号不配对、属性初始化引用后声明属性（前向引用）→ push 前自查
 3. M3 1.4：Typography 无 defaultFontFamily（需逐样式 copy）；Modifier.padding 不能混用 horizontal+top
 4. 正则字符串里 `\s` 必须双反斜杠（非 raw string 时）；helper 函数别嵌进局部函数
+4.5. 全局替换函数名时，`return@旧名` 标签必须同步改名（Switch→EmberSwitch 已踩坑）
 5. Modifier 扩展若用 rememberUpdatedState，必须包 `Modifier.composed`（@Composable 上下文）
 6. App 无法本地编译，全靠 CI；push 后以 `gh run list` 为准，网络不稳就重试
 

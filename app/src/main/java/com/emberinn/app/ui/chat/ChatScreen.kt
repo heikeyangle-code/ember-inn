@@ -2561,6 +2561,7 @@ private fun EmptyChat(name: String, accent: Color) {
         title = "和 ${name.ifBlank { "TA" }} 打个招呼吧",
         body = "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
         accent = accent,
+        icon = PhosphorIcons.Book,
         modifier = Modifier.fillMaxWidth().padding(top = 72.dp, bottom = 24.dp),
     )
 }

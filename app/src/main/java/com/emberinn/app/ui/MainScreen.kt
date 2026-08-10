@@ -48,6 +48,8 @@ private val Tabs = listOf(
 fun MainScreen(
     themeMode: com.emberinn.app.ui.theme.ThemeMode = com.emberinn.app.ui.theme.ThemeMode.SYSTEM,
     themePreset: com.emberinn.app.ui.theme.ThemePreset = com.emberinn.app.ui.theme.ThemePresets.first(),
+    vibe: com.emberinn.app.ui.theme.VibePreset = com.emberinn.app.ui.theme.VibePresets.first(),
+    onVibeChanged: (com.emberinn.app.ui.theme.VibePreset) -> Unit = {},
     onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
@@ -161,6 +163,8 @@ fun MainScreen(
                         },
                         themeMode = themeMode,
                         themePreset = themePreset,
+                        vibe = vibe,
+                        onVibeChanged = onVibeChanged,
                         onThemeChanged = onThemeChanged,
                         settingsDeepLink = settingsDeepLink,
                         onSettingsDeepLinkConsumed = { settingsDeepLink = null },
@@ -234,6 +238,8 @@ fun MainScreen(
                 },
                 themeMode = themeMode,
                 themePreset = themePreset,
+                vibe = vibe,
+                onVibeChanged = onVibeChanged,
                 onThemeChanged = onThemeChanged,
                 settingsDeepLink = settingsDeepLink,
                 onSettingsDeepLinkConsumed = { settingsDeepLink = null },
@@ -252,6 +258,8 @@ private fun TabContent(
     onOpenSession: (com.emberinn.app.data.SessionRecord) -> Unit,
     themeMode: com.emberinn.app.ui.theme.ThemeMode,
     themePreset: com.emberinn.app.ui.theme.ThemePreset,
+    vibe: com.emberinn.app.ui.theme.VibePreset,
+    onVibeChanged: (com.emberinn.app.ui.theme.VibePreset) -> Unit,
     onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit,
     settingsDeepLink: String?,
     onSettingsDeepLinkConsumed: () -> Unit,
@@ -268,6 +276,8 @@ private fun TabContent(
         else -> com.emberinn.app.ui.settings.SettingsScreen(
             themeMode = themeMode,
             themePreset = themePreset,
+            vibe = vibe,
+            onVibeChanged = onVibeChanged,
             onThemeChanged = onThemeChanged,
             deepLink = settingsDeepLink,
             onDeepLinkConsumed = onSettingsDeepLinkConsumed,

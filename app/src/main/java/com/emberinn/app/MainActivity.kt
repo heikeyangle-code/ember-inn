@@ -25,6 +25,8 @@ import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePrefs
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
+import com.emberinn.app.ui.theme.VibePrefs
+import com.emberinn.app.ui.theme.VibePreset
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
+            var vibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
             val recipe by ThemeState.recipe.collectAsState()
             val seedColor by ThemeState.seedColor.collectAsState()
             // 第三层角色主题配方：浅深锁定 > 全局模式；seed > 角色取色 > 全局预设
@@ -92,10 +95,15 @@ class MainActivity : ComponentActivity() {
                 "source", "serif" -> FontFamily.Serif
                 else -> FontFamily.Default
             }
-            EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, shapes = shapes, fontFamily = fontFamily) {
+            EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, vibe = vibe, shapes = shapes, fontFamily = fontFamily) {
                 MainScreen(
                     themeMode = mode,
                     themePreset = preset,
+                    vibe = vibe,
+                    onVibeChanged = { newVibe ->
+                        vibe = newVibe
+                        VibePrefs.save(this, newVibe)
+                    },
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode
                         preset = newPreset
