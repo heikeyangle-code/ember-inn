@@ -1477,6 +1477,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
             val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
             val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
+            val reasoningToPrompts = GenerationPrefs.reasoningToPrompts(getApplication())
             // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
             saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
@@ -1545,6 +1546,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 regexScopedAllowed = regexScopedAllowed,
                 isContinue = continueMode,
                 regexEnabled = regexEnabled,
+                reasoningToPrompts = reasoningToPrompts,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

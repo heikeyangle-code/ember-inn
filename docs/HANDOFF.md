@@ -57,11 +57,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（57 组差分 fixture，共 909 例对拍，全部通过；2026-08-10 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 57 组 / 909 例（机器数）为准。
+**已覆盖（58 组差分 fixture，共 916 例对拍，全部通过；2026-08-10 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 58 组 / 916 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 57 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 909 例。
+> 注：脚本数 58 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 916 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
@@ -117,6 +117,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 提示词总装整链（prepareOpenAIMessages+populateChatCompletion，含工具/媒体/推理签名/continue-nudge 分支） | prepare-messages-official.mjs | PromptPipelineDiffTest | 20 |
 | 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
 | 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
+| 思考入提示词（PromptReasoning.addToMessage） | prompt-reasoning-official.mjs | PromptReasoningDiffTest | 7 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
 
@@ -160,7 +161,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
-✅ 角色 system_prompt / 剧情后指令已真正进请求体（2026-08-10 第 79 轮修复：官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride，App 此前漏传——角色系统提示词从未生效；现按官方语义传 fields.system/jailbreak，且 chat_metadata 同名键优先）；✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ 角色宏环境接线（2026-08-10：ChatPromptFactory env.character=CharacterFields(system/jailbreak/description/…/charDepthPrompt)+system.model，官方 MacroEnvBuilder 映射 1:1，{{chardepthprompt}} 等历史消息宏可用）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
+✅ 历史 reasoning 注入（第 135 轮：PromptReasoningEngine.addToMessage 官方 1:1 差分 7 例；App 总装时先过 REASONING 正则（isPrompt=true+depth）再注入；power_user.reasoning.add_to_prompts 默认关，设置→服务开关；continue 最后一条 prefix 不受开关限制，官方语义）；✅ 角色 system_prompt / 剧情后指令已真正进请求体（2026-08-10 第 79 轮修复：官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride，App 此前漏传——角色系统提示词从未生效；现按官方语义传 fields.system/jailbreak，且 chat_metadata 同名键优先）；✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ 角色宏环境接线（2026-08-10：ChatPromptFactory env.character=CharacterFields(system/jailbreak/description/…/charDepthPrompt)+system.model，官方 MacroEnvBuilder 映射 1:1，{{chardepthprompt}} 等历史消息宏可用）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；🟡 工具真正执行在 App 扩展注册表。
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换 + 27 例差分（第 132 轮扩：g/首匹配、i/m/s、x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过、u 原生 flag 应用、重复 flags 回退整体正则——全部对照官方 regexFromString 1:1）；世界书 key 解析 parseRegexFromString 差分 9→15 例（第 132 轮扩：x/X/A/J/U 无效 → null、重复 flag → null，WorldRegexUtils 已补重复 flag 拒绝；u/y 原生 flag 仍为边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
@@ -350,7 +351,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 57 组差分 fixture / 909 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
+- 58 组差分 fixture / 916 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 

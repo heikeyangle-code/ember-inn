@@ -107,6 +107,7 @@ class ChatRepository(context: Context) {
         regexPresetAllowed: Boolean = false,
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
+        reasoningToPrompts: Boolean = false,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -176,6 +177,7 @@ class ChatRepository(context: Context) {
             regexPresetAllowed = regexPresetAllowed,
             isContinue = isContinue,
             regexEnabled = regexEnabled,
+            reasoningToPrompts = reasoningToPrompts,
         )
         onPrepared?.invoke(prepared)
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。

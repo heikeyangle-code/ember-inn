@@ -18,6 +18,8 @@ import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptAssembler
 import com.emberinn.engine.prompt.PromptPipeline
+import com.emberinn.engine.prompt.PromptReasoningEngine
+import com.emberinn.engine.prompt.ReasoningPromptSettings
 import com.emberinn.engine.prompt.PromptUtils
 import com.emberinn.engine.regex.RegexPipelineEngine
 import com.emberinn.engine.regex.RegexScopeResolver
@@ -60,6 +62,7 @@ class ChatPromptFactory {
         const val REGEX_AI_OUTPUT = 2
         const val REGEX_SLASH_COMMAND = 3
         const val REGEX_WORLD_INFO = 5
+        const val REGEX_REASONING = 6
 
         const val DEFAULT_IMPERSONATION_PROMPT =
             "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
@@ -130,6 +133,7 @@ class ChatPromptFactory {
         regexPresetAllowed: Boolean = false,
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
+        reasoningToPrompts: Boolean = false,
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -261,9 +265,44 @@ class ChatPromptFactory {
         // 总装内部 populationInjectionPrompts 会 reverse 一次、历史填充再 reverse 一次。
         // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
         // 向量重排后消息顺序/内容以引擎结果为准；原 JSONL 下标用于携带 extra.media。
-        val indexedChat = vectorTransform?.let { transform ->
+        var indexedChat = vectorTransform?.let { transform ->
             mapVectorMessages(transform.newChat, indexedMessages)
         } ?: indexedMessages
+        // 官方 openai.js prepareMessages：历史 AI 消息的 extra.reasoning 先过 REASONING 正则
+        // （isPrompt=true + depth），再按 PromptReasoning.addToMessage 注入正文。
+        // add_to_prompts 默认关（非 prefix 不注入）；continue 最后一条 prefix 不受开关限制（官方语义）。
+        val reasoningEngine = PromptReasoningEngine(substitute = { MacroEngine.substitute(it, env) })
+        indexedChat = indexedChat.mapIndexed { i, pair ->
+            val (idx, m) = pair
+            val el = history.getOrNull(idx)?.jsonObject
+            val extra = el?.get("extra") as? JsonObject
+            val reasoning = extra?.get("reasoning")?.jsonPrimitive?.contentOrNull
+            if (reasoning.isNullOrEmpty()) {
+                pair
+            } else {
+                val duration = extra["reasoning_duration"]?.jsonPrimitive?.content?.toLongOrNull()
+                val depth = indexedChat.size - i - (if (isContinue) 2 else 1)
+                val regexed = RegexPipelineEngine.apply(
+                    raw = reasoning,
+                    placement = REGEX_REASONING,
+                    scripts = regexScripts,
+                    isPrompt = true,
+                    depth = depth,
+                    characterOverride = charName,
+                    disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
+                )
+                val isPrefix = isContinue && i == indexedChat.lastIndex
+                idx to m.copy(
+                    mes = reasoningEngine.addToMessage(
+                        content = m.mes,
+                        reasoning = regexed,
+                        isPrefix = isPrefix,
+                        duration = duration,
+                        settings = ReasoningPromptSettings(addToPrompts = reasoningToPrompts),
+                    ),
+                )
+            }
+        }
         val openAiMessages = PromptAssembler.toOpenAiMessages(indexedChat.map { it.second }, user = userName)
         val historyMessages = openAiMessages.mapIndexed { i, pm ->
             val el = history.getOrNull(indexedChat[i].first)?.jsonObject
