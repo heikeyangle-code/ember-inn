@@ -1873,6 +1873,7 @@ private fun MessageRow(
                     ChatMarkdown(
                         content = text,
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        isSystem = isSystem,
                         charAvatarPath = avatarPath,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
                     )
@@ -1882,6 +1883,7 @@ private fun MessageRow(
                 ChatMarkdown(
                     content = text,
                     onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    isSystem = isSystem,
                     charAvatarPath = avatarPath,
                     modifier = bubbleModifier,
                 )
@@ -2520,7 +2522,7 @@ private data class ChatTypography(
  *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。
  *  代码围栏/行内代码/<style> 块先占位保护，避免引号、波浪线、HTML 标签转换污染代码内容
  *  （官方 messageFormatting 的正则同样把 ``` / ~~~ / `` / ` / <style> 放在引号匹配之前）。 */
-private fun preprocessOfficialHtml(content: String): String {
+private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = true): String {
     val protectedSegments = mutableListOf<String>()
     var out = content
     out = Regex(
@@ -2539,9 +2541,12 @@ private fun preprocessOfficialHtml(content: String): String {
         .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
     out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
     out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n")
-    // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）
-    out = Regex("\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂")
-        .replace(out) { m -> "\uE001${m.value}\uE002" }
+    // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）。
+    // 官方仅对非系统消息做引号转换（script.js `if (!isSystem)`），系统消息不做
+    if (convertQuotes) {
+        out = Regex("\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂")
+            .replace(out) { m -> "\uE001${m.value}\uE002" }
+    }
     // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
     out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
     for ((i, seg) in protectedSegments.withIndex()) out = out.replace("\uE100$i\uE101", seg)
@@ -2766,6 +2771,7 @@ private fun OfficialMarkdownNode(
 private fun ChatMarkdown(
     content: String,
     onSurface: Color,
+    isSystem: Boolean = false,
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
     modifier: Modifier = Modifier,
@@ -2787,7 +2793,7 @@ private fun ChatMarkdown(
         ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
     // 官方行内 HTML（<q>/<u>/<em>/<b>/<s>/<font color>/<hr>/<br>/~text~）→ 原生标记，不走 WebView
-    val displayContent = remember(content) { preprocessOfficialHtml(content) }
+    val displayContent = remember(content, isSystem) { preprocessOfficialHtml(content, convertQuotes = !isSystem) }
     val mermaid = mermaidHtmlOf(content)
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
     // 官方行内 HTML（q/u/font/em/i/blockquote 等）即使开关关着也走 WebView（官方永远渲染 HTML）；

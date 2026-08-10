@@ -1,6 +1,6 @@
 # 交接清单（会话上下文耗尽时使用）
 
-> 最后更新：2026-08-10。接手顺序：第 0 节一眼看懂 → 1 常用命令 → 2 差分怎么用 → 3/4 现状 → 5 剩余工作 → 6 日志。
+> 最后更新：2026-08-11。接手顺序：第 0 节一眼看懂 → 1 常用命令 → 2 差分怎么用 → 3/4 现状 → 5 剩余工作 → 6 日志。
 
 ## 0. 一眼看懂：这是什么、怎么保证 1:1
 
@@ -374,81 +374,47 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 > 只保留会影响后续工作的结论；更早逐轮完整历史见 `git log --oneline`。
 
-## 8. UI 规范审计（第 151 轮，对照 README 逐屏核查）
+## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 
-**已达标**：底部三 Tab + 平板双栏（NavigationRail）、首页（毛玻璃顶栏/全局搜索/AI 对话置顶/最近聊过/双列网格/卡片 seed 底色/最近消息预览/⋯入口/空状态双按钮）、Onboarding（淡入/两主选项/跳过/本地数据）、聊天页（流式/停止/滑动切回复+变体弹层/最后一条常驻 4 键+沉浸开关/上下文胶囊/世界书命中面板/快捷工具盘/书签/TTS/媒体渲染/Mermaid+HTML WebView/设置搜索深链）、设置六组卡片+常用快捷区、角色详情分字段编辑+模型覆盖收起+主题配方、无障碍 contentDescription、Phosphor 图标统一、无 Material 图标混用、无黑屏启动。
+### 8.1 布局/组件定稿
+- 底部三 Tab + 平板 NavigationRail；首页毛玻璃顶栏/全局搜索/AI 对话置顶/双列网格/卡片 seed 底色
+- 角色详情：世界书收进一张卡片默认折叠并置底；全部分组 SectionCard（18dp 圆角/surfaceContainerLow）；
+  BackHandler 防返回直接退出 App
+- 聊天消息布局：AI 全文宽纸面流、用户右对齐限宽 78% 整块气泡；图片内联大图（高限 320dp）
+  + 点击 LIST↔GALLERY 切换并持久化（官方 switchMessageMediaDisplay）
+- 输入栏（OmniBot 借鉴）：图标 36dp onSurfaceVariant(0.8)；发送=实心圆（accent 底+亮度自适应图标）、
+  停止=error 实心圆；输入框 44dp
+- 设置：六组卡片 + 搜索深链；外观与主题四分区（主题 / 视觉与质感 / 消息外观 / 行为与兼容）
+- 共享组件：EmberSwitch（统一触觉）、EmberEmptyState、EmberSkeletonBox、emberShadow（元素色深版阴影）、
+  ColorField（色块即选色入口 + hex 等宽预览 + 选色盘）、ColorPickerDialog（20 色板+RGB+hex）
 
-**本轮修复**：
-- Token 统计菜单（README 消息操作表；长按 → 弹层显示当前模型 tokenizer 估算值）
-- 外观新增四项：气泡样式（纸面/气泡）、密度（舒适/紧凑）、背景模糊总开关（关掉后顶栏/输入栏/首页顶栏用纯色表面）、启动进入上次聊天（默认关；MainScreen 持久化 last_session_id）
-- 首页顶栏背景模糊开关同步生效
+### 8.2 显示管线 / 流式 / 滚动（官方对照结论）
+- displayTextOf：显示位点正则（用户/旁白/AI + 官方 depth）→ fixMarkdown(forDisplay=true) → encode_tags（可选）；
+  复制/编辑用原始落盘文本，显示与操作分离
+- 流式：120ms 节流；StreamingMarkdown 轻量 AnnotatedString 一次构建（粗/斜/删/下划线/行内码/引号/链接），
+  结束由 ChatMarkdown 完整重渲染；balanceStreamingDelimiters 为 App 增强（官方 1.18 无此函数）
+- 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
+  MessageRow 派生字段 remember(el) 一次缓存
+- 自动触底：最后一项可见=贴底；上滑暂停、回底恢复；首帧滚底读当前 layoutInfo
+- 登记未做：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、cleanUpMessage 停用词逐 token 裁剪、
+  LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器
 
-**登记未做（README 要求但未实现）**：
-- LaTeX 渲染（KaTeX 资产未打包）；MeshGradient 氛围背景（API churn，用 seed 低饱和渐变替代中）；
-  每卡“消息样式”配方（引用色/斜体色）；快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
-- 骨架屏 / 触觉 / 空状态 / 彩色阴影 / 霞鹜文楷下载 / 六主题间距+动效 已落地（第 158-161 轮，见下节）。
+### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
+- CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
+  displayCache 按消息索引缓存显示文本，组合期不再读盘/跑正则
+- 进聊天首帧滚底等 totalItemsCount>0 再 scrollToItem；流式不再每 tick 整段 Markdown 解析/正则
+- 角色卡去掉逐卡 dropShadow；WebView 兜底项高度突变登记为潜在滚动跳变源（测高机制见第 11 章）
 
-## 8. 消息区布局调整（第 153 轮，OmniBot 对照 + 官方复核）
+### 8.4 主题系统现状
+- 三层：全局（预设/视觉氛围/字体/圆角/密度/气泡/模糊）→ 角色配方（seed/背景/形状/字体/浅深锁定）
+  → 状态微调；优先级：显式配方 seed > 头像取色 / 卡名哈希（无头像兜底，HSV 0.55/0.78）> 全局预设；
+  自动取色同时作强调色（名字/氛围光/气泡点缀）
+- 官方字段 st*/scheme*：酒馆官方主题填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…）；
+  其余 10 套由色板派生深色套；浅色模式回退 M3；官方主题浅深都强制官方深色
+- 聊天背景三层：显式背景（会话/配方）> 头像玻璃背景（开关 + 模糊五档 0/12/24/36/48 +
+  深/浅遮罩颜色与强度 65%/30% + 恢复默认）> 氛围渐变兜底
 
-对照 omnimind-ai/OmniBot 的 ChatScreen/MessageBubble 借鉴（UI 思路，代码自研）：
-- AI 消息全文宽（无边距纸面流），用户消息右对齐限宽 78% 整块气泡
-- 消息留白节奏：用户消息顶部间距加大（user≈20dp / ai≈8dp 的呼吸感）
-- 图片附件按官方复核后对齐（不用 OmniBot 瓦片方案）：
-  官方 `.mes_img` 为内联大图（max-width:100%、max-height:40vh、圆角 5px），
-  点击图片在 LIST ↔ GALLERY 间切换并持久化 extra.media_display（官方 chats.js
-  switchMessageMediaDisplay）；App 恢复内联大图（高限 320dp）+ 点击切换 + gallery 左右滑切
-
-## 8. 外观与主题页重构（第 157 轮，用户反馈 bug）
-
-- 重叠根因：2 列 LazyVerticalGrid 混全宽项 + FilterChip 单行放不下溢出
-- 修复：主题模式/圆角/字体/气泡样式/密度改用 FlowRow 自动换行；HTML/沉浸/选项块统一包进
-  18dp Surface 卡片（surfaceContainerLow + 一致内边距），消除重叠与样式混乱
-- 主题选中态根因：MainActivity 调 MainScreen 时漏传 themeMode/themePreset（只用默认值），
-  导致全局主题已切但页面选中指示不动；已改为把真实状态传入 MainScreen（单一数据源），
-  并删除页面本地兜底状态，避免双份状态漂移
-
-## 8. 流式渲染/自动触底对齐官方（第 156 轮，对照 StreamingProcessor + scroll 逻辑）
-
-官方流式（onProgressStreaming + Stopwatch(1000/streaming_fps=30)）：
-- 每 tick 整段 messageFormatting；App 对齐：流式显示 30fps 节流（snapshotFlow 33ms 限流，结束时补最终值）
-- 官方流式中补齐未配对定界符（* / " / ``` / ~~~，奇数时行尾补，多字符前加换行）→ 移植
-  balanceStreamingDelimiters，显示前再过 fixMarkdown + encode_tags（与 messageFormatting 同链路）。
-  ⚠️ 2026-08-10 复核：官方 1.18 源码（sse-stream.js / streaming-display.js / script.js）**并无**
-  balanceStreamingDelimiters 函数，此为 App 层显示增强，非 1:1；规则定为“奇数且行尾未以该
-  定界符结尾才补”，避免把“你好*”补成“你好**”（第 159 轮与单测对齐）。
-- 落盘仍用原始流式文本（官方 saveReply 最后 cleanUpMessage，不落补齐痕迹）
-官方自动触底：|scrollHeight-clientHeight-scrollTop|<5；用户上滑→scrollLock 暂停，回底→恢复；
-App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复已实现，本轮未改）
-- 登记：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、cleanUpMessage 停用词逐 token 裁剪未做
-
-## 8. 文字渲染对齐官方（第 155 轮，对照 script.js messageFormatting）
-
-官方显示管线：显示位点正则（isMarkdown=true，仅 markdownOnly 生效）→ fixMarkdown(forDisplay=true)
-→ encode_tags（可选）→ 引号转 <q> → Showdown → DOMPurify。App 对齐项：
-- ✅ 显示文本走 vm.displayTextOf：显示位点正则（用户/旁白/AI 分位点 + 官方 depth）+ fixMarkdown
-  （power-user.js 1:1 移植，含配对符号去空格、奇数 * / " 行尾补齐）+ encode_tags（默认关，外观新增开关）
-- ✅ 复制/编辑仍用原始落盘文本（菜单 textOf），显示与操作分离
-- 登记未做：引号转 <q>（视觉样式）、流式 30fps 节流（官方 streaming_fps=30，我们逐 delta 重渲染）、
-  DOMPurify 白名单（WebView 简易消毒近似）、LaTeX、Showdown 的 emoji/underline/dinkus 扩展差异
-
-## 8. 输入栏按钮借鉴 OmniBot（第 154 轮）
-
-对照 chat_input_area_composer.dart 的按钮体系：
-- 主行图标按钮 42dp → 36dp，颜色统一 onSurfaceVariant(0.8)，不再又大又平
-- 发送按钮改实心圆钮：可发送时 accent 底 + 亮度自适应图标（浅色 accent 用深图标、深色用白），
-  不可发送时 surfaceContainerHighest 浅灰；停止生成改 error 实心圆钮
-- 输入框最小高 46dp → 44dp（OmniBot 紧凑 44dp）
-- 快捷工具盘文字按钮、状态胶囊/待发缩略图暂保持，待下批继续统一
-
-## 8. 角色详情页 UI 重构（第 152 轮，用户反馈）
-
-- 世界书条目不再默认全展开：收进一张“世界书”卡片、默认折叠，点击展开/收起，放到详情页最底部
-- 详情页所有分组统一为 SectionCard（基础字段/备用开场白/正则/变量/模型覆盖/主题配方/高级/世界书），
-  统一 18dp 圆角 + surfaceContainerLow + 一致内边距，消除此前各组样式混乱
-- 修复返回手势：详情页缺 BackHandler，系统返回/预测性返回会直接退出 App；已补 BackHandler(onBack)，
-  与 edgeSwipeBack 并存，返回上一层的逻辑不变（MainScreen onBack = openDetailId=null）
-
-## 8. 半成品治理记录（第 137–139 轮，2026-08-10）
+### 8.5 半成品治理记录（第 137–139 轮，2026-08-10）
 
 针对“UI 有入口/执行没实现、字段没暴露、文档滞后”的半成品逐项核对官方源码并补齐：
 
@@ -470,7 +436,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 
 **剩余已知半成品（继续治理中）**：工具调用 App 注册表（官方 1.18 无内置工具，框架性待做）、表情精灵 App 层。
 
-## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
+### 8.6 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
 > 规则：任何与官方 1:1 有出入的实现必须在此登记；未登记即视为未完成。
 
@@ -493,7 +459,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/浅深锁定管线已做（第 92/106 轮）；配方导出/分享已做 | ✅ |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）；✅ URL 下载已做（第 147 轮：数据银行对话框“从 URL 添加”，对齐官方 vectors 扩展 Data Bank URL 上传语义）；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（第 138 轮，官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
-## 官方对齐确认总表（2026-08-10 全量审计结论）
+### 8.7 官方对齐确认总表（2026-08-10 全量审计结论）
 
 **已逐字/差分确认对齐（官方源码 1:1）**
 - 媒体内联能力：isImage/Video/AudioInliningSupported 白名单 + source 分支（差分 24 例）
@@ -522,519 +488,6 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   /hide name 过滤、narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；
   openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；
   表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
-
-## 8. UI 质感清单第一批/第二批落地（第 158–159 轮，2026-08-10，对照 EmberInn-UI质感提升方案）
-
-**新增共享组件**（`app/src/main/java/com/emberinn/app/ui/components/`）：
-- `EmberFx.kt`：EmberHaptics（Confirm/ToggleOn·Off/Reject/SegmentTick 语义触觉）、
-  `Modifier.emberShadow`（Compose 1.9+ 稳定 dropShadow，阴影色用元素自身颜色深色版，非纯黑）、
-  `EmberSkeletonBox`（rememberInfiniteTransition + 扫光渐变，颜色跟随主题强调色）、
-  `EmberSwitch`（全 App 开关统一封装：ToggleOn/Off 触觉）
-- `EmberEmptyState.kt`：中性空状态（可选图标 + 引导按钮 + 语气文案，无品牌符号/动画）
-
-**第一批落地（6257134）**：
-- 彩色阴影：首页 AI 对话卡（primary 光晕）、最近聊过（secondary）、角色卡（seed 色深版）全部换 emberShadow
-- 触觉铺满：发送=Confirm、删除=Reject、开关=ToggleOn/Off、点角色/会话/新建/导入=SegmentTick 轻选；
-  ChatScreen 原有 Confirm/Reject 保留
-- 骨架屏：提供商模型列表“测试连接中”显示 5 行主题色骨架（替代灰色转圈）
-- 空状态统一：首页/会话/聊天全部换 EmberEmptyState（中性图标 + 引导按钮，无品牌符号/动画）
-- 声音反馈：已按用户要求整体删除（第 163 轮）
-
-**第二批落地（bfda115）**：
-- 六套预设主题各自形状性格：墨韵/青瓷=圆润 16dp、夜航/简约纸感=系统 12dp、丹砂=方正 4dp、琉璃=浑圆 24dp
-  （ThemePreset.shape；角色配方 > 用户全局档 > 预设性格）
-- 视觉氛围可调（vibe）：降饱和 / 冷暖 / 光效三项参数；预设=标准（无滤镜）、柔和、清冷、明快、自定义滑块；
-  默认“标准”取色原样输出，无强制品牌气质（用户要求，见第 160 轮）
-- 形状语言真正区分角色：角色卡按自身主题配方 shape 取圆角（square=4 / circle=24 / rounded=16 / 默认 16），
-  与颜色一起形成每卡专属氛围
-
-**第三批落地（d976515）**：
-- 排版层级拉大：全局 Typography 标题 Bold/SemiBold、正文常规（README 清单 13）
-- 空状态铺开：搜索无结果、全局正则空、快捷回复空、提供商模型列表空 全部换 EmberEmptyState（compact 行内模式）
-
-**本轮 CI 修复**：
-- ChatViewModel 补 DisplayPipeline/AppearancePrefs 导入；CharacterDetailScreen SectionHeader 补 @Composable
-- DisplayPipelineTest 失败 → balanceStreamingDelimiters 补“行尾已以该定界符结尾则不补”规则（见上节登记）
-- @file:OptIn 文件里 import 插到 package 前导致 CharacterDetailScreen 语法错误 → 已移回 package 后；
-  EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
-- Switch→EmberSwitch 全局改名后，RegexScreen 里 `return@Switch` 标签不同步 → 已改 `return@EmberSwitch`（dbf321d）
-
-## 8. 音效整套删除（第 163 轮，2026-08-11，用户要求）
-
-- 删除 UiSounds.kt（SoundPool + WAV 合成）、MainActivity 初始化、EmberSwitch 切换音、
-  ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
-- 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
-
-## 8. 酒馆官方默认值 + 选色盘 + 原生化（第 175 轮，2026-08-11）
-
-- ThemePreset 新增官方字段默认值（null=跟随 M3）；酒馆官方主题填官方真值：
-  body #DCDCD2 / em #919191 / underline #BCE7CF / quote #E18A24 / 用户气泡 #4D000000 /
-  AI 气泡 #4D3C3C3C / 边框 #80000000 / 阴影 #80000000；用户设置留空时自动用主题默认
-- 选色盘：新增 ColorPickerDialog（官方色板 + 20 常用色 + RGB 滑杆 + hex 输入 + 预览），
-  消息渲染设置页每个字段改为“色块 + hex + 选色盘按钮”
-- 原生化（减少 WebView 兜底）：<q>/<u>/<em>/<i>/<b>/<strong>/<s>/<hr>/<br>/<font color="#hex">
-  和 Showdown ~text~ 全部预处理为原生 AnnotatedString 标记（引用色/下划线色/指定色），不再走 WebView；
-  WebView 只留给 font rgb()/span/div/table/img 等真正解析不了的任意 HTML
-- 兜底突兀度：WebView 已透明背景 + 官方 CSS 变量 + 自动测高 + 圆角裁剪 + 同字号行高
-
-## 8. 聊天全链路流畅性（第 176 轮，2026-08-11，用户要求先搜同类问题再全链条排查）
-
-**联网调研结论（Compose 聊天高频坑，已逐一对照本实现）**：
-1. LazyColumn item 无稳定 key / 索引 key → 增删时 Compose 复用错位、触发错位动画 → 本实现流式项与最终消息共用 key 修复
-2. `scrollToItem` 每 token 调用 / 首帧未测量被吞 → 首帧滚底改为读当前 layoutInfo，流式滚动与显示同频节流
-3. 流式每 tick 整段 Markdown 重解析（mikepenz 官方 issue：LaunchedEffect 每次 cancel/restart，短流式 parse 全被丢弃）→ 本实现流式走轻量渲染，结束才完整解析
-4. `animateItem()` + 索引 key 在流式结束“删一行插一行”时闪跳（Google issue 395536917/352584409）→ 流式项与完成消息同 key + 同 contentType，原地替换
-5. WebView 在 LazyColumn 内高度突变会拽滚动（LemmyNet 案例）→ 已不在流式路径；HTML 消息仍走自动测高，登记为后续观察点
-
-**已修（本机验证结构 + CI 验证中）**：
-- **编译红修复**（HEAD 9319e68 实际会红的三处）：
-  ChatMarkdown 的 `Markdown(...)` 参数列表里误插 `val stTheme/bodyColor/...` 且颜色用在声明之前 → 提升到函数头部；
-  WebViewClient `onPageFinished` 改双参签名；MessageRenderScreen 字符串字面量裸换行 → 单行
-- **流式输出降载**：显示节流 33ms→120ms（官方 streaming_fps=30 是上限不是目标）；
-  流式中只 `balanceStreamingDelimiters`，不再每 tick `fixMarkdown`/`encodeTags`，结束后一次性走完整管线
-- **流式轻量渲染 StreamingMarkdown**：AnnotatedString 一次构建（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、
-  `行内码`、六种引号对→引用色、链接→引用色），不启动 mikepenz 解析器；生成结束 ChatMarkdown 完整重渲染
-- **滚动**：贴底跟随从“最后一项可见”改为滚动方向判定——长消息流式途中上滑阅读不再被拽回，
-  滚回内容末端才恢复；流式滚动 120ms 节流；新消息/流式结束滚到消息底边；首帧滚底读当前布局总数
-  （不再用组合期捕获的空 items，异步加载时也能一次到位）
-- **列表 key**：Streaming/ReasoningOnly 与最终消息共用 `m-末尾索引` + contentType=`chat-message`，
-  StreamingRow 去掉 `animateItem()` → 流式结束是内容原地替换，不再删行插行闪跳
-- **每 tick 重算归零**：MessageRow 派生字段（media/name/time/swipe/displayText）`remember(el)` 一次缓存，
-  dateLabel `remember`；items 构建不再依赖 streamingText（每 token 不再重建整表）
-
-**登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
-下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
-
-
-
-
-
-
-
-
-
-
-
-## 8. HTML 卡片测高补“图片感知”（第 194 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 用户样例：compact-dialogue 风格 HTML 卡（`<style>` + 远程 i.postimg.cc 头像 + flex 气泡）
-- 支持情况：消息含 HTML 标签 → WebView 兜底渲染（JS/网络全开）；``` 内 `<` 开头 `>` 结尾 → iframe 交互卡
-- 本轮修复：onPageFinished 测高改为返回 `{h, p}`（高度 + 未加载图片数），
-  只要还有图片未 complete 就继续轮询（总上限 15s，连续 3 次同高且图片就绪才停）；
-  交互 iframe 复测链追加 3000ms 一次——远程头像/插图加载完前卡片不再被裁矮
-
-## 8. 交互卡片/HTML 兜底显示修复：测高与 iframe 自适应（第 193 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 用户反馈：交互卡片不显示 / HTML 渲染不出来 / 文字像被框住看不全
-- 修复（ChatScreen WebViewHtml + embedInteractiveBlocks）：
-  1. 外层测高改取 `Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)`，
-     轮询上限 20→30 次（最长 6s）、连续 3 次同高才停——HTML 消息不再因首次量到 0 而整条不可见
-  2. 交互 iframe 从“onload 量一次”改为 onload + 150/500/1500ms 三次复测：
-     卡内脚本/图片延迟渲染后高度会更新，外层轮询同步撑高，不再“框住看不全”
-  3. 外层高度上限从固定 420dp 改为 `max(420dp, 屏幕高×75%)`，长交互页可见范围更大，超出部分卡内滚动
-- 说明：高度上限仍存在（防单条消息撑爆列表）；卡片内容超出上限时 WebView 内部可滚动
-
-## 8. 修复消息含代码围栏崩溃：No group 1（第 192 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 现象：聊天中消息出现 ``` 代码围栏时崩溃，
-  `java.lang.IndexOutOfBoundsException: No group 1` → MatcherMatchResult.groupValues[1] → ChatMarkdown
-- 根因：交互 HTML 卡片检测正则 `Regex("```[a-zA-Z]*\n[\s\S]*?```")` 没有捕获组，
-  却访问 `m.groupValues[1]`（embedInteractiveBlocks 的同名正则原本就带组，只有检测处漏了）
-- 修复：检测正则补捕获组 ```` ```[a-zA-Z]*
-([\s\S]*?)``` ````；
-  并全仓扫描 `groupValues[` 16 处，其余正则组数均匹配（标题/引号/下划线/font/mermaid/交互嵌入）
-
-## 8. 聊天背景玻璃遮罩设置化 + 选色 + ColorField 美化（第 191 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 用户要求“背景遮罩做成设置、强度之外还能选颜色”
-- 新增全局设置（外观与主题 → 视觉与质感 → 聊天背景（头像玻璃 + 遮罩））：
-  1. 头像玻璃背景总开关（默认开；关=显式背景仍显示，否则回退氛围渐变）
-  2. 模糊五档（无 0 / 轻 12 / 标准 24 / 重 36 / 极 48，默认标准；调研 Telegram/Signal 均为档位式）
-  3. 深色遮罩颜色（选色盘）+ 强度 0-90%（默认 #000000 / 65%）
-  4. 浅色遮罩颜色（选色盘）+ 强度 0-60%（默认 #FFFFFF / 30%）
-  5. 一键恢复默认（同时重置颜色字段；ColorField 改为 remember(label, value) 响应外部重置）
-- 实现：AppearancePrefs 新增 6 个字段；ChatScreen 背景层读设置（颜色 × 强度=最终 alpha）；
-  选色盘复用现有 ColorPickerDialog（支持 #RRGGBB / #AARRGGBB / 3 位简写 + RGB 滑杆 + 预设色板）
-- ColorField 抽成公共组件（components/ColorField.kt）并整体美化：色块即选色入口（圆角+描边）、
-  label + hex 等宽预览、编辑图标按钮、圆角输入框；消息渲染页 8 个官方字段与遮罩 2 个字段全部复用
-
-## 8. 角色主题/背景链路修复 + 玻璃背景遮罩（第 190 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 用户反馈：所有角色卡聊天背景/主题都一样，头像当背景一直不生效
-- 根因：头像取色（seedColor）为 null 时，主题与背景强调色全部回退全局 → 每张卡同色同背景
-- 修复：
-  1. ChatViewModel 主题 seed 增加稳定兜底：`seedColor = 头像取色 ?: 卡名哈希(HSV 0.55/0.78)`，
-     每张卡都有独立主题色与强调色；MainActivity 恢复“显式配方 seed > 角色取色/名字哈希 > 全局预设”优先级
-  2. 聊天背景三层：显式背景（会话 custom_background / 角色配方 background）> 角色头像玻璃背景 > 氛围渐变兜底；
-     头像不再只当 accent，未设显式背景时自动作为模糊背景
-  3. 玻璃背景遮罩（README + 调研）：模糊 24dp、Coil 限宽 1200 降采样；深色叠 65% 黑、浅色叠 30% 纸白，
-     替换原来 alpha=0.18 无遮罩的裸图
-- 对照 README 背景系统规范（默认氛围渐变 / 可选卡图玻璃背景）；官方无此 UI 层行为，属 App 层自主
-
-## 8. 全渲染字段管线收口 + 主题覆盖角色聊天（第 189 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 第 188 轮基础上补标题节点：`OfficialMarkdownNode` 增加 `contentChildType`，heading1-6 / setextHeading1-2
-  只渲染 ATX_CONTENT / SETEXT_CONTENT 子节点（对齐 mikepenz `MarkdownHeader`），避免 `#` 号原样输出
-- 全渲染字段核对（对照官方 script.js messageFormatting + style.css）：
-  引号对/<q>、~下划线~/<u>、<em>/<i>、<b>/<strong>、<s>、<font color>、行内码、代码围栏保护、
-  链接（引用色）、blockquote、列表、标题全部走同一剥标记+上色管线；WebView 兜底 CSS 不变
-- 正文字色收口：`model.typography.*` 本身不带颜色，最终渲染原来只有流式路径 push 了 bodyColor；
-  OfficialMarkdownNode 现在对无色样式补 `bodyColor`（引用等已指定色样式保持自身颜色），正文色设置两端一致
-- 主题优先级：第 190 轮按用户后续反馈修订为“显式配方 seed > 角色取色/名字哈希 > 全局预设”，
-  见第 190 轮（本轮的“全局主题覆盖角色聊天”方案已撤回）
-- 登记（未做）：Markdown 表格单元格与任务列表 checkbox 文本仍走库内直绘，若含引号等官方字段
-  可能残留占位符，属低频边缘场景；后续需重写 table/checkbox 组件
-
-## 8. 修复流式有色/完成后无色+引号两侧方框（第 188 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 现象：流式输出时引号/斜体等有官方颜色；生成完成后颜色消失，引号外侧出现两个方框（复制后是看不见的私有区字符）
-- 根因（对照 mikepenz markdown 0.43 `MarkdownExtension.kt` + `MarkdownParagraph.kt` + `MarkdownHeader.kt`）：
-  `MarkdownElement` 对 PARAGRAPH 走 `components.paragraph`、对 ATX 标题走 `components.heading*`，
-  而默认 `MarkdownParagraph` / `MarkdownHeader` 直接调 `MarkdownText`，**绕过自定义 text 组件**；
-  `preprocessOfficialHtml` 插入的 - 占位符在最终渲染里没人剥离 → 方框 + 不上色
-- 修复（ChatScreen.kt）：新增 `OfficialMarkdownNode`（构建 AnnotatedString → `applyOfficialMarkers` 剥占位符并上色 → MarkdownText），
-  `markdownComponents` 覆盖 `text / paragraph / heading1-6 / setextHeading1-2` 全部走同一管线；
-  斜体 annotator 与 annotatorSettings 移入该节点内部（保持第 187 轮的 provider 内创建要求）
-- 对照官方 script.js messageFormatting：引号对 → `<q>"…"</q>` 保留引号字符并整段引用色，本实现一致
-- 登记（未做）：表格单元格（MarkdownTable 内部直绘 MarkdownText）与任务列表 checkbox 文本仍可能残留占位符，属低频边缘场景，后续如需 1:1 需重写 table/checkbox 组件
-
-## 8. 修复进聊天崩溃：No local MarkdownTypography（第 187 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 现象：一进聊天（有消息的会话）直接崩，异常 `java.lang.IllegalStateException: No local MarkdownTypography`，
-  堆栈在 `LazyLayoutItemContentFactory$CachedItemContent.createContentLambda` 处
-- 根因：mikepenz markdown 0.43 的 `annotatorSettings()` 是 @Composable，默认参数 `codeSpanStyle` /
-  `referenceLinkHandler` 会读 `LocalMarkdownTypography` / `LocalReferenceLinkHandler`；
-  ChatMarkdown 在 `Markdown` 组件**外**（when 之前）创建了 mdSettings → 裸读本地上下文 → 崩溃
-- 修复：`annotatorSettings(...)` 移到 `Markdown(components = markdownComponents(text = { model -> ... }))`
-  的 text 组件内部创建（此时 CompositionLocalProvider 已生效），`annotatorSettingsRef` 同步在该处赋值
-- 对照源码：mikepenz/multiplatform-markdown-renderer v0.43.0 `AnnotatorSettings.kt`（annotatorSettings 默认参数）
-  + `Markdown.kt`（CompositionLocalProvider 包裹 success）
-
-## 8. 不加深浅双套字段，修复 CI（第 186 轮，2026-08-11，App/UI 层，未动引擎）
-
-- 用户确认：主题本来就有深浅两种模式（lightBg/darkBg + M3 自动生成），不需要再为每套主题加一套“浅色 st*/scheme*”字段；
-  本轮未新增任何字段，第 185 轮加的深色套保留，浅色模式继续回退 M3 自动配色
-- 修复 185 轮 CI 红：
-  1. ChatScreen 的 `?: if (stDark) ... else null` 不加括号会把整条 elvis 链推断成可空 Color，
-     17 处全部加括号 `?: (if (stDark) ... else null)`（MessageRow/StreamingMarkdown/ChatMarkdown/WebViewHtml/chatTextShadow）
-  2. AppearanceScreen 重组时 `}` 与下一个 `item(` 挤在同一行，Kotlin 把后续 item 当成上一 lambda 的表达式 → 全部补换行
-- 修复暗色“视觉氛围”回归：第 185 轮把 10 套主题的 scheme* 显式化后，暗色模式的主/次/第三色不再经过 vibe 降饱和；
-  darkScheme 改为“官方主题（完整 scheme 覆盖）绝对精确，其余主题的 scheme* 仍走 desaturate”，恢复自定义降饱和对暗色主题生效
-
-## 8. 主题强化 + 外观页重组（第 185 轮，2026-08-11，App/UI 层，未动引擎）
-
-**10 套非官方主题补齐 st*/scheme* 字段**（ThemePreset.kt；酒馆官方主题真值未动）：
-- st 系列由各主题色板派生：stBody=lighten(darkBg,0.78)、stEm=lighten(secondary,0.20)、
-  stUnderline=lighten(seed,0.55)、stQuote=lighten(seed,0.24)；用户/AI 气泡、边框、阴影沿用官方中性透明值
-  （#4D000000 / #4D3C3C3C / #80000000 / #80000000）
-- schemePrimary/Secondary/Tertiary = 与 darkScheme 自动派生同值（深色 M3 配色显式化）；
-  Background/OnBackground/Surface/OnSurface 仍为 null（浅色继续按 lightBg/seed 自动生成）
-- 对照：SillyTavern public/style.css :root 的 --SmartTheme* 字段名与语义；派生公式为 App 层自主设计
-
-**渲染器接线**（ChatScreen.kt）：
-- 预设 st* 是深色专属真值：新增 isDarkThemeSurface()（background.luminance()<0.5），
-  深色模式用主题预设 st*，浅色模式回退 M3 自动配色；消息渲染页用户手填值始终优先
-- 原生 StreamingMarkdown / ChatMarkdown / MessageRow / chatTextShadow 与 WebView 兜底全部同步
-
-**官方主题浅色模式**（Theme.kt）：
-- 完整 scheme 覆盖（schemeBackground != null）的主题没有浅色模式：EmberInnTheme 浅/深都走官方深色，
-  与官方一致（官方无浅色主题）
-
-**外观与主题页分组重组**（AppearanceScreen.kt，按 Material 设置页规范：9-16 项用 2+ 分区标题）：
-- 四大分组：主题（模式+11 预设）、视觉与质感（氛围 / 圆角字体 / 头像+文字阴影 / 背景模糊）、
-  消息外观（气泡+密度 / HTML 消息 / 文字排版）、行为与兼容（沉浸 / 启动上次聊天 / 转义标签）
-- 新增 SectionLabel 分区标题；气泡大卡拆出“背景模糊”到视觉组、“启动/转义”到行为组；
-  头像形状+文字阴影上移到视觉组（原在页面末尾）
-- 本轮 App/UI 层，未动引擎，差分不适用；验证 = CI 编译 + 手工过一遍四组卡片
-
-## 8. 官方质感全局设置（第 184 轮，2026-08-11，全部对照官方 style.css 真值）
-
-**新增全局设置（外观与主题页 / 文字排版页）**：
-| 设置 | 官方对照（style.css :root） | 默认 |
-|---|---|---|
-| 文字阴影（开关 + 强度 0-4px） | `* { text-shadow: 0 0 calc(var(--shadowWidth)*1px) var(--SmartThemeShadowColor) }`，shadowWidth=2、shadow=rgba(0,0,0,.5) | 开 / 2px |
-| 头像形状（圆形 50% / 圆角 10px / 方形 2px） | `--avatar-base-border-radius:2px`、`-rounded:10px`、`-round:50%` | 圆形（保持原样） |
-| 正文字号“官方 15” | `--mainFontSize: calc(var(--fontScale)*15px)`，fontScale=1 | 标准 16（可选手动切官方 15） |
-| 字体“Noto Sans（官方·下载）” | `--mainFontFamily: "Noto Sans", sans-serif` | 系统（点下载后生效） |
-
-**Noto Sans 方案（用户拍板：4 面 Regular/Bold/Italic/BoldItalic、点下载、不打包）**：
-- FontManager ensureNoto：Google Fonts 官方 TTF 直下 4 个（共约 2.2MB）→ filesDir/fonts/NotoSans-*.ttf
-- 原生：MainActivity `"noto"` 分支用 Compose `Font(file, weight, style)` 组 4 面 FontFamily（粗/斜/粗斜全保真）；
-  WebView 兜底：4 个 @font-face 指向同一批 file:// filesDir TTF
-- 同一批字体两个渲染器共用；woff2 方案已回退，字体不打包进 APK
-- 文字阴影颜色跟随官方 --SmartThemeShadowColor（消息渲染页“阴影色”设置，原生与 WebView 都生效）；毛玻璃强度已接聊天顶栏/输入栏（cloudy，官方 --SmartThemeBlurStrength）
-
-**接线点**：chatTypography（15px + Shadow）、MessageRow 用户气泡（Shadow）、RoleAvatar（形状）、officialStyledHtml（@font-face + text-shadow + 15px）、MainActivity（noto）、AppearanceScreen（芯片 + 下载流程）。
-- **酒馆官方主题 M3 三色直接映射官方 SmartTheme 字段**（ThemePreset.schemePrimary/Secondary/Tertiary/Background/OnBackground/Surface/OnSurface）：主色=引用橙 #E18A24（--SmartThemeQuoteColor）、次色=灰 #919191（--SmartThemeEmColor）、第三=下划线绿 #BCE7CF（--SmartThemeUnderlineColor）、背景/面板 #171717（--SmartThemeBlurTintColor）、文字 #DCDCD2（--SmartThemeBodyColor）；覆盖色时容器色与对比色也随主色派生。第 185 轮起：完整 scheme 覆盖的主题（酒馆官方）浅色模式也强制官方深色，不再近似。
-
-## 8. 渲染审计修复（第 183 轮，2026-08-11，用户要求与官方任何边缘情况一致）
-
-**对照官方 script.js messageFormatting + style.css 逐条审计，修复 5 处**：
-1. **代码块保护**：preprocessOfficialHtml 先占位保护 ``` / ~~~ / `` / ` / <style> 块，再做引号对/波浪线/行内 HTML 转换——官方 messageFormatting 的正则同样把代码与 style 放在引号匹配之前；修复了代码块内 `~x~`、引号、`<em>` 被污染的问题
-2. **q/u 嵌套着色**：applyOfficialMarkers 改为 q 与 u 互相避让（元素自身颜色优先于继承，对齐 style.css 的 .mes_text q / .mes_text u 规则），修复“引号内下划线”与“下划线内引号”的颜色错乱
-3. **系统消息管线**：displayTextOf 对齐官方——系统消息不走显示位点正则、不做 encode_tags，但 fixMarkdown 仍执行；同时修复“关闭全局正则后 encode_tags 也不生效”的问题
-4. **WebView CSS 对齐 style.css**：补 font[color] em/i/u/q inherit、blockquote margin:0、p 上下边距、table 边框、ol/ul 边距、li tt、pre code 块级、strong em 加粗
-5. **HTML 兜底标签清单补全**：officialHtml 检测补 HTML5 全量标签（section/header/footer/main/nav/aside/article/form/input/select/textarea/label/details/summary/canvas/svg/math/template/mark/progress/meter/output/fieldset/legend/dialog/menu/picture/source/track/map/area/iframe/hgroup/address/figcaption/data/time/var/samp/kbd/abbr/bdi/bdo/ruby/rt/rp），开关关着时也不再把这些标签显示成原文
-
-## 8. 扩展插件体系（第 178–181 轮，2026-08-11）
-
-- JS 全开、iframe 交互卡片、头像类/宏、原代码折叠、安全登记：全部并入 **第 10 章 扩展插件**。
-- 第 182 轮：按用户要求收回“10 个开关”，扩展插件页只留 **1 个总开关（交互 HTML 卡片）**；JS/网络/外链/测高等行为恢复为常开，不再单独开关。
-- 第 177 轮（Web 兜底全放开 + 官方字段映射后处理）属渲染层，保留在 177。
-
-## 8. Web 兜底全部放开 + 官方映射后处理（第 177 轮，2026-08-11，用户要求全放开不加开关）
-
-**用户决定**：HTML 兜底不再拦网络/链接，全部放开，不加开关。
-- WebView 删掉 shouldInterceptRequest（远程图片/字体/媒体可正常加载）；http(s) 链接 shouldOverrideUrlLoading → 系统浏览器打开（FLAG_ACTIVITY_NEW_TASK）
-- JS 状态见第 178 轮：已全开（活动页/交互页面能跑），与官方 DOMPurify 禁脚本不同，登记为已知偏差 + 安全风险
-- 兜底标签检测补齐：font/span/div/style/table/img 之外，新增 a/blockquote/ul/ol/li/p/pre/h1-6/center/figure/video/audio/button（这些官方永远渲染，不能因“HTML 开关关着”变纯文本）
-
-**原生渲染架构升级：标记 + 最终 AnnotatedString 后处理（applyOfficialMarkers）**
-- 旧方案在 annotator 的 TEXT 层逐段上色：引号对/<q> 标记在“引号内含 Markdown（如 "a *b* c"）”时会被 AST 拆成多个 TEXT 节点，标记失配 → 私有字符泄漏 + 不上色；<q> 内 <em> 也会被 em 色盖掉
-- 新方案：preprocessOfficialHtml 只负责把 引号对/<q>/<u>/~text~/<font color> 转成私有标记 \uE001-\uE007；
-  text 组件先 buildAnnotatedString（库的 buildMarkdownAnnotatedString + mdSettings）拿到完整 AnnotatedString，
-  再 applyOfficialMarkers：剥标记字符（含 font 的 hex 段）、平移所有 span，按官方 style.css 层级上色：
-  基础 em 色 → q 整段引用色（覆盖 em，等价 .mes_text q em { color:inherit }）→ u 下划线色+下划线（em 段避让，
-  等价 .mes_text em 优先于 .mes_text u）→ font 整段指定色（等价 font[color] em/i/u/q { color:inherit }）
-- 嵌套（引号内引号、font 内 em/u/q、u 内 em）用栈配对 + 层序解决；标记字符不会出现在最终文本里
-
-**官方字段映射表（维护用）**
-| 官方字段/语法 | 我们的实现 |
-|---|---|
-| 正文色 --SmartThemeBodyColor | 原生：ChatTypography body + markdownColor text |
-| 斜体 <em>/<i> --SmartThemeEmColor | 原生：emAnnotator 斜体+emColor；引号/字体内的 em 按官方继承规则被外层色覆盖 |
-| 下划线 <u>/~text~ --SmartThemeUnderlineColor | 原生：\uE003..\uE004 → 下划线色+Underline；em 段保留 emColor |
-| 引用 <q>/引号对/blockquote/链接 --SmartThemeQuoteColor | 原生：\uE001..\uE002 → 整段引用色（含内部 Markdown）；blockquote 边框/链接色走 markdownColor/TextLinkStyles |
-| <font color="#hex"> | 原生：\uE005..\uE007 → 指定色，覆盖 em/u/q（官方 font[color] 全部 inherit） |
-| <font color="rgb(...)"> 等任意 HTML | WebView 兜底（透明底 + 官方 CSS 变量注入） |
-| 表格/代码块/标题/列表/图片（Markdown） | 原生 mikepenz + Coil；HTML 版表格/图片等走 WebView |
-| Mermaid | WebView + 本地 asset JS |
-| 气泡底色/边框/阴影/毛玻璃 | 原生 Compose 卡片（MessageRow） |
-
-**与官方 1:1 结论**：文本字段的映射与 style.css 逐条对齐；WebView 兜底是“官方 DOM 渲染的等价近似”。
-**已知偏差（登记）**：
-1. `<style>`：官方默认剥掉（需角色允许 custom-style 才恢复，选择器还加 .mes_text 前缀）；我们按用户“全放开”默认放行，且样式只影响该消息自己的 WebView
-2. 外部媒体：官方默认 forbid_external_media=true（要设置才开）；我们按“全放开”直接允许
-3. 官方页面级交互（click-to-edit、消息按钮、自定义样式按角色开关）未实现；消息内脚本官方禁、我们已放开（第 178 轮，风险登记）
-4. 消毒原是白名单近似（DOMPurify 更细）；第 178 轮按用户要求全放开后只剩 javascript: URL 拦截
-
-**边缘情况（已按官方语义处理/需回归）**：
-- 引号内含粗体/斜体/下划线/代码：整体引用色，内部 u 仍下划线色，em 在 u 外/内按 CSS 层级
-- 嵌套引号（不同引号类型）：栈配对，颜色一致
-- font 内 em/u/q：整段字体色
-- 代码围栏内的 HTML：looksLikeHtml 先剥 ```...```，不进 WebView
-- encode_tags 开：< 先转义，HTML 不渲染（与官方顺序一致：先 encode 再 markdown）
-- 半个标签/未闭合：looksLikeHtml 匹配到就整段 WebView，由浏览器容错
-- 空消息/纯文本：不走 WebView，零开销
-- WebView 高度突变仍是长 HTML 消息的潜在滚动跳变源（登记，观察）
-
-## 8. 渲染全面对齐官方（第 174 轮，2026-08-11，逐条核对 script.js + style.css）
-
-官方 messageFormatting（script.js）：引号对（"“«「『＂）→ <q>；Showdown：emoji/underline(~text~→<u>)/strikethrough/tables；
-CSS（style.css）：i/em=emColor；q=quoteColor 且 q i/em inherit；u=underlineColor；a=quoteColor（不是下划线色）；
-blockquote=左 3px quote + black30 底；body font-weight 500。
-
-本次对齐：
-- 原生：斜体（EMPH）→ emColor；引号对 → 引用色（自定义 annotator 的 TEXT 分支，含中英文引号）；
-  链接 → 引用色（linkTextSpanStyle）；blockquote/checkbox 沿用官方样式
-- WebView 兜底：<q>/<u>/<font>/blockquote/em/i 及 ~text~ 自动走官方 CSS（即使 HTML 开关关着，
-  官方永远渲染 HTML）；a 色修正为引用色；em/i 恢复着色；q 内斜体继承
-- 设置页提示修正：次要色=斜体+小字；下划线色含 ~text~；链接色=引用色
-
-## 8. 官方字段设置页 + HTML 兜底修复（第 173 轮，2026-08-11）
-
-- 新增设置页「消息渲染（官方字段）」：正文色/次要文字色/下划线色/引用色/用户气泡底/AI 气泡底/
-  边框色/阴影色（#RRGGBB，空=跟随主题）+ 毛玻璃强度滑块（0-40，官方 --SmartThemeBlurStrength）
-- 接入：
-  - 原生 Markdown：正文色（markdownColor.text）、引用色（quote style color → blockquote 左栏）、
-    自定义 blockQuote（黑 30% 底 + 官方内边距）、自定义 checkbox（引用色勾选框）
-  - 气泡：用户/AI 气泡底 + 边框色（MessageRow）
-  - 毛玻璃：顶栏/输入栏/首页顶栏 cloudy radius 走 blurStrength
-  - WebView 兜底：注入官方 CSS 变量（body/q/u/em/a/blockquote/code）
-- 修复 HTML 渲染不出来：根因是 WebView WRAP_CONTENT 在 Compose 里高度塌成 0；
-  onPageFinished 测 scrollHeight 撑高，HTML 消息现在能正常显示
-- 边界：行内 <q>/<u>/font[color] 依赖 HTML 兜底（WebView）；原生渲染里 em 颜色暂未单独生效（无字段）
-
-## 8. 官方渲染全支持调研与方案（第 172 轮，2026-08-11）
-
-**官方字段用法（public/style.css 核对）**：body 正文色、em 次要色、u 下划线色、q/blockquote 引用色
-（blockquote=左 3px 引用色 + 黑 30% 底 + 左内边距 10px）、font[color] 行内 HTML、checkbox 任务框、
-气泡半透明底、边框/阴影、模糊强度、Noto Sans/Mono 字体、代码背景、表格、分隔线。
-
-**mikepenz 0.43 能力核对**：markdownColor 只暴露 text/codeBackground/inlineCodeBackground/dividerColor/tableBackground；
-markdownComponents 暴露 text/eol/codeFence/codeBlock/heading1-6/blockQuote/paragraph/orderedList/unorderedList/image/
-horizontalRule/table/checkbox/custom——blockquote 与 checkbox 可自定义，行内 q/u/font[color] 没有直接字段。
-
-**方案**：
-- A 原生自定义组件：扩展主题模型（body/em/underline/quote/bubble/border 色）+ 自定义 blockQuote/checkbox/text
-  组件 + q/u/font 预处理着色。覆盖官方大部分字段；q/u 行内 HTML 需预处理，工作量大但可控。
-- B 消息区 WebView + 官方 Showdown/CSS：像素级 1:1（含 q/u/font/checkbox），但滚动/性能/无障碍/主题联动差。
-- C 换渲染器：Compose 生态无更全的现成方案（richeditor 偏编辑），不推荐。
-- D 混合（推荐）：默认原生 A 覆盖常见字段；检测到 q/u/font/复杂 HTML 时走已有本地 WebView 兜底 +
-  官方 CSS 变量注入 → 100% 覆盖官方字段，普通消息保持原生流畅。
-
-**落地批次（待做）**：1) ThemePreset 扩展可选官方字段 + 酒馆官方填真值；2) 自定义 blockQuote/checkbox/text 组件；
-3) q/u/font 检测切 WebView + 官方 CSS 变量注入；4) 气泡/边框/阴影/模糊强度接入；5) Noto 字体打包（增包体，待确认）。
-
-## 8. 新增主题：酒馆官方 + 4 套（第 171 轮，2026-08-11）
-
-- 酒馆官方主题（id=st）：对照官方 release `public/style.css` :root 逐值核对——
-  `--SmartThemeBodyColor: rgb(220,220,210)` 象牙文字、`--SmartThemeBlurTintColor: rgba(23,23,23,1)` 墨黑底、
-  `--SmartThemeUnderlineColor: rgb(188,231,207)` 青绿点缀、`--SmartThemeQuoteColor: rgb(225,138,36)` 引用橙、
-  `--SmartThemeEmColor: rgb(145,145,145)` 次要文字；官方字体 Noto Sans 15px（正文默认 16sp 近似）、
-  Noto Sans Mono（等宽）
-- 新增：竹青（晨光青绿）、暮紫（紫调沉静）、晨雾（雾蓝清冷）、樱粉（粉紫温柔）
-- 现在共 11 套预设（默认仍为墨韵，不动用户默认）；README 主题表已同步
-
-## 8. 主题卡“椭圆冒方角”修复（第 170 轮，2026-08-11）
-
-- 根因：PresetCard 用 `Modifier.clickable()`，波纹按方形绘制，卡片背景却是圆角 → 点选/悬停时
-  圆角外露出方形四角，波纹消退后收回；且卡片 shape 用 MaterialTheme.shapes.large，会随选中主题的
-  形状档变化（丹砂→方正、琉璃→浑圆），看起来像“椭圆变形”
-- 修复：PresetCard 改 Card(onClick=…)（波纹裁进 shape）+ 固定 RoundedCornerShape(20.dp)；
-  AiChatCard 同样改 Card(onClick=…)；CharacterCard 补 clip(corner)（保留长按）
-- 同类排查：最近聊过卡本来就是 Card(onClick)，无此问题
-
-## 8. 独立“文字排版”页 + 渲染器全量设置（第 169 轮，2026-08-11）
-
-- 新增设置页 TextTypographyScreen（设置 → 外观与主题 → 文字排版），独立于主题页：
-  - 正文：字号（14/16/18/20）、行高（1.4/1.55/1.7）、字重（常规/中等/半粗）
-  - 标题：层级（聊天风/正常）、H1 大小、H2 大小
-  - 引用：斜体开关；代码：代码块字号、行内代码字号
-  - 间距：块间距（紧凑/标准/宽松）、列表缩进（8/10/12dp）
-- ChatMarkdown 全部消费这些设置（markdownTypography + markdownPadding），即时生效
-- 修复设置主页重复入口：移除“字体 / 圆角”和“默认采样参数”两个与主题/提供商同页的假条目；
-  外观组改为“主题与视觉 / 文字排版”两个真入口
-- 渲染器支持上限说明：库支持 h1-h6/text/paragraph/quote/code/inlineCode 的 TextStyle 与
-  block/list 间距，已全部暴露；颜色类（codeBackground/divider）属 markdownColor，未进排版页
-
-## 8. 文字排版可调（第 168 轮，2026-08-11，用户反馈字体“平/一样大”）
-
-- 渲染组件确认：mikepenz multiplatform-markdown-renderer 0.43（m3 Markdown），ChatMarkdown 故意把
-  h1-h6 降级为 titleMedium/titleSmall、正文固定 bodyMedium 16sp/24.8 行高 → “平/一样大”是聊天风设计，不是坏
-- 已加设置（外观与主题 → 文字排版）：
-  - 正文字号：小 14 / 标准 16 / 大 18 / 特大 20
-  - 行高：紧凑 1.4 / 标准 1.55 / 宽松 1.7
-  - 标题层级：聊天风（标题缩小，默认）/ 正常层级（标题放大）
-- 实现：ChatMarkdown 用 chatTypography() 按设置构造 markdownTypography（h1-h6/text/paragraph/quote/code/inlineCode），
-  即时生效（onAppearanceChanged 贯通）
-- 调研：该库支持逐项 TextStyle 定制；Compose 聊天长列表要点=稳定 key + item 内不干重活（已做缓存）；
-  reverseLayout（键盘贴底）暂不动（影响滑动切回复/日期逻辑）
-
-## 8. 进聊天滚底 + 缓存副作用修复（第 167 轮，2026-08-11）
-
-- 用户反馈：从角色卡进聊天，内容延迟约 1 秒才出现且不滚到底
-- 排查：首帧未测量时 scrollToItem 会被吞（内容先空后跳）；已加“首帧布局完成后滚到底”的
-  LaunchedEffect（等 totalItemsCount>0 再 scrollToItem(lastIndex, Int.MAX_VALUE)）
-- 副作用修复：第 166 轮的存储缓存是**每个 ViewModel 实例各一份**（Home/Session/Chat 各自 new
-  CharacterStore/ChatStore），跨页面会互相看到旧数据 → 已改为**进程级共享缓存**（companion object），
-  任何实例写入都全局失效/回填
-- 登记：displayTextOf 缓存意味着“正则/转义设置”在聊天内改动后，已显示消息要等下次消息刷新才按
-  新设置重渲染（轻微，聊天页不常改全局正则；后续可加设置变更信号主动失效）
-
-## 8. 存储层全量扫描缓存（第 166 轮，2026-08-11，点卡进聊天/发送按钮卡 1 秒）
-
-**根因（用户点出“全都是扫描”）**：
-- CharacterStore.list() 每次访问读全部角色文件并解析；ChatStore.list() 每次读全部会话文件；
-  ChatStore.messages() 每次读整份 jsonl 并解析——send() 里 append 前读一次、refresh 又读一次、
-  translate 再读一次；ChatViewModel 初始化 + HomeViewModel.refresh() 也会触发多次全量扫描
-- 角色卡/世界书多时，进聊天和发送就在主线程上反复做磁盘 I/O + 全量 JSON 解析 → 1 秒卡顿
-
-**已修（84c0208）**：
-- CharacterStore：角色列表内存缓存（save/delete 失效）
-- ChatStore：会话列表缓存（upsert/delete/改名失效）+ 消息 jsonl 缓存（统一 writeMessages 写入口，
-  写后自动失效并回填，append/save 直接热缓存，refresh 不再重解析）
-- 配合第 164/165 轮：displayTextOf 缓存 + 详情页 JSON 一次解析，聊天/发送/详情/首页全部不再重复扫描
-
-**其它易卡点（已排查）**：
-- 流式行每 33ms 整段 markdown 重渲染（官方 30fps 上限；若仍卡下一步降频或流式纯文本）
-- 世界书扫描/宏/提示词总装已在 Dispatchers.Default 后台线程（startStream）
-- 大图 AsyncImage、Palette 取色（导入时一次）、书签读写、设置搜索（全量但轻）、群聊实时读文件（低频）
-
-## 8. 角色详情页卡顿 + 角色卡阴影美化（第 165 轮，2026-08-11）
-
-- 详情页 6 个读取函数（字段/世界书/正则/变量/模型覆盖/主题配方）原来各自 parse 整张卡 JSON → 打开大卡重复解析 6 次；
-  新增 CharacterCardEdit.parseCached（LRU 16）共用一次解析，打开/编辑大卡不再卡
-- 角色卡彩色阴影按用户要求恢复并升级：emberShadow 支持 Brush 渐变，角色卡用 seed 垂直渐变发光
-  （seed 0.30→透明，radius 14/spread 2/offset 7），网格只渲染可见卡，无卡顿
-- 首页不是卡顿源（用户确认）；聊天页根因修复见第 164 轮
-
-## 8. 聊天页卡顿根因修复（第 164 轮，2026-08-11，用户反馈发消息/收键盘/输出/滑动全卡）
-
-**根因**：`ChatViewModel.displayTextOf()` 在组合期被每条可见消息调用，内部每次都：
-读盘（chatStore.messages(sessionId) 整个聊天文件）+ 读 SharedPreferences + 解析正则脚本 + 跑正则 + fixMarkdown；
-流式 30fps 时父级重组，所有可见消息每帧重算一遍 → 发消息后/输出/收键盘/滑动全部卡顿（滚动卡顿是历史遗留，同一根因）。
-
-**已修**：
-- displayTextOf 增加显示缓存（refreshMessages 时清空重建），组合期只读缓存；
-  usable 列表改用内存 _messages.value，不再每帧读盘
-- 发消息后只有流式行自己重算，历史消息不再每帧重跑正则/markdown
-
-**后续（若仍卡）**：流式行每 33ms 全量 markdown 重渲染可降到 ~10fps 或流式中先渲染纯文本；
-长消息可做增量渲染。
-
-## 8. 性能修复（第 162 轮，2026-08-11，用户反馈发消息/多处变卡）
-
-**根因排查**：
-- 每张角色卡都挂了 `emberShadow`（Compose dropShadow = 离屏模糊渲染），首页网格里同时 4-6 张卡 → 帧率明显下降
-- 流式渲染每 33ms tick 对整段文本跑 `fixMarkdown` 正则 + `balanceStreamingDelimiters` 四次全量扫描，纯文本消息白花钱
-- （音效整套已于第 163 轮删除，此项不再适用）
-
-**已修（commit 待推）**：
-- 角色卡改回普通 Card 阴影（只保留 AI 对话卡/最近聊过 2 处彩色阴影，首页不再逐卡模糊）
-- DisplayPipeline 加快路径：文本不含 `* _ "` 或 ``` ~~~ 时直接返回，流式纯文本不再跑正则/扫描
-- （音效删除后此项不再适用）
-- 登记：若仍卡，下一步把彩色阴影整体做成“性能开关/低端模式”，并把流式 markdown 重渲染降频（官方 30fps 上限内）
-
-## 8. UI 质感方案 15 项清点（第 161 轮，2026-08-11，《EmberInn-UI质感提升方案》全清单）
-
-| # | 项 | 状态 |
-|---|---|---|
-| 1 | 阴影升级新 API（dropShadow 彩色阴影） | ✅ emberShadow（seed 色深版，非纯黑） |
-| 2 | 组件走主题强调色 | ✅ Switch/Chip/Button 全部读 colorScheme 角色，视觉氛围可调 |
-| 3 | 触觉反馈铺满关键交互 | ✅ Confirm/ToggleOn·Off/Reject/SegmentTick 全 App 开关+发送+删除+点选 |
-| 4 | 骨架屏替换转圈 Loading | ✅ 模型列表骨架屏；剩余 CircularProgress 为上下文胶囊环/测试连接按钮内嵌指示（有意保留） |
-| 5 | 首页角色卡用取色做底色 | ✅ seed 极淡 tint + 名字/占位渐变 |
-| 6 | 声音反馈 | ➖ 已按用户要求删除（第 163 轮，UiSounds/开关/调用点全移除） |
-| 7 | 字体真正落地 | ✅ 霞鹜文楷（LXGW WenKai）下载→解包→filesDir 缓存→Typeface 即时生效；衬线=思源宋体近似 |
-| 8 | 形状语言区分角色 | ✅ 每卡配方 shape（4/16/24dp）+ 六预设形状性格 |
-| 9 | 六套主题各自独立性格 | ✅ 形状 + 间距节奏（墨韵 1.12 / 丹砂 0.92…）+ 动效速度（丹砂 1.15 / 墨韵 0.85…） |
-| 10 | 算法取色后统一滤镜 | ✅ 改为可调“视觉氛围”（标准/柔和/清冷/明快/自定义：降饱和/冷暖/光效）；按用户要求默认标准=无滤镜、无强制品牌气质 |
-| 11 | 空状态设计 | ✅ 全 App 主要空状态统一组件（图标+引导按钮+语气文案），无品牌符号 |
-| 12 | 设置页重新设计 | ✅ 六组语义卡片 + 常用快捷区 + 搜索 + 分组标题 |
-| 13 | 排版层级大胆 | ✅ 全局 Typography 标题 Bold/SemiBold、正文常规 |
-| 14 | 图标一致性 | ✅ 全 Phosphor，无 Material 混用 |
-| 15 | 品牌视觉母题 | ➖ 按用户要求移除（空状态 ✦/微光/余烬文案已删），改为用户可调视觉氛围 |
-
-**第 161 轮 CI 修复**：字体下载状态原本声明在 LazyVerticalGrid 的 item 作用域内、弹窗在外面引用不到 → 提升到 AppearanceScreen 顶层（401a88f）。
-✅ 401a88f CI 全绿：霞鹜文楷下载 + 外观即时生效 + 六主题间距/动效性格 + 15 项清点全部编译通过。
-
-**第 161 轮新增**：
-- FontManager：霞鹜文楷下载（官方 Release zip → LXGWWenKai-Regular.ttf → filesDir/fonts），
-  外观页字体新增“霞鹜文楷（下载）”chip：未下载点选→下载对话框→成功自动应用并持久化
-- 外观改动即时生效：MainActivity appearanceRev 状态贯通 MainScreen→SettingsScreen→AppearanceScreen，
-  字体/圆角保存后不再需要重启
-- 六主题独立性格补全：ThemePreset.spacing（列表/网格间距倍数）+ motionScale（骨架屏等动效速度）；
-  墨韵留白大动效慢、丹砂紧凑动效快、琉璃轻快、青瓷舒展
-
-## 8. 去掉强制品牌气质，视觉氛围可调（第 160 轮，2026-08-11，用户要求）
-
-- 按用户要求移除上一轮加的“余烬品牌感”：空状态去掉 ✦/微光动画，改中性图标（Person/List/Book/Search）+ 中性文案；
-  去掉强制暖调降饱和“品牌滤镜”，默认“标准”= 算法取色原样输出（desat 0 / warmth 0）
-- 新增「视觉氛围」设置（外观与主题）：标准 / 柔和 / 清冷 / 明快 / 自定义；
-  自定义=降饱和（0–0.5）、冷暖（±0.25）、光效（0–1）三个滑块，实时生效并持久化（VibePrefs）
-- 阴影强度跟随光效设置（LocalVibe.glow → emberShadow alpha），标准档阴影自然
-- 数据流：MainActivity 持有 vibe → EmberInnTheme(vibe) + MainScreen → SettingsScreen → AppearanceScreen
-
-**规划（用户确认后开工，P2）**：高级主题编辑器——“自定义所有组件”的最终形态：
-M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字号字重 / 密度间距 / 动效速度）逐项可调，
-组件自动跟随（M3 组件读角色不读死值）；现在不做，等当前 UI 批次稳定后作为独立里程碑。
-
-**剩余 UI 待办**：每卡消息样式配方（需 mikepenz renderer 自定义 quote/斜体配色 spike）、
-快捷回复全屏编辑器、LaTeX/MeshGradient（版本风险，待 spike）、网络代理（P5）、
-高级主题编辑器（P2 已登记，用户确认后开工）。
-- ✅ 世界书命中灯四色已做（8244c41：常驻/关键词/概率/向量，含图例）。
-- ✅ 字体包已做（7de20a3：霞鹜文楷下载 + 即时生效；衬线=思源宋体近似）。
 
 ## 10. 扩展插件：交互 HTML 卡片 / iframe 渲染器（App 层）
 
@@ -1091,6 +544,62 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 ### 10.7 安全与许可证
 - 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；无 JS 桥，碰不到 Android API/本地文件（除 asset）。
 - 与第 178 轮 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
+
+## 11. 渲染与官方源码逐项对照（第 195 轮审计，2026-08-11）
+
+对照版本：SillyTavern 1.18.0（~/sillytavern-ref，release 8172dcd）。
+官方管线：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染。
+我方管线：`displayTextOf`（位点正则/fixMarkdown/encode_tags）→ `preprocessOfficialHtml`
+（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`
+（buildMarkdownAnnotatedString + applyOfficialMarkers）→ 或 WebView 兜底（officialStyledHtml + 自动测高）。
+引擎层未动，本审计只覆盖 App/UI 渲染。
+
+### 11.1 逐项对照表
+
+| 官方项（源码位置） | 官方行为 | 我方实现 | 1:1 |
+|---|---|---|---|
+| 引号对 6 种（script.js） | `"…"`/“…”/«»/「」/『』/＂＂ → `<q>` 含引号字符，代码/style 先保护 | preprocessOfficialHtml 同 6 种 → \uE001..\uE002；保护 ```/~~~ /``/`/style | ✅ |
+| 系统消息（script.js `if (!isSystem)`） | 引号转换/encode_tags 跳过，fixMarkdown 仍执行 | displayTextOf 已跳过正则+encode；第 195 轮补跳过引号转换 | ✅ 本轮修复 |
+| ~text~ 下划线（Showdown underline） | → `<u>` 下划线色+Underline | \uE003..\uE004 → 下划线色+Underline | ✅ |
+| `<em>/<i>`（style.css .mes_text i,em） | 斜体 + --SmartThemeEmColor | 原生 annotator EMPH → emColor；WebView CSS em,i 同色 | ✅ |
+| `<b>/<strong>`（style.css strong/h1/h2） | font-weight bold | → `**` Markdown 加粗 | ✅ |
+| `<s>/<strike>/<del>` | 删除线 | → `~~` | ✅ |
+| `<font color="#hex">`（style.css font[color]…inherit） | 指定色，内部 em/i/u/q 继承 | \uE005..#hex..\uE007 → 最后覆盖 em/u/q | ✅ |
+| `<hr>`/`<br>` | 分隔线/换行 | → Markdown 分隔线 / 换行 | ✅ |
+| 正文色（style.css body） | --SmartThemeBodyColor | 原生无色样式统一补 bodyColor；WebView body color | ✅ |
+| 链接（style.css a） | --SmartThemeQuoteColor，无下划线 | linkTextSpanStyle=quoteColor；WebView a=quote | ✅ |
+| 引用块（style.css blockquote） | 左 3px quote + padding-left 10px + black30a + margin 0 | 原生黑 30% Box + MarkdownBlockQuote 左边条；WebView CSS 同官方 | ✅ |
+| q 内斜体（style.css q i/q em） | color:inherit（被 q 色覆盖） | applyOfficialMarkers q 后于 em | ✅ |
+| u 与 em 层级（style.css u / em 优先级） | u 段 em 保持 em 色 | u 避开 em 段上色 | ✅ |
+| 代码块（style.css pre code） | display:block + overflow-x:auto | highlightedCodeBlock/Fence（库代码高亮）+ WebView pre code | ✅ 视觉 |
+| 表格/列表/p/li tt（style.css .mes_text） | border/padding/margin 定值 | WebView CSS 同官方；原生 mikepenz 为 M3 风格近似 | 🟡 原生视觉近似 |
+| 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + WebView text-shadow | 🟡 仅聊天正文，非全站 |
+| 阴影/边框色（style.css :root） | rgba(0,0,0,.5)=#80000000 | stShadow/stBorder #80000000 | ✅ |
+| 用户/AI 气泡底（style.css :root） | rgba(0,0,0,.3) / rgba(60,60,60,.3) | stUserBubble #4D000000 / stBotBubble #4D3C3C3C | ✅ 色值；气泡无官方玻璃模糊 🟡 |
+| 头像圆角（style.css :root） | 2px / 10px / 50% | avatarShape square/rounded/circle | ✅（默认圆形，官方默认方形，可改） |
+| 主字体/字号（style.css :root） | Noto Sans / 15px（fontScale=1） | Noto Sans 4 面下载 / textSize=official 15px | ✅（默认 16px，可切官方 15） |
+| encode_tags（script.js） | `<`/`>` 转义（负向后顾版本差异） | AppearancePrefs.encodeTags，非系统消息 | ✅ |
+| 流式渲染（官方 StreamingProcessor） | 增量整段 messageFormatting | StreamingMarkdown 轻量着色，结束完整重渲染 | 🟡 中间态近似，最终一致 |
+| DOMPurify（script.js） | 剥 script/on*，白名单 | JS 全开、网络全开（用户要求），只拦 javascript: URL | ❌ 有意偏差，风险登记 |
+| `<style>` | 官方默认剥除（角色开关恢复+前缀） | 默认放行，且只影响该消息自己的 WebView | ❌ 有意偏差 |
+| 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
+| Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
+| reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
+| WebView 高度 | 官方 DOM 正常撑高 | onPageFinished 轮询 {h,p}（图片感知，最长 15s）+ iframe 150/500/1500/3000ms 复测；上限 75% 屏高 | ✅ 机制自研 |
+
+### 11.2 已知 bug / 限制登记（继续治理清单）
+1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
+2. 全站文字阴影只覆盖聊天正文/标题，时间戳/名字/按钮未加（官方 `*` 全站）
+3. 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）
+4. Markdown 表格单元格/任务列表 checkbox 文本仍走库内直绘，引号等官方字段可能残留占位符（低频）
+5. 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致
+6. WebView 高度上限 75% 屏高，超长内容卡内滚动（防单条撑爆列表）
+7. 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（第 178 轮登记）
+
+### 11.3 对照源码文件
+- `~/sillytavern-ref/public/script.js`：messageFormatting（引号对/encode_tags/Showdown/DOMPurify）
+- `~/sillytavern-ref/public/style.css`：`:root`（SmartTheme*、阴影、字号、字体、头像圆角）、`.mes_text`（i/em、q、u、a、blockquote、table/p/ol/ul/li tt、pre code、font[color]）
+
 
 ## 9. 维护速记（2026-08-10 精简归档）
 
