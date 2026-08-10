@@ -552,12 +552,18 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 形状语言真正区分角色：角色卡按自身主题配方 shape 取圆角（square=4 / circle=24 / rounded=16 / 默认 16），
   与颜色一起形成每卡专属氛围
 
+**第三批落地（d976515）**：
+- 排版层级拉大：全局 Typography 标题 Bold/SemiBold、正文常规（README 清单 13）
+- 空状态铺开：搜索无结果、全局正则空、快捷回复空、提供商模型列表空 全部换 EmberEmptyState（compact 行内模式）
+
 **本轮 CI 修复**：
 - ChatViewModel 补 DisplayPipeline/AppearancePrefs 导入；CharacterDetailScreen SectionHeader 补 @Composable
 - DisplayPipelineTest 失败 → balanceStreamingDelimiters 补“行尾已以该定界符结尾则不补”规则（见上节登记）
+- @file:OptIn 文件里 import 插到 package 前导致 CharacterDetailScreen 语法错误 → 已移回 package 后；
+  EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
 
 **剩余 UI 待办（下一批）**：字体包（霞鹜文楷/思源宋体下载接入）、世界书命中灯四色、每卡消息样式配方、
-快捷回复全屏编辑器、设置页再打磨（分组卡片已做）、排版层级拉大、LaTeX/MeshGradient（版本风险，待 spike）。
+快捷回复全屏编辑器、设置页再打磨（分组卡片已做）、LaTeX/MeshGradient（版本风险，待 spike）。
 
 ## 9. 维护速记（2026-08-10 精简归档）
 

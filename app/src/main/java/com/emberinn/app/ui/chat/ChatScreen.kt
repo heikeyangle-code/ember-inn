@@ -688,24 +688,39 @@ fun ChatScreen(
                 if (worldHits.isEmpty()) {
                     Text("没有命中条目", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+                        WorldHitLight(MaterialTheme.colorScheme.primary, "常驻")
+                        WorldHitLight(MaterialTheme.colorScheme.secondary, "关键词")
+                        WorldHitLight(Color(0xFFE09A3E), "概率")
+                        WorldHitLight(MaterialTheme.colorScheme.tertiary, "向量")
+                    }
                     worldHits.forEach { hit ->
+                        val hitLabel = when {
+                            hit.constant -> "常驻"
+                            hit.vectorized -> "向量"
+                            hit.useProbability -> "概率命中"
+                            else -> "关键词命中"
+                        }
+                        val lightColor = when {
+                            hit.constant -> MaterialTheme.colorScheme.primary
+                            hit.vectorized -> MaterialTheme.colorScheme.tertiary
+                            hit.useProbability -> Color(0xFFE09A3E)
+                            else -> MaterialTheme.colorScheme.secondary
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         ) {
                             Box(
                                 modifier = Modifier.size(10.dp).clip(CircleShape)
-                                    .background(
-                                        if (hit.constant) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.tertiary,
-                                    ),
+                                    .background(lightColor),
                             )
                             Spacer(Modifier.size(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(hit.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
                                 Text(
                                     listOf(
-                                        if (hit.constant) "常驻" else "关键词命中",
+                                        hitLabel,
                                         hit.key.takeIf { it.isNotBlank() }?.let { "键：$it" },
                                         hit.positionLabel,
                                         "${hit.tokens} token",
@@ -2548,6 +2563,15 @@ private fun EmptyChat(name: String, accent: Color) {
         accent = accent,
         modifier = Modifier.fillMaxWidth().padding(top = 72.dp, bottom = 24.dp),
     )
+}
+
+@Composable
+private fun WorldHitLight(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.size(4.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 private fun isUser(el: JsonElement): Boolean {

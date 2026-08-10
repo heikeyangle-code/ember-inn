@@ -1837,6 +1837,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                                 name = name,
                                 key = entry.keys.firstOrNull().orEmpty(),
                                 constant = entry.constant,
+                                vectorized = entry.vectorized,
+                                useProbability = entry.useProbability && entry.probability < 100,
                                 positionLabel = positionLabel(entry.position),
                                 tokens = entryTokens(entry.content),
                             )
@@ -2021,6 +2023,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val name: String,
         val key: String,
         val constant: Boolean,
+        val vectorized: Boolean,
+        val useProbability: Boolean,
         val positionLabel: String,
         val tokens: Int,
     )
