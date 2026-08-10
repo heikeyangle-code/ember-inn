@@ -401,6 +401,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return trimmed
     }
 
+    override fun selectPersona(name: String, mode: String): String {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return "（/persona-set 需要指定人设名）"
+        // 官方 setNameCallback：先按名字/avatar 找人设
+        val found = personaStore.list().firstOrNull { it.name == trimmed || it.id == trimmed }
+        when (mode.lowercase()) {
+            "lookup" -> {
+                if (found == null) return "（找不到人设：$trimmed）"
+                setPersona(found.id)
+                return ""
+            }
+            "temp" -> {
+                // 官方 temp：仅设置临时用户名，不查找人设
+                currentUserName = trimmed
+                _notice.value = "（临时用户名已设为 $trimmed）"
+                return ""
+            }
+            else -> {
+                // 官方 all：先找人设，找不到回退临时用户名
+                if (found != null) {
+                    setPersona(found.id)
+                    return ""
+                }
+                currentUserName = trimmed
+                _notice.value = "（未找到人设“$trimmed”，已设为临时用户名）"
+                return ""
+            }
+        }
+    }
+
     override fun impersonate(prompt: String): String {
         if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
         if (!isProviderConfigured()) {

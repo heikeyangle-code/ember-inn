@@ -25,6 +25,7 @@ class AppSlashExecutorTest {
         override fun setInput(text: String): String { calls += "setinput:$text"; return text }
         override fun setBackground(text: String): String { calls += "bg:$text"; return "bg.png" }
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
+        override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
         override fun notify(text: String) { calls += "notify:$text" }
     }
 
@@ -81,6 +82,13 @@ class AppSlashExecutorTest {
             listOf("renamechat:新会话", "getchatname", "setinput:你好世界", "bg:clear", "impersonate:写一句旁白"),
             a.calls,
         )
+    }
+
+    @Test
+    fun `persona set forwards name and mode`() {
+        val a = FakeActions()
+        AppSlashExecutor(a).execute("/persona-set mode=lookup 小红 | /persona 小明")
+        assertEquals(listOf("persona:lookup:小红", "persona:all:小明"), a.calls)
     }
 
     @Test

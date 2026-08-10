@@ -47,6 +47,8 @@ interface SlashMessageActions {
     fun setBackground(text: String): String
     /** /impersonate：触发冒充生成（prompt 可选，覆盖默认冒充提示）；返回提示文本。 */
     fun impersonate(prompt: String): String
+    /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
+    fun selectPersona(name: String, mode: String): String
 }
 
 /**
@@ -180,6 +182,14 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "触发冒充生成（官方 impersonate；prompt 可选）",
             rawQuotes = true,
             callback = { inv, _ -> actions.impersonate(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "persona-set",
+            aliases = listOf("persona"),
+            description = "切换人设（官方 persona-set：mode=lookup/temp/all，默认 all）",
+            callback = { inv, _ ->
+                actions.selectPersona(inv.unnamedArgs.joinToString(" "), inv.namedArgs["mode"] ?: "all")
+            },
         ),
     )
 

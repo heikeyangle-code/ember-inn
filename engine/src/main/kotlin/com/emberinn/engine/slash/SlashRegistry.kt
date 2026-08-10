@@ -83,7 +83,8 @@ object SlashRegistry : SlashCommandResolver {
         register(
             SlashCommandDef(
                 "persona",
-                description = "切换人设",
+                aliases = listOf("persona-set"),
+                description = "切换人设（mode=lookup/temp/all，默认 all：先找人设，找不到回退临时用户名）",
                 callback = { inv, _ -> "OK:persona:${inv.unnamedArgs.joinToString(" ")}:mode=${inv.namedArgs["mode"] ?: "all"}" },
             ),
         )
