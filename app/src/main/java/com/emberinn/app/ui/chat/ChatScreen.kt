@@ -92,6 +92,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
@@ -2435,11 +2436,11 @@ private fun ChatInputBar(
                     }
                 }
             }
-            IconButton(onClick = onToggleQuickBar, modifier = Modifier.size(42.dp)) {
-                Icon(PhosphorIcons.Book, contentDescription = "快捷工具盘", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            IconButton(onClick = onToggleQuickBar, modifier = Modifier.size(36.dp)) {
+                Icon(PhosphorIcons.Book, contentDescription = "快捷工具盘", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
             }
-            IconButton(onClick = onAttach, modifier = Modifier.size(42.dp)) {
-                Icon(PhosphorIcons.Plus, contentDescription = "附件 / 语音", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            IconButton(onClick = onAttach, modifier = Modifier.size(36.dp)) {
+                Icon(PhosphorIcons.Plus, contentDescription = "附件 / 语音", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
             }
             OutlinedTextField(
                 value = input,
@@ -2463,35 +2464,47 @@ private fun ChatInputBar(
                 ),
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 46.dp, max = 160.dp),
+                    .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                IconButton(onClick = onVoice, modifier = Modifier.size(42.dp)) {
-                    Icon(PhosphorIcons.Mic, contentDescription = "语音输入", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                IconButton(onClick = onVoice, modifier = Modifier.size(36.dp)) {
+                    Icon(PhosphorIcons.Mic, contentDescription = "语音输入", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                 }
                 val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
+                // 借鉴 OmniBot：发送=实心圆钮，可发送时 accent 底 + 自适应亮色图标，不可发送时浅灰
+                val onAccent = if (accent.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else Color.White
                 IconButton(
                     onClick = onSend,
                     enabled = canSend,
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(if (canSend) accent.copy(alpha = 0.16f) else Color.Transparent),
+                            .background(
+                                if (canSend) accent else MaterialTheme.colorScheme.surfaceContainerHighest,
+                            ),
                     ) {
                         Icon(
                             PhosphorIcons.Send,
                             contentDescription = "发送",
-                            tint = if (canSend) accent else MaterialTheme.colorScheme.outlineVariant,
+                            tint = if (canSend) onAccent else MaterialTheme.colorScheme.outlineVariant,
                         )
                     }
                 }
             } else {
-                IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
-                    Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.error)
+                IconButton(onClick = onStop, modifier = Modifier.size(36.dp)) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.error),
+                    ) {
+                        Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError)
+                    }
                 }
             }
             }

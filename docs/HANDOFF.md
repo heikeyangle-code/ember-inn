@@ -400,6 +400,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   点击图片在 LIST ↔ GALLERY 间切换并持久化 extra.media_display（官方 chats.js
   switchMessageMediaDisplay）；App 恢复内联大图（高限 320dp）+ 点击切换 + gallery 左右滑切
 
+## 8. 输入栏按钮借鉴 OmniBot（第 154 轮）
+
+对照 chat_input_area_composer.dart 的按钮体系：
+- 主行图标按钮 42dp → 36dp，颜色统一 onSurfaceVariant(0.8)，不再又大又平
+- 发送按钮改实心圆钮：可发送时 accent 底 + 亮度自适应图标（浅色 accent 用深图标、深色用白），
+  不可发送时 surfaceContainerHighest 浅灰；停止生成改 error 实心圆钮
+- 输入框最小高 46dp → 44dp（OmniBot 紧凑 44dp）
+- 快捷工具盘文字按钮、状态胶囊/待发缩略图暂保持，待下批继续统一
+
 ## 8. 角色详情页 UI 重构（第 152 轮，用户反馈）
 
 - 世界书条目不再默认全展开：收进一张“世界书”卡片、默认折叠，点击展开/收起，放到详情页最底部
