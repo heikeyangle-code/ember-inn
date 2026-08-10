@@ -24,7 +24,7 @@ private val parsedCardCache = object : LinkedHashMap<String, JsonObject>(64, 0.7
 }
 
 private fun parseCached(raw: String): JsonObject = synchronized(parsedCardCache) {
-    parsedCardCache.getOrPut(raw) { json.parseToJsonElement(raw).jsonObject }
+    parsedCardCache.getOrPut(raw) { Json.parseToJsonElement(raw).jsonObject }
 }
 
 /** 角色详情页可编辑字段快照（官方 v2 归一字段；tags 逗号拼接、depth_prompt 兼容对象/字符串、talkativeness 读 extensions）。 */
