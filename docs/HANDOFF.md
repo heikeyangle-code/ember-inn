@@ -572,6 +572,10 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 阴影强度跟随光效设置（LocalVibe.glow → emberShadow alpha），标准档阴影自然
 - 数据流：MainActivity 持有 vibe → EmberInnTheme(vibe) + MainScreen → SettingsScreen → AppearanceScreen
 
+**规划（用户确认后开工，P2）**：高级主题编辑器——“自定义所有组件”的最终形态：
+M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字号字重 / 密度间距 / 动效速度）逐项可调，
+组件自动跟随（M3 组件读角色不读死值）；现在不做，等当前 UI 批次稳定后作为独立里程碑。
+
 **剩余 UI 待办（下一批）**：字体包（霞鹜文楷/思源宋体下载接入）、每卡消息样式配方、
 快捷回复全屏编辑器、设置页再打磨（分组卡片已做）、LaTeX/MeshGradient（版本风险，待 spike）。
 - ✅ 世界书命中灯四色已做（8244c41：常驻/关键词/概率/向量，含图例）。
