@@ -184,14 +184,15 @@ class ChatPromptFactoryTest {
     }
 
     @Test
-    fun `character regex applies to user message before prompt`() {
+    fun `character regex applies only when scoped allowed (official character_allowed_regex)`() {
         val card = """
             {"spec":"chara_card_v2","name":"角色","data":{"name":"角色","extensions":{"regex_scripts":[
               {"id":"r1","scriptName":"改口","findRegex":"/你好/","replaceString":"哈喽","placement":[1],"runOnEdit":true}
             ]}}}
         """.trimIndent()
         val history = listOf(msg(true, "你好", "User"))
-        val result = ChatPromptFactory().prepare(
+        // 官方 getScriptsByType(SCOPED)：allowedOnly 且角色不在 character_allowed_regex 中 → 不生效
+        val denied = ChatPromptFactory().prepare(
             characterRawJson = card,
             history = history,
             userName = "User",
@@ -200,7 +201,19 @@ class ChatPromptFactoryTest {
             maxContextTokens = 10000,
             maxTokens = 256,
         )
-        assertTrue(result.messages.any { it.content.contains("哈喽") })
+        assertTrue(denied.messages.none { it.content.contains("哈喽") })
+        // 角色在允许列表 → 生效
+        val allowed = ChatPromptFactory().prepare(
+            characterRawJson = card,
+            history = history,
+            userName = "User",
+            charName = "角色",
+            model = "gpt-4o",
+            maxContextTokens = 10000,
+            maxTokens = 256,
+            regexScopedAllowed = true,
+        )
+        assertTrue(allowed.messages.any { it.content.contains("哈喽") })
     }
 
     @Test
