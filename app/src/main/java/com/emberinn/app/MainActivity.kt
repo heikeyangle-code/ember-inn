@@ -26,8 +26,6 @@ import com.emberinn.app.ui.theme.ThemePresets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 原生启动屏：启动窗口先按 Splash 主题渲染（主题 windowBackground），内容就绪后切回常规主题
-        setTheme(R.style.Theme_EmberInn)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
