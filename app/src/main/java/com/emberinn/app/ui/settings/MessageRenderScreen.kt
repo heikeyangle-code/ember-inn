@@ -74,14 +74,38 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        ColorField("正文色", "官方 --SmartThemeBodyColor（例 #DCDCD2）", AppearancePrefs.stBodyColor(context), bodyFallback) { AppearancePrefs.saveStBodyColor(context, it); onAppearanceChanged() }
-                        ColorField("次要文字色", "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", AppearancePrefs.stEmColor(context), emFallback) { AppearancePrefs.saveStEmColor(context, it); onAppearanceChanged() }
-                        ColorField("下划线色", "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", AppearancePrefs.stUnderlineColor(context), underlineFallback) { AppearancePrefs.saveStUnderlineColor(context, it); onAppearanceChanged() }
-                        ColorField("引用色", "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", AppearancePrefs.stQuoteColor(context), quoteFallback) { AppearancePrefs.saveStQuoteColor(context, it); onAppearanceChanged() }
-                        ColorField("用户气泡底色", "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", AppearancePrefs.stUserBubble(context), userBubbleFallback) { AppearancePrefs.saveStUserBubble(context, it); onAppearanceChanged() }
-                        ColorField("AI 气泡底色", "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", AppearancePrefs.stBotBubble(context), botBubbleFallback) { AppearancePrefs.saveStBotBubble(context, it); onAppearanceChanged() }
-                        ColorField("边框色", "官方 --SmartThemeBorderColor（例 #00000080）", AppearancePrefs.stBorderColor(context), borderFallback) { AppearancePrefs.saveStBorderColor(context, it); onAppearanceChanged() }
-                        ColorField("阴影色", "官方 --SmartThemeShadowColor（例 #00000080）", AppearancePrefs.stShadowColor(context), shadowFallback) { AppearancePrefs.saveStShadowColor(context, it); onAppearanceChanged() }
+                        ColorField(
+                            label = "正文色", hint = "官方 --SmartThemeBodyColor（例 #DCDCD2）", value = AppearancePrefs.stBodyColor(context), fallback = bodyFallback,
+                            onSave = { AppearancePrefs.saveStBodyColor(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "次要文字色", hint = "官方 --SmartThemeEmColor：斜体 <em>/<i> + 小字时间戳（例 #919191）", value = AppearancePrefs.stEmColor(context), fallback = emFallback,
+                            onSave = { AppearancePrefs.saveStEmColor(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "下划线色", hint = "官方 --SmartThemeUnderlineColor（<u> 或 ~text~，例 #BCE7CF）", value = AppearancePrefs.stUnderlineColor(context), fallback = underlineFallback,
+                            onSave = { AppearancePrefs.saveStUnderlineColor(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "引用色", hint = "官方 --SmartThemeQuoteColor（<q>/blockquote/链接，例 #E18A24）", value = AppearancePrefs.stQuoteColor(context), fallback = quoteFallback,
+                            onSave = { AppearancePrefs.saveStQuoteColor(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "用户气泡底色", hint = "官方 --SmartThemeUserMesBlurTintColor（例 #0000004D）", value = AppearancePrefs.stUserBubble(context), fallback = userBubbleFallback,
+                            onSave = { AppearancePrefs.saveStUserBubble(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "AI 气泡底色", hint = "官方 --SmartThemeBotMesBlurTintColor（例 #3C3C3C4D）", value = AppearancePrefs.stBotBubble(context), fallback = botBubbleFallback,
+                            onSave = { AppearancePrefs.saveStBotBubble(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "边框色", hint = "官方 --SmartThemeBorderColor（例 #00000080）", value = AppearancePrefs.stBorderColor(context), fallback = borderFallback,
+                            onSave = { AppearancePrefs.saveStBorderColor(context, it); onAppearanceChanged() },
+                        )
+                        ColorField(
+                            label = "阴影色", hint = "官方 --SmartThemeShadowColor（例 #00000080）", value = AppearancePrefs.stShadowColor(context), fallback = shadowFallback,
+                            onSave = { AppearancePrefs.saveStShadowColor(context, it); onAppearanceChanged() },
+                        )
                     }
                 }
             }
