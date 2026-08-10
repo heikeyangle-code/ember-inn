@@ -53,6 +53,10 @@ interface SlashMessageActions {
     fun triggerGeneration(): String
     /** /inject：写/删 chat_metadata.script_injects 并注入本会话生成；返回注入 ID。 */
     fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String
+    /** /gen：用当前聊天上下文 + 提示生成文本（不落盘），返回生成文本（官方 generateCallback）。 */
+    suspend fun generateText(prompt: String, length: Int?): String
+    /** /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本（官方 generateRawCallback）。 */
+    suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String
 }
 
 /**
@@ -193,6 +197,29 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             callback = { _, _ -> actions.triggerGeneration() },
         ),
         SlashCommandDef(
+            "gen",
+            description = "用当前聊天上下文 + 提示生成文本（官方 gen；length= 可选；不落盘）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ ->
+                actions.generateText(inv.unnamedArgs.joinToString(" "), inv.namedArgs["length"]?.toIntOrNull())
+            },
+        ),
+        SlashCommandDef(
+            "genraw",
+            description = "直接用提示请求生成（官方 genraw；system/prefill/length= 可选；不落盘）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ ->
+                actions.generateRaw(
+                    prompt = inv.unnamedArgs.joinToString(" "),
+                    system = inv.namedArgs["system"] ?: "",
+                    prefill = inv.namedArgs["prefill"] ?: "",
+                    length = inv.namedArgs["length"]?.toIntOrNull(),
+                )
+            },
+        ),
+        SlashCommandDef(
             "inject",
             description = "注入提示文本（官方 inject：position=before/after/chat/none，depth，role，scan，ephemeral；返回注入 ID）",
             rawQuotes = true,
@@ -229,6 +256,9 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
 
     fun execute(text: String, state: SlashState = SlashState()): String =
         SlashEngine.execute(text, state, this)
+
+    suspend fun executeAsync(text: String, state: SlashState = SlashState()): String =
+        SlashEngine.executeAsync(text, state, this)
 
     private fun atOf(raw: String?): Int = raw?.toIntOrNull() ?: -1
 

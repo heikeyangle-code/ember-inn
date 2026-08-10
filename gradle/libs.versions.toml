@@ -14,6 +14,7 @@ lifecycleViewmodelCompose = "2.11.0"
 palette = "1.0.0"
 jtokkit = "1.1.0"
 okhttp = "5.4.0"
+kotlinxCoroutines = "1.10.2"
 media3 = "1.10.0"
 markdown = "0.43.0"
 datastore = "1.2.1"
@@ -49,6 +50,7 @@ snakeyaml = { group = "org.yaml", name = "snakeyaml", version.ref = "snakeyaml" 
 jtokkit = { group = "com.knuddels", name = "jtokkit", version.ref = "jtokkit" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

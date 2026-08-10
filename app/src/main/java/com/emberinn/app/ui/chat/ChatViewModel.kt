@@ -158,12 +158,42 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun runSlash(line: String) {
         if (_isStreaming.value) return
         _notice.value = null
-        try {
-            val output = slashExecutor.execute(line)
-            if (output.isNotBlank()) _quickReplyOutput.value = output
-        } catch (e: Exception) {
-            _notice.value = "（${e.message ?: "斜杠命令执行失败"}）"
+        // 异步执行：/gen /genraw 需要等待生成；同步命令行为不变
+        viewModelScope.launch {
+            try {
+                val output = slashExecutor.executeAsync(line)
+                if (output.isNotBlank()) _quickReplyOutput.value = output
+            } catch (e: Exception) {
+                _notice.value = "（${e.message ?: "斜杠命令执行失败"}）"
+            }
         }
+    }
+
+    /** 官方 /gen：用当前聊天上下文 + 提示生成文本（不落盘），返回生成文本。 */
+    override suspend fun generateText(prompt: String, length: Int?): String {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            return "（未配置模型，请先选一个模型。）"
+        }
+        val history = chatStore.messages(sessionId).toMutableList()
+        history += buildJsonObject {
+            put("name", JsonPrimitive(currentUserName))
+            put("is_user", JsonPrimitive(true))
+            put("is_system", JsonPrimitive(false))
+            put("send_date", JsonPrimitive(java.time.Instant.now().toString()))
+            put("mes", JsonPrimitive(prompt))
+            put("extra", buildJsonObject {})
+        }
+        return chatRepository.chat(history, maxTokensOverride = length) ?: "（生成失败）"
+    }
+
+    /** 官方 /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本。 */
+    override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String {
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            return "（未配置模型，请先选一个模型。）"
+        }
+        return chatRepository.rawGenerate(prompt, system, prefill, length) ?: "（生成失败）"
     }
 
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }

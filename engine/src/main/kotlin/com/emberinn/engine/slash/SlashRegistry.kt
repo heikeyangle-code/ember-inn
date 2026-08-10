@@ -218,6 +218,8 @@ object SlashRegistry : SlashCommandResolver {
         // ---- 会话/输入/背景/冒充/触发命令（官方 slash-commands.js；真正执行由 App SlashMessageActions 注入，引擎占位）----
         register(SlashCommandDef("trigger", description = "触发一次生成（Generate('normal')）", callback = { _, _ -> "OK:trigger" }))
         register(SlashCommandDef("inject", description = "注入一段提示文本（返回注入 ID）", rawQuotes = true, callback = { inv, _ -> "OK:inject:${inv.namedArgs["id"] ?: ""}" }))
+        register(SlashCommandDef("gen", description = "用当前上下文 + 提示生成文本（不落盘）", rawQuotes = true, callback = { inv, _ -> "OK:gen:${inv.unnamedArgs.joinToString(" ")}" }))
+        register(SlashCommandDef("genraw", description = "直接用提示请求生成（不落盘）", rawQuotes = true, callback = { inv, _ -> "OK:genraw:${inv.unnamedArgs.joinToString(" ")}" }))
 
         register(SlashCommandDef("renamechat", description = "重命名当前会话", callback = { _, _ -> "OK:renamechat" }))
         register(SlashCommandDef("getchatname", description = "返回当前会话名（管道）", callback = { _, _ -> "OK:getchatname" }))

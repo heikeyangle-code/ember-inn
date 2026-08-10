@@ -2,6 +2,7 @@ package com.emberinn.engine.slash
 
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import kotlinx.coroutines.runBlocking
 
 /**
  * 斜杠链式执行引擎，对齐官方 SlashCommandParser.parseClosure + executeDirect：
@@ -10,6 +11,7 @@ import com.emberinn.engine.macros.MacroEnv
  * - 双管道 ||：不注入
  * - /parser-flag STRICT_ESCAPING on|off 立即生效，影响后续命令解析
  * - 闭包 {: ... :} 预解析为立即执行并取其 pipe 输出（官方惰性闭包，近似已登记）
+ * 异步：executeAsync 支持 suspendCallback（/gen /genraw）；execute 同步路径 runBlocking 兜底。
  */
 object SlashEngine {
 
@@ -17,8 +19,14 @@ object SlashEngine {
         text: String,
         state: SlashState = SlashState(),
         resolver: SlashCommandResolver = SlashRegistry,
+    ): String = runBlocking { executeAsync(text, state, resolver) }
+
+    suspend fun executeAsync(
+        text: String,
+        state: SlashState = SlashState(),
+        resolver: SlashCommandResolver = SlashRegistry,
     ): String {
-        val resolved = resolveClosures(text, resolver)
+        val resolved = resolveClosuresAsync(text, resolver)
         val tok = SlashTokenizer(resolved, strictEscaping = state.strictEscaping)
         var injectPipe = true
         while (true) {
@@ -48,7 +56,7 @@ object SlashEngine {
                         namedLists = finalInv.namedLists.mapValues { (_, v) -> v.map { it.replace("\u0001", "") } },
                         unnamedArgs = finalInv.unnamedArgs.map { it.replace("\u0001", "") },
                     )
-                    state.pipeValue = def.callback(finalInv, state)
+                    state.pipeValue = invokeCommand(def, finalInv, state)
                     injectPipe = true
                 }
                 else -> {
@@ -68,6 +76,10 @@ object SlashEngine {
         return state.pipeValue
     }
 
+    /** 异步命令优先 suspendCallback，其余走同步 callback（executeAsync 内两路都可用）。 */
+    private suspend fun invokeCommand(def: SlashCommandDef, invocation: CommandInvocation, state: SlashState): String =
+        def.suspendCallback?.invoke(invocation, state) ?: def.callback(invocation, state)
+
     /** 对齐官方：命令参数在执行前过宏替换（{{var}}/{{pipe}}/{{arg}} 等）。 */
     private fun substituteInvocation(invocation: CommandInvocation, state: SlashState): CommandInvocation {
         val env = MacroEnv(user = "", char = "", slash = state)
@@ -82,7 +94,7 @@ object SlashEngine {
      * 把 {: 链 :} 替换为其执行输出（加控制字符占位，保持单个参数）。
      * 转义判定对齐官方 testSymbol：{ 前反斜杠为奇数个时不是闭包。
      */
-    private fun resolveClosures(text: String, resolver: SlashCommandResolver): String {
+    private suspend fun resolveClosuresAsync(text: String, resolver: SlashCommandResolver): String {
         val sb = StringBuilder()
         var i = 0
         while (i < text.length) {
@@ -109,7 +121,7 @@ object SlashEngine {
                 }
                 if (end < 0) { sb.append(text, i, text.length); break }
                 val inner = text.substring(i + 2, end)
-                val output = runCatching { execute(inner, resolver = resolver) }.getOrElse { "" }
+                val output = runCatching { executeAsync(inner, resolver = resolver) }.getOrElse { "" }
                 sb.append('\u0001').append(output).append('\u0001')
                 i = end + 2
             } else {

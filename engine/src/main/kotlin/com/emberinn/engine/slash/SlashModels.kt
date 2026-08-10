@@ -22,6 +22,8 @@ data class SlashCommandDef(
     val aliases: List<String> = emptyList(),
     val description: String = "",
     val callback: (CommandInvocation, SlashState) -> String,
+    /** 异步命令（/gen /genraw 等）：executeAsync 优先走这里；execute 同步路径 runBlocking 兜底。 */
+    val suspendCallback: (suspend (CommandInvocation, SlashState) -> String)? = null,
     val rawQuotes: Boolean = false,
     /** 对齐官方 splitUnnamedArgument：无名参数按空白拆成多个（如 /qr-arg、/let）。 */
     val splitUnnamedArgument: Boolean = false,

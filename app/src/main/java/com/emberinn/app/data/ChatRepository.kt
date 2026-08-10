@@ -60,6 +60,7 @@ class ChatRepository(context: Context) {
 
     suspend fun chat(
         history: List<JsonElement>,
+        maxTokensOverride: Int? = null,
     ): String? = withContext(Dispatchers.IO) {
         val profile = store.load() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
@@ -69,7 +70,34 @@ class ChatRepository(context: Context) {
             val content = obj["mes"]?.jsonPrimitive?.content ?: return@mapNotNull null
             CompletionMessage(role = role, content = content)
         }
-        client.chatCompletions(provider, profile, messages)
+        val effective = if (maxTokensOverride != null && maxTokensOverride > 0) {
+            profile.copy(sampler = profile.sampler.copy(maxTokens = maxTokensOverride))
+        } else {
+            profile
+        }
+        client.chatCompletions(provider, effective, messages)
+    }
+
+    /** 官方 /genraw：直接以给定提示请求（system/prefill/length 可选），不读写聊天。 */
+    suspend fun rawGenerate(
+        prompt: String,
+        system: String = "",
+        prefill: String = "",
+        maxTokensOverride: Int? = null,
+    ): String? = withContext(Dispatchers.IO) {
+        val profile = store.load() ?: return@withContext null
+        val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
+        val messages = buildList {
+            if (system.isNotBlank()) add(CompletionMessage(role = "system", content = system))
+            add(CompletionMessage(role = "user", content = prompt))
+            if (prefill.isNotBlank()) add(CompletionMessage(role = "assistant", content = prefill))
+        }
+        val effective = if (maxTokensOverride != null && maxTokensOverride > 0) {
+            profile.copy(sampler = profile.sampler.copy(maxTokens = maxTokensOverride))
+        } else {
+            profile
+        }
+        client.chatCompletions(provider, effective, messages)
     }
 
     /**

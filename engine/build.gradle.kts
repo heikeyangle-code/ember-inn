@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.snakeyaml)
     implementation(libs.jtokkit)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)

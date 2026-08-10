@@ -1,5 +1,6 @@
 package com.emberinn.app.data
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -27,6 +28,8 @@ class AppSlashExecutorTest {
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
         override fun triggerGeneration(): String { calls += "trigger"; return "" }
+        override suspend fun generateText(prompt: String, length: Int?): String { calls += "gen:$prompt:$length"; return "生成文本" }
+        override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String { calls += "genraw:$system:$prefill:$length:$prompt"; return "原始生成" }
         override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String {
             calls += "inject:$id:$position:$depth:$role:$ephemeral:$text"
             return "abc12345"
@@ -94,6 +97,16 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/persona-set mode=lookup 小红 | /persona 小明")
         assertEquals(listOf("persona:lookup:小红", "persona:all:小明"), a.calls)
+    }
+
+    @Test
+    fun `gen and genraw run via async executor`() = runBlocking {
+        val a = FakeActions()
+        val out1 = AppSlashExecutor(a).executeAsync("/gen 你好")
+        val out2 = AppSlashExecutor(a).executeAsync("/genraw system=系统 prefill=开头 length=100 你好世界")
+        assertEquals("生成文本", out1)
+        assertEquals("原始生成", out2)
+        assertEquals(listOf("gen:你好:null", "genraw:系统:开头:100:你好世界"), a.calls)
     }
 
     @Test
