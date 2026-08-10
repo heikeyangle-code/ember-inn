@@ -72,9 +72,8 @@ private val IMAGE_SOURCES = listOf(
     DropdownOption("novel", "NovelAI"),
     DropdownOption("openai", "OpenAI · gpt-image"),
     DropdownOption("huggingface", "Hugging Face Inference"),
+    DropdownOption("horde", "Stable Horde"),
     DropdownOption("comfy", "ComfyUI（开发中）"),
-    DropdownOption("drawthings", "Draw Things（开发中）"),
-    DropdownOption("horde", "Stable Horde（开发中）"),
 )
 
 private val VECTOR_PROVIDERS = listOf(

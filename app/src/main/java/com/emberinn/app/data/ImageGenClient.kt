@@ -45,6 +45,7 @@ class ImageGenClient {
                 "sdcpp" -> auto1111(context, url, prompt, steps, model)
                 "novel" -> novel(context, prompt, model, apiKey, steps)
                 "huggingface" -> huggingface(context, prompt, model, apiKey)
+                "horde" -> horde(context, prompt, model, apiKey, steps)
                 else -> auto1111(context, url, prompt, steps, null)
             }
         }.getOrNull()
@@ -160,6 +161,77 @@ class ImageGenClient {
             }
             return null
         }
+    }
+
+    /**
+     * Stable Horde：官方 src/endpoints/horde.js generate-image 1:1——
+     * 截断(5000-neg-5) + sanitizeHordeImagePrompt + POST /api/v2/generate/async，
+     * 轮询 /check/{id} 至 done，/status/{id} 取 generations[0].img（base64 webp）。
+     * 默认参数对齐官方：cfg_scale=7、512x512、karras=true、sampler=k_euler_a、nsfw=false。
+     */
+    private fun horde(context: Context, prompt: String, model: String, apiKey: String, steps: Int): String? {
+        val negative = ""
+        val maxLength = 5000 - negative.length - 5
+        val safePrompt = if (prompt.length > maxLength) prompt.substring(0, maxLength) else prompt
+        val sanitized = sanitizeHordePrompt(safePrompt)
+        val payload = JSONObject()
+            .put("prompt", "$sanitized ### $negative")
+            .put("params", JSONObject()
+                .put("sampler_name", "k_euler_a")
+                .put("hires_fix", false)
+                .put("use_gfpgan", false)
+                .put("cfg_scale", 7)
+                .put("steps", steps.coerceIn(1, 50))
+                .put("width", 512)
+                .put("height", 512)
+                .put("karras", true)
+                .put("seed", kotlin.random.Random.nextLong(0, Long.MAX_VALUE).toString())
+                .put("n", 1))
+            .put("r2", false)
+            .put("nsfw", false)
+            .put("models", JSONArray().put(model.ifBlank { "Deliberate" }))
+        val requestBuilder = Request.Builder()
+            .url("https://stablehorde.net/api/v2/generate/async")
+            .post(payload.toRequestBody(jsonMedia))
+        if (apiKey.isNotBlank()) requestBuilder.header("apikey", apiKey)
+        val id = client.newCall(requestBuilder.build()).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            JSONObject(resp.body?.string().orEmpty()).optString("id").ifBlank { return null }
+        }
+        // 官方 CHECK_INTERVAL=3000 / MAX_ATTEMPTS=200
+        repeat(200) {
+            Thread.sleep(3000)
+            val done = client.newCall(
+                Request.Builder().url("https://stablehorde.net/api/v2/generate/check/$id").get().build(),
+            ).execute().use { resp ->
+                if (!resp.isSuccessful) return@use false
+                JSONObject(resp.body?.string().orEmpty()).optBoolean("done")
+            }
+            if (done) {
+                val status = client.newCall(
+                    Request.Builder().url("https://stablehorde.net/api/v2/generate/status/$id").get().build(),
+                ).execute().use { resp ->
+                    if (!resp.isSuccessful) return@use null
+                    JSONObject(resp.body?.string().orEmpty())
+                } ?: return null
+                val img = status.optJSONArray("generations")?.optJSONObject(0)?.optString("img") ?: return null
+                return runCatching { saveBase64(context, img, "webp") }.getOrNull()
+            }
+        }
+        return null
+    }
+
+    /** 官方 sanitizeHordeImagePrompt（horde.js）：替换/移除高风险的年龄相关词。 */
+    private fun sanitizeHordePrompt(prompt: String): String {
+        var out = prompt
+        out = Regex("\\b(girl)\\b", RegexOption.IGNORE_CASE).replace(out, "woman")
+        out = Regex("\\b(boy)\\b", RegexOption.IGNORE_CASE).replace(out, "man")
+        out = Regex("\\b(girls)\\b", RegexOption.IGNORE_CASE).replace(out, "women")
+        out = Regex("\\b(boys)\\b", RegexOption.IGNORE_CASE).replace(out, "men")
+        out = Regex("\\b(under\\.age|under\\.aged|underage|underaged|loli|pedo|pedophile|(\\w+)\\.year\\.old|(\\w+)\\.years\\.old|minor|prepubescent|minors|shota)\\b", RegexOption.IGNORE_CASE).replace(out, "")
+        out = Regex("\\b(youngster|infant|baby|toddler|child|teen|kid|kiddie|kiddo|teenager|student|preteen|pre\\.teen)\\b", RegexOption.IGNORE_CASE).replace(out, "person")
+        out = Regex("\\b(young|younger|youthful|youth|small|smaller|smallest|girly|boyish|lil|tiny|teenaged|lit[tl]le|school\\.aged|school|highschool|kindergarten|teens|children|kids)\\b", RegexOption.IGNORE_CASE).replace(out, "")
+        return out
     }
 
     /** Hugging Face Inference：POST /models/{model} {inputs: prompt}，响应为图片原始字节。 */
