@@ -379,23 +379,40 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/浅深锁定管线已做（第 92/106 轮）；配方导出/分享已做 | ✅ |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 官方对齐确认总表（2026-08-10 全量审计结论）
+
+**已逐字/差分确认对齐（官方源码 1:1）**
+- 媒体内联能力：isImage/Video/AudioInliningSupported 白名单 + source 分支（差分 24 例）
+- 世界书：externalActivations 键 world.uid、负深度、深度注入、EM 锚点、coreChat 过滤 is_system、
+  ensureSwipes（只排除 user/isSmallSys、swipe_info 回填 extra={}）
+- 斜杠：解析器 43 例差分、testSymbol 27 例；sendas 缺省 name 兜底当前角色名；/sysname 空名写 System；
+  /hide=/message-role=is_system/narrator 语义；Comment 默认名 Note；/delswipe 1-based
+- 消息数据流：AI 消息落盘带 swipes 结构；saveReply 尾部 mes/swipes/swipe_info.extra 逐字段刷新（continue 同步）；
+  deleteSwipe 新 id 规则；syncSwipeToMes 字段；send_date=ISO；AI extra 恒有
+  api/model/reasoning/reasoning_duration/reasoning_signature；群聊 AI 带 gen_id；
+  普通用户消息 extra isSmallSys=false、无 gen_id；附件 media_index 恒写、inline_image=true
+- 提示词：默认提示集合/顺序、populationInjectionPrompts、历史消息 preparePrompt 宏替换、
+  AN interval 公式与默认 position=1、Generate 类型（regenerate/continue/swipe/impersonate）
+- 正则分桶：GLOBAL→PRESET→SCOPED 顺序 + allowedOnly（差分 7 例）；JSON 导入导出（13/10 例）；
+  slash-parser（43 例）；向量工具（14 例）等 54 组差分
+
+**审计修复（bug/偏差已修）**
+- 历史索引错位（media 挂错）、bias 提取最后用户消息 + 编辑存 extra.bias 回溯、
+  /hide 语义、comment 不进提示词、系统消息防误操作（继续/重生成/变体/滑动）、
+  continue swipe_info 同步、发送失败不丢输入、重生成先查配置、群聊配置实时、书签路径消毒、
+  世界书条目删除确认、角色主题/背景实时刷新、平板导航轨、滑动返回手势、返回按钮不贴最高处
+
+**登记边界（有意保留，非 bug）**
+- extra.api 存提供商 id（官方存 source）；落盘文本未过 regex/宏替换（发送时应用，请求等价）；
+  群聊 gen_id 为每条时间戳（官方整批）；bias 文本提取 vs extra.bias（双轨已接）；
+  /hide name 过滤、narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；
+  openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；/gen /genraw /trigger /while 异步命令；
+  表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
+
 ## 9. 维护速记（2026-08-10 精简归档）
 
 ### 历史轮次
 88–126 轮逐轮记录已精简归档（需要时查 `git log --oneline`）；当前状态以上文第 3/4/5/8 节为准。
-
-### 官方对齐确认（全量审计结论）
-- ✅ 已逐字/差分确认：媒体内联能力（差分 24 例）、正则分桶（7 例）、slash 解析（43+27 例）、
-  JSON 导入导出（13/10 例）、世界书（externalActivations 键 world.uid、负深度、深度/EM 注入、
-  coreChat 过滤 is_system、ensureSwipes、AI swipes 结构与 saveReply 尾部同步、deleteSwipe 规则）、
-  作者注释（interval 公式/默认 position=1/IN_CHAT 通道）、提示词默认集合与 preparePrompt 宏替换、
-  Generate 类型、消息字段（gen_id 规则、isSmallSys、title、media_index、reasoning_*）
-- 🔧 审计修复的 bug：历史索引错位、bias 提取与编辑存 extra.bias 回溯、/hide 语义（is_system）、
-  comment 不进提示词、系统消息防误操作、continue 后 swipe_info 同步、发送失败不丢输入、
-  重生成先查配置、群聊配置实时生效、书签路径消毒、角色主题/背景实时刷新、平板导航轨、
-  全界面滑动返回、返回按钮不贴最高处
-- 🟡 保留边界：见第 8 节（不一致登记）；其中 extra.api 存提供商 id、落盘文本未过 regex/宏替换、
-  群聊 gen_id 每条时间戳、SWAP/APPEND 旧版近似、/gen /genraw 异步命令等已逐项登记
 
 ### 常见编译坑（CI 红→绿经验）
 1. 注释里写 `group-chats/*.json` 会触发 Kotlin 嵌套注释，把文件后半段吞掉 → 写成“目录的 *.json”
