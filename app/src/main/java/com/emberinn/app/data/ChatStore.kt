@@ -142,7 +142,8 @@ class ChatStore(private val context: Context) {
             put("is_system", JsonPrimitive(false))
             put("send_date", JsonPrimitive(now))
             if (!isUser) {
-                // 官方 AI 消息：gen_started / gen_finished + swipes 结构（官方 Message 构造即带）
+                // 官方 AI 消息：title（默认空）+ gen_started / gen_finished + swipes 结构（官方 Message 构造即带）
+                put("title", JsonPrimitive(""))
                 put("gen_started", JsonPrimitive(genStarted ?: now))
                 put("gen_finished", JsonPrimitive(genFinished ?: now))
                 put("swipe_id", JsonPrimitive(0))
