@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,8 +119,18 @@ fun MainScreen(
     if (sessionId != null) {
         val wide = LocalConfiguration.current.screenWidthDp >= 840
         if (wide) {
-            // 平板/折叠屏双栏：左侧列表 + 右侧聊天（README 大屏自适应）
+            // 平板/折叠屏双栏：导航轨 + 左侧列表 + 右侧聊天（README 大屏自适应）
             Row(modifier = Modifier.fillMaxSize()) {
+                NavigationRail {
+                    Tabs.forEachIndexed { index, tab ->
+                        NavigationRailItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) },
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
