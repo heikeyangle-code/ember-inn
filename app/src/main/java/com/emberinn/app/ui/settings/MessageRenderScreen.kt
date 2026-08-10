@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ColorField
+import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.theme.LocalThemePreset
 import androidx.compose.ui.graphics.luminance
 
@@ -123,7 +123,7 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Slider(
+                        EmberSlider(
                             value = blur.toFloat(),
                             onValueChange = { blur = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()); onAppearanceChanged() },
                             valueRange = 0f..40f,

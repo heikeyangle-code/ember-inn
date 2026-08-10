@@ -3,6 +3,7 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.ColorField
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberSlider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,7 +30,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
@@ -330,7 +330,7 @@ fun AppearanceScreen(
                                 onCheckedChange = { shadowOn = it; AppearancePrefs.saveTextShadowEnabled(fxContext, it); onAppearanceChanged() },
                             )
                         }
-                        Slider(
+                        EmberSlider(
                             value = shadowStrength.toFloat(),
                             onValueChange = { shadowStrength = it.toInt(); AppearancePrefs.saveTextShadowStrength(fxContext, it.toInt()); onAppearanceChanged() },
                             valueRange = 0f..4f,
@@ -678,7 +678,7 @@ private fun SliderRow(
             Text(String.format("%.2f", value), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Slider(value = value, onValueChange = onChange, valueRange = range)
+        EmberSlider(value = value, onValueChange = onChange, valueRange = range)
     }
 }
 

@@ -24,6 +24,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.TextFieldColors
@@ -212,6 +214,38 @@ fun EmberGlassFab(
     ) {
         Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.primary)
     }
+}
+
+/**
+ * README UI 质感升级：高级滑块（全局替换 M3 Slider）。
+ * 主色轨道 + 主色拇指，浅色主题/深色主题都取色自当前主题，禁用态自动降级。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EmberSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    steps: Int = 0,
+    enabled: Boolean = true,
+    accent: Color = MaterialTheme.colorScheme.primary,
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        valueRange = valueRange,
+        steps = steps,
+        enabled = enabled,
+        colors = SliderDefaults.colors(
+            thumbColor = accent,
+            activeTrackColor = accent.copy(alpha = 0.85f),
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            activeTickColor = Color.Transparent,
+            inactiveTickColor = Color.Transparent,
+        ),
+    )
 }
 
 /**

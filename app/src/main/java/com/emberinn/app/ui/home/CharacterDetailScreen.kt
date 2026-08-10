@@ -3,12 +3,15 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.emberShadow
+import com.emberinn.app.ui.components.glassEdgeHighlight
 
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,12 +41,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -61,11 +63,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterCardEdit
@@ -78,9 +82,14 @@ import com.emberinn.app.data.ThemeRecipe
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.ui.components.edgeSwipeBack
+import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
+import com.skydoves.cloudy.cloudy
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.sky
+import com.emberinn.app.ui.components.EmberSlider
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -217,13 +226,36 @@ fun CharacterDetailScreen(
 
     // 返回手势：系统返回/预测性返回也回到上一层，而不是退出 App
     BackHandler(onBack = onBack)
+    val sky = rememberSky()
+    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize().edgeSwipeBack(onBack = onBack)) {
+        // 静态背景层：顶栏毛玻璃的静态模糊源（列表滚动不触发整屏重捕）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .sky(sky)
+                .background(MaterialTheme.colorScheme.background),
+        )
         Column(modifier = Modifier.fillMaxSize()) {
-            // 顶栏：返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
+            // 顶栏：玻璃 + 边缘高光，返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .glassEdgeHighlight(dark = glassDark, atTop = false)
+                    .then(
+                        if (AppearancePrefs.backgroundBlur(context)) {
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                        } else {
+                            Modifier.background(MaterialTheme.colorScheme.surface)
+                        },
+                    ),
+            ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .statusBarsPadding()
                     .fillMaxWidth()
                     .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             ) {
@@ -283,6 +315,7 @@ fun CharacterDetailScreen(
                     }
                 }
             }
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -296,12 +329,33 @@ fun CharacterDetailScreen(
                                 model = File(record.avatarPath),
                                 contentDescription = record.name,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(72.dp).clip(CircleShape),
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .emberShadow(
+                                        color = (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.4f),
+                                        radius = 14.dp,
+                                        spread = 1.dp,
+                                        offset = DpOffset(0.dp, 5.dp),
+                                        alpha = 0.45f,
+                                    )
+                                    .clip(CircleShape)
+                                    .border(2.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.5f), CircleShape),
                             )
                         } else {
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(72.dp).clip(CircleShape).background(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .emberShadow(
+                                        color = (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.4f),
+                                        radius = 14.dp,
+                                        spread = 1.dp,
+                                        offset = DpOffset(0.dp, 5.dp),
+                                        alpha = 0.45f,
+                                    )
+                                    .clip(CircleShape)
+                                    .border(2.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.5f), CircleShape)
+                                    .background(
                                     Brush.linearGradient(
                                         if (seed != null) {
                                             listOf(lerp(seed, MaterialTheme.colorScheme.surface, 0.55f), seed)
@@ -330,9 +384,9 @@ fun CharacterDetailScreen(
                             )
                             Spacer(Modifier.height(6.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                StatChip("世界书 ${entries.size} 条")
-                                StatChip("开场白 ${fields.alternateGreetings.size}")
-                                if (fields.tags.isNotBlank()) StatChip("标签 ${fields.tags.split(',').count { it.isNotBlank() }}")
+                                StatChip("世界书 ${entries.size} 条", seed)
+                                StatChip("开场白 ${fields.alternateGreetings.size}", seed)
+                                if (fields.tags.isNotBlank()) StatChip("标签 ${fields.tags.split(',').count { it.isNotBlank() }}", seed)
                             }
                         }
                     }
@@ -382,7 +436,7 @@ fun CharacterDetailScreen(
                                 },
                             )
                         }
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = { editingGreetingIdx = fields.alternateGreetings.size; greetingDraft = "" },
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         ) { Text("＋ 新增开场白") }
@@ -409,7 +463,7 @@ fun CharacterDetailScreen(
                                 },
                             )
                         }
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = { addingRegex = true },
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         ) { Text("＋ 新增正则") }
@@ -461,7 +515,7 @@ fun CharacterDetailScreen(
                                 },
                             )
                         }
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         ) { Text("＋ 新增变量") }
@@ -497,12 +551,12 @@ fun CharacterDetailScreen(
                         if (modelOverrideExpanded) {
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(
+                                FilledTonalButton(
                                     onClick = { editingModelOverride = true },
                                     modifier = Modifier.weight(1f),
                                 ) { Text("编辑覆盖") }
                                 if (!modelOverride.isEmpty()) {
-                                    OutlinedButton(
+                                    FilledTonalButton(
                                         onClick = {
                                             modelOverride = ModelOverride()
                                             dirty = true
@@ -544,11 +598,11 @@ fun CharacterDetailScreen(
                         if (themeRecipeExpanded) {
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(
+                                FilledTonalButton(
                                     onClick = { editingThemeRecipe = true },
                                     modifier = Modifier.weight(1f),
                                 ) { Text("编辑配方") }
-                                OutlinedButton(
+                                FilledTonalButton(
                                     onClick = {
                                         themeRecipe = ThemeRecipe()
                                         dirty = true
@@ -574,7 +628,7 @@ fun CharacterDetailScreen(
                         ) { editingDepth = true }
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Text("话痨程度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
-                            Slider(
+                            EmberSlider(
                                 value = fields.talkativeness,
                                 onValueChange = { fields = fields.copy(talkativeness = it); dirty = true },
                                 valueRange = 0f..1f,
@@ -650,7 +704,7 @@ fun CharacterDetailScreen(
                                     },
                                 )
                             }
-                            OutlinedButton(
+                            FilledTonalButton(
                                 onClick = { addingEntry = true },
                                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                             ) { Text("＋ 新增条目") }
@@ -1056,18 +1110,18 @@ fun CharacterDetailScreen(
                     )
                     Text("背景", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { themeBgPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                        FilledTonalButton(onClick = { themeBgPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
                             Text(if (themeRecipe.background.isBlank()) "选择背景图" else "更换背景图")
                         }
                         if (themeRecipe.background.isNotBlank()) {
-                            OutlinedButton(onClick = { themeRecipe = themeRecipe.copy(background = ""); dirty = true }, modifier = Modifier.weight(1f)) {
+                            FilledTonalButton(onClick = { themeRecipe = themeRecipe.copy(background = ""); dirty = true }, modifier = Modifier.weight(1f)) {
                                 Text("清除", color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                         val bgScope = rememberCoroutineScope()
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = {
                                 bgScope.launch {
                                     val path = withContext(Dispatchers.IO) {
@@ -1114,7 +1168,7 @@ fun CharacterDetailScreen(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) {
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = {
                                 val draft = ThemeRecipe(
                                     seed = tSeed.trim(),
@@ -1136,7 +1190,7 @@ fun CharacterDetailScreen(
                         ) {
                             Text("导出/分享")
                         }
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = { themeRecipeImportLauncher.launch(arrayOf("text/*", "application/json")) },
                             modifier = Modifier.weight(1f),
                         ) {
@@ -1195,7 +1249,14 @@ private fun SectionCard(
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .emberShadow(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                radius = 10.dp,
+                offset = DpOffset(0.dp, 4.dp),
+                alpha = 0.06f,
+            ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
             SectionHeader(title, count)
@@ -1219,16 +1280,17 @@ private fun SectionHeader(title: String, count: String? = null) {
 }
 
 @Composable
-private fun StatChip(text: String) {
+private fun StatChip(text: String, seed: Color? = null) {
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(999.dp),
+        color = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceVariant, 0.84f) }
+            ?: MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            color = if (seed != null) lerp(seed, MaterialTheme.colorScheme.onSurfaceVariant, 0.45f) else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }
@@ -1416,7 +1478,7 @@ private fun WorldEntryEditorSheet(
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (!isNew) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onDelete,
                         modifier = Modifier.weight(1f),
                     ) { Text("删除条目", color = MaterialTheme.colorScheme.error) }
@@ -1634,7 +1696,7 @@ private fun RegexEditorSheet(
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (!isNew) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onDelete,
                         modifier = Modifier.weight(1f),
                     ) { Text("删除", color = MaterialTheme.colorScheme.error) }

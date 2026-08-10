@@ -3,6 +3,7 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberSlider
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -24,7 +25,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -188,7 +188,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Slider(
+                        EmberSlider(
                             value = rate,
                             onValueChange = { rate = it; save() },
                             valueRange = 0.5f..2.0f,
