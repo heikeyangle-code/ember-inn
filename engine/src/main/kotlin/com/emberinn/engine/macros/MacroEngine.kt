@@ -72,6 +72,8 @@ data class MacroEnv(
     val preferCharacterPrompt: Boolean = true,
     val local: VariableStore = EmptyVariableStore,
     val global: VariableStore = EmptyVariableStore,
+    /** 世界书 outlet 提示（官方 {{outlet::key}} ← extension_prompts[customWIOutlet_key]）。 */
+    val outlets: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -564,6 +566,7 @@ object MacroEngine {
             "maxresponse", "maxresponsetokens" -> env.maxResponseTokens.toString()
             "lastgenerationtype" -> env.lastGenerationType
             "hasextension" -> (if (env.extensions.contains(args.trim())) "true" else "false")
+            "outlet" -> if (args.isBlank()) "" else env.outlets[args.trim()] ?: "" 
             "lastmessage" -> lastMessageMacro(env)
             "lastmessageid" -> lastMessageIdMacro(env)?.toString() ?: ""
             "lastusermessage" -> lastFilteredMessage(env, true)

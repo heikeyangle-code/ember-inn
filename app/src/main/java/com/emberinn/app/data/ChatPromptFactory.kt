@@ -144,7 +144,7 @@ class ChatPromptFactory {
             chatMetadataMesExample = chatMetadata?.get("mes_example")?.jsonPrimitive?.contentOrNull ?: "",
         )
         // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）
-        val env = MacroEnv(
+        var env = MacroEnv(
             user = userName,
             char = charName,
             character = CharacterFields(
@@ -361,6 +361,10 @@ class ChatPromptFactory {
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
                 .associateBy { "${it.world}.${it.uid}" },
         )
+
+        // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
+        // 仅供 {{outlet::key}} 宏读取（NONE 不注入提示词）
+        env = env.copy(outlets = wiResult.outletEntries.mapValues { (_, v) -> v.joinToString("\n") })
 
         // 官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)
         val worldInfoDepthPrompts = wiResult.depthEntries.mapIndexed { i, d ->

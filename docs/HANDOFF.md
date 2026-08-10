@@ -57,15 +57,16 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（59 组差分 fixture，共 956 例对拍，全部通过；2026-08-10 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 59 组 / 956 例（机器数）为准。
+**已覆盖（60 组差分 fixture，共 961 例对拍，全部通过；2026-08-10 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 60 组 / 961 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 59 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 956 例。
+> 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
 | 世界书正则深度（regexDepth） | worldinfo-regex-depth-official.mjs | WorldInfoRegexDepthDiffTest | 40 |
+| outlet 宏（{{outlet::key}}） | outlet-macro-official.mjs | OutletMacroDiffTest | 5 |
 | 世界书文件 | worldinfo-file-official.mjs | WorldInfoFileDiffTest | 2 |
 | 正则 | regex-official.mjs | RegexDiffTest | 20 |
 | PNG 角色卡 | card-png-official.mjs | CardPngDiffTest | 6 |
@@ -153,7 +154,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ### 3.3 宏 ✅（含作用域宏）
 通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例；!?~> flags 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。
 核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
-✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（2026-08-10：App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
+✅ {{outlet::key}} 宏（第 140 轮：官方 core-macros.js 逐字提取差分 5 例；App 把世界书 outletEntries 注入 MacroEnv.outlets，官方 NONE 位置不注入提示词、仅供宏读取；差分抓出空 key 未判空已修）；✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（2026-08-10：App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 27 例。
@@ -352,7 +353,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 59 组差分 fixture / 956 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
+- 60 组差分 fixture / 961 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
@@ -372,7 +373,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | swipe picker / 书签 / URL 导入 | 文档标未做 | 复验已实现并更正文档 |
 | 死代码 | openComingSoon 未使用 | 已删除 |
 
-**剩余已知半成品（继续治理中）**：工具调用 App 注册表、世界书 outlet 宏接线、斜杠异步命令（/gen /genraw /trigger /inject /while，需异步执行器）、表情精灵 App 层、HTML/Mermaid 渲染、preset 正则存储/UI、快照、ComfyUI/DrawThings/Horde 图像来源。
+**剩余已知半成品（继续治理中）**：工具调用 App 注册表、斜杠异步命令（/gen /genraw /trigger /inject /while，需异步执行器）、表情精灵 App 层、HTML/Mermaid 渲染、preset 正则存储/UI、快照、ComfyUI/DrawThings/Horde 图像来源。
 
 ## 8. 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
