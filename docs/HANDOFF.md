@@ -336,7 +336,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 上下文预算对齐官方（commit `131d5c6`）：默认 32K（旧 8192 视为未设置）、maxTokens 钳制保证预算为正、
 必选提示词装不下时走 `ContextBudgetException` 人话报错；Claude 直连缓存参数已接线（详见第 6 节日志 72）。
 
-## 5. 完成度总览（截至第 126 轮 / 全量审计后，2026-08-10）
+## 5. 完成度总览（截至第 150 轮 / 2026-08-10；第 127–150 轮增量见第 8 节半成品治理与各小节登记）
+
+**第 127–150 轮新增完成**（全部 CI 绿、引擎 296 测全绿、差分 60 组 / 961 例）：
+- 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集，127–129/132/134/146 轮）
+- 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验（129–131/133/144 轮）
+- 翻译 8 家 + 自动翻译模式 + 编辑重译（137/142 轮）、图像 6 来源 + Horde + ComfyUI（138/145/150 轮）
+- 向量 Data Bank 高级参数 + URL 上传（138/147 轮）、Mermaid/HTML WebView 硬化（143 轮）
+- 斜杠：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject
+  /gen /genraw + 异步执行器（130/133/141/149 轮）、send_if_empty（148 轮）
+- 引擎：{{outlet::key}}、PromptReasoning、正则 flags、世界书正则深度（135/136/140/132 轮）
+
+**剩余**：工具调用 App 注册表（官方 1.18 无内置工具，且需引擎响应侧 tool_calls 解析差分，框架性待做）、
+表情精灵 App 层（需 sprite 存储/分类后端，官方为 extras/LLM API）。
+
+**已完成（全部经 CI 验证 / 引擎测试全绿）**
 
 **已完成（全部经 CI 验证 / 引擎测试全绿）**
 - P0：会话列表/新建对话、流式/停止/重生成/继续/复制/删除/编辑/冒充/提示词总装、滑动切回复 + swipe picker、
