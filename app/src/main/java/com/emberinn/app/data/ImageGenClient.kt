@@ -1,6 +1,7 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.app.ui.settings.ServicesPrefs
 import java.io.File
 import java.util.Base64
@@ -33,6 +34,35 @@ class ImageGenClient {
         val source = ServicesPrefs.imageSource(context)
         val url = ServicesPrefs.imageUrl(context)
         val steps = ServicesPrefs.imageSteps(context)
+        // OpenAI gpt-image（复用提供商档案里的 Key；默认官方 /v1/images/generations）
+        if (source == "openai") {
+            val profile = ProviderStore(File(context.filesDir, "provider")).load()
+            if (profile == null || profile.providerId != "openai" || profile.apiKey.isBlank()) {
+                return@withContext null
+            }
+            return@withContext runCatching {
+                val payload = JSONObject()
+                    .put("model", "gpt-image-1")
+                    .put("prompt", prompt)
+                    .put("size", "1024x1024")
+                    .toString()
+                val baseUrl = profile.baseUrlOverride.ifBlank { "https://api.openai.com/v1" }
+                val request = Request.Builder()
+                    .url(baseUrl.trimEnd('/') + "/images/generations")
+                    .post(payload.toRequestBody(jsonMedia))
+                    .header("Authorization", "Bearer ${profile.apiKey}")
+                    .build()
+                client.newCall(request).execute().use { resp ->
+                    if (!resp.isSuccessful) return@use null
+                    val root = JSONObject(resp.body?.string().orEmpty())
+                    val b64 = root.optJSONArray("data")?.optJSONObject(0)?.optString("b64_json") ?: return@use null
+                    val file = File(context.filesDir, "media/gen-${System.nanoTime()}.png")
+                    file.parentFile?.mkdirs()
+                    file.writeBytes(Base64.getDecoder().decode(b64))
+                    file.absolutePath
+                }
+            }.getOrNull()
+        }
         if (source != "auto" || url.isBlank()) return@withContext null
         runCatching {
             val payload = JSONObject()

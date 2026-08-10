@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 107（2026-08-10：OpenAI 图像生成（gpt-image））
+
+- ImageGenClient 增 openai 来源：读活跃提供商档案（须为 openai + 有 Key）→ POST /v1/images/generations
+  （gpt-image-1 / 1024x1024，b64_json → filesDir/media/gen-*.png），失败返回 null 由 UI 提示
+- 服务页图像来源已有 openai 选项，现在真实可用；A1111 保持原逻辑
+- 边界：无配额/余额错误人话提示沿用通用失败文案；gpt-image 不支持 steps 参数（忽略）
+- 无引擎改动；App 编译走 CI
+
 ## 最近一轮 106（2026-08-10：全局字体/圆角设置——README“字体/圆角/密度”落地）
 
 - AppearancePrefs（radius 档位 default/square/rounded/circle + font default/serif）；外观与主题页新增两组 chips
