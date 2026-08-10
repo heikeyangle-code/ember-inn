@@ -296,7 +296,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
 | 正则 | `public/scripts/regex/` | 消息编辑/发送扫描接入 RegexPipelineEngine（placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth）；设置页做 global/preset/scoped 分桶 |
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
-| 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → Lottie/sprite 动画渲染到消息头像区；分类 API 接 LLM 或本地模型 |
+| 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
 | 人设 | `public/scripts/personas.js` | ✅ 2026-08-10 第 83 轮：PersonaStore（filesDir/personas.json，官方 Persona Management 语义）+ 聊天 ⋮ 人设选择/新建/编辑/删除；选中人设时 personaDescription 注入（personaInPrompt=true，官方 persona_in_prompt 语义；引擎 PromptPipeline 补同名透传参数，默认 false 行为不变） |
 | 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ 2026-08-10 第 88 轮：VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
@@ -338,7 +338,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - P0：会话列表/新建对话、流式/停止/重生成/继续/复制/删除/编辑/冒充/提示词总装、滑动切回复 + swipe picker、
   全局搜索 + 设置深链（含服务/正则/世界书/快捷回复/语音）、群聊调度层
 - P1：角色详情编辑页（字段/世界书/正则/变量/模型覆盖/主题配方 + 导出分享/AI 生成背景）、聊天页（胶囊/命中面板/媒体/
-  滑动/行高）、Splash、数据与隐私、首启引导、TTS、翻译/图像执行层（Libre/DeepL/DeepLX/A1111/gpt-image）、
+  滑动/行高）、启动无黑屏/无图标（Splash 已移除）、数据与隐私、首启引导、TTS、翻译/图像执行层（Libre/DeepL/DeepLX/A1111/gpt-image）、
   向量 App 接线（聊天重排/世界书 RAG/数据银行）、默认采样参数、全局字体/圆角、作者注释、全局正则
 - P2：SlashParser flags + 常用/消息类斜杠命令 + 差分 18→43 例；群聊全部可做项（natural/pooled、深度提示、
   自动续写链、策略 UI）；世界书设置 UI；快捷回复 automationId 自动执行；JSON 导入导出差分 10→13/6→10；

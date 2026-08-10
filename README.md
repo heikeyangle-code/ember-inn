@@ -173,7 +173,6 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 | 玻璃 / 模糊 | **skydoves/Cloudy** 0.7.1 稳定版（GPU + 旧设备 CPU 降级）；备选 Haze、miuix-blur | `com.github.skydoves:cloudy:0.7.1` |
 | 卡图取色 | Palette / landscapist-palette | `androidx.palette:palette` |
 | 图片加载 | Coil 3 | `io.coil-kt.coil3:coil-compose` |
-| 动效 | Lottie | `com.airbnb.android:lottie-compose` |
 | 图标 | Phosphor Icons（内置官方路径，见 scripts/gen-phosphor-icons.mjs） | `app/.../ui/icons/PhosphorIcons.kt` |
 | 中文字体（可下载） | 霞鹜文楷 Screen/Lite、霞鹜新晰黑（OFL 开源） | 可下载字体包 / Google Fonts Provider |
 | 主题切换动画 | `animateColorAsState` + Crossfade | 内置 |
@@ -260,7 +259,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 ### 版本策略（尽量用最新版）
 
 - 生产依赖一律使用**当前最新稳定版**；仅有 alpha/beta 才支持的功能放“尝鲜分支”或功能开关，不进主线
-- 2026-08 实测基线：Compose BOM 2026.06.01 · Kotlin 2.4.10 · material3 1.4.0（Expressive 1.5.0-alpha25 仅尝鲜）· MaterialKolor 4.1.x（5.0 为 alpha，不用）· Coil 3.5.0（+coil-gif）· Lottie 6.7.1 · Media3 1.10.0 · DataStore 1.2.1 · activity-compose 1.13.0 · OkHttp 5.4.0 · multiplatform-markdown-renderer 0.43.0 · Palette / Room / Navigation 跟最新稳定版
+- 2026-08 实测基线：Compose BOM 2026.06.01 · Kotlin 2.4.10 · material3 1.4.0（Expressive 1.5.0-alpha25 仅尝鲜）· MaterialKolor 4.1.x（5.0 为 alpha，不用）· Coil 3.5.0（+coil-gif）· Media3 1.10.0 · DataStore 1.2.1 · activity-compose 1.13.0 · OkHttp 5.4.0 · multiplatform-markdown-renderer 0.43.0 · Palette / Room / Navigation 跟最新稳定版
 - 升级流程：Renovate / Dependabot 每周自动 PR → CI 通过自动合 patch/minor → major 人工看 changelog + 全量回归
 - 小库失活预案：直接把开源源码搬进项目（vendoring），不守死库
 
@@ -301,7 +300,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 
 ### 首次打开（Onboarding）
 
-- **开场**：炉火余烬微光动画（Lottie，低饱和、1.5–2 秒）→ 淡入欢迎页；仅首次，之后不再播放
+- **开场**：欢迎页直接淡入（Compose 动画，约 1.6 秒后显示内容）；仅首次，之后不再播放
 - **欢迎页**：「欢迎来到余烬酒馆」+ 副标题“每个角色都是一炉火，故事在余烬里继续”
 - **两个主选项**（玻璃卡片，大按钮，低饱和氛围渐变背景）：
   - 「导入角色卡」→ 直接打开文件选择器（PNG / JSON / CharX）
@@ -311,7 +310,7 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 
 ### 日常打开
 
-- Android 12+ 原生 Splash（应用图标 + 主题色），**不播自定义长动画**（每次开 App 播动画是烦人）
+- 启动无黑屏、无图标动画：直接进入角色列表（按用户要求不搞开头动画）
 - 直接进角色列表首页：AI 对话（置顶）→ 最近聊过 → 全部角色
 - 设置可选：「启动时直接进入上次聊天」（默认关）
 
@@ -535,14 +534,14 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
   - 颜色过渡：`animateColorAsState`（角色主题切换）
   - 背景切换：`Crossfade`
   - 内容过渡：`AnimatedContent`；数值/尺寸：`animateFloatAsState` / `animateDpAsState`
-  - 弹性动效：`spring`（M3 风格）；开场复杂动效：Lottie
+  - 弹性动效：`spring`（M3 风格）
 - 需要自己写的只是“编排逻辑”（何时触发/参数/顺序），动画引擎与组件全部现成
 
 ## 技术栈与组件选型
 
 **引擎层（1:1 官方）**：纯 Kotlin，不依赖任何 UI 组件；官方 JS 逻辑全部翻译在 engine（角色卡 / 世界书 / 宏 / 斜杠 / 提示词组装 / 提供商转换器 / 媒体 / 群聊 / 表情）。
 
-**App 层（自由选型）**：Kotlin · Jetpack Compose · Material3（1.4.0 稳定）· Navigation Compose · Room · DataStore 1.2.1 · Coil3 3.5.0 · Lottie 6.7.1 · Media3 1.10.0 · OkHttp 5.4.0 · Koin · kotlinx.serialization
+**App 层（自由选型）**：Kotlin · Jetpack Compose · Material3（1.4.0 稳定）· Navigation Compose · Room · DataStore 1.2.1 · Coil3 3.5.0 · Media3 1.10.0 · OkHttp 5.4.0 · Koin · kotlinx.serialization
 
 渲染与主题：multiplatform-markdown-renderer 0.43.0 · latex-renderer · Highlights/KodeView · androidx.palette · MaterialKolor · MeshGradient · Cloudy
 
