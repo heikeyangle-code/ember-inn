@@ -596,7 +596,8 @@ private fun HomeTopBar(
 @Composable
 private fun AiChatCard(onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
             .emberShadow(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                 radius = 12.dp,
@@ -705,6 +706,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(corner))
             .combinedClickable(onClick = onClick, onLongClick = onMenu)
             .emberShadow(
                 brush = Brush.verticalGradient(

@@ -565,6 +565,15 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 主题卡“椭圆冒方角”修复（第 170 轮，2026-08-11）
+
+- 根因：PresetCard 用 `Modifier.clickable()`，波纹按方形绘制，卡片背景却是圆角 → 点选/悬停时
+  圆角外露出方形四角，波纹消退后收回；且卡片 shape 用 MaterialTheme.shapes.large，会随选中主题的
+  形状档变化（丹砂→方正、琉璃→浑圆），看起来像“椭圆变形”
+- 修复：PresetCard 改 Card(onClick=…)（波纹裁进 shape）+ 固定 RoundedCornerShape(20.dp)；
+  AiChatCard 同样改 Card(onClick=…)；CharacterCard 补 clip(corner)（保留长按）
+- 同类排查：最近聊过卡本来就是 Card(onClick)，无此问题
+
 ## 8. 独立“文字排版”页 + 渲染器全量设置（第 169 轮，2026-08-11）
 
 - 新增设置页 TextTypographyScreen（设置 → 外观与主题 → 文字排版），独立于主题页：

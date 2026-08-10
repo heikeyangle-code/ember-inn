@@ -469,9 +469,11 @@ private fun PresetCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // Card(onClick) 会把波纹裁进 shape；固定 20dp 圆角，避免选中不同形状主题时卡片四角跟着变
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
