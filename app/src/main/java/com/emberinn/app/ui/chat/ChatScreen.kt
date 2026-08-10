@@ -2433,14 +2433,14 @@ private data class ChatTypography(
  *  代码围栏/行内代码/<style> 块先占位保护，避免引号、波浪线、HTML 标签转换污染代码内容
  *  （官方 messageFormatting 的正则同样把 ``` / ~~~ / `` / ` / <style> 放在引号匹配之前）。 */
 private fun preprocessOfficialHtml(content: String): String {
-    val protected = mutableListOf<String>()
+    val protectedSegments = mutableListOf<String>()
     var out = content
     out = Regex(
         "```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|``[^`\\n]*``|`[^`\\n]*`|<style>[\\s\\S]*?</style>",
         RegexOption.IGNORE_CASE,
     ).replace(out) { m ->
-        protected += m.value
-        "\uE100${protected.lastIndex}\uE101"
+        protectedSegments += m.value
+        "\uE100${protectedSegments.lastIndex}\uE101"
     }
     out = Regex("<q[^>]*>([\\s\\S]*?)</q>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE001${m.groupValues[1]}\uE002" }
     out = Regex("<u[^>]*>([\\s\\S]*?)</u>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
@@ -2456,7 +2456,7 @@ private fun preprocessOfficialHtml(content: String): String {
         .replace(out) { m -> "\uE001${m.value}\uE002" }
     // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
     out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
-    for ((i, seg) in protected.withIndex()) out = out.replace("\uE100$i\uE101", seg)
+    for ((i, seg) in protectedSegments.withIndex()) out = out.replace("\uE100$i\uE101", seg)
     return out
 }
 
