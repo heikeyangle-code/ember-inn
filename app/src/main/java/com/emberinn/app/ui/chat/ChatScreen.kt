@@ -199,7 +199,7 @@ fun ChatScreen(
     var showDataBank by remember { mutableStateOf(false) }
     var showAuthorsNote by remember { mutableStateOf(false) }
     var anPrompt by remember { mutableStateOf("") }
-    var anPosition by remember { mutableStateOf(2) }
+    var anPosition by remember { mutableStateOf(1) }
     var anDepth by remember { mutableStateOf(4) }
     var showGroupSettings by remember { mutableStateOf(false) }
     var pendingDisplay by remember { mutableStateOf<String?>(null) }
@@ -442,7 +442,7 @@ fun ChatScreen(
                                 },
                                 onRegenerate = { vm.regenerate() },
                                 onContinue = { vm.continueGeneration() },
-                                onDelete = { vm.deleteMessage(item.index) },
+                                onDelete = { deleteTargetIndex = item.index },
                                 onLongPress = { menuMessageIndex = item.index },
                             )
                         }
@@ -1857,7 +1857,10 @@ private fun MessageMedia(
                 }
             }
         }
-        others.forEach { m -> MediaPlayer(m.url, isAudio = m.type == "audio") }
+        // 图库模式：图片在图库区显示，非图媒体（音视频）统一在下方列出一次
+        if (display == "gallery" && images.size > 1) {
+            others.forEach { m -> MediaPlayer(m.url, isAudio = m.type == "audio") }
+        }
     }
 }
 

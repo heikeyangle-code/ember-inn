@@ -178,7 +178,7 @@ private fun SettingsHome(
         QuickAction("主题", PhosphorIcons.Star, onOpenAppearance),
         QuickAction("模型", PhosphorIcons.Settings, onOpenProviders),
         QuickAction("语音", PhosphorIcons.SpeakerHigh, onOpenVoice),
-        QuickAction("备份", PhosphorIcons.Refresh, { openComingSoon(context) }),
+        QuickAction("备份", PhosphorIcons.Refresh, onOpenData),
     )
 
     val groups = listOf(
@@ -201,7 +201,7 @@ private fun SettingsHome(
             listOf(
                 SettingRow(
                     "语音朗读（TTS）",
-                    if (VoicePrefs.enabled(context)) "已启用 · 本机引擎可试听" else "本机引擎试听 · 聊天朗读后续接入",
+                    if (VoicePrefs.enabled(context)) "已启用 · 本机引擎可试听" else "未启用 · 可在语音页开启自动朗读",
                     Color.Unspecified,
                     onOpenVoice,
                 ),
@@ -210,7 +210,7 @@ private fun SettingsHome(
         SettingsGroup(
             "服务",
             listOf(
-                SettingRow("翻译 · 图像 · 向量", "配置已持久化 · 执行层 P3 接入", Color.Unspecified, onOpenServices),
+                SettingRow("翻译 · 图像 · 向量", "执行层已接入（Libre/DeepL/A1111/gpt-image/RAG）", Color.Unspecified, onOpenServices),
                 SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies),
                 SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo),
                 SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex),

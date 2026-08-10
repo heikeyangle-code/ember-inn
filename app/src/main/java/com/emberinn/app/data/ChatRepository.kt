@@ -11,6 +11,7 @@ import com.emberinn.engine.worldinfo.VectorFileRef
 import com.emberinn.engine.worldinfo.VectorSettings
 import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldInfoSettings
+import com.emberinn.engine.media.MediaCapability
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.regex.RegexPipelineScript
@@ -133,6 +134,11 @@ class ChatRepository(context: Context) {
             "anthropic" -> "claude"
             else -> "openai"
         }
+        // 官方 isImage/Video/AudioInliningSupported：main_api=openai + media_inlining + 模型白名单 + source 分支
+        val mediaSource = mediaSourceOf(provider)
+        val imageOk = mediaSource != null && MediaCapability.isImageInliningSupported(mediaSource, effectiveModel)
+        val videoOk = mediaSource != null && MediaCapability.isVideoInliningSupported(mediaSource, effectiveModel)
+        val audioOk = mediaSource != null && MediaCapability.isAudioInliningSupported(mediaSource, effectiveModel)
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
@@ -145,9 +151,9 @@ class ChatRepository(context: Context) {
             continuePrefill = continuePrefill,
             impersonationPrompt = impersonationPrompt,
             cyclePrompt = cyclePrompt,
-            imageInlining = mediaInlining,
-            videoInlining = mediaInlining,
-            audioInlining = mediaInlining,
+            imageInlining = mediaInlining && imageOk,
+            videoInlining = mediaInlining && videoOk,
+            audioInlining = mediaInlining && audioOk,
             chatMetadata = chatMetadata,
             chatCompletionSource = chatCompletionSource,
             personaDescription = personaDescription,
@@ -183,5 +189,25 @@ class ChatRepository(context: Context) {
             options = options,
             onReasoning = onReasoning,
         )
+    }
+
+
+    /** provider.id → 官方 chat_completion_sources（无官方分支的返回 null = 不支持媒体内联）。 */
+    private fun mediaSourceOf(provider: com.emberinn.engine.provider.ProviderSpec): String? = when (provider.id) {
+        "openai" -> MediaCapability.Source.OPENAI
+        "azure" -> MediaCapability.Source.AZURE_OPENAI
+        "anthropic" -> MediaCapability.Source.CLAUDE
+        "google" -> MediaCapability.Source.MAKERSUITE
+        "vertexai" -> MediaCapability.Source.VERTEXAI
+        "openrouter" -> MediaCapability.Source.OPENROUTER
+        "custom" -> MediaCapability.Source.CUSTOM
+        "mistral" -> MediaCapability.Source.MISTRALAI
+        "cohere" -> MediaCapability.Source.COHERE
+        "xai" -> MediaCapability.Source.XAI
+        "moonshot" -> MediaCapability.Source.MOONSHOT
+        "zhipu" -> MediaCapability.Source.ZAI
+        "siliconflow" -> MediaCapability.Source.SILICONFLOW
+        "workers-ai" -> MediaCapability.Source.WORKERS
+        else -> null
     }
 }

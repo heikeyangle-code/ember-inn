@@ -189,6 +189,7 @@ class ChatStore(private val context: Context) {
         val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
         val isSmallSys = (obj["extra"] as? JsonObject)?.get("isSmallSys")
             ?.jsonPrimitive?.let { it.contentOrNull == "true" } == true
+        // 官方 ensureSwipes：只排除用户/小系统消息（系统消息也会建 swipes）
         if (isUser || isSmallSys) return false
 
         val hasSwipes = obj["swipes"] is JsonArray
@@ -524,14 +525,13 @@ class ChatStore(private val context: Context) {
     fun deleteMessagesByName(sessionId: String, name: String): Int {
         if (name.isBlank()) return 0
         val list = messages(sessionId).toMutableList()
-        val before = list.size
-        list.removeAll { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull == name }
-        val removed = before - list.size
-        if (removed > 0) {
-            File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
-            get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
-        }
-        return removed
+        val removedMessages = list.filter { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull == name }
+        if (removedMessages.isEmpty()) return 0
+        list.removeAll(removedMessages.toSet())
+        File(chatsDir, "$sessionId.jsonl").writeText(ChatJsonl.export(list))
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        deleteMediaFiles(removedMessages)
+        return removedMessages.size
     }
 
     /** /addswipe：给最后一条 AI 消息追加手动变体；返回新 swipe_id 字符串（失败返回 ""）。 */

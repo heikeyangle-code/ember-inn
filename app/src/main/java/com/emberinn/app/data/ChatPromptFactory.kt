@@ -136,21 +136,22 @@ class ChatPromptFactory {
             scoped = parsed?.regexScripts ?: emptyList(),
         )
 
-        // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）
-        val chatMessages = history.mapNotNull { el ->
+        // 历史消息（JSONL → 引擎 ChatMessage → PromptMessage）；Pair.first 保留原始 JSONL 下标，
+        // 保证 extra.media 挂回正确的消息（曾有 mes 缺失导致下标错位、附件挂错消息的隐患）
+        val chatMessages = history.mapIndexedNotNull { index, el ->
             val obj = el.jsonObject
             val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
-            val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-            ChatMessage(
+            val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: return@mapIndexedNotNull null
+            index to ChatMessage(
                 mes = mes,
                 isUser = isUser,
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
             )
-        }.map { m ->
+        }.map { (index, m) ->
             // 官方：用户输入存前过 USER_INPUT 正则、生成回复存前过 AI_OUTPUT 正则（script.js sendMessageAsUser/saveReply）；
             // 本 App 在总装时统一应用（对幂等脚本等价；双应用边界见 HANDOFF）
-            if (regexScripts.isEmpty()) m
-            else m.copy(
+            if (regexScripts.isEmpty()) index to m
+            else index to m.copy(
                 mes = RegexPipelineEngine.apply(
                     raw = m.mes,
                     placement = if (m.isUser) REGEX_USER_INPUT else REGEX_AI_OUTPUT,
@@ -165,17 +166,19 @@ class ChatPromptFactory {
             // bias 只取最后一条用户消息，且仅 generate/swipe 注入（官方 getBiasStrings 对 impersonate/continue 返回空）
             var found = ""
             var lastUserBias = ""
-            val cleaned = msgs.mapIndexed { i, m ->
+            val cleaned = msgs.mapIndexed { i, pair ->
+                val (index, m) = pair
                 if (m.isUser && m.mes.contains("{{bias")) {
                     val (text, bias) = extractMessageBias(m.mes)
                     if (i == msgs.lastIndex) lastUserBias = bias
-                    m.copy(mes = text)
-                } else m
+                    index to m.copy(mes = text)
+                } else pair
             }
             if (type != "impersonate" && type != "continue" && lastUserBias.isNotBlank()) found = lastUserBias
             cleaned to found
         }
-        val (cleanMessages, promptBias) = chatMessages
+        val (indexedMessages, promptBias) = chatMessages
+        val cleanMessages = indexedMessages.map { it.second }
 
         // 向量 RAG（官方 extensions/vectors）：聊天历史重排 + 文件/数据银行 + 世界书向量激活。
         // 引擎 VectorChatRearranger 1:1；App 只负责把数据接进去，结果进历史/扩展提示/强制激活。
@@ -204,8 +207,8 @@ class ChatPromptFactory {
         // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
         // 向量重排后消息顺序/内容以引擎结果为准；原 JSONL 下标用于携带 extra.media。
         val indexedChat = vectorTransform?.let { transform ->
-            mapVectorMessages(transform.newChat, cleanMessages)
-        } ?: cleanMessages.mapIndexed { i, m -> i to m }
+            mapVectorMessages(transform.newChat, indexedMessages)
+        } ?: indexedMessages
         val openAiMessages = PromptAssembler.toOpenAiMessages(indexedChat.map { it.second }, user = userName)
         val historyMessages = openAiMessages.mapIndexed { i, pm ->
             val el = history.getOrNull(indexedChat[i].first)?.jsonObject
@@ -286,12 +289,35 @@ class ChatPromptFactory {
             ),
             settings = AuthorsNoteSettings(),
         )
-        val anText = AuthorsNoteBuilder.compose(note.content, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
-        val anPrompt = if (anText.isNotBlank()) {
-            mapExtensionPosition(note.position)?.let { pos ->
-                mapOf("2_floating_prompt" to ExtensionPrompt("2_floating_prompt", note.role, anText, pos, note.depth))
-            }.orEmpty()
-        } else emptyMap()
+        // 官方 authors-note.js：lastMessageNumber >= interval ? lastMessageNumber % interval : interval - lastMessageNumber，
+        // shouldAdd = messagesTillInsertion == 0（即消息数恰为 interval 的倍数才注入）
+        val noteInterval = note.interval.coerceAtLeast(1)
+        val historyCount = history.size
+        val shouldInjectNote = historyCount >= noteInterval && historyCount % noteInterval == 0
+        val noteContent = if (shouldInjectNote) note.content else ""
+        val anText = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
+        // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），
+        // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
+        var effectiveInChat = inChatExtensions
+        var effectiveExtensions = extensionPrompts
+        if (anText.isNotBlank()) {
+            if (note.position == 1) {
+                effectiveInChat = effectiveInChat + PromptItem(
+                    identifier = "authorsNote",
+                    name = "作者注释",
+                    content = anText,
+                    role = note.role,
+                    injectionDepth = note.depth,
+                    injectionOrder = 100,
+                )
+            } else {
+                mapExtensionPosition(note.position)?.let { pos ->
+                    effectiveExtensions = effectiveExtensions + (
+                        "2_floating_prompt" to ExtensionPrompt("2_floating_prompt", note.role, anText, pos, note.depth)
+                    )
+                }
+            }
+        }
 
         val result = PromptPipeline.prepare(
             PromptPipeline.PrepareInput(
@@ -306,8 +332,8 @@ class ChatPromptFactory {
                 env = env,
                 personaDescription = personaDescription,
                 personaInPrompt = personaInPrompt,
-                extensionPrompts = extensionPrompts + vectorTransform?.extensionPrompts.orEmpty() + anPrompt,
-                inChatExtensions = inChatExtensions + worldInfoDepthPrompts,
+                extensionPrompts = effectiveExtensions + vectorTransform?.extensionPrompts.orEmpty(),
+                inChatExtensions = effectiveInChat + worldInfoDepthPrompts,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,
@@ -340,17 +366,17 @@ class ChatPromptFactory {
      */
     private fun mapVectorMessages(
         reordered: List<VectorChatMessage>,
-        source: List<ChatMessage>,
+        source: List<Pair<Int, ChatMessage>>,
     ): List<Pair<Int, ChatMessage>> {
         val used = mutableSetOf<Int>()
-        val byNameAndMes = source.indices.groupBy { source[it].name to source[it].mes }
+        val byNameAndMes = source.indices.groupBy { source[it].second.name to source[it].second.mes }
         return reordered.map { vm ->
             val idx = byNameAndMes[vm.name to vm.mes]?.firstOrNull { it !in used }
-                ?: source.indices.firstOrNull { i -> i !in used && source[i].name == vm.name && vm.mes.endsWith(source[i].mes) }
+                ?: source.indices.firstOrNull { i -> i !in used && source[i].second.name == vm.name && vm.mes.endsWith(source[i].second.mes) }
                 ?: source.indices.firstOrNull { it !in used }
                 ?: 0
             used += idx
-            idx to source[idx].copy(mes = vm.mes)
+            source[idx].first to source[idx].second.copy(mes = vm.mes)
         }
     }
 

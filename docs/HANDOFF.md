@@ -387,6 +387,21 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 108.5（2026-08-10：全量审视第一批修复——Bug + 官方 1:1 核实）
+
+- **历史索引错位修复**：ChatPromptFactory 保留原始 JSONL 下标（Pair<Int,ChatMessage>），
+  mes 缺失的消息不再让 extra.media 挂错消息
+- **媒体内联 1:1**：官方 isImage/Video/AudioInliningSupported = main_api=openai + media_inlining + 模型白名单 + source 分支；
+  新增引擎 MediaCapability（官方三张白名单逐字移植）+ 差分 24 例（media-capability-official.mjs，抓出官方
+  gpt-4-turbo-preview 排除逻辑是 some(!includes) 而非 none）；ChatRepository 按 provider.id→source + 模型判定，
+  不再一刀切 true；历史媒体每次生成都会内联（官方语义）
+- **AN 1:1**：官方默认 position=1（IN_CHAT）；UI 默认改为 1；IN_CHAT 位置真正走 populationInjectionPrompts
+  （之前只走 start/end 通道，对话内位置被静默丢弃）；interval 按官方消息计数公式（消息数恰为倍数才注入）
+- **ensureSwipes 纠偏**：官方只排除 user/isSmallSys，**不排除 is_system**（我上一轮加的 isSystem 判定是错的，已撤）
+- **UI/资源 Bug**：图库模式音视频重复渲染（list 分支渲染一次 + 尾部又渲染一次）已修；常驻“删除”按钮改为二次确认
+  （README 守则 6）；/delname 清理被删消息的本地附件文件
+- 引擎 289 测全绿（含 media-capability 24 例）；App 编译走 CI
+
 ## 最近一轮 107（2026-08-10：OpenAI 图像生成（gpt-image））
 
 - ImageGenClient 增 openai 来源：读活跃提供商档案（须为 openai + 有 Key）→ POST /v1/images/generations

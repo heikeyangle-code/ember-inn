@@ -573,7 +573,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else {
             startStream(
                 history = chatStore.messages(sessionId),
-                mediaInlining = media.isNotEmpty(),
             )
         }
     }
@@ -1144,7 +1143,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         cyclePrompt: String = "",
         continueMode: Boolean = false,
         swipeMode: Boolean = false,
-        mediaInlining: Boolean = false,
+        mediaInlining: Boolean = true,
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),
         onFinished: (() -> Unit)? = null,
