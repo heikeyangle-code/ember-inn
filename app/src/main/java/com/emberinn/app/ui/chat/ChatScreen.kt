@@ -2629,6 +2629,7 @@ private fun ChatMarkdown(
     // 交互代码块（Tavern Helper 渲染器 / HTML 注入器机制）：``` 内以 < 开头以 > 结尾或含 <body> →
     // 整条走 WebView，由 embedInteractiveBlocks 换成独立 iframe 运行（按钮/状态栏可交互）。受扩展插件总开关控制
     val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
+    val mermaidOn = ExtensionPrefs.mermaid(context)
     val interactiveBlock = interactiveCardsOn && Regex("```[a-zA-Z]*\\n[\\s\\S]*?```").findAll(content).any { m ->
         val inner = m.groupValues[1].trim()
         (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
@@ -2659,9 +2660,9 @@ private fun ChatMarkdown(
     )
     annotatorSettingsRef = mdSettings
     when {
-        mermaid != null -> WebViewHtml(mermaid, modifier)
+        mermaid != null && mermaidOn -> WebViewHtml(mermaid, modifier, jsRequired = true)
         rawHtml != null -> WebViewHtml(
-            sanitizeHtmlForWebView(rawHtml),
+            sanitizeHtmlForWebView(rawHtml, ExtensionPrefs.blockJavascriptUrls(context)),
             modifier,
             charAvatarPath = charAvatarPath,
             userAvatarPath = userAvatarPath,
@@ -2797,8 +2798,8 @@ private fun looksLikeHtml(content: String): Boolean {
 
 /** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
  *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
-private fun sanitizeHtmlForWebView(html: String): String =
-    html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
+private fun sanitizeHtmlForWebView(html: String, blockJs: Boolean = true): String =
+    if (blockJs) html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:") else html
 
 /** WebView 兜底渲染（HTML 消息 / Mermaid）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
  *  官方 DOMPurify 禁脚本，此为已知偏差）；网络与外链已放开，http(s) 链接用系统浏览器打开。
@@ -2807,6 +2808,7 @@ private fun sanitizeHtmlForWebView(html: String): String =
 private fun WebViewHtml(
     html: String,
     modifier: Modifier = Modifier,
+    jsRequired: Boolean = false,
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
 ) {
@@ -2818,6 +2820,10 @@ private fun WebViewHtml(
     val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stTheme.stEm
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stTheme.stUnderline
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stTheme.stQuote
+    val jsOn = jsRequired || ExtensionPrefs.messageJs(context)
+    val netOn = ExtensionPrefs.networkMedia(context)
+    val extOn = ExtensionPrefs.externalLinks(context)
+    val heightOn = ExtensionPrefs.autoHeight(context)
     val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath) {
         officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath)
     }
@@ -2825,18 +2831,31 @@ private fun WebViewHtml(
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(0x00000000)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
+                settings.javaScriptEnabled = jsOn
+                settings.domStorageEnabled = jsOn
                 settings.allowFileAccess = true
                 webViewClient = object : android.webkit.WebViewClient() {
-                    // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
-                    // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
+                    // 网络开关：关闭时拦截 http(s)，其余资源照常
+                    override fun shouldInterceptRequest(
+                        view: android.webkit.WebView?,
+                        request: android.webkit.WebResourceRequest?,
+                    ): android.webkit.WebResourceResponse? {
+                        if (!netOn) {
+                            val url = request?.url?.toString().orEmpty()
+                            if (url.startsWith("https://") || url.startsWith("http://")) {
+                                return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                            }
+                        }
+                        return null
+                    }
+
+                    // 外链开关：开=系统浏览器；关=WebView 内打开
                     override fun shouldOverrideUrlLoading(
                         view: android.webkit.WebView?,
                         request: android.webkit.WebResourceRequest?,
                     ): Boolean {
                         val url = request?.url?.toString().orEmpty()
-                        if (url.startsWith("https://") || url.startsWith("http://")) {
+                        if (extOn && (url.startsWith("https://") || url.startsWith("http://"))) {
                             try {
                                 ctx.startActivity(
                                     android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
@@ -2851,6 +2870,14 @@ private fun WebViewHtml(
 
                     override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                         super.onPageFinished(view, url)
+                        if (!heightOn) {
+                            // 关闭自动测高：量一次固定高度
+                            view?.evaluateJavascript("(function(){return document.body.scrollHeight;})()") { value ->
+                                val px = value.trim('"').toIntOrNull() ?: 0
+                                if (px > 0) heightPx = px
+                            }
+                            return
+                        }
                         // 自动测高：页面加载完先量一次，再轮询几百毫秒等交互 iframe 的 onload 测高
                         // （iframe 内容高度稳定后停止，避免长驻轮询拖慢滚动）
                         var stable = 0
@@ -2889,7 +2916,7 @@ private fun WebViewHtml(
  *  卡内 <script>/onclick/框架 JS 在 iframe 里正常运行（按钮/状态栏/表单可交互）；onload 自动按内容测高。
  *  非交互代码块保留为 <pre><code>；围栏外的纯文本转义后按 pre-wrap 显示（保留换行）。
  *  安全提示：交互代码块等同于执行任意脚本，与第 178 轮 JS 全开同等级，已在 HANDOFF 登记。 */
-private fun embedInteractiveBlocks(raw: String): String {
+private fun embedInteractiveBlocks(raw: String, showCode: Boolean = true): String {
     val fence = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
     val out = StringBuilder()
     var last = 0
@@ -2902,9 +2929,11 @@ private fun embedInteractiveBlocks(raw: String): String {
                 .replace("\"", "&quot;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
-            out.append("<details style=\"margin-bottom:4px\"><summary>原代码</summary><pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
-                .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-                .append("</code></pre></details>")
+            if (showCode) {
+                out.append("<details style=\"margin-bottom:4px\"><summary>原代码</summary><pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
+                    .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+                    .append("</code></pre></details>")
+            }
             out.append(
                 "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
                     "onload=\"this.style.height=(this.contentWindow.document.documentElement.scrollHeight+5)+'px'\"></iframe>",
@@ -2948,17 +2977,21 @@ private fun officialStyledHtml(
     fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
         "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
     } ?: "inherit"
-    val bodyHtml = embedInteractiveBlocks(raw)
-        .replace("{{charAvatarPath}}", charAvatarPath ?: "")
-        .replace("{{userAvatarPath}}", userAvatarPath ?: "")
+    val avatarOn = ExtensionPrefs.avatarClasses(context)
+    val showCode = ExtensionPrefs.codeFolding(context)
+    val bodyHtml = embedInteractiveBlocks(raw, showCode)
+        .replace("{{charAvatarPath}}", if (avatarOn) charAvatarPath.orEmpty() else "")
+        .replace("{{userAvatarPath}}", if (avatarOn) userAvatarPath.orEmpty() else "")
     fun avatarUrl(path: String?): String? = path?.let {
         if (it.startsWith("file://") || it.startsWith("content://")) it else "file://$it"
     }
     val charUrl = avatarUrl(charAvatarPath)
     val userUrl = avatarUrl(userAvatarPath)
     val avatarCss = buildString {
-        charUrl?.let { append(".char-avatar,.char_avatar{background-image:url('$it')}\n") }
-        userUrl?.let { append(".user-avatar,.user_avatar{background-image:url('$it')}\n") }
+        if (avatarOn) {
+            charUrl?.let { append(".char-avatar,.char_avatar{background-image:url('$it')}\n") }
+            userUrl?.let { append(".user-avatar,.user_avatar{background-image:url('$it')}\n") }
+        }
     }
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>

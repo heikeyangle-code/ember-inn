@@ -605,7 +605,30 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 **登记（未做，观察后再说）**：WebView 兜底项高度突变仍是 HTML 长消息的潜在跳变源；若流式仍不够顺，
 下一步可上 FluidMarkdown/增量渲染（支付宝开源）或把 120ms 再降到 150ms。
 
-## 8. 扩展插件总开关 + 必要能力补齐（第 180 轮，2026-08-11，用户要求“一个主开关”）
+## 8. 扩展插件 10 个独立开关（第 181 轮，2026-08-11，用户改为“每个功能单独一个开关”，角色卡调研）
+
+**角色卡常用插件调研（tavernsprite 榜 / 酒馆实用插件帖 / SimTracker / RPG Companion / MVU / CardForge / MagVarUpdate）**：
+- 角色卡常用能力 = 交互 HTML 状态栏（Tavern Helper/注入器）、变量系统（MVU/state 语法，HP/好感/背包）、
+  头像类、表情系统（Character Expressions）、TTS、记忆总结（Horae/Amily/表格记忆）、Quick Reply、文生图、对话着色
+- 我们已有等价物：TTS（语音页）、记忆（向量 RAG）、Quick Reply、文生图（服务页）、对话着色（消息渲染字段）、
+  交互 HTML 卡片 + 头像类（第 179/180 轮）
+- 变量系统（MVU）与表情系统涉及引擎层/大功能，登记不实现；用户头像宏暂空（官方 Persona 无头像字段）
+
+**已实现（10 个开关，默认全开，设置 → 扩展插件）**：
+| 开关 | 行为 |
+|---|---|
+| 交互 HTML 卡片 | ``` 内 HTML 代码块 → iframe 运行（关=按普通代码块显示） |
+| 消息内 JavaScript | WebView JS 开关（Mermaid 强制开） |
+| 远程图片与网络加载 | 关=http(s) 全部拦截 |
+| 链接用系统浏览器打开 | 关=WebView 内打开 |
+| 自动测高 | 关=量一次固定高度 |
+| 角色头像类 .char-avatar / {{charAvatarPath}} | 关=不注入头像 CSS/宏 |
+| 原代码折叠 | 关=只显示卡片不显示原代码 |
+| Mermaid 图表 | 关=按普通代码块显示 |
+| HTML 消息渲染 | 复用 RenderPrefs（外观页同一开关） |
+| 拦截 javascript: 链接 | 关=完全放行（不推荐） |
+
+## 8. 扩展插件总开关 + 必要能力补齐（第 180 轮，2026-08-11；用户随后改为每功能独立开关，见第 181 轮）
 
 **全网调研（tavernsprite 最佳扩展榜 / 小酒窝插件帖 / SillyTavern 扩展清单 / 酒馆助手文档）**：
 - 常用插件 = 交互 HTML 卡片（Tavern Helper/HTML 注入器）、表情系统（Character Expressions）、VN 视觉小说模式、
@@ -920,9 +943,19 @@ M3 系统层（ColorScheme 颜色角色全集 / Shapes 五档 / Typography 字�
 - 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
 - 设置与开关是 App 层自主 UI，不参与差分；总开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
 
-### 10.3 设置入口与总开关
-- 设置 → 扩展插件 → **交互 HTML 卡片**（`ExtensionPrefs.interactiveCards`，默认开）。关闭后 ``` 内 HTML 代码块按普通代码块原生显示。
-- 其余能力（JS 全开/网络/外链/测高）不属于本开关，见第 177/178 轮。
+### 10.3 设置入口与开关（第 181 轮，每功能独立开关，默认全开）
+- 设置 → **扩展插件**（`ExtensionsScreen` / `ExtensionPrefs`，共 10 个开关）：
+  1. 交互 HTML 卡片（interactiveCards）
+  2. 消息内 JavaScript（messageJs；Mermaid 强制开）
+  3. 远程图片与网络加载（networkMedia；关=http(s) 拦截）
+  4. 链接用系统浏览器打开（externalLinks；关=WebView 内打开）
+  5. 自动测高（autoHeight；关=量一次固定高度）
+  6. 角色头像类 .char-avatar / {{charAvatarPath}}（avatarClasses）
+  7. 原代码折叠（codeFolding）
+  8. Mermaid 图表（mermaid）
+  9. HTML 消息渲染（复用 RenderPrefs.htmlEnabled）
+  10. 拦截 javascript: 链接（blockJavascriptUrls；安全项，默认开）
+- 各开关接线点：ChatMarkdown（1/8/9/10）、WebViewHtml（2/3/4/5）、officialStyledHtml（6/7）。
 
 ### 10.4 实现位置与行为（维护必读）
 - `ChatScreen.kt / ChatMarkdown`：新增 `interactiveBlock` 检测——``` 内以 `<` 开头以 `>` 结尾 或 含 `<body>`（忽略大小写）→ 整条消息进 WebView（`rawHtml` 条件扩展为 `htmlEnabled || officialHtml || interactiveBlock`）。
