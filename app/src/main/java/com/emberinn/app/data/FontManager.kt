@@ -21,9 +21,12 @@ object FontManager {
     private const val LXGW_ZIP_URL =
         "https://github.com/lxgw/LxgwWenKai/releases/download/$LXGW_VERSION/lxgw-wenkai-$LXGW_VERSION.zip"
     private const val FONT_FILE = "lxgw.ttf"
-    private const val NOTO_URL =
-        "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
-    private const val NOTO_FILE = "noto_sans_regular.ttf"
+    private val NOTO_FILES = listOf(
+        "NotoSans-Regular" to "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
+        "NotoSans-Bold" to "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
+        "NotoSans-Italic" to "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Italic.ttf",
+        "NotoSans-BoldItalic" to "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-BoldItalic.ttf",
+    )
     private const val MIN_VALID_BYTES = 100_000L
 
     fun lxgwFile(context: Context): File? {
@@ -75,28 +78,32 @@ object FontManager {
         }
     }
 
-    /** 酒馆官方 Noto Sans Regular（正文）：下载后与 WebView 共用同一份 TTF。 */
-    fun notoFile(context: Context): File? {
-        val f = File(File(context.filesDir, "fonts"), NOTO_FILE)
-        return f.takeIf { it.exists() && it.length() > MIN_VALID_BYTES }
-    }
+    /** 酒馆官方 Noto Sans 4 面（Regular/Bold/Italic/BoldItalic）：原生与 WebView 共用同一批 TTF。 */
+    fun notoFiles(context: Context): List<File> =
+        NOTO_FILES.map { (name, _) -> File(File(context.filesDir, "fonts"), "$name.ttf") }
+            .filter { it.exists() && it.length() > MIN_VALID_BYTES }
 
-    suspend fun ensureNoto(context: Context): Result<File> = withContext(Dispatchers.IO) {
+    fun notoReady(context: Context): Boolean = notoFiles(context).size == NOTO_FILES.size
+
+    suspend fun ensureNoto(context: Context): Result<List<File>> = withContext(Dispatchers.IO) {
         runCatching {
-            notoFile(context)?.let { return@runCatching it }
+            if (notoReady(context)) return@runCatching notoFiles(context)
             val dir = File(context.filesDir, "fonts").apply { mkdirs() }
-            val target = File(dir, NOTO_FILE)
             val client = OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)
                 .build()
-            client.newCall(Request.Builder().url(NOTO_URL).build()).execute().use { resp ->
-                check(resp.isSuccessful) { "下载失败（HTTP ${resp.code}）" }
-                val body = resp.body ?: error("下载内容为空")
-                body.byteStream().use { input -> target.outputStream().use { out -> input.copyTo(out) } }
+            for ((name, url) in NOTO_FILES) {
+                val target = File(dir, "$name.ttf")
+                if (target.exists() && target.length() > MIN_VALID_BYTES) continue
+                client.newCall(Request.Builder().url(url).build()).execute().use { resp ->
+                    check(resp.isSuccessful) { "下载失败（HTTP ${resp.code}）" }
+                    val body = resp.body ?: error("下载内容为空")
+                    body.byteStream().use { input -> target.outputStream().use { out -> input.copyTo(out) } }
+                }
+                check(target.length() > MIN_VALID_BYTES) { "字体文件异常（可能下载不完整）" }
             }
-            check(target.length() > MIN_VALID_BYTES) { "字体文件异常（可能下载不完整）" }
-            target
+            notoFiles(context)
         }
     }
 }

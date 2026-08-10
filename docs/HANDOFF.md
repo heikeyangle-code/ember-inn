@@ -615,11 +615,11 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 | 正文字号“官方 15” | `--mainFontSize: calc(var(--fontScale)*15px)`，fontScale=1 | 标准 16（可选手动切官方 15） |
 | 字体“Noto Sans（官方·下载）” | `--mainFontFamily: "Noto Sans", sans-serif` | 系统（点下载后生效） |
 
-**Noto Sans 方案（用户拍板：只正文 Regular、点下载、不打包）**：
-- FontManager 新增 ensureNoto/notoFile：Google Fonts 官方 TTF 直下（约 570KB）→ filesDir/fonts/noto_sans_regular.ttf
-- 原生：MainActivity `"noto"` 分支 Typeface.createFromFile 加载；WebView 兜底：@font-face 指向同一份 file:// filesDir TTF
-- 同一份字体两个渲染器共用；woff2 方案已回退，字体不打包进 APK
-- 已知取舍：只含 Regular 面，粗体/斜体不合成（Compose 不会伪造）；后续要保真可加 Bold/Italic 下载
+**Noto Sans 方案（用户拍板：4 面 Regular/Bold/Italic/BoldItalic、点下载、不打包）**：
+- FontManager ensureNoto：Google Fonts 官方 TTF 直下 4 个（共约 2.2MB）→ filesDir/fonts/NotoSans-*.ttf
+- 原生：MainActivity `"noto"` 分支用 Compose `Font(file, weight, style)` 组 4 面 FontFamily（粗/斜/粗斜全保真）；
+  WebView 兜底：4 个 @font-face 指向同一批 file:// filesDir TTF
+- 同一批字体两个渲染器共用；woff2 方案已回退，字体不打包进 APK
 - 文字阴影颜色跟随官方 --SmartThemeShadowColor（消息渲染页“阴影色”设置，原生与 WebView 都生效）；毛玻璃强度已接聊天顶栏/输入栏（cloudy，官方 --SmartThemeBlurStrength）
 
 **接线点**：chatTypography（15px + Shadow）、MessageRow 用户气泡（Shadow）、RoleAvatar（形状）、officialStyledHtml（@font-face + text-shadow + 15px）、MainActivity（noto）、AppearanceScreen（芯片 + 下载流程）。

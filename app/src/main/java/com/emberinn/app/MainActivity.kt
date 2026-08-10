@@ -17,7 +17,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import java.io.File
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.ui.settings.AppearancePrefs
@@ -96,7 +100,19 @@ class MainActivity : ComponentActivity() {
             )
             val fontFamily = when (recipe?.font ?: AppearancePrefs.font(this)) {
                 "lxgw" -> FontManager.lxgwFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Serif
-                "noto" -> FontManager.notoFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Default
+                "noto" -> {
+                    val files = FontManager.notoFiles(this)
+                    if (files.size == 4) {
+                        FontFamily(
+                            Font(files[0], FontWeight.Normal, FontStyle.Normal),
+                            Font(files[1], FontWeight.Bold, FontStyle.Normal),
+                            Font(files[2], FontWeight.Normal, FontStyle.Italic),
+                            Font(files[3], FontWeight.Bold, FontStyle.Italic),
+                        )
+                    } else {
+                        FontFamily.Default
+                    }
+                }
                 "source", "serif" -> FontFamily.Serif
                 else -> FontFamily.Default
             }

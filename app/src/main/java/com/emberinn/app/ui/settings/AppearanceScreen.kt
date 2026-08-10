@@ -227,7 +227,7 @@ fun AppearanceScreen(
                             ).forEach { (v, label) ->
                                 val fontReady = when (v) {
                                     "lxgw" -> FontManager.lxgwFile(appearanceContext) != null
-                                    "noto" -> FontManager.notoFile(appearanceContext) != null
+                                    "noto" -> FontManager.notoReady(appearanceContext)
                                     else -> true
                                 }
                                 FilterChip(
@@ -504,7 +504,7 @@ fun AppearanceScreen(
             AlertDialog(
                 onDismissRequest = {},
                 title = { Text("下载字体") },
-                text = { Text("正在下载字体（Noto Sans 约 570KB / 霞鹜文楷约 70MB），完成后自动应用，请稍候…") },
+                text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB / 霞鹜文楷约 70MB），完成后自动应用，请稍候…") },
                 confirmButton = {},
             )
         }

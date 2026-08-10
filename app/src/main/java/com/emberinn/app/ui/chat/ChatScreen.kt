@@ -3002,9 +3002,16 @@ private fun officialStyledHtml(
     fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
         "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
     } ?: "inherit"
-    // 官方 --mainFontFamily Noto Sans：下载的同一份 TTF 供 WebView 兜底使用
-    val noto = FontManager.notoFile(context)
-    val notoFace = noto?.let { "@font-face{font-family:'Noto Sans';src:url('file://$it') format('truetype')}\n" } ?: ""
+    // 官方 --mainFontFamily Noto Sans：下载的同一批 TTF（4 面）供 WebView 兜底使用
+    val noto = FontManager.notoFiles(context)
+    val notoFace = if (noto.size == 4) buildString {
+        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[0]}') format('truetype');font-weight:400;font-style:normal}\n")
+        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[1]}') format('truetype');font-weight:700;font-style:normal}\n")
+        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[2]}') format('truetype');font-weight:400;font-style:italic}\n")
+        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[3]}') format('truetype');font-weight:700;font-style:italic}\n")
+    } else {
+        ""
+    }
     // 官方 * { text-shadow: 0 0 2px var(--SmartThemeShadowColor) }，颜色跟随消息渲染页“阴影色”设置
     val textShadowCss = if (AppearancePrefs.textShadowEnabled(context)) {
         val blur = AppearancePrefs.textShadowStrength(context)
