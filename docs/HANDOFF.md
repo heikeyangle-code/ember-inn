@@ -561,6 +561,19 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   EmberFx 移除错误的 ExperimentalUiApi file OptIn；SoundPool.load 改 absolutePath 字符串
 - Switch→EmberSwitch 全局改名后，RegexScreen 里 `return@Switch` 标签不同步 → 已改 `return@EmberSwitch`（dbf321d）
 
+## 8. 性能修复（第 162 轮，2026-08-11，用户反馈发消息/多处变卡）
+
+**根因排查**：
+- 每张角色卡都挂了 `emberShadow`（Compose dropShadow = 离屏模糊渲染），首页网格里同时 4-6 张卡 → 帧率明显下降
+- 流式渲染每 33ms tick 对整段文本跑 `fixMarkdown` 正则 + `balanceStreamingDelimiters` 四次全量扫描，纯文本消息白花钱
+- UiSounds.ensure 在 MainActivity.onCreate 同步生成 3 段 WAV + 建 SoundPool，启动首帧前有额外开销
+
+**已修（commit 待推）**：
+- 角色卡改回普通 Card 阴影（只保留 AI 对话卡/最近聊过 2 处彩色阴影，首页不再逐卡模糊）
+- DisplayPipeline 加快路径：文本不含 `* _ "` 或 ``` ~~~ 时直接返回，流式纯文本不再跑正则/扫描
+- UiSounds.ensure 延到 `window.decorView.post {}` 首帧后执行，启动不卡
+- 登记：若仍卡，下一步把彩色阴影整体做成“性能开关/低端模式”，并把流式 markdown 重渲染降频（官方 30fps 上限内）
+
 ## 8. UI 质感方案 15 项清点（第 161 轮，2026-08-11，《EmberInn-UI质感提升方案》全清单）
 
 | # | 项 | 状态 |

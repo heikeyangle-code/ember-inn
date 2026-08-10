@@ -15,6 +15,8 @@ object DisplayPipeline {
     )
 
     fun fixMarkdown(text: String): String {
+        // 快路径：无任何强调/引号字符时直接返回，避免流式每帧跑正则
+        if (text.indexOf('*') < 0 && text.indexOf('_') < 0 && text.indexOf('"') < 0) return text
         val matches = pairRegex.findAll(text).toList()
         var newText = text
         // 从后往前替换，避免下标错位
@@ -45,6 +47,8 @@ object DisplayPipeline {
      */
     fun balanceStreamingDelimiters(text: String, isFinal: Boolean = false): String {
         if (isFinal) return text
+        // 快路径：文本里一个定界符都没有时直接返回（流式高频调用）
+        if (text.indexOf('*') < 0 && text.indexOf('"') < 0 && !text.contains("```") && !text.contains("~~~")) return text
         var out = text
         for (delimiter in listOf("*", "\"", "```", "~~~")) {
             // 奇数且行尾未以该定界符结尾时才补：避免 "你好*" 被补成 "你好**"（视觉反而更怪）

@@ -34,7 +34,8 @@ import com.emberinn.app.ui.theme.VibePreset
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UiSounds.ensure(applicationContext)
+        // 音效初始化延到首帧之后，避免启动同步生成 WAV/SoundPool 卡顿
+        window.decorView.post { UiSounds.ensure(applicationContext) }
         enableEdgeToEdge()
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }

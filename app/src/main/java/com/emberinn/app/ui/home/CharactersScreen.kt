@@ -701,16 +701,11 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
         "rounded" -> 16.dp
         else -> 16.dp
     }
+    // 性能：逐卡彩色 dropShadow 在网格里很贵（离屏模糊），角色卡改回普通阴影
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onMenu)
-            .emberShadow(
-                color = seed?.copy(alpha = 0.22f) ?: MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                radius = 12.dp,
-                offset = DpOffset(0.dp, 5.dp),
-                alpha = 0.08f + 0.16f * LocalVibe.current.glow,
-            ),
+            .combinedClickable(onClick = onClick, onLongClick = onMenu),
         shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
     ) {
