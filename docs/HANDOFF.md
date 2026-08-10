@@ -390,6 +390,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   快捷回复全屏编辑器（现有管理页可编辑，非全屏）；网络代理（P5）。
 - 已在 README 路线图/清单登记，后续按批次补。
 
+## 8. 角色详情页 UI 重构（第 152 轮，用户反馈）
+
+- 世界书条目不再默认全展开：收进一张“世界书”卡片、默认折叠，点击展开/收起，放到详情页最底部
+- 详情页所有分组统一为 SectionCard（基础字段/备用开场白/正则/变量/模型覆盖/主题配方/高级/世界书），
+  统一 18dp 圆角 + surfaceContainerLow + 一致内边距，消除此前各组样式混乱
+- 修复返回手势：详情页缺 BackHandler，系统返回/预测性返回会直接退出 App；已补 BackHandler(onBack)，
+  与 edgeSwipeBack 并存，返回上一层的逻辑不变（MainScreen onBack = openDetailId=null）
+
 ## 8. 半成品治理记录（第 137–139 轮，2026-08-10）
 
 针对“UI 有入口/执行没实现、字段没暴露、文档滞后”的半成品逐项核对官方源码并补齐：

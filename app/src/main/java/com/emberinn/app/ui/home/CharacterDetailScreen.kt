@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -98,6 +100,7 @@ fun CharacterDetailScreen(
 
     var fields by remember(record.id) { mutableStateOf(vm.readCharacterFields(record)) }
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
+    var worldBookExpanded by remember { mutableStateOf(false) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
     // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效（默认不允许）
     var regexAllowed by remember(record.id) {
@@ -209,6 +212,8 @@ fun CharacterDetailScreen(
         Toast.makeText(context, "已保存：${fields.name.ifBlank { record.name }}", Toast.LENGTH_SHORT).show()
     }
 
+    // 返回手势：系统返回/预测性返回也回到上一层，而不是退出 App
+    BackHandler(onBack = onBack)
     Box(modifier = Modifier.fillMaxSize().edgeSwipeBack(onBack = onBack)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // 顶栏：返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
@@ -332,291 +337,175 @@ fun CharacterDetailScreen(
                 }
 
                 item {
-                    SectionHeader("基础字段")
-                }
-                item {
-                    FieldRow("名字", fields.name) {
-                        editingKey = "name"; fieldDraft = fields.name
-                    }
-                }
-                item {
-                    FieldRow("描述", fields.description) {
-                        editingKey = "description"; fieldDraft = fields.description
-                    }
-                }
-                item {
-                    FieldRow("性格", fields.personality) {
-                        editingKey = "personality"; fieldDraft = fields.personality
-                    }
-                }
-                item {
-                    FieldRow("场景", fields.scenario) {
-                        editingKey = "scenario"; fieldDraft = fields.scenario
-                    }
-                }
-                item {
-                    FieldRow("开场白", fields.firstMes) {
-                        editingKey = "first_mes"; fieldDraft = fields.firstMes
-                    }
-                }
-                item {
-                    FieldRow("示例对话", fields.mesExample) {
-                        editingKey = "mes_example"; fieldDraft = fields.mesExample
+                    SectionCard("基础字段") {
+                        FieldRow("名字", fields.name) {
+                            editingKey = "name"; fieldDraft = fields.name
+                        }
+                        FieldRow("描述", fields.description) {
+                            editingKey = "description"; fieldDraft = fields.description
+                        }
+                        FieldRow("性格", fields.personality) {
+                            editingKey = "personality"; fieldDraft = fields.personality
+                        }
+                        FieldRow("场景", fields.scenario) {
+                            editingKey = "scenario"; fieldDraft = fields.scenario
+                        }
+                        FieldRow("开场白", fields.firstMes) {
+                            editingKey = "first_mes"; fieldDraft = fields.firstMes
+                        }
+                        FieldRow("示例对话", fields.mesExample) {
+                            editingKey = "mes_example"; fieldDraft = fields.mesExample
+                        }
                     }
                 }
 
                 item {
-                    SectionHeader("备用开场白", "${fields.alternateGreetings.size} 个")
-                }
-                if (fields.alternateGreetings.isEmpty()) {
-                    item {
-                        Text(
-                            "没有备用开场白。点击下方按钮新增，新会话可从备用开场白开始。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(fields.alternateGreetings.size) { i ->
-                    GreetingRow(
-                        text = fields.alternateGreetings[i],
-                        onEdit = { editingGreetingIdx = i; greetingDraft = fields.alternateGreetings[i] },
-                        onDelete = {
-                            fields = fields.copy(alternateGreetings = fields.alternateGreetings.filterIndexed { j, _ -> j != i })
-                            dirty = true
-                        },
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { editingGreetingIdx = fields.alternateGreetings.size; greetingDraft = "" },
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) { Text("＋ 新增开场白") }
-                }
-
-                item {
-                    SectionHeader("世界书", "${entries.size} 条")
-                }
-                if (entries.isEmpty()) {
-                    item {
-                        Text(
-                            "没有世界书条目。新增关键词条目后，聊到关键词时内容会自动注入上下文。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(entries.size) { i ->
-                    WorldEntryRow(
-                        entry = entries[i],
-                        onEdit = { editingEntryIdx = i },
-                        onToggle = {
-                            entries = entries.mapIndexed { j, e -> if (j == i) e.copy(enabled = !e.enabled) else e }
-                            dirty = true
-                        },
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { addingEntry = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) { Text("＋ 新增条目") }
-                }
-
-                item {
-                    SectionHeader("正则（该卡）", "${regexScripts.size} 条")
-                }
-                if (regexScripts.isEmpty()) {
-                    item {
-                        Text(
-                            "没有该卡正则。新增后需在下文开启“允许此角色应用该卡正则”才会生效（对齐官方 data.extensions.regex_scripts + character_allowed_regex）。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(regexScripts.size) { i ->
-                    RegexRow(
-                        script = regexScripts[i],
-                        onEdit = { editingRegexIdx = i },
-                        onToggle = {
-                            regexScripts = regexScripts.mapIndexed { j, s -> if (j == i) s.copy(disabled = !s.disabled) else s }
-                            dirty = true
-                        },
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { addingRegex = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) { Text("＋ 新增正则") }
-                }
-                item {
-                    Row(
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("允许此角色应用该卡正则", style = MaterialTheme.typography.bodyMedium)
+                    SectionCard("备用开场白", "${fields.alternateGreetings.size} 个") {
+                        if (fields.alternateGreetings.isEmpty()) {
                             Text(
-                                "对齐官方 character_allowed_regex：不勾选时该卡正则不会生效。",
+                                "没有备用开场白。点击下方按钮新增，新会话可从备用开场白开始。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                             )
                         }
-                        Switch(
-                            checked = regexAllowed,
-                            onCheckedChange = { on ->
-                                regexAllowed = on
-                                val list = GlobalRegexPrefs.characterAllowedRegex(context).toMutableList()
-                                val key = "${record.id}.png"
-                                if (on && key !in list) list += key
-                                if (!on) list.remove(key)
-                                GlobalRegexPrefs.saveCharacterAllowed(context, list)
-                            },
-                        )
+                        fields.alternateGreetings.forEachIndexed { i, g ->
+                            GreetingRow(
+                                text = g,
+                                onEdit = { editingGreetingIdx = i; greetingDraft = g },
+                                onDelete = {
+                                    fields = fields.copy(alternateGreetings = fields.alternateGreetings.filterIndexed { j, _ -> j != i })
+                                    dirty = true
+                                },
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { editingGreetingIdx = fields.alternateGreetings.size; greetingDraft = "" },
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        ) { Text("＋ 新增开场白") }
                     }
                 }
 
                 item {
-                    SectionHeader("变量（该卡）", "${variables.size} 个")
-                }
-                if (variables.isEmpty()) {
-                    item {
-                        Text(
-                            "没有该卡变量。变量以 {{getvar::键}} 在提示词/宏里引用（README 自定义扩展）。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(variables.toList().size) { i ->
-                    val pair = variables.toList()[i]
-                    SimpleEditRow(
-                        title = pair.first,
-                        subtitle = pair.second,
-                        onEdit = { editingVarKey = pair.first; varDraftKey = pair.first; varDraftValue = pair.second },
-                        onDelete = {
-                            variables = variables - pair.first
-                            dirty = true
-                        },
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) { Text("＋ 新增变量") }
-                }
-
-                item {
-                    SectionHeader("模型覆盖", if (modelOverride.isEmpty()) "跟随全局" else "已覆盖")
-                }
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth().clickable { modelOverrideExpanded = !modelOverrideExpanded },
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "模型 / 上下文 / 采样（本角色覆盖全局）",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Text(
-                                        modelOverride.summary(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                Icon(
-                                    if (modelOverrideExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.outline,
+                    SectionCard("正则（该卡）", "${regexScripts.size} 条") {
+                        if (regexScripts.isEmpty()) {
+                            Text(
+                                "没有该卡正则。新增后需在下文开启“允许此角色应用该卡正则”才会生效（对齐官方 data.extensions.regex_scripts + character_allowed_regex）。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                            )
+                        }
+                        regexScripts.forEachIndexed { i, script ->
+                            RegexRow(
+                                script = script,
+                                onEdit = { editingRegexIdx = i },
+                                onToggle = {
+                                    regexScripts = regexScripts.mapIndexed { j, s -> if (j == i) s.copy(disabled = !s.disabled) else s }
+                                    dirty = true
+                                },
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { addingRegex = true },
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        ) { Text("＋ 新增正则") }
+                        Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("允许此角色应用该卡正则", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "对齐官方 character_allowed_regex：不勾选时该卡正则不会生效。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
                                 )
                             }
-                            if (modelOverrideExpanded) {
-                                Spacer(Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    OutlinedButton(
-                                        onClick = { editingModelOverride = true },
-                                        modifier = Modifier.weight(1f),
-                                    ) { Text("编辑覆盖") }
-                                    if (!modelOverride.isEmpty()) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                modelOverride = ModelOverride()
-                                                dirty = true
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                        ) { Text("清除（跟随全局）", color = MaterialTheme.colorScheme.error) }
-                                    }
-                                }
-                            }
+                            Switch(
+                                checked = regexAllowed,
+                                onCheckedChange = { on ->
+                                    regexAllowed = on
+                                    val list = GlobalRegexPrefs.characterAllowedRegex(context).toMutableList()
+                                    val key = "${record.id}.png"
+                                    if (on && key !in list) list += key
+                                    if (!on) list.remove(key)
+                                    GlobalRegexPrefs.saveCharacterAllowed(context, list)
+                                },
+                            )
                         }
                     }
                 }
 
                 item {
-                    SectionHeader("主题配方", if (themeRecipe.isEmpty()) "跟随全局" else "已覆盖")
+                    SectionCard("变量（该卡）", "${variables.size} 个") {
+                        if (variables.isEmpty()) {
+                            Text(
+                                "没有该卡变量。变量以 {{getvar::键}} 在提示词/宏里引用（README 自定义扩展）。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                            )
+                        }
+                        variables.toList().forEachIndexed { i, pair ->
+                            SimpleEditRow(
+                                title = pair.first,
+                                subtitle = pair.second,
+                                onEdit = { editingVarKey = pair.first; varDraftKey = pair.first; varDraftValue = pair.second },
+                                onDelete = {
+                                    variables = variables - pair.first
+                                    dirty = true
+                                },
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { editingVarKey = ""; varDraftKey = ""; varDraftValue = "" },
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        ) { Text("＋ 新增变量") }
+                    }
                 }
+
                 item {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth().clickable { themeRecipeExpanded = !themeRecipeExpanded },
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "seed / 背景 / 形状 / 字体 / 风格 / 浅深锁定",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Text(
-                                        themeRecipe.summary(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                Icon(
-                                    if (themeRecipeExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.outline,
+                    SectionCard("模型覆盖", if (modelOverride.isEmpty()) "跟随全局" else "已覆盖") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { modelOverrideExpanded = !modelOverrideExpanded },
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "模型 / 上下文 / 采样（本角色覆盖全局）",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    modelOverride.summary(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            if (themeRecipeExpanded) {
-                                Spacer(Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    OutlinedButton(
-                                        onClick = { editingThemeRecipe = true },
-                                        modifier = Modifier.weight(1f),
-                                    ) { Text("编辑配方") }
+                            Icon(
+                                if (modelOverrideExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        if (modelOverrideExpanded) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { editingModelOverride = true },
+                                    modifier = Modifier.weight(1f),
+                                ) { Text("编辑覆盖") }
+                                if (!modelOverride.isEmpty()) {
                                     OutlinedButton(
                                         onClick = {
-                                            themeRecipe = ThemeRecipe()
+                                            modelOverride = ModelOverride()
                                             dirty = true
                                         },
                                         modifier = Modifier.weight(1f),
-                                    ) { Text("恢复全局", color = MaterialTheme.colorScheme.error) }
+                                    ) { Text("清除（跟随全局）", color = MaterialTheme.colorScheme.error) }
                                 }
                             }
                         }
@@ -624,65 +513,147 @@ fun CharacterDetailScreen(
                 }
 
                 item {
-                    SectionHeader("高级")
-                }
-                item {
-                    FieldRow("系统提示", fields.systemPrompt) {
-                        editingKey = "system_prompt"; fieldDraft = fields.systemPrompt
+                    SectionCard("主题配方", if (themeRecipe.isEmpty()) "跟随全局" else "已覆盖") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { themeRecipeExpanded = !themeRecipeExpanded },
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "seed / 背景 / 形状 / 字体 / 风格 / 浅深锁定",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    themeRecipe.summary(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            Icon(
+                                if (themeRecipeExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        if (themeRecipeExpanded) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { editingThemeRecipe = true },
+                                    modifier = Modifier.weight(1f),
+                                ) { Text("编辑配方") }
+                                OutlinedButton(
+                                    onClick = {
+                                        themeRecipe = ThemeRecipe()
+                                        dirty = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                ) { Text("恢复全局", color = MaterialTheme.colorScheme.error) }
+                            }
+                        }
                     }
                 }
+
                 item {
-                    FieldRow("剧情后指令", fields.postHistoryInstructions) {
-                        editingKey = "post_history_instructions"; fieldDraft = fields.postHistoryInstructions
+                    SectionCard("高级") {
+                        FieldRow("系统提示", fields.systemPrompt) {
+                            editingKey = "system_prompt"; fieldDraft = fields.systemPrompt
+                        }
+                        FieldRow("剧情后指令", fields.postHistoryInstructions) {
+                            editingKey = "post_history_instructions"; fieldDraft = fields.postHistoryInstructions
+                        }
+                        FieldRow(
+                            "深度提示",
+                            fields.depthPrompt.ifBlank { "深度 ${fields.depthPromptDepth} · 角色 ${fields.depthPromptRole}" },
+                        ) { editingDepth = true }
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Text("话痨程度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
+                            Slider(
+                                value = fields.talkativeness,
+                                onValueChange = { fields = fields.copy(talkativeness = it); dirty = true },
+                                valueRange = 0f..1f,
+                                steps = 19,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                when {
+                                    fields.talkativeness < 0.3f -> "安静"
+                                    fields.talkativeness < 0.7f -> "适中"
+                                    else -> "话多"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(40.dp),
+                            )
+                        }
+                        FieldRow("作者", fields.creator) {
+                            editingKey = "creator"; fieldDraft = fields.creator
+                        }
+                        FieldRow("版本", fields.characterVersion) {
+                            editingKey = "character_version"; fieldDraft = fields.characterVersion
+                        }
+                        FieldRow("创作者备注", fields.creatorNotes) {
+                            editingKey = "creator_notes"; fieldDraft = fields.creatorNotes
+                        }
+                        FieldRow("标签", fields.tags) {
+                            editingKey = "tags"; fieldDraft = fields.tags
+                        }
                     }
                 }
+
+                // README/用户要求：世界书收进一张卡片、默认折叠，放在详情页最底部
                 item {
-                    FieldRow(
-                        "深度提示",
-                        fields.depthPrompt.ifBlank { "深度 ${fields.depthPromptDepth} · 角色 ${fields.depthPromptRole}" },
-                    ) { editingDepth = true }
-                }
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("话痨程度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
-                        Slider(
-                            value = fields.talkativeness,
-                            onValueChange = { fields = fields.copy(talkativeness = it); dirty = true },
-                            valueRange = 0f..1f,
-                            steps = 19,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            when {
-                                fields.talkativeness < 0.3f -> "安静"
-                                fields.talkativeness < 0.7f -> "适中"
-                                else -> "话多"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.width(40.dp),
-                        )
+                    SectionCard("世界书", "${entries.size} 条") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { worldBookExpanded = !worldBookExpanded }.padding(vertical = 8.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    if (worldBookExpanded) "收起世界书条目" else "展开管理与查看世界书条目",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    if (worldBookExpanded) "点击收起" else "共 ${entries.size} 条 · 点击展开",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            Icon(
+                                if (worldBookExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        if (worldBookExpanded) {
+                            if (entries.isEmpty()) {
+                                Text(
+                                    "没有世界书条目。新增关键词条目后，聊到关键词时内容会自动注入上下文。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+                                )
+                            }
+                            entries.forEachIndexed { i, e ->
+                                WorldEntryRow(
+                                    entry = e,
+                                    onEdit = { editingEntryIdx = i },
+                                    onToggle = {
+                                        entries = entries.mapIndexed { j, item -> if (j == i) item.copy(enabled = !item.enabled) else item }
+                                        dirty = true
+                                    },
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { addingEntry = true },
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                            ) { Text("＋ 新增条目") }
+                        }
                     }
                 }
-                item {
-                    FieldRow("作者", fields.creator) {
-                        editingKey = "creator"; fieldDraft = fields.creator
-                    }
-                }
-                item {
-                    FieldRow("版本", fields.characterVersion) {
-                        editingKey = "character_version"; fieldDraft = fields.characterVersion
-                    }
-                }
-                item {
-                    FieldRow("创作者备注", fields.creatorNotes) {
-                        editingKey = "creator_notes"; fieldDraft = fields.creatorNotes
-                    }
-                }
-                item {
-                    FieldRow("标签", fields.tags) {
-                        editingKey = "tags"; fieldDraft = fields.tags
-                    }
                 }
             }
         }
@@ -1213,6 +1184,25 @@ fun CharacterDetailScreen(
 }
 
 @Composable
+/** 统一区块卡片：详情页所有分组（基础字段/开场白/正则/变量/模型覆盖/主题配方/高级/世界书）同一样式。 */
+@Composable
+private fun SectionCard(
+    title: String,
+    count: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+            SectionHeader(title, count)
+            content()
+        }
+    }
+}
+
 private fun SectionHeader(title: String, count: String? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
