@@ -325,7 +325,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   - providers.json 24 家补 default_context_window + model_contexts（gpt-5.5 272K / claude 1M / gemini 1M / deepseek 1M / grok-4.3 1M / kimi-k3 1M / glm 200K / qwen 262K / 豆包 256K 等）；上下文胶囊分母默认按所选模型，设置页显示“按模型自动”（手动改数字后退出自动）。
 - ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
 - ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
-- ⚠️ 图库切换已做（第 95 轮：发送端列表/图库切换 + 渲染横滑/圆点 + media_index 落盘）；未做（登记）：从 URL 导入附件、URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
+- ⚠️ 图库切换已做（第 95 轮：发送端列表/图库切换 + 渲染横滑/圆点 + media_index 落盘）；✅ 从 URL 导入附件（第 131 轮：输入区附件菜单“从 URL 添加”→ 下载 → 落盘 media/ → 与本地附件同链，URL 后缀+魔数判型；官方 Message.addImage/addVideo/addAudio URL 来源）；未做（登记）：URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
 
 ### 4.9 App↔引擎接线状态
 聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。

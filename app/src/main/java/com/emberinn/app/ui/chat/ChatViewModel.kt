@@ -58,6 +58,9 @@ import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -987,6 +990,83 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 )
             }
         }
+    }
+
+    /** 从 URL 导入附件（官方 Message.addImage/addVideo/addAudio 的 URL 来源）：下载 → 落盘 → 本地附件链。 */
+    fun addMediaFromUrl(url: String) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val bytes = runCatching {
+                    val client = OkHttpClient.Builder()
+                        .followRedirects(true)
+                        .connectTimeout(20, TimeUnit.SECONDS)
+                        .readTimeout(60, TimeUnit.SECONDS)
+                        .build()
+                    val request = Request.Builder().url(trimmed).header("User-Agent", "EmberInn/0.1").build()
+                    client.newCall(request).execute().use { resp ->
+                        if (!resp.isSuccessful) error("HTTP ${resp.code}")
+                        resp.body?.bytes() ?: error("空响应")
+                    }
+                }.getOrElse { e -> throw IllegalArgumentException(e.message ?: "下载失败") }
+                val (type, displayName) = guessMediaFromUrl(trimmed, bytes)
+                val mediaType = when {
+                    type.startsWith("image/") -> "image"
+                    type.startsWith("video/") -> "video"
+                    type.startsWith("audio/") -> "audio"
+                    else -> return@runCatching
+                }
+                // 与本地附件同一条处理链：非 jpeg/png/webp 图片压缩
+                val safeMime = type == "image/jpeg" || type == "image/png" || type == "image/webp"
+                val processedBytes = if (mediaType == "image" && !safeMime) compressToJpeg(bytes) else bytes
+                val extension = if (processedBytes !== bytes) "jpg" else extensionFor(type, displayName)
+                val app = getApplication<Application>()
+                val dir = java.io.File(app.filesDir, "media").apply { mkdirs() }
+                val file = java.io.File(dir, "${System.currentTimeMillis()}_${displayName.hashCode().toUInt().toString(16)}.$extension")
+                file.writeBytes(processedBytes)
+                _pendingMedia.value = _pendingMedia.value + MediaAttachment(
+                    type = mediaType,
+                    url = file.absolutePath,
+                    title = displayName,
+                )
+            }.onFailure { e ->
+                _notice.value = "（附件下载失败：${e.message ?: "未知错误"}）"
+            }
+        }
+    }
+
+    /** 从 URL 后缀 + 魔数推断媒体类型与文件名（官方按 MIME/URL 来源分类）。 */
+    private fun guessMediaFromUrl(url: String, bytes: ByteArray): Pair<String, String> {
+        val path = url.substringBefore('?').substringAfterLast('/')
+        val lower = path.lowercase()
+        val name = path.ifBlank { "attachment" }
+        val byExt = when {
+            lower.endsWith(".png") -> "image/png"
+            lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> "image/jpeg"
+            lower.endsWith(".gif") -> "image/gif"
+            lower.endsWith(".webp") -> "image/webp"
+            lower.endsWith(".mp4") -> "video/mp4"
+            lower.endsWith(".webm") -> "video/webm"
+            lower.endsWith(".mp3") -> "audio/mpeg"
+            lower.endsWith(".wav") -> "audio/wav"
+            lower.endsWith(".ogg") -> "audio/ogg"
+            lower.endsWith(".m4a") -> "audio/mp4"
+            lower.endsWith(".flac") -> "audio/flac"
+            else -> null
+        }
+        val mime = byExt ?: when {
+            bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() -> "image/png"
+            bytes.size >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "image/jpeg"
+            bytes.size >= 6 && bytes[0] == 'G'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte() -> "image/gif"
+            bytes.size >= 12 && bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() -> "image/webp"
+            bytes.size >= 12 && bytes[4] == 0x66.toByte() && bytes[5] == 0x74.toByte() && bytes[6] == 0x79.toByte() && bytes[7] == 0x70.toByte() -> "video/mp4"
+            bytes.size >= 4 && bytes[0] == 0x1A.toByte() && bytes[1] == 0x45.toByte() && bytes[2] == 0xDF.toByte() && bytes[3] == 0xA3.toByte() -> "video/webm"
+            bytes.size >= 4 && bytes[0] == 'I'.code.toByte() && bytes[1] == 'D'.code.toByte() && bytes[2] == 0x33.toByte() -> "audio/mpeg"
+            bytes.size >= 4 && bytes[0] == 'R'.code.toByte() && bytes[1] == 'I'.code.toByte() && bytes[2] == 'F'.code.toByte() && bytes[3] == 'F'.code.toByte() -> "audio/wav"
+            else -> "application/octet-stream"
+        }
+        return mime to name
     }
 
     /** 官方 createThumbnail 近似：最长边 2048 等比缩放 → JPEG 85。 */

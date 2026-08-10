@@ -190,6 +190,9 @@ fun ChatScreen(
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
+    var showAttachOptions by remember { mutableStateOf(false) }
+    var showUrlAttachmentDialog by remember { mutableStateOf(false) }
+    var urlAttachmentDraft by rememberSaveable { mutableStateOf("") }
     var showQuickBar by remember { mutableStateOf(false) }
     var showCharacterInfo by remember { mutableStateOf(false) }
     var showPersonaPicker by remember { mutableStateOf(false) }
@@ -258,6 +261,58 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let { vm.addDataBankFile(it) }
+    }
+
+    // 附件来源选择：本地文件 / URL（官方 Message.addImage 等支持 URL 来源）
+    if (showAttachOptions) {
+        AlertDialog(
+            onDismissRequest = { showAttachOptions = false },
+            title = { Text("添加附件") },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        showAttachOptions = false
+                        mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
+                    }) { Text("从文件选择…") }
+                    TextButton(onClick = {
+                        showAttachOptions = false
+                        showUrlAttachmentDialog = true
+                    }) { Text("从 URL 添加…") }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAttachOptions = false }) { Text("取消") }
+            },
+        )
+    }
+    if (showUrlAttachmentDialog) {
+        AlertDialog(
+            onDismissRequest = { showUrlAttachmentDialog = false },
+            title = { Text("从 URL 添加附件") },
+            text = {
+                OutlinedTextField(
+                    value = urlAttachmentDraft,
+                    onValueChange = { urlAttachmentDraft = it },
+                    placeholder = { Text("https://…") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val u = urlAttachmentDraft.trim()
+                    if (u.isNotBlank()) vm.addMediaFromUrl(u)
+                    urlAttachmentDraft = ""
+                    showUrlAttachmentDialog = false
+                }) { Text("添加") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    urlAttachmentDraft = ""
+                    showUrlAttachmentDialog = false
+                }) { Text("取消") }
+            },
+        )
     }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
@@ -559,7 +614,7 @@ fun ChatScreen(
             },
             onStop = { vm.stop() },
             onAttach = {
-                mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
+                showAttachOptions = true
             },
             onVoice = {
                 Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
