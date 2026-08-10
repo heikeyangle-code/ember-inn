@@ -95,6 +95,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -2911,49 +2912,46 @@ private fun NativeMarkdown(
         ?: (if (stDark) stTheme.stUnderline else null)
         ?: MaterialTheme.colorScheme.primary
     val type = chatTypography()
-    // 渲染参数按实际值缓存：参数不变就复用同一实例，避免每条消息/每次重组重建整套组件 lambda 与样式
+    // 颜色/排版/间距工厂是 @Composable（读主题），直接在组合上下文调用；组件 lambda 走 remember 复用
     val codeBg = MaterialTheme.colorScheme.surfaceContainerHighest
     val divider = MaterialTheme.colorScheme.outlineVariant
-    val colors = remember(bodyColor, quoteColor, emColor, underlineColor, codeBg, divider) {
-        markdownColor(
-            text = bodyColor,
-            codeBackground = codeBg.copy(alpha = 0.55f),
-            inlineCodeBackground = codeBg.copy(alpha = 0.45f),
-            dividerColor = divider,
-            tableBackground = codeBg.copy(alpha = 0.25f),
-        )
-    }
-    val typography = remember(type, quoteColor) {
-        markdownTypography(
-            h1 = type.h1,
-            h2 = type.h2,
-            h3 = type.h3,
-            h4 = type.h4,
-            h5 = type.h5,
-            h6 = type.h6,
-            text = type.body,
-            paragraph = type.body,
-            ordered = type.body,
-            bullet = type.body,
-            list = type.body,
-            quote = type.body.copy(
-                color = quoteColor,
-                fontStyle = if (type.quoteItalic) {
-                    androidx.compose.ui.text.font.FontStyle.Italic
-                } else {
-                    androidx.compose.ui.text.font.FontStyle.Normal
-                },
-            ),
-            code = type.body.copy(
-                fontSize = (type.body.fontSize.value * type.codeMult).sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            ),
-            inlineCode = type.body.copy(
-                fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            ),
-        )
-    }
+    // markdownColor 是 @Composable 工厂（读主题），只能在组合上下文调用，不能进 remember
+    val colors = markdownColor(
+        text = bodyColor,
+        codeBackground = codeBg.copy(alpha = 0.55f),
+        inlineCodeBackground = codeBg.copy(alpha = 0.45f),
+        dividerColor = divider,
+        tableBackground = codeBg.copy(alpha = 0.25f),
+    )
+    val typography = markdownTypography(
+        h1 = type.h1,
+        h2 = type.h2,
+        h3 = type.h3,
+        h4 = type.h4,
+        h5 = type.h5,
+        h6 = type.h6,
+        text = type.body,
+        paragraph = type.body,
+        ordered = type.body,
+        bullet = type.body,
+        list = type.body,
+        quote = type.body.copy(
+            color = quoteColor,
+            fontStyle = if (type.quoteItalic) {
+                androidx.compose.ui.text.font.FontStyle.Italic
+            } else {
+                androidx.compose.ui.text.font.FontStyle.Normal
+            },
+        ),
+        code = type.body.copy(
+            fontSize = (type.body.fontSize.value * type.codeMult).sp,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        ),
+        inlineCode = type.body.copy(
+            fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        ),
+    )
     // 代码高亮组件引用在组合上下文取好再进 remember（非组合 lambda 里不允许新建可组合函数引用）
     val codeBlockRef = highlightedCodeBlock
     val codeFenceRef = highlightedCodeFence
@@ -3008,8 +3006,8 @@ private fun NativeMarkdown(
     }
     val blockSpacing = AppearancePrefs.blockSpacing(context)
     val listIndent = AppearancePrefs.listIndent(context)
-    val padding = remember(blockSpacing, listIndent) {
-        markdownPadding(
+    // markdownPadding 是 @Composable 工厂（读 LocalMarkdownPadding），只能在组合上下文调用
+    val padding = markdownPadding(
             block = when (blockSpacing) {
                 "compact" -> 2.dp
                 "loose" -> 5.dp
@@ -3022,7 +3020,6 @@ private fun NativeMarkdown(
             codeBlock = PaddingValues(10.dp),
             blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
         )
-    }
     Markdown(
         content = content,
         modifier = modifier.fillMaxWidth(),
