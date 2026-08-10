@@ -83,7 +83,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     val message: StateFlow<String?> = _message
 
     private var editingId: String? = null
-    private var editingSampler: SamplerParams = SamplerParams()
+    private val _editingSampler = MutableStateFlow(SamplerParams())
+    val editingSampler: StateFlow<SamplerParams> = _editingSampler
 
     fun provider(): ProviderSpec? = ProviderRegistry.get(_providerId.value)
 
@@ -91,7 +92,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         val spec = ProviderRegistry.get(id) ?: return
         val existing = _profiles.value.firstOrNull { it.providerId == id }
         editingId = existing?.id
-        editingSampler = existing?.sampler ?: SamplerParams()
+        _editingSampler.value = existing?.sampler ?: SamplerParams()
         _providerId.value = id
         _profileName.value = existing?.name?.ifBlank { spec.displayName } ?: spec.displayName
         _apiKey.value = existing?.apiKey.orEmpty()
@@ -197,6 +198,11 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setTemperature(v: Double) { _editingSampler.value = _editingSampler.value.copy(temperature = v) }
+    fun setTopP(v: Double) { _editingSampler.value = _editingSampler.value.copy(topP = v) }
+    fun setPresencePenalty(v: Double) { _editingSampler.value = _editingSampler.value.copy(presencePenalty = v) }
+    fun setFrequencyPenalty(v: Double) { _editingSampler.value = _editingSampler.value.copy(frequencyPenalty = v) }
+
     fun save() {
         val spec = provider() ?: return
         if (_selectedModel.value.isBlank() && spec.defaultModels.isNotEmpty()) {
@@ -243,7 +249,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             accountId = _accountId.value,
             apiVersionOverride = _apiVersion.value,
             contextWindow = _contextWindow.value,
-            sampler = editingSampler.copy(maxTokens = _maxTokens.value),
+            sampler = _editingSampler.value.copy(maxTokens = _maxTokens.value),
         )
     }
 

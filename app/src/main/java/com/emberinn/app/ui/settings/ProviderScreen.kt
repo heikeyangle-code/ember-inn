@@ -251,6 +251,7 @@ fun ProviderDetailScreen(
     val contextWindow by vm.contextWindow.collectAsState()
     val contextAuto by vm.contextAuto.collectAsState()
     val maxTokens by vm.maxTokens.collectAsState()
+    val sampler by vm.editingSampler.collectAsState()
     val testing by vm.testing.collectAsState()
     val message by vm.message.collectAsState()
 
@@ -385,6 +386,18 @@ fun ProviderDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
+                vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
+            }
+            DecimalRow("核采样（topP）", sampler.topP.toString()) { v ->
+                vm.setTopP(v.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 1.0)
+            }
+            DecimalRow("存在惩罚（presencePenalty）", sampler.presencePenalty.toString()) { v ->
+                vm.setPresencePenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
+            }
+            DecimalRow("频率惩罚（frequencyPenalty）", sampler.frequencyPenalty.toString()) { v ->
+                vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
+            }
             OutlinedTextField(
                 value = contextWindow.toString(),
                 onValueChange = vm::setContextWindow,
@@ -550,4 +563,17 @@ private fun TopBar(
         }
         trailing?.invoke()
     }
+}
+
+
+@Composable
+private fun DecimalRow(label: String, value: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
 }

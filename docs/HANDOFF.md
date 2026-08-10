@@ -393,6 +393,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 104（2026-08-10：默认采样参数设置——README“开发中”落地）
+
+- ProviderViewModel 的 editingSampler 改为 StateFlow，增 setTemperature/setTopP/setPresencePenalty/setFrequencyPenalty
+- ProviderDetailScreen 在“最大回复 tokens”下新增温度/核采样/存在惩罚/频率惩罚四项（十进制输入，范围钳制），
+  保存随 ConnectionProfile.sampler 落盘，发送时 LlmClient 已按 sampler 写请求体（差分锁行为）
+- README 设置“默认采样参数”不再显示开发中
+- 无引擎改动；App 编译走 CI
+
 ## 最近一轮 103（2026-08-10：设置深链补全 + 剩余清单审计）
 
 - 设置深链补全：voice/services/quickreplies/worldinfo/regex 可被首页搜索直达（SettingsScreen deepLink + HomeViewModel 设置目录）
