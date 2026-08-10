@@ -620,6 +620,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 - 原生：MainActivity `"noto"` 分支 Typeface.createFromFile 加载；WebView 兜底：@font-face 指向同一份 file:// filesDir TTF
 - 同一份字体两个渲染器共用；woff2 方案已回退，字体不打包进 APK
 - 已知取舍：只含 Regular 面，粗体/斜体不合成（Compose 不会伪造）；后续要保真可加 Bold/Italic 下载
+- 文字阴影颜色跟随官方 --SmartThemeShadowColor（消息渲染页“阴影色”设置，原生与 WebView 都生效）；毛玻璃强度已接聊天顶栏/输入栏（cloudy，官方 --SmartThemeBlurStrength）
 
 **接线点**：chatTypography（15px + Shadow）、MessageRow 用户气泡（Shadow）、RoleAvatar（形状）、officialStyledHtml（@font-face + text-shadow + 15px）、MainActivity（noto）、AppearanceScreen（芯片 + 下载流程）。
 - **酒馆官方主题 M3 三色直接映射官方 SmartTheme 字段**（ThemePreset.schemePrimary/Secondary/Tertiary/Background/OnBackground/Surface/OnSurface）：主色=引用橙 #E18A24（--SmartThemeQuoteColor）、次色=灰 #919191（--SmartThemeEmColor）、第三=下划线绿 #BCE7CF（--SmartThemeUnderlineColor）、背景/面板 #171717（--SmartThemeBlurTintColor）、文字 #DCDCD2（--SmartThemeBodyColor）；覆盖色时容器色与对比色也随主色派生。浅色模式仍为近似（官方无浅色）。

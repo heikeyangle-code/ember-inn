@@ -2434,15 +2434,17 @@ private fun chatTypography(): ChatTypography {
     )
 }
 
-/** 全局文字阴影（外观设置）：官方默认 0 0 2px rgba(0,0,0,.5)。 */
+/** 全局文字阴影（外观设置）：颜色跟随官方 --SmartThemeShadowColor（消息渲染页可改，默认 rgba(0,0,0,.5)）。 */
 @Composable
 private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
     val context = LocalContext.current
     if (!AppearancePrefs.textShadowEnabled(context)) return null
     val blur = AppearancePrefs.textShadowStrength(context)
     if (blur <= 0) return null
+    val stTheme = LocalThemePreset.current
+    val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context)) ?: stTheme.stShadow ?: Color(0x80000000)
     return androidx.compose.ui.graphics.Shadow(
-        color = Color(0x80000000),
+        color = shadowColor,
         offset = androidx.compose.ui.geometry.Offset.Zero,
         blurRadius = blur.toFloat(),
     )
@@ -3003,10 +3005,16 @@ private fun officialStyledHtml(
     // 官方 --mainFontFamily Noto Sans：下载的同一份 TTF 供 WebView 兜底使用
     val noto = FontManager.notoFile(context)
     val notoFace = noto?.let { "@font-face{font-family:'Noto Sans';src:url('file://$it') format('truetype')}\n" } ?: ""
-    // 官方 * { text-shadow: 0 0 2px rgba(0,0,0,.5) }（--SmartThemeShadowColor），全局可调
+    // 官方 * { text-shadow: 0 0 2px var(--SmartThemeShadowColor) }，颜色跟随消息渲染页“阴影色”设置
     val textShadowCss = if (AppearancePrefs.textShadowEnabled(context)) {
         val blur = AppearancePrefs.textShadowStrength(context)
-        if (blur > 0) "text-shadow:0 0 ${blur}px rgba(0,0,0,.5);" else ""
+        if (blur > 0) {
+            val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context)) ?: Color(0x80000000)
+            val shadowRgba = "rgba(${(shadowColor.red * 255).toInt()},${(shadowColor.green * 255).toInt()},${(shadowColor.blue * 255).toInt()},${shadowColor.alpha})"
+            "text-shadow:0 0 ${blur}px $shadowRgba;"
+        } else {
+            ""
+        }
     } else {
         ""
     }
