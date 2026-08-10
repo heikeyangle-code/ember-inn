@@ -565,6 +565,25 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 存储层全量扫描缓存（第 166 轮，2026-08-11，点卡进聊天/发送按钮卡 1 秒）
+
+**根因（用户点出“全都是扫描”）**：
+- CharacterStore.list() 每次访问读全部角色文件并解析；ChatStore.list() 每次读全部会话文件；
+  ChatStore.messages() 每次读整份 jsonl 并解析——send() 里 append 前读一次、refresh 又读一次、
+  translate 再读一次；ChatViewModel 初始化 + HomeViewModel.refresh() 也会触发多次全量扫描
+- 角色卡/世界书多时，进聊天和发送就在主线程上反复做磁盘 I/O + 全量 JSON 解析 → 1 秒卡顿
+
+**已修（84c0208）**：
+- CharacterStore：角色列表内存缓存（save/delete 失效）
+- ChatStore：会话列表缓存（upsert/delete/改名失效）+ 消息 jsonl 缓存（统一 writeMessages 写入口，
+  写后自动失效并回填，append/save 直接热缓存，refresh 不再重解析）
+- 配合第 164/165 轮：displayTextOf 缓存 + 详情页 JSON 一次解析，聊天/发送/详情/首页全部不再重复扫描
+
+**其它易卡点（已排查）**：
+- 流式行每 33ms 整段 markdown 重渲染（官方 30fps 上限；若仍卡下一步降频或流式纯文本）
+- 世界书扫描/宏/提示词总装已在 Dispatchers.Default 后台线程（startStream）
+- 大图 AsyncImage、Palette 取色（导入时一次）、书签读写、设置搜索（全量但轻）、群聊实时读文件（低频）
+
 ## 8. 角色详情页卡顿 + 角色卡阴影美化（第 165 轮，2026-08-11）
 
 - 详情页 6 个读取函数（字段/世界书/正则/变量/模型覆盖/主题配方）原来各自 parse 整张卡 JSON → 打开大卡重复解析 6 次；
