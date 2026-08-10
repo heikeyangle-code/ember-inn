@@ -27,6 +27,10 @@ class AppSlashExecutorTest {
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
         override fun triggerGeneration(): String { calls += "trigger"; return "" }
+        override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String {
+            calls += "inject:$id:$position:$depth:$role:$ephemeral:$text"
+            return "abc12345"
+        }
         override fun notify(text: String) { calls += "notify:$text" }
     }
 
@@ -97,6 +101,14 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/trigger")
         assertEquals(listOf("trigger"), a.calls)
+    }
+
+    @Test
+    fun `inject forwards text and named args`() {
+        val a = FakeActions()
+        val out = AppSlashExecutor(a).execute("/inject id=note position=chat depth=3 role=user ephemeral=true 记住这条设定")
+        assertEquals(listOf("inject:note:chat:3:user:true:记住这条设定"), a.calls)
+        assertEquals("abc12345", out)
     }
 
     @Test

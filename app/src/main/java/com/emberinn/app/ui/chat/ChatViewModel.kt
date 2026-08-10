@@ -452,6 +452,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String {
+        val resolvedId = id.ifBlank { java.util.UUID.randomUUID().toString().substring(0, 8) }
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        val injects = (meta["script_injects"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (text.isBlank()) {
+            injects.remove(resolvedId)
+        } else {
+            injects[resolvedId] = buildJsonObject {
+                put("value", JsonPrimitive(text))
+                put("position", JsonPrimitive(position))
+                put("depth", JsonPrimitive(depth))
+                put("scan", JsonPrimitive(false))
+                put("role", JsonPrimitive(role))
+            }
+            if (ephemeral) ephemeralInjectIds += resolvedId
+        }
+        meta["script_injects"] = JsonObject(injects)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        return resolvedId
+    }
+
     override fun impersonate(prompt: String): String {
         if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
         if (!isProviderConfigured()) {
@@ -629,6 +650,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 本轮群聊批次 ID（官方 group_generation_id：整批共享，regenerate 定位用）。 */
     @Volatile
     private var pendingGroupGenId: Long? = null
+    /** /inject ephemeral=true 的注入 ID：生成结束后从元数据删除（官方 GENERATION_ENDED/STOPPED）。 */
+    private val ephemeralInjectIds = mutableSetOf<String>()
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
 
@@ -1499,6 +1522,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
             val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
             val reasoningToPrompts = GenerationPrefs.reasoningToPrompts(getApplication())
+            // 官方 /inject：chat_metadata.script_injects → 本轮扩展提示 + scan 扫描文本
+            val scriptInjections = (chatStore.metadata(sessionId)["script_injects"] as? JsonObject)
+                ?.mapNotNull { (id, el) ->
+                    val o = el.jsonObject
+                    val value = o["value"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                    ChatPromptFactory.ScriptInject(
+                        id = id,
+                        value = value,
+                        position = o["position"]?.jsonPrimitive?.contentOrNull ?: "after",
+                        depth = o["depth"]?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
+                        role = o["role"]?.jsonPrimitive?.contentOrNull ?: "system",
+                        scan = o["scan"]?.jsonPrimitive?.content == "true",
+                    )
+                } ?: emptyList()
             // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
             saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
@@ -1568,6 +1605,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 isContinue = continueMode,
                 regexEnabled = regexEnabled,
                 reasoningToPrompts = reasoningToPrompts,
+                scriptInjections = scriptInjections,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
@@ -1694,6 +1732,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _streamingReasoning.value = ""
         streamContinueMode = false
         generatingSwipe = false
+        // 官方 /inject ephemeral：GENERATION_ENDED/STOPPED 后删除注入
+        clearEphemeralInjects()
+    }
+
+    private fun clearEphemeralInjects() {
+        if (ephemeralInjectIds.isEmpty()) return
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        val injects = (meta["script_injects"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        ephemeralInjectIds.forEach { injects.remove(it) }
+        ephemeralInjectIds.clear()
+        meta["script_injects"] = JsonObject(injects)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
     }
 
     /** 滑动生成完成落盘：追加为新变体（对齐官方 swipe 生成 saveReply）。 */

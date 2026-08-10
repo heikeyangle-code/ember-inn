@@ -77,6 +77,16 @@ class ChatPromptFactory {
         val maxContextTokens: Int = 8192,
     )
 
+    /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects）。 */
+    data class ScriptInject(
+        val id: String,
+        val value: String,
+        val position: String, // before / after / chat / none（官方 injectCallback 位置）
+        val depth: Int = 4,
+        val role: String = "system", // system / user / assistant
+        val scan: Boolean = false,
+    )
+
     /**
      * 官方 getRegexScripts({ allowedOnly: true }) 的 App 侧统一解析：
      * GLOBAL → PRESET → SCOPED；scoped 仅当角色头像在 character_allowed_regex 中。
@@ -134,6 +144,7 @@ class ChatPromptFactory {
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
+        scriptInjections: List<ScriptInject> = emptyList(),
     ): Prepared {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         // 官方 script.js：chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡字段
@@ -352,7 +363,7 @@ class ChatPromptFactory {
             },
         )
         val wiResult = scanner.scan(
-            chat = indexedChat.map { it.second.mes },
+            chat = indexedChat.map { it.second.mes } + scriptScanInjections,
             maxContext = maxContextTokens,
             entries = parsed?.worldEntries ?: emptyList(),
             settings = worldInfoSettings,
@@ -365,6 +376,30 @@ class ChatPromptFactory {
         // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
         // 仅供 {{outlet::key}} 宏读取（NONE 不注入提示词）
         env = env.copy(outlets = wiResult.outletEntries.mapValues { (_, v) -> v.joinToString("\n") })
+
+        // 官方 /inject：script_injects → setExtensionPrompt(script_inject_{id}, value, position, depth, scan, role)
+        // before→start / after→end / chat→in_chat / none→不注入（仅存元数据，可配合 scan 触发世界书）
+        val scriptExtensionPrompts = mutableMapOf<String, ExtensionPrompt>()
+        val scriptInChatPrompts = mutableListOf<PromptItem>()
+        val scriptScanInjections = mutableListOf<String>()
+        for (inj in scriptInjections) {
+            if (inj.value.isBlank()) continue
+            if (inj.scan) scriptScanInjections += inj.value
+            val identifier = "script_inject_${inj.id}"
+            when (inj.position) {
+                "before" -> scriptExtensionPrompts[identifier] = ExtensionPrompt(identifier, inj.role, inj.value, "start", inj.depth)
+                "after" -> scriptExtensionPrompts[identifier] = ExtensionPrompt(identifier, inj.role, inj.value, "end", inj.depth)
+                "chat" -> scriptInChatPrompts += PromptItem(
+                    identifier = identifier,
+                    name = "脚本注入 ${inj.id}",
+                    content = inj.value,
+                    role = inj.role,
+                    injectionDepth = inj.depth,
+                    injectionOrder = 100,
+                )
+                // none：官方不注入提示词
+            }
+        }
 
         // 官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)
         val worldInfoDepthPrompts = wiResult.depthEntries.mapIndexed { i, d ->
@@ -411,8 +446,8 @@ class ChatPromptFactory {
         val anText = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
         // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），
         // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
-        var effectiveInChat = inChatExtensions
-        var effectiveExtensions = extensionPrompts
+        var effectiveInChat = inChatExtensions + scriptInChatPrompts
+        var effectiveExtensions = extensionPrompts + scriptExtensionPrompts
         if (anText.isNotBlank()) {
             if (note.position == 1) {
                 effectiveInChat = effectiveInChat + PromptItem(

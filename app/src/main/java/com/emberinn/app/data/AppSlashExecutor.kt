@@ -51,6 +51,8 @@ interface SlashMessageActions {
     fun selectPersona(name: String, mode: String): String
     /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
     fun triggerGeneration(): String
+    /** /inject：写/删 chat_metadata.script_injects 并注入本会话生成；返回注入 ID。 */
+    fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String
 }
 
 /**
@@ -189,6 +191,21 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             "trigger",
             description = "触发一次生成（官方 trigger；await 参数本实现不等待，登记）",
             callback = { _, _ -> actions.triggerGeneration() },
+        ),
+        SlashCommandDef(
+            "inject",
+            description = "注入提示文本（官方 inject：position=before/after/chat/none，depth，role，scan，ephemeral；返回注入 ID）",
+            rawQuotes = true,
+            callback = { inv, _ ->
+                actions.injectScript(
+                    text = inv.unnamedArgs.joinToString(" "),
+                    id = inv.namedArgs["id"] ?: "",
+                    position = inv.namedArgs["position"] ?: "after",
+                    depth = inv.namedArgs["depth"]?.toIntOrNull() ?: 4,
+                    role = inv.namedArgs["role"] ?: "system",
+                    ephemeral = isTrue(inv.namedArgs["ephemeral"]),
+                )
+            },
         ),
         SlashCommandDef(
             "persona-set",
