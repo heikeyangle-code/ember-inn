@@ -16,6 +16,7 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
+import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.data.GroupStore
@@ -30,6 +31,7 @@ import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.data.VectorRagService
+import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.ui.settings.VoicePrefs

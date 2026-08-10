@@ -1201,6 +1201,7 @@ private fun SectionCard(
     }
 }
 
+@Composable
 private fun SectionHeader(title: String, count: String? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
