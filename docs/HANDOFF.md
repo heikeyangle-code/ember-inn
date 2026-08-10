@@ -565,6 +565,19 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 独立“文字排版”页 + 渲染器全量设置（第 169 轮，2026-08-11）
+
+- 新增设置页 TextTypographyScreen（设置 → 外观与主题 → 文字排版），独立于主题页：
+  - 正文：字号（14/16/18/20）、行高（1.4/1.55/1.7）、字重（常规/中等/半粗）
+  - 标题：层级（聊天风/正常）、H1 大小、H2 大小
+  - 引用：斜体开关；代码：代码块字号、行内代码字号
+  - 间距：块间距（紧凑/标准/宽松）、列表缩进（8/10/12dp）
+- ChatMarkdown 全部消费这些设置（markdownTypography + markdownPadding），即时生效
+- 修复设置主页重复入口：移除“字体 / 圆角”和“默认采样参数”两个与主题/提供商同页的假条目；
+  外观组改为“主题与视觉 / 文字排版”两个真入口
+- 渲染器支持上限说明：库支持 h1-h6/text/paragraph/quote/code/inlineCode 的 TextStyle 与
+  block/list 间距，已全部暴露；颜色类（codeBackground/divider）属 markdownColor，未进排版页
+
 ## 8. 文字排版可调（第 168 轮，2026-08-11，用户反馈字体“平/一样大”）
 
 - 渲染组件确认：mikepenz multiplatform-markdown-renderer 0.43（m3 Markdown），ChatMarkdown 故意把

@@ -103,6 +103,86 @@ object AppearancePrefs {
             .apply()
     }
 
+    /** 正文字重：normal / medium / semibold。 */
+    fun bodyWeight(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("body_weight", "normal") ?: "normal"
+
+    fun saveBodyWeight(context: Context, weight: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("body_weight", weight)
+            .apply()
+    }
+
+    /** h1 额外倍率（在标题层级基础样式上再乘，默认 1.0）。 */
+    fun headingH1(context: Context): Float =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("heading_h1", 1f)
+
+    fun saveHeadingH1(context: Context, mult: Float) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("heading_h1", mult)
+            .apply()
+    }
+
+    /** h2 额外倍率。 */
+    fun headingH2(context: Context): Float =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("heading_h2", 1f)
+
+    fun saveHeadingH2(context: Context, mult: Float) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("heading_h2", mult)
+            .apply()
+    }
+
+    /** 引用块斜体（默认开）。 */
+    fun quoteItalic(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("quote_italic", true)
+
+    fun saveQuoteItalic(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("quote_italic", enabled)
+            .apply()
+    }
+
+    /** 代码块字号倍率（相对正文）。 */
+    fun codeSize(context: Context): Float =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("code_size", 0.9f)
+
+    fun saveCodeSize(context: Context, mult: Float) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("code_size", mult)
+            .apply()
+    }
+
+    /** 行内代码字号倍率（相对正文）。 */
+    fun inlineCodeSize(context: Context): Float =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("inline_code_size", 0.9f)
+
+    fun saveInlineCodeSize(context: Context, mult: Float) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("inline_code_size", mult)
+            .apply()
+    }
+
+    /** 块间距：compact / normal / loose。 */
+    fun blockSpacing(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("block_spacing", "normal") ?: "normal"
+
+    fun saveBlockSpacing(context: Context, spacing: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("block_spacing", spacing)
+            .apply()
+    }
+
+    /** 列表缩进（dp）：8 / 10 / 12。 */
+    fun listIndent(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("list_indent", "10") ?: "10"
+
+    fun saveListIndent(context: Context, indent: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("list_indent", indent)
+            .apply()
+    }
+
     fun saveLastSessionId(context: Context, sessionId: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("last_session_id", sessionId)

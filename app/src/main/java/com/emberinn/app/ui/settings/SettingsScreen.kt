@@ -54,7 +54,7 @@ import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -128,6 +128,7 @@ fun SettingsScreen(
             onThemeChanged = onThemeChanged,
             onBack = { page = SettingsPage.HOME },
         )
+        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
@@ -141,6 +142,7 @@ fun SettingsScreen(
             themePreset = themePreset,
             onOpenProviders = { page = SettingsPage.PROVIDERS },
             onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
             onOpenVoice = { page = SettingsPage.VOICE },
             onOpenServices = { page = SettingsPage.SERVICES },
             onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
@@ -166,6 +168,7 @@ private fun SettingsHome(
     themePreset: ThemePreset,
     onOpenProviders: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onOpenTypography: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenQuickReplies: () -> Unit,
@@ -202,15 +205,14 @@ private fun SettingsHome(
         SettingsGroup(
             "外观与主题",
             listOf(
-                SettingRow("主题", themeSummary, Color.Unspecified, onOpenAppearance),
-                SettingRow("字体 / 圆角", "全局档位 · 角色配方优先", Color.Unspecified, onOpenAppearance),
+                SettingRow("主题与视觉", "预设主题 · 视觉氛围 · 圆角 · 字体", Color.Unspecified, onOpenAppearance),
+                SettingRow("文字排版", "字号 · 行高 · 标题 · 引用 · 代码 · 间距", Color.Unspecified, onOpenTypography),
             ),
         ),
         SettingsGroup(
             "提供商与模型",
             listOf(
                 SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders),
-                SettingRow("默认采样参数", "温度 / 核采样 / 惩罚", Color.Unspecified, onOpenProviders),
             ),
         ),
         SettingsGroup(

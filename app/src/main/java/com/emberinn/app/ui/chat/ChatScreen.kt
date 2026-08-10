@@ -2166,7 +2166,7 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
     }
 }
 
-/** 聊天文字排版（外观设置可调）：正文字号 / 行高 / 标题层级。 */
+/** 聊天文字排版（独立“文字排版”设置页全量可调）：正文/行高/字重/标题/引用/代码/间距。 */
 @Composable
 private fun chatTypography(): ChatTypography {
     val context = LocalContext.current
@@ -2181,21 +2181,34 @@ private fun chatTypography(): ChatTypography {
         "loose" -> 1.7f
         else -> 1.55f
     }
+    val bodyWeight = when (AppearancePrefs.bodyWeight(context)) {
+        "medium" -> FontWeight.Medium
+        "semibold" -> FontWeight.SemiBold
+        else -> FontWeight.Normal
+    }
     val realHeading = AppearancePrefs.headingStyle(context) == "real"
+    val h1Mult = AppearancePrefs.headingH1(context)
+    val h2Mult = AppearancePrefs.headingH2(context)
+    val codeMult = AppearancePrefs.codeSize(context)
+    val inlineCodeMult = AppearancePrefs.inlineCodeSize(context)
     fun size(mult: Float) = (textSizeSp * mult).sp
     fun line(mult: Float) = (textSizeSp * mult * lineFactor).sp
-    val body = MaterialTheme.typography.bodyMedium.copy(fontSize = size(1f), lineHeight = line(1f))
+    val body = MaterialTheme.typography.bodyMedium.copy(
+        fontSize = size(1f),
+        lineHeight = line(1f),
+        fontWeight = bodyWeight,
+    )
     return ChatTypography(
         body = body,
         h1 = if (realHeading) {
-            MaterialTheme.typography.headlineMedium.copy(fontSize = size(1.5f), lineHeight = line(1.5f), fontWeight = FontWeight.Bold)
+            MaterialTheme.typography.headlineMedium.copy(fontSize = size(1.5f * h1Mult), lineHeight = line(1.5f * h1Mult), fontWeight = FontWeight.Bold)
         } else {
-            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
+            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f * h1Mult), lineHeight = line(1.15f * h1Mult), fontWeight = FontWeight.SemiBold)
         },
         h2 = if (realHeading) {
-            MaterialTheme.typography.headlineSmall.copy(fontSize = size(1.3f), lineHeight = line(1.3f), fontWeight = FontWeight.Bold)
+            MaterialTheme.typography.headlineSmall.copy(fontSize = size(1.3f * h2Mult), lineHeight = line(1.3f * h2Mult), fontWeight = FontWeight.Bold)
         } else {
-            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
+            MaterialTheme.typography.titleMedium.copy(fontSize = size(1.15f * h2Mult), lineHeight = line(1.15f * h2Mult), fontWeight = FontWeight.SemiBold)
         },
         h3 = if (realHeading) {
             MaterialTheme.typography.titleLarge.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
@@ -2205,6 +2218,9 @@ private fun chatTypography(): ChatTypography {
         h4 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium),
         h5 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
         h6 = MaterialTheme.typography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
+        quoteItalic = AppearancePrefs.quoteItalic(context),
+        codeMult = codeMult,
+        inlineCodeMult = inlineCodeMult,
     )
 }
 
@@ -2216,6 +2232,9 @@ private data class ChatTypography(
     val h4: androidx.compose.ui.text.TextStyle,
     val h5: androidx.compose.ui.text.TextStyle,
     val h6: androidx.compose.ui.text.TextStyle,
+    val quoteItalic: Boolean,
+    val codeMult: Float,
+    val inlineCodeMult: Float,
 )
 
 /** 聊天里的 Markdown：收敛成聊天风（正文 bodyMedium、标题降级、代码低饱和、间距克制）。
@@ -2258,23 +2277,31 @@ private fun ChatMarkdown(content: String, onSurface: Color, modifier: Modifier =
                 bullet = type.body,
                 list = type.body,
                 quote = type.body.copy(
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    fontStyle = if (type.quoteItalic) {
+                        androidx.compose.ui.text.font.FontStyle.Italic
+                    } else {
+                        androidx.compose.ui.text.font.FontStyle.Normal
+                    },
                 ),
                 code = type.body.copy(
-                    fontSize = (type.body.fontSize.value * 0.9f).sp,
+                    fontSize = (type.body.fontSize.value * type.codeMult).sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                 ),
                 inlineCode = type.body.copy(
-                    fontSize = (type.body.fontSize.value * 0.9f).sp,
+                    fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                 ),
             ),
             padding = markdownPadding(
-                block = 3.dp,
+                block = when (AppearancePrefs.blockSpacing(context)) {
+                    "compact" -> 2.dp
+                    "loose" -> 5.dp
+                    else -> 3.dp
+                },
                 list = 2.dp,
                 listItemTop = 2.dp,
                 listItemBottom = 2.dp,
-                listIndent = 10.dp,
+                listIndent = AppearancePrefs.listIndent(context).toFloatOrNull()?.dp ?: 10.dp,
                 codeBlock = PaddingValues(10.dp),
                 blockQuote = PaddingValues(horizontal = 8.dp),
             ),
