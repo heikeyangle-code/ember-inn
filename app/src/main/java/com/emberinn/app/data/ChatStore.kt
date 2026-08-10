@@ -194,6 +194,32 @@ class ChatStore(private val context: Context) {
         save(sessionId, list)
     }
 
+    /**
+     * 官方 translate 扩展：AI 回复译文写 extra.display_text（原文不动）；
+     * 用户消息自动翻译时 mes 换译文、原文存 extra.display_text；
+     * 推理译文写 extra.reasoning_display_text。
+     */
+    fun setDisplayText(
+        sessionId: String,
+        index: Int,
+        displayText: String?,
+        replaceMes: Boolean = false,
+        reasoningDisplayText: String? = null,
+    ) {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return
+        val el = list[index].jsonObject
+        val oldExtra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (displayText == null) oldExtra.remove("display_text") else oldExtra["display_text"] = JsonPrimitive(displayText)
+        if (reasoningDisplayText == null) oldExtra.remove("reasoning_display_text") else oldExtra["reasoning_display_text"] = JsonPrimitive(reasoningDisplayText)
+        var out = JsonObject(el + ("extra" to JsonObject(oldExtra)))
+        if (replaceMes && displayText != null) {
+            out = JsonObject(out + ("mes" to JsonPrimitive(displayText)))
+        }
+        list[index] = out
+        save(sessionId, list)
+    }
+
     /** 读取消息的 swipes 变体文本（无则空列表）。 */
     fun swipesOf(el: JsonElement): List<String> =
         (el.jsonObject["swipes"] as? JsonArray)?.map { it.jsonPrimitive.contentOrNull ?: "" } ?: emptyList()

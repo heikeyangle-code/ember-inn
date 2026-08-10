@@ -2401,8 +2401,13 @@ private fun isUser(el: JsonElement): Boolean {
     return v.jsonPrimitive.let { it.booleanOrNull ?: (it.content == "true") }
 }
 
-private fun textOf(el: JsonElement): String =
-    el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+private fun textOf(el: JsonElement): String {
+    // 官方 script.js：message?.extra?.display_text ?? message.mes（translate 扩展译文优先）
+    val extra = el.jsonObject["extra"] as? JsonObject
+    val display = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
+    if (!display.isNullOrBlank()) return display
+    return el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+}
 
 /** 渲染输入：data URL 原样，本地路径转 File（Coil3/ExoPlayer 都能加载）。 */
 private fun mediaModel(url: String): Any = if (url.startsWith("data:")) url else File(url)

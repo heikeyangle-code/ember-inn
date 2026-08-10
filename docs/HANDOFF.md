@@ -262,7 +262,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址 / 区域 / 账户 ID / API 版本 / 默认模型（底部弹层搜索）/ 上下文上限（tokens，占比胶囊分母）/ 最大回复 tokens（推理模型思考会占额度，512 太小正文被掐空；默认按 providers.json default_max_tokens）/ 测试连接 / 保存 / 删除确认
 - 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
 - 语音（TTS）✅（2026-08-10 第 80 轮执行层已接）：Android 系统 TTS 本机引擎，语音选择/语速/试听真实可用；朗读选项字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；聊天自动朗读（auto_generation）、消息长按“朗读这条消息”、narrate_user 已接；文本处理对齐官方（跳代码块/标签、去星号、正则 /pat/flags、去图片、按行分段排队），纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装（未做）
-- 服务页 ✅（2026-08-10 第 86 轮执行层已接）：翻译（第 137 轮 8 家全实现：Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐官方 src/endpoints/translate.js，Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程；语言映射/DeepL formality/free-pro 端点均按官方）、图像（第 138 轮：AUTOMATIC1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace 已实现，协议对齐官方 stable-diffusion 扩展与 src/endpoints/{stable-diffusion,novelai}.js——SDCPP 同 /sdapi/v1/txt2img、NovelAI 请求体 1:1 且解 ZIP 取 PNG、HF 直连 /models/{model}；UI 增 API Key 字段；ComfyUI/DrawThings/Stable Horde 如实标“开发中”）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）——✅ 2026-08-10 第 88 轮已接线：设置页开关（启用/聊天历史重排/文件数据银行 + query/insert/protect/阈值）、发送时 VectorChatRearranger 重排+数据银行检索、世界书 vectorized 条目经 externalActivations 强制激活、聊天 ⋮ 数据银行管理；OpenAI 配置不完整时本轮禁用并人话提示
+- 服务页 ✅（2026-08-10 第 86 轮执行层已接）：翻译（第 137 轮 8 家全实现：Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐官方 src/endpoints/translate.js，Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程；语言映射/DeepL formality/free-pro 端点均按官方；第 142 轮自动翻译模式已接：responses/both→AI 回复译文进 extra.display_text、推理进 extra.reasoning_display_text，inputs/both→用户消息 mes 换译文、原文存 display_text，渲染按官方 display_text ?? mes；编辑后自动重译未接，登记）、图像（第 138 轮：AUTOMATIC1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace 已实现，协议对齐官方 stable-diffusion 扩展与 src/endpoints/{stable-diffusion,novelai}.js——SDCPP 同 /sdapi/v1/txt2img、NovelAI 请求体 1:1 且解 ZIP 取 PNG、HF 直连 /models/{model}；UI 增 API Key 字段；ComfyUI/DrawThings/Stable Horde 如实标“开发中”）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）——✅ 2026-08-10 第 88 轮已接线：设置页开关（启用/聊天历史重排/文件数据银行 + query/insert/protect/阈值）、发送时 VectorChatRearranger 重排+数据银行检索、世界书 vectorized 条目经 externalActivations 强制激活、聊天 ⋮ 数据银行管理；OpenAI 配置不完整时本轮禁用并人话提示
 
 ### 4.4.5 应用图标 ✅
 launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
@@ -365,7 +365,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 | 项 | 之前 | 现在（第 137–139 轮） |
 |---|---|---|
-| 翻译执行层 | UI 8 家、执行 3 家 | 8 家全实现（协议对齐 src/endpoints/translate.js；Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程） |
+| 翻译执行层 | UI 8 家、执行 3 家；自动翻译模式只有选项没接线 | 8 家全实现（协议对齐 src/endpoints/translate.js；Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程）；自动模式 responses/inputs/both 已按官方位点接线（第 142 轮） |
 | 图像执行层 | UI 8 来源、执行 2 家 | A1111/SDCPP/NovelAI/OpenAI/HuggingFace 已实现（NovelAI 请求体 1:1 + ZIP 取 PNG；HF 直连）；ComfyUI/DrawThings/Horde 在 UI 如实标“开发中” |
 | 图像 API Key | 无字段 | 设置→服务→图像新增 API Key（NovelAI/HF/Horde 用） |
 | 向量 Data Bank 高级参数 | 官方默认隐藏 | sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露（默认 5/5/0，接进 VectorChatSettings） |

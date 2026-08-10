@@ -219,6 +219,52 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 translate 扩展自动翻译模式（none/responses/inputs/both）。 */
+    private fun translateAutoMode(): String = ServicesPrefs.translateAutoMode(getApplication())
+
+    /** 官方 translateIncomingMessage：AI 回复译文写 extra.display_text（原文保留），推理写 extra.reasoning_display_text。 */
+    private fun translateIncoming(index: Int, reasoning: String? = null) {
+        val mode = translateAutoMode()
+        if (mode != "responses" && mode != "both") return
+        val msgs = chatStore.messages(sessionId)
+        val el = msgs.getOrNull(index)?.jsonObject ?: return
+        val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val translated = translateClient.translate(getApplication(), text)
+            val reasoningTranslated = if (!reasoning.isNullOrBlank()) {
+                translateClient.translate(getApplication(), reasoning)
+            } else {
+                null
+            }
+            withContext(Dispatchers.Main) {
+                if (translated.isNullOrBlank() && reasoningTranslated.isNullOrBlank()) return@withContext
+                chatStore.setDisplayText(
+                    sessionId,
+                    index,
+                    displayText = translated,
+                    reasoningDisplayText = reasoningTranslated,
+                )
+                refreshMessages()
+            }
+        }
+    }
+
+    /** 官方 translateOutgoingMessage：用户消息 mes 换成译文，原文存 extra.display_text。 */
+    private fun translateOutgoing(index: Int) {
+        val mode = translateAutoMode()
+        if (mode != "inputs" && mode != "both") return
+        val msgs = chatStore.messages(sessionId)
+        val el = msgs.getOrNull(index)?.jsonObject ?: return
+        val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val translated = translateClient.translate(getApplication(), text) ?: return@launch
+            withContext(Dispatchers.Main) {
+                chatStore.setDisplayText(sessionId, index, displayText = translated, replaceMes = true)
+                refreshMessages()
+            }
+        }
+    }
+
     /** 翻译指定消息（P1-6 执行层；结果放 notice）。 */
     fun translateMessage(index: Int) {
         val msgs = chatStore.messages(sessionId)
@@ -761,6 +807,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         chatStore.append(sessionId, true, regexedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
         _pendingMedia.value = emptyList()
         refreshMessages()
+        // 官方 translate 扩展：auto_mode=inputs/both 时用户消息自动翻译（mes 换译文、原文进 extra.display_text）
+        translateOutgoing(chatStore.messages(sessionId).lastIndex)
         val voice = VoicePrefs.read(getApplication())
         if (voice.enabled && voice.narrateUser) {
             narrateText(text)
@@ -1732,6 +1780,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _streamingReasoning.value = ""
         streamContinueMode = false
         generatingSwipe = false
+        // 官方 translate 扩展：auto_mode=responses/both 时 AI 回复自动翻译（译文进 extra.display_text）
+        if (!wasImpersonating) {
+            val lastAi = chatStore.messages(sessionId).indexOfLast { !isUser(it) }
+            if (lastAi >= 0) translateIncoming(lastAi, _streamingReasoning.value.takeIf { it.isNotBlank() })
+        }
         // 官方 /inject ephemeral：GENERATION_ENDED/STOPPED 后删除注入
         clearEphemeralInjects()
     }
