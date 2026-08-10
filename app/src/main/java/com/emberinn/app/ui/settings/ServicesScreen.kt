@@ -1,5 +1,7 @@
 package com.emberinn.app.ui.settings
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.data.GenerationPrefs
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -308,7 +310,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
 
@@ -444,7 +446,7 @@ private fun ReasoningCard() {
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            Switch(
+            EmberSwitch(
                 checked = enabled,
                 onCheckedChange = { on ->
                     enabled = on

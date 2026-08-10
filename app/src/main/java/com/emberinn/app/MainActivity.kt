@@ -1,5 +1,7 @@
 package com.emberinn.app
 
+import com.emberinn.app.ui.components.UiSounds
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,6 +29,7 @@ import com.emberinn.app.ui.theme.ThemePresets
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UiSounds.ensure(applicationContext)
         enableEdgeToEdge()
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }

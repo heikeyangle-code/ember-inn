@@ -1,5 +1,7 @@
 package com.emberinn.app.ui.settings
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -107,7 +109,7 @@ fun RegexScreen(onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(
+                EmberSwitch(
                     checked = regexEnabled,
                     onCheckedChange = { on ->
                         regexEnabled = on
@@ -175,7 +177,7 @@ fun RegexScreen(onBack: () -> Unit) {
                             }, modifier = Modifier.size(34.dp)) {
                                 Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
-                            Switch(
+                            EmberSwitch(
                                 checked = !script.disabled,
                                 onCheckedChange = { on ->
                                     persist(scripts.mapIndexed { i, s -> if (i == index) s.copy(disabled = !on) else s })
@@ -240,7 +242,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 ) {
                     Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Switch(
+                    EmberSwitch(
                         checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
                         onCheckedChange = { on ->
                             if (activePreset.isBlank()) return@Switch
@@ -293,7 +295,7 @@ fun RegexScreen(onBack: () -> Unit) {
                             }, modifier = Modifier.size(34.dp)) {
                                 Icon(PhosphorIcons.Delete, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
-                            Switch(
+                            EmberSwitch(
                                 checked = !script.disabled,
                                 onCheckedChange = { on ->
                                     val list = presetSets[activePreset].orEmpty().mapIndexed { j, s -> if (j == i) s.copy(disabled = !on) else s }
@@ -390,7 +392,7 @@ fun RegexScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
                         Text("禁用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Switch(checked = draftDisabled, onCheckedChange = { draftDisabled = it })
+                        EmberSwitch(checked = draftDisabled, onCheckedChange = { draftDisabled = it })
                     }
                 }
             },

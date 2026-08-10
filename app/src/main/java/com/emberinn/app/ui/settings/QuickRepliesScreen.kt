@@ -1,5 +1,7 @@
 package com.emberinn.app.ui.settings
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
@@ -140,7 +142,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                             }, modifier = Modifier.size(34.dp)) {
                                 Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
-                            Switch(
+                            EmberSwitch(
                                 checked = slot.enabled,
                                 onCheckedChange = { on ->
                                     persist(slots.map { if (it.label == slot.label) it.copy(enabled = on) else it })
@@ -191,7 +193,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Switch(checked = draftEnabled, onCheckedChange = { draftEnabled = it })
+                        EmberSwitch(checked = draftEnabled, onCheckedChange = { draftEnabled = it })
                     }
                     OutlinedTextField(
                         value = draftAutomationId,
@@ -205,7 +207,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
                         Text("自动执行期间禁止嵌套自动执行", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Switch(checked = draftPreventAutoExecute, onCheckedChange = { draftPreventAutoExecute = it })
+                        EmberSwitch(checked = draftPreventAutoExecute, onCheckedChange = { draftPreventAutoExecute = it })
                     }
                 }
             },

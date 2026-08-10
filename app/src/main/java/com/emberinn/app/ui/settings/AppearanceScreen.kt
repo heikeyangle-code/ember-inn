@@ -1,5 +1,7 @@
 package com.emberinn.app.ui.settings
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -160,7 +162,7 @@ fun AppearanceScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Switch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it) })
+                        EmberSwitch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it) })
                     }
                 }
             }
@@ -187,7 +189,7 @@ fun AppearanceScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Switch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it) })
+                        EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it) })
                     }
                 }
             }
@@ -198,6 +200,7 @@ fun AppearanceScreen(
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
+                var uiSounds by remember { mutableStateOf(AppearancePrefs.uiSounds(optContext)) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -232,7 +235,7 @@ fun AppearanceScreen(
                                 Text("背景模糊（玻璃表面）", style = MaterialTheme.typography.bodyLarge)
                                 Text("顶栏 / 输入栏 / 浮层的 Cloudy 毛玻璃总开关", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it) })
+                            EmberSwitch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it) })
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -242,7 +245,7 @@ fun AppearanceScreen(
                                 Text("启动进入上次聊天", style = MaterialTheme.typography.bodyLarge)
                                 Text("默认关；开启后启动直接回到上次会话", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it) })
+                            EmberSwitch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it) })
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -252,7 +255,17 @@ fun AppearanceScreen(
                                 Text("转义标签（encode_tags）", style = MaterialTheme.typography.bodyLarge)
                                 Text("官方 power_user.encode_tags：显示时把 < > 转义为 &lt; &gt;（默认关）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Switch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it) })
+                            EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it) })
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { uiSounds = !uiSounds; AppearancePrefs.saveUiSounds(optContext, uiSounds) }.padding(vertical = 6.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("交互音效", style = MaterialTheme.typography.bodyLarge)
+                                Text("发送 / 开关 / 删除的极短提示音，克制可关闭", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            EmberSwitch(checked = uiSounds, onCheckedChange = { uiSounds = it; AppearancePrefs.saveUiSounds(optContext, it) })
                         }
                     }
                 }

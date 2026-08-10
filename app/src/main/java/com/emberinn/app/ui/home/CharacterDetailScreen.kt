@@ -1,5 +1,7 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 package com.emberinn.app.ui.home
 
 import android.content.Intent
@@ -422,7 +424,7 @@ fun CharacterDetailScreen(
                                     color = MaterialTheme.colorScheme.outline,
                                 )
                             }
-                            Switch(
+                            EmberSwitch(
                                 checked = regexAllowed,
                                 onCheckedChange = { on ->
                                     regexAllowed = on
@@ -1335,7 +1337,7 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(PhosphorIcons.Edit, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
-            Switch(checked = entry.enabled, onCheckedChange = { onToggle() })
+            EmberSwitch(checked = entry.enabled, onCheckedChange = { onToggle() })
         }
     }
 }
@@ -1447,7 +1449,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        EmberSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -1491,7 +1493,7 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(PhosphorIcons.Edit, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
-            Switch(checked = !script.disabled, onCheckedChange = { onToggle() })
+            EmberSwitch(checked = !script.disabled, onCheckedChange = { onToggle() })
         }
     }
 }

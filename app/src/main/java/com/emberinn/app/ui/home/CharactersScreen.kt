@@ -2,6 +2,11 @@
 
 package com.emberinn.app.ui.home
 
+import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberHaptics
+import com.emberinn.app.ui.components.UiSounds
+import com.emberinn.app.ui.components.emberShadow
+
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import android.content.Context
@@ -67,9 +72,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
@@ -93,6 +100,7 @@ fun CharactersScreen(
     val recentSessions by vm.recentSessions.collectAsState()
     val message by vm.message.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     var query by rememberSaveable { mutableStateOf("") }
     var menuRecord by remember { mutableStateOf<CharacterRecord?>(null) }
@@ -177,7 +185,7 @@ fun CharactersScreen(
                 modifier = Modifier.fillMaxSize().sky(sky),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    AiChatCard(onClick = { onOpenChat(vm.newSession(null, "AI 对话")) })
+                    AiChatCard(onClick = { EmberHaptics.select(haptic); onOpenChat(vm.newSession(null, "AI 对话")) })
                 }
                 if (recentSessions.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -190,7 +198,7 @@ fun CharactersScreen(
                                     session = session,
                                     avatarPath = characters.firstOrNull { it.id == session.characterId }?.avatarPath,
                                     preview = vm.lastMessage(session.id),
-                                    onClick = { onOpenChat(session) },
+                                    onClick = { EmberHaptics.select(haptic); onOpenChat(session) },
                                 )
                             }
                         }
@@ -204,7 +212,7 @@ fun CharactersScreen(
                         CharacterCard(
                             record = record,
                             preview = vm.lastMessageFor(record.id),
-                            onClick = { onOpenChat(vm.openOrResume(record.id, record.name)) },
+                            onClick = { EmberHaptics.select(haptic); onOpenChat(vm.openOrResume(record.id, record.name)) },
                             onMenu = { menuRecord = record },
                         )
                     }
@@ -232,7 +240,7 @@ fun CharactersScreen(
         }
 
         FloatingActionButton(
-            onClick = { showImportSheet = true },
+            onClick = { EmberHaptics.select(haptic); showImportSheet = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
             Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡")
@@ -360,6 +368,8 @@ fun CharactersScreen(
             text = { Text("角色和它的聊天记录都会被删除，此操作不可撤销。") },
             confirmButton = {
                 TextButton(onClick = {
+                    EmberHaptics.reject(haptic)
+                    UiSounds.delete(context)
                     vm.delete(record); deleteTarget = null
                     Toast.makeText(context, "已删除：${record.name}", Toast.LENGTH_SHORT).show()
                 }) { Text("删除", color = MaterialTheme.colorScheme.error) }
@@ -597,7 +607,12 @@ private fun HomeTopBar(
 @Composable
 private fun AiChatCard(onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .emberShadow(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                radius = 12.dp,
+                offset = DpOffset(0.dp, 5.dp),
+            ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
     ) {
@@ -635,6 +650,11 @@ private fun RecentChatCard(
 ) {
     Card(
         onClick = onClick,
+        modifier = Modifier.fillMaxWidth().emberShadow(
+            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+            radius = 10.dp,
+            offset = DpOffset(0.dp, 4.dp),
+        ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -683,7 +703,12 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onMenu),
+            .combinedClickable(onClick = onClick, onLongClick = onMenu)
+            .emberShadow(
+                color = seed?.copy(alpha = 0.22f) ?: MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                radius = 12.dp,
+                offset = DpOffset(0.dp, 5.dp),
+            ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
     ) {
@@ -764,21 +789,15 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 
 @Composable
 private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
-    Column(
+    EmberEmptyState(
+        title = "欢迎来到余烬酒馆",
+        body = "导入第一张角色卡，故事会在余烬里继续",
+        actionLabel = "导入角色卡",
+        onAction = onImport,
+        secondaryLabel = "直接开始聊天",
+        onSecondary = onDirectChat,
         modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("✦", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(8.dp))
-        Text("欢迎来到余烬酒馆", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(4.dp))
-        Text("导入第一张角色卡，开始你的故事", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(20.dp))
-        Button(onClick = onImport) { Text("导入角色卡") }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onDirectChat) { Text("直接开始聊天") }
-    }
+    )
 }
 
 private fun displayName(context: Context, uri: Uri): String? = runCatching {

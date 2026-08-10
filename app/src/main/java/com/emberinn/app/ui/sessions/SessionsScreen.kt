@@ -2,6 +2,10 @@
 
 package com.emberinn.app.ui.sessions
 
+import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberHaptics
+import com.emberinn.app.ui.components.UiSounds
+
 import com.emberinn.app.ui.icons.PhosphorIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,6 +82,7 @@ fun SessionsScreen(
     val characters by vm.characters.collectAsState()
     val message by vm.message.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     var showNewSheet by rememberSaveable { mutableStateOf(false) }
     var showGroupSheet by rememberSaveable { mutableStateOf(false) }
@@ -147,7 +153,7 @@ fun SessionsScreen(
                         SessionRow(
                             session = session,
                             preview = remember(session) { vm.previewOf(session.id) },
-                            onClick = { onOpenSession(session) },
+                            onClick = { EmberHaptics.select(haptic); onOpenSession(session) },
                             onMenu = { menuSession = session },
                         )
                     }
@@ -156,7 +162,7 @@ fun SessionsScreen(
         }
 
         FloatingActionButton(
-            onClick = { showNewSheet = true },
+            onClick = { EmberHaptics.select(haptic); showNewSheet = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         ) {
             Icon(PhosphorIcons.Plus, contentDescription = "新建对话")
@@ -315,6 +321,8 @@ fun SessionsScreen(
             text = { Text("这条会话的全部消息都会被删除，此操作不可撤销。") },
             confirmButton = {
                 TextButton(onClick = {
+                    EmberHaptics.reject(haptic)
+                    UiSounds.delete(context)
                     vm.delete(session); deleteTarget = null
                     Toast.makeText(context, "已删除：${session.name}", Toast.LENGTH_SHORT).show()
                 }) { Text("删除", color = MaterialTheme.colorScheme.error) }
@@ -527,24 +535,13 @@ private fun SheetRow(
 
 @Composable
 private fun EmptySessions(onNew: () -> Unit) {
-    Column(
+    EmberEmptyState(
+        title = "炉火还没点起来",
+        body = "新建一个对话，或去角色页点一张角色卡，故事就从这里开始",
+        actionLabel = "新建对话",
+        onAction = onNew,
         modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("✦", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(8.dp))
-        Text("还没有会话", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "点右下角 + 新建对话，或去角色页点一张角色卡开始",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-        Spacer(Modifier.height(16.dp))
-        TextButton(onClick = onNew) { Text("新建对话") }
-    }
+    )
 }
 
 private fun timeLabel(epochMillis: Long): String {

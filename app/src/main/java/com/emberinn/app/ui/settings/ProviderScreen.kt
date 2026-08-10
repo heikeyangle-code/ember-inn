@@ -2,6 +2,8 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.components.EmberSkeletonBox
+
 import com.emberinn.app.ui.icons.PhosphorIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -482,6 +485,7 @@ fun ProviderDetailScreen(
 private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
     val models by vm.models.collectAsState()
     val selected by vm.selectedModel.collectAsState()
+    val testing by vm.testing.collectAsState()
     var query by remember { mutableStateOf("") }
     val filtered = remember(models, query) {
         models.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
@@ -524,12 +528,22 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                 }
             }
             if (models.isEmpty()) {
-                Text(
-                    "暂无模型，请先测试连接",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                if (testing) {
+                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                        repeat(5) {
+                            EmberSkeletonBox(
+                                modifier = Modifier.fillMaxWidth().height(36.dp).padding(vertical = 6.dp),
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        "暂无模型，请先测试连接",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         }
     }

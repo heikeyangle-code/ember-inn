@@ -2,6 +2,9 @@
 
 package com.emberinn.app.ui.chat
 
+import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.UiSounds
+
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
@@ -642,6 +645,7 @@ fun ChatScreen(
                 if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
                     followBottom = true
                     haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    UiSounds.send(context)
                     val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
                     if (accepted) {
                         input = ""
@@ -838,6 +842,7 @@ fun ChatScreen(
             confirmButton = {
                 TextButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                    UiSounds.delete(context)
                     vm.deleteMessage(index)
                     deleteTargetIndex = null
                     Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
@@ -2537,27 +2542,12 @@ private fun ChatInputBar(
 
 @Composable
 private fun EmptyChat(name: String, accent: Color) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("✦", style = MaterialTheme.typography.displayLarge, color = accent.copy(alpha = 0.85f))
-        Spacer(Modifier.size(16.dp))
-        Text(
-            "和 ${name.ifBlank { "TA" }} 打个招呼吧",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.size(6.dp))
-        Text(
-            "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
-            modifier = Modifier.padding(horizontal = 48.dp),
-        )
-    }
+    EmberEmptyState(
+        title = "和 ${name.ifBlank { "TA" }} 打个招呼吧",
+        body = "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
+        accent = accent,
+        modifier = Modifier.fillMaxWidth().padding(top = 72.dp, bottom = 24.dp),
+    )
 }
 
 private fun isUser(el: JsonElement): Boolean {

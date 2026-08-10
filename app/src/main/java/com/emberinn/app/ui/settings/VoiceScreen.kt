@@ -1,5 +1,7 @@
 package com.emberinn.app.ui.settings
 
+
+import com.emberinn.app.ui.components.EmberSwitch
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -123,7 +125,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(checked = enabled, onCheckedChange = { enabled = it; save() })
+                    EmberSwitch(checked = enabled, onCheckedChange = { enabled = it; save() })
                 }
             }
 
@@ -236,7 +238,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
                         Text("朗读前正则过滤", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Switch(checked = applyRegex, onCheckedChange = { applyRegex = it; save() })
+                        EmberSwitch(checked = applyRegex, onCheckedChange = { applyRegex = it; save() })
                     }
                     if (applyRegex) {
                         OutlinedTextField(
@@ -302,6 +304,6 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
