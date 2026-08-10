@@ -57,14 +57,15 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（58 组差分 fixture，共 916 例对拍，全部通过；2026-08-10 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 58 组 / 916 例（机器数）为准。
+**已覆盖（59 组差分 fixture，共 956 例对拍，全部通过；2026-08-10 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 59 组 / 956 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 58 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 916 例。
+> 注：脚本数 59 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 956 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
+| 世界书正则深度（regexDepth） | worldinfo-regex-depth-official.mjs | WorldInfoRegexDepthDiffTest | 40 |
 | 世界书文件 | worldinfo-file-official.mjs | WorldInfoFileDiffTest | 2 |
 | 正则 | regex-official.mjs | RegexDiffTest | 20 |
 | PNG 角色卡 | card-png-official.mjs | CardPngDiffTest | 6 |
@@ -141,7 +142,7 @@ PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）�
 ✅ 导入保留世界书回归锁（2026-08-10 WorldBookImportTest：JSON/PNG 导入后 data.character_book.entries 可读可解析）；✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（2026-08-09：CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord）；✅ URL 导入角色卡（HomeViewModel.importCardFromUrl + 首页 FAB 弹层，PNG/CharX/JSON 按 URL 后缀/魔数探测，对齐官方 content-manager importURL；第 129 轮复验）。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
-buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。
+buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。 ✅ 世界书 BUILDING PROMPT 正则深度已差分（第 136 轮：regexDepthOf 逐字提取官方表达式，40 例对拍）。
 ✅ 扩展字段已全接上（数据全量透传 + 行为）：
    - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容）；**FileVectorStore 磁盘持久化对齐官方 vectra.LocalIndex**（目录 root/source/collection/model + items.json，重启不丢；InMemoryVectorStore 仅测试/临时）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
    - 向量扩展补齐：**VectorChatRearranger**（聊天历史重排，对齐 rearrangeChat：protect 保留最近 N 条、insert 条数、模板 Past events:{{text}}、position 映射 BEFORE_PROMPT→start/IN_PROMPT→end）+ **文件/Data Bank 向量化**（对齐 processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile：分块 splitRecursive、overlap、chunk 检索注入）+ VectorTextUtils（splitRecursive/trimToEndSentence/trimToStartSentence/overlapChunks 官方 1:1）
@@ -351,7 +352,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 58 组差分 fixture / 916 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
+- 59 组差分 fixture / 956 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10 等）
 
 ## 6. 引擎差分/修复日志（仅引擎层；App/UI 层不记过程，现状见第 4 节）
 
