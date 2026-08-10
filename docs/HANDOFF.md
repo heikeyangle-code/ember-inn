@@ -582,6 +582,7 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
 | 15 | 品牌视觉母题 | ➖ 按用户要求移除（空状态 ✦/微光/余烬文案已删），改为用户可调视觉氛围 |
 
 **第 161 轮 CI 修复**：字体下载状态原本声明在 LazyVerticalGrid 的 item 作用域内、弹窗在外面引用不到 → 提升到 AppearanceScreen 顶层（401a88f）。
+✅ 401a88f CI 全绿：霞鹜文楷下载 + 外观即时生效 + 六主题间距/动效性格 + 15 项清点全部编译通过。
 
 **第 161 轮新增**：
 - FontManager：霞鹜文楷下载（官方 Release zip → LXGWWenKai-Regular.ttf → filesDir/fonts），
