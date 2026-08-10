@@ -288,7 +288,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     override fun sendAsCharacter(name: String, text: String): String {
         if (text.isBlank()) return ""
-        chatStore.appendManualMessage(sessionId, isUser = false, content = text, name = name)
+        // 官方 sendas：name 缺省用当前角色名
+        chatStore.appendManualMessage(sessionId, isUser = false, content = text, name = name.ifBlank { currentCharName })
         refreshMessages()
         return ""
     }

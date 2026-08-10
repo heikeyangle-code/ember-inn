@@ -1,7 +1,6 @@
 package com.emberinn.app.data
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** 锁住“消息类斜杠命令 → App 动作”的接线契约（解析器由引擎差分覆盖）。 */
@@ -32,11 +31,11 @@ class AppSlashExecutorTest {
     }
 
     @Test
-    fun `sendas without name returns hint and does not send`() {
+    fun `sendas without name falls back to empty name for viewmodel default`() {
         val a = FakeActions()
-        val out = AppSlashExecutor(a).execute("/sendas 你好")
-        assertEquals(0, a.calls.size)
-        assertTrue(out.contains("name="))
+        AppSlashExecutor(a).execute("/sendas 你好")
+        // 官方 sendas 缺省 name 不报错，由 ChatViewModel 兜底当前角色名
+        assertEquals(listOf("sendas::你好"), a.calls)
     }
 
     @Test

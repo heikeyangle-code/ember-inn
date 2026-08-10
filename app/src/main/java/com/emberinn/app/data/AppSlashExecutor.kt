@@ -51,12 +51,8 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "以指定角色发送消息（name= 必填；at= 可插入指定位置）",
             rawQuotes = true,
             callback = { inv, _ ->
-                val name = inv.namedArgs["name"]?.trim().orEmpty()
-                if (name.isEmpty()) {
-                    "（/sendas 需要 name= 参数，例如 /sendas name=小炭 你好）"
-                } else {
-                    actions.sendAsCharacter(name, inv.unnamedArgs.joinToString(" "))
-                }
+                // 官方 sendas：缺省 name 用当前角色名（不报错）；ChatViewModel 兜底
+                actions.sendAsCharacter(inv.namedArgs["name"]?.trim().orEmpty(), inv.unnamedArgs.joinToString(" "))
             },
         ),
         SlashCommandDef(
