@@ -85,6 +85,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -393,6 +394,14 @@ fun ChatScreen(
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty() && followBottom) {
             listState.scrollToItem(messages.lastIndex)
+        }
+    }
+    // 进入聊天：首帧布局完成后直接滚到底（首帧未测量时 scrollToItem 会被吞，内容先空后跳）
+    LaunchedEffect(Unit) {
+        snapshotFlow { listState.layoutInfo.totalItemsCount }
+            .first { it > 0 }
+        if (items.isNotEmpty()) {
+            listState.scrollToItem(items.lastIndex, scrollOffset = Int.MAX_VALUE)
         }
     }
     // 流式：贴底时用即时滚动到流式项末尾（正文变长不再跳顶，也不逐 token 动画）

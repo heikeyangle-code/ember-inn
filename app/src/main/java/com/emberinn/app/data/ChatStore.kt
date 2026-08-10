@@ -33,6 +33,12 @@ data class SessionRecord(
 /** 聊天会话存储：sessions 目录（*.json）+ chats 目录（*.jsonl）（对齐官方 jsonl：每行一条消息 JSON）。 */
 class ChatStore(private val context: Context) {
 
+    /** 进程级共享缓存：Home/Session/Chat 三个 ViewModel 各自 new ChatStore，缓存必须共用。 */
+    companion object {
+        private var sessionsCache: List<SessionRecord>? = null
+        private val messagesCache = mutableMapOf<String, List<JsonElement>>()
+    }
+
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val sessionsDir: File get() = File(context.filesDir, "sessions").apply { mkdirs() }
     private val chatsDir: File get() = File(context.filesDir, "chats").apply { mkdirs() }
@@ -41,8 +47,6 @@ class ChatStore(private val context: Context) {
         list().firstOrNull { it.characterId == characterId }
 
     fun get(id: String): SessionRecord? = list().firstOrNull { it.id == id }
-
-    private var sessionsCache: List<SessionRecord>? = null
 
     fun list(): List<SessionRecord> {
         sessionsCache?.let { return it }
@@ -82,8 +86,6 @@ class ChatStore(private val context: Context) {
         }
         File(chatsDir, "$sessionId.json").writeText(json.encodeToString(JsonObject.serializer(), header))
     }
-
-    private val messagesCache = mutableMapOf<String, List<JsonElement>>()
 
     private fun writeMessages(sessionId: String, content: String) {
         File(chatsDir, "$sessionId.jsonl").writeText(content)

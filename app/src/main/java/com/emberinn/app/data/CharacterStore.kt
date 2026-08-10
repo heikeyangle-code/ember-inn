@@ -7,12 +7,14 @@ import kotlinx.serialization.json.Json
 /** 角色卡文件存储：characters 目录（*.json）+ avatars 目录（*.png）（内部存储，无权限要求）。 */
 class CharacterStore(private val context: Context) {
 
+    /** 进程级共享缓存：多个 ViewModel 各自 new CharacterStore，缓存必须共用，否则互相看不到改动。 */
+    companion object {
+        private var cache: List<CharacterRecord>? = null
+    }
+
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val charactersDir: File get() = File(context.filesDir, "characters").apply { mkdirs() }
     private val avatarsDir: File get() = File(context.filesDir, "avatars").apply { mkdirs() }
-
-    /** 内存缓存：角色列表只读一次，save/delete/导入时失效（避免每次访问全量读盘）。 */
-    private var cache: List<CharacterRecord>? = null
 
     fun list(): List<CharacterRecord> {
         cache?.let { return it }

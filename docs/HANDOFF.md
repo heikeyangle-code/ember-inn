@@ -565,6 +565,17 @@ App 贴底判定=最后一项可见，语义一致（上滑暂停/回底恢复�
   ChatScreen 发送/删除音、首页/会话删除音、外观「交互音效」开关、AppearancePrefs.uiSounds 字段
 - 触觉反馈保留（与音效无关）；README 清单 6 同步标记“已移除”
 
+## 8. 进聊天滚底 + 缓存副作用修复（第 167 轮，2026-08-11）
+
+- 用户反馈：从角色卡进聊天，内容延迟约 1 秒才出现且不滚到底
+- 排查：首帧未测量时 scrollToItem 会被吞（内容先空后跳）；已加“首帧布局完成后滚到底”的
+  LaunchedEffect（等 totalItemsCount>0 再 scrollToItem(lastIndex, Int.MAX_VALUE)）
+- 副作用修复：第 166 轮的存储缓存是**每个 ViewModel 实例各一份**（Home/Session/Chat 各自 new
+  CharacterStore/ChatStore），跨页面会互相看到旧数据 → 已改为**进程级共享缓存**（companion object），
+  任何实例写入都全局失效/回填
+- 登记：displayTextOf 缓存意味着“正则/转义设置”在聊天内改动后，已显示消息要等下次消息刷新才按
+  新设置重渲染（轻微，聊天页不常改全局正则；后续可加设置变更信号主动失效）
+
 ## 8. 存储层全量扫描缓存（第 166 轮，2026-08-11，点卡进聊天/发送按钮卡 1 秒）
 
 **根因（用户点出“全都是扫描”）**：
