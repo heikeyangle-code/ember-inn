@@ -15,6 +15,18 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+/**
+ * 角色卡 JSON 解析缓存：详情页 6 个读取函数共用一个解析结果（大卡一次解析，不再重复 parse）。
+ * LRU 上限 16 张卡；保存/导入会生成新 raw 字符串，天然失效。
+ */
+private val parsedCardCache = object : LinkedHashMap<String, JsonObject>(64, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, JsonObject>?): Boolean = size > 16
+}
+
+private fun parseCached(raw: String): JsonObject = synchronized(parsedCardCache) {
+    parsedCardCache.getOrPut(raw) { json.parseToJsonElement(raw).jsonObject }
+}
+
 /** 角色详情页可编辑字段快照（官方 v2 归一字段；tags 逗号拼接、depth_prompt 兼容对象/字符串、talkativeness 读 extensions）。 */
 data class CharacterDetailFields(
     val name: String,
@@ -106,7 +118,7 @@ object CharacterCardEdit {
 
     fun readFields(raw: String, fallbackName: String, fallbackDescription: String): CharacterDetailFields =
         runCatching {
-            val root = json.parseToJsonElement(raw).jsonObject
+            val root = parseCached(raw)
             val data = dataLayer(root)
             val ext = data["extensions"]?.jsonObject
             fun str(key: String): String = (data[key] as? JsonPrimitive)?.contentOrNull ?: ""
@@ -153,7 +165,7 @@ object CharacterCardEdit {
 
     /** 读取角色卡内嵌世界书条目（兼容 v2 keys / v1 key、enabled / disable 反向、keys 逗号字符串）。 */
     fun readWorldEntries(raw: String): List<WorldEntryDraft> = runCatching {
-        val root = json.parseToJsonElement(raw).jsonObject
+        val root = parseCached(raw)
         val data = dataLayer(root)
         val entries = (bookOf(root, data)?.get("entries") as? JsonArray)
             ?: return@runCatching emptyList()
@@ -260,7 +272,7 @@ object CharacterCardEdit {
 
     /** 读取该卡正则脚本（官方位置 data.extensions.regex_scripts）。 */
     fun readRegexScripts(raw: String): List<CharacterRegexScript> = runCatching {
-        val root = json.parseToJsonElement(raw).jsonObject
+        val root = parseCached(raw)
         val data = dataLayer(root)
         val ext = data["extensions"]?.jsonObject ?: return@runCatching emptyList()
         (ext["regex_scripts"] as? JsonArray)?.mapIndexedNotNull { i, el ->
@@ -319,7 +331,7 @@ object CharacterCardEdit {
 
     /** 读取该卡变量（README 自定义扩展，data.extensions.emberinn_variables，字符串值）。 */
     fun readVariables(raw: String): Map<String, String> = runCatching {
-        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val data = dataLayer(parseCached(raw))
         val ext = data["extensions"]?.jsonObject ?: return@runCatching emptyMap()
         (ext["emberinn_variables"] as? JsonObject)?.mapNotNull { (k, v) ->
             val value = (v as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
@@ -345,7 +357,7 @@ object CharacterCardEdit {
 
     /** 读取角色级模型覆盖（null = 跟随全局）。 */
     fun readModelOverride(raw: String): ModelOverride = runCatching {
-        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val data = dataLayer(parseCached(raw))
         val ext = data["extensions"]?.jsonObject ?: return@runCatching ModelOverride()
         val o = ext["emberinn_model_override"]?.jsonObject ?: return@runCatching ModelOverride()
         fun str(key: String): String = (o[key] as? JsonPrimitive)?.contentOrNull ?: ""
@@ -388,7 +400,7 @@ object CharacterCardEdit {
 
     /** 读取角色级主题配方（空字段 = 跟随全局）。 */
     fun readThemeRecipe(raw: String): ThemeRecipe = runCatching {
-        val data = dataLayer(json.parseToJsonElement(raw).jsonObject)
+        val data = dataLayer(parseCached(raw))
         val ext = data["extensions"]?.jsonObject ?: return@runCatching ThemeRecipe()
         val o = ext["emberinn_theme_recipe"]?.jsonObject ?: return@runCatching ThemeRecipe()
         fun str(key: String): String = (o[key] as? JsonPrimitive)?.contentOrNull ?: ""

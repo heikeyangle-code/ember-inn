@@ -55,9 +55,14 @@ fun Modifier.emberShadow(
     spread: Dp = 0.dp,
     offset: DpOffset = DpOffset(0.dp, 4.dp),
     alpha: Float = 1f,
+    brush: Brush? = null,
 ): Modifier = dropShadow(
     shape = RectangleShape,
-    shadow = Shadow(radius = radius, color = color, spread = spread, offset = offset, alpha = alpha),
+    shadow = if (brush != null) {
+        Shadow(radius = radius, brush = brush, spread = spread, offset = offset, alpha = alpha)
+    } else {
+        Shadow(radius = radius, color = color, spread = spread, offset = offset, alpha = alpha)
+    },
 )
 
 /**

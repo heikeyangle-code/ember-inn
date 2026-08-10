@@ -699,11 +699,25 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
         "rounded" -> 16.dp
         else -> 16.dp
     }
-    // 性能：逐卡彩色 dropShadow 在网格里很贵（离屏模糊），角色卡改回普通阴影
+    // 彩色发光阴影：角色 seed 垂直渐变光晕（网格只渲染可见卡，无卡顿）
+    val glow = LocalVibe.current.glow
+    val shadowColor = seed ?: MaterialTheme.colorScheme.primary
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onMenu),
+            .combinedClickable(onClick = onClick, onLongClick = onMenu)
+            .emberShadow(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        shadowColor.copy(alpha = 0.30f * glow),
+                        shadowColor.copy(alpha = 0.08f * glow),
+                        Color.Transparent,
+                    ),
+                ),
+                radius = 14.dp,
+                spread = 2.dp,
+                offset = DpOffset(0.dp, 7.dp),
+            ),
         shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
     ) {
