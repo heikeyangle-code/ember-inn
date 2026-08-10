@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.emberinn.app.ui.components
 
 import androidx.compose.foundation.background
