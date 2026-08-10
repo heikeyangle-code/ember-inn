@@ -157,6 +157,8 @@ fun ChatScreen(
             initializer { ChatViewModel(this[APPLICATION_KEY]!!, sessionId) }
         },
     )
+    // /renamechat 后实时刷新顶栏/空态名字（不用 MainScreen 传入的固定 name）
+    val currentName = vm.sessionName().ifBlank { name }
     val messages by vm.messages.collectAsState()
     val streamingText by vm.streamingText.collectAsState()
     val isStreaming by vm.isStreaming.collectAsState()
@@ -393,7 +395,7 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (items.isEmpty()) {
-                    item { EmptyChat(name = name, accent = accent) }
+                    item { EmptyChat(name = currentName, accent = accent) }
                 }
                 itemsIndexed(items, key = { _, item -> when (item) {
                     is ChatItem.Message -> "m-${item.index}"
@@ -455,7 +457,7 @@ fun ChatScreen(
                             reasoning = streamingReasoning,
                             reasoningExpanded = reasoningExpanded,
                             onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
-                            name = name,
+                            name = currentName,
                             avatarPath = vm.avatarPath,
                             accent = accent,
                             impersonating = isImpersonating,
@@ -487,7 +489,7 @@ fun ChatScreen(
         }
 
         ChatTopBar(
-            name = name,
+            name = currentName,
             avatarPath = vm.avatarPath,
             accent = accent,
             onBack = onBack,
@@ -640,7 +642,7 @@ fun ChatScreen(
             ModalBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
-                        if (isUserMsg) "我的消息" else name,
+                        if (isUserMsg) "我的消息" else currentName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),

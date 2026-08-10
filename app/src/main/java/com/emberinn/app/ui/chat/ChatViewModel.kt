@@ -1137,6 +1137,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }.toString()
     }
 
+    /** 当前会话名（实时读盘；/renamechat 后顶栏立即刷新）。 */
+    fun sessionName(): String = chatStore.sessionName(sessionId).ifBlank { currentCharName }
+
     /** 群聊设置：生成模式（SWAP/APPEND）+ 激活策略（natural/pooled）。 */
     fun saveGroupSettings(generationMode: Int, activationStrategy: String) {
         group?.let {
