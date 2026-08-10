@@ -9,6 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 
@@ -21,13 +22,39 @@ fun EmberInnTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     preset: ThemePreset = ThemePresets.first(),
     shapes: Shapes = Shapes(),
+    fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) preset.darkScheme() else preset.lightScheme(),
-        typography = Typography(),
+        typography = typographyWith(fontFamily),
         shapes = shapes,
         content = content,
+    )
+}
+
+/** M3 1.4 没有 defaultFontFamily 参数：整体换字体族时逐样式 copy（默认族时原样）。 */
+private fun typographyWith(fontFamily: FontFamily): Typography {
+    if (fontFamily == FontFamily.Default) return Typography()
+    val base = Typography()
+    fun withFont(style: androidx.compose.ui.text.TextStyle): androidx.compose.ui.text.TextStyle =
+        style.copy(fontFamily = fontFamily)
+    return Typography(
+        displayLarge = withFont(base.displayLarge),
+        displayMedium = withFont(base.displayMedium),
+        displaySmall = withFont(base.displaySmall),
+        headlineLarge = withFont(base.headlineLarge),
+        headlineMedium = withFont(base.headlineMedium),
+        headlineSmall = withFont(base.headlineSmall),
+        titleLarge = withFont(base.titleLarge),
+        titleMedium = withFont(base.titleMedium),
+        titleSmall = withFont(base.titleSmall),
+        bodyLarge = withFont(base.bodyLarge),
+        bodyMedium = withFont(base.bodyMedium),
+        bodySmall = withFont(base.bodySmall),
+        labelLarge = withFont(base.labelLarge),
+        labelMedium = withFont(base.labelMedium),
+        labelSmall = withFont(base.labelSmall),
     )
 }
 

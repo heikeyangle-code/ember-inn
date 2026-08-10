@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
+import com.emberinn.app.ui.settings.AppearancePrefs
 
 /** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
 @Composable
@@ -92,6 +93,23 @@ fun AppearanceScreen(
                     selected = preset.id == themePreset.id,
                     onClick = { onThemeChanged(themeMode, preset) },
                 )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val appearanceContext = LocalContext.current
+                var radius by remember { mutableStateOf(AppearancePrefs.radius(appearanceContext)) }
+                var font by remember { mutableStateOf(AppearancePrefs.font(appearanceContext)) }
+                Text("全局圆角", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)) {
+                    listOf("default" to "系统", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
+                        FilterChip(selected = radius == v, onClick = { radius = v; AppearancePrefs.save(appearanceContext, radius, font) }, label = { Text(label) })
+                    }
+                }
+                Text("全局字体", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                    listOf("default" to "系统", "serif" to "衬线（思源宋体近似）").forEach { (v, label) ->
+                        FilterChip(selected = font == v, onClick = { font = v; AppearancePrefs.save(appearanceContext, radius, font) }, label = { Text(label) })
+                    }
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val renderContext = LocalContext.current
