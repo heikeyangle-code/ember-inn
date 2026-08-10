@@ -151,7 +151,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                             snapshots = SettingsSnapshotStore.list(context)
                             Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
                         }) {
-                            Icon(PhosphorIcons.TrashSimple, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
+                            Icon(PhosphorIcons.Delete, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

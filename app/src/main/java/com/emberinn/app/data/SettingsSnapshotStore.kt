@@ -8,7 +8,7 @@ import java.util.zip.ZipOutputStream
 
 /**
  * 设置快照：对齐官方 user.js 的命名设置快照语义（保存/加载/列表/删除）。
- * 本 App 快照内容 = 全部 SharedPreferences（shared_prefs/*.xml）+ 提供商档案（provider/*.json）。
+ * 本 App 快照内容 = 全部 SharedPreferences（shared_prefs 目录的 *.xml）+ 提供商档案（provider 目录的 *.json）。
  * 边界登记：SharedPreferences 有进程内缓存，恢复后需重启 App 完全生效（官方会热重载设置，App 侧登记）。
  */
 object SettingsSnapshotStore {

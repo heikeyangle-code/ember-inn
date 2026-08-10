@@ -192,7 +192,7 @@ class ImageGenClient {
             .put("models", JSONArray().put(model.ifBlank { "Deliberate" }))
         val requestBuilder = Request.Builder()
             .url("https://stablehorde.net/api/v2/generate/async")
-            .post(payload.toRequestBody(jsonMedia))
+            .post(payload.toString().toRequestBody(jsonMedia))
         if (apiKey.isNotBlank()) requestBuilder.header("apikey", apiKey)
         val id = client.newCall(requestBuilder.build()).execute().use { resp ->
             if (!resp.isSuccessful) return null
