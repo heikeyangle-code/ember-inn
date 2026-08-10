@@ -387,6 +387,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景（第 81/82 轮），全局形状/字体/锁定管线 P3 | 🟡 部分 |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 仅本地文本（UTF-8），不做 URL 下载；sizeThresholdDb/chunkCountDb/overlap 等高级参数用官方默认未暴露 UI；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
+## 最近一轮 110（2026-08-10：全量审视第三批——消息字段互操作）
+
+- ChatStore.append：普通用户/AI 消息 extra 补官方 gen_id（Date.now()，jsonl 与 ST 互操作）
+- appendSwipe / addSwipeManual 的 swipe_info.extra 与消息级 extra 补 gen_id
+- 复核：send_date 格式、gen_started/gen_finished、swipe_info 结构均对齐官方 jsonl
+- 引擎 289 测全绿；App 编译走 CI
+
 ## 最近一轮 109（2026-08-10：全量审视第二批）
 
 - **bias 提取修复**：官方 getBiasStrings 取“最后一条用户消息”的 bias；原实现只在上一条消息就是用户消息时提取，
