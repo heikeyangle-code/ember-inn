@@ -296,6 +296,7 @@ fun ChatScreen(
     LaunchedEffect(Unit) {
         vm.refreshProviderConfigured()
         vm.refreshQuickReplies()
+        vm.refreshTheme()
     }
 
     // 离开聊天页：角色主题配方还原为全局主题

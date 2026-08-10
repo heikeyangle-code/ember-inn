@@ -411,8 +411,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     val characterId: String? = chatStore.get(sessionId)?.characterId
-    val character: CharacterRecord? =
-        characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
+    val character: CharacterRecord?
+        get() = characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
 
     /** 群聊：每次访问实时读（群聊设置保存后立即生效，不缓存旧模式/策略）。 */
     val group: GroupRecord?
@@ -420,8 +420,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val groupMembers: List<CharacterRecord>
         get() = group?.members?.mapNotNull { id -> charStore.list().firstOrNull { it.id == id } } ?: emptyList()
 
-    val accentColor: Long? = character?.seedColor
-    val avatarPath: String? = character?.avatarPath
+    val accentColor: Long?
+        get() = character?.seedColor
+    val avatarPath: String?
+        get() = character?.avatarPath
+
+    /** 角色卡/主题编辑后返回聊天：刷新第三层主题与头像（字符 getter 实时读盘）。 */
+    fun refreshTheme() {
+        ThemeState.update(
+            recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
+            seedColor = character?.seedColor,
+        )
+    }
 
     /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
     private val _chatBackground = MutableStateFlow(
