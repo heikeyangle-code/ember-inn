@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（67 组差分 fixture，共 1101 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 67 组 / 1101 例（机器数）为准。
+**已覆盖（68 组差分 fixture，共 1118 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 68 组 / 1118 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -129,6 +129,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 偏置全链（getBiasStrings/extractMessageBias/removeMacros） | bias-official.mjs | BiasDiffTest | 17 |
 | 流式响应/错误解析（getStreamingReply/tryParseStreamingError） | streaming-response-official.mjs | StreamingResponseDiffTest | 20 |
 | Reasoning 解析（parse/remove/formatReasoning） | reasoning-official.mjs | ReasoningDiffTest | 13 |
+| Token 预算（getMaxContext/Response/PromptTokens） | token-budget-official.mjs | TokenBudgetDiffTest | 17 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -224,6 +225,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - strict 锚定/非 strict 任意位置、prefix/suffix 缺失返回 null、无匹配返回 `{reasoning:"", content:原串}`（官方真语义）、trimSpaces 开关。
 - `formatReasoning` 与 `ResponseDataExtractor` 的 removeReasoning 注入点可直接接真函数。
 - 差分：`scripts/diff/reasoning-official.mjs`（reasoning.js:1389/1410/1450 + utils.js trimSpaces 逐字）→ `ReasoningDiffTest` 13 例全过。
+
+### 3.9.7 Token 预算 ✅（2026-08-12）
+官方 `getMaxContextTokens / getMaxResponseTokens / getMaxPromptTokens` + `getKayraMaxContextTokens` 已移植到 `engine/provider/TokenBudgetEngine.kt`：
+- kobold/textgen/novel（clio/kayra/erato 与订阅 tier）/openai/未知默认 1487 全分支。
+- `getMaxPromptTokens` 的 override 校验（非数字/<=0/NaN → 回退 response）与官方一致。
+- 差分：`scripts/diff/token-budget-official.mjs`（script.js:5870/5907/5922 + nai-settings.js:92 逐字）→ `TokenBudgetDiffTest` 17 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 

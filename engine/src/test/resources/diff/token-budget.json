@@ -1,0 +1,205 @@
+{
+  "source": "getMaxContextTokens/getMaxResponseTokens/getMaxPromptTokens",
+  "cases": [
+    {
+      "id": "context-kobold",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "kobold",
+          "maxContext": 2048
+        }
+      },
+      "expected": 2048
+    },
+    {
+      "id": "context-textgen",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "textgenerationwebui",
+          "maxContext": 4096
+        }
+      },
+      "expected": 4096
+    },
+    {
+      "id": "context-novel-clio",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "novel",
+          "maxContext": 12000,
+          "novelModel": "clio-v1"
+        }
+      },
+      "expected": 8192
+    },
+    {
+      "id": "context-novel-kayra-no-tier",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "novel",
+          "maxContext": 12000,
+          "novelModel": "kayra-v1",
+          "novelTier": null
+        }
+      },
+      "expected": 8192
+    },
+    {
+      "id": "context-novel-kayra-tier1",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "novel",
+          "maxContext": 12000,
+          "novelModel": "kayra-v1",
+          "novelTier": 1
+        }
+      },
+      "expected": 4096
+    },
+    {
+      "id": "context-novel-kayra-tier2",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "novel",
+          "maxContext": 12000,
+          "novelModel": "kayra-v1",
+          "novelTier": 2
+        }
+      },
+      "expected": 8192
+    },
+    {
+      "id": "context-novel-erato",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "novel",
+          "maxContext": 12000,
+          "novelModel": "erato-v1"
+        }
+      },
+      "expected": 8182
+    },
+    {
+      "id": "context-openai",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "openai",
+          "openaiMaxContext": 32000
+        }
+      },
+      "expected": 32000
+    },
+    {
+      "id": "context-unknown",
+      "args": {
+        "body": {
+          "method": "context",
+          "mainApi": "claude"
+        }
+      },
+      "expected": 1487
+    },
+    {
+      "id": "response-kobold",
+      "args": {
+        "body": {
+          "method": "response",
+          "mainApi": "kobold",
+          "amountGen": 250
+        }
+      },
+      "expected": 250
+    },
+    {
+      "id": "response-novel",
+      "args": {
+        "body": {
+          "method": "response",
+          "mainApi": "novel",
+          "amountGen": 300
+        }
+      },
+      "expected": 300
+    },
+    {
+      "id": "response-openai",
+      "args": {
+        "body": {
+          "method": "response",
+          "mainApi": "openai",
+          "openaiMaxTokens": 512
+        }
+      },
+      "expected": 512
+    },
+    {
+      "id": "response-unknown",
+      "args": {
+        "body": {
+          "method": "response",
+          "mainApi": "claude"
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "prompt-default",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "mainApi": "openai",
+          "openaiMaxContext": 32000,
+          "openaiMaxTokens": 512
+        }
+      },
+      "expected": 31488
+    },
+    {
+      "id": "prompt-override",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "mainApi": "openai",
+          "openaiMaxContext": 32000,
+          "openaiMaxTokens": 512,
+          "override": 1024
+        }
+      },
+      "expected": 30976
+    },
+    {
+      "id": "prompt-override-zero",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "mainApi": "openai",
+          "openaiMaxContext": 32000,
+          "openaiMaxTokens": 512,
+          "override": 0
+        }
+      },
+      "expected": 31488
+    },
+    {
+      "id": "prompt-override-negative",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "mainApi": "openai",
+          "openaiMaxContext": 32000,
+          "openaiMaxTokens": 512,
+          "override": -5
+        }
+      },
+      "expected": 31488
+    }
+  ]
+}
