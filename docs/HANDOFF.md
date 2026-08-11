@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（60 组差分 fixture，共 961 例对拍，全部通过；2026-08-10 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 60 组 / 961 例（机器数）为准。
+**已覆盖（61 组差分 fixture，共 995 例对拍，全部通过；2026-08-11 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 61 组 / 995 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -122,6 +122,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 思考入提示词（PromptReasoning.addToMessage） | prompt-reasoning-official.mjs | PromptReasoningDiffTest | 7 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
+| 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 34 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -175,6 +176,12 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 ### 3.8 聊天 🟡
 jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 层，对齐官方 `swipe_id`/`swipes[]`/`swipe_info[]`：ensureSwipes 初始化、syncSwipeToMes 同步、Generate('swipe') 追加、deleteSwipe、editMessage 写回）**。
 ✅ 聊天元数据（2026-08-10）：官方 ChatHeader（chats/{id}.json chat_metadata）读写 + 字段覆盖（system_prompt/scenario/mes_example）+ 背景（custom_background）；✅ 书签（复验：ChatStore bookmarkNames/createBookmark/openBookmark，存档 chats/{id}-Checkpoint-*.jsonl + 最后 AI extra.bookmark_link，官方 saveBookmark 语义；UI 对话框 + 二次确认）；✅ 设置快照（SettingsSnapshotStore 命名 zip 保存/恢复/删除 SharedPreferences + 提供商档案，对齐官方 user.js 设置快照语义；恢复后需重启 App 完全生效，登记）。
+
+### 3.8.5 消息清理 ✅（2026-08-11）
+官方 `script.js cleanUpMessage`（停用词逐字符裁剪/prompt bias/错误名字裁剪/endoftext/Instruct 序列/群消息裁剪/名字剥离/fixMarkdown/句子与空格收尾）+ `cleanGroupMessage` + `power-user.js fixMarkdown` 已移植到引擎：
+- `engine/prompt/CleanUpMessage.kt`：`CleanUpConfig` 注入 promptBias/regexTransform/stoppingStrings 等官方依赖；App 接线时传入已宏替换的 bias、真实 RegexPipelineEngine 与 API 停用词。
+- `engine/prompt/FixMarkdown.kt`：forDisplay=false（cleanUp 用）与 forDisplay=true（显示用）两条官方路径。
+- 差分：`scripts/diff/cleanup-official.mjs`（函数体逐字摘自 script.js:3112/6383、power-user.js:408/429、utils.js:883/1378；打桩 substituteParams/getRegexedString/stoppingStrings 已在脚本头部登记）→ `CleanUpDiffTest` 34 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
@@ -392,7 +399,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
  MessageRow 派生字段 remember(el) 一次缓存
 - 自动触底：最后一项可见=贴底；上滑暂停、回底恢复；首帧滚底读当前 layoutInfo
-- 登记未做：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、cleanUpMessage 停用词逐 token 裁剪、
+- 登记未做：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、
  LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器
 
 ### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
