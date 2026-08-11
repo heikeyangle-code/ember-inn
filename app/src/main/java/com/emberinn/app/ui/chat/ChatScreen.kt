@@ -1826,7 +1826,7 @@ private fun MessageRow(
                     folderName = name,
                     expression = expression ?: "",
                     spriteCache = mapOf(name to groups),
-                    settings = com.emberinn.engine.expression.ExpressionSettings(
+                    settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
                         fallbackExpression = prefs.fallbackExpression.ifBlank { null },
                         allowMultiple = prefs.allowMultiple,
                         rerollIfSame = prefs.rerollIfSame,
