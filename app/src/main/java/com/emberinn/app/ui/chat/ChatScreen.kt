@@ -2602,6 +2602,22 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
         .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
     out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
     out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n")
+    // 官方 DOMPurify 白名单里的文本级标签原生渲染（浏览器 UA 默认样式 1:1）：
+    // sub/sup 上下标、ins 下划线、small/big 缩放、mark 黄底、kbd/samp/tt/code 等宽、
+    // var/dfn/cite 斜体、abbr/acronym 虚线下划线；data/time/wbr 无视觉效果，剥标签留内容。
+    // 私有区标记 \uE020-\uE031，applyOfficialMarkers 按层叠加；bdi/bdo/ruby 等方向/注音语义
+    // 原生无法表达，仍由 OFFICIAL_HTML_TAG 走 WebView。
+    out = Regex("<sub[^>]*>([\\s\\S]*?)</sub>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE020${m.groupValues[1]}\uE021" }
+    out = Regex("<sup[^>]*>([\\s\\S]*?)</sup>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE022${m.groupValues[1]}\uE023" }
+    out = Regex("<ins[^>]*>([\\s\\S]*?)</ins>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE024${m.groupValues[1]}\uE025" }
+    out = Regex("<small[^>]*>([\\s\\S]*?)</small>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE026${m.groupValues[1]}\uE027" }
+    out = Regex("<big[^>]*>([\\s\\S]*?)</big>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE028${m.groupValues[1]}\uE029" }
+    out = Regex("<mark[^>]*>([\\s\\S]*?)</mark>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02A${m.groupValues[1]}\uE02B" }
+    out = Regex("<(?:kbd|samp|tt|code)[^>]*>([\\s\\S]*?)</(?:kbd|samp|tt|code)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02C${m.groupValues[1]}\uE02D" }
+    out = Regex("<(?:var|dfn|cite)[^>]*>([\\s\\S]*?)</(?:var|dfn|cite)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02E${m.groupValues[1]}\uE02F" }
+    out = Regex("<(?:abbr|acronym)(?=[^>]*\\btitle\\b)[^>]*>([\\s\\S]*?)</(?:abbr|acronym)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE030${m.groupValues[1]}\uE031" }
+    out = Regex("</?(?:abbr|acronym)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("</?(?:data|time|wbr)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
     // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）。
     // 官方仅对非系统消息做引号转换（script.js `if (!isSystem)`），系统消息不做
     if (convertQuotes) {
@@ -2640,22 +2656,33 @@ private fun minus(outer: OfficialSpan, holes: List<OfficialSpan>): List<Official
     return res
 }
 
-/** 官方 CSS 语义的标记后处理：剥掉 \uE001-\uE007 标记字符，并按层上色。
- *  分层顺序对齐 style.css：
+/** 官方 CSS 语义的标记后处理：剥掉 \uE001-\uE007 与文本级标签标记（\uE020-\uE031），并按层上色/加样式。
+ *  分层顺序对齐 style.css + 浏览器 UA 默认：
+ *  - 文本级（sub/sup/small/big/mark/mono/var/cite/dfn/ins/abbr）先叠加（UA 默认，author 色可覆盖）
  *  - em/i 先按 emColor 着色（库的 annotator 完成）
  *  - q/引号对 → 整段引用色（官方 q em 继承 → 覆盖 em；strong 无色 → 继承引用色）
  *  - u/~text~ → 下划线色+下划线；em 段保留斜体色（官方 .mes_text em 优先于 u）
  *  - font[color] → 最后整段指定色（官方 font[color] em/i/u/q 全部 inherit）
- *  嵌套（引号内引号、font 内 em/u/q）由栈配对 + 层序解决。 */
+ *  嵌套（引号内引号、font 内 em/u/q、文本级套文本级）由栈配对 + 层序解决。 */
 private fun applyOfficialMarkers(
     source: AnnotatedString,
     quoteColor: Color,
     underlineColor: Color,
+    baseFontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
 ): AnnotatedString {
     val raw = source.text
     val qStack = ArrayDeque<Int>()
     val uStack = ArrayDeque<Int>()
     val fontStack = ArrayDeque<Pair<Int, Int>>() // (open, sep)
+    val subStack = ArrayDeque<Int>()
+    val supStack = ArrayDeque<Int>()
+    val insStack = ArrayDeque<Int>()
+    val smallStack = ArrayDeque<Int>()
+    val bigStack = ArrayDeque<Int>()
+    val markStack = ArrayDeque<Int>()
+    val monoStack = ArrayDeque<Int>()
+    val semItalicStack = ArrayDeque<Int>()
+    val abbrStack = ArrayDeque<Int>()
     val markers = mutableListOf<OfficialMarker>()
     var i = 0
     while (i < raw.length) {
@@ -2675,6 +2702,24 @@ private fun applyOfficialMarkers(
                     markers += OfficialMarker(open, sep + 1, i, i, parseHexColor(hex) ?: quoteColor)
                 }
             }
+            '\uE020' -> subStack.addLast(i)
+            '\uE021' -> subStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE022' -> supStack.addLast(i)
+            '\uE023' -> supStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE024' -> insStack.addLast(i)
+            '\uE025' -> insStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE026' -> smallStack.addLast(i)
+            '\uE027' -> smallStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE028' -> bigStack.addLast(i)
+            '\uE029' -> bigStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE02A' -> markStack.addLast(i)
+            '\uE02B' -> markStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE02C' -> monoStack.addLast(i)
+            '\uE02D' -> monoStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE02E' -> semItalicStack.addLast(i)
+            '\uE02F' -> semItalicStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
+            '\uE030' -> abbrStack.addLast(i)
+            '\uE031' -> abbrStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
         }
         i++
     }
@@ -2723,6 +2768,15 @@ private fun applyOfficialMarkers(
     }.map { OfficialSpan(map(it.innerStart), map(it.innerEnd), quoteColor) }
     val uSpans = mutableListOf<OfficialSpan>()
     val fontSpans = mutableListOf<OfficialSpan>()
+    val subSpans = mutableListOf<OfficialSpan>()
+    val supSpans = mutableListOf<OfficialSpan>()
+    val insSpans = mutableListOf<OfficialSpan>()
+    val smallSpans = mutableListOf<OfficialSpan>()
+    val bigSpans = mutableListOf<OfficialSpan>()
+    val markSpans = mutableListOf<OfficialSpan>()
+    val monoSpans = mutableListOf<OfficialSpan>()
+    val semItalicSpans = mutableListOf<OfficialSpan>()
+    val abbrSpans = mutableListOf<OfficialSpan>()
     for (m in markers) {
         if (m.innerStart >= m.innerEnd) continue
         val start = map(m.innerStart)
@@ -2731,12 +2785,66 @@ private fun applyOfficialMarkers(
         when {
             m.color != null -> fontSpans += OfficialSpan(start, end, m.color)
             raw.getOrNull(m.open) == '\uE003' -> uSpans += OfficialSpan(start, end, underlineColor)
+            raw.getOrNull(m.open) == '\uE020' -> subSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE022' -> supSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE024' -> insSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE026' -> smallSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE028' -> bigSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE02A' -> markSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE02C' -> monoSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE02E' -> semItalicSpans += OfficialSpan(start, end)
+            raw.getOrNull(m.open) == '\uE030' -> abbrSpans += OfficialSpan(start, end)
         }
     }
 
     // 分层（官方 CSS：元素自身的颜色规则优先于继承，因此 q 与 u 互相避让）：
-    // em 基色 → q（避开 u 段）→ u 下划线+色（避开 q 与 em 段）→ font 最后全覆盖
+    // 文本级 UA 默认（sub/sup/small/big/mark/mono/var/cite/dfn/ins/abbr）→ em 基色 →
+    // q（避开 u 段）→ u 下划线+色（避开 q 与 em 段）→ font 最后全覆盖。
+    // 文本级样式先加、author 色（q/u/font/em）后加，与浏览器 UA 样式 < author 样式一致。
+    // Chromium UA html.css：sub/sup/small 均为 font-size: smaller（≈0.83em），big 为 larger（1.2em）
+    val subSupSize = if (baseFontSize.isSpecified) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
+    val smallSize = if (baseFontSize.isSpecified) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
+    val bigSize = if (baseFontSize.isSpecified) baseFontSize * 1.2f else androidx.compose.ui.unit.TextUnit.Unspecified
     val finalSpans = mappedSpans.toMutableList()
+    for (s in subSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(
+            fontSize = subSupSize,
+            baselineShift = androidx.compose.ui.text.style.BaselineShift.Subscript,
+        ),
+        s.start,
+        s.end,
+    )
+    for (s in supSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(
+            fontSize = subSupSize,
+            baselineShift = androidx.compose.ui.text.style.BaselineShift.Superscript,
+        ),
+        s.start,
+        s.end,
+    )
+    for (s in insSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(textDecoration = TextDecoration.Underline),
+        s.start,
+        s.end,
+    )
+    for (s in smallSpans) finalSpans += AnnotatedString.Range(SpanStyle(fontSize = smallSize), s.start, s.end)
+    for (s in bigSpans) finalSpans += AnnotatedString.Range(SpanStyle(fontSize = bigSize), s.start, s.end)
+    for (s in monoSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+        s.start,
+        s.end,
+    )
+    for (s in semItalicSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+        s.start,
+        s.end,
+    )
+    // abbr/acronym：浏览器 UA 为虚线，Compose 无虚线，用实线近似
+    for (s in abbrSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(textDecoration = TextDecoration.Underline),
+        s.start,
+        s.end,
+    )
     for (q in qSpans) {
         for (seg in minus(q, uSpans)) {
             finalSpans += AnnotatedString.Range(SpanStyle(color = quoteColor), seg.start, seg.end)
@@ -2753,6 +2861,13 @@ private fun applyOfficialMarkers(
         }
     }
     for (f in fontSpans) f.color?.let { finalSpans += AnnotatedString.Range(SpanStyle(color = it), f.start, f.end) }
+    // mark 最后加：Chromium UA html.css `mark { background-color: Mark; color: MarkText }`（黄底黑字）。
+    // UA 声明优先于继承的 author 色，所以 q/u/font/em 的颜色都不能覆盖它——与官方浏览器行为一致。
+    for (s in markSpans) finalSpans += AnnotatedString.Range(
+        SpanStyle(background = Color(0xFFFFFF00), color = Color(0xFF000000)),
+        s.start,
+        s.end,
+    )
 
     val out = AnnotatedString.Builder(stripped)
     for (span in finalSpans) out.addStyle(span.item, span.start, span.end)
@@ -2768,7 +2883,7 @@ private fun applyOfficialMarkers(
 }
 
 /** 官方行内标记的最终渲染节点：必须在 Markdown 的 CompositionLocalProvider 内调用。
- *  流程：buildMarkdownAnnotatedString 生成基础样式 → applyOfficialMarkers 剥 \uE001-\uE007 并上色。
+ *  流程：buildMarkdownAnnotatedString 生成基础样式 → applyOfficialMarkers 剥 \uE001-\uE007/\uE020-\uE031 并按层上色/加样式。
  *  text / paragraph / heading1-6 / setextHeading1-2 全部走这里，否则默认组件会绕过管线。 */
 @Composable
 private fun OfficialMarkdownNode(
@@ -2814,8 +2929,8 @@ private fun OfficialMarkdownNode(
             pop()
         }
     }
-    val styled = remember(built, quoteColor, underlineColor) {
-        applyOfficialMarkers(built, quoteColor, underlineColor)
+    val styled = remember(built, quoteColor, underlineColor, style.fontSize) {
+        applyOfficialMarkers(built, quoteColor, underlineColor, baseFontSize = style.fontSize)
     }
     MarkdownText(
         content = styled,
@@ -2829,7 +2944,15 @@ private fun OfficialMarkdownNode(
 /** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
 private val OFFICIAL_HTML_TAG = Regex(
     "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b" +
-        "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b",
+        "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b" +
+        // DOMPurify 默认白名单里文本级标签已由 preprocessOfficialHtml 原生转换（sub/sup/ins/small/big/
+        // mark/kbd/samp/tt/code/var/dfn/cite/abbr/acronym）；这里保留它们作为转换失败时的 Web 兜底。
+        "|<sub\\b|<sup\\b|<ins\\b|<small\\b|<big\\b|<tt\\b|<acronym\\b|<dfn\\b|<cite\\b|<code\\b" +
+        // 布局/交互/媒体/完整网页标签：官方 DOMPurify 白名单放行，浏览器原生渲染，WebView 兜底。
+        "|<script\\b|</?html|<head\\b|<body\\b|<title\\b|<meta\\b|<link\\b" +
+        "|<caption\\b|<col\\b|<colgroup\\b|<tbody\\b|<thead\\b|<tfoot\\b|<tr\\b|<td\\b|<th\\b" +
+        "|<dl\\b|<dt\\b|<dd\\b|<datalist\\b|<optgroup\\b|<option\\b" +
+        "|<marquee\\b|<blink\\b|<nobr\\b|<xmp\\b|<shadow\\b|<menuitem\\b|<slot\\b",
     RegexOption.IGNORE_CASE,
 )
 
