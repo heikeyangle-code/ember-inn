@@ -10,7 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * 表情精灵存储（对齐官方 extensions/expressions sprites 目录：expressions/{角色名}/*.png）。
+ * 表情精灵存储（对齐官方 extensions/expressions sprites 目录：expressions/{角色名} 下扩展名为 .png 的文件）。
  * 引擎只负责路径/分组/选择纯逻辑；本类负责落盘与读取。
  */
 class ExpressionStore(private val context: Context) {

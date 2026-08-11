@@ -7,8 +7,8 @@ import java.io.File
 import kotlinx.serialization.json.Json
 
 /**
- * 全局快捷回复（对齐官方 Quick Reply 扩展：data/default-user/quick-replies 目录 *.json 多预设）。
- * App 落盘 filesDir/quick-replies/*.json；旧单文件 quick-replies.json 自动迁移。
+ * 全局快捷回复（对齐官方 Quick Reply 扩展：data/default-user/quick-replies 目录下 .json 多预设）。
+ * App 落盘 filesDir/quick-replies 目录下 .json 文件；旧单文件 quick-replies.json 自动迁移。
  * 槽位字段（mes/label/enabled/automationId/preventAutoExecute）完全复用官方 QuickReplyPreset/QuickReplySlot。
  */
 class QuickReplyStore(context: Context) {

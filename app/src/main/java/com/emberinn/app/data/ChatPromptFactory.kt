@@ -523,7 +523,7 @@ class ChatPromptFactory {
         // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
 
         var effectiveInChat = inChatExtensions + scriptPlan.inChatPrompts
-        var effectiveExtensions = extensionPrompts + scriptPlan.extensionPrompts
+        var effectiveExtensions = (extensionPrompts + scriptPlan.extensionPrompts).toMutableMap()
         // 官方 generate：群聊有 depth 提示时用群聊深度提示（调用方 inChatExtensions），
         // 否则角色卡深度提示 setExtensionPrompt(DEPTH_PROMPT, IN_CHAT, depth, role)
         if (useCharacterDepthPrompt) {
