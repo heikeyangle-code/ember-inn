@@ -278,7 +278,7 @@ class ChatPromptFactory {
                     mo["title"]?.jsonPrimitive?.contentOrNull?.let { titles += it }
                 }
             }
-            idx to (if (titles.isEmpty()) m else m.copy(mes = m.mes + "\n\n" + titles.joinToString("\n\n")))
+            idx to m.copy(titles = titles)
         }
         val cleanMessages = titledMessages.map { it.second }
 

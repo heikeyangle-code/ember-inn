@@ -38,6 +38,8 @@ data class ChatMessage(
     val name: String? = null,
     val swipes: List<String> = emptyList(),
     val swipeId: Int = 0,
+    /** 官方 coreChat.map 追加的 append_title/媒体标题。 */
+    val titles: List<String> = emptyList(),
 )
 
 /** 宏环境：对齐 MacroEnv 的核心字段。 */

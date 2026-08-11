@@ -201,6 +201,9 @@ object PromptAssembler {
             val role = if (m.isUser) "user" else "assistant"
             val name = m.name ?: (if (m.isUser) user else "")
             var content = m.mes.replace("\r", "")
+            if (m.titles.isNotEmpty()) {
+                content = appendMessageTitles(content, m.titles)
+            }
             val prefix = when (namesBehavior) {
                 NAMES_NONE, NAMES_COMPLETION -> false
                 NAMES_CONTENT -> true
@@ -211,6 +214,10 @@ object PromptAssembler {
         }
         return messages
     }
+
+    /** 官方 script.js coreChat.map 的标题追加逻辑。 */
+    fun appendMessageTitles(mes: String, titles: List<String>): String =
+        if (titles.isEmpty()) mes else "$mes\n\n" + titles.joinToString("\n\n")
 
     // 官方 character_names_behavior：NONE=-1 / DEFAULT=0 / COMPLETION=1 / CONTENT=2
     const val NAMES_NONE = -1
