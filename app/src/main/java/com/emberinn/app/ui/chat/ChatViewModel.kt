@@ -676,7 +676,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    override suspend fun triggerGeneration(await: Boolean = false): String {
+    override suspend fun triggerGeneration(await: Boolean): String {
         if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
@@ -709,7 +709,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         role: String,
         scan: Boolean,
         ephemeral: Boolean,
-        filter: String? = null,
+        filter: String?,
     ): String {
         // 官方 injectCallback：position/role/depth/scan 参数归一，空 value 删除条目
         val spec = ExtensionPromptEngine.parseInject(id, text, position, depth, role, scan)
