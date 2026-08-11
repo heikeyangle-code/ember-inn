@@ -1825,7 +1825,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                                     mainApi = cleanProfile?.let {
                                         com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
                                     } ?: "openai",
-                                    textareaText = _inputDraft.value,
+                                    textareaText = _inputDraft.value.orEmpty(),
                                     lastMessageText = lastText,
                                 ),
                                 tokenCount = { text ->
