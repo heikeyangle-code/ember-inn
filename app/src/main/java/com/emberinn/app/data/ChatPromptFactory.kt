@@ -415,7 +415,7 @@ class ChatPromptFactory {
         // 官方 setOpenAIMessages：输出“新的在前”；历史下标同步反转，保证 media/reasoning 挂回正确消息
         val pipelineChat = indexedChat.asReversed()
         val openAiMessages = PromptAssembler.toOpenAiMessages(
-            chat = pipelineChat.map { it.second },
+            chat = indexedChat.map { it.second },
             user = userName,
             name2 = charName,
             currentApi = currentApi,
