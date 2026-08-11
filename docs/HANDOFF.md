@@ -618,6 +618,23 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ### 11.3 对照源码文件
 - `~/sillytavern-ref/public/script.js`：messageFormatting（引号对/encode_tags/Showdown/DOMPurify）
 - `~/sillytavern-ref/public/style.css`：`:root`（SmartTheme*、阴影、字号、字体、头像圆角）、`.mes_text`（i/em、q、u、a、blockquote、table/p/ol/ul/li tt、pre code、font[color]）
+- Chromium UA 样式表 `third_party/blink/renderer/core/html/resources/html.css`：sub/sup/small（font-size: smaller）、big（larger）、mark（Mark/MarkText）、tt/code/kbd/samp（monospace）、i/cite/em/var/address/dfn（italic）、u/ins（underline）、abbr[title]/acronym[title]（dotted underline）
+- AOSP `core/java/android/text/Html.java` + Compose `AnnotatedString.fromHtml`（Android-only）：平台原生 HTML 支持范围（无 mark/kbd/samp/var/ins/abbr/code，不采用的原因）
+- beeper/matrix-messageformat-compose：生产库“HTML→AnnotatedString + 组合期延迟着色”架构（架构验证，未引依赖）
+
+### 11.4 文本级 HTML 标签原生渲染对照（2026-08-11）
+- **问题**：官方 DOMPurify 默认白名单放行的文本级标签，此前一部分走 WebView、一部分（sub/sup/ins/small/code 等）因 HTML 判定收紧直接漏成纯文本。
+- **调研结论（权威依据）**：
+  - 官方管线：script.js messageFormatting → Showdown → DOMPurify（默认 HTML 白名单）→ 浏览器按 UA 默认渲染；ST style.css 只覆盖 q/u/em/b/s/font[color]/blockquote 等，**没有**为 sub/sup/ins/small/big/mark/kbd/samp/tt/code/var/dfn/cite/abbr 写任何规则 → 全部是浏览器 UA 默认。
+  - Chromium UA 样式表（third_party/blink/renderer/core/html/resources/html.css）：`sub,sup { font-size: smaller }`、`small { font-size: smaller }`、`big { font-size: larger }`、`mark { background-color: Mark; color: MarkText }`（黄底黑字）、`tt,code,kbd,samp { font-family: monospace }`、`i,cite,em,var,address,dfn { font-style: italic }`、`u,ins { text-decoration: underline }`、`abbr[title],acronym[title] { text-decoration: dotted underline }`。
+  - Android 平台 `Html.fromHtml`/Compose `AnnotatedString.fromHtml`（Android-only）只支持 b/i/u/s/font/big/small/sub/sup/tt/h1-6/p/div/span 等，**不支持 mark/kbd/samp/var/ins/abbr/code**，且无法接入我方 q/u/font 官方着色层 → 不采用。
+  - Beeper/Element 生产库 matrix-messageformat-compose 采用“HTML → AnnotatedString + 组合期延迟着色”架构，与本项目 preprocess → 私有标记 → applyOfficialMarkers 同构（验证架构方向，不引依赖）。
+- **实现（本轮）**：preprocessOfficialHtml 新增 10 组文本级标签转换（私有标记 \uE020-\uE031）：sub/sup（0.83× + BaselineShift）、ins（下划线）、small/big（0.83×/1.2×）、mark（黄底黑字，最后叠加）、kbd/samp/tt/code（等宽）、var/dfn/cite（斜体）、abbr[title]/acronym（实线下划线近似）；data/time/wbr 剥标签留内容。无 title 的 abbr/acronym 无 UA 装饰，同样剥标签。
+- **layering 依据**：UA 声明优先于继承值（CSS 层叠），所以 mark 的黄底黑字最后加、不被 q/u/font/em 继承色覆盖；var/dfn/cite 斜体先加、q/font 颜色后加只覆盖 color 属性。
+- **保留 WebView**：bdi/bdo（方向）、ruby/rt/rp（注音）、font face/size、nobr（nowrap）、marquee/blink 等原生无对应能力；布局/交互/媒体/整页仍走 WebView（12.14 已修 base64 加载）。
+- **OFFICIAL_HTML_TAG 补齐**（防漏成纯文本）：script/html/head/body/title/meta/link、caption/col/colgroup/tbody/thead/tfoot/tr/td/th、dl/dt/dd、datalist/optgroup/option、marquee/blink/nobr/xmp/shadow/menuitem/slot；文本级标签保留在清单作为转换失败兜底。
+- 影响：纯 App/UI 层，引擎零改动。
+
 
 
 ## 12. 消息分段渲染 / WebView 复用池 / ResizeObserver 测高（App/UI 层，2026-08-11）
@@ -712,19 +729,6 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - **HTML 误判收紧（本轮）**：`looksLikeHtml` 由“任意 `<tag>`”改为“带属性或自闭合标签”（`<[a-zA-Z][^>]*(?:=|/>)`，忽略 ``` / ~~~ 围栏）。原因：普通文字/JSON 里出现 `<tag>` 会被旧规则整条丢进 WebView，WebView 又因上面的截断 bug 白屏 → 表现为“文字被框死/正文消失”。裸标签（b/i/q/u/s/font color/hr/br）已由 `preprocessOfficialHtml` 原生转换，官方富标签仍由 `OFFICIAL_HTML_TAG` 接管，行为不回退。
 - **代码块“框死看不全”（fd95265）**：mikepenz 默认 `MarkdownCode` 对 code 挂 `horizontalScroll`（源码 MarkdownCode.kt），长 JSON 只能横向滚动、内容“被框住”。新增 `WrappingHighlightedCode`：snipme 高亮保留 + `Text(softWrap=true)` 自动换行，替换 codeFence/codeBlock 两个入口。官方 style.css 是 overflow-x:auto（横向滚动），此处为视觉可用性有意改成换行（功能级对齐，内容完整可见）。
 - 影响：纯 App/UI 层，引擎零改动；与第 11 章官方对照结论不冲突。
-
-### 12.15 文本级 HTML 标签原生渲染 + 调研依据（2026-08-11 追加）
-- **问题**：官方 DOMPurify 默认白名单放行的文本级标签，此前一部分走 WebView、一部分（sub/sup/ins/small/code 等）因 12.14 的判定收紧直接漏成纯文本。
-- **调研结论（权威依据）**：
-  - 官方管线：script.js messageFormatting → Showdown → DOMPurify（默认 HTML 白名单）→ 浏览器按 UA 默认渲染；ST style.css 只覆盖 q/u/em/b/s/font[color]/blockquote 等，**没有**为 sub/sup/ins/small/big/mark/kbd/samp/tt/code/var/dfn/cite/abbr 写任何规则 → 全部是浏览器 UA 默认。
-  - Chromium UA 样式表（third_party/blink/renderer/core/html/resources/html.css）：`sub,sup { font-size: smaller }`、`small { font-size: smaller }`、`big { font-size: larger }`、`mark { background-color: Mark; color: MarkText }`（黄底黑字）、`tt,code,kbd,samp { font-family: monospace }`、`i,cite,em,var,address,dfn { font-style: italic }`、`u,ins { text-decoration: underline }`、`abbr[title],acronym[title] { text-decoration: dotted underline }`。
-  - Android 平台 `Html.fromHtml`/Compose `AnnotatedString.fromHtml`（Android-only）只支持 b/i/u/s/font/big/small/sub/sup/tt/h1-6/p/div/span 等，**不支持 mark/kbd/samp/var/ins/abbr/code**，且无法接入我方 q/u/font 官方着色层 → 不采用。
-  - Beeper/Element 生产库 matrix-messageformat-compose 采用“HTML → AnnotatedString + 组合期延迟着色”架构，与本项目 preprocess → 私有标记 → applyOfficialMarkers 同构（验证架构方向，不引依赖）。
-- **实现（本轮）**：preprocessOfficialHtml 新增 10 组文本级标签转换（私有标记 \uE020-\uE031）：sub/sup（0.83× + BaselineShift）、ins（下划线）、small/big（0.83×/1.2×）、mark（黄底黑字，最后叠加）、kbd/samp/tt/code（等宽）、var/dfn/cite（斜体）、abbr[title]/acronym（实线下划线近似）；data/time/wbr 剥标签留内容。无 title 的 abbr/acronym 无 UA 装饰，同样剥标签。
-- **layering 依据**：UA 声明优先于继承值（CSS 层叠），所以 mark 的黄底黑字最后加、不被 q/u/font/em 继承色覆盖；var/dfn/cite 斜体先加、q/font 颜色后加只覆盖 color 属性。
-- **保留 WebView**：bdi/bdo（方向）、ruby/rt/rp（注音）、font face/size、nobr（nowrap）、marquee/blink 等原生无对应能力；布局/交互/媒体/整页仍走 WebView（12.14 已修 base64 加载）。
-- **OFFICIAL_HTML_TAG 补齐**（防漏成纯文本）：script/html/head/body/title/meta/link、caption/col/colgroup/tbody/thead/tfoot/tr/td/th、dl/dt/dd、datalist/optgroup/option、marquee/blink/nobr/xmp/shadow/menuitem/slot；文本级标签保留在清单作为转换失败兜底。
-- 影响：纯 App/UI 层，引擎零改动。
 
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
