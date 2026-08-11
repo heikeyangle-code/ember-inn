@@ -154,10 +154,11 @@ class LlmClient(
         onDelta: (String) -> Unit,
         onDone: () -> Unit,
         options: ProviderRequestOptions = ProviderRequestOptions(),
+        onToolCalls: ((JsonElement) -> Unit)? = null,
     ) {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         http.newCall(request).execute().use { response ->
-            executeStream(response, provider.protocol, onDelta, onDone)
+            executeStream(response, provider.protocol, onDelta, onDone, onToolCalls = onToolCalls)
         }
     }
 
@@ -175,6 +176,7 @@ class LlmClient(
         onError: ((Throwable) -> Unit)? = null,
         options: ProviderRequestOptions = ProviderRequestOptions(),
         onReasoning: ((String) -> Unit)? = null,
+        onToolCalls: ((JsonElement) -> Unit)? = null,
     ): StreamSession {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         val call = http.newCall(request)
@@ -184,7 +186,7 @@ class LlmClient(
                     if (!response.isSuccessful) {
                         error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
                     }
-                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning)
+                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning, onToolCalls)
                 }
             } catch (e: Exception) {
                 if (!call.isCanceled()) onError?.invoke(e)
@@ -199,10 +201,13 @@ class LlmClient(
         onDelta: (String) -> Unit,
         onDone: () -> Unit,
         onReasoning: ((String) -> Unit)? = null,
+        onToolCalls: ((JsonElement) -> Unit)? = null,
     ) {
         val source = response.body?.source() ?: return
         val sb = StringBuilder()
         var finished = false
+        val toolAccumulator = ToolCallAccumulator()
+        var lastToolSnapshot = ""
         while (true) {
             val line = source.readUtf8Line() ?: break
             sb.append(line).append('\n')
@@ -223,6 +228,15 @@ class LlmClient(
                     continue
                 }
                 try {
+                    if (onToolCalls != null) {
+                        val parsed = json.parseToJsonElement(dataText)
+                        toolAccumulator.parse(parsed)
+                        val snapshot = toolAccumulator.snapshot().toString()
+                        if (snapshot != lastToolSnapshot) {
+                            lastToolSnapshot = snapshot
+                            onToolCalls(toolAccumulator.snapshot())
+                        }
+                    }
                     // 官方对拍解析器：逐字符增量；推理文本走独立通道（UI 显示思考过程，不进聊天正文）
                     for (chunk in SseChunkParser.parse(dataText)) {
                         if (chunk.reasoning) {

@@ -134,6 +134,7 @@ class ChatRepository(context: Context) {
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
         cyclePrompt: String = "",
         onReasoning: ((String) -> Unit)? = null,
+        onToolCalls: ((JsonElement) -> Unit)? = null,
         mediaInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
         personaDescription: String = "",
@@ -250,6 +251,7 @@ class ChatRepository(context: Context) {
             onError = onError,
             options = options,
             onReasoning = onReasoning,
+            onToolCalls = onToolCalls,
         )
     }
 
