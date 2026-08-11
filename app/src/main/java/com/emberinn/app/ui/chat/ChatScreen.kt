@@ -3631,12 +3631,14 @@ private fun WebViewHtml(
         modifier = modifier
             .fillMaxWidth()
             .height(
-                val maxHeight = (screenHeightDp * 0.75f).dp
-                // WebView 的 scrollHeight 是 CSS 像素，1 CSS px == 1 dp，不能按 Android 物理像素换算；
-                // 旧代码 heightPx.toDp() 在高密度屏上会把高度除以 density，HTML 卡被压成几乎看不见的细条。
-                val measured = heightPx.toFloat().dp.coerceAtMost(maxHeight)
-                // 测高还没回来时给一个可见兜底高度，否则 WebView 高度恒 0、内容永远渲染不出来
-                if (heightPx > 0) measured else minOf(160.dp, maxHeight)
+                run {
+                    val maxHeight = (screenHeightDp * 0.75f).dp
+                    // WebView 的 scrollHeight 是 CSS 像素，1 CSS px == 1 dp，不能按 Android 物理像素换算；
+                    // 旧代码 heightPx.toDp() 在高密度屏上会把高度除以 density，HTML 卡被压成几乎看不见的细条。
+                    val measured = heightPx.toFloat().dp.coerceAtMost(maxHeight)
+                    // 测高还没回来时给一个可见兜底高度，否则 WebView 高度恒 0、内容永远渲染不出来
+                    if (heightPx > 0) measured else minOf(160.dp, maxHeight)
+                }
             )
             .clip(RoundedCornerShape(12.dp)),
     )
