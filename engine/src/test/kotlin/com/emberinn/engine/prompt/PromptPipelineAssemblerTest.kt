@@ -235,4 +235,18 @@ class PromptPipelineAssemblerTest {
         )
         assertTrue(injected.none { it.content == "不应出现" })
     }
+
+    @Test
+    fun `in chat extension depth beyond history length appends like js splice`() {
+        // 官方 messages.splice(depth, 0, ...)：插入点超过数组长度 = 追加到末尾；
+        // 角色卡深度提示默认 depth=4，小历史下必须不抛异常（曾因 Kotlin addAll 越界被 runCatching 吞掉整轮总装）
+        val injected = PromptPipeline.populationInjectionPrompts(
+            absolutePrompts = emptyList(),
+            messages = listOf(PromptMessage("user", "你好")),
+            inChatExtensions = listOf(
+                PromptItem("DEPTH_PROMPT", "深度提示", content = "深层设定文本", role = "system", injectionDepth = 4, injectionOrder = 100),
+            ),
+        )
+        assertEquals(listOf("深层设定文本", "你好"), injected.map { it.content })
+    }
 }

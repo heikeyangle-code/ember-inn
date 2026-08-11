@@ -143,7 +143,9 @@ object PromptPipeline {
             }
             if (roleMessages.isNotEmpty()) {
                 val injectIdx = depth + totalInsertedMessages
-                out.addAll(injectIdx, roleMessages)
+                // 官方 messages.splice(injectIdx, 0, ...)：插入点超过数组长度时追加到末尾，
+                // Kotlin addAll(index) 会抛越界——深度 4 的角色卡深度提示在小历史下必须走 splice 语义
+                out.addAll(injectIdx.coerceAtMost(out.size), roleMessages)
                 totalInsertedMessages += roleMessages.size
             }
         }
