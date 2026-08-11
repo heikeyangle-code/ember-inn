@@ -2801,10 +2801,12 @@ private fun applyOfficialMarkers(
     // 文本级 UA 默认（sub/sup/small/big/mark/mono/var/cite/dfn/ins/abbr）→ em 基色 →
     // q（避开 u 段）→ u 下划线+色（避开 q 与 em 段）→ font 最后全覆盖。
     // 文本级样式先加、author 色（q/u/font/em）后加，与浏览器 UA 样式 < author 样式一致。
-    // Chromium UA html.css：sub/sup/small 均为 font-size: smaller（≈0.83em），big 为 larger（1.2em）
-    val subSupSize = if (baseFontSize.isSpecified) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
-    val smallSize = if (baseFontSize.isSpecified) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
-    val bigSize = if (baseFontSize.isSpecified) baseFontSize * 1.2f else androidx.compose.ui.unit.TextUnit.Unspecified
+    // Chromium UA html.css：sub/sup/small 均为 font-size: smaller（≈0.83em），big 为 larger（1.2em）。
+    // TextUnit 无 isSpecified（那是 Color 的属性），用 type 判空；Unspecified 时乘法会抛异常，先兜底。
+    val hasBaseSize = baseFontSize.type != androidx.compose.ui.unit.TextUnitType.Unspecified
+    val subSupSize = if (hasBaseSize) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
+    val smallSize = if (hasBaseSize) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
+    val bigSize = if (hasBaseSize) baseFontSize * 1.2f else androidx.compose.ui.unit.TextUnit.Unspecified
     val finalSpans = mappedSpans.toMutableList()
     for (s in subSpans) finalSpans += AnnotatedString.Range(
         SpanStyle(
