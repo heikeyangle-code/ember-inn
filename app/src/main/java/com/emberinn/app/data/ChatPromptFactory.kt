@@ -265,7 +265,22 @@ class ChatPromptFactory {
             isUser && (obj["extra"] as? JsonObject)?.get("bias")?.jsonPrimitive?.contentOrNull?.isNotBlank() == true
         }?.jsonObject?.get("extra")?.jsonObject?.get("bias")?.jsonPrimitive?.contentOrNull
         val promptBias = storedBias ?: textBias
-        val cleanMessages = indexedMessages.map { it.second }
+        // 官方 coreChat.map：extra.append_title + 媒体 append_title 标题追加到消息正文末尾
+        val titledMessages = indexedMessages.map { (idx, m) ->
+            val extra = history.getOrNull(idx)?.jsonObject?.get("extra") as? JsonObject
+            val titles = mutableListOf<String>()
+            if (extra?.get("append_title")?.jsonPrimitive?.content == "true") {
+                extra["title"]?.jsonPrimitive?.contentOrNull?.let { titles += it }
+            }
+            extra?.get("media")?.jsonArray?.forEach { me ->
+                val mo = me.jsonObject
+                if (mo["append_title"]?.jsonPrimitive?.content == "true") {
+                    mo["title"]?.jsonPrimitive?.contentOrNull?.let { titles += it }
+                }
+            }
+            idx to (if (titles.isEmpty()) m else m.copy(mes = m.mes + "\n\n" + titles.joinToString("\n\n")))
+        }
+        val cleanMessages = titledMessages.map { it.second }
 
         // 向量 RAG（官方 extensions/vectors）：聊天历史重排 + 文件/数据银行 + 世界书向量激活。
         // 引擎 VectorChatRearranger 1:1；App 只负责把数据接进去，结果进历史/扩展提示/强制激活。
@@ -294,8 +309,8 @@ class ChatPromptFactory {
         // 之前传“旧的在前”导致 continue_prefill 把最老消息当续写对象。
         // 向量重排后消息顺序/内容以引擎结果为准；原 JSONL 下标用于携带 extra.media。
         var indexedChat = vectorTransform?.let { transform ->
-            mapVectorMessages(transform.newChat, indexedMessages)
-        } ?: indexedMessages
+            mapVectorMessages(transform.newChat, titledMessages)
+        } ?: titledMessages
         // 官方 openai.js prepareMessages：历史 AI 消息的 extra.reasoning 先过 REASONING 正则
         // （isPrompt=true + depth），再按 PromptReasoning.addToMessage 注入正文。
         // add_to_prompts 默认关（非 prefix 不注入）；continue 最后一条 prefix 不受开关限制（官方语义）。
