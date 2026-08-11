@@ -46,6 +46,8 @@
   打桩 substituteParams/EPHEMERAL（脚本头部登记）。
 - `bias-official.mjs`：官方偏置全链 getBiasStrings/extractMessageBias/removeMacros，
   Handlebars 官方同版本 vendor（^4.7.9）。
+- `streaming-response-official.mjs`：官方流式响应/错误解析 getStreamingReply/tryParseStreamingError，
+  打桩 oai_settings/toastr/checkQuota/checkModeration（脚本头部登记）。
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
@@ -118,6 +120,7 @@ node scripts/diff/response-data-official.mjs
 node scripts/diff/auto-continue-official.mjs
 node scripts/diff/stopping-strings-official.mjs
 node scripts/diff/bias-official.mjs
+node scripts/diff/streaming-response-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs

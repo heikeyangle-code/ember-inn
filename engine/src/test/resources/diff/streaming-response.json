@@ -1,0 +1,526 @@
+{
+  "source": "getStreamingReply/tryParseStreamingError",
+  "cases": [
+    {
+      "id": "stream-claude-text",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "claude",
+          "data": {
+            "delta": {
+              "text": "hi"
+            }
+          }
+        }
+      },
+      "expected": {
+        "text": "hi",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-claude-thinking",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "claude",
+          "showThoughts": true,
+          "data": {
+            "delta": {
+              "thinking": "think",
+              "text": "hi"
+            }
+          }
+        }
+      },
+      "expected": {
+        "text": "hi",
+        "state": {
+          "reasoning": "think",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-vertex-image",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "vertexai",
+          "data": {
+            "candidates": [
+              {
+                "content": {
+                  "parts": [
+                    {
+                      "text": "answer"
+                    },
+                    {
+                      "inlineData": {
+                        "mimeType": "image/png",
+                        "data": "AAAA"
+                      },
+                      "thought": false
+                    },
+                    {
+                      "text": "secret",
+                      "thought": true
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "answer",
+        "state": {
+          "reasoning": "secret",
+          "images": [
+            "data:image/png;base64,AAAA"
+          ],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-vertex-signature",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "makersuite",
+          "data": {
+            "candidates": [
+              {
+                "content": {
+                  "parts": [
+                    {
+                      "text": "a",
+                      "thoughtSignature": "SIG"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "a",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": "SIG",
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-cohere-content",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "cohere",
+          "data": {
+            "delta": {
+              "message": {
+                "content": {
+                  "text": "cohere"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "text": "cohere",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-cohere-tool-plan",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "cohere",
+          "data": {
+            "delta": {
+              "message": {
+                "tool_plan": "plan"
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "text": "plan",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-deepseek",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "deepseek",
+          "showThoughts": true,
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "reasoning_content": "r",
+                  "content": "c"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "c",
+        "state": {
+          "reasoning": "r",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-xai",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "xai",
+          "showThoughts": true,
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "reasoning_content": "r",
+                  "content": "c"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "c",
+        "state": {
+          "reasoning": "r",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-openrouter-reasoning",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "openrouter",
+          "showThoughts": true,
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "reasoning": "r",
+                  "content": "c",
+                  "reasoning_details": [
+                    {
+                      "id": "main",
+                      "type": "reasoning.encrypted",
+                      "data": "SIG"
+                    },
+                    {
+                      "id": "tool_x",
+                      "type": "reasoning.encrypted",
+                      "data": "TSIG"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "c",
+        "state": {
+          "reasoning": "r",
+          "images": [],
+          "signature": "SIG",
+          "toolSignatures": {
+            "main": "SIG",
+            "tool_x": "TSIG"
+          }
+        }
+      }
+    },
+    {
+      "id": "stream-openrouter-image",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "openrouter",
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "images": [
+                    {
+                      "type": "image_url",
+                      "image_url": {
+                        "url": "data:image/png;base64,AA"
+                      }
+                    }
+                  ],
+                  "content": "c"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "c",
+        "state": {
+          "reasoning": "",
+          "images": [
+            "data:image/png;base64,AA"
+          ],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-custom-reasoning",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "custom",
+          "showThoughts": true,
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "reasoning_content": "r",
+                  "content": "c"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "c",
+        "state": {
+          "reasoning": "r",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-mistral-array",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "mistralai",
+          "showThoughts": true,
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "content": [
+                    {
+                      "text": "a"
+                    },
+                    {
+                      "text": "b"
+                    },
+                    {
+                      "text": ""
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "ab",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "stream-default",
+      "args": {
+        "body": {
+          "method": "stream",
+          "source": "openai",
+          "data": {
+            "choices": [
+              {
+                "delta": {
+                  "content": "default"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "text": "default",
+        "state": {
+          "reasoning": "",
+          "images": [],
+          "signature": null,
+          "toolSignatures": {}
+        }
+      }
+    },
+    {
+      "id": "error-none",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"ok\":true}"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": false,
+        "errorMessage": null,
+        "message": null,
+        "detail": null
+      }
+    },
+    {
+      "id": "error-quota",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"quota_error\":true}"
+        }
+      },
+      "expected": {
+        "quota": true,
+        "moderation": false,
+        "errorMessage": null,
+        "message": null,
+        "detail": null
+      }
+    },
+    {
+      "id": "error-moderation",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"error\":{\"message\":\"requires moderation\",\"metadata\":{\"reasons\":[\"x\"],\"flagged_input\":\"f\"}}}"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": true,
+        "errorMessage": "requires moderation",
+        "message": null,
+        "detail": null
+      }
+    },
+    {
+      "id": "error-message",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"error\":{\"message\":\"boom\"}}"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": false,
+        "errorMessage": "boom",
+        "message": null,
+        "detail": null
+      }
+    },
+    {
+      "id": "error-message-field",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"message\":\"plain\"}"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": false,
+        "errorMessage": null,
+        "message": "plain",
+        "detail": null
+      }
+    },
+    {
+      "id": "error-detail",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "{\"detail\":{\"error\":{\"message\":\"deep\"}}}"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": false,
+        "errorMessage": null,
+        "message": null,
+        "detail": "deep"
+      }
+    },
+    {
+      "id": "error-invalid-json",
+      "args": {
+        "body": {
+          "method": "error",
+          "decoded": "not json"
+        }
+      },
+      "expected": {
+        "quota": false,
+        "moderation": false,
+        "errorMessage": null,
+        "message": null,
+        "detail": null
+      }
+    }
+  ]
+}

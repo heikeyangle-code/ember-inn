@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（65 组差分 fixture，共 1068 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 65 组 / 1068 例（机器数）为准。
+**已覆盖（66 组差分 fixture，共 1088 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 66 组 / 1088 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -127,6 +127,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 自动续写判定（shouldAutoContinue） | auto-continue-official.mjs | AutoContinueDiffTest | 11 |
 | 停用词全链（getStoppingStrings/getCustomStoppingStrings） | stopping-strings-official.mjs | StoppingStringsDiffTest | 14 |
 | 偏置全链（getBiasStrings/extractMessageBias/removeMacros） | bias-official.mjs | BiasDiffTest | 17 |
+| 流式响应/错误解析（getStreamingReply/tryParseStreamingError） | streaming-response-official.mjs | StreamingResponseDiffTest | 20 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -210,6 +211,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - `extractMessageBias` 用 Handlebars 官方 vendor 生成差分基准，引擎实现兼容 `{{bias "..."}}` 字面量、未定义路径（undefined→空串）、无参 `{{bias}}`（[object Object]）。
 - `getBiasStrings` 覆盖 impersonate/continue 空返回、文本 bias、用户全局 bias、回溯聊天 bias、swipe 跳过最后一条、空 bias 继续回溯。
 - 差分：`scripts/diff/bias-official.mjs`（script.js:3081/5735/5801 逐字；Handlebars ^4.7.9 加入 diff vendor）→ `BiasDiffTest` 17 例全过。
+
+### 3.9.6 流式响应/错误解析 ✅（2026-08-12）
+官方 `openai.js getStreamingReply / tryParseStreamingError` 已移植到 `engine/provider/StreamingResponse.kt`：
+- `StreamingReplyParser`：Claude/Gemini/Cohere/DeepSeek/xAI/OpenRouter/自定义源/Mistral/默认源全部 delta 分支，reasoning/images/signature/toolSignatures 状态纯函数返回。
+- `StreamingErrorParser`：quota/moderation/error/message/detail 分类，严格 JSON.parse 语义（裸词不算 JSON）。
+- 差分：`scripts/diff/streaming-response-official.mjs`（openai.js:1624/3128 逐字；打桩 oai_settings/toastr/check*，已登记）→ `StreamingResponseDiffTest` 20 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
