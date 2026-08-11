@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
@@ -260,7 +261,7 @@ fun CharactersScreen(
                     .glassEdgeHighlight(dark = glassDark, atTop = false)
                     .then(
                         if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.45f))
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
                         },
@@ -432,7 +433,7 @@ private fun SearchResultsColumn(
                 .glassEdgeHighlight(dark = glassDark, atTop = false)
                 .then(
                     if (AppearancePrefs.backgroundBlur(searchContext)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(searchContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f))
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(searchContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.45f))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     },
@@ -659,7 +660,7 @@ private fun GlassFab(
             .glassEdgeHighlight(dark = dark, atTop = true)
             .then(
                 if (AppearancePrefs.backgroundBlur(fabContext)) {
-                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.52f))
+                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.52f))
                 } else {
                     Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 },

@@ -27,6 +27,7 @@ data class ThemePreset(
     val stBotBubble: Color? = null,
     val stBorder: Color? = null,
     val stShadow: Color? = null,
+    val stBlurTint: Color? = null,
     // ---- M3 角色覆盖（酒馆官方主题填官方 SmartTheme 真值；null=由 seed 生成） ----
     val schemePrimary: Color? = null,
     val schemeSecondary: Color? = null,
@@ -218,6 +219,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         stBotBubble = Color(0x4D3C3C3C),
         stBorder = Color(0x80000000),
         stShadow = Color(0x80000000),
+        stBlurTint = Color(0xFF171717),
         // M3 三色直接映射官方 SmartTheme 字段：主=引用橙、次=灰、第三=下划线绿
         schemePrimary = Color(0xFFE18A24),
         schemeSecondary = Color(0xFF919191),

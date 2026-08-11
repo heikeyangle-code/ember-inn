@@ -250,6 +250,9 @@ object AppearancePrefs {
     fun stShadowColor(context: Context): String = stField(context, "st_shadow_color")
     fun saveStShadowColor(context: Context, v: String) = saveStField(context, "st_shadow_color", v)
 
+    fun stBlurTint(context: Context): String = stField(context, "st_blur_tint")
+    fun saveStBlurTint(context: Context, v: String) = saveStField(context, "st_blur_tint", v)
+
     /** 聊天背景：头像玻璃背景总开关（默认开；关=显式背景仍显示，头像回退到氛围渐变）。 */
     fun chatBgAvatarGlass(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("chat_bg_avatar_glass", true)

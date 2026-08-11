@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.glassTint
 
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.FontManager
@@ -776,7 +777,7 @@ fun ChatScreen(
                 .glassEdgeHighlight(dark = glassDark, atTop = false)
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.38f))
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.38f))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     },
@@ -844,7 +845,7 @@ fun ChatScreen(
                 .glassEdgeHighlight(dark = glassDark, atTop = true)
                 .then(
                     if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     },

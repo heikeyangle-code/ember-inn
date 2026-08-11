@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.sessions
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
@@ -157,7 +158,7 @@ fun SessionsScreen(
                     .glassEdgeHighlight(dark = glassDark, atTop = false)
                     .then(
                         if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
                         },

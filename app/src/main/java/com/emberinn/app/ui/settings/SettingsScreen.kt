@@ -4,6 +4,7 @@ import com.emberinn.app.ui.icons.PhosphorIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import com.emberinn.app.ui.components.edgeSwipeBack
+import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -558,7 +559,7 @@ fun SettingsTopBar(
                         .glassEdgeHighlight(dark = glassDark, atTop = false)
                         .then(
                             if (AppearancePrefs.backgroundBlur(topBarContext)) {
-                                Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(topBarContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                                Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(topBarContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
                             } else {
                                 Modifier.background(MaterialTheme.colorScheme.surface)
                             },

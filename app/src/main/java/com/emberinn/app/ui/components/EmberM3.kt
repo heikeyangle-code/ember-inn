@@ -204,7 +204,7 @@ fun EmberGlassFab(
             .glassEdgeHighlight(dark = dark, atTop = true)
             .then(
                 if (AppearancePrefs.backgroundBlur(fabContext)) {
-                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.52f))
+                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.52f))
                 } else {
                     Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 },

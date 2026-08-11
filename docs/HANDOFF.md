@@ -496,6 +496,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
  - OfficialMarkdownNode 的 remember 增加 style 键：字号/行高/阴影等排版改动对已渲染消息即时生效
  - 外观页卡片圆角从写死 18dp 改为 MaterialTheme.shapes.medium：切“全局圆角”档位时设置页即时预览
  - ColorField 支持 fallback=当前主题默认色：消息渲染页字段留空时显示主题默认值（#hex · 跟随主题），换主题即时更新
+ - 新增官方玻璃色调设置（st_blur_tint）：消息渲染页“毛玻璃（官方字段）”卡；glassTint() 统一解析（用户 > 主题预设 > M3 surface），8 处玻璃面即时生效
 
 ## 10. 扩展插件：交互 HTML 卡片 / iframe 渲染器（App 层）
 
@@ -598,6 +599,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 表格/列表/p/li tt（style.css .mes_text） | border/padding/margin 定值 | WebView CSS 同官方；原生 mikepenz 为 M3 风格近似 | 🟡 原生视觉近似 |
 | 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + 名字/时间/日期/思考卡（补）+ WebView text-shadow | 🟡 聊天内全文字；按钮/输入栏等 UI 未加 |
 | 阴影/边框色（style.css :root） | rgba(0,0,0,.5)=#80000000 | stShadow/stBorder #80000000 | ✅ |
+| --SmartThemeBlurTintColor（style.css :root） | 玻璃底色 rgba(23,23,23,1) | 设置 st_blur_tint（空=主题预设；酒馆官方 #171717）；8 处玻璃面共用 glassTint()，alpha 按面叠加 | ✅ |
 | 用户/AI 气泡底（style.css :root） | rgba(0,0,0,.3) / rgba(60,60,60,.3) | stUserBubble #4D000000 / stBotBubble #4D3C3C3C | ✅ 色值；气泡无官方玻璃模糊 🟡 |
 | 头像圆角（style.css :root） | 2px / 10px / 50% | avatarShape square/rounded/circle | ✅（默认圆形，官方默认方形，可改） |
 | 主字体/字号（style.css :root） | Noto Sans / 15px（fontScale=1） | Noto Sans 4 面下载 / textSize=official 15px | ✅（默认 16px，可切官方 15） |

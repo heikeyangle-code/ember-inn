@@ -53,6 +53,7 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
     val botBubbleFallback = if (dark) stTheme.stBotBubble else null ?: MaterialTheme.colorScheme.surfaceContainerLow
     val borderFallback = if (dark) stTheme.stBorder else null ?: androidx.compose.ui.graphics.Color(0x80000000)
     val shadowFallback = if (dark) stTheme.stShadow else null ?: androidx.compose.ui.graphics.Color(0x80000000)
+    val blurTintFallback = if (dark) stTheme.stBlurTint else null ?: MaterialTheme.colorScheme.surface
 
     SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
@@ -107,6 +108,12 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             label = "阴影色", hint = "官方 --SmartThemeShadowColor（例 #00000080）", value = AppearancePrefs.stShadowColor(context), fallback = shadowFallback,
                             onSave = { AppearancePrefs.saveStShadowColor(context, it); onAppearanceChanged() },
                         )
+                        Text(
+                            "此页颜色同时注入 WebView 兜底渲染（含 <q>/<u>/<font color> 等官方行内 HTML 的消息）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
                     }
                 }
             }
@@ -117,34 +124,23 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("毛玻璃强度", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("毛玻璃（官方字段）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "官方 --SmartThemeBlurStrength；0 = 关闭模糊（纯色表面）",
+                            "色调 = 官方 --SmartThemeBlurTintColor（默认 #171717）；强度 = --SmartThemeBlurStrength，0 = 关闭模糊（纯色表面）。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        ColorField(
+                            label = "玻璃色调", hint = "官方 --SmartThemeBlurTintColor（例 #171717）", value = AppearancePrefs.stBlurTint(context), fallback = blurTintFallback,
+                            onSave = { AppearancePrefs.saveStBlurTint(context, it); onAppearanceChanged() },
+                        )
+                        Text("毛玻璃强度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                         EmberSlider(
                             value = blur.toFloat(),
                             onValueChange = { blur = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()); onAppearanceChanged() },
                             valueRange = 0f..40f,
                         )
                         Text("$blur", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-            item {
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("HTML 兜底", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "含 <q>/<u>/<font color> 等官方行内 HTML 的消息走本地 WebView + 官方 CSS 变量渲染；普通 Markdown 仍用原生渲染。此页颜色同时注入 WebView。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }

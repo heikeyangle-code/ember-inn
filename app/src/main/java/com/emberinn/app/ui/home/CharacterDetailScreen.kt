@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.glassEdgeHighlight
 
@@ -247,7 +248,7 @@ fun CharacterDetailScreen(
                     .glassEdgeHighlight(dark = glassDark, atTop = false)
                     .then(
                         if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.42f))
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
                         },
