@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（62 组差分 fixture，共 1026 例对拍，全部通过；2026-08-11 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 62 组 / 1026 例（机器数）为准。
+**已覆盖（63 组差分 fixture，共 1037 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 63 组 / 1037 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -124,6 +124,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
 | 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 34 |
 | 响应数据提取（extractMessageFromData/extractJsonFromData） | response-data-official.mjs | ResponseDataDiffTest | 31 |
+| 自动续写判定（shouldAutoContinue） | auto-continue-official.mjs | AutoContinueDiffTest | 11 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -189,6 +190,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - `extractMessageFromData`：kobold/koboldhorde/textgenerationwebui/novel/openai 各协议响应取文本链，与官方逐字段一致（含 textgen `data[0].content` 数组分支、openai content 文本数组 `\n\n` 拼接、tool_plan 回退）。
 - `extractJsonFromData`：openai 主 API 下按 chat_completion_source 解析 JSON；claude 取 tool_use.input；perplexity 先过 removeReasoning（调用方注入）；returnInvalidJson 原样返回；非 openai 返回 `{}`。kotlinx 会把裸词当字符串，已加官方 JSON.parse 语义白名单。
 - 差分：`scripts/diff/response-data-official.mjs`（script.js:6217/6252 逐字；打桩 removeReasoningFromString=恒等，已登记）→ `ResponseDataDiffTest` 31 例全过。
+
+### 3.8.7 自动续写判定 ✅（2026-08-12）
+官方 `script.js shouldAutoContinue` 已移植到 `engine/prompt/AutoContinue.kt`：
+- 开关/冒充/发送中/停止/目标长度/OpenAI 禁止/输入框非空/短 chunk/无最后消息/已达目标长度/应续写 全分支 11 例差分。
+- `tokenCount` 由调用方注入（App 用 TokenCounterFactory），`AutoContinueConfig` 承载官方 power_user/chat/textarea 状态。
+- 差分：`scripts/diff/auto-continue-official.mjs`（script.js:5657 逐字；打桩 getTokenCount/textarea/abortController，已登记）→ `AutoContinueDiffTest` 11 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
