@@ -2,7 +2,6 @@ package com.emberinn.app.data
 
 import android.content.Context
 import com.emberinn.engine.expression.ExpressionEngine
-import com.emberinn.engine.expression.SpriteEntry
 import com.emberinn.engine.expression.SpriteStorage
 import java.io.File
 import kotlinx.serialization.json.contentOrNull
@@ -17,11 +16,11 @@ class ExpressionStore(private val context: Context) {
 
     private val root = File(context.filesDir, "expressions").apply { mkdirs() }
 
-    fun sprites(characterName: String): List<SpriteEntry> {
+    fun sprites(characterName: String): List<ExpressionEngine.SpriteEntry> {
         val dir = folder(characterName) ?: return emptyList()
         return (dir.listFiles() ?: emptyArray())
             .filter { it.isFile && (it.extension.equals("png", true) || it.extension.equals("jpg", true) || it.extension.equals("jpeg", true) || it.extension.equals("webp", true)) }
-            .map { SpriteEntry(ExpressionEngine.labelFromFilename(it.name), it.absolutePath) }
+            .map { ExpressionEngine.SpriteEntry(ExpressionEngine.labelFromFilename(it.name), it.absolutePath) }
             .sortedBy { it.label }
     }
 

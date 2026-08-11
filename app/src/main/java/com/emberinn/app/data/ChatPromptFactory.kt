@@ -545,8 +545,8 @@ class ChatPromptFactory {
                 )
             } else {
                 mapExtensionPosition(note.position)?.let { pos ->
-                    effectiveExtensions = effectiveExtensions + (
-                        "2_floating_prompt" to ExtensionPrompt("2_floating_prompt", note.role, anText, pos, note.depth)
+                    effectiveExtensions["2_floating_prompt"] = ExtensionPrompt(
+                        "2_floating_prompt", note.role, anText, pos, note.depth,
                     )
                 }
             }
