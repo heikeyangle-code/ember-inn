@@ -42,6 +42,16 @@ data class ChatMessage(
     val titles: List<String> = emptyList(),
     /** 官方 setOpenAIMessages 的 invocations（extra.tool_invocations → 工具调用链重构）。 */
     val toolInvocations: List<com.emberinn.engine.prompt.ToolInvocation>? = null,
+    /** 官方 extra.api / extra.model（isSameModel 比对用）。 */
+    val api: String? = null,
+    val model: String? = null,
+    /** 官方 extra.reasoning_signature / extra.reasoning（仅同 API/模型携带）。 */
+    val reasoningSignature: String? = null,
+    val reasoning: String? = null,
+    /** 官方 extra.type == system_message_types.NARRATOR → role=system。 */
+    val narrator: Boolean = false,
+    /** 官方消息顶层 force_avatar（群聊头像强制显示，DEFAULT 名字前缀分支用）。 */
+    val forceAvatar: Boolean = false,
 )
 
 /** 宏环境：对齐 MacroEnv 的核心字段。 */

@@ -105,6 +105,7 @@ class ChatRepository(context: Context) {
         system: String = "",
         prefill: String = "",
         maxTokensOverride: Int? = null,
+        stopSequences: List<String> = emptyList(),
     ): String? = withContext(Dispatchers.IO) {
         val profile = store.load() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
@@ -118,7 +119,12 @@ class ChatRepository(context: Context) {
         } else {
             profile
         }
-        client.chatCompletions(provider, effective, messages)
+        client.chatCompletions(
+            provider,
+            effective,
+            messages,
+            options = ProviderRequestOptions(stopSequences = stopSequences),
+        )
     }
 
     /** 官方 caption 扩展 multimodal：用当前提供商发视觉请求生成图片描述。 */
@@ -191,6 +197,9 @@ class ChatRepository(context: Context) {
         memoryScan: Boolean = false,
         collapseNewlines: Boolean = false,
         exampleSeparator: String = "***",
+        userPromptBias: String = "",
+        pinExamples: Boolean = false,
+        namesAsStopStrings: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -271,6 +280,10 @@ class ChatRepository(context: Context) {
             memoryScan = memoryScan,
             collapseNewlines = collapseNewlines,
             exampleSeparator = exampleSeparator,
+            currentApi = provider.id,
+            currentModel = effectiveModel,
+            userPromptBias = userPromptBias,
+            pinExamples = pinExamples,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
@@ -293,6 +306,7 @@ class ChatRepository(context: Context) {
                 chatLastIsUser = history.lastOrNull()?.jsonObject?.get("is_user")?.jsonPrimitive?.content == "true",
                 groupMemberNames = stopGroupMemberNames,
                 selectedGroup = stopGroupMemberNames.isNotEmpty(),
+                namesAsStopStrings = namesAsStopStrings,
                 env = MacroEnv(user = userName, char = charName),
             ),
         )

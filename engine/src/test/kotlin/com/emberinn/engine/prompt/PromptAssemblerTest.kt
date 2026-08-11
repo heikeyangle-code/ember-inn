@@ -64,10 +64,13 @@ class PromptAssemblerTest {
         )
         val out = PromptAssembler.toOpenAiMessages(chat)
         assertEquals(3, out.size)
-        // 官方：is_system 不跳过；角色仍按 is_user 判定（narrator 才转 system）
+        // 官方：is_system 不跳过；角色仍按 is_user 判定（narrator 才转 system）；输出新的在前
         assertEquals("assistant", out[0].role)
         assertEquals("user", out[1].role)
         assertEquals("assistant", out[2].role)
+        assertEquals("答", out[0].content)
+        assertEquals("问", out[1].content)
+        assertEquals("旁白", out[2].content)
     }
 
     @Test
@@ -77,12 +80,13 @@ class PromptAssemblerTest {
             ChatMessage(mes = "你好呀", isUser = false, name = "柳春娘"),
         )
         val none = PromptAssembler.toOpenAiMessages(chat, PromptAssembler.NAMES_NONE)
-        assertEquals("你好", none[0].content)
-        assertEquals("user", none[0].role)
-        assertEquals("assistant", none[1].role)
+        assertEquals("你好呀", none[0].content)
+        assertEquals("assistant", none[0].role)
+        assertEquals("你好", none[1].content)
+        assertEquals("user", none[1].role)
 
         val content = PromptAssembler.toOpenAiMessages(chat, PromptAssembler.NAMES_CONTENT)
-        assertEquals("玩家: 你好", content[0].content)
-        assertEquals("柳春娘: 你好呀", content[1].content)
+        assertEquals("柳春娘: 你好呀", content[0].content)
+        assertEquals("玩家: 你好", content[1].content)
     }
 }

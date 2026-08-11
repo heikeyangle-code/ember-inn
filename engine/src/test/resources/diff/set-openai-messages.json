@@ -1,0 +1,433 @@
+{
+  "source": "openai.js setOpenAIMessages",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "你好",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            },
+            {
+              "is_user": false,
+              "mes": "嗨",
+              "name": "Char",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "嗨",
+          "name": "Char",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "你好",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "names-default-group",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "你好",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {}
+            },
+            {
+              "is_user": false,
+              "mes": "我是 Alice",
+              "name": "Alice",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            },
+            {
+              "is_user": false,
+              "mes": "我是 Bob",
+              "name": "Bob",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 0,
+          "selectedGroup": true,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Bob: 我是 Bob",
+          "name": "Bob",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        },
+        {
+          "role": "assistant",
+          "content": "Alice: 我是 Alice",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "你好",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "names-content-narrator",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "旁白",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {}
+            },
+            {
+              "is_user": false,
+              "mes": "窗外下雨",
+              "name": "System",
+              "force_avatar": false,
+              "extra": {
+                "type": "narrator"
+              }
+            }
+          ],
+          "namesBehavior": 2
+        }
+      },
+      "expected": [
+        {
+          "role": "system",
+          "content": "窗外下雨",
+          "name": "System",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "User: 旁白",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "names-completion",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "嗨",
+              "name": "Char",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 1,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "嗨",
+          "name": "Char",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "force-avatar-default",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "旁白",
+              "name": "Narr",
+              "force_avatar": true,
+              "extra": {
+                "type": "narrator"
+              }
+            },
+            {
+              "is_user": false,
+              "mes": "带头像",
+              "name": "Alice",
+              "force_avatar": true,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 0,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Alice: 带头像",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        },
+        {
+          "role": "system",
+          "content": "旁白",
+          "name": "Narr",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "same-model-keeps-signature",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "思考回复",
+              "name": "Char",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o",
+                "reasoning_signature": "sig-1",
+                "reasoning": "想法",
+                "tool_invocations": [
+                  {
+                    "id": "c1",
+                    "name": "tool",
+                    "parameters": "{}",
+                    "result": "ok",
+                    "signature": "inv-sig",
+                    "reasoning": "inv-r"
+                  }
+                ]
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "思考回复",
+          "name": "Char",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "invocations": [
+            {
+              "id": "c1",
+              "name": "tool",
+              "parameters": "{}",
+              "result": "ok",
+              "signature": "inv-sig",
+              "reasoning": "inv-r"
+            }
+          ],
+          "signature": "sig-1",
+          "reasoning": "想法"
+        }
+      ]
+    },
+    {
+      "id": "different-model-strips",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "旧回复",
+              "name": "Char",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o",
+                "reasoning_signature": "sig-1",
+                "reasoning": "想法",
+                "tool_invocations": [
+                  {
+                    "id": "c1",
+                    "name": "tool",
+                    "parameters": "{}",
+                    "result": "ok",
+                    "signature": "inv-sig",
+                    "reasoning": "inv-r"
+                  }
+                ]
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-5"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "旧回复",
+          "name": "Char",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "invocations": [
+            {
+              "id": "c1",
+              "name": "tool",
+              "parameters": "{}",
+              "result": "ok"
+            }
+          ],
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "group-other-member-drops-signature",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "群聊回复",
+              "name": "Alice",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o",
+                "reasoning_signature": "sig-1",
+                "reasoning": "想法"
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o",
+          "selectedGroup": true,
+          "name2": "Bob"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Alice: 群聊回复",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "media-passthrough",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "看图",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {
+                "media": [
+                  {
+                    "url": "x.png"
+                  }
+                ]
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "看图",
+          "name": "User",
+          "media": [
+            {
+              "url": "x.png"
+            }
+          ],
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    }
+  ]
+}

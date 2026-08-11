@@ -246,6 +246,8 @@ fun ChatScreen(
     val contextUsage by vm.contextUsage.collectAsState()
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
+    val captionDraft by vm.captionDraft.collectAsState()
+    val captionPromptAsk by vm.captionPromptRequest.collectAsState()
     val inputDraft by vm.inputDraft.collectAsState()
     val chatBackground by vm.chatBackground.collectAsState()
     val personas by vm.personas.collectAsState()
@@ -711,6 +713,8 @@ fun ChatScreen(
                                 time = derived.time,
                                 dateLabel = dateLabel,
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
+                                spritePath = (item.element.jsonObject["extra"] as? JsonObject)
+                                    ?.get("sprite")?.jsonPrimitive?.contentOrNull,
                                 accent = accent,
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
@@ -806,7 +810,7 @@ fun ChatScreen(
             quickReplies = quickReplies,
             onQuickReply = { label -> vm.runQuickReply(label) },
             onQuickImage = { showImageDialog = true; showQuickBar = false },
-            onQuickCaption = { vm.captionAndSendFirstImage() },
+            onQuickCaption = { vm.startCaptionFlow() },
             onQuickContinue = {
                 showQuickBar = false
                 vm.continueGeneration()
@@ -1642,6 +1646,52 @@ fun ChatScreen(
         )
     }
 
+    if (captionPromptAsk) {
+        var promptText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { vm.cancelCaptionFlow() },
+            title = { Text("描述提示词（caption prompt_ask）") },
+            text = {
+                EmberTextField(
+                    value = promptText,
+                    onValueChange = { promptText = it },
+                    label = { Text("留空使用默认提示词") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.submitCaptionPrompt(promptText) }) { Text("生成描述") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.cancelCaptionFlow() }) { Text("取消") }
+            },
+        )
+    }
+    if (captionDraft != null) {
+        var editText by remember(captionDraft) { mutableStateOf(captionDraft.text) }
+        AlertDialog(
+            onDismissRequest = { vm.cancelCaptionFlow() },
+            title = { Text("确认图片描述（caption refine_mode）") },
+            text = {
+                EmberTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.confirmCaptionSend(editText)
+                }) { Text("发送") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.cancelCaptionFlow() }) { Text("取消") }
+            },
+        )
+    }
+
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
@@ -1790,6 +1840,7 @@ private fun MessageRow(
     name: String,
     time: String,
     avatarPath: String?,
+    spritePath: String? = null,
     accent: Color,
     dateLabel: String?,
     showActions: Boolean,
@@ -1808,31 +1859,36 @@ private fun MessageRow(
 ) {
     val context = LocalContext.current
     // 表情精灵：AI 消息按正文分类选立绘（官方 expressions chooseSpriteForExpression 纯逻辑）
-    val spriteFile = remember(text, name, isUser) {
+    val spriteFile = remember(text, name, isUser, spritePath) {
         if (isUser) {
             null
         } else {
-            val prefs = ExpressionPrefs.load(context)
-            if (!prefs.enabled) {
-                null
+            val stored = spritePath?.let { File(it).takeIf { f -> f.exists() } }
+            if (stored != null) {
+                stored
             } else {
-                val store = ExpressionStore(context)
-                val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(text)
-                val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
-                    store.sprites(name),
-                    prefs.customLabels,
-                )
-                com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
-                    folderName = name,
-                    expression = expression ?: "",
-                    spriteCache = mapOf(name to groups),
-                    settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
-                        fallbackExpression = prefs.fallbackExpression.ifBlank { null },
-                        allowMultiple = prefs.allowMultiple,
-                        rerollIfSame = prefs.rerollIfSame,
-                        customLabels = prefs.customLabels,
-                    ),
-                )?.imageSrc?.let { File(it).takeIf { f -> f.exists() } }
+                val prefs = ExpressionPrefs.load(context)
+                if (!prefs.enabled) {
+                    null
+                } else {
+                    val store = ExpressionStore(context)
+                    val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(text)
+                    val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
+                        store.sprites(name),
+                        prefs.customLabels,
+                    )
+                    com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
+                        folderName = name,
+                        expression = expression ?: "",
+                        spriteCache = mapOf(name to groups),
+                        settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
+                            fallbackExpression = prefs.fallbackExpression.ifBlank { null },
+                            allowMultiple = prefs.allowMultiple,
+                            rerollIfSame = prefs.rerollIfSame,
+                            customLabels = prefs.customLabels,
+                        ),
+                    )?.imageSrc?.let { File(it).takeIf { f -> f.exists() } }
+                }
             }
         }
     }

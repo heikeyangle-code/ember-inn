@@ -167,6 +167,13 @@ class ChatPromptFactory {
         collapseNewlines: Boolean = false,
         /** 官方 power_user.context.example_separator（非 OpenAI 消息示例分隔符，默认 ***）。 */
         exampleSeparator: String = "***",
+        /** 官方 setOpenAIMessages isSameModel：当前 API/模型（extra.api/extra.model 比对）。 */
+        currentApi: String = "",
+        currentModel: String = "",
+        /** 官方 power_user.user_prompt_bias / show_user_prompt_bias。 */
+        userPromptBias: String = "",
+        /** 官方 power_user.pin_examples（示例固定顶部）。 */
+        pinExamples: Boolean = false,
         /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
         localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
@@ -267,6 +274,12 @@ class ChatPromptFactory {
                 isSystem = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true,
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
                 toolInvocations = toolInvocations,
+                api = (obj["extra"] as? JsonObject)?.get("api")?.jsonPrimitive?.contentOrNull,
+                model = (obj["extra"] as? JsonObject)?.get("model")?.jsonPrimitive?.contentOrNull,
+                reasoningSignature = (obj["extra"] as? JsonObject)?.get("reasoning_signature")?.jsonPrimitive?.contentOrNull,
+                reasoning = (obj["extra"] as? JsonObject)?.get("reasoning")?.jsonPrimitive?.contentOrNull,
+                narrator = (obj["extra"] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "narrator",
+                forceAvatar = obj["force_avatar"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true,
             )
         }
         // 官方 script.js generate coreChat.map：消息在存前已过一轮（sendMessageAsUser/saveReply，
@@ -303,7 +316,7 @@ class ChatPromptFactory {
             textareaText = textareaText,
             type = type,
             config = BiasConfig(
-                userPromptBias = "",
+                userPromptBias = userPromptBias,
                 chat = history.mapNotNull { el ->
                     val obj = el.jsonObject
                     val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
@@ -399,9 +412,17 @@ class ChatPromptFactory {
                 )
             }
         }
-        val openAiMessages = PromptAssembler.toOpenAiMessages(indexedChat.map { it.second }, user = userName)
+        // 官方 setOpenAIMessages：输出“新的在前”；历史下标同步反转，保证 media/reasoning 挂回正确消息
+        val pipelineChat = indexedChat.asReversed()
+        val openAiMessages = PromptAssembler.toOpenAiMessages(
+            chat = pipelineChat.map { it.second },
+            user = userName,
+            name2 = charName,
+            currentApi = currentApi,
+            currentModel = currentModel,
+        )
         val historyMessages = openAiMessages.mapIndexed { i, pm ->
-            val el = history.getOrNull(indexedChat[i].first)?.jsonObject
+            val el = history.getOrNull(pipelineChat[i].first)?.jsonObject
             val extra = el?.get("extra") as? JsonObject
             val media = extra?.get("media")?.jsonArray?.mapNotNull { me ->
                 val mo = me.jsonObject
@@ -438,7 +459,6 @@ class ChatPromptFactory {
                 },
             )
         }
-            .asReversed()
 
         // 世界书扫描（角色卡内嵌 character_book）
         val scanner = WorldInfoScanner(
@@ -604,6 +624,7 @@ class ChatPromptFactory {
                 videoInlining = videoInlining,
                 audioInlining = audioInlining,
                 quietPrompt = quietPrompt,
+                pinExamples = pinExamples,
             ),
         )
         return Prepared(

@@ -187,7 +187,60 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                     }
                 }
             }
+            item {
+                var behavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("官方行为（power-user）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        EmberTextField(
+                            value = behavior.userPromptBias,
+                            onValueChange = {
+                                behavior = behavior.copy(userPromptBias = it)
+                                BehaviorPrefs.save(context, behavior)
+                            },
+                            label = { Text("回复前缀（user_prompt_bias；会拼在生成回复前）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        )
+                        BehaviorToggle("显示回复前缀（show_user_prompt_bias）", behavior.showUserPromptBias) {
+                            behavior = behavior.copy(showUserPromptBias = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        BehaviorToggle("清理时裁掉句尾（trim_sentences）", behavior.trimSentences) {
+                            behavior = behavior.copy(trimSentences = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        BehaviorToggle("清理时裁掉首尾空格（trim_spaces）", behavior.trimSpaces) {
+                            behavior = behavior.copy(trimSpaces = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        BehaviorToggle("示例固定顶部（pin_examples）", behavior.pinExamples) {
+                            behavior = behavior.copy(pinExamples = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        BehaviorToggle("名字作为停用词（names_as_stop_strings）", behavior.namesAsStopStrings) {
+                            behavior = behavior.copy(namesAsStopStrings = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                    }
+                }
+            }
         }
     }
+    }
+}
+
+@Composable
+private fun BehaviorToggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        EmberSwitch(checked = checked, onCheckedChange = onChange)
     }
 }

@@ -57,11 +57,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（76 组差分 fixture，共 1216 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 76 组 / 1216 例（机器数）为准。
+**已覆盖（77 组差分 fixture，共 1225 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 77 组 / 1225 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 63 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 1216 例。
+> 注：脚本数 64 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 1225 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 17 |
@@ -138,6 +138,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 扩展提示 set/get + /inject 参数映射 | extension-prompt-official.mjs | ExtensionPromptDiffTest | 19 |
 | 世界书 EM 示例（baseChatReplace+unshift/push） | em-examples-official.mjs | EmExamplesDiffTest | 9 |
 | 深度提示注入规格（角色/群聊/世界书） | depth-inject-official.mjs | DepthPromptDiffTest | 6 |
+| setOpenAIMessages 构造循环（names/isSameModel/narrator/工具过滤） | set-openai-messages-official.mjs | SetOpenAiMessagesDiffTest | 9 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -281,6 +282,17 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 表情精灵 App 层：`ExpressionStore`（expressions/{角色名}/*.png + Risu 导入）、设置页（启用/兜底/多立绘/去重 + 角色精灵导入/删除）、聊天 AI 消息按正文 `sampleClassifyText` → `chooseSprite` 渲染到头像下方。登记：extra.sprite 持久化未做（渲染期确定性选择）；LLM 分类未接。
 - Captions App 层：`CaptionPrefs` + 输入区“图片描述”按钮（对首张待发图生成描述 → `sendCaptionedMessage` 语义追加 captioned 用户消息 → 触发回复）+ 设置页。登记：source 仅 multimodal（extras/local/horde 未接）；refine_mode/prompt_ask 为开关未接确认弹层。
 - 官方设置对齐：`collapse_newlines`（字段/示例/回复清理折叠换行）与 `example_separator`（默认 ***）已加到 消息渲染 设置页并全链路接线（CharacterCardFieldsEngine/ExampleAssembler/CleanUpConfig）。
+
+### 3.8.18 setOpenAIMessages 构造循环 ✅（2026-08-12）
+- `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
+- ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 318 测全绿。
+
+### 3.8.19 边界补齐（2026-08-12）
+- Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
+- 表情精灵：AI 回复落盘后把选中精灵路径写进 `extra.sprite`，渲染优先读存储（官方 extra.sprite 语义）。
+- `/genraw` 官方参数补齐：instruct/as/stop/trim（stop 按 JSON 数组注入一次性停用词；trim 裁掉 user/char 名前缀；instruct/as 因 App 无 instruct 模式登记边界）。
+- 官方行为设置（power-user）：user_prompt_bias/show_user_prompt_bias、trim_spaces、trim_sentences、pin_examples、names_as_stop_strings 已加设置页并全链路接线（BiasEngine/CleanUpMessage/StoppingStrings/PromptPipeline.pinExamples）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
@@ -444,7 +456,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览（截至 2026-08-12；增量见第 8 节半成品治理与各小节登记）
 
-**新增完成**（全部 CI 绿、引擎 315 测全绿、差分 76 组 / 1216 例）：
+**新增完成**（全部 CI 绿、引擎 318 测全绿、差分 77 组 / 1225 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -454,9 +466,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 引擎：{{outlet::key}}、PromptReasoning、正则 flags、世界书正则深度
 - 2026-08-12：/inject 参数映射 + set/getExtensionPrompt + EM 示例 baseChatReplace + 深度提示规格全部下沉引擎并差分（34 例）；WorldInfoScanner scanInjections 缓冲语义修正；populationInjectionPrompts 宏替换对齐；getBiasStrings 引擎接入总装；工具调用执行循环全链接线（ToolRegistry 执行 → 官方 shouldDeleteMessage/saveFunctionToolInvocations → RECURSE_LIMIT 递归重装 → extra.tool_invocations 历史重构）
 
-**剩余**：captions extras/local/horde 来源与 refine/prompt_ask 确认弹层（当前 multimodal 已接）、
-表情精灵 extra.sprite 持久化与 LLM 分类、Custom CSS + Moving UI（用户决策延期，见 8.9）、
-Claude/Gemini 官方 web tokenizer（用户豁免）。图库（LIST/GALLERY）、世界书设置 UI、快捷回复多文件均已核实完成。
+**剩余**：captions extras/local/horde 来源（multimodal + refine/prompt_ask 已接）、表情精灵 LLM 分类、
+instruct 模式（textgen 协议提供商）、/inject filter 闭包、惰性闭包即时求值、/trigger await、
+Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 web tokenizer（用户豁免）。
+图库（LIST/GALLERY）、世界书设置 UI、快捷回复多文件均已核实完成。
 
 **已完成（全部经 CI 验证 / 引擎测试全绿）**
 
@@ -476,7 +489,7 @@ Claude/Gemini 官方 web tokenizer（用户豁免）。图库（LIST/GALLERY）�
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 76 组差分 fixture / 1216 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6 等）
+- 77 组差分 fixture / 1225 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 9 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 

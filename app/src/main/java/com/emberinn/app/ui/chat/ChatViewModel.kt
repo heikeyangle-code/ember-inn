@@ -35,6 +35,7 @@ import com.emberinn.app.data.TtsReader
 import com.emberinn.app.data.TtsTextProcessor
 import com.emberinn.app.data.VectorRagService
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.settings.BehaviorPrefs
 import com.emberinn.app.ui.settings.CaptionPrefs
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.MemoryPrefs
@@ -219,12 +220,32 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 官方 /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本。 */
-    override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String {
+    override suspend fun generateRaw(
+        prompt: String,
+        system: String,
+        prefill: String,
+        length: Int?,
+        instruct: Boolean,
+        asRole: String,
+        stop: String,
+        trim: Boolean,
+    ): String {
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
             return "（未配置模型，请先选一个模型。）"
         }
-        return chatRepository.rawGenerate(prompt, system, prefill, length) ?: "（生成失败）"
+        // 官方 genraw：stop 是 JSON 数组（一次性停用词）；instruct/as 在 App 无 instruct 模式，登记边界
+        val stops = runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                .parseToJsonElement(stop).jsonArray.map { it.jsonPrimitive.content }
+        }.getOrDefault(emptyList())
+        val result = chatRepository.rawGenerate(prompt, system, prefill, length, stops) ?: "（生成失败）"
+        if (!trim) return result
+        var out = result
+        for (prefix in listOf("$currentUserName:", "$currentCharName:")) {
+            while (out.startsWith(prefix)) out = out.removePrefix(prefix).trimStart()
+        }
+        return out
     }
 
     /** 官方 /summarize：无文本 → forceSummarizeChat；有文本 → generateRaw + 当前总结设置。 */
@@ -867,6 +888,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _inputDraft.value = null
     }
 
+    /** 官方 caption 扩展 refine_mode：生成后待用户确认/编辑的草稿。 */
+    data class CaptionDraft(val text: String, val image: MediaAttachment)
+
+    private val _captionDraft = MutableStateFlow<CaptionDraft?>(null)
+    val captionDraft: StateFlow<CaptionDraft?> = _captionDraft
+
+    /** 官方 caption prompt_ask：生成前请求自定义提示词。 */
+    private val _captionPromptRequest = MutableStateFlow(false)
+    val captionPromptRequest: StateFlow<Boolean> = _captionPromptRequest
+
     /** 每次进入聊天页调用：读盘刷新一次（设置页已保存过则直接由 ProviderState 同步）。 */
     fun refreshProviderConfigured() {
         ProviderState.refresh(chatRepository.profile())
@@ -1461,10 +1492,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /**
-     * 官方 caption 扩展：对第一条待发图片生成描述，并按 sendCaptionedMessage 语义
-     * 追加一条带 captioned 媒体的用户消息后触发生成。
+     * 官方 caption 扩展：入口。prompt_ask=true 先弹提示词输入，refine_mode=true 生成后弹确认编辑，
+     * 最终 sendCaptionedMessage 语义追加带 captioned 媒体的用户消息并触发回复。
      */
-    fun captionAndSendFirstImage() {
+    fun startCaptionFlow() {
         if (_isStreaming.value) {
             _notice.value = "（正在生成中，请稍后再试。）"
             return
@@ -1475,6 +1506,33 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（请先添加一张图片，再点“生成描述并发送”。）"
             return
         }
+        val s = CaptionPrefs.load(getApplication())
+        if (s.promptAsk) {
+            _captionPromptRequest.value = true
+        } else {
+            captionImageAndDraft(null)
+        }
+    }
+
+    fun submitCaptionPrompt(prompt: String) {
+        _captionPromptRequest.value = false
+        captionImageAndDraft(prompt)
+    }
+
+    fun cancelCaptionFlow() {
+        _captionPromptRequest.value = false
+        _captionDraft.value = null
+    }
+
+    fun confirmCaptionSend(editedText: String? = null) {
+        val draft = _captionDraft.value ?: return
+        _captionDraft.value = null
+        sendCaptionedMessage(editedText?.takeIf { it.isNotBlank() } ?: draft.text, draft.image)
+    }
+
+    private fun captionImageAndDraft(promptOverride: String?) {
+        val pending = _pendingMedia.value
+        val image = pending.firstOrNull { it.type == "image" } ?: return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val s = CaptionPrefs.load(getApplication())
@@ -1482,7 +1540,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 if (!file.exists()) error("图片文件不存在")
                 val mime = mimeForCaption(image.url)
                 val dataUrl = "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(file.readBytes())
-                val prompt = MacroEngine.substitute(s.prompt, MacroEnv(user = currentUserName, char = currentCharName))
+                val rawPrompt = promptOverride?.takeIf { it.isNotBlank() } ?: s.prompt
+                val prompt = MacroEngine.substitute(rawPrompt, MacroEnv(user = currentUserName, char = currentCharName))
                 val caption = chatRepository.captionImage(dataUrl, prompt) ?: error("描述生成失败")
                 if (caption.isBlank()) error("描述生成失败")
                 val rawTemplate = if (s.template.contains("{{caption}}", ignoreCase = true)) {
@@ -1492,24 +1551,33 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
                 val substituted = MacroEngine.substitute(rawTemplate, MacroEnv(user = currentUserName, char = currentCharName))
                 val wrapped = substituted.replace("{{caption}}", caption.trim())
-                chatStore.append(
-                    sessionId = sessionId,
-                    isUser = true,
-                    content = wrapped,
-                    name = currentUserName,
-                    media = listOf(image.copy(title = wrapped)),
-                    mediaDisplay = "gallery",
-                    mediaIndex = 0,
-                    captioned = true,
-                    inlineImage = s.showInChat,
-                )
-                _pendingMedia.value = _pendingMedia.value.filterNot { it.url == image.url }
-                refreshMessages()
-                startStream(history = chatStore.messages(sessionId))
+                if (s.refineMode) {
+                    _captionDraft.value = CaptionDraft(wrapped, image)
+                } else {
+                    sendCaptionedMessage(wrapped, image)
+                }
             }.onFailure { e ->
                 _notice.value = "（图片描述失败：${e.message ?: "未知错误"}）"
             }
         }
+    }
+
+    private fun sendCaptionedMessage(wrapped: String, image: MediaAttachment) {
+        val s = CaptionPrefs.load(getApplication())
+        chatStore.append(
+            sessionId = sessionId,
+            isUser = true,
+            content = wrapped,
+            name = currentUserName,
+            media = listOf(image.copy(title = wrapped)),
+            mediaDisplay = "gallery",
+            mediaIndex = 0,
+            captioned = true,
+            inlineImage = s.showInChat,
+        )
+        _pendingMedia.value = _pendingMedia.value.filterNot { it.url == image.url }
+        refreshMessages()
+        startStream(history = chatStore.messages(sessionId))
     }
 
     private fun mimeForCaption(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
@@ -1944,6 +2012,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val vectorDataBank = rag.dataBankFiles()
             val worldInfoSettings = WorldInfoPrefs.read(getApplication())
             val memorySettings = MemoryPrefs.load(getApplication())
+            val behavior = BehaviorPrefs.load(getApplication())
             val globalRegexScripts = GlobalRegexPrefs.read(getApplication())
             // 官方 regex getScriptsByType(SCOPED)：allowedOnly 时角色头像必须在 character_allowed_regex 中
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
@@ -2058,6 +2127,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 memoryScan = memorySettings.scan,
                 collapseNewlines = RenderPrefs.collapseNewlines(getApplication()),
                 exampleSeparator = RenderPrefs.exampleSeparator(getApplication()),
+                userPromptBias = behavior.userPromptBias,
+                pinExamples = behavior.pinExamples,
+                namesAsStopStrings = behavior.namesAsStopStrings,
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
@@ -2230,6 +2302,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _streamingText.value
         }
         // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）
+        val behavior = BehaviorPrefs.load(getApplication())
         val profileForClean = chatRepository.profile()
         val apiForClean = profileForClean?.let {
             com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
@@ -2244,6 +2317,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 chatLastIsUser = chatStore.messages(sessionId).lastOrNull()?.let { isUser(it) } == true,
                 groupMemberNames = groupMembers.map { it.name },
                 selectedGroup = group != null,
+                namesAsStopStrings = behavior.namesAsStopStrings,
                 env = MacroEnv(user = currentUserName, char = currentCharName),
             ),
         )
@@ -2259,6 +2333,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 groupMemberNames = groupMembers.map { it.name },
                 groupTrimmingEnabled = group != null,
                 collapseNewlines = RenderPrefs.collapseNewlines(getApplication()),
+                trimSpaces = behavior.trimSpaces,
+                trimSentences = behavior.trimSentences,
+                userPromptBias = behavior.userPromptBias.takeIf { it.isNotBlank() },
+                includeUserPromptBias = behavior.showUserPromptBias,
             ),
         )
         when {
@@ -2381,6 +2459,33 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // 官方群聊 AI 消息带 gen_id（group_generation_id，整批共享）；单聊不带
             groupGenId = pendingGroupGenId,
         )
+        // 官方 expressions：回复落盘后把选中的精灵路径写进 extra.sprite（渲染优先读它）
+        runCatching {
+            val prefs = com.emberinn.app.ui.settings.ExpressionPrefs.load(getApplication())
+            if (prefs.enabled) {
+                val store = com.emberinn.app.data.ExpressionStore(getApplication())
+                val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(reply)
+                val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
+                    store.sprites(currentCharName),
+                    prefs.customLabels,
+                )
+                val chosen = com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
+                    folderName = currentCharName,
+                    expression = expression ?: "",
+                    spriteCache = mapOf(currentCharName to groups),
+                    settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
+                        fallbackExpression = prefs.fallbackExpression.ifBlank { null },
+                        allowMultiple = prefs.allowMultiple,
+                        rerollIfSame = prefs.rerollIfSame,
+                        customLabels = prefs.customLabels,
+                    ),
+                )?.imageSrc
+                if (chosen != null) {
+                    val idx = chatStore.messages(sessionId).lastIndex
+                    if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "sprite", chosen)
+                }
+            }
+        }
     }
 
     private fun refreshMessages() {

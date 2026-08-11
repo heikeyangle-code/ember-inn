@@ -29,7 +29,10 @@ class AppSlashExecutorTest {
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
         override fun triggerGeneration(): String { calls += "trigger"; return "" }
         override suspend fun generateText(prompt: String, length: Int?): String { calls += "gen:$prompt:$length"; return "生成文本" }
-        override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String { calls += "genraw:$system:$prefill:$length:$prompt"; return "原始生成" }
+        override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?, instruct: Boolean, asRole: String, stop: String, trim: Boolean): String {
+            calls += "genraw:$system:$prefill:$length:$instruct:$asRole:$stop:$trim:$prompt"
+            return "原始生成"
+        }
         override suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String {
             calls += "summarize:$source:$prompt:$quiet:$text"
             return "摘要文本"
@@ -110,7 +113,7 @@ class AppSlashExecutorTest {
         val out2 = AppSlashExecutor(a).executeAsync("/genraw system=系统 prefill=开头 length=100 你好世界")
         assertEquals("生成文本", out1)
         assertEquals("原始生成", out2)
-        assertEquals(listOf("gen:你好:null", "genraw:系统:开头:100:你好世界"), a.calls)
+        assertEquals(listOf("gen:你好:null", "genraw:系统:开头:100:true:system:[]:true:你好世界"), a.calls)
     }
 
     @Test

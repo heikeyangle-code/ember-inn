@@ -667,6 +667,19 @@ class ChatStore(private val context: Context) {
         save(sessionId, list)
     }
 
+    /** 通用 extra 写入（官方 message.extra 直接改字段语义；值空=删除）。 */
+    fun setExtraValue(sessionId: String, index: Int, key: String, value: String?) {
+        val list = messages(sessionId).toMutableList()
+        if (list.isEmpty()) return
+        val idx = index.coerceIn(0, list.lastIndex)
+        val obj = list[idx].jsonObject.toMutableMap()
+        val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (value.isNullOrBlank()) extra.remove(key) else extra[key] = JsonPrimitive(value)
+        obj["extra"] = JsonObject(extra)
+        list[idx] = JsonObject(obj)
+        save(sessionId, list)
+    }
+
     fun setMessageHidden(sessionId: String, at: Int, hidden: Boolean) {
         val list = messages(sessionId).toMutableList()
         val index = resolveIndex(at, list.size) ?: return

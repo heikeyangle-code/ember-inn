@@ -56,7 +56,16 @@ interface SlashMessageActions {
     /** /gen：用当前聊天上下文 + 提示生成文本（不落盘），返回生成文本（官方 generateCallback）。 */
     suspend fun generateText(prompt: String, length: Int?): String
     /** /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本（官方 generateRawCallback）。 */
-    suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String
+    suspend fun generateRaw(
+        prompt: String,
+        system: String,
+        prefill: String,
+        length: Int?,
+        instruct: Boolean = true,
+        asRole: String = "system",
+        stop: String = "[]",
+        trim: Boolean = true,
+    ): String
     /** /summarize：无文本=总结当前聊天；有文本=按指定 source/prompt 总结（官方 summarizeCallback）。 */
     suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
 }
@@ -218,6 +227,10 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
                     system = inv.namedArgs["system"] ?: "",
                     prefill = inv.namedArgs["prefill"] ?: "",
                     length = inv.namedArgs["length"]?.toIntOrNull(),
+                    instruct = inv.namedArgs["instruct"]?.lowercase() != "off",
+                    asRole = inv.namedArgs["as"] ?: "system",
+                    stop = inv.namedArgs["stop"] ?: "[]",
+                    trim = inv.namedArgs["trim"]?.lowercase() != "off",
                 )
             },
         ),

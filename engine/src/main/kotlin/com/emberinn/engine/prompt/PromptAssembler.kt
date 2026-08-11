@@ -194,30 +194,49 @@ object PromptAssembler {
         namesBehavior: Int = NAMES_DEFAULT,
         selectedGroup: Boolean = false,
         user: String = "",
+        name2: String = "",
+        currentApi: String = "",
+        currentModel: String = "",
     ): List<PromptMessage> {
         val messages = mutableListOf<PromptMessage>()
         for (m in chat) {
-            // 官方 setOpenAIMessages：is_system 消息不跳过（仅 narrator extra.type 才转 system，角色按 is_user 判定）
-            val role = if (m.isUser) "user" else "assistant"
+            // 官方 setOpenAIMessages：narrator（extra.type === 'narrator'）→ system；其余按 is_user 判定
+            val role = when {
+                m.narrator -> "system"
+                m.isUser -> "user"
+                else -> "assistant"
+            }
             val name = m.name ?: (if (m.isUser) user else "")
             var content = m.mes.replace("\r", "")
             if (m.titles.isNotEmpty()) {
                 content = appendMessageTitles(content, m.titles)
             }
+            // 官方 names_behavior：DEFAULT 组内 force_avatar 或群聊非用户；CONTENT 非旁白；NONE/COMPLETION 不加
             val prefix = when (namesBehavior) {
                 NAMES_NONE, NAMES_COMPLETION -> false
-                NAMES_CONTENT -> true
-                else -> selectedGroup && name != user
+                NAMES_CONTENT -> !m.narrator
+                else -> (selectedGroup && name != user) || (m.forceAvatar && name != user && !m.narrator)
             }
             if (prefix && name.isNotEmpty()) content = "$name: $content"
+            // 官方 isSameModel：同 API/模型才携带 reasoning/signature；工具调用里的推理/签名同规则剥离
+            val isSameModel = currentApi.isNotEmpty() && m.api == currentApi && m.model == currentModel
+            val isOtherGroupMember = selectedGroup && name != name2
+            val signature = if (isSameModel && !isOtherGroupMember) m.reasoningSignature else null
+            val reasoning = if (isSameModel && !isOtherGroupMember) (m.reasoning ?: "") else null
+            val invocations = m.toolInvocations?.map { inv ->
+                if (isSameModel) inv else inv.copy(reasoning = null, signature = null)
+            }
             messages += PromptMessage(
                 role = role,
                 content = content,
                 name = name.ifEmpty { null },
-                toolInvocations = m.toolInvocations,
+                toolInvocations = invocations,
+                signature = signature,
+                reasoning = reasoning,
             )
         }
-        return messages
+        // 官方 setOpenAIMessages：messages[i] 从末尾反向填充，最终数组“新的在前”
+        return messages.asReversed()
     }
 
     /** 官方 script.js coreChat.map 的标题追加逻辑。 */
