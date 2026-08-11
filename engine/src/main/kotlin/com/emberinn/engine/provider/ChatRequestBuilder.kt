@@ -33,6 +33,14 @@ data class SamplerParams(
     val cachingAtDepth: Int = -1,
     /** 官方 claude.extendedTTL：false→5m，true→1h。 */
     val cacheTTL: String = "5m",
+    /** 官方 settings.seed（-1 = 不发送）。 */
+    val seed: Int = -1,
+    /** 官方 settings.n（多回复/多 swipe）。 */
+    val n: Int = 1,
+    /** 官方 settings.top_k（OpenAI 系/OpenRouter）。 */
+    val topK: Int = 40,
+    /** 官方 settings.logit_bias（仅支持源发送）。 */
+    val logitBias: Map<String, Double> = emptyMap(),
 )
 
 /** 工具定义（官方 request.body.tools 的 function 结构）。 */
@@ -57,6 +65,8 @@ data class ProviderRequestOptions(
     val aspectRatio: String = "",
     val imageSize: String = "",
     val safetySettings: JsonArray = JsonArray(emptyList()),
+    /** 官方 createGenerationParameters.stop / 后端 request.body.stop。 */
+    val stopSequences: List<String> = emptyList(),
 ) {
     val hasTools: Boolean get() = tools.isNotEmpty()
 
@@ -107,6 +117,21 @@ object ChatRequestBuilder {
             put("presence_penalty", params.presencePenalty)
             put("frequency_penalty", params.frequencyPenalty)
             put("stream", params.stream)
+            put("top_k", params.topK)
+            if (options.stopSequences.isNotEmpty()) {
+                put("stop", JsonArray(options.stopSequences.map { JsonPrimitive(it) }))
+            }
+            if (params.logitBias.isNotEmpty() && source in setOf("openai", "azure_openai", "openrouter", "electronhub", "chutes", "custom")) {
+                put("logit_bias", buildJsonObject {
+                    params.logitBias.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
+                })
+            }
+            if (source in setOf("openai", "azure_openai", "openrouter", "mistralai", "custom", "cohere", "groq", "electronhub", "nanogpt", "xai", "pollinations", "aimlapi", "vertexai", "makersuite", "chutes") && params.seed >= 0) {
+                put("seed", JsonPrimitive(params.seed))
+            }
+            if (params.n > 1 && source in setOf("openai", "azure_openai", "custom", "xai", "aimlapi", "moonshot")) {
+                put("n", JsonPrimitive(params.n))
+            }
             if (options.hasTools) {
                 put("tools", options.openAiTools())
                 options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }

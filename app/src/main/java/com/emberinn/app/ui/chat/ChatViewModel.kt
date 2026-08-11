@@ -65,8 +65,12 @@ import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.ToolCall
+import com.emberinn.engine.prompt.ToolLoopPlanner
 import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
+import com.emberinn.app.data.ToolRegistry
 import com.emberinn.engine.slash.AutoExecuteHandler
 import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.slash.SlashState
@@ -843,6 +847,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     @Volatile
     private var streamActive = false
     private var singleAutoContinueRuns = 0
+    private var toolLoopRuns = 0
+    private var preparedMessages: List<CompletionMessage> = emptyList()
+    private var pendingToolCalls: kotlinx.serialization.json.JsonElement? = null
     private var streamStartedAt: String = java.time.Instant.now().toString()
     private var streamContinueMode = false
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
@@ -938,13 +945,37 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         mediaIndex: Int? = null,
     ): Boolean {
         if (_isStreaming.value) return false
-        // 官方 oai_settings.send_if_empty：最后一条是 AI 且输入为空时，用配置文本发送（续聊）
+        // 官方 sendTextareaMessage / Generate：
+        // 1) power_user.continue_on_send：空输入 + 最后一条 AI + 无附件 + 非群聊 → continue
+        // 2) oai_settings.send_if_empty：仅 OpenAI 系 + 空输入 + 最后一条 AI → 用配置文本 normal 发送
         var effectiveText = text
         if (effectiveText.isBlank() && media.isEmpty()) {
-            val replacement = GenerationPrefs.sendIfEmpty(getApplication())
             val last = chatStore.messages(sessionId).lastOrNull()
-            if (replacement.isNotBlank() && last != null && !isUser(last) && !isSystemMsg(last)) {
-                effectiveText = replacement
+            val lastIsAi = last != null && !isUser(last) && !isSystemMsg(last)
+            if (lastIsAi && group == null && GenerationPrefs.continueOnSend(getApplication())) {
+                if (!isProviderConfigured()) {
+                    refreshProviderConfigured()
+                    _notice.value = "（未配置模型，请先选一个模型再发送。）"
+                    return false
+                }
+                currentCharName = chatStore.get(sessionId)?.name ?: "Assistant"
+                currentUserName = userName
+                _notice.value = null
+                _impersonated.value = null
+                startStream(
+                    history = chatStore.messages(sessionId),
+                    type = "continue",
+                    continueMode = true,
+                )
+                return true
+            }
+            val profileProtocol = chatRepository.profile()?.let {
+                com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+            }
+            val isOpenAiLike = profileProtocol != null && profileProtocol != "anthropic" && profileProtocol != "google"
+            if (lastIsAi && isOpenAiLike) {
+                effectiveText = GenerationPrefs.sendIfEmpty(getApplication())
+                if (effectiveText.isBlank()) return false
             } else {
                 return false
             }
@@ -1803,6 +1834,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 onReasoning = { text ->
                     if (streamActive) _streamingReasoning.value += text
                 },
+                onToolCalls = { calls ->
+                    if (streamActive) pendingToolCalls = calls
+                },
+                stopGroupMemberNames = groupMembers.map { it.name },
                 onDone = {
                     if (streamActive) {
                         streamActive = false

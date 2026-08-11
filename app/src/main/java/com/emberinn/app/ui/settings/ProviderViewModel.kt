@@ -24,8 +24,10 @@ import kotlinx.coroutines.withContext
 class ProviderViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
-        /** 上下文默认档：能装下常见大卡 + 足够历史，又不至于像模型全窗口那样提示词爆炸。 */
-        const val DEFAULT_CONTEXT_WINDOW = 32_768
+        /** 官方 oai_settings.openai_max_context 默认 max_4k。 */
+        const val DEFAULT_CONTEXT_WINDOW = 4095
+        /** 官方 oai_settings.openai_max_tokens 默认。 */
+        const val DEFAULT_MAX_TOKENS = 300
     }
 
     private val repo = ChatRepository(application)
@@ -73,7 +75,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _contextAuto = MutableStateFlow(false)
     val contextAuto: StateFlow<Boolean> = _contextAuto
 
-    private val _maxTokens = MutableStateFlow(512)
+    private val _maxTokens = MutableStateFlow(DEFAULT_MAX_TOKENS)
     val maxTokens: StateFlow<Int> = _maxTokens
 
     private val _testing = MutableStateFlow(false)
@@ -106,14 +108,13 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
         _selectedModel.value = model
-        // 旧版本固定默认（8192 / 512）视为“未手动设置”：上下文取保守中间档，
-        // 不自动拉满模型窗口（否则提示词全量塞满、回复明显变慢）。
+        // 官方 1.18：只有“从未设置”才用默认值；用户存的 8192/512 原样保留。
         val storedContext = existing?.contextWindow
-        val legacyDefault = storedContext == null || storedContext == 8192
+        val legacyDefault = storedContext == null
         _contextAuto.value = false
-        _contextWindow.value = if (legacyDefault) DEFAULT_CONTEXT_WINDOW else storedContext!!
+        _contextWindow.value = storedContext ?: DEFAULT_CONTEXT_WINDOW
         val storedTokens = existing?.sampler?.maxTokens
-        _maxTokens.value = if (storedTokens == null || storedTokens == 512) (spec.defaultMaxTokens ?: 512) else storedTokens
+        _maxTokens.value = storedTokens ?: DEFAULT_MAX_TOKENS
         _message.value = null
         _testing.value = false
     }

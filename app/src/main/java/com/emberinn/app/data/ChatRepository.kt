@@ -16,6 +16,12 @@ import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.ToolLoopPlanner
+import com.emberinn.engine.prompt.CustomStoppingConfig
+import com.emberinn.engine.prompt.StoppingStringsConfig
+import com.emberinn.engine.prompt.StoppingStringsEngine
+import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -55,8 +61,10 @@ class ChatRepository(context: Context) {
     }
 
     companion object {
-        /** 旧档案固定默认 8192 视为“未设置”：取保守中间档，避免自动拉满模型窗口导致提示词爆炸。 */
-        const val DEFAULT_CONTEXT_WINDOW = 32_768
+        /** 官方 oai_settings.openai_max_context 默认 max_4k。 */
+        const val DEFAULT_CONTEXT_WINDOW = 4095
+        /** 官方 oai_settings.openai_max_tokens 默认。 */
+        const val DEFAULT_MAX_TOKENS = 300
         /** 上下文预算中留给必选提示词（角色卡/世界书/系统提示）的安全余量。 */
         const val PROMPT_BUDGET_RESERVE = 2_048
     }
@@ -135,6 +143,7 @@ class ChatRepository(context: Context) {
         cyclePrompt: String = "",
         onReasoning: ((String) -> Unit)? = null,
         onToolCalls: ((JsonElement) -> Unit)? = null,
+        stopGroupMemberNames: List<String> = emptyList(),
         mediaInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
         personaDescription: String = "",
@@ -158,23 +167,17 @@ class ChatRepository(context: Context) {
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
-        // 旧档案默认值（512 / 8192）视为“未设置”：
-        // 上下文取保守中间档（官方机制：默认小值、用户可手动调大，不再自动拉满模型窗口）；
-        // 最大回复取厂商默认后按上下文钳制，保证预算 = 上下文 − 最大回复 恒为正。
+        // 官方 1.18：未设置时用 openai_max_context / openai_max_tokens 默认；用户存值原样保留。
         // 角色级模型覆盖（README：模型/上下文/最大回复/采样，本角色覆盖全局；存卡内扩展字段）
         val override = characterRawJson?.let { CharacterCardEdit.readModelOverride(it) }
         val effectiveModel = override?.model?.ifBlank { null } ?: profile.model
         val effectiveContextWindow = override?.contextWindow?.takeIf { it > 0 }
-            ?: if (profile.contextWindow <= 0 || profile.contextWindow == 8192) {
-                DEFAULT_CONTEXT_WINDOW
-            } else {
-                profile.contextWindow
-            }
-        val effectiveMaxTokens = override?.maxTokens?.takeIf { it > 0 }
-            ?: (if (profile.sampler.maxTokens == 512) {
-                provider.defaultMaxTokens ?: 512
-            } else profile.sampler.maxTokens)
-                .coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
+            ?: profile.contextWindow.takeIf { it > 0 } ?: DEFAULT_CONTEXT_WINDOW
+        val effectiveMaxTokens = (
+            override?.maxTokens?.takeIf { it > 0 }
+                ?: profile.sampler.maxTokens.takeIf { it > 0 }
+                ?: DEFAULT_MAX_TOKENS
+            ).coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
         val sampler = profile.sampler.copy(
             temperature = override?.temperature ?: profile.sampler.temperature,
             topP = override?.topP ?: profile.sampler.topP,
@@ -241,11 +244,72 @@ class ChatRepository(context: Context) {
             )
             return null
         }
+        val stopSequences = StoppingStringsEngine.getStoppingStrings(
+            api = provider.protocol,
+            config = StoppingStringsConfig(
+                isContinue = isContinue,
+                name1 = userName,
+                name2 = charName,
+                chatLastIsUser = history.lastOrNull()?.jsonObject?.get("is_user")?.jsonPrimitive?.content == "true",
+                groupMemberNames = stopGroupMemberNames,
+                selectedGroup = stopGroupMemberNames.isNotEmpty(),
+                env = MacroEnv(user = userName, char = charName),
+            ),
+        )
+        val finalOptions = options.copy(stopSequences = stopSequences)
         return client.streamChatCompletionsAsync(
             provider = provider,
             // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）
             profile = profile.copy(model = effectiveModel, sampler = sampler.copy(maxTokens = effectiveMaxTokens), contextWindow = effectiveContextWindow),
             messages = prepared.messages,
+            onDelta = onDelta,
+            onDone = onDone,
+            onError = onError,
+            options = finalOptions,
+            onReasoning = onReasoning,
+            onToolCalls = onToolCalls,
+        )
+    }
+
+    /** 工具循环续跑：在已准备好的消息后追加 assistant(tool_calls) + tool 结果，再请求一次。 */
+    fun continueWithToolResults(
+        messages: List<CompletionMessage>,
+        assistant: CompletionMessage,
+        results: List<Pair<String, String>>,
+        onDelta: (String) -> Unit,
+        onDone: () -> Unit,
+        onError: (Throwable) -> Unit,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
+        onReasoning: ((String) -> Unit)? = null,
+        onToolCalls: ((JsonElement) -> Unit)? = null,
+    ): LlmClient.StreamSession? {
+        return continueWithMessages(
+            messages = messages + ToolLoopPlanner.buildNextMessages(assistant, results),
+            onDelta = onDelta,
+            onDone = onDone,
+            onError = onError,
+            options = options,
+            onReasoning = onReasoning,
+            onToolCalls = onToolCalls,
+        )
+    }
+
+    /** 工具循环下一轮：直接使用已拼好的消息列表请求（不再重跑提示词总装）。 */
+    fun continueWithMessages(
+        messages: List<CompletionMessage>,
+        onDelta: (String) -> Unit,
+        onDone: () -> Unit,
+        onError: (Throwable) -> Unit,
+        options: ProviderRequestOptions = ProviderRequestOptions(),
+        onReasoning: ((String) -> Unit)? = null,
+        onToolCalls: ((JsonElement) -> Unit)? = null,
+    ): LlmClient.StreamSession? {
+        val profile = store.load() ?: return null
+        val provider = ProviderRegistry.get(profile.providerId) ?: return null
+        return client.streamChatCompletionsAsync(
+            provider = provider,
+            profile = profile,
+            messages = messages,
             onDelta = onDelta,
             onDone = onDone,
             onError = onError,

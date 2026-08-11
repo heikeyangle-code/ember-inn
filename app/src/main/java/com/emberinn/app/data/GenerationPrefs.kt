@@ -30,6 +30,16 @@ object GenerationPrefs {
             .apply()
     }
 
+    /** 官方 power_user.continue_on_send：空输入且最后一条是 AI 时按“继续”发送（默认关）。 */
+    fun continueOnSend(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("continue_on_send", false)
+
+    fun saveContinueOnSend(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("continue_on_send", enabled)
+            .apply()
+    }
+
     fun saveReasoningToPrompts(context: Context, enabled: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("reasoning_to_prompts", enabled)

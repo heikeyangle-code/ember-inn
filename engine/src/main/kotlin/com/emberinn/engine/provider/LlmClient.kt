@@ -293,6 +293,7 @@ class LlmClient(
                     enableAdaptiveThinking = profile.sampler.enableAdaptiveThinking,
                     tools = options.tools.map { AnthropicTool(it.name, it.description, it.parameters) },
                     toolChoice = options.toolChoice,
+                    stop = options.stopSequences,
                     jsonSchema = options.jsonSchema,
                     enableWebSearch = options.enableWebSearch,
                     enableSystemPromptCache = profile.sampler.enableSystemPromptCache,
@@ -336,6 +337,7 @@ class LlmClient(
                     aspectRatio = options.aspectRatio,
                     imageSize = options.imageSize,
                     safetySettings = options.safetySettings,
+                    stop = options.stopSequences,
                     responseMimeType = if (options.jsonSchema != null) "application/json" else null,
                     responseSchema = options.jsonSchema?.let { schema ->
                         schema["value"] as? JsonObject ?: schema
