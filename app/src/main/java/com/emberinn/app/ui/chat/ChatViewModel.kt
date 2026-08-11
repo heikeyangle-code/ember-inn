@@ -83,6 +83,7 @@ import com.emberinn.engine.slash.WorldInfoAutoExecute
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -96,6 +97,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -674,7 +676,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    override fun triggerGeneration(): String {
+    override suspend fun triggerGeneration(await: Boolean = false): String {
         if (_isStreaming.value) return "（正在生成中，请稍后再试。）"
         if (!isProviderConfigured()) {
             refreshProviderConfigured()
@@ -682,7 +684,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return "（还没有消息可触发生成。）"
-        return if (isUser(last)) {
+        val result = if (isUser(last)) {
             // 官方 Generate('normal')：最后一条用户消息 → 正常生成回复
             if (group != null) startGroupTurn(type = "generate") else startStream(history = msgs)
             ""
@@ -693,6 +695,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else {
             "（最后一条是系统消息，无法触发生成。）"
         }
+        if (await && result.isEmpty()) {
+            while (_isStreaming.value) delay(50)
+        }
+        return result
     }
 
     override fun injectScript(
@@ -703,6 +709,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         role: String,
         scan: Boolean,
         ephemeral: Boolean,
+        filter: String? = null,
     ): String {
         // 官方 injectCallback：position/role/depth/scan 参数归一，空 value 删除条目
         val spec = ExtensionPromptEngine.parseInject(id, text, position, depth, role, scan)
@@ -718,6 +725,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 put("depth", JsonPrimitive(spec.depth))
                 put("scan", JsonPrimitive(spec.scan))
                 put("role", JsonPrimitive(spec.role))
+                filter?.takeIf { it.isNotBlank() }?.let { put("filter", JsonPrimitive(it)) }
             }
             if (ephemeral) ephemeralInjectIds += resolvedId
         }
@@ -2024,6 +2032,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 ?.mapNotNull { (id, el) ->
                     val o = el.jsonObject
                     val value = o["value"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                    // 官方 /inject filter：闭包在生成时判定，结果 true 才注入；解析失败/空=始终注入
+                    val filterRaw = o["filter"]?.jsonPrimitive?.contentOrNull
+                    val filterPassed = filterRaw.isNullOrBlank() || runCatching {
+                        val out = slashExecutor.execute(filterRaw, SlashState())
+                        out.trim().lowercase() in setOf("true", "1", "yes", "y", "on")
+                    }.getOrDefault(true)
+                    if (!filterPassed) return@mapNotNull null
                     val positionRaw = o["position"]?.jsonPrimitive?.contentOrNull
                     val roleRaw = o["role"]?.jsonPrimitive?.contentOrNull
                     ExtensionPromptEngine.ScriptInject(

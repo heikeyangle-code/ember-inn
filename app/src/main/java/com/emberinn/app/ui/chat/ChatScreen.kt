@@ -1668,8 +1668,9 @@ fun ChatScreen(
             },
         )
     }
-    if (captionDraft != null) {
-        var editText by remember(captionDraft) { mutableStateOf(captionDraft.text) }
+    val captionDraftValue = captionDraft
+    if (captionDraftValue != null) {
+        var editText by remember(captionDraftValue) { mutableStateOf(captionDraftValue.text) }
         AlertDialog(
             onDismissRequest = { vm.cancelCaptionFlow() },
             title = { Text("确认图片描述（caption refine_mode）") },

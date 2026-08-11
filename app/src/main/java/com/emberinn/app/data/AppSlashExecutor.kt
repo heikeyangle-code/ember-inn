@@ -50,9 +50,9 @@ interface SlashMessageActions {
     /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
     fun selectPersona(name: String, mode: String): String
     /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
-    fun triggerGeneration(): String
+    suspend fun triggerGeneration(await: Boolean = false): String
     /** /inject：写/删 chat_metadata.script_injects 并注入本会话生成；返回注入 ID。 */
-    fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean): String
+    fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean, filter: String? = null): String
     /** /gen：用当前聊天上下文 + 提示生成文本（不落盘），返回生成文本（官方 generateCallback）。 */
     suspend fun generateText(prompt: String, length: Int?): String
     /** /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本（官方 generateRawCallback）。 */
@@ -204,8 +204,9 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
         ),
         SlashCommandDef(
             "trigger",
-            description = "触发一次生成（官方 trigger；await 参数本实现不等待，登记）",
-            callback = { _, _ -> actions.triggerGeneration() },
+            description = "触发一次生成（官方 trigger；await=true 等待生成结束）",
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ -> actions.triggerGeneration(isTrue(inv.namedArgs["await"])) },
         ),
         SlashCommandDef(
             "gen",
@@ -247,6 +248,7 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
                     role = inv.namedArgs["role"] ?: "system",
                     scan = isTrue(inv.namedArgs["scan"]),
                     ephemeral = isTrue(inv.namedArgs["ephemeral"]),
+                    filter = inv.namedArgs["filter"],
                 )
             },
         ),
