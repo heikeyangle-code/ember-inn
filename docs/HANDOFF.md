@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（69 组差分 fixture，共 1147 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 69 组 / 1147 例（机器数）为准。
+**已覆盖（71 组差分 fixture，共 1169 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 71 组 / 1169 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -131,6 +131,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | Reasoning 解析（parse/remove/formatReasoning） | reasoning-official.mjs | ReasoningDiffTest | 13 |
 | Token 预算（getMaxContext/Response/PromptTokens） | token-budget-official.mjs | TokenBudgetDiffTest | 17 |
 | 滑动/自动过滤（swipe/generatedTextFiltered/extractMultiSwipes） | swipe-official.mjs | SwipeDiffTest | 29 |
+| 工具调用增量解析（ToolManager.parseToolCalls） | tool-calls-official.mjs | ToolCallDiffTest | 8 |
+| 记忆扩展纯逻辑（memory） | memory-official.mjs | MemoryDiffTest | 14 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -238,6 +240,17 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 滑动允许/消息可滑/越界行为（pristine_greeting/regenerate/loop/none）与 ensureSwipes 初始化/归一。
 - auto-swipe 最短长度/黑名单阈值过滤；openai/textgen llamacpp 多回复提取（cleanUpMessage 注入，已单独差分）。
 - 差分：`scripts/diff/swipe-official.mjs`（script.js:9100/9123/9163/6778/6300 + power-user.js:3032 逐字；打桩 cleanUpMessage/syncMesToSwipe，已登记）→ `SwipeDiffTest` 29 例全过。
+
+### 3.8.12 工具调用增量解析 ✅（2026-08-12）
+官方 `tool-calling.js ToolManager.parseToolCalls / #applyToolCallDelta` 已移植到 `engine/provider/ToolCallParser.kt`：
+- OpenAI choices/tool_calls 字符串增量拼接、多 choice、thought signature 转移。
+- Cohere 工具事件、Anthropic content_block/input_json_delta/content_block_stop、Gemini candidates functionCall。
+- 差分：`scripts/diff/tool-calls-official.mjs`（tool-calling.js:427 逐字；打桩 isToolCallingSupported，已登记）→ `ToolCallDiffTest` 8 例全过。
+
+### 3.8.13 记忆扩展纯逻辑 ✅（2026-08-12）
+官方 `extensions/memory` 的 `getLatestMemoryFromChat / getIndexOfLatestChatSummary / getSummaryPromptForNow / getRawSummaryPrompt` 已移植到 `engine/prompt/MemoryEngine.kt`：
+- 摘要位置回溯、间隔/强制字数/force 条件、原始摘要提示词构建（最新摘要 + 消息缓冲区 + token 截断 + maxMessagesPerRequest）。
+- 差分：`scripts/diff/memory-official.mjs`（memory/index.js:353/374/559/756 + utils.js extractAllWords 逐字；打桩 substituteParamsExtended/countSourceTokens，已登记）→ `MemoryDiffTest` 14 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 

@@ -1,0 +1,335 @@
+{
+  "source": "extensions/memory pure logic",
+  "cases": [
+    {
+      "id": "latest-empty",
+      "args": {
+        "body": {
+          "method": "latest",
+          "chat": []
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "latest-skip-last",
+      "args": {
+        "body": {
+          "method": "latest",
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {
+                "memory": "M"
+              }
+            },
+            {
+              "name": "B",
+              "mes": "y",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": "M"
+    },
+    {
+      "id": "latest-none",
+      "args": {
+        "body": {
+          "method": "latest",
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "index-found",
+      "args": {
+        "body": {
+          "method": "index",
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {
+                "memory": "M"
+              }
+            },
+            {
+              "name": "B",
+              "mes": "y",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "index-not-found",
+      "args": {
+        "body": {
+          "method": "index",
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": -1
+    },
+    {
+      "id": "prompt-interval-zero",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "promptInterval": 0,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "prompt-too-short",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "promptInterval": 5,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "prompt-satisfied",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "promptInterval": 2,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "one two",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "B",
+              "mes": "three four",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": "Summarize."
+    },
+    {
+      "id": "prompt-force-words",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "promptInterval": 100,
+          "promptForceWords": 3,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "one two three four",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "prompt-force",
+      "args": {
+        "body": {
+          "method": "prompt",
+          "promptInterval": 100,
+          "force": true,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "x",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": "Summarize."
+    },
+    {
+      "id": "raw-basic",
+      "args": {
+        "body": {
+          "method": "raw",
+          "promptSize": 1000,
+          "maxMessagesPerRequest": 0,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "aaaa",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "B",
+              "mes": "bbbb",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "C",
+              "mes": "cccc",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": {
+        "rawPrompt": "A:\naaaa\n\nB:\nbbbb",
+        "lastUsedIndex": 1
+      }
+    },
+    {
+      "id": "raw-with-memory",
+      "args": {
+        "body": {
+          "method": "raw",
+          "promptSize": 1000,
+          "maxMessagesPerRequest": 0,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "old",
+              "is_system": false,
+              "extra": {
+                "memory": "SUMMARY"
+              }
+            },
+            {
+              "name": "B",
+              "mes": "bbbb",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "C",
+              "mes": "cccc",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": {
+        "rawPrompt": "SUMMARY\n\nB:\nbbbb",
+        "lastUsedIndex": 1
+      }
+    },
+    {
+      "id": "raw-max-messages",
+      "args": {
+        "body": {
+          "method": "raw",
+          "promptSize": 1000,
+          "maxMessagesPerRequest": 1,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "aaaa",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "B",
+              "mes": "bbbb",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "C",
+              "mes": "cccc",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": {
+        "rawPrompt": "A:\naaaa",
+        "lastUsedIndex": 0
+      }
+    },
+    {
+      "id": "raw-token-limit",
+      "args": {
+        "body": {
+          "method": "raw",
+          "promptSize": 40,
+          "maxMessagesPerRequest": 0,
+          "chat": [
+            {
+              "name": "A",
+              "mes": "aaaa",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "B",
+              "mes": "bbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "is_system": false,
+              "extra": {}
+            },
+            {
+              "name": "C",
+              "mes": "cccc",
+              "is_system": false,
+              "extra": {}
+            }
+          ]
+        }
+      },
+      "expected": {
+        "rawPrompt": "",
+        "lastUsedIndex": -1
+      }
+    }
+  ]
+}

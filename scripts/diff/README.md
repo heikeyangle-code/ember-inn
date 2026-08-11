@@ -51,6 +51,8 @@
 - `reasoning-official.mjs`：官方 Reasoning 解析 parse/remove/formatReasoning（reasoning.js）。
 - `token-budget-official.mjs`：官方 Token 预算 getMaxContext/Response/PromptTokens + getKayraMaxContextTokens。
 - `swipe-official.mjs`：官方滑动/自动过滤 isSwipingAllowed/isMessageSwipeable/getOverswipeBehavior/ensureSwipes/generatedTextFiltered/extractMultiSwipes。
+- `tool-calls-official.mjs`：官方工具调用增量解析 ToolManager.parseToolCalls（OpenAI/Cohere/Anthropic/Gemini）。
+- `memory-official.mjs`：官方记忆扩展纯逻辑 getLatestMemoryFromChat/getIndexOfLatestChatSummary/getSummaryPromptForNow/getRawSummaryPrompt。
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
@@ -127,6 +129,8 @@ node scripts/diff/streaming-response-official.mjs
 node scripts/diff/reasoning-official.mjs
 node scripts/diff/token-budget-official.mjs
 node scripts/diff/swipe-official.mjs
+node scripts/diff/tool-calls-official.mjs
+node scripts/diff/memory-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs
