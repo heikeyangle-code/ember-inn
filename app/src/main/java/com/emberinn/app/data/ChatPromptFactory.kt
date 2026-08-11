@@ -17,6 +17,7 @@ import com.emberinn.engine.prompt.AuthorsNoteBuilder
 import com.emberinn.engine.prompt.AuthorsNoteEngine
 import com.emberinn.engine.prompt.AuthorsNoteMetadata
 import com.emberinn.engine.prompt.AuthorsNoteSettings
+import com.emberinn.engine.prompt.BiasEngine
 import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptAssembler
@@ -610,15 +611,10 @@ class ChatPromptFactory {
         return ParsedCard(source, entries, regexScripts)
     }
 
-    /**
-     * 对齐官方 extractMessageBias（script.js）：提取 {{bias:...}} 内容并从消息中移除宏。
-     * 官方用 Handlebars helper；本实现用非贪婪正则（嵌套/引号边界近似，登记见 HANDOFF）。
-     */
+    /** 官方 extractMessageBias + removeMacros（引擎 1:1，Handlebars 语义）。 */
     private fun extractMessageBias(message: String): Pair<String, String> {
-        val pattern = Regex("""\{\{\s*bias\s*:([\s\S]*?)\s*\}\}""")
-        val matches = pattern.findAll(message).map { it.groupValues[1].trim() }.filter { it.isNotEmpty() }.toList()
-        val cleaned = pattern.replace(message, "")
-        val bias = if (matches.isEmpty()) "" else " " + matches.joinToString(" ")
+        val bias = BiasEngine.extractMessageBias(message)
+        val cleaned = if (bias.isNotBlank()) BiasEngine.removeMacros(message) else message
         return cleaned to bias
     }
 

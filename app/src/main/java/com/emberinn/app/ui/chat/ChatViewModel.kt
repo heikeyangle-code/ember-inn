@@ -54,9 +54,19 @@ import com.emberinn.engine.group.GroupDepthMember
 import com.emberinn.engine.group.GroupDepthPromptsEngine
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.group.GroupLoopEngine
+import com.emberinn.engine.prompt.BiasEngine
+import com.emberinn.engine.prompt.AutoContinueConfig
+import com.emberinn.engine.prompt.AutoContinueEngine
+import com.emberinn.engine.prompt.CleanUpConfig
+import com.emberinn.engine.prompt.CleanUpMessageEngine
+import com.emberinn.engine.prompt.ContextSettings
+import com.emberinn.engine.prompt.CustomStoppingConfig
+import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.StoppingStringsConfig
+import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.slash.AutoExecuteHandler
 import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.slash.SlashState
@@ -832,6 +842,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var streamSession: LlmClient.StreamSession? = null
     @Volatile
     private var streamActive = false
+    private var singleAutoContinueRuns = 0
     private var streamStartedAt: String = java.time.Instant.now().toString()
     private var streamContinueMode = false
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
@@ -1270,12 +1281,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    /** 对齐官方 extractMessageBias：提取 {{bias:...}} 并从文本移除。 */
+    /** 官方 extractMessageBias + removeMacros（引擎 1:1）。 */
     private fun extractEditBias(message: String): Pair<String, String> {
-        val pattern = Regex("""\{\{\s*bias\s*:([\s\S]*?)\s*\}\}""")
-        val matches = pattern.findAll(message).map { it.groupValues[1].trim() }.filter { it.isNotEmpty() }.toList()
-        val cleaned = pattern.replace(message, "")
-        val bias = if (matches.isEmpty()) "" else " " + matches.joinToString(" ")
+        val bias = BiasEngine.extractMessageBias(message)
+        val cleaned = if (bias.isNotBlank()) BiasEngine.removeMacros(message) else message
         return cleaned to bias
     }
 
@@ -1737,6 +1746,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         generatingSwipe = swipeMode
         pendingGroupGenId = groupGenId
         streamActive = true
+        singleAutoContinueRuns = 0
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
         viewModelScope.launch(Dispatchers.Default) {
@@ -1797,6 +1807,37 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     if (streamActive) {
                         streamActive = false
                         finalizeStream(streamContinueMode)
+                        // 官方 triggerAutoContinue：单聊且满足条件时自动 continue（群聊走 runGroupStep）
+                        val lastAi = chatStore.messages(sessionId).lastOrNull { !isUser(it) && !isSystemMsg(it) }
+                        val lastText = lastAi?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
+                        val cleanProfile = chatRepository.profile()
+                        val shouldAutoContinue = group == null &&
+                            !impersonation &&
+                            !swipeMode &&
+                            singleAutoContinueRuns < 5 &&
+                            AutoContinueEngine.shouldAutoContinue(
+                                messageChunk = lastText,
+                                isImpersonate = false,
+                                config = AutoContinueConfig(
+                                    enabled = GenerationPrefs.autoContinueEnabled(getApplication()),
+                                    targetLength = GenerationPrefs.autoContinueTargetLength(getApplication()),
+                                    allowChatCompletions = GenerationPrefs.allowChatCompletions(getApplication()),
+                                    mainApi = cleanProfile?.let {
+                                        com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+                                    } ?: "openai",
+                                    textareaText = _inputDraft.value,
+                                    lastMessageText = lastText,
+                                ),
+                                tokenCount = { text ->
+                                    runCatching {
+                                        com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(cleanProfile?.model.orEmpty()).count(text)
+                                    }.getOrDefault(0)
+                                },
+                            )
+                        if (shouldAutoContinue) {
+                            singleAutoContinueRuns++
+                            continueGeneration()
+                        }
                         onFinished?.invoke()
                     }
                 },
@@ -1903,13 +1944,44 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamSession = null
         // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
         // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
-        val reply = if (GlobalRegexPrefs.enabled(getApplication())) {
+        val wasImpersonating = _isImpersonating.value
+        val wasSwipe = generatingSwipe
+        val rawReply = if (GlobalRegexPrefs.enabled(getApplication())) {
             RegexPipelineEngine.apply(_streamingText.value, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
         } else {
             _streamingText.value
         }
-        val wasImpersonating = _isImpersonating.value
-        val wasSwipe = generatingSwipe
+        // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）
+        val profileForClean = chatRepository.profile()
+        val apiForClean = profileForClean?.let {
+            com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+        } ?: "openai"
+        val stoppingStrings = StoppingStringsEngine.getStoppingStrings(
+            api = apiForClean,
+            config = StoppingStringsConfig(
+                isImpersonate = wasImpersonating,
+                isContinue = continueMode,
+                name1 = currentUserName,
+                name2 = currentCharName,
+                chatLastIsUser = chatStore.messages(sessionId).lastOrNull()?.let { isUser(it) } == true,
+                groupMemberNames = groupMembers.map { it.name },
+                selectedGroup = group != null,
+                env = MacroEnv(user = currentUserName, char = currentCharName),
+            ),
+        )
+        val reply = CleanUpMessageEngine.clean(
+            getMessage = rawReply,
+            config = CleanUpConfig(
+                isImpersonate = wasImpersonating,
+                isContinue = continueMode,
+                stoppingStrings = stoppingStrings,
+                name1 = currentUserName,
+                name2 = currentCharName,
+                hasReasoningPrefix = _streamingReasoning.value.isNotBlank(),
+                groupMemberNames = groupMembers.map { it.name },
+                groupTrimmingEnabled = group != null,
+            ),
+        )
         when {
             wasImpersonating -> {
                 // 官方：冒充结果进输入框，不写历史

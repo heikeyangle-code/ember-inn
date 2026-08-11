@@ -576,10 +576,7 @@ class LlmClient(
                     else -> message["tool_plan"]?.asText().orEmpty()
                 }
             }
-            else -> root["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.let { choice ->
-                choice["message"]?.jsonObject?.get("content")?.asText()
-                    ?: choice["text"]?.asText()
-            }.orEmpty()
+            else -> ResponseDataExtractor.extractMessageFromData(root, "openai")
         }
     }.getOrDefault("")
 

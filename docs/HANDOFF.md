@@ -809,6 +809,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - **代码块“框死看不全”（fd95265）**：mikepenz 默认 `MarkdownCode` 对 code 挂 `horizontalScroll`（源码 MarkdownCode.kt），长 JSON 只能横向滚动、内容“被框住”。新增 `WrappingHighlightedCode`：snipme 高亮保留 + `Text(softWrap=true)` 自动换行，替换 codeFence/codeBlock 两个入口。官方 style.css 是 overflow-x:auto（横向滚动），此处为视觉可用性有意改成换行（功能级对齐，内容完整可见）。
 - 影响：纯 App/UI 层，引擎零改动；与第 11 章官方对照结论不冲突。
 
+### 12.15 引擎新功能 App 接线（2026-08-12）
+- `ChatPromptFactory` / `ChatViewModel` 的 `{{bias}}` 提取与宏剥离已从私有正则改为 `BiasEngine`（官方 Handlebars 语义；历史 `{{bias:...}}` 写法不再支持，官方也不支持，README/HANDOFF 已登记）。
+- `ChatViewModel.finalizeStream` 保存回复前已接 `CleanUpMessageEngine` + `StoppingStringsEngine`（停用词/名字/群消息/trim 全链），替换原先只过正则的保存路径。
+- 单聊自动续写已接 `AutoContinueEngine`（原只有群聊 `GroupLoopEngine`），最大 5 轮与群聊一致。
+- `LlmClient` OpenAI 兼容非流式最终响应已改用 `ResponseDataExtractor`；`StreamingReplyParser` / `ReasoningEngine` / `TokenBudgetEngine` / `SwipeEngine` 引擎已差分就绪，App 剩余接线点：流式 SSE delta（StreamingReplyParser）、removeReasoning（ReasoningEngine）、Token 预算默认值（TokenBudgetEngine）、滑动 UI 判定（SwipeEngine）。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
