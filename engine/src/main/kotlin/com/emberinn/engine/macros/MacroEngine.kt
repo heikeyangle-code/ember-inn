@@ -78,6 +78,8 @@ data class MacroEnv(
     val global: VariableStore = EmptyVariableStore,
     /** 世界书 outlet 提示（官方 {{outlet::key}} ← extension_prompts[customWIOutlet_key]）。 */
     val outlets: Map<String, String> = emptyMap(),
+    /** 官方 memory 扩展 {{summary}}：返回当前聊天最新记忆摘要。 */
+    val summary: String = "",
 )
 
 /**
@@ -521,6 +523,7 @@ object MacroEngine {
             "charfirstmessage", "greeting" -> greetingMacro(args, env.character)
             "charversion", "version", "char_version" -> env.character.version
             "model" -> env.system.model
+            "summary" -> env.summary
             "ismobile" -> (if (env.isMobile) "true" else "false")
             "space" -> " "
             "newline" -> "\n"

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // extensions/memory 纯逻辑：getLatestMemoryFromChat / getIndexOfLatestChatSummary /
-// getSummaryPromptForNow / getRawSummaryPrompt（index.js:353/374/559/756）→ fixture。
+// getSummaryPromptForNow / getRawSummaryPrompt / formatMemoryValue（index.js:353/374/559/756/240）→ fixture。
 // 打桩：substituteParamsExtended=恒等、countSourceTokens=len+padding、extractAllWords 官方实现。
 
 import { writeFileSync } from 'node:fs';
@@ -18,6 +18,17 @@ const countSourceTokens = async (str, padding) => str.length + padding;
 let getSourceContextSize = async () => 4096;
 const chatBuffer = [];
 let latestSummary = '';
+
+const defaultTemplate = '[Summary: {{summary}}]';
+function formatMemoryValue(value, template, substitute) {
+    if (!value) return '';
+    value = value.trim();
+    if (template) {
+        return substitute(template);
+    } else {
+        return 'Summary: ' + value;
+    }
+}
 
 function extractAllWords(value) {
     const words = [];
@@ -126,6 +137,10 @@ const runCase = new Function([
     '        getSourceContextSize = async () => b.promptSize ?? 4096;',
     '        return await getRawSummaryPrompt({ chat: b.chat }, b.prompt ?? "Summarize.");',
     '    }',
+    '    if (b.method === "format") {',
+    '        const substitute = (t) => String(t).replaceAll("{{summary}}", b.value.trim()).replaceAll("{{user}}", "User");',
+    '        return formatMemoryValue(b.value, b.template, substitute);',
+    '    }',
     '    throw new Error("unknown method");',
     '};',
 ].join('\n'));
@@ -164,6 +179,10 @@ await add('raw-token-limit', {
     method: 'raw', promptSize: 40, maxMessagesPerRequest: 0,
     chat: chat([{ name: 'A', mes: 'aaaa' }, { name: 'B', mes: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb' }, { name: 'C', mes: 'cccc' }]),
 });
+await add('format-empty', { method: 'format', value: '', template: '[Summary: {{summary}}]' });
+await add('format-default-template', { method: 'format', value: '  故事摘要  ', template: '[Summary: {{summary}}]' });
+await add('format-custom-template', { method: 'format', value: '摘要', template: '记忆：{{summary}}（{{user}}）' });
+await add('format-no-template', { method: 'format', value: '摘要', template: '' });
 
 writeFileSync(outFile, JSON.stringify({ source: 'extensions/memory pure logic', cases }, null, 2));
 console.log('memory:', cases.length, 'cases ->', outFile);

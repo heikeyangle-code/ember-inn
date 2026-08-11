@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -63,6 +64,14 @@ class MemoryDiffTest {
                     val e = expected.jsonObject
                     assertEquals("case $id rawPrompt", e["rawPrompt"]?.jsonPrimitive?.content ?: "", result.rawPrompt)
                     assertEquals("case $id lastUsedIndex", e["lastUsedIndex"]?.jsonPrimitive?.content?.toInt() ?: -1, result.lastUsedIndex)
+                }
+                "format" -> {
+                    val value = body["value"]?.jsonPrimitive?.content ?: ""
+                    val template = body["template"]?.jsonPrimitive?.contentOrNull ?: MemoryEngine.DEFAULT_TEMPLATE
+                    val actual = MemoryEngine.formatMemoryValue(value, template) {
+                        it.replace("{{summary}}", value.trim()).replace("{{user}}", "User")
+                    }
+                    assertEquals("case $id", expected.jsonPrimitive.content, actual)
                 }
             }
         }

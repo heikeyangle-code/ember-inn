@@ -18,7 +18,27 @@ data class RawSummaryPrompt(
 
 object MemoryEngine {
 
+    /** 官方 extensions/memory defaultSettings.prompt。 */
+    const val DEFAULT_PROMPT =
+        "Ignore previous instructions. Summarize the most important facts and events in the story so far. " +
+            "If a summary already exists in your memory, use that as a base and expand with new facts. " +
+            "Limit the summary to {{words}} words or less. Your response should include nothing but the summary."
+
+    /** 官方 extensions/memory defaultSettings.template。 */
+    const val DEFAULT_TEMPLATE = "[Summary: {{summary}}]"
+
     private val wordRegex = Regex("\\b\\w+\\b", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
+
+    /** 官方 formatMemoryValue：模板为空时用 `Summary: value`，否则 substituteParamsExtended(template, {summary})。 */
+    fun formatMemoryValue(
+        value: String,
+        template: String = DEFAULT_TEMPLATE,
+        substitute: (String) -> String = { it },
+    ): String {
+        if (value.isBlank()) return ""
+        val trimmed = value.trim()
+        return if (template.isNotEmpty()) substitute(template) else "Summary: $trimmed"
+    }
 
     fun getLatestMemoryFromChat(chat: List<MemoryMessage>): String {
         if (chat.isEmpty()) return ""

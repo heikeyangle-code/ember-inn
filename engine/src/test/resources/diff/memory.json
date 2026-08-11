@@ -330,6 +330,50 @@
         "rawPrompt": "",
         "lastUsedIndex": -1
       }
+    },
+    {
+      "id": "format-empty",
+      "args": {
+        "body": {
+          "method": "format",
+          "value": "",
+          "template": "[Summary: {{summary}}]"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "format-default-template",
+      "args": {
+        "body": {
+          "method": "format",
+          "value": "  故事摘要  ",
+          "template": "[Summary: {{summary}}]"
+        }
+      },
+      "expected": "[Summary: 故事摘要]"
+    },
+    {
+      "id": "format-custom-template",
+      "args": {
+        "body": {
+          "method": "format",
+          "value": "摘要",
+          "template": "记忆：{{summary}}（{{user}}）"
+        }
+      },
+      "expected": "记忆：摘要（User）"
+    },
+    {
+      "id": "format-no-template",
+      "args": {
+        "body": {
+          "method": "format",
+          "value": "摘要",
+          "template": ""
+        }
+      },
+      "expected": "Summary: 摘要"
     }
   ]
 }

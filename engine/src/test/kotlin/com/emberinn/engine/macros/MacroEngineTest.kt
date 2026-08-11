@@ -171,4 +171,10 @@ class MacroEngineTest {
         assertEquals("cba", MacroEngine.substitute("{{reverse::abc}}", env2))
         assertEquals("", MacroEngine.substitute("{{// 注释}}", env2))
     }
+
+    @Test
+    fun `summary macro returns latest memory`() {
+        assertEquals("", MacroEngine.substitute("{{summary}}", env))
+        assertEquals("故事摘要", MacroEngine.substitute("{{summary}}", env.copy(summary = "故事摘要")))
+    }
 }
