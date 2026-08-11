@@ -2601,7 +2601,7 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
     out = Regex("<font[^>]*color=[\"']?#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
         .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
     out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
-    out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n")
+    out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "  \n")
     // 官方 DOMPurify 白名单里的文本级标签原生渲染（浏览器 UA 默认样式 1:1）：
     // sub/sup 上下标、ins 下划线、small/big 缩放、mark 黄底、kbd/samp/tt/code 等宽、
     // var/dfn/cite 斜体、abbr/acronym 虚线下划线；data/time/wbr 无视觉效果，剥标签留内容。
@@ -2618,6 +2618,20 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
     out = Regex("<(?:abbr|acronym)(?=[^>]*\\btitle\\b)[^>]*>([\\s\\S]*?)</(?:abbr|acronym)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE030${m.groupValues[1]}\uE031" }
     out = Regex("</?(?:abbr|acronym)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
     out = Regex("</?(?:data|time|wbr)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    // 可原生表达的 HTML（减少 Web 兜底）：
+    // <a href="..">text</a> → [text](url)；无 href 的 <a> 剥标签（官方无视觉）
+    // <img src=".."> → ![img](url)（Coil 原生图片）；无 src 的 <img> 剥标签
+    // 无属性的 <div>/<p>：块级语义用空行近似（markdown 段落分隔，官方块级排版接近）
+    // 无属性的 <span>：行内无视觉语义，直接剥；带属性的 span/div/p 由 Web 元素切分器接管
+    out = Regex("<a\\b(?=[^>]*\\bhref\\s*=\\s*[\"']([^\"']+)[\"'])[^>]*>([\\s\\S]*?)</a>", RegexOption.IGNORE_CASE)
+        .replace(out) { m -> "[${m.groupValues[2]}](${m.groupValues[1]})" }
+    out = Regex("</?a[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<img\\b(?=[^>]*\\bsrc\\s*=\\s*[\"']([^\"']+)[\"'])[^>]*>", RegexOption.IGNORE_CASE)
+        .replace(out) { m -> "![img](${m.groupValues[1]})" }
+    out = Regex("<img[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
+    out = Regex("<(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n\n")
+    out = Regex("</(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n\n")
+    out = Regex("<span\\s*>|</span\\s*>", RegexOption.IGNORE_CASE).replace(out, "")
     // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）。
     // 官方仅对非系统消息做引号转换（script.js `if (!isSystem)`），系统消息不做
     if (convertQuotes) {
@@ -2992,7 +3006,65 @@ private fun appendTextSegment(
     }
 }
 
-/** 把一条消息切成段：围栏外 Markdown 原生渲染，交互卡/Mermaid/富 HTML 各进独立 WebView。
+/** 真正需要独立 WebView 的块级/结构标签（含带属性的 div/p；font 仅 face/size 时）。
+ *  行内 Web 标签（button/input/span[属性]/font face-size/ruby/bdi/bdo 等）无法与原生文本混排，
+ *  仍按 12.6 登记整段走 Web；a/img 已原生转换，不进此清单。 */
+private val WEB_BLOCK_TAG = Regex(
+    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe)\\b" +
+        "|<(div|p)\\b(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
+        "|<font\\b(?=[^>]*\\s(?:face|size)=)",
+    RegexOption.IGNORE_CASE,
+)
+
+/** 在围栏外切出“真正需要 WebView”的元素区间：从开标签到同名闭标签（同层嵌套计数，自闭合除外）。
+ *  无闭标签（残缺 HTML）延伸到文本末尾；跨围栏的残缺元素按当前片段处理，见 12.6。 */
+private fun carveWebElementRanges(text: String): List<IntRange> {
+    val out = mutableListOf<IntRange>()
+    var i = 0
+    val fence = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
+    while (i < text.length) {
+        val f = fence.find(text, i)
+        val t = WEB_BLOCK_TAG.find(text, i)
+        val fi = f?.range?.first ?: Int.MAX_VALUE
+        val ti = t?.range?.first ?: Int.MAX_VALUE
+        if (fi == Int.MAX_VALUE && ti == Int.MAX_VALUE) break
+        if (fi <= ti) {
+            i = f!!.range.last + 1
+            continue
+        }
+        val name = t!!.groupValues[1].ifEmpty { t.groupValues[2].ifEmpty { t.groupValues[3] } }
+        if (t.value.trimEnd().endsWith("/>")) {
+            out += t.range.first until t.range.last + 1
+            i = t.range.last + 1
+            continue
+        }
+        var depth = 1
+        var j = t.range.last + 1
+        val openRe = Regex("<${Regex.escape(name)}\\b(?![^>]*/\\s*>)[^>]*>", RegexOption.IGNORE_CASE)
+        val closeRe = Regex("</${Regex.escape(name)}\\s*>", RegexOption.IGNORE_CASE)
+        while (depth > 0 && j < text.length) {
+            val o = openRe.find(text, j)
+            val c = closeRe.find(text, j)
+            val oi = o?.range?.first ?: Int.MAX_VALUE
+            val ci = c?.range?.first ?: Int.MAX_VALUE
+            if (ci == Int.MAX_VALUE) break
+            if (oi < ci) {
+                depth++
+                j = o!!.range.last + 1
+            } else {
+                depth--
+                j = c!!.range.last + 1
+            }
+        }
+        val end = if (depth == 0) j else text.length
+        out += t.range.first until end
+        i = end
+    }
+    return out
+}
+
+/** 把一条消息切成段：先切出真正需要 WebView 的块级 HTML 元素（周围文字保持原生 Markdown），
+ *  再对非 Web 部分按围栏切分（交互卡/Mermaid/普通代码块），最后按官方富标签兜底。
  *  修复“文字+卡片混排时整条进 WebView，围栏外 **粗体** 等 Markdown 语法失效”。 */
 private fun buildMessageSegments(
     content: String,
@@ -3001,18 +3073,27 @@ private fun buildMessageSegments(
     interactiveCardsOn: Boolean,
 ): List<ChatSegment> {
     val out = mutableListOf<ChatSegment>()
-    var last = 0
-    for (m in ANY_FENCE.findAll(content)) {
-        appendTextSegment(out, content.substring(last, m.range.first), isSystem, htmlEnabled)
-        val raw = m.value
-        when {
-            interactiveCardsOn && isInteractiveFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
-            MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
-            else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
+    fun appendFenced(text: String) {
+        var last = 0
+        for (m in ANY_FENCE.findAll(text)) {
+            appendTextSegment(out, text.substring(last, m.range.first), isSystem, htmlEnabled)
+            val raw = m.value
+            when {
+                interactiveCardsOn && isInteractiveFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
+                MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
+                else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
+            }
+            last = m.range.last + 1
         }
-        last = m.range.last + 1
+        appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
     }
-    appendTextSegment(out, content.substring(last), isSystem, htmlEnabled)
+    var cursor = 0
+    for (r in carveWebElementRanges(content)) {
+        appendFenced(content.substring(cursor, r.first))
+        out += ChatSegment(SegmentKind.WebHtml, content.substring(r.first, r.last + 1))
+        cursor = r.last + 1
+    }
+    appendFenced(content.substring(cursor))
     return out
 }
 
@@ -3623,7 +3704,7 @@ table{border-spacing:0;border-collapse:collapse;margin-bottom:10px}
 td,th{border:1px solid;padding:.25em}
 ol,ul{margin-top:5px;margin-bottom:5px}
 li tt{display:inline-block}
-pre code{display:block;overflow-x:auto}
+pre,pre code{white-space:pre-wrap;word-break:break-word}
 strong em,strong,h1,h2{font-weight:bold}
 code{font-family:monospace}
 </style></head><body>$bodyHtml</body></html>"""

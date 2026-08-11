@@ -573,7 +573,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | `<b>/<strong>`（style.css strong/h1/h2） | font-weight bold | → `**` Markdown 加粗 | ✅ |
 | `<s>/<strike>/<del>` | 删除线 | → `~~` | ✅ |
 | `<font color="#hex">`（style.css font[color]…inherit） | 指定色，内部 em/i/u/q 继承 | \uE005..#hex..\uE007 → 最后覆盖 em/u/q | ✅ |
-| `<hr>`/`<br>` | 分隔线/换行 | → Markdown 分隔线 / 换行 | ✅ |
+| `<hr>`/`<br>` | 分隔线/换行 | `<hr>`→`---`；`<br>`→`  \n`（Markdown 硬换行，mikepenz HARD_LINE_BREAK 渲染真换行，官方 1:1） | ✅ |
 | sub/sup（Chromium UA html.css） | font-size: smaller + vertical-align: sub/super | 原生 SpanStyle：0.83×字号 + BaselineShift.Subscript/Superscript | ✅ |
 | ins（UA） | text-decoration: underline | 原生 Underline | ✅ |
 | small/big（UA） | font-size: smaller / larger | 0.83× / 1.2× 字号 | ✅ |
@@ -584,6 +584,11 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | data/time/wbr | 无视觉样式 | 剥标签留内容 | ✅ |
 | bdi/bdo/ruby/rt/rp（UA） | 方向隔离/覆盖、注音 | WebView 兜底（原生无法表达） | ✅ 需 Web |
 | font face/size | UA 字体族/1-7 号字 | WebView 兜底（原生仅 font color） | 🟡 需 Web |
+| `<a href>`（原始 HTML） | 官方 a 链接色+无下划线 | 原生转换 `[text](url)`（复用链接样式）；无 href 剥标签 | ✅ |
+| `<img src>`（原始 HTML） | 浏览器内联图片 | 原生转换 `![img](url)`（Coil 图片管线）；无 src 剥标签 | ✅ 尺寸属性不保留 |
+| 无属性 `<div>`/`<p>` | 块级布局（上下分行） | 原生剥标签 + 空行段落近似（`\n\n`） | 🟡 视觉近似 |
+| 无属性 `<span>` | 行内无视觉 | 原生剥标签 | ✅ |
+| 带属性 `<div>`/`<p>`（class/style/align 等） | 块级+样式 | 独立 WebView 元素（周围文字保持原生，不再整条 Web） | ✅ 需 Web |
 | 正文色（style.css body） | --SmartThemeBodyColor | 原生无色样式统一补 bodyColor；WebView body color | ✅ |
 | 链接（style.css a） | --SmartThemeQuoteColor，无下划线 | linkTextSpanStyle=quoteColor；WebView a=quote | ✅ |
 | 引用块（style.css blockquote） | 左 3px quote + padding-left 10px + black30a + margin 0 | 原生黑 30% Box + MarkdownBlockQuote 左边条；WebView CSS 同官方 | ✅ |
@@ -645,11 +650,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 旧测高用 `evaluateJavascript` 每 250ms 轮询，每个 HTML 消息最多 60 次空转。
 
 ### 12.2 分段渲染（ChatScreen.kt：buildMessageSegments / SegmentedMarkdown）
-- `ANY_FENCE` 按 ``` / ~~~ 把消息切成段，每段分类：
+- **第一步：Web 元素切分（本轮新增）**：`carveWebElementRanges` 在围栏外找出“真正需要 WebView”的块级/结构元素（table/ul/ol/li/blockquote/pre/h1-6/center/figure/…/video/audio/canvas/svg/math/iframe/style/script/form 等，以及带属性的 div/p、face/size 的 font），从开标签到同名闭标签（同层嵌套计数、自闭合除外）切出独立 WebView 段；**周围文字保持原生 Markdown**，不再“一条消息有一点 HTML 就整条 Web”。
+- **第二步：非 Web 部分按围栏切分**：`ANY_FENCE` 按 ``` / ~~~ 分段：
  - 交互卡段：``` 内以 `<` 开头以 `>` 结尾或含 `<body>`（`INTERACTIVE_FENCE` 与 `embedInteractiveBlocks` 同一正则）→ 独立 WebViewHtml，内部仍是 details 原代码 + iframe srcdoc，脚本照常执行
  - Mermaid 段：```mermaid → 独立 WebViewHtml（mermaid.min.js 本地 asset）
  - 普通代码块段：原样交给原生 Markdown
- - 围栏外文本段：先 `preprocessOfficialHtml`，命中 `OFFICIAL_HTML_TAG`（官方标签清单）或（HTML 开关开且 looksLikeHtml）→ 独立 WebViewHtml；否则原生 Markdown
+ - 围栏外文本段：先 `preprocessOfficialHtml`（本轮新增 a/img 原生转换、无属性 div/p/span 剥标签、`<br>` 硬换行），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等）或（HTML 开关开且 looksLikeHtml）→ 整段 WebView 兜底；否则原生 Markdown
 - 纯 Markdown 消息（全段 Native）仍整条一次原生渲染，不拆散列表 / 引用等跨段 Markdown 结构。
 - 段间 `Arrangement.spacedBy(6.dp)`；外层 modifier（气泡 / 长按 / 滑回复）包在整条 Column 上。
 
@@ -738,7 +744,11 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - **键盘 / 滚底**：先滚底再收键盘（小视口滚底、大视口锚底）避免“滚到旧视口”。聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat）可彻底消除键盘开合/新消息的底部跳动，但需重写滚动跟随与 key 逻辑，风险高，列为后续方案（当前未采用）。
 
 ### 12.6 已知边界
-- 围栏外“非官方裸标签”（如 `<foo>`、`a<b>`）不再误判成富 HTML：无属性/非官方清单标签走原生 Markdown（原样显示文本）；带属性或自闭合标签（`<foo x=1>`、`<br/>`）仍进 WebView。HTML 开关关闭时围栏外文本一律走原生（旧实现整条 WebView），符合“HTML 开关关闭 = 不渲染任意 HTML”。
+- **行内 Web 标签仍整段走 Web（无法与原生文本混排）**：button/input/select/textarea/label/progress/meter/output/map/area/object/span[属性]/font face-size/ruby/rt/rp/bdi/bdo 等出现在围栏外文字里时，所在整段仍进 WebView（Compose 不支持“原生文字 + 任意行内 HTML 控件”混排）；块级卡片/表格/媒体已独立切出，周围文字不再被拖入。
+- 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似块级分行（官方是块级 margin）；连续 `<div>` 的间隔视觉略不同。带属性 div/p 走 Web 元素，不参与该近似。
+- `<a href>`/`<img src>` 转原生 markdown 时，img 的 width/height/alt 等属性不保留（alt 固定为 `img`）。
+- 围栏外“非官方裸标签”（如 `<foo>`、`a<b>`）不再误判成富 HTML：无属性/非官方清单标签走原生 Markdown（原样显示文本）；带属性或自闭合标签（`<foo x=1>`、`<br/>`）仍进 WebView。HTML 开关关闭时围栏外文本一律走原生，符合“HTML 开关关闭 = 不渲染任意 HTML”。
+- Web 元素切分边界：无闭标签的残缺元素延伸到消息末尾；同名嵌套按层计数；跨围栏的残缺 HTML（开标签在围栏外、闭标签在围栏后）会按片段分别处理（低频边缘，行为不崩溃）。
 - iframe 内部动态改高仍靠 3s 内复测，未向卡片脚本注入 ResizeObserver（避免改动角色卡内容）。
 - WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
 - 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
