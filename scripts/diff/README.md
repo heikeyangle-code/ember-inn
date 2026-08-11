@@ -42,6 +42,10 @@
   打桩 removeReasoningFromString=恒等（脚本头部登记）。
 - `auto-continue-official.mjs`：官方自动续写判定 shouldAutoContinue（script.js），
   打桩 getTokenCount/textarea/abortController（脚本头部登记）。
+- `stopping-strings-official.mjs`：官方停用词全链 getStoppingStrings/getCustomStoppingStrings/getInstructStoppingSequences，
+  打桩 substituteParams/EPHEMERAL（脚本头部登记）。
+- `bias-official.mjs`：官方偏置全链 getBiasStrings/extractMessageBias/removeMacros，
+  Handlebars 官方同版本 vendor（^4.7.9）。
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
@@ -112,6 +116,8 @@ node scripts/diff/prompt-utils-official.mjs
 node scripts/diff/cleanup-official.mjs
 node scripts/diff/response-data-official.mjs
 node scripts/diff/auto-continue-official.mjs
+node scripts/diff/stopping-strings-official.mjs
+node scripts/diff/bias-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs

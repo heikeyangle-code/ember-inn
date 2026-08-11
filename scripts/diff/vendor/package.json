@@ -1,1 +1,1 @@
-{"name":"ember-inn-diff-vendor","private":true,"dependencies":{"sanitize-filename":"^1.6.3","yaml":"2.8.3"}}
+{"name":"ember-inn-diff-vendor","private":true,"dependencies":{"handlebars":"^4.7.9","sanitize-filename":"^1.6.3","yaml":"2.8.3"}}
