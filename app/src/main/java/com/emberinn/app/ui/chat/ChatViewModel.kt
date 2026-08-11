@@ -1006,12 +1006,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             presetScripts = presetScripts,
             presetAllowed = presetAllowed,
         )
+        // 官方 Generate：getBiasStrings(textareaText, type) 先提取 {{bias}}，sendMessageAsUser 再存 extra.bias
+        val messageBias = BiasEngine.extractMessageBias(effectiveText)
         val regexedText = if (GlobalRegexPrefs.enabled(getApplication())) {
             RegexPipelineEngine.apply(effectiveText, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
         } else {
             effectiveText
         }
-        chatStore.append(sessionId, true, regexedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex)
+        val storedText = if (messageBias.isNotBlank()) BiasEngine.removeMacros(regexedText) else regexedText
+        // 官方 sendMessageAsUser：regex USER_INPUT → bias 剥离 → substituteParams
+        val substitutedText = MacroEngine.substitute(storedText, MacroEnv(user = userName, char = charName))
+        chatStore.append(sessionId, true, substitutedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
         _pendingMedia.value = emptyList()
         refreshMessages()
         // 官方 translate 扩展：auto_mode=inputs/both 时用户消息自动翻译（mes 换译文、原文进 extra.display_text）

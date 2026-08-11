@@ -118,11 +118,13 @@ class ChatStore(private val context: Context) {
         mediaIndex: Int? = null,
         groupGenId: Long? = null,
         greetingSwipes: List<String> = emptyList(),
+        bias: String? = null,
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
             // 官方 sendMessageAsUser：extra 含 isSmallSys=false；普通发送不带 gen_id（仅 slash 手动消息有）
             if (isUser) put("isSmallSys", JsonPrimitive(false))
+            bias?.takeIf { it.isNotBlank() }?.let { put("bias", JsonPrimitive(it)) }
             if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
                 put("inline_image", JsonPrimitive(true))

@@ -65,8 +65,6 @@ class ChatRepository(context: Context) {
         const val DEFAULT_CONTEXT_WINDOW = 4095
         /** 官方 oai_settings.openai_max_tokens 默认。 */
         const val DEFAULT_MAX_TOKENS = 300
-        /** 上下文预算中留给必选提示词（角色卡/世界书/系统提示）的安全余量。 */
-        const val PROMPT_BUDGET_RESERVE = 2_048
     }
 
     fun profile(): ConnectionProfile? = store.load()
@@ -173,11 +171,11 @@ class ChatRepository(context: Context) {
         val effectiveModel = override?.model?.ifBlank { null } ?: profile.model
         val effectiveContextWindow = override?.contextWindow?.takeIf { it > 0 }
             ?: profile.contextWindow.takeIf { it > 0 } ?: DEFAULT_CONTEXT_WINDOW
-        val effectiveMaxTokens = (
+        // 官方 getMaxPromptTokens = getMaxContextTokens - getMaxResponseTokens，不额外扣安全余量
+        val effectiveMaxTokens =
             override?.maxTokens?.takeIf { it > 0 }
                 ?: profile.sampler.maxTokens.takeIf { it > 0 }
                 ?: DEFAULT_MAX_TOKENS
-            ).coerceAtMost((effectiveContextWindow - PROMPT_BUDGET_RESERVE).coerceAtLeast(512))
         val sampler = profile.sampler.copy(
             temperature = override?.temperature ?: profile.sampler.temperature,
             topP = override?.topP ?: profile.sampler.topP,
