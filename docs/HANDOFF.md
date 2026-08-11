@@ -293,6 +293,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 表情精灵：AI 回复落盘后把选中精灵路径写进 `extra.sprite`，渲染优先读存储（官方 extra.sprite 语义）。
 - `/genraw` 官方参数补齐：instruct/as/stop/trim（stop 按 JSON 数组注入一次性停用词；trim 裁掉 user/char 名前缀；instruct/as 因 App 无 instruct 模式登记边界）。
 - 官方行为设置（power-user）：user_prompt_bias/show_user_prompt_bias、trim_spaces、trim_sentences、pin_examples、names_as_stop_strings 已加设置页并全链路接线（BiasEngine/CleanUpMessage/StoppingStrings/PromptPipeline.pinExamples）。
+- `/trigger await`：await=true 等待生成结束（官方语义）；`/inject filter`：filter 参数持久化，生成前用 SlashEngine 求值（true/1/yes 才注入；解析失败/空=始终注入，与官方 filter 复活失败同语义；闭包上下文为 App 近似）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
@@ -467,7 +468,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 2026-08-12：/inject 参数映射 + set/getExtensionPrompt + EM 示例 baseChatReplace + 深度提示规格全部下沉引擎并差分（34 例）；WorldInfoScanner scanInjections 缓冲语义修正；populationInjectionPrompts 宏替换对齐；getBiasStrings 引擎接入总装；工具调用执行循环全链接线（ToolRegistry 执行 → 官方 shouldDeleteMessage/saveFunctionToolInvocations → RECURSE_LIMIT 递归重装 → extra.tool_invocations 历史重构）
 
 **剩余**：captions extras/local/horde 来源（multimodal + refine/prompt_ask 已接）、表情精灵 LLM 分类、
-instruct 模式（textgen 协议提供商）、/inject filter 闭包、惰性闭包即时求值、/trigger await、
+instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、
 Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 web tokenizer（用户豁免）。
 图库（LIST/GALLERY）、世界书设置 UI、快捷回复多文件均已核实完成。
 
