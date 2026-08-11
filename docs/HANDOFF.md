@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（72 组差分 fixture，共 1174 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 72 组 / 1174 例（机器数）为准。
+**已覆盖（73 组差分 fixture，共 1182 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 73 组 / 1182 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -134,6 +134,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 工具调用增量解析（ToolManager.parseToolCalls） | tool-calls-official.mjs | ToolCallDiffTest | 8 |
 | 记忆扩展纯逻辑（memory） | memory-official.mjs | MemoryDiffTest | 14 |
 | append_title 标题追加（coreChat.map） | append-title-official.mjs | AppendTitleDiffTest | 5 |
+| 作者注释注入判定（authors-note.shouldInject） | authors-note-inject-official.mjs | AuthorsNoteInjectDiffTest | 8 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -257,6 +258,11 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 官方 `Generate coreChat.map` 的 `append_title` / 媒体 `append_title` 标题拼接已下沉到引擎 `PromptAssembler.appendMessageTitles`：
 - App 只负责从 JSONL extra 提取 titles 列表，拼接逻辑由引擎完成并差分。
 - 差分：`scripts/diff/append-title-official.mjs`（script.js:4448-4462 逐字）→ `AppendTitleDiffTest` 5 例全过。
+
+### 3.8.15 作者注释注入判定 ✅（2026-08-12）
+官方 `authors-note.js` 的“按用户消息数决定是否注入 AN”已下沉到引擎 `AuthorsNoteEngine.shouldInjectNote`：
+- 修正 App 旧实现用“总消息数”而非“用户消息数”的问题；interval=1 恒注入。
+- 差分：`scripts/diff/authors-note-inject-official.mjs`（authors-note.js:333-362 逐字）→ `AuthorsNoteInjectDiffTest` 8 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 

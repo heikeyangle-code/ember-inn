@@ -1,0 +1,85 @@
+{
+  "source": "authors-note shouldInject",
+  "cases": [
+    {
+      "id": "interval-one",
+      "args": {
+        "body": {
+          "userMessages": 0,
+          "interval": 1
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "interval-one-many",
+      "args": {
+        "body": {
+          "userMessages": 5,
+          "interval": 1
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "zero-user",
+      "args": {
+        "body": {
+          "userMessages": 0,
+          "interval": 4
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "below-interval",
+      "args": {
+        "body": {
+          "userMessages": 3,
+          "interval": 4
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "equal-interval",
+      "args": {
+        "body": {
+          "userMessages": 4,
+          "interval": 4
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "multiple-interval",
+      "args": {
+        "body": {
+          "userMessages": 8,
+          "interval": 4
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "remainder",
+      "args": {
+        "body": {
+          "userMessages": 6,
+          "interval": 4
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "zero-interval",
+      "args": {
+        "body": {
+          "userMessages": 2,
+          "interval": 0
+        }
+      },
+      "expected": false
+    }
+  ]
+}

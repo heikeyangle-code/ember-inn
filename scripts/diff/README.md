@@ -54,6 +54,7 @@
 - `tool-calls-official.mjs`：官方工具调用增量解析 ToolManager.parseToolCalls（OpenAI/Cohere/Anthropic/Gemini）。
 - `memory-official.mjs`：官方记忆扩展纯逻辑 getLatestMemoryFromChat/getIndexOfLatestChatSummary/getSummaryPromptForNow/getRawSummaryPrompt。
 - `append-title-official.mjs`：官方 coreChat.map append_title/媒体标题追加。
+- `authors-note-inject-official.mjs`：官方作者注释注入判定（用户消息数/interval）。
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
@@ -133,6 +134,7 @@ node scripts/diff/swipe-official.mjs
 node scripts/diff/tool-calls-official.mjs
 node scripts/diff/memory-official.mjs
 node scripts/diff/append-title-official.mjs
+node scripts/diff/authors-note-inject-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs

@@ -479,11 +479,12 @@ class ChatPromptFactory {
             ),
             settings = AuthorsNoteSettings(),
         )
-        // 官方 authors-note.js：lastMessageNumber >= interval ? lastMessageNumber % interval : interval - lastMessageNumber，
-        // shouldAdd = messagesTillInsertion == 0（即消息数恰为 interval 的倍数才注入）
-        val noteInterval = note.interval.coerceAtLeast(1)
-        val historyCount = history.size
-        val shouldInjectNote = historyCount >= noteInterval && historyCount % noteInterval == 0
+        // 官方 authors-note.js：统计“用户消息数”而非总消息数，interval 1 恒注入
+        val userMessageCount = history.count { el ->
+            val obj = el.jsonObject
+            obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        }
+        val shouldInjectNote = AuthorsNoteEngine.shouldInjectNote(userMessageCount, note.interval)
         val noteContent = if (shouldInjectNote) note.content else ""
         val anText = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
         // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），

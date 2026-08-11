@@ -44,6 +44,21 @@ object AuthorsNoteEngine {
         )
     }
 
+    /** 官方 authors-note.js：按“用户消息数”判断是否该注入 AN。 */
+    fun shouldInjectNote(lastUserMessageNumber: Int, interval: Int): Boolean {
+        var last = lastUserMessageNumber
+        var intervalValue = interval
+        // interval 1 应无论如何都注入
+        if (intervalValue == 1) last = 1
+        if (last <= 0 || intervalValue <= 0) return false
+        val messagesTillInsertion = if (last >= intervalValue) {
+            last % intervalValue
+        } else {
+            intervalValue - last
+        }
+        return messagesTillInsertion == 0
+    }
+
     /** 对齐 world-info.js ANWithWI：top + 原文 + bottom，去掉首尾换行。 */
     fun composeWithWorldInfo(original: String, top: List<String> = emptyList(), bottom: List<String> = emptyList()): String =
         listOf(top.joinToString("\n"), original, bottom.joinToString("\n"))
