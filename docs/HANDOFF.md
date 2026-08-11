@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（66 组差分 fixture，共 1088 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 66 组 / 1088 例（机器数）为准。
+**已覆盖（67 组差分 fixture，共 1101 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 67 组 / 1101 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -128,6 +128,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 停用词全链（getStoppingStrings/getCustomStoppingStrings） | stopping-strings-official.mjs | StoppingStringsDiffTest | 14 |
 | 偏置全链（getBiasStrings/extractMessageBias/removeMacros） | bias-official.mjs | BiasDiffTest | 17 |
 | 流式响应/错误解析（getStreamingReply/tryParseStreamingError） | streaming-response-official.mjs | StreamingResponseDiffTest | 20 |
+| Reasoning 解析（parse/remove/formatReasoning） | reasoning-official.mjs | ReasoningDiffTest | 13 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -217,6 +218,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - `StreamingReplyParser`：Claude/Gemini/Cohere/DeepSeek/xAI/OpenRouter/自定义源/Mistral/默认源全部 delta 分支，reasoning/images/signature/toolSignatures 状态纯函数返回。
 - `StreamingErrorParser`：quota/moderation/error/message/detail 分类，严格 JSON.parse 语义（裸词不算 JSON）。
 - 差分：`scripts/diff/streaming-response-official.mjs`（openai.js:1624/3128 逐字；打桩 oai_settings/toastr/check*，已登记）→ `StreamingResponseDiffTest` 20 例全过。
+
+### 3.8.10 Reasoning 解析 ✅（2026-08-12）
+官方 `reasoning.js parseReasoningFromString / removeReasoningFromString / formatReasoning` 已移植到 `engine/prompt/ReasoningEngine.kt`：
+- strict 锚定/非 strict 任意位置、prefix/suffix 缺失返回 null、无匹配返回 `{reasoning:"", content:原串}`（官方真语义）、trimSpaces 开关。
+- `formatReasoning` 与 `ResponseDataExtractor` 的 removeReasoning 注入点可直接接真函数。
+- 差分：`scripts/diff/reasoning-official.mjs`（reasoning.js:1389/1410/1450 + utils.js trimSpaces 逐字）→ `ReasoningDiffTest` 13 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
