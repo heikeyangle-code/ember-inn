@@ -41,12 +41,20 @@ object ToolRegistry {
 
     fun get(name: String): EmberTool? = tools[name]
 
-    /** 执行流式响应里的 tool_calls 快照（官方 ToolManager.invokeFunctionTools）。 */
+    /**
+     * 执行流式响应里的 tool_calls 快照（官方 ToolManager.invokeFunctionTools）。
+     * 引擎 ToolCallAccumulator.snapshot() 是 choices 嵌套数组：[[{id,type,function,...}], ...]；
+     * 兼容 OpenAI choices 对象形态 [{tool_calls:[...]}]。
+     */
     fun executeToolCalls(snapshot: JsonElement): List<ExecutedToolCall> {
         val calls = mutableListOf<ExecutedToolCall>()
         val choices = snapshot as? JsonArray ?: return calls
         for (choice in choices) {
-            val toolCalls = (choice as? JsonObject)?.get("tool_calls")?.jsonArray ?: continue
+            val toolCalls = when (choice) {
+                is JsonArray -> choice
+                is JsonObject -> choice["tool_calls"]?.jsonArray ?: continue
+                else -> continue
+            }
             for (toolCallEl in toolCalls) {
                 val toolCall = toolCallEl as? JsonObject ?: continue
                 val id = toolCall["id"]?.jsonPrimitive?.content ?: continue

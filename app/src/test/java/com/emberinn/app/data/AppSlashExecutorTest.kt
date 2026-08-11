@@ -30,8 +30,8 @@ class AppSlashExecutorTest {
         override fun triggerGeneration(): String { calls += "trigger"; return "" }
         override suspend fun generateText(prompt: String, length: Int?): String { calls += "gen:$prompt:$length"; return "生成文本" }
         override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String { calls += "genraw:$system:$prefill:$length:$prompt"; return "原始生成" }
-        override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String {
-            calls += "inject:$id:$position:$depth:$role:$ephemeral:$text"
+        override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean): String {
+            calls += "inject:$id:$position:$depth:$role:$scan:$ephemeral:$text"
             return "abc12345"
         }
         override fun notify(text: String) { calls += "notify:$text" }
@@ -120,7 +120,7 @@ class AppSlashExecutorTest {
     fun `inject forwards text and named args`() {
         val a = FakeActions()
         val out = AppSlashExecutor(a).execute("/inject id=note position=chat depth=3 role=user ephemeral=true 记住这条设定")
-        assertEquals(listOf("inject:note:chat:3:user:true:记住这条设定"), a.calls)
+        assertEquals(listOf("inject:note:chat:3:user:false:true:记住这条设定"), a.calls)
         assertEquals("abc12345", out)
     }
 

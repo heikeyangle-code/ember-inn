@@ -1,0 +1,166 @@
+{
+  "source": "script.js depth prompt injection specs",
+  "cases": [
+    {
+      "id": "character-defaults",
+      "args": {
+        "body": {
+          "mode": "character",
+          "content": "角色深度提示"
+        }
+      },
+      "expected": {
+        "key": "DEPTH_PROMPT",
+        "value": "角色深度提示",
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "character-user-depth0",
+      "args": {
+        "body": {
+          "mode": "character",
+          "content": "深度0用户",
+          "depth": 0,
+          "role": "user"
+        }
+      },
+      "expected": {
+        "key": "DEPTH_PROMPT",
+        "value": "深度0用户",
+        "position": 1,
+        "depth": 0,
+        "role": 1
+      }
+    },
+    {
+      "id": "character-assistant-depth10",
+      "args": {
+        "body": {
+          "mode": "character",
+          "content": "深度10助手",
+          "depth": 10,
+          "role": "assistant"
+        }
+      },
+      "expected": {
+        "key": "DEPTH_PROMPT",
+        "value": "深度10助手",
+        "position": 1,
+        "depth": 10,
+        "role": 2
+      }
+    },
+    {
+      "id": "character-empty",
+      "args": {
+        "body": {
+          "mode": "character",
+          "content": "",
+          "depth": 4,
+          "role": "system"
+        }
+      },
+      "expected": {
+        "key": "DEPTH_PROMPT",
+        "value": "",
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "group-two",
+      "args": {
+        "body": {
+          "mode": "group",
+          "prompts": [
+            {
+              "text": "G1",
+              "depth": 1,
+              "role": "system"
+            },
+            {
+              "text": "G2",
+              "depth": 2,
+              "role": "assistant"
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "key": "DEPTH_PROMPT_0",
+          "value": "G1",
+          "position": 1,
+          "depth": 1,
+          "role": 0
+        },
+        {
+          "key": "DEPTH_PROMPT_1",
+          "value": "G2",
+          "position": 1,
+          "depth": 2,
+          "role": 2
+        }
+      ]
+    },
+    {
+      "id": "world-depth",
+      "args": {
+        "body": {
+          "mode": "world",
+          "depthEntries": [
+            {
+              "depth": 2,
+              "role": 0,
+              "entries": [
+                "E1",
+                "E2"
+              ]
+            },
+            {
+              "depth": 4,
+              "role": 2,
+              "entries": [
+                "E3"
+              ]
+            },
+            {
+              "depth": 1,
+              "role": 0,
+              "entries": [
+                "E4"
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "key": "customDepthWI_2_0",
+          "value": "E1\nE2",
+          "position": 1,
+          "depth": 2,
+          "role": 0
+        },
+        {
+          "key": "customDepthWI_4_2",
+          "value": "E3",
+          "position": 1,
+          "depth": 4,
+          "role": 2
+        },
+        {
+          "key": "customDepthWI_1_0",
+          "value": "E4",
+          "position": 1,
+          "depth": 1,
+          "role": 0
+        }
+      ]
+    }
+  ]
+}

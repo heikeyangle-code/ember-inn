@@ -1,6 +1,7 @@
 package com.emberinn.engine.prompt
 
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.worldinfo.TokenCounter
 
 /**
@@ -82,13 +83,15 @@ object PromptPipeline {
      * 官方 populationInjectionPrompts：absolute 提示按 injection_depth 分组，order 降序、角色
      * system/user/assistant 固定序，拼接后 splice 到 messages[depth+已插数]，最后整体 reverse()
      * （populateChatHistory 内部再 reverse 一次，净效果是顺序不变）。
-     * inChatExtensions 对应官方 getExtensionPrompt(IN_CHAT, depth)：差分脚本打桩为空；
+     * inChatExtensions 对应官方 getExtensionPrompt(IN_CHAT, depth)：逐条 trim → separator 拼接 →
+     * wrap 首尾补 separator → substituteParams（官方 openai.js getExtensionPrompt 语义）；
      * App 侧群聊深度提示（GroupDepthPromptsEngine）从这里注入（第 90 轮接线）。
      */
     fun populationInjectionPrompts(
         absolutePrompts: List<PromptItem>,
         messages: List<PromptMessage>,
         inChatExtensions: List<PromptItem> = emptyList(),
+        env: MacroEnv = MacroEnv(user = "", char = ""),
     ): List<PromptMessage> {
         var totalInsertedMessages = 0
         val out = messages.toMutableList()
@@ -111,11 +114,21 @@ object PromptPipeline {
                     val rolePrompts = orderPrompts
                         .filter { it.role == role }
                         .joinToString(separator) { it.content }
-                    // 官方：扩展提示只在 order==100 组合并（其余 order 组 extensionPrompt=''）
+                    // 官方：扩展提示只在 order==100 组合并（其余 order 组 extensionPrompt=''）；
+                    // 官方 getExtensionPrompt(IN_CHAT, depth, '\n', role, wrap=true)：
+                    // trim 拼接 → 首尾补 '\n' → substituteParams，最后与 rolePrompts 各自 trim 后 join
                     val extensionPrompt = if (order == 100) {
-                        inChatExtensions
+                        val raw = inChatExtensions
+                            // 官方 getExtensionPrompt：Object.keys(extension_prompts).sort() 后按序拼接
+                            .sortedBy { it.identifier }
                             .filter { it.injectionDepth == depth && it.role == role }
-                            .joinToString(separator) { it.content }
+                            .map { it.content.trim() }
+                            .joinToString(separator)
+                        var wrapped = raw
+                        if (wrapped.isNotEmpty() && !wrapped.startsWith(separator)) wrapped = separator + wrapped
+                        if (wrapped.isNotEmpty() && !wrapped.endsWith(separator)) wrapped = wrapped + separator
+                        if (wrapped.isNotEmpty()) wrapped = MacroEngine.substitute(wrapped, env)
+                        wrapped
                     } else {
                         ""
                     }
@@ -285,7 +298,7 @@ object PromptPipeline {
         }
 
         // in-chat 深度注入（官方 populationInjectionPrompts；群聊深度提示等扩展从这里进）
-        val finalMessages = populationInjectionPrompts(absolutePrompts, messages, input.inChatExtensions)
+        val finalMessages = populationInjectionPrompts(absolutePrompts, messages, input.inChatExtensions, input.env)
 
         // 示例/历史顺序
         if (input.pinExamples) {

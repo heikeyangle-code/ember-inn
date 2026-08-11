@@ -1,0 +1,210 @@
+{
+  "source": "script.js Generate WI message examples + baseChatReplace",
+  "cases": [
+    {
+      "id": "base-only",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi\nChar: hello",
+          "emEntries": [],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: hi\nChar: hello\n"
+      ]
+    },
+    {
+      "id": "em-before",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi\nChar: hello",
+          "emEntries": [
+            {
+              "position": 0,
+              "content": "<START>\nUser: em\nChar: em1"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: em\nChar: em1\n",
+        "<START>\nUser: hi\nChar: hello\n"
+      ]
+    },
+    {
+      "id": "em-after",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi\nChar: hello",
+          "emEntries": [
+            {
+              "position": 1,
+              "content": "<START>\nUser: em\nChar: em2"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: hi\nChar: hello\n",
+        "<START>\nUser: em\nChar: em2\n"
+      ]
+    },
+    {
+      "id": "em-before-after-multi",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi",
+          "emEntries": [
+            {
+              "position": 0,
+              "content": "<START>\nUser: A1\nChar: A2"
+            },
+            {
+              "position": 1,
+              "content": "<START>\nUser: B1"
+            },
+            {
+              "position": 0,
+              "content": "<START>\nUser: C1"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: C1\n",
+        "<START>\nUser: A1\nChar: A2\n",
+        "<START>\nUser: hi\n",
+        "<START>\nUser: B1\n"
+      ]
+    },
+    {
+      "id": "em-macros-collapse",
+      "args": {
+        "body": {
+          "base": "<START>\n{{user}}: hi",
+          "emEntries": [
+            {
+              "position": 1,
+              "content": "<START>\n{{user}}: macro\n\n\n\n{{char}}: x"
+            }
+          ],
+          "collapse": true,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\n{{user}}: hi\n",
+        "<START>\nUser: macro\nChar: x\n"
+      ]
+    },
+    {
+      "id": "em-empty-skipped",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi",
+          "emEntries": [
+            {
+              "position": 0,
+              "content": ""
+            },
+            {
+              "position": 1,
+              "content": "<START>\nUser: ok"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: hi\n",
+        "<START>\nUser: ok\n"
+      ]
+    },
+    {
+      "id": "em-just-start",
+      "args": {
+        "body": {
+          "base": "<START>\nUser: hi",
+          "emEntries": [
+            {
+              "position": 0,
+              "content": "<START>"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "",
+          "mainApiIsOpenAi": true
+        }
+      },
+      "expected": [
+        "<START>\nUser: hi\n"
+      ]
+    },
+    {
+      "id": "em-instruct-separator",
+      "args": {
+        "body": {
+          "base": "plain base",
+          "emEntries": [
+            {
+              "position": 1,
+              "content": "plain em"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": true,
+          "exampleSeparator": "[Example]",
+          "mainApiIsOpenAi": false
+        }
+      },
+      "expected": [
+        "<START>\nplain base\n",
+        "<START>\nplain em\n"
+      ]
+    },
+    {
+      "id": "em-non-openai-separator",
+      "args": {
+        "body": {
+          "base": "plain base",
+          "emEntries": [
+            {
+              "position": 0,
+              "content": "plain em"
+            }
+          ],
+          "collapse": false,
+          "isInstruct": false,
+          "exampleSeparator": "[Example]",
+          "mainApiIsOpenAi": false
+        }
+      },
+      "expected": [
+        "[Example]\nplain em\n",
+        "[Example]\nplain base\n"
+      ]
+    }
+  ]
+}

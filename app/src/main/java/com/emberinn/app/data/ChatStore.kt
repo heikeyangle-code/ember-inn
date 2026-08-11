@@ -538,6 +538,48 @@ class ChatStore(private val context: Context) {
         insertMessage(sessionId, message, at)
     }
 
+    /** 官方 ToolManager.saveFunctionToolInvocations：工具执行结果落成一条 system 消息（extra.tool_invocations）。 */
+    fun appendToolInvocations(
+        sessionId: String,
+        invocations: List<ExecutedToolCall>,
+        api: String? = null,
+        model: String? = null,
+        reasoning: String? = null,
+    ) {
+        if (invocations.isEmpty()) return
+        val now = java.time.Instant.now().toString()
+        val names = invocations.joinToString(", ") { it.name }
+        val message = buildJsonObject {
+            put("name", JsonPrimitive("System"))
+            put("is_user", JsonPrimitive(false))
+            put("is_system", JsonPrimitive(true))
+            put("mes", JsonPrimitive("Tool calls: $names"))
+            put("send_date", JsonPrimitive(now))
+            put(
+                "extra",
+                buildJsonObject {
+                    put("isSmallSys", JsonPrimitive(true))
+                    put("api", JsonPrimitive(api ?: "manual"))
+                    put("model", JsonPrimitive(model ?: ""))
+                    reasoning?.takeIf { it.isNotBlank() }?.let { put("reasoning", JsonPrimitive(it)) }
+                    put(
+                        "tool_invocations",
+                        JsonArray(invocations.map { inv ->
+                            buildJsonObject {
+                                put("id", JsonPrimitive(inv.id))
+                                put("name", JsonPrimitive(inv.name))
+                                put("parameters", JsonPrimitive(inv.arguments))
+                                put("result", JsonPrimitive(inv.result))
+                                put("error", JsonPrimitive(false))
+                            }
+                        }),
+                    )
+                },
+            )
+        }
+        insertMessage(sessionId, message, null)
+    }
+
     /** 对齐官方 at= 插入语义：负数 = chat.length + at；越界/缺省追加到末尾。 */
     private fun insertMessage(sessionId: String, message: JsonObject, at: Int?) {
         val list = messages(sessionId).toMutableList()

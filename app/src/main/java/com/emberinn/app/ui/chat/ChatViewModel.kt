@@ -57,6 +57,7 @@ import com.emberinn.engine.group.GroupLoopEngine
 import com.emberinn.engine.prompt.BiasEngine
 import com.emberinn.engine.prompt.AutoContinueConfig
 import com.emberinn.engine.prompt.AutoContinueEngine
+import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.CleanUpConfig
 import com.emberinn.engine.prompt.CleanUpMessageEngine
 import com.emberinn.engine.prompt.ContextSettings
@@ -652,19 +653,29 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String {
-        val resolvedId = id.ifBlank { java.util.UUID.randomUUID().toString().substring(0, 8) }
+    override fun injectScript(
+        text: String,
+        id: String,
+        position: String,
+        depth: Int,
+        role: String,
+        scan: Boolean,
+        ephemeral: Boolean,
+    ): String {
+        // 官方 injectCallback：position/role/depth/scan 参数归一，空 value 删除条目
+        val spec = ExtensionPromptEngine.parseInject(id, text, position, depth, role, scan)
+        val resolvedId = spec.id
         val meta = chatStore.metadata(sessionId).toMutableMap()
         val injects = (meta["script_injects"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
         if (text.isBlank()) {
             injects.remove(resolvedId)
         } else {
             injects[resolvedId] = buildJsonObject {
-                put("value", JsonPrimitive(text))
-                put("position", JsonPrimitive(position))
-                put("depth", JsonPrimitive(depth))
-                put("scan", JsonPrimitive(false))
-                put("role", JsonPrimitive(role))
+                put("value", JsonPrimitive(spec.value))
+                put("position", JsonPrimitive(spec.position))
+                put("depth", JsonPrimitive(spec.depth))
+                put("scan", JsonPrimitive(spec.scan))
+                put("role", JsonPrimitive(spec.role))
             }
             if (ephemeral) ephemeralInjectIds += resolvedId
         }
@@ -847,9 +858,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     @Volatile
     private var streamActive = false
     private var singleAutoContinueRuns = 0
+    /** 工具循环递归计数（官方 ToolManager.RECURSE_LIMIT=5）。 */
     private var toolLoopRuns = 0
+    /** 本轮总装出的最终消息（工具循环续跑基线；官方 Generate 递归会重新总装）。 */
     private var preparedMessages: List<CompletionMessage> = emptyList()
     private var pendingToolCalls: kotlinx.serialization.json.JsonElement? = null
+    /** 当前流的生成参数：工具循环递归时按官方 Generate('normal') 重启 startStream。 */
+    private var currentStreamParams: StreamParams? = null
     private var streamStartedAt: String = java.time.Instant.now().toString()
     private var streamContinueMode = false
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
@@ -1041,6 +1056,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamSession?.cancel()
         streamSession = null
         streamActive = false
+        pendingToolCalls = null
         val partial = _streamingText.value
         val wasImpersonating = _isImpersonating.value
         val wasContinue = streamContinueMode
@@ -1520,6 +1536,22 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val inChatExtensions: List<PromptItem> = emptyList(),
     )
 
+    /** 工具循环重启 startStream 所需的当前流参数（官方 Generate 递归用同一组参数 + depth+1）。 */
+    private data class StreamParams(
+        val type: String,
+        val continuePrefill: Boolean,
+        val impersonation: Boolean,
+        val cyclePrompt: String,
+        val continueMode: Boolean,
+        val swipeMode: Boolean,
+        val impersonationPrompt: String,
+        val mediaInlining: Boolean,
+        val characterRawJsonOverride: String?,
+        val inChatExtensions: List<PromptItem>,
+        val scopedRegexAvatar: String?,
+        val groupGenId: Long?,
+    )
+
     private fun startGroupTurn(type: String, cyclePrompt: String = "") {
         val members = groupMembers
         if (members.isEmpty()) {
@@ -1770,6 +1802,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         groupGenId: Long? = null,
         onFinished: (() -> Unit)? = null,
     ) {
+        currentStreamParams = StreamParams(
+            type = type,
+            continuePrefill = continuePrefill,
+            impersonation = impersonation,
+            cyclePrompt = cyclePrompt,
+            continueMode = continueMode,
+            swipeMode = swipeMode,
+            impersonationPrompt = impersonationPrompt,
+            mediaInlining = mediaInlining,
+            characterRawJsonOverride = characterRawJsonOverride,
+            inChatExtensions = inChatExtensions,
+            scopedRegexAvatar = scopedRegexAvatar,
+            groupGenId = groupGenId,
+        )
+        if (!streamActive) {
+            toolLoopRuns = 0
+            pendingToolCalls = null
+        }
         streamStartedAt = java.time.Instant.now().toString()
         _streamingText.value = ""
         _streamingReasoning.value = ""
@@ -1807,12 +1857,22 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 ?.mapNotNull { (id, el) ->
                     val o = el.jsonObject
                     val value = o["value"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                    ChatPromptFactory.ScriptInject(
+                    val positionRaw = o["position"]?.jsonPrimitive?.contentOrNull
+                    val roleRaw = o["role"]?.jsonPrimitive?.contentOrNull
+                    ExtensionPromptEngine.ScriptInject(
                         id = id,
                         value = value,
-                        position = o["position"]?.jsonPrimitive?.contentOrNull ?: "after",
-                        depth = o["depth"]?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
-                        role = o["role"]?.jsonPrimitive?.contentOrNull ?: "system",
+                        position = positionRaw?.toIntOrNull()
+                            ?: when (positionRaw?.lowercase()) {
+                                "before" -> ExtensionPromptEngine.POSITION_BEFORE_PROMPT
+                                "chat" -> ExtensionPromptEngine.POSITION_IN_CHAT
+                                "none" -> ExtensionPromptEngine.POSITION_NONE
+                                else -> ExtensionPromptEngine.POSITION_IN_PROMPT
+                            },
+                        depth = o["depth"]?.jsonPrimitive?.content?.toIntOrNull()
+                            ?: ExtensionPromptEngine.DEFAULT_DEPTH,
+                        role = roleRaw?.toIntOrNull()
+                            ?: ExtensionPromptEngine.roleByName(roleRaw),
                         scan = o["scan"]?.jsonPrimitive?.content == "true",
                     )
                 } ?: emptyList()
@@ -1843,47 +1903,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     if (streamActive) pendingToolCalls = calls
                 },
                 stopGroupMemberNames = groupMembers.map { it.name },
-                onDone = {
-                    if (streamActive) {
-                        streamActive = false
-                        finalizeStream(streamContinueMode)
-                        // 官方 triggerAutoContinue：单聊且满足条件时自动 continue（群聊走 runGroupStep）
-                        val lastAi = chatStore.messages(sessionId).lastOrNull { !isUser(it) && !isSystemMsg(it) }
-                        val lastText = lastAi?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
-                        val cleanProfile = chatRepository.profile()
-                        val shouldAutoContinue = group == null &&
-                            !impersonation &&
-                            !swipeMode &&
-                            singleAutoContinueRuns < 5 &&
-                            AutoContinueEngine.shouldAutoContinue(
-                                messageChunk = lastText,
-                                isImpersonate = false,
-                                config = AutoContinueConfig(
-                                    enabled = GenerationPrefs.autoContinueEnabled(getApplication()),
-                                    targetLength = GenerationPrefs.autoContinueTargetLength(getApplication()),
-                                    allowChatCompletions = GenerationPrefs.allowChatCompletions(getApplication()),
-                                    mainApi = cleanProfile?.let {
-                                        com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
-                                    } ?: "openai",
-                                    textareaText = _inputDraft.value.orEmpty(),
-                                    lastMessageText = lastText,
-                                ),
-                                tokenCount = { text ->
-                                    runCatching {
-                                        com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(cleanProfile?.model.orEmpty()).count(text)
-                                    }.getOrDefault(0)
-                                },
-                            )
-                        if (shouldAutoContinue) {
-                            singleAutoContinueRuns++
-                            continueGeneration()
-                        }
-                        onFinished?.invoke()
-                    }
-                },
+                onDone = { handleStreamDone(streamContinueMode, onFinished) },
                 onError = { e ->
                     if (streamActive) {
                         streamActive = false
+                        pendingToolCalls = null
                         // 中断也保留已流出的思考过程，不静默吞掉；状态必须全部复位，避免卡“生成中”
                         if (_streamingReasoning.value.isNotBlank()) {
                             _lastReasoning.value = _streamingReasoning.value
@@ -1904,6 +1928,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 },
                 type = type,
+                textareaText = _inputDraft.value.orEmpty(),
                 continuePrefill = continuePrefill,
                 cyclePrompt = cyclePrompt,
                 impersonationPrompt = impersonationPrompt,
@@ -1926,8 +1951,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 regexEnabled = regexEnabled,
                 reasoningToPrompts = reasoningToPrompts,
                 scriptInjections = scriptInjections,
+                useCharacterDepthPrompt = inChatExtensions.isEmpty(),
                 onPrepared = { info ->
                     if (streamActive) {
+                        preparedMessages = info.messages
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
                             val name = entry.name.ifBlank { entry.keys.firstOrNull().orEmpty() }
                             if (name.isBlank()) null else WorldHitView(
@@ -1977,6 +2004,112 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             }
         }
+    }
+
+    /**
+     * 流结束统一收尾：先看是否要续工具循环（官方 Generate 工具调用递归），
+     * 否则落盘 + 自动续写（官方 triggerAutoContinue；群聊走 runGroupStep）。
+     */
+    private fun handleStreamDone(continueMode: Boolean, onFinished: (() -> Unit)?) {
+        if (!streamActive) {
+            onFinished?.invoke()
+            return
+        }
+        if (maybeContinueToolLoop(continueMode, onFinished)) return
+        streamActive = false
+        finalizeStream(continueMode)
+        // 官方 triggerAutoContinue：单聊且满足条件时自动 continue（群聊走 runGroupStep）
+        val wasImpersonating = currentStreamParams?.impersonation == true
+        val wasSwipe = currentStreamParams?.swipeMode == true
+        val lastAi = chatStore.messages(sessionId).lastOrNull { !isUser(it) && !isSystemMsg(it) }
+        val lastText = lastAi?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull.orEmpty()
+        val cleanProfile = chatRepository.profile()
+        val shouldAutoContinue = group == null &&
+            !wasImpersonating &&
+            !wasSwipe &&
+            singleAutoContinueRuns < 5 &&
+            AutoContinueEngine.shouldAutoContinue(
+                messageChunk = lastText,
+                isImpersonate = false,
+                config = AutoContinueConfig(
+                    enabled = GenerationPrefs.autoContinueEnabled(getApplication()),
+                    targetLength = GenerationPrefs.autoContinueTargetLength(getApplication()),
+                    allowChatCompletions = GenerationPrefs.allowChatCompletions(getApplication()),
+                    mainApi = cleanProfile?.let {
+                        com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+                    } ?: "openai",
+                    textareaText = _inputDraft.value.orEmpty(),
+                    lastMessageText = lastText,
+                ),
+                tokenCount = { text ->
+                    runCatching {
+                        com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(cleanProfile?.model.orEmpty()).count(text)
+                    }.getOrDefault(0)
+                },
+            )
+        if (shouldAutoContinue) {
+            singleAutoContinueRuns++
+            continueGeneration()
+        }
+        onFinished?.invoke()
+    }
+
+    /**
+     * 官方 Generate 工具调用递归（script.js:5345-5375 语义）：
+     * 空回复 + 新发送用户消息 → 删最后用户消息（shouldDeleteMessage）；
+     * 非空回复 → 先落盘 assistant 消息（finalizeIntermediaryMessage）；
+     * 执行工具 → saveFunctionToolInvocations（extra.tool_invocations 系统消息）→
+     * depth+1 重新 Generate('normal')（startStream 重新总装，工具历史进提示词）。
+     */
+    private fun maybeContinueToolLoop(continueMode: Boolean, onFinished: (() -> Unit)?): Boolean {
+        val snapshot = pendingToolCalls ?: return false
+        pendingToolCalls = null
+        val executed = ToolRegistry.executeToolCalls(snapshot)
+        if (executed.isEmpty()) return false
+        val toolCalls = executed.map { ToolCall(it.id, it.name, it.arguments) }
+        if (!ToolLoopPlanner.shouldContinue(toolCalls, toolLoopRuns)) return false
+        val params = currentStreamParams ?: return false
+        val reply = _streamingText.value
+        val reasoning = _streamingReasoning.value
+        val msgs = chatStore.messages(sessionId)
+        // 官方 shouldDeleteMessage：新发送的空用户消息 + 空回复 + 无思考 → 删除，避免悬空
+        val lastIsFreshUser = msgs.isNotEmpty() && isUser(msgs.last()) && reply.isBlank() && reasoning.isBlank()
+        if (lastIsFreshUser) {
+            chatStore.removeAt(sessionId, msgs.lastIndex)
+        } else if (reply.isNotBlank()) {
+            appendAiReply(reply)
+        }
+        refreshMessages()
+        val profile = chatRepository.profile()
+        chatStore.appendToolInvocations(
+            sessionId = sessionId,
+            invocations = executed,
+            api = profile?.providerId,
+            model = profile?.model,
+            reasoning = reasoning.takeIf { it.isNotBlank() },
+        )
+        refreshMessages()
+        toolLoopRuns++
+        _streamingText.value = ""
+        _streamingReasoning.value = ""
+        // 官方递归 Generate('normal')：重新总装（工具调用历史经 extra.tool_invocations 进提示词）
+        startStream(
+            history = chatStore.messages(sessionId),
+            type = "generate",
+            continuePrefill = false,
+            impersonation = false,
+            cyclePrompt = params.cyclePrompt,
+            continueMode = false,
+            swipeMode = false,
+            impersonationPrompt = params.impersonationPrompt,
+            mediaInlining = params.mediaInlining,
+            characterRawJsonOverride = params.characterRawJsonOverride,
+            inChatExtensions = params.inChatExtensions,
+            scopedRegexAvatar = params.scopedRegexAvatar,
+            groupGenId = params.groupGenId,
+            onFinished = onFinished,
+        )
+        return true
     }
 
     private fun finalizeStream(continueMode: Boolean = false) {

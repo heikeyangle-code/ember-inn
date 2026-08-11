@@ -16,7 +16,7 @@ import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
-import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.ToolLoopPlanner
 import com.emberinn.engine.prompt.CustomStoppingConfig
 import com.emberinn.engine.prompt.StoppingStringsConfig
@@ -136,6 +136,8 @@ class ChatRepository(context: Context) {
         onError: (Throwable) -> Unit,
         options: ProviderRequestOptions = ProviderRequestOptions(),
         type: String = "generate",
+        /** 官方 Generate 的 textareaText（getBiasStrings 输入；regenerate/swipe/continue 空串）。 */
+        textareaText: String = "",
         continuePrefill: Boolean = false,
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
         cyclePrompt: String = "",
@@ -160,7 +162,9 @@ class ChatRepository(context: Context) {
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
-        scriptInjections: List<ChatPromptFactory.ScriptInject> = emptyList(),
+        scriptInjections: List<ExtensionPromptEngine.ScriptInject> = emptyList(),
+        /** 官方 generate：群聊深度提示存在时用群聊提示，否则角色卡深度提示。 */
+        useCharacterDepthPrompt: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -204,6 +208,7 @@ class ChatRepository(context: Context) {
             maxContextTokens = effectiveContextWindow,
             maxTokens = effectiveMaxTokens,
             type = type,
+            textareaText = textareaText,
             continuePrefill = continuePrefill,
             impersonationPrompt = impersonationPrompt,
             cyclePrompt = cyclePrompt,
@@ -229,6 +234,8 @@ class ChatRepository(context: Context) {
             regexEnabled = regexEnabled,
             reasoningToPrompts = reasoningToPrompts,
             scriptInjections = scriptInjections,
+            useCharacterDepthPrompt = useCharacterDepthPrompt,
+            canUseTools = options.hasTools,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)

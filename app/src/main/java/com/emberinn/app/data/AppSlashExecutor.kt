@@ -52,7 +52,7 @@ interface SlashMessageActions {
     /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
     fun triggerGeneration(): String
     /** /inject：写/删 chat_metadata.script_injects 并注入本会话生成；返回注入 ID。 */
-    fun injectScript(text: String, id: String, position: String, depth: Int, role: String, ephemeral: Boolean): String
+    fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean): String
     /** /gen：用当前聊天上下文 + 提示生成文本（不落盘），返回生成文本（官方 generateCallback）。 */
     suspend fun generateText(prompt: String, length: Int?): String
     /** /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本（官方 generateRawCallback）。 */
@@ -230,6 +230,7 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
                     position = inv.namedArgs["position"] ?: "after",
                     depth = inv.namedArgs["depth"]?.toIntOrNull() ?: 4,
                     role = inv.namedArgs["role"] ?: "system",
+                    scan = isTrue(inv.namedArgs["scan"]),
                     ephemeral = isTrue(inv.namedArgs["ephemeral"]),
                 )
             },

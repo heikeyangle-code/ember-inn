@@ -40,6 +40,8 @@ data class ChatMessage(
     val swipeId: Int = 0,
     /** 官方 coreChat.map 追加的 append_title/媒体标题。 */
     val titles: List<String> = emptyList(),
+    /** 官方 setOpenAIMessages 的 invocations（extra.tool_invocations → 工具调用链重构）。 */
+    val toolInvocations: List<com.emberinn.engine.prompt.ToolInvocation>? = null,
 )
 
 /** 宏环境：对齐 MacroEnv 的核心字段。 */

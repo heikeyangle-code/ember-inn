@@ -326,8 +326,18 @@ class ChatPromptFactoryTest {
     }
 
     @Test
-    fun `bias macro is extracted from user input and stripped from message`() {
-        val history = listOf(msg(true, "问{{bias:悄悄说}}", "User"))
+    fun `bias stored in extra bias is injected and macro is stripped from message`() {
+        // 官方 sendMessageAsUser：{{bias}} 存前剥离 → 写 extra.bias；总装 getBiasStrings 空输入时回溯
+        val history = listOf(
+            buildJsonObject {
+                put("name", "User")
+                put("is_user", true)
+                put("is_system", false)
+                put("send_date", "2026-08-09T00:00:00Z")
+                put("mes", "问{{bias:悄悄说}}")
+                put("extra", buildJsonObject { put("bias", "悄悄说") })
+            },
+        )
         val result = ChatPromptFactory().prepare(
             characterRawJson = null,
             history = history,
@@ -339,7 +349,7 @@ class ChatPromptFactoryTest {
         )
         val contents = result.messages.map { it.content }.joinToString("\n")
         assertTrue(contents.contains("悄悄说"))
-        assertTrue(!contents.contains("{{bias"))
+        assertTrue(!contents.contains("问{{bias"))
     }
 
     @Test

@@ -1,0 +1,599 @@
+{
+  "source": "script.js setExtensionPrompt/getExtensionPrompt + slash-commands.js injectCallback",
+  "cases": [
+    {
+      "id": "inject-defaults",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "abc",
+          "value": "注意脚下"
+        }
+      },
+      "expected": {
+        "id": "abc",
+        "value": "注意脚下",
+        "prefixedId": "script_inject_abc",
+        "position": 0,
+        "depth": 4,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-before-user",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "b1",
+          "value": "before text",
+          "position": "before",
+          "depth": 2,
+          "role": "user",
+          "scan": true
+        }
+      },
+      "expected": {
+        "id": "b1",
+        "value": "before text",
+        "prefixedId": "script_inject_b1",
+        "position": 2,
+        "depth": 2,
+        "scan": true,
+        "role": 1
+      }
+    },
+    {
+      "id": "inject-after-assistant",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "a1",
+          "value": "after text",
+          "position": "after",
+          "depth": "3",
+          "role": "assistant",
+          "scan": "on"
+        }
+      },
+      "expected": {
+        "id": "a1",
+        "value": "after text",
+        "prefixedId": "script_inject_a1",
+        "position": 0,
+        "depth": 3,
+        "scan": true,
+        "role": 2
+      }
+    },
+    {
+      "id": "inject-chat-system",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "c1",
+          "value": "chat text",
+          "position": "chat",
+          "depth": 0,
+          "role": "system",
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "c1",
+        "value": "chat text",
+        "prefixedId": "script_inject_c1",
+        "position": 1,
+        "depth": 0,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-none",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "n1",
+          "value": "none text",
+          "position": "none",
+          "depth": 7,
+          "role": "system",
+          "scan": "1"
+        }
+      },
+      "expected": {
+        "id": "n1",
+        "value": "none text",
+        "prefixedId": "script_inject_n1",
+        "position": -1,
+        "depth": 7,
+        "scan": true,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-unknown-position",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "u1",
+          "value": "fallback",
+          "position": "sideways",
+          "depth": 4,
+          "role": "system",
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "u1",
+        "value": "fallback",
+        "prefixedId": "script_inject_u1",
+        "position": 0,
+        "depth": 4,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-nan-depth",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "d1",
+          "value": "bad depth",
+          "position": "after",
+          "depth": "abc",
+          "role": "system",
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "d1",
+        "value": "bad depth",
+        "prefixedId": "script_inject_d1",
+        "position": 0,
+        "depth": 4,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-empty-value",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "e1",
+          "value": "",
+          "position": "before",
+          "depth": 4,
+          "role": "system",
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "e1",
+        "value": "",
+        "prefixedId": "script_inject_e1",
+        "position": 2,
+        "depth": 4,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-role-number",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "r1",
+          "value": "numeric role",
+          "position": "chat",
+          "depth": 4,
+          "role": 1,
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "r1",
+        "value": "numeric role",
+        "prefixedId": "script_inject_r1",
+        "position": 1,
+        "depth": 4,
+        "scan": false,
+        "role": 0
+      }
+    },
+    {
+      "id": "inject-case-role",
+      "args": {
+        "body": {
+          "mode": "inject",
+          "id": "r2",
+          "value": "case role",
+          "position": "before",
+          "depth": 4,
+          "role": "  Assistant ",
+          "scan": false
+        }
+      },
+      "expected": {
+        "id": "r2",
+        "value": "case role",
+        "prefixedId": "script_inject_r2",
+        "position": 2,
+        "depth": 4,
+        "scan": false,
+        "role": 2
+      }
+    },
+    {
+      "id": "get-in-chat-sorted",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "z_last",
+              "value": "Z",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "a_first",
+              "value": "A",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "m_mid",
+              "value": "M",
+              "position": 1,
+              "depth": 1,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "empty",
+              "value": "  ",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 1,
+          "depth": 2,
+          "separator": "\n",
+          "role": 0,
+          "wrap": true
+        }
+      },
+      "expected": "\nA\n\nZ\n"
+    },
+    {
+      "id": "get-in-chat-no-depth",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "z_last",
+              "value": "Z",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "a_first",
+              "value": "A",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "m_mid",
+              "value": "M",
+              "position": 1,
+              "depth": 1,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "empty",
+              "value": "  ",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 1,
+          "separator": "\n",
+          "wrap": true
+        }
+      },
+      "expected": "\nA\n\nM\nZ\n"
+    },
+    {
+      "id": "get-no-wrap",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "z_last",
+              "value": "Z",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "a_first",
+              "value": "A",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "m_mid",
+              "value": "M",
+              "position": 1,
+              "depth": 1,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "empty",
+              "value": "  ",
+              "position": 1,
+              "depth": 2,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 1,
+          "depth": 2,
+          "separator": "\n",
+          "role": 0,
+          "wrap": false
+        }
+      },
+      "expected": "A\n\nZ"
+    },
+    {
+      "id": "get-in-prompt",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 0,
+          "depth": 4,
+          "separator": "\n",
+          "role": 0,
+          "wrap": true
+        }
+      },
+      "expected": "\none\ntwo\n"
+    },
+    {
+      "id": "get-before-prompt",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 2,
+          "separator": "\n",
+          "wrap": true
+        }
+      },
+      "expected": "\nthree\n"
+    },
+    {
+      "id": "get-role-filter",
+      "args": {
+        "body": {
+          "mode": "set-get",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "position": 0,
+          "depth": 4,
+          "separator": "\n",
+          "role": 1,
+          "wrap": true
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "by-name-found",
+      "args": {
+        "body": {
+          "mode": "by-name",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "key": "k2"
+        }
+      },
+      "expected": " two "
+    },
+    {
+      "id": "by-name-missing",
+      "args": {
+        "body": {
+          "mode": "by-name",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "key": "nope"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "by-name-empty-key",
+      "args": {
+        "body": {
+          "mode": "by-name",
+          "entries": [
+            {
+              "key": "k1",
+              "value": " one ",
+              "position": 0,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            },
+            {
+              "key": "k2",
+              "value": " two ",
+              "position": 0,
+              "depth": 4,
+              "scan": true,
+              "role": 0
+            },
+            {
+              "key": "k3",
+              "value": " three ",
+              "position": 2,
+              "depth": 4,
+              "scan": false,
+              "role": 0
+            }
+          ],
+          "key": ""
+        }
+      },
+      "expected": ""
+    }
+  ]
+}

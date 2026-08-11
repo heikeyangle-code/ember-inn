@@ -28,9 +28,13 @@ class WorldInfoScanner(
         isDryRun: Boolean = false,
         // 外部强制激活（对齐官方 WorldInfoBuffer.externalActivations，RAG/向量检索喂到这里）
         externalActivations: Map<String, WorldInfoEntry> = emptyMap(),
+        // 官方 checkWorldInfo：extensionPrompts 中 scan=true 的提示经 getExtensionPromptByName
+        // （宏替换后）addInject 进扫描缓冲，匹配所有条目的扫描文本（不在聊天深度里）
+        scanInjections: List<String> = emptyList(),
     ): WorldInfoResult {
         // 官方：聊天消息先过正则（getRegexedString），再进世界书扫描
         val buffer = WorldInfoBuffer(chat.map(messageTransformer), global, settings)
+        scanInjections.forEach { buffer.addInject(it) }
         externalActivations.forEach { (_, entry) -> buffer.addExternalActivation(entry) }
 
         var scanState = WorldInfoConstants.STATE_INITIAL

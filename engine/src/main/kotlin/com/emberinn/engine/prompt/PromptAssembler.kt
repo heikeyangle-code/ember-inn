@@ -210,7 +210,12 @@ object PromptAssembler {
                 else -> selectedGroup && name != user
             }
             if (prefix && name.isNotEmpty()) content = "$name: $content"
-            messages += PromptMessage(role, content, name.ifEmpty { null })
+            messages += PromptMessage(
+                role = role,
+                content = content,
+                name = name.ifEmpty { null },
+                toolInvocations = m.toolInvocations,
+            )
         }
         return messages
     }

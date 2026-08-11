@@ -18,13 +18,17 @@ import com.emberinn.engine.prompt.AuthorsNoteEngine
 import com.emberinn.engine.prompt.AuthorsNoteMetadata
 import com.emberinn.engine.prompt.AuthorsNoteSettings
 import com.emberinn.engine.prompt.BiasEngine
+import com.emberinn.engine.prompt.BiasChatMessage
+import com.emberinn.engine.prompt.BiasConfig
 import com.emberinn.engine.prompt.CharacterCardSource
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.DepthPromptEngine
+import com.emberinn.engine.prompt.ExampleAssembler
+import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.PromptAssembler
 import com.emberinn.engine.prompt.PromptPipeline
 import com.emberinn.engine.prompt.PromptReasoningEngine
 import com.emberinn.engine.prompt.ReasoningPromptSettings
-import com.emberinn.engine.prompt.PromptUtils
 import com.emberinn.engine.regex.RegexPipelineEngine
 import com.emberinn.engine.regex.RegexScopeResolver
 import com.emberinn.engine.regex.RegexPipelineScript
@@ -82,15 +86,8 @@ class ChatPromptFactory {
         val maxContextTokens: Int = 8192,
     )
 
-    /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects）。 */
-    data class ScriptInject(
-        val id: String,
-        val value: String,
-        val position: String, // before / after / chat / none（官方 injectCallback 位置）
-        val depth: Int = 4,
-        val role: String = "system", // system / user / assistant
-        val scan: Boolean = false,
-    )
+    /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects），引擎 1:1 模型。 */
+    typealias ScriptInject = ExtensionPromptEngine.ScriptInject
 
     /**
      * 官方 getRegexScripts({ allowedOnly: true }) 的 App 侧统一解析：
@@ -124,6 +121,8 @@ class ChatPromptFactory {
         maxContextTokens: Int = 8192,
         maxTokens: Int = 512,
         type: String = "generate",
+        /** 官方 Generate 的 textareaText（getBiasStrings 用；regenerate/swipe/continue 空输入回溯 extra.bias）。 */
+        textareaText: String = "",
         continuePrefill: Boolean = false,
         impersonationPrompt: String = DEFAULT_IMPERSONATION_PROMPT,
         cyclePrompt: String = "",
@@ -150,6 +149,10 @@ class ChatPromptFactory {
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
         scriptInjections: List<ScriptInject> = emptyList(),
+        /** 官方 generate：群聊有 depth 提示时用群聊深度提示，否则用角色卡深度提示（DEPTH_PROMPT）。 */
+        useCharacterDepthPrompt: Boolean = true,
+        /** 官方 ToolManager.isToolCallingSupported：本轮是否允许工具调用（App 按注册工具/能力填充）。 */
+        canUseTools: Boolean = false,
         /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
         localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
@@ -207,19 +210,39 @@ class ChatPromptFactory {
         // 保证 extra.media 挂回正确的消息（曾有 mes 缺失导致下标错位、附件挂错消息的隐患）
         val indexedChatMessages = history.mapIndexedNotNull { index, el ->
             val obj = el.jsonObject
-            // 官方 script.js coreChat：is_system（含 /hide 隐藏、comment 注释消息）不进提示词；
-            // 旧版 is_hidden 字段一并兼容排除
+            // 官方 script.js coreChat：is_system 不进提示词，例外是工具调用系统消息
+            // （canUseTools && Array.isArray(extra.tool_invocations)）；旧版 is_hidden 一并兼容排除
             if (obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true ||
                 obj["is_hidden"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
             ) {
-                return@mapIndexedNotNull null
+                val extra = obj["extra"] as? JsonObject
+                val toolInvocations = extra?.get("tool_invocations")?.jsonArray
+                if (!(canUseTools && toolInvocations != null && toolInvocations.isNotEmpty())) {
+                    return@mapIndexedNotNull null
+                }
             }
             val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
             val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: return@mapIndexedNotNull null
+            val toolInvocations = (obj["extra"] as? JsonObject)?.get("tool_invocations")?.jsonArray
+                ?.mapNotNull { el ->
+                    val t = el.jsonObject
+                    val name = t["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                    val id = t["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                    com.emberinn.engine.prompt.ToolInvocation(
+                        id = id,
+                        name = name,
+                        parameters = t["parameters"]?.jsonPrimitive?.contentOrNull ?: "{}",
+                        result = t["result"]?.jsonPrimitive?.contentOrNull ?: "",
+                        reasoning = t["reasoning"]?.jsonPrimitive?.contentOrNull,
+                        signature = t["signature"]?.jsonPrimitive?.contentOrNull,
+                    )
+                }
             index to ChatMessage(
                 mes = mes,
                 isUser = isUser,
+                isSystem = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true,
                 name = obj["name"]?.jsonPrimitive?.contentOrNull,
+                toolInvocations = toolInvocations,
             )
         }
         // 官方 script.js generate coreChat.map：消息在存前已过一轮（sendMessageAsUser/saveReply，
@@ -239,32 +262,38 @@ class ChatPromptFactory {
                 ),
             )
         }.let { msgs ->
-            // 官方 getBiasStrings：{{bias:...}} 提取自输入文本（regenerate/swipe 时回溯 extra.bias）；
-            // impersonate/continue 不注入 bias。宏从消息文本剥离（官方 Handlebars helper 渲染为空）。
-            // 宏从所有用户消息剥离（避免 {{bias:...}} 泄漏进提示词，含 continue 里的旧消息）；
-            // bias 只取最后一条用户消息，且仅 generate/swipe 注入（官方 getBiasStrings 对 impersonate/continue 返回空）
-            var found = ""
-            var lastUserBias = ""
-            val cleaned = msgs.map { pair ->
+            // 官方 sendMessageAsUser 存前已剥离 {{bias}} 并写入 extra.bias；旧/导入聊天兜底再清一次
+            // （官方 Handlebars bias helper 渲染为空，等价不泄漏），但不从历史文本反推 bias。
+            msgs.map { pair ->
                 val (index, m) = pair
                 if (m.isUser && m.mes.contains("{{bias")) {
-                    val (text, bias) = extractMessageBias(m.mes)
-                    // 官方 getBiasStrings 取“最后一条用户消息”的 bias；逐条覆盖，最后一条用户消息胜出
-                    if (bias.isNotBlank()) lastUserBias = bias
-                    index to m.copy(mes = text)
+                    index to m.copy(mes = extractMessageBias(m.mes).first)
                 } else pair
             }
-            if (type != "impersonate" && type != "continue" && lastUserBias.isNotBlank()) found = lastUserBias
-            cleaned to found
         }
-        val (indexedMessages, textBias) = chatMessages
-        // 官方 getBiasStrings：优先回溯最后一条用户消息 extra.bias（编辑消息时官方把 {{bias}} 存进 extra.bias）
-        val storedBias = history.lastOrNull { el ->
-            val obj = el.jsonObject
-            val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
-            isUser && (obj["extra"] as? JsonObject)?.get("bias")?.jsonPrimitive?.contentOrNull?.isNotBlank() == true
-        }?.jsonObject?.get("extra")?.jsonObject?.get("bias")?.jsonPrimitive?.contentOrNull
-        val promptBias = storedBias ?: textBias
+        val indexedMessages = chatMessages
+        // 官方 Generate.getBiasStrings(textareaText, type)：
+        // 输入为空时回溯最近一条 user/system/narrator 的 extra.bias（swipe 跳过最后一条），
+        // 否则用输入文本里的 {{bias}}（发送时已存 extra.bias）；impersonate/continue 恒空。
+        val promptBias = BiasEngine.getBiasStrings(
+            textareaText = textareaText,
+            type = type,
+            config = BiasConfig(
+                userPromptBias = "",
+                chat = history.mapNotNull { el ->
+                    val obj = el.jsonObject
+                    val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+                    val isSystem = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+                    val isNarrator = (obj["extra"] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+                    BiasChatMessage(
+                        isUser = isUser,
+                        isSystem = isSystem,
+                        isNarrator = isNarrator,
+                        bias = (obj["extra"] as? JsonObject)?.get("bias")?.jsonPrimitive?.contentOrNull,
+                    )
+                },
+            ),
+        ).promptBias
         // 官方 coreChat.map：extra.append_title + 媒体 append_title 标题追加到消息正文末尾
         val titledMessages = indexedMessages.map { (idx, m) ->
             val extra = history.getOrNull(idx)?.jsonObject?.get("extra") as? JsonObject
@@ -404,32 +433,15 @@ class ChatPromptFactory {
                 )
             },
         )
-        // 官方 /inject：script_injects → setExtensionPrompt(script_inject_{id}, value, position, depth, scan, role)
-        // before→start / after→end / chat→in_chat / none→不注入（仅存元数据，可配合 scan 触发世界书）
-        val scriptExtensionPrompts = mutableMapOf<String, ExtensionPrompt>()
-        val scriptInChatPrompts = mutableListOf<PromptItem>()
-        val scriptScanInjections = mutableListOf<String>()
-        for (inj in scriptInjections) {
-            if (inj.value.isBlank()) continue
-            if (inj.scan) scriptScanInjections += inj.value
-            val identifier = "script_inject_${inj.id}"
-            when (inj.position) {
-                "before" -> scriptExtensionPrompts[identifier] = ExtensionPrompt(identifier, inj.role, inj.value, "start", inj.depth)
-                "after" -> scriptExtensionPrompts[identifier] = ExtensionPrompt(identifier, inj.role, inj.value, "end", inj.depth)
-                "chat" -> scriptInChatPrompts += PromptItem(
-                    identifier = identifier,
-                    name = "脚本注入 ${inj.id}",
-                    content = inj.value,
-                    role = inj.role,
-                    injectionDepth = inj.depth,
-                    injectionOrder = 100,
-                )
-                // none：官方不注入提示词
-            }
+        // 官方 /inject：script_injects → processChatSlashCommands 逐条 setExtensionPrompt，
+        // 引擎 ExtensionPromptEngine 1:1 落成 before→start / after→end / chat→in-chat / none→不注入；
+        // scan=true 的 value 按官方 getExtensionPromptByName 先宏替换再进世界书扫描缓冲
+        val scriptPlan = ExtensionPromptEngine.planScriptInjections(scriptInjections) {
+            MacroEngine.substitute(it, env)
         }
 
         val wiResult = scanner.scan(
-            chat = indexedChat.map { it.second.mes } + scriptScanInjections,
+            chat = indexedChat.map { it.second.mes },
             maxContext = maxContextTokens,
             entries = parsed?.worldEntries ?: emptyList(),
             settings = worldInfoSettings,
@@ -437,35 +449,30 @@ class ChatPromptFactory {
             // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
                 .associateBy { "${it.world}.${it.uid}" },
+            // 官方 checkWorldInfo：scan=true 的扩展提示 addInject 进扫描缓冲（不在聊天深度里）
+            scanInjections = scriptPlan.scanValues,
         )
 
         // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
         // 仅供 {{outlet::key}} 宏读取（NONE 不注入提示词）
         env = env.copy(outlets = wiResult.outletEntries.mapValues { (_, v) -> v.joinToString("\n") })
 
-        // 官方 script.js：worldInfoDepth → setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE, IN_CHAT, depth, role)
-        val worldInfoDepthPrompts = wiResult.depthEntries.mapIndexed { i, d ->
-            PromptItem(
-                identifier = "worldInfoDepth$i",
-                name = "世界书深度 ${d.depth}/${d.role}",
-                content = d.entries.joinToString("\n"),
-                role = d.role,
-                injectionDepth = d.depth,
-                injectionOrder = 100,
-            )
-        }
+        // 官方 script.js：flushWIInjections + worldInfoDepth.forEach →
+        // setExtensionPrompt(CUSTOM_WI_DEPTH_ROLE(depth, role), IN_CHAT, depth, role)
+        val worldInfoDepthPrompts = DepthPromptEngine.worldInfoDepthPromptItems(wiResult.depthEntries)
 
         // 示例对话：官方先建卡内 mes_example，再把世界书 EM 锚点示例 unshift/push 进同一数组
-        val exampleBlocks = mutableListOf<String>()
-        exampleBlocks += PromptUtils.parseMesExamples(fields.mesExamples)
-        for (em in wiResult.emEntries) {
-            val parsed = PromptUtils.parseMesExamples(em.content)
-            if (em.position == 0) {
-                parsed.reversed().forEach { exampleBlocks.add(0, it) }
-            } else {
-                exampleBlocks += parsed
-            }
-        }
+        // 官方：WI 示例先 baseChatReplace（宏替换+collapse+去 \r）再 parseMesExamples，
+        // before(0)→unshift / after(1)→push（此前 App 缺 baseChatReplace，已补）
+        val exampleBlocks = ExampleAssembler.assembleWithWorldExamples(
+            baseMesExamples = fields.mesExamples,
+            emEntries = wiResult.emEntries,
+            substitute = { MacroEngine.substitute(it, env) },
+            collapseNewlines = false,
+            isInstruct = false,
+            exampleSeparator = "",
+            mainApiIsOpenAi = chatCompletionSource != "claude",
+        )
         val examples = PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
 
         // 官方 authors-note.js：note_prompt/note_position/note_depth/note_role + ANWithWI 合并世界书 AN 前后注入
@@ -490,8 +497,17 @@ class ChatPromptFactory {
         // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），
         // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
 
-        var effectiveInChat = inChatExtensions + scriptInChatPrompts
-        var effectiveExtensions = extensionPrompts + scriptExtensionPrompts
+        var effectiveInChat = inChatExtensions + scriptPlan.inChatPrompts
+        var effectiveExtensions = extensionPrompts + scriptPlan.extensionPrompts
+        // 官方 generate：群聊有 depth 提示时用群聊深度提示（调用方 inChatExtensions），
+        // 否则角色卡深度提示 setExtensionPrompt(DEPTH_PROMPT, IN_CHAT, depth, role)
+        if (useCharacterDepthPrompt) {
+            DepthPromptEngine.characterDepthPromptItem(
+                content = fields.charDepthPrompt,
+                depth = parsed?.depthPromptDepth ?: DepthPromptEngine.DEFAULT_DEPTH,
+                role = parsed?.depthPromptRole ?: DepthPromptEngine.DEFAULT_ROLE,
+            )?.let { effectiveInChat += it }
+        }
         if (anText.isNotBlank()) {
             if (note.position == 1) {
                 effectiveInChat = effectiveInChat + PromptItem(
@@ -535,6 +551,7 @@ class ChatPromptFactory {
                 jailbreakPromptOverride = fields.jailbreak,
                 bias = promptBias,
                 chatCompletionSource = chatCompletionSource,
+                canUseTools = canUseTools,
                 continuePrefill = continuePrefill,
                 impersonationPrompt = impersonationPrompt,
                 cyclePrompt = cyclePrompt,
@@ -576,6 +593,10 @@ class ChatPromptFactory {
         val source: CharacterCardSource,
         val worldEntries: List<WorldInfoEntry>,
         val regexScripts: List<RegexPipelineScript>,
+        /** 官方 data.extensions.depth_prompt.depth ?? 4。 */
+        val depthPromptDepth: Int = 4,
+        /** 官方 data.extensions.depth_prompt.role ?? 'system'。 */
+        val depthPromptRole: String = "system",
     )
 
     private fun parseCard(raw: String): ParsedCard {
@@ -624,7 +645,15 @@ class ChatPromptFactory {
                     )
                 }.getOrNull()
             } ?: emptyList()
-        return ParsedCard(source, entries, regexScripts)
+        return ParsedCard(
+            source = source,
+            worldEntries = entries,
+            regexScripts = regexScripts,
+            depthPromptDepth = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
+                ?.get("depth")?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
+            depthPromptRole = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
+                ?.get("role")?.jsonPrimitive?.contentOrNull?.ifBlank { "system" } ?: "system",
+        )
     }
 
     /** 官方 extractMessageBias + removeMacros（引擎 1:1，Handlebars 语义）。 */
