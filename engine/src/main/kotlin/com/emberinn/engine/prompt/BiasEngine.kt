@@ -27,6 +27,7 @@ data class BiasResult(
 object BiasEngine {
 
     private val biasRegex = Regex("""\{\{\s*bias(?:\s+([\s\S]*?))?\s*\}\}""", RegexOption.IGNORE_CASE)
+    private val legacyBiasColonRegex = Regex("""\{\{\s*bias\s*:([\s\S]*?)\s*\}\}""", RegexOption.IGNORE_CASE)
 
     fun extractMessageBias(message: String): String {
         if (message.isEmpty()) return ""
@@ -47,6 +48,17 @@ object BiasEngine {
             last = m.range.last + 1
         }
         sb.append(message, last, message.length)
+        // App 历史兼容：{{bias:...}} 冒号写法（官方 Handlebars 不支持，作为 README 扩展保留）
+        val colonText = sb.toString()
+        sb.setLength(0)
+        var colonLast = 0
+        for (m in legacyBiasColonRegex.findAll(colonText)) {
+            sb.append(colonText, colonLast, m.range.first)
+            val value = m.groupValues[1].trim()
+            if (value.isNotEmpty()) matches += value
+            colonLast = m.range.last + 1
+        }
+        sb.append(colonText, colonLast, colonText.length)
         // 官方 helper 返回 ''，模板渲染后 bias 调用点被移除；这里返回偏置串即可，
         // 调用方需要“移除后文本”时用 removeMacros(rendered)（官方 sendMessageAsUser 语义）。
         return if (matches.isEmpty()) "" else " " + matches.joinToString(" ")
