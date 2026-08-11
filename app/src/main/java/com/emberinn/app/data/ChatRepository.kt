@@ -17,7 +17,6 @@ import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.ExtensionPromptEngine
-import com.emberinn.engine.prompt.ToolLoopPlanner
 import com.emberinn.engine.prompt.CustomStoppingConfig
 import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
@@ -275,55 +274,6 @@ class ChatRepository(context: Context) {
             onToolCalls = onToolCalls,
         )
     }
-
-    /** 工具循环续跑：在已准备好的消息后追加 assistant(tool_calls) + tool 结果，再请求一次。 */
-    fun continueWithToolResults(
-        messages: List<CompletionMessage>,
-        assistant: CompletionMessage,
-        results: List<Pair<String, String>>,
-        onDelta: (String) -> Unit,
-        onDone: () -> Unit,
-        onError: (Throwable) -> Unit,
-        options: ProviderRequestOptions = ProviderRequestOptions(),
-        onReasoning: ((String) -> Unit)? = null,
-        onToolCalls: ((JsonElement) -> Unit)? = null,
-    ): LlmClient.StreamSession? {
-        return continueWithMessages(
-            messages = messages + ToolLoopPlanner.buildNextMessages(assistant, results),
-            onDelta = onDelta,
-            onDone = onDone,
-            onError = onError,
-            options = options,
-            onReasoning = onReasoning,
-            onToolCalls = onToolCalls,
-        )
-    }
-
-    /** 工具循环下一轮：直接使用已拼好的消息列表请求（不再重跑提示词总装）。 */
-    fun continueWithMessages(
-        messages: List<CompletionMessage>,
-        onDelta: (String) -> Unit,
-        onDone: () -> Unit,
-        onError: (Throwable) -> Unit,
-        options: ProviderRequestOptions = ProviderRequestOptions(),
-        onReasoning: ((String) -> Unit)? = null,
-        onToolCalls: ((JsonElement) -> Unit)? = null,
-    ): LlmClient.StreamSession? {
-        val profile = store.load() ?: return null
-        val provider = ProviderRegistry.get(profile.providerId) ?: return null
-        return client.streamChatCompletionsAsync(
-            provider = provider,
-            profile = profile,
-            messages = messages,
-            onDelta = onDelta,
-            onDone = onDone,
-            onError = onError,
-            options = options,
-            onReasoning = onReasoning,
-            onToolCalls = onToolCalls,
-        )
-    }
-
 
     /** provider.id → 官方 chat_completion_sources（无官方分支的返回 null = 不支持媒体内联）。 */
     private fun mediaSourceOf(provider: com.emberinn.engine.provider.ProviderSpec): String? = when (provider.id) {

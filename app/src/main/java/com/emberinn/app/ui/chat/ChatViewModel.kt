@@ -66,7 +66,6 @@ import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.PromptItem
-import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.ToolCall
 import com.emberinn.engine.prompt.ToolLoopPlanner
 import com.emberinn.engine.prompt.StoppingStringsConfig
@@ -860,8 +859,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var singleAutoContinueRuns = 0
     /** 工具循环递归计数（官方 ToolManager.RECURSE_LIMIT=5）。 */
     private var toolLoopRuns = 0
-    /** 本轮总装出的最终消息（工具循环续跑基线；官方 Generate 递归会重新总装）。 */
-    private var preparedMessages: List<CompletionMessage> = emptyList()
     private var pendingToolCalls: kotlinx.serialization.json.JsonElement? = null
     /** 当前流的生成参数：工具循环递归时按官方 Generate('normal') 重启 startStream。 */
     private var currentStreamParams: StreamParams? = null
@@ -1538,12 +1535,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 工具循环重启 startStream 所需的当前流参数（官方 Generate 递归用同一组参数 + depth+1）。 */
     private data class StreamParams(
-        val type: String,
-        val continuePrefill: Boolean,
         val impersonation: Boolean,
-        val cyclePrompt: String,
-        val continueMode: Boolean,
         val swipeMode: Boolean,
+        val cyclePrompt: String,
         val impersonationPrompt: String,
         val mediaInlining: Boolean,
         val characterRawJsonOverride: String?,
@@ -1803,12 +1797,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         onFinished: (() -> Unit)? = null,
     ) {
         currentStreamParams = StreamParams(
-            type = type,
-            continuePrefill = continuePrefill,
             impersonation = impersonation,
-            cyclePrompt = cyclePrompt,
-            continueMode = continueMode,
             swipeMode = swipeMode,
+            cyclePrompt = cyclePrompt,
             impersonationPrompt = impersonationPrompt,
             mediaInlining = mediaInlining,
             characterRawJsonOverride = characterRawJsonOverride,
@@ -1954,7 +1945,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 useCharacterDepthPrompt = inChatExtensions.isEmpty(),
                 onPrepared = { info ->
                     if (streamActive) {
-                        preparedMessages = info.messages
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
                             val name = entry.name.ifBlank { entry.keys.firstOrNull().orEmpty() }
                             if (name.isBlank()) null else WorldHitView(

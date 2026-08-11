@@ -186,7 +186,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 ✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；✅ preset 脚本存储/UI（命名预设集保存/恢复/编辑 + preset_allowed_regex[openai] 允许开关 + 存前/总装/编辑/开场白全位点接线；App 无采样预设管理器，命名集为官方 preset 扩展 regex_scripts 字段的结构等价，登记）。
 
 ### 3.7 预设 ✅
-官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包。
+官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。moving-ui（界面预设）未打包，用户决策延期见 8.9。
 
 ### 3.8 聊天 🟡
 jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 层，对齐官方 `swipe_id`/`swipes[]`/`swipe_info[]`：ensureSwipes 初始化、syncSwipeToMes 同步、Generate('swipe') 追加、deleteSwipe、editMessage 写回）**。
@@ -876,6 +876,19 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
 - **2026-08-11 渲染修复**：普通 `\n` 已按官方 `simpleLineBreaks:true` 打开 `eolAsNewLine`；HTML 开关现在真正关闭 WebView（围栏外一律原生）；WebView 链接补 `text-decoration:none`；WebView 高度允许回缩、上限严格 75%；用户消息改走与 AI 同一条 Markdown/HTML 渲染管线。
 - 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
+
+### 8.9 用户决策延期：自定义 CSS + Moving UI（2026-08-12 记录，暂不做）
+
+**官方是什么（对照 release 8172dcd）**：
+- Custom CSS：设置页文本框 → 写 `data/_css/user.css`，整个 Web UI（DOM）套用；因 EmberInn 是原生 Compose 无 DOM，无法 1:1。
+- Moving UI：设置→“移动界面”开关，鼠标拖拽/缩放聊天、角色列表、设置面板等，位置尺寸存 `power_user.movingUIState`（top/left/right/bottom/width/height/margin），可保存/加载/删除命名预设（`default/content/presets/moving-ui/*.json`，结构 `{name, movingUIState}`），窗口缩放按比例重算；**官方 `isMobile()` 直接禁用**，1.18 自带预设只有空 `Default.json`。
+
+**结论**：1:1 不可行（依赖 DOM/CSS，且官方移动端禁用）。等价方案待用户选择：
+- A（推荐）：自定义 CSS 限定 WebView 交互卡片/HTML 消息（当前渲染器已可承载，需加“自定义样式”输入 + user.css 注入）；
+- B：主题 JSON 编辑器（颜色/字体/圆角/密度映射 Compose 主题令牌，扩展现有主题配方体系）；
+- C：布局预设（面板显隐/消息密度/双栏，数据结构可对齐 movingUIState 思路，但控件语义为 Ember 自有）。
+
+用户答复（2026-08-12）：先记录，以后再做；未选 A/B/C。**本项不参与差分**（官方移动端禁用 + 非引擎逻辑）。
 
 ## 9. 维护速记（2026-08-10 精简归档）
 
