@@ -57,8 +57,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（61 组差分 fixture，共 995 例对拍，全部通过；2026-08-11 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 61 组 / 995 例（机器数）为准。
+**已覆盖（62 组差分 fixture，共 1026 例对拍，全部通过；2026-08-11 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 62 组 / 1026 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：脚本数 60 个（prompt-converters 一行脚本输出 claude-messages.json）；合计 961 例。
@@ -123,6 +123,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
 | 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 34 |
+| 响应数据提取（extractMessageFromData/extractJsonFromData） | response-data-official.mjs | ResponseDataDiffTest | 31 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -182,6 +183,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - `engine/prompt/CleanUpMessage.kt`：`CleanUpConfig` 注入 promptBias/regexTransform/stoppingStrings 等官方依赖；App 接线时传入已宏替换的 bias、真实 RegexPipelineEngine 与 API 停用词。
 - `engine/prompt/FixMarkdown.kt`：forDisplay=false（cleanUp 用）与 forDisplay=true（显示用）两条官方路径。
 - 差分：`scripts/diff/cleanup-official.mjs`（函数体逐字摘自 script.js:3112/6383、power-user.js:408/429、utils.js:883/1378；打桩 substituteParams/getRegexedString/stoppingStrings 已在脚本头部登记）→ `CleanUpDiffTest` 34 例全过。
+
+### 3.8.6 响应数据提取 ✅（2026-08-11）
+官方 `script.js extractMessageFromData / extractJsonFromData` 已移植到 `engine/provider/ResponseDataExtractor.kt`：
+- `extractMessageFromData`：kobold/koboldhorde/textgenerationwebui/novel/openai 各协议响应取文本链，与官方逐字段一致（含 textgen `data[0].content` 数组分支、openai content 文本数组 `\n\n` 拼接、tool_plan 回退）。
+- `extractJsonFromData`：openai 主 API 下按 chat_completion_source 解析 JSON；claude 取 tool_use.input；perplexity 先过 removeReasoning（调用方注入）；returnInvalidJson 原样返回；非 openai 返回 `{}`。kotlinx 会把裸词当字符串，已加官方 JSON.parse 语义白名单。
+- 差分：`scripts/diff/response-data-official.mjs`（script.js:6217/6252 逐字；打桩 removeReasoningFromString=恒等，已登记）→ `ResponseDataDiffTest` 31 例全过。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 

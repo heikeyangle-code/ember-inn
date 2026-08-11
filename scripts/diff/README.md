@@ -38,6 +38,8 @@
 - `prompt-utils-official.mjs`：官方提示词工具 collapseNewlines/parseMesExamples。
 - `cleanup-official.mjs`：官方消息清理 cleanUpMessage/cleanGroupMessage（script.js）+ fixMarkdown（power-user.js），
   打桩 substituteParams/getRegexedString/stoppingStrings（脚本头部登记）。
+- `response-data-official.mjs`：官方响应数据提取 extractMessageFromData/extractJsonFromData（script.js），
+  打桩 removeReasoningFromString=恒等（脚本头部登记）。
 - `json-export-official.mjs`：官方 JSON 角色卡导出。
 - `sse-stream-official.mjs`：官方 SSE 流解析 parseStreamData。
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
@@ -106,6 +108,7 @@ node scripts/diff/byaf-import-official.mjs
 node scripts/diff/slash-escape-official.mjs
 node scripts/diff/prompt-utils-official.mjs
 node scripts/diff/cleanup-official.mjs
+node scripts/diff/response-data-official.mjs
 node scripts/diff/json-export-official.mjs
 node scripts/diff/sse-stream-official.mjs
 node scripts/diff/regex-pipeline-official.mjs
