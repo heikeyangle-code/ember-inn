@@ -3187,10 +3187,13 @@ private fun mermaidHtmlOf(content: String): String? {
 <script>mermaid.initialize({startOnLoad:true,theme:'base'});</script></body></html>"""
 }
 
-/** 粗略 HTML 判定：存在成对/单标签（忽略 markdown 代码围栏内的）。 */
+/** 粗略 HTML 判定：围栏外存在带属性或自闭合的标签才算富 HTML（忽略 markdown 代码围栏内的）。
+ *  裸标签（<b>/<i>/<q>/<u>/<s>/<font color> 等）已被 preprocessOfficialHtml 原生转换，
+ *  官方富标签由 OFFICIAL_HTML_TAG 接管；这里只兜底自定义/带属性标签，避免 <tag> 出现在
+ *  普通文字里（如 JSON 示例、a<b> 比较）把整条消息误送进 WebView 变成空白。 */
 private fun looksLikeHtml(content: String): Boolean {
-    val outsideFence = content.replace(Regex("```[\\s\\S]*?```"), "")
-    return Regex("<[a-zA-Z][^>]*>").containsMatchIn(outsideFence)
+    val outsideFence = content.replace(ANY_FENCE, "")
+    return Regex("<[a-zA-Z][^>]*(?:=|/>)").containsMatchIn(outsideFence)
 }
 
 /** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
@@ -3247,6 +3250,11 @@ private fun configureWebView(
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
     view.settings.allowFileAccess = true
+    // 本地 HTML 需要加载 file:// 字体/图片（WebView 默认禁止 file→file 跨源）；
+    // 消息内容本身是本地拼接页，交互 JS 已按用户要求全开，保持同等级放行
+    view.settings.allowFileAccessFromFileURLs = true
+    view.settings.allowUniversalAccessFromFileURLs = true
+    view.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
     view.webViewClient = object : android.webkit.WebViewClient() {
         // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
         // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
@@ -3297,7 +3305,11 @@ private fun configureWebView(
         ViewGroup.LayoutParams.WRAP_CONTENT,
     )
     session.html = page
-    view.loadDataWithBaseURL("file:///android_asset/", page, "text/html", "utf-8", null)
+    // Android WebView 对非 base64 的 HTML 会按 URL 解析：#/% 等字符把内容截断成空白页
+    // （Android 11+ 已知问题，官方与社区一致解法是 base64 编码加载）。
+    // 保留 file:///android_asset/ 作 baseUrl，mermaid.min.js 与 file:// 字体仍可正常解析。
+    val encoded = android.util.Base64.encodeToString(page.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+    view.loadDataWithBaseURL("file:///android_asset/", encoded, "text/html", "base64", null)
 }
 
 /** WebView 兜底渲染（HTML 消息 / Mermaid / 交互卡片）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；

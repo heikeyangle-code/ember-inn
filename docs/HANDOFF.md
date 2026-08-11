@@ -579,7 +579,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 引用块（style.css blockquote） | 左 3px quote + padding-left 10px + black30a + margin 0 | 原生黑 30% Box + MarkdownBlockQuote 左边条；WebView CSS 同官方 | ✅ |
 | q 内斜体（style.css q i/q em） | color:inherit（被 q 色覆盖） | applyOfficialMarkers q 后于 em | ✅ |
 | u 与 em 层级（style.css u / em 优先级） | u 段 em 保持 em 色 | u 避开 em 段上色 | ✅ |
-| 代码块（style.css pre code） | display:block + overflow-x:auto | highlightedCodeBlock/Fence（库代码高亮）+ WebView pre code | ✅ 视觉 |
+| 代码块（style.css pre code） | display:block + overflow-x:auto（长行横向滚动） | WrappingHighlightedCode（snipme 高亮 + softWrap 换行，不再横向截断；WebView pre 同样 pre-wrap） | ✅ 功能级（官方横向滚动→我方换行，内容完整可见） |
 | 表格/列表/p/li tt（style.css .mes_text） | border/padding/margin 定值 | WebView CSS 同官方；原生 mikepenz 为 M3 风格近似 | 🟡 原生视觉近似 |
 | 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + 名字/时间/日期/思考卡（补）+ WebView text-shadow | 🟡 聊天内全文字；按钮/输入栏等 UI 未加 |
 | 阴影/边框色（style.css :root） | rgba(0,0,0,.5)=#80000000 | stShadow/stBorder #80000000 | ✅ |
@@ -694,6 +694,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   - 群聊队列（GroupChat/GroupQueue）、工具调用、Instruct 模式、表情立绘：功能新增而非迁移，未做。
 - 影响：纯 App/UI 层，引擎零改动；变量宏行为从“读不到”变为“可读”，属于修复。
 
+### 12.14 WebView 空白根因修复 + HTML 判定收紧 + 代码块换行（2026-08-11 追加）
+- **空白根因（已修）**：`configureWebView` 原来 `loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)`。Android WebView 对非 base64 的 data 按 URL 解析：`#`/`%` 及范围外字节做 %xx 编码，`#` 会被当成 fragment 把页面截断（官方 WebView 文档 + 华为论坛 + StackOverflow 58181704 一致结论，API 29/30 可稳定复现）。我方拼接页 CSS 里全是 `#RRGGBB` 色值，等于每页必截断 → 网页/卡片/交互 HTML 白屏、高度上报脚本不执行 → 高度恒 0 不可见。
+- **修复方式（本轮）**：`Base64.encodeToString(page.toByteArray(UTF_8), NO_WRAP)` + `loadDataWithBaseURL("file:///android_asset/", encoded, "text/html", "base64", null)`。baseUrl 保留 `file:///android_asset/`，`mermaid.min.js` 相对引用与 file:// 字体不受影响；base64 数据不再被 URL 解析器截断。这是 Android 社区对同一问题的权威解法（非本 App 自创）。
+- **本地资源访问补齐**：`allowFileAccessFromFileURLs=true` + `allowUniversalAccessFromFileURLs=true`（file:// 页面加载 file:// 字体/图片，WebView 默认禁止 file→file 跨源）；`MIXED_CONTENT_ALWAYS_ALLOW`（消息内 http 图片/资源在 data 页可加载）。与用户“网络/JS 全放开”要求一致，不加开关。
+- **HTML 误判收紧（本轮）**：`looksLikeHtml` 由“任意 `<tag>`”改为“带属性或自闭合标签”（`<[a-zA-Z][^>]*(?:=|/>)`，忽略 ``` / ~~~ 围栏）。原因：普通文字/JSON 里出现 `<tag>` 会被旧规则整条丢进 WebView，WebView 又因上面的截断 bug 白屏 → 表现为“文字被框死/正文消失”。裸标签（b/i/q/u/s/font color/hr/br）已由 `preprocessOfficialHtml` 原生转换，官方富标签仍由 `OFFICIAL_HTML_TAG` 接管，行为不回退。
+- **代码块“框死看不全”（fd95265）**：mikepenz 默认 `MarkdownCode` 对 code 挂 `horizontalScroll`（源码 MarkdownCode.kt），长 JSON 只能横向滚动、内容“被框住”。新增 `WrappingHighlightedCode`：snipme 高亮保留 + `Text(softWrap=true)` 自动换行，替换 codeFence/codeBlock 两个入口。官方 style.css 是 overflow-x:auto（横向滚动），此处为视觉可用性有意改成换行（功能级对齐，内容完整可见）。
+- 影响：纯 App/UI 层，引擎零改动；与第 11 章官方对照结论不冲突。
+
 ### 12.8 性能治理权威依据（调研结论）
 - **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
@@ -702,7 +710,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - **键盘 / 滚底**：先滚底再收键盘（小视口滚底、大视口锚底）避免“滚到旧视口”。聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat）可彻底消除键盘开合/新消息的底部跳动，但需重写滚动跟随与 key 逻辑，风险高，列为后续方案（当前未采用）。
 
 ### 12.6 已知边界
-- 交互卡 + 围栏外“非官方任意 HTML”（如 `<foo>`）且 HTML 开关关闭时，围栏外文本走原生（旧实现整条 WebView）；属低频边缘，结果仍符合“HTML 开关关闭 = 不渲染任意 HTML”。
+- 围栏外“非官方裸标签”（如 `<foo>`、`a<b>`）不再误判成富 HTML：无属性/非官方清单标签走原生 Markdown（原样显示文本）；带属性或自闭合标签（`<foo x=1>`、`<br/>`）仍进 WebView。HTML 开关关闭时围栏外文本一律走原生（旧实现整条 WebView），符合“HTML 开关关闭 = 不渲染任意 HTML”。
 - iframe 内部动态改高仍靠 3s 内复测，未向卡片脚本注入 ResizeObserver（避免改动角色卡内容）。
 - WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
 - 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
