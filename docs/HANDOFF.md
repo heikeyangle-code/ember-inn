@@ -423,8 +423,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
  /gen /genraw + 异步执行器、send_if_empty
 - 引擎：{{outlet::key}}、PromptReasoning、正则 flags、世界书正则深度
 
-**剩余**：工具调用 App 注册表（官方 1.18 无内置工具，且需引擎响应侧 tool_calls 解析差分，框架性待做）、
-表情精灵 App 层（需 sprite 存储/分类后端，官方为 extras/LLM API）。
+**剩余**：工具调用 App 注册表/执行器（引擎 ToolCallParser 已差分，App 待接）、
+表情精灵 App 层（引擎 ExpressionEngine/SpriteStorage 已差分，UI 待接）。
 
 **已完成（全部经 CI 验证 / 引擎测试全绿）**
 
@@ -506,7 +506,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | send_if_empty | 未做 | ✅ 空输入且最后一条为 AI 时发送配置文本续聊（官方 oai_settings.send_if_empty） |
 | 斜杠异步命令 | 无异步执行器 | ✅ executeAsync + /gen /genraw（；官方无 /while，误记已删） |
 
-**剩余已知半成品（继续治理中）**：工具调用 App 注册表（官方 1.18 无内置工具，框架性待做）、表情精灵 App 层。
+**剩余已知半成品（继续治理中）**：工具调用 App 注册表/执行器（引擎已差分）、表情精灵 App 层（引擎已差分）。
 
 ### 8.6 与官方不一致登记（2026-08-10 全量审计，防漏机制）
 
@@ -525,8 +525,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | {{bias}} 提示词 | 官方 getBiasStrings 从输入/最近用户消息 extra.bias 提取；App 此前不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ 已修 |
 | chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 此前恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
 | 人设 personaDescription | ✅ 已接（2026-08-10）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
-| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors；App 作者注释已接（聊天 ⋮ 作者注释 + ANWithWI）；记忆 UI 未做（官方默认关） | 🟡 记忆 UI 待做 |
-| 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；App 工具注册表未做（HANDOFF 已有登记） | 🟡 P2 |
+| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 已差分；App 作者注释已接；记忆 UI 待做（官方默认关） | 🟡 记忆 UI 待做 |
+| 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；ToolCallParser 已差分；App 工具注册表/执行器待接 | 🟡 App 待接 |
 | 世界书设置 | 已做（设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景，全局形状/字体/浅深锁定管线已做；配方导出/分享已做 | ✅ |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）；✅ URL 下载已做（数据银行对话框“从 URL 添加”，对齐官方 vectors 扩展 Data Bank URL 上传语义）；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
