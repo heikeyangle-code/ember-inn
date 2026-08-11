@@ -32,6 +32,7 @@ object WebViewPool {
             view.loadUrl("about:blank")
             view.clearHistory()
             view.removeAllViews()
+            runCatching { view.removeJavascriptInterface("EmberInnBridge") }
             view.webChromeClient = null
             // 丢弃旧页面的回调：复用后由新 WebViewClient 接管
             view.webViewClient = android.webkit.WebViewClient()

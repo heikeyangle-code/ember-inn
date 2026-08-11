@@ -524,10 +524,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ### 10.4 实现位置与行为（维护必读）
 - `ChatScreen.kt / ChatMarkdown`：消息先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段（``` 内以 `<` 开头以 `>` 结尾或含 `<body>`）与 Mermaid / 富 HTML 段各自进独立 WebView，围栏外文本走原生 Markdown（详见第 12 章）。
 - `ChatScreen.kt / embedInteractiveBlocks`（在 officialStyledHtml 内对 WebView 页面调用）：
- - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度；
+ - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
  - 非交互代码块 → `<pre><code>`（转义）；
  - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
-- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver 事件上报（emberinnh:// scheme）+ 1s 低频兜底 + onPageFinished 一次兜底读取（详见第 12 章）；等 iframe 加载完再撑外层高度；外层高度上限仍 75% 屏高，超出后卡片内部滚动。
+- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层高度上限仍 75% 屏高，超出后卡片内部滚动。
 - 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
 
 ### 10.5 与 Tavern Helper 能力对照
@@ -535,7 +535,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|
 | ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
 | 非交互代码块保留显示 | ✅ 已实现（pre/code） |
-| iframe 自动测高 | ✅ 已实现（onload + 150/500/1500/3000ms 复测；外层 ResizeObserver 上报） |
+| iframe 自动测高 | ✅ 已实现（onload + 150/500/1500/3000ms 复测；iframe 内 ResizeObserver/MutationObserver 持续同步高度；外层 ResizeObserver 上报） |
 | 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
 | 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
 | `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
@@ -548,10 +548,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
 3. 纯 HTML 消息（无代码围栏）：行为同（透明底、图片加载、外链跳系统浏览器）
 4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
-5. 长交互页：外层 420dp 上限，内部滚动正常，聊天列表滚动不被卡死
+5. 长交互页：外层 75% 屏高上限，内部滚动正常，聊天列表滚动不被卡死
 
 ### 10.7 安全与许可证
-- 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；无 JS 桥，碰不到 Android API/本地文件（除 asset）。
+- 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；唯一的 JS 桥 `EmberInnBridge` 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。
 - 与 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
 ## 11. 渲染与官方源码逐项对照（审计，2026-08-11）
@@ -569,12 +569,14 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 |---|---|---|---|
 | 引号对 6 种（script.js） | `"…"`/“…”/«»/「」/『』/＂＂ → `<q>` 含引号字符，代码/style 先保护 | preprocessOfficialHtml 同 6 种 → \uE001..\uE002；保护 ```/~~~ /``/`/style | ✅ |
 | 系统消息（script.js `if (!isSystem)`） | 引号转换/encode_tags 跳过，fixMarkdown 仍执行 | displayTextOf 已跳过正则+encode；补跳过引号转换 | ✅ 本轮修复 |
+| 用户消息（script.js getMessageTextHTML） | 与 AI 消息同样走 messageFormatting | 用户气泡改走 ChatMarkdown（Markdown/HTML/WebView 同一管线） | ✅ 本轮修复 |
+| 普通换行（script.js simpleLineBreaks） | 单个 `\n` 也会变 `<br>` | mikepenz `eolAsNewLine=true`（OfficialMarkdownNode + NativeMarkdown 两处注入） | ✅ 本轮修复 |
 | ~text~ 下划线（Showdown underline） | → `<u>` 下划线色+Underline | \uE003..\uE004 → 下划线色+Underline | ✅ |
 | `<em>/<i>`（style.css .mes_text i,em） | 斜体 + --SmartThemeEmColor | 原生 annotator EMPH → emColor；WebView CSS em,i 同色 | ✅ |
 | `<b>/<strong>`（style.css strong/h1/h2） | font-weight bold | → `**` Markdown 加粗 | ✅ |
 | `<s>/<strike>/<del>` | 删除线 | → `~~` | ✅ |
 | `<font color="#hex">`（style.css font[color]…inherit） | 指定色，内部 em/i/u/q 继承 | \uE005..#hex..\uE007 → 最后覆盖 em/u/q | ✅ |
-| `<hr>`/`<br>` | 分隔线/换行 | `<hr>`→`---`；`<br>`→`  \n`（Markdown 硬换行，mikepenz HARD_LINE_BREAK 渲染真换行，官方 1:1） | ✅ |
+| `<hr>`/`<br>` | 分隔线/换行 | `<hr>`→`\n\n---\n\n`（避免紧跟文字时被解析成 Setext 标题）；`<br>`→`  \n`（Markdown 硬换行） | ✅ |
 | sub/sup（Chromium UA html.css） | font-size: smaller + vertical-align: sub/super | 原生 SpanStyle：0.83×字号 + BaselineShift.Subscript/Superscript | ✅ |
 | ins（UA） | text-decoration: underline | 原生 Underline | ✅ |
 | small/big（UA） | font-size: smaller / larger | 0.83× / 1.2× 字号 | ✅ |
@@ -585,13 +587,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | data/time/wbr | 无视觉样式 | 剥标签留内容 | ✅ |
 | bdi/bdo/ruby/rt/rp（UA） | 方向隔离/覆盖、注音 | WebView 兜底（原生无法表达） | ✅ 需 Web |
 | font face/size | UA 字体族/1-7 号字 | WebView 兜底（原生仅 font color） | 🟡 需 Web |
-| `<a href>`（原始 HTML） | 官方 a 链接色+无下划线 | 原生转换 `[text](url)`（复用链接样式）；无 href 剥标签 | ✅ |
-| `<img src>`（原始 HTML） | 浏览器内联图片 | 原生转换 `![img](url)`（Coil 图片管线）；无 src 剥标签 | ✅ 尺寸属性不保留 |
+| `<a href>`（原始 HTML） | 官方 a 链接色+无下划线 | 原生转换 `[text](url)`，支持无引号 href；无 href 剥标签 | ✅ 本轮修复 |
+| `<img src>`（原始 HTML） | 浏览器内联图片 | 原生转换 `![alt](url)`，支持无引号 src、保留 alt；无 src 剥标签 | 🟡 width/height 不保留 |
 | 无属性 `<div>`/`<p>` | 块级布局（上下分行） | 原生剥标签 + 空行段落近似（`\n\n`） | 🟡 视觉近似 |
 | 无属性 `<span>` | 行内无视觉 | 原生剥标签 | ✅ |
 | 带属性 `<div>`/`<p>`（class/style/align 等） | 块级+样式 | 独立 WebView 元素（周围文字保持原生，不再整条 Web） | ✅ 需 Web |
 | 正文色（style.css body） | --SmartThemeBodyColor | 原生无色样式统一补 bodyColor；WebView body color | ✅ |
-| 链接（style.css a） | --SmartThemeQuoteColor，无下划线 | linkTextSpanStyle=quoteColor；WebView a=quote | ✅ |
+| 链接（style.css a） | --SmartThemeQuoteColor，无下划线 | linkTextSpanStyle=quoteColor；typography.textLink 同色无下划线；WebView `a{text-decoration:none}` | ✅ 本轮修复 |
 | 引用块（style.css blockquote） | 左 3px quote + padding-left 10px + black30a + margin 0 | 原生黑 30% Box + MarkdownBlockQuote 左边条；WebView CSS 同官方 | ✅ |
 | q 内斜体（style.css q i/q em） | color:inherit（被 q 色覆盖） | applyOfficialMarkers q 后于 em | ✅ |
 | u 与 em 层级（style.css u / em 优先级） | u 段 em 保持 em 色 | u 避开 em 段上色 | ✅ |
@@ -610,7 +612,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
 | Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
 | reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
-| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver 事件上报（emberinnh:// scheme）+ 图片未就绪 1s 低频兜底 + onPageFinished 一次兜底读取；iframe 150/500/1500/3000ms 复测；上限 75% 屏高（替换旧 250ms 轮询） | ✅ 机制自研 |
+| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 初始 160dp 可见兜底；scrollHeight 按 CSS 像素 1:1 转 dp（不是 Android 物理像素）；iframe 150/500/1500/3000ms 复测 + iframe 内 ResizeObserver/MutationObserver 持续同步；上限 75% 屏高（替换旧 250ms 轮询） | ✅ 机制自研 |
 
 ### 11.2 已知 bug / 限制登记（继续治理清单）
 1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
@@ -652,12 +654,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 旧测高用 `evaluateJavascript` 每 250ms 轮询，每个 HTML 消息最多 60 次空转。
 
 ### 12.2 分段渲染（ChatScreen.kt：buildMessageSegments / SegmentedMarkdown）
-- **第一步：Web 元素切分（本轮新增）**：`carveWebElementRanges` 在围栏外找出“真正需要 WebView”的块级/结构元素（table/ul/ol/li/blockquote/pre/h1-6/center/figure/…/video/audio/canvas/svg/math/iframe/style/script/form 等，以及带属性的 div/p、face/size 的 font），从开标签到同名闭标签（同层嵌套计数、自闭合除外）切出独立 WebView 段；**周围文字保持原生 Markdown**，不再“一条消息有一点 HTML 就整条 Web”。
+- **第一步：Web 元素切分（本轮新增）**：`carveWebElementRanges` 在围栏外找出“真正需要 WebView”的块级/结构元素（table/ul/ol/li/blockquote/pre/h1-6/center/figure/…/video/audio/canvas/svg/math/iframe/style/script/form 等，以及带属性的 div/p、face/size 的 font），从开标签到同名闭标签（同层嵌套计数、自闭合除外）切出独立 WebView 段；**周围文字保持原生 Markdown**，不再“一条消息有一点 HTML 就整条 Web”。切分受 `htmlEnabled` 控制，开关关闭时该区间并入原生段，不创建 WebView。
 - **第二步：非 Web 部分按围栏切分**：`ANY_FENCE` 按 ``` / ~~~ 分段：
  - 交互卡段：``` 内以 `<` 开头以 `>` 结尾或含 `<body>`（`INTERACTIVE_FENCE` 与 `embedInteractiveBlocks` 同一正则）→ 独立 WebViewHtml，内部仍是 details 原代码 + iframe srcdoc，脚本照常执行
  - Mermaid 段：```mermaid → 独立 WebViewHtml（mermaid.min.js 本地 asset）
  - 普通代码块段：原样交给原生 Markdown
- - 围栏外文本段：先 `preprocessOfficialHtml`（本轮新增 a/img 原生转换、无属性 div/p/span 剥标签、`<br>` 硬换行），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等）或（HTML 开关开且 looksLikeHtml）→ 整段 WebView 兜底；否则原生 Markdown
+ - 围栏外文本段：先 `preprocessOfficialHtml`（本轮新增 a/img 原生转换（支持无引号属性、保留 img alt）、无属性 div/p/span 剥标签、`<br>` 硬换行、`<hr>` 空行分隔），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等）或 `looksLikeHtml` 且 `htmlEnabled` → 整段 WebView 兜底；否则原生 Markdown
 - 纯 Markdown 消息（全段 Native）仍整条一次原生渲染，不拆散列表 / 引用等跨段 Markdown 结构。
 - 段间 `Arrangement.spacedBy(6.dp)`；外层 modifier（气泡 / 长按 / 滑回复）包在整条 Column 上。
 
@@ -669,14 +671,16 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 12.4 ResizeObserver 测高（ChatScreen.kt：WEBVIEW_MEASURE_SCRIPT）
 - 兜底页 `</body>` 前注入脚本：`ResizeObserver(document.documentElement)` + load 事件 + 1s 低频轮询（图片未加载完继续，`p==0` 停，15s 上限）。
-- 高度经 `location.href='emberinnh://measure?h=..&p=..'` 上报，`WebViewClient.shouldOverrideUrlLoading` 拦截解析并更新 Compose 高度（不产生真实导航）。
-- `onPageFinished` 只保留一次 `evaluateJavascript` 兜底读取；旧 250ms 高频轮询已删除。
-- iframe（交互卡内部）仍按 onload + 150/500/1500/3000ms 复测；外层高度上限仍是 75% 屏高，超长卡内滚动。
+- 高度经 `window.EmberInnBridge.onMeasure(h,p)` 直接回调 Kotlin（`addJavascriptInterface`，仅回传高度/未加载图片数，不暴露其它能力）；`onPageFinished` 轮询作为第二道兜底。
+- `onPageFinished` 改为 ≤15s 轮询兜底（纯字符串 `高度:未加载图片数`，避免 JSON 转义问题）；初始测高未返回时给 160dp 可见兜底，打破“高度 0 → 不布局 → 量不到高度”的死循环。
+- **CSS 像素换算（本轮修复）**：`scrollHeight` 是 WebView 的 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素除以 density，高密度屏上 HTML/卡片被压成细条甚至不可见；现改为 `heightPx.toFloat().dp`。
+- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）；外层高度上限仍是 75% 屏高，超长卡内滚动。
 - token 机制保证复用后旧页面的上报不会写进新消息的高度状态。
 
 ### 12.5 删除的旧实现（已确认无残留）
 - `ChatMarkdown` 里整条 `rawHtml` / `interactiveBlock` 路由、`mermaid != null` 优先整条 WebView 的分支已删除。
-- `WebViewHtml` 里 `onPageFinished` 每 250ms 轮询（≤60 次）+ stable 计数已删除。
+- `WebViewHtml` 里旧版 `onPageFinished` 每 250ms 高频轮询（≤60 次）已删除；现保留 ≤15s 低频兜底轮询（事件桥为主、轮询为第二道）。
+- `emberinnh://` 自定义 scheme 测高上报已删除，改 `EmberInnBridge`（addJavascriptInterface）直接回调；`shouldOverrideUrlLoading` 只处理 http(s) 外链。
 - 每消息 `WebView(ctx)` 新建已改为 `WebViewPool.acquire`；除 WebViewPool 内部外不再直建 WebView。
 - 保留：`officialStyledHtml` / `embedInteractiveBlocks` / `embedPlainText`（iframe 转换与 CSS 样式仍按原机制），`sanitizeHtmlForWebView`（只拦 javascript:）。
 
@@ -732,6 +736,10 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ### 12.14 WebView 空白根因修复 + HTML 判定收紧 + 代码块换行（2026-08-11 追加）
 - **空白根因（已修）**：`configureWebView` 原来 `loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)`。Android WebView 对非 base64 的 data 按 URL 解析：`#`/`%` 及范围外字节做 %xx 编码，`#` 会被当成 fragment 把页面截断（官方 WebView 文档 + 华为论坛 + StackOverflow 58181704 一致结论，API 29/30 可稳定复现）。我方拼接页 CSS 里全是 `#RRGGBB` 色值，等于每页必截断 → 网页/卡片/交互 HTML 白屏、高度上报脚本不执行 → 高度恒 0 不可见。
+- **渲染不出来的第二根因（本轮修复）**：Compose 初始把 WebView 高度给成 0 → 页面不布局 → `scrollHeight` 也量不到 → 高度永远 0。修复：测高未返回时先给 160dp 可见兜底高度，让页面先布局，再回缩/撑到真实高度。
+- **渲染不出来的第三根因（本轮修复）**：`scrollHeight` 是 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素换算，高密度屏上高度被除以 density，HTML/卡片被压成细条甚至不可见。现改为 `heightPx.toFloat().dp`。
+- **测高链路（本轮修复）**：`EmberInnBridge`（addJavascriptInterface，只回传高度/未加载图片数）→ ResizeObserver + load + 1s 兜底；`onPageFinished` 纯字符串 `高度:未加载图片数` 轮询 ≤15s 作为第二道；token 机制丢弃复用后的旧回调。
+- **渲染语义（本轮一并修）**：普通 `\n` 对齐官方 `simpleLineBreaks:true`（`eolAsNewLine=true`）；HTML 开关真正关闭 WebView；WebView 链接补 `text-decoration:none`；用户消息改走 Markdown/HTML 同一管线；Mermaid 不再 html 套 html；iframe 高度由父页观察同源 srcdoc 持续同步。
 - **修复方式（本轮）**：`Base64.encodeToString(page.toByteArray(UTF_8), NO_WRAP)` + `loadDataWithBaseURL("file:///android_asset/", encoded, "text/html", "base64", null)`。baseUrl 保留 `file:///android_asset/`，`mermaid.min.js` 相对引用与 file:// 字体不受影响；base64 数据不再被 URL 解析器截断。这是 Android 社区对同一问题的权威解法（非本 App 自创）。
 - **本地资源访问补齐**：`allowFileAccessFromFileURLs=true` + `allowUniversalAccessFromFileURLs=true`（file:// 页面加载 file:// 字体/图片，WebView 默认禁止 file→file 跨源）；`MIXED_CONTENT_ALWAYS_ALLOW`（消息内 http 图片/资源在 data 页可加载）。与用户“网络/JS 全放开”要求一致，不加开关。
 - **HTML 误判收紧（本轮）**：`looksLikeHtml` 由“任意 `<tag>`”改为“带属性或自闭合标签”（`<[a-zA-Z][^>]*(?:=|/>)`，忽略 ``` / ~~~ 围栏）。原因：普通文字/JSON 里出现 `<tag>` 会被旧规则整条丢进 WebView，WebView 又因上面的截断 bug 白屏 → 表现为“文字被框死/正文消失”。裸标签（b/i/q/u/s/font color/hr/br）已由 `preprocessOfficialHtml` 原生转换，官方富标签仍由 `OFFICIAL_HTML_TAG` 接管，行为不回退。
@@ -748,11 +756,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ### 12.6 已知边界
 - **行内 Web 标签仍整段走 Web（无法与原生文本混排）**：button/input/select/textarea/label/progress/meter/output/map/area/object/span[属性]/font face-size/ruby/rt/rp/bdi/bdo 等出现在围栏外文字里时，所在整段仍进 WebView（Compose 不支持“原生文字 + 任意行内 HTML 控件”混排）；块级卡片/表格/媒体已独立切出，周围文字不再被拖入。
 - 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似块级分行（官方是块级 margin）；连续 `<div>` 的间隔视觉略不同。带属性 div/p 走 Web 元素，不参与该近似。
-- `<a href>`/`<img src>` 转原生 markdown 时，img 的 width/height/alt 等属性不保留（alt 固定为 `img`）。
+- `<a href>`/`<img src>` 转原生 markdown：现已支持无引号属性值；img 的 alt 会保留，width/height 仍不保留（官方 parseImgDimensions 差异登记）。
 - 围栏外“非官方裸标签”（如 `<foo>`、`a<b>`）不再误判成富 HTML：无属性/非官方清单标签走原生 Markdown（原样显示文本）；带属性或自闭合标签（`<foo x=1>`、`<br/>`）仍进 WebView。HTML 开关关闭时围栏外文本一律走原生，符合“HTML 开关关闭 = 不渲染任意 HTML”。
 - Web 元素切分边界：无闭标签的残缺元素延伸到消息末尾；同名嵌套按层计数；跨围栏的残缺 HTML（开标签在围栏外、闭标签在围栏后）会按片段分别处理（低频边缘，行为不崩溃）。
-- iframe 内部动态改高仍靠 3s 内复测，未向卡片脚本注入 ResizeObserver（避免改动角色卡内容）。
+- iframe 内部动态改高：已从父页对同源 srcdoc 文档挂 ResizeObserver/MutationObserver 持续同步，不再只靠 3s 内复测（未向卡片脚本注入代码）。
 - WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
+- **2026-08-11 渲染修复**：普通 `\n` 已按官方 `simpleLineBreaks:true` 打开 `eolAsNewLine`；HTML 开关现在真正关闭 WebView（围栏外一律原生）；WebView 链接补 `text-decoration:none`；WebView 高度允许回缩、上限严格 75%；用户消息改走与 AI 同一条 Markdown/HTML 渲染管线。
 - 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
 
 ## 9. 维护速记（2026-08-10 精简归档）

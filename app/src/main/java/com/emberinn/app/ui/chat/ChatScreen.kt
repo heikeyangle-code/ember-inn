@@ -154,6 +154,7 @@ import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
 import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
 import com.mikepenz.markdown.model.markdownAnnotator
+import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
@@ -1897,10 +1898,11 @@ private fun MessageRow(
                     modifier = bubbleModifier,
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                        Text(
-                            text = text,
-                            style = (MaterialTheme.typography.bodyMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ChatMarkdown(
+                            content = text,
+                            onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
+                            isSystem = false,
+                            charAvatarPath = avatarPath,
                         )
                     }
                 }
@@ -2601,7 +2603,7 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
     out = Regex("<(s|strike|del)[^>]*>([\\s\\S]*?)</(s|strike|del)>", RegexOption.IGNORE_CASE).replace(out) { m -> "~~${m.groupValues[2]}~~" }
     out = Regex("<font[^>]*color=[\"']?#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
         .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
-    out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n---\n")
+    out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n\n---\n\n")
     out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "  \n")
     // 官方 DOMPurify 白名单里的文本级标签原生渲染（浏览器 UA 默认样式 1:1）：
     // sub/sup 上下标、ins 下划线、small/big 缩放、mark 黄底、kbd/samp/tt/code 等宽、
@@ -2624,14 +2626,30 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
     // <img src=".."> → ![img](url)（Coil 原生图片）；无 src 的 <img> 剥标签
     // 无属性的 <div>/<p>：块级语义用空行近似（markdown 段落分隔，官方块级排版接近）
     // 无属性的 <span>：行内无视觉语义，直接剥；带属性的 span/div/p 由 Web 元素切分器接管
-    out = Regex("<a\\b(?=[^>]*\\bhref\\s*=\\s*[\"']([^\"']+)[\"'])[^>]*>([\\s\\S]*?)</a>", RegexOption.IGNORE_CASE)
-        .replace(out) { m -> "[${m.groupValues[2]}](${m.groupValues[1]})" }
+    out = Regex(
+        "<a\\b(?=[^>]*\\bhref\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))[^>]*>([\\s\\S]*?)</a>",
+        RegexOption.IGNORE_CASE,
+    ).replace(out) { m ->
+        val href = m.groupValues[1].ifEmpty { m.groupValues[2].ifEmpty { m.groupValues[3] } }
+        "[${m.groupValues[4]}]($href)"
+    }
     out = Regex("</?a[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<img\\b(?=[^>]*\\bsrc\\s*=\\s*[\"']([^\"']+)[\"'])[^>]*>", RegexOption.IGNORE_CASE)
-        .replace(out) { m -> "![img](${m.groupValues[1]})" }
+    out = Regex(
+        "<img\\b(?=[^>]*\\bsrc\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))[^>]*>",
+        RegexOption.IGNORE_CASE,
+    ).replace(out) { m ->
+        val src = m.groupValues[1].ifEmpty { m.groupValues[2].ifEmpty { m.groupValues[3] } }
+        val alt = Regex(
+            "\\balt\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))",
+            RegexOption.IGNORE_CASE,
+        ).find(m.value)?.let { g ->
+            g.groupValues[1].ifEmpty { g.groupValues[2].ifEmpty { g.groupValues[3] } }
+        } ?: "img"
+        "![$alt]($src)"
+    }
     out = Regex("<img[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
     out = Regex("<(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n\n")
-    out = Regex("</(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n\n")
+    out = Regex("</(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n")
     out = Regex("<span\\s*>|</span\\s*>", RegexOption.IGNORE_CASE).replace(out, "")
     // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）。
     // 官方仅对非系统消息做引号转换（script.js `if (!isSystem)`），系统消息不做
@@ -2916,6 +2934,7 @@ private fun OfficialMarkdownNode(
     val settingsHolder = remember { arrayOfNulls<AnnotatorSettings>(1) }
     val emAnnotator = remember(emColor) {
         markdownAnnotator(
+            config = markdownAnnotatorConfig(eolAsNewLine = true),
             annotate = { content, child ->
                 // 官方 .mes_text i/em { color: emColor }：斜体单独着色；引号/下划线/字体色由
                 // applyOfficialMarkers 在最终 AnnotatedString 上按官方 CSS 层级统一处理
@@ -3000,7 +3019,7 @@ private fun appendTextSegment(
     val pre = preprocessOfficialHtml(text, convertQuotes = !isSystem)
     val officialHtml = OFFICIAL_HTML_TAG.containsMatchIn(pre)
     val looksHtml = looksLikeHtml(pre)
-    if (officialHtml || (looksHtml && htmlEnabled)) {
+    if ((officialHtml || looksHtml) && htmlEnabled) {
         out += ChatSegment(SegmentKind.WebHtml, text)
     } else {
         out += ChatSegment(SegmentKind.Native, text, pre)
@@ -3090,8 +3109,12 @@ private fun buildMessageSegments(
     }
     var cursor = 0
     for (r in carveWebElementRanges(content)) {
-        appendFenced(content.substring(cursor, r.first))
-        out += ChatSegment(SegmentKind.WebHtml, content.substring(r.first, r.last + 1))
+        if (htmlEnabled) {
+            appendFenced(content.substring(cursor, r.first))
+            out += ChatSegment(SegmentKind.WebHtml, content.substring(r.first, r.last + 1))
+        } else {
+            appendFenced(content.substring(cursor, r.last + 1))
+        }
         cursor = r.last + 1
     }
     appendFenced(content.substring(cursor))
@@ -3205,6 +3228,9 @@ private fun NativeMarkdown(
                 androidx.compose.ui.text.font.FontStyle.Normal
             },
         ),
+        textLink = androidx.compose.ui.text.TextLinkStyles(
+            style = androidx.compose.ui.text.SpanStyle(color = quoteColor),
+        ),
         code = type.body.copy(
             fontSize = (type.body.fontSize.value * type.codeMult).sp,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
@@ -3289,6 +3315,9 @@ private fun NativeMarkdown(
             codeBlock = PaddingValues(10.dp),
             blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
         )
+    val mdAnnotator = remember {
+        markdownAnnotator(config = markdownAnnotatorConfig(eolAsNewLine = true))
+    }
     Markdown(
         content = content,
         modifier = modifier.fillMaxWidth(),
@@ -3297,6 +3326,7 @@ private fun NativeMarkdown(
         colors = colors,
         typography = typography,
         padding = padding,
+        annotator = mdAnnotator,
     )
 }
 
@@ -3382,16 +3412,16 @@ private fun ChatMarkdown(
     }
 }
 
-/** 提取 ```mermaid 代码块并包成 WebView HTML（网络加载 mermaid CDN；离线无图时显示原代码）。 */
+/** 提取 ```mermaid 代码块并返回 HTML 片段，由 officialStyledHtml 统一包成完整页面。
+ *  不要在这里返回 <!DOCTYPE html>：再被 officialStyledHtml 包裹会变成 html 套 html，
+ *  导致 mermaid 脚本/样式落进错误 DOM 而不渲染。 */
 private fun mermaidHtmlOf(content: String): String? {
     val m = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE).find(content)
         ?: return null
     val diagram = m.groupValues[1].trim().replace("</", "&lt;/")
-    return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="mermaid.min.js"></script>
-<style>body{margin:8px;background:transparent;color:#333} @media (prefers-color-scheme: dark){body{color:#ddd}}</style>
-</head><body><pre class="mermaid">$diagram</pre>
-<script>mermaid.initialize({startOnLoad:true,theme:'base'});</script></body></html>"""
+    return """<script src="mermaid.min.js"></script>
+<pre class="mermaid">$diagram</pre>
+<script>mermaid.initialize({startOnLoad:true,theme:'base'});</script>"""
 }
 
 /** 粗略 HTML 判定：围栏外存在带属性或自闭合的标签才算富 HTML（忽略 markdown 代码围栏内的）。
@@ -3409,8 +3439,8 @@ private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
 
 /** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时 1s 低速兜底。
- *  高度经自定义 scheme emberinnh://measure?h=..&p=.. 上报，由 WebViewClient 拦截解析。
- *  相比旧版 evaluateJavascript 每 250ms 轮询，滚动和发送消息时不再让每个 WebView 空转。 */
+ *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；
+ *  onPageFinished 轮询作为页面脚本/桥接失效时的第二道兜底。 */
 private val WEBVIEW_MEASURE_SCRIPT = """<script>
 (function(){
   var last='';
@@ -3418,8 +3448,8 @@ private val WEBVIEW_MEASURE_SCRIPT = """<script>
     var imgs=document.images,p=0;
     for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}
     var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
-    var url='emberinnh://measure?h='+h+'&p='+p;
-    if(url!==last){last=url;location.href=url;}
+    var sig=h+':'+p;
+    if(sig!==last){last=sig;if(window.EmberInnBridge){window.EmberInnBridge.onMeasure(h,p);}}
     return p===0;
   }
   if(window.ResizeObserver){new ResizeObserver(report).observe(document.documentElement);}
@@ -3428,6 +3458,10 @@ private val WEBVIEW_MEASURE_SCRIPT = """<script>
   setTimeout(function(){clearInterval(t);report();},15000);
 })();
 </script>"""
+
+/** onPageFinished 兜底轮询用的纯字符串高度表达式：返回 "高度:未加载图片数"。 */
+private val WEBVIEW_HEIGHT_JS =
+    "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()"
 
 private fun injectMeasureScript(html: String): String {
     val idx = html.lastIndexOf("</body>")
@@ -3442,6 +3476,14 @@ private fun injectMeasureScript(html: String): String {
 private class WebViewSession {
     var token: Any = Any()
     var html: String? = null
+}
+
+/** JS → Kotlin 测高桥：只回传高度/未加载图片数，不暴露任何其它能力。 */
+private class WebViewMeasureBridge(private val onMeasure: (Int, Int) -> Unit) {
+    @android.webkit.JavascriptInterface
+    fun onMeasure(height: Int, pending: Int) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post { onMeasure(height, pending) }
+    }
 }
 
 private fun configureWebView(
@@ -3462,6 +3504,8 @@ private fun configureWebView(
     view.settings.allowFileAccessFromFileURLs = true
     view.settings.allowUniversalAccessFromFileURLs = true
     view.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+    view.removeJavascriptInterface("EmberInnBridge")
+    view.addJavascriptInterface(WebViewMeasureBridge(onMeasure), "EmberInnBridge")
     view.webViewClient = object : android.webkit.WebViewClient() {
         // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
         // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
@@ -3470,15 +3514,6 @@ private fun configureWebView(
             request: android.webkit.WebResourceRequest?,
         ): Boolean {
             val url = request?.url?.toString().orEmpty()
-            val uri = Uri.parse(url)
-            if (uri.scheme == "emberinnh") {
-                if (view?.tag === session && session.token === token) {
-                    val px = uri.getQueryParameter("h")?.toIntOrNull()
-                    val pending = uri.getQueryParameter("p")?.toIntOrNull() ?: 0
-                    if (px != null && px > 0) onMeasure(px, pending)
-                }
-                return true
-            }
             if (url.startsWith("https://") || url.startsWith("http://")) {
                 try {
                     ctx.startActivity(
@@ -3494,17 +3529,31 @@ private fun configureWebView(
 
         override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
             super.onPageFinished(view, url)
-            // 页面脚本正常时 ResizeObserver 已上报；这里只兜底读一次初始高度
-            view?.evaluateJavascript(
-                "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()",
-            ) { value ->
-                if (view?.tag === session && session.token === token) {
-                    val parts = value.trim('"').split(':')
-                    val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                    val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                    if (px > 0) onMeasure(px, pending)
+            // 页面脚本正常时 ResizeObserver 已上报；这里再轮询兜底。
+            // 轮询不能省：Compose 初始给 WebView 的高度是 0 时页面可能根本不做内容布局，
+            // 只有先给一个可见高度、再读 scrollHeight，WebView 才会真正“长出来”。
+            var stable = 0
+            var lastPx = 0
+            var ticks = 0
+            fun measure() {
+                if (view?.tag !== session || session.token !== token) return
+                ticks++
+                if (ticks > 60) return
+                view?.evaluateJavascript(WEBVIEW_HEIGHT_JS) { value ->
+                    if (view?.tag === session && session.token === token) {
+                        val parts = value.trim('"').split(':')
+                        val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                        val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                        if (px > 0) {
+                            if (px == lastPx && pending == 0) stable++ else stable = 0
+                            lastPx = px
+                            onMeasure(px, pending)
+                        }
+                        if (stable < 3) view?.postDelayed({ measure() }, 250)
+                    }
                 }
             }
+            measure()
         }
     }
     view.layoutParams = ViewGroup.LayoutParams(
@@ -3531,7 +3580,6 @@ private fun WebViewHtml(
     userAvatarPath: String? = null,
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     var heightPx by remember { mutableIntStateOf(0) }
     val stTheme = LocalThemePreset.current
@@ -3547,7 +3595,9 @@ private fun WebViewHtml(
     }
     val webView = remember { WebViewPool.acquire(context) }
     fun onMeasure(px: Int, pending: Int) {
-        if (px > 0) heightPx = px
+        // pending > 0 表示还有图片在加载：只允许继续长高，不允许提前缩矮；
+        // pending == 0 时允许回缩，修复折叠/切 tab 后高度卡在旧值的问题。
+        if (px > 0 && (pending == 0 || px > heightPx)) heightPx = px
     }
     AndroidView(
         factory = { ctx ->
@@ -3566,6 +3616,7 @@ private fun WebViewHtml(
             if (session?.html != styled) {
                 session?.let {
                     it.token = Any()
+                    heightPx = 0
                     configureWebView(
                         view = view,
                         ctx = context,
@@ -3580,9 +3631,12 @@ private fun WebViewHtml(
         modifier = modifier
             .fillMaxWidth()
             .height(
-                with(density) {
-                    heightPx.toDp().coerceAtMost(maxOf(420.dp, (screenHeightDp * 0.75f).dp))
-                },
+                val maxHeight = (screenHeightDp * 0.75f).dp
+                // WebView 的 scrollHeight 是 CSS 像素，1 CSS px == 1 dp，不能按 Android 物理像素换算；
+                // 旧代码 heightPx.toDp() 在高密度屏上会把高度除以 density，HTML 卡被压成几乎看不见的细条。
+                val measured = heightPx.toFloat().dp.coerceAtMost(maxHeight)
+                // 测高还没回来时给一个可见兜底高度，否则 WebView 高度恒 0、内容永远渲染不出来
+                if (heightPx > 0) measured else minOf(160.dp, maxHeight)
             )
             .clip(RoundedCornerShape(12.dp)),
     )
@@ -3611,7 +3665,7 @@ private fun embedInteractiveBlocks(raw: String): String {
                 .append("</code></pre></details>")
             out.append(
                 "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
-                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500);setTimeout(h,3000)\"></iframe>",
+                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500);setTimeout(h,3000);var d=f.contentWindow.document;if(d&&d.documentElement){if(window.ResizeObserver){new ResizeObserver(h).observe(d.documentElement);}if(window.MutationObserver){new MutationObserver(h).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});}}\"></iframe>",
             )
         } else {
             out.append("<pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
@@ -3696,7 +3750,9 @@ body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-
 em,i{color:${css(em)}}
 q{color:${css(quote)}} q em,q i{color:inherit}
 u{color:${css(underline)}}
-a{color:${css(quote)}}
+a{color:${css(quote)};text-decoration:none}
+a:hover{filter:brightness(1.25)}
+img{max-width:100%;max-height:75vh}
 font[color] em,font[color] i,font[color] u,font[color] q{color:inherit}
 blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:0}
 p{margin-top:0;margin-bottom:10px}
