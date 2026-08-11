@@ -166,9 +166,9 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 ✅ {{outlet::key}} 宏（官方 core-macros.js 逐字提取差分 5 例；App 把世界书 outletEntries 注入 MacroEnv.outlets，官方 NONE 位置不注入提示词、仅供宏读取；差分抓出空 key 未判空已修）；✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（2026-08-10：App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
 
 ### 3.4 斜杠 🟡
-SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol 转义判定，STRICT_ESCAPING 奇偶反斜杠）官方差分 27 例。
-✅ 2026-08-10 按官方 SlashCommandParser 逐字移植 tokenizer：parseCommand/parseNamedArgument/parseUnnamedArgument（split+splitUnnamedArgumentCount，/let、/setvar=1、/qr-arg=2）/parseQuotedValue/parseListValue/parseValue；STRICT_ESCAPING 完整语义（/parser-flag 可切换，影响后续命令解析）；REPLACE_GETVAR 官方新宏引擎下为 no-op（{{getvar::}} 由 MacroEngine 展开，已测）；rawQuotes 官方语义（整段到命令结束、保留引号）；注释（//、/#、块注释）与命令间普通文本丢弃；闭包转义（\{:）按官方消费反斜杠。
-🟡 偏差：官方惰性闭包（传给命令对象）与 即时执行统一为即时求值（近似，闭包仍预解析）；命令数仍少于官方（UI 已能做到的不补；异步/生成类 /gen /genraw /trigger /inject /while 未实现，登记 P2）。补 /renamechat /getchatname /setinput /bg /impersonate（官方语义：renamechat 空名提示、setinput 文本进管道并写输入框、bg 无参返回/clear 清除/URL 路径近似、impersonate prompt 覆盖默认冒充提示；引擎占位 + App 动作 + 单测）。补 /persona-set（mode=lookup/temp/all 默认 all：先找人设、找不到回退临时用户名，对齐官方 setNameCallback）。补 /trigger（官方 triggerGenerationCallback 的 Generate('normal') 语义：最后一条用户消息→generate、最后 AI→continue；await 参数不等待，登记）与 /inject（官方 injectCallback：chat_metadata.script_injects 持久化、before/after→扩展提示 start/end、chat→in-chat 深度注入、none 只存不注入、scan=true 注入文本进世界书扫描、ephemeral 生成结束自动删除；返回注入 ID；filter 闭包与 await 未实现，登记）。 补斜杠异步执行器：SlashCommandDef.suspendCallback + SlashEngine.executeAsync（同步 execute 行为不变，runBlocking 兜底；闭包递归走异步）；/gen（官方 generateCallback：当前聊天上下文 + 提示，不落盘，length= 覆盖响应长度）、/genraw（官方 generateRawCallback：直接请求，system/prefill/length= 可选）已接；genraw 的 instruct/as/stop/trim 参数未实现，登记。注：官方 1.18 无 /while 命令，原登记误记已删。差分：参数解析核心 43 例 + testSymbol 27 例（scripts/diff/slash-parser-official.mjs / slash-escape-official.mjs 从官方逐字提取，SlashParserDiffTest/SlashEscapeDiffTest 对拍）；执行链/闭包/注释仍源码对照 + 单测（依赖 DOM/模块无法逐字提取）。
+SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol）官方差分 27 例；参数解析核心 43 例差分。
+已接：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器；/inject 支持 chat_metadata.script_injects 持久化、before/after/chat/none/scan/ephemeral。
+剩余偏差：惰性闭包仍即时求值；/genraw 的 instruct/as/stop/trim 参数未实现；/inject filter 闭包与 await 未实现；/trigger await 不等待。官方 1.18 无 /while。
 
 ### 3.5 提示词组装 ✅（核心）
 PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5：shouldContinue/buildNextMessages/nextRecursionCount，单测 4 例；工具真正执行在 App 扩展注册表）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 20 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁（官方 getExtensionPrompt 恒空，差分无法覆盖））、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
@@ -361,7 +361,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
-| 正则 | `public/scripts/regex/` | 存前（sendMessageAsUser/saveReply/getFirstMessage）+ 总装（isPrompt=true/depth）双位点接入 RegexPipelineEngine；允许列表 character_allowed_regex；设置页做 global/preset/scoped 分桶（preset 存储待做） |
+| 正则 | `public/scripts/regex/` | 存前（sendMessageAsUser/saveReply/getFirstMessage）+ 总装（isPrompt=true/depth）双位点接入 RegexPipelineEngine；允许列表 character_allowed_regex；global/preset/scoped 分桶；✅ 命名预设集已做（官方无采样预设管理器，登记） |
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
@@ -810,7 +810,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 影响：纯 App/UI 层，引擎零改动；与第 11 章官方对照结论不冲突。
 
 ### 12.15 引擎新功能 App 接线（2026-08-12）
-- `ChatPromptFactory` / `ChatViewModel` 的 `{{bias}}` 提取与宏剥离已从私有正则改为 `BiasEngine`（官方 Handlebars 语义；历史 `{{bias:...}}` 写法不再支持，官方也不支持，README/HANDOFF 已登记）。
+- `ChatPromptFactory` / `ChatViewModel` 的 `{{bias}}` 提取与宏剥离已从私有正则改为 `BiasEngine`（官方 Handlebars 语义；同时兼容历史 `{{bias:...}}` 冒号写法，作为 README 扩展保留）。
 - `ChatViewModel.finalizeStream` 保存回复前已接 `CleanUpMessageEngine` + `StoppingStringsEngine`（停用词/名字/群消息/trim 全链），替换原先只过正则的保存路径。
 - 单聊自动续写已接 `AutoContinueEngine`（原只有群聊 `GroupLoopEngine`），最大 5 轮与群聊一致。
 - `LlmClient` OpenAI 兼容非流式最终响应已改用 `ResponseDataExtractor`；`StreamingReplyParser` / `ReasoningEngine` / `TokenBudgetEngine` / `SwipeEngine` 引擎已差分就绪，App 剩余接线点：流式 SSE delta（StreamingReplyParser）、removeReasoning（ReasoningEngine）、Token 预算默认值（TokenBudgetEngine）、滑动 UI 判定（SwipeEngine）。
