@@ -30,6 +30,10 @@ class AppSlashExecutorTest {
         override fun triggerGeneration(): String { calls += "trigger"; return "" }
         override suspend fun generateText(prompt: String, length: Int?): String { calls += "gen:$prompt:$length"; return "生成文本" }
         override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String { calls += "genraw:$system:$prefill:$length:$prompt"; return "原始生成" }
+        override suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String {
+            calls += "summarize:$source:$prompt:$quiet:$text"
+            return "摘要文本"
+        }
         override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean): String {
             calls += "inject:$id:$position:$depth:$role:$scan:$ephemeral:$text"
             return "abc12345"

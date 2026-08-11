@@ -57,6 +57,8 @@ interface SlashMessageActions {
     suspend fun generateText(prompt: String, length: Int?): String
     /** /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本（官方 generateRawCallback）。 */
     suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?): String
+    /** /summarize：无文本=总结当前聊天；有文本=按指定 source/prompt 总结（官方 summarizeCallback）。 */
+    suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
 }
 
 /**
@@ -232,6 +234,20 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
                     role = inv.namedArgs["role"] ?: "system",
                     scan = isTrue(inv.namedArgs["scan"]),
                     ephemeral = isTrue(inv.namedArgs["ephemeral"]),
+                )
+            },
+        ),
+        SlashCommandDef(
+            "summarize",
+            description = "总结文本；无文本=总结当前聊天（官方 summarize：source/prompt/quiet）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ ->
+                actions.summarize(
+                    text = inv.unnamedArgs.joinToString(" "),
+                    source = inv.namedArgs["source"],
+                    prompt = inv.namedArgs["prompt"],
+                    quiet = isTrue(inv.namedArgs["quiet"]),
                 )
             },
         ),

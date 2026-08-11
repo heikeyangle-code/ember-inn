@@ -119,6 +119,10 @@ class ChatStore(private val context: Context) {
         groupGenId: Long? = null,
         greetingSwipes: List<String> = emptyList(),
         bias: String? = null,
+        /** 官方 caption 扩展：媒体 source=captioned + captioned=true。 */
+        captioned: Boolean = false,
+        /** 官方 caption show_in_chat：null=默认（有媒体即 true）。 */
+        inlineImage: Boolean? = null,
     ) {
         val list = messages(sessionId).toMutableList()
         val extra = buildJsonObject {
@@ -127,7 +131,7 @@ class ChatStore(private val context: Context) {
             bias?.takeIf { it.isNotBlank() }?.let { put("bias", JsonPrimitive(it)) }
             if (media.isNotEmpty()) {
                 // 官方 chats.js populateFileAttachment：上传附件时写 inline_image=true
-                put("inline_image", JsonPrimitive(true))
+                put("inline_image", JsonPrimitive(inlineImage ?: true))
                 put(
                     "media",
                     JsonArray(media.map { m ->
@@ -135,7 +139,8 @@ class ChatStore(private val context: Context) {
                             put("type", JsonPrimitive(m.type))
                             put("url", JsonPrimitive(m.url))
                             if (m.title.isNotBlank()) put("title", JsonPrimitive(m.title))
-                            put("source", JsonPrimitive("upload"))
+                            put("source", JsonPrimitive(if (captioned) "captioned" else "upload"))
+                            if (captioned) put("captioned", JsonPrimitive(true))
                         }
                     }),
                 )
@@ -647,6 +652,19 @@ class ChatStore(private val context: Context) {
         list[index] = JsonObject(el + ("name" to JsonPrimitive(trimmed)))
         save(sessionId, list)
         return trimmed
+    }
+
+    /** 官方 memory 扩展 setMemoryContext：把摘要写进消息 extra.memory（值空 = 删除；index 越界钳制）。 */
+    fun setMemoryExtra(sessionId: String, index: Int, value: String?) {
+        val list = messages(sessionId).toMutableList()
+        if (list.isEmpty()) return
+        val idx = index.coerceIn(0, list.lastIndex)
+        val obj = list[idx].jsonObject.toMutableMap()
+        val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (value.isNullOrBlank()) extra.remove("memory") else extra["memory"] = JsonPrimitive(value)
+        obj["extra"] = JsonObject(extra)
+        list[idx] = JsonObject(obj)
+        save(sessionId, list)
     }
 
     fun setMessageHidden(sessionId: String, at: Int, hidden: Boolean) {

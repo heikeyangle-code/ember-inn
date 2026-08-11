@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,9 +54,13 @@ import com.emberinn.engine.slash.QuickReplySlot
 fun QuickRepliesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val store = remember { QuickReplyStore(context) }
-    var slots by remember { mutableStateOf(store.slots()) }
+    var presetName by remember { mutableStateOf(store.activeName().ifBlank { store.presets().firstOrNull()?.name ?: "default" }) }
+    var slots by remember { mutableStateOf(store.load(presetName).slots) }
     var editing by remember { mutableStateOf<Int?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var showPresetDialog by remember { mutableStateOf(false) }
+    var draftPresetName by remember { mutableStateOf("") }
+    var presetMenuExpanded by remember { mutableStateOf(false) }
     var draftLabel by remember { mutableStateOf("") }
     var draftMes by remember { mutableStateOf("") }
     var draftEnabled by remember { mutableStateOf(true) }
@@ -60,8 +68,14 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
     var draftPreventAutoExecute by remember { mutableStateOf(false) }
 
     fun persist(next: List<QuickReplySlot>) {
-        store.saveSlots(next)
+        store.save(store.load(presetName).copy(slots = next))
         slots = next
+    }
+
+    fun switchPreset(name: String) {
+        presetName = name
+        store.setActive(name)
+        slots = store.load(name).slots
     }
 
     SettingsGlassPage { settingsSky ->
@@ -75,11 +89,44 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
         ) {
             Text("全局快捷回复", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             Text(
-                "字段对齐官方 Quick Reply 扩展：槽位 = 斜杠链 mes + label + 启用。聊天输入区快捷盘点击执行。",
+                "字段对齐官方 Quick Reply 扩展：目录多预设（data/default-user/quick-replies/*.json）。槽位 = 斜杠链 mes + label + 启用。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Box {
+                    FilterChip(
+                        selected = false,
+                        onClick = { presetMenuExpanded = true },
+                        label = { Text("预设：${presetName}") },
+                    )
+                    DropdownMenu(expanded = presetMenuExpanded, onDismissRequest = { presetMenuExpanded = false }) {
+                        store.presets().forEach { p ->
+                            DropdownMenuItem(
+                                text = { Text(p.name) },
+                                onClick = {
+                                    presetMenuExpanded = false
+                                    switchPreset(p.name)
+                                },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = {
+                    draftPresetName = ""
+                    showPresetDialog = true
+                }) { Text("＋ 新建预设") }
+                Spacer(Modifier.width(8.dp))
+                if (store.presets().size > 1) {
+                    TextButton(onClick = {
+                        store.delete(presetName)
+                        val next = store.presets().firstOrNull()?.name ?: "default"
+                        switchPreset(next)
+                    }) { Text("删除当前") }
+                }
+            }
             if (slots.isEmpty()) {
                 EmberEmptyState(
                     title = "还没有快捷回复",
@@ -168,6 +215,37 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
         }
     }
+    }
+
+    if (showPresetDialog) {
+        AlertDialog(
+            onDismissRequest = { showPresetDialog = false },
+            title = { Text("新建快捷回复预设") },
+            text = {
+                EmberTextField(
+                    value = draftPresetName,
+                    onValueChange = { draftPresetName = it },
+                    label = { Text("预设名") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = draftPresetName.trim()
+                    if (name.isNotEmpty()) {
+                        store.save(com.emberinn.engine.slash.QuickReplyPreset(name = name, slots = emptyList()))
+                        switchPreset(name)
+                    } else {
+                        Toast.makeText(context, "预设名不能为空", Toast.LENGTH_SHORT).show()
+                    }
+                    showPresetDialog = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPresetDialog = false }) { Text("取消") }
+            },
+        )
     }
 
     if (adding || editing != null) {

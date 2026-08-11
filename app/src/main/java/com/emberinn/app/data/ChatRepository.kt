@@ -12,6 +12,7 @@ import com.emberinn.engine.worldinfo.VectorSettings
 import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import com.emberinn.engine.media.MediaCapability
+import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
@@ -120,6 +121,21 @@ class ChatRepository(context: Context) {
         client.chatCompletions(provider, effective, messages)
     }
 
+    /** 官方 caption 扩展 multimodal：用当前提供商发视觉请求生成图片描述。 */
+    suspend fun captionImage(dataUrl: String, prompt: String): String? = withContext(Dispatchers.IO) {
+        val profile = store.load() ?: return@withContext null
+        val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
+        val messages = listOf(
+            CompletionMessage(role = "system", content = "You are an image captioning assistant."),
+            CompletionMessage(
+                role = "user",
+                content = prompt,
+                media = listOf(MediaAttachment(type = "image", url = dataUrl, title = "")),
+            ),
+        )
+        client.chatCompletions(provider, profile, messages)
+    }
+
     /**
      * 总装流式发送：角色卡 + 历史 → PromptPipeline 出最终消息 → SSE 流式。
      * 返回可取消会话（停止按钮用）；未配置连接/提供商返回 null。
@@ -164,6 +180,17 @@ class ChatRepository(context: Context) {
         scriptInjections: List<ExtensionPromptEngine.ScriptInject> = emptyList(),
         /** 官方 generate：群聊深度提示存在时用群聊提示，否则角色卡深度提示。 */
         useCharacterDepthPrompt: Boolean = true,
+        /** 官方 generateQuietPrompt 的 quietPrompt（记忆扩展 DEFAULT 总结器）。 */
+        quietPrompt: String = "",
+        /** 官方 memory 扩展注入参数。 */
+        memorySummary: String = "",
+        memoryTemplate: String = com.emberinn.engine.prompt.MemoryEngine.DEFAULT_TEMPLATE,
+        memoryPosition: Int = 0,
+        memoryRole: Int = 0,
+        memoryDepth: Int = 2,
+        memoryScan: Boolean = false,
+        collapseNewlines: Boolean = false,
+        exampleSeparator: String = "***",
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -235,6 +262,15 @@ class ChatRepository(context: Context) {
             scriptInjections = scriptInjections,
             useCharacterDepthPrompt = useCharacterDepthPrompt,
             canUseTools = options.hasTools,
+            quietPrompt = quietPrompt,
+            memorySummary = memorySummary,
+            memoryTemplate = memoryTemplate,
+            memoryPosition = memoryPosition,
+            memoryRole = memoryRole,
+            memoryDepth = memoryDepth,
+            memoryScan = memoryScan,
+            collapseNewlines = collapseNewlines,
+            exampleSeparator = exampleSeparator,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
@@ -272,6 +308,69 @@ class ChatRepository(context: Context) {
             options = finalOptions,
             onReasoning = onReasoning,
             onToolCalls = onToolCalls,
+        )
+    }
+
+    /** 记忆扩展 RAW 总结器：官方 generateRaw({prompt, systemPrompt, responseLength})。 */
+    fun summarizeRaw(
+        systemPrompt: String,
+        userPrompt: String,
+        responseLength: Int = 0,
+        onDelta: (String) -> Unit = {},
+        onResult: (String) -> Unit,
+        onError: (Throwable) -> Unit,
+    ) {
+        val profile = store.load() ?: return onError(IllegalStateException("未配置模型"))
+        val provider = ProviderRegistry.get(profile.providerId) ?: return onError(IllegalStateException("未配置模型"))
+        val sampler = if (responseLength > 0) profile.sampler.copy(maxTokens = responseLength) else profile.sampler
+        val sb = StringBuilder()
+        client.streamChatCompletionsAsync(
+            provider = provider,
+            profile = profile.copy(sampler = sampler),
+            messages = listOf(
+                CompletionMessage(role = "system", content = systemPrompt),
+                CompletionMessage(role = "user", content = userPrompt),
+            ),
+            onDelta = { sb.append(it); onDelta(it) },
+            onDone = { onResult(sb.toString()) },
+            onError = onError,
+        )
+    }
+
+    /** 记忆扩展 DEFAULT 总结器：官方 generateQuietPrompt（quietPrompt + 当前上下文，结果不落盘）。 */
+    fun generateQuietSummary(
+        history: List<JsonElement>,
+        quietPrompt: String,
+        responseLength: Int = 0,
+        onDelta: (String) -> Unit = {},
+        onResult: (String) -> Unit,
+        onError: (Throwable) -> Unit,
+    ): LlmClient.StreamSession? {
+        val profile = store.load() ?: return null
+        val provider = ProviderRegistry.get(profile.providerId) ?: return null
+        val prepared = promptFactory.prepare(
+            characterRawJson = null,
+            history = history,
+            userName = "User",
+            charName = "Assistant",
+            model = profile.model,
+            maxContextTokens = profile.contextWindow.takeIf { it > 0 } ?: 8192,
+            maxTokens = if (responseLength > 0) responseLength else profile.sampler.maxTokens.takeIf { it > 0 } ?: 512,
+            type = "quiet",
+            quietPrompt = quietPrompt,
+        )
+        if (prepared.messages.isEmpty()) {
+            onError(IllegalStateException("上下文太小，装不下总结提示词"))
+            return null
+        }
+        val sb = StringBuilder()
+        return client.streamChatCompletionsAsync(
+            provider = provider,
+            profile = profile,
+            messages = prepared.messages,
+            onDelta = { sb.append(it); onDelta(it) },
+            onDone = { onResult(sb.toString()) },
+            onError = onError,
         )
     }
 

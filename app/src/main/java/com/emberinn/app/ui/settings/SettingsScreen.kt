@@ -61,7 +61,7 @@ import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, REGEX, DATA, ABOUT }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -88,6 +88,9 @@ fun SettingsScreen(
             "services" -> page = SettingsPage.SERVICES
             "quickreplies" -> page = SettingsPage.QUICK_REPLIES
             "worldinfo" -> page = SettingsPage.WORLD_INFO
+            "memory" -> page = SettingsPage.MEMORY
+            "caption" -> page = SettingsPage.CAPTION
+            "expression" -> page = SettingsPage.EXPRESSION
             "regex" -> page = SettingsPage.REGEX
             "about" -> page = SettingsPage.ABOUT
             "data" -> page = SettingsPage.DATA
@@ -142,6 +145,9 @@ fun SettingsScreen(
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.WORLD_INFO -> WorldInfoScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.MEMORY -> MemoryScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.CAPTION -> CaptionScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.EXPRESSION -> ExpressionScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.REGEX -> RegexScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
@@ -158,6 +164,9 @@ fun SettingsScreen(
             onOpenServices = { page = SettingsPage.SERVICES },
             onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
             onOpenWorldInfo = { page = SettingsPage.WORLD_INFO },
+            onOpenMemory = { page = SettingsPage.MEMORY },
+            onOpenCaption = { page = SettingsPage.CAPTION },
+            onOpenExpression = { page = SettingsPage.EXPRESSION },
             onOpenRegex = { page = SettingsPage.REGEX },
             onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
@@ -186,6 +195,9 @@ private fun SettingsHome(
     onOpenServices: () -> Unit,
     onOpenQuickReplies: () -> Unit,
     onOpenWorldInfo: () -> Unit,
+    onOpenMemory: () -> Unit,
+    onOpenCaption: () -> Unit,
+    onOpenExpression: () -> Unit,
     onOpenRegex: () -> Unit,
     onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -244,6 +256,7 @@ private fun SettingsHome(
             "扩展插件",
             listOf(
                 SettingRow("扩展插件（交互 HTML 卡片）", "iframe 渲染器 · 头像类 · 原代码折叠", Color.Unspecified, onOpenExtensions),
+                SettingRow("表情精灵", "角色立绘 · 正文表情分类 · 导入/删除", Color.Unspecified, onOpenExpression),
             ),
         ),
         SettingsGroup(
@@ -252,6 +265,8 @@ private fun SettingsHome(
                 SettingRow("翻译 · 图像 · 向量", "执行层已接入（Libre/DeepL/A1111/gpt-image/RAG）", Color.Unspecified, onOpenServices),
                 SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies),
                 SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo),
+                SettingRow("记忆扩展", "自动摘要 · {{summary}} 注入 · 立即总结", Color.Unspecified, onOpenMemory),
+                SettingRow("图片描述（Caption）", "图片生成描述并发送（multimodal）", Color.Unspecified, onOpenCaption),
                 SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex),
             ),
         ),

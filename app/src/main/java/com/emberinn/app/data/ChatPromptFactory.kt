@@ -25,6 +25,7 @@ import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.DepthPromptEngine
 import com.emberinn.engine.prompt.ExampleAssembler
 import com.emberinn.engine.prompt.ExtensionPromptEngine
+import com.emberinn.engine.prompt.MemoryEngine
 import com.emberinn.engine.prompt.PromptAssembler
 import com.emberinn.engine.prompt.PromptPipeline
 import com.emberinn.engine.prompt.PromptReasoningEngine
@@ -153,6 +154,19 @@ class ChatPromptFactory {
         useCharacterDepthPrompt: Boolean = true,
         /** 官方 ToolManager.isToolCallingSupported：本轮是否允许工具调用（App 按注册工具/能力填充）。 */
         canUseTools: Boolean = false,
+        /** 官方 generateQuietPrompt 的 quietPrompt（记忆扩展 DEFAULT 总结器等场景）。 */
+        quietPrompt: String = "",
+        /** 官方 memory 扩展：最新摘要 + 注入设置（formatMemoryValue → setExtensionPrompt('1_memory')）。 */
+        memorySummary: String = "",
+        memoryTemplate: String = MemoryEngine.DEFAULT_TEMPLATE,
+        memoryPosition: Int = 0,
+        memoryRole: Int = 0,
+        memoryDepth: Int = 2,
+        memoryScan: Boolean = false,
+        /** 官方 power_user.collapse_newlines（字段/示例折叠连续换行）。 */
+        collapseNewlines: Boolean = false,
+        /** 官方 power_user.context.example_separator（非 OpenAI 消息示例分隔符，默认 ***）。 */
+        exampleSeparator: String = "***",
         /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
         localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
@@ -163,6 +177,7 @@ class ChatPromptFactory {
             chatMetadataSystem = chatMetadata?.get("system_prompt")?.jsonPrimitive?.contentOrNull ?: "",
             chatMetadataScenario = chatMetadata?.get("scenario")?.jsonPrimitive?.contentOrNull ?: "",
             chatMetadataMesExample = chatMetadata?.get("mes_example")?.jsonPrimitive?.contentOrNull ?: "",
+            collapseNewlines = collapseNewlines,
         )
         // 对齐官方 MacroEnvBuilder：character 字段来自 getCharacterCardFields（已 baseChatReplace）。
         // 变量宏接线：优先用调用方传入的会话级存储（ChatRepository 每会话一份，setvar 跨消息保留）；
@@ -194,6 +209,15 @@ class ChatPromptFactory {
             system = SystemFields(model = model),
             local = local,
         )
+        // 官方 memory 扩展 {{summary}} 宏 + formatMemoryValue 注入
+        env = env.copy(summary = memorySummary)
+        val memoryFormatted = if (memorySummary.isNotBlank()) {
+            MemoryEngine.formatMemoryValue(memorySummary, memoryTemplate) {
+                MacroEngine.substitute(it, env.copy(summary = memorySummary))
+            }
+        } else {
+            ""
+        }
         val tokenCounter = TokenCounterFactory.forModel(model)
         // 官方 getRegexedString：getRegexScripts({ allowedOnly: true })，
         // GLOBAL → PRESET → SCOPED；scoped 仅当角色头像在 character_allowed_regex 中、
@@ -450,7 +474,8 @@ class ChatPromptFactory {
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
                 .associateBy { "${it.world}.${it.uid}" },
             // 官方 checkWorldInfo：scan=true 的扩展提示 addInject 进扫描缓冲（不在聊天深度里）
-            scanInjections = scriptPlan.scanValues,
+            scanInjections = scriptPlan.scanValues +
+                if (memoryScan && memoryFormatted.isNotEmpty()) listOf(memoryFormatted) else emptyList(),
         )
 
         // 官方 script.js：outletEntries → setExtensionPrompt(CUSTOM_WI_OUTLET(key), value, NONE, 0)，
@@ -468,9 +493,9 @@ class ChatPromptFactory {
             baseMesExamples = fields.mesExamples,
             emEntries = wiResult.emEntries,
             substitute = { MacroEngine.substitute(it, env) },
-            collapseNewlines = false,
+            collapseNewlines = collapseNewlines,
             isInstruct = false,
-            exampleSeparator = "",
+            exampleSeparator = exampleSeparator,
             mainApiIsOpenAi = chatCompletionSource != "claude",
         )
         val examples = PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
@@ -527,6 +552,26 @@ class ChatPromptFactory {
             }
         }
 
+        // 官方 memory 扩展 setExtensionPrompt('1_memory', formatMemoryValue(...), position, depth, scan, role)
+        if (memoryFormatted.isNotEmpty()) {
+            val memoryRoleName = ExtensionPromptEngine.roleName(memoryRole)
+            when (memoryPosition) {
+                ExtensionPromptEngine.POSITION_IN_CHAT -> effectiveInChat += PromptItem(
+                    identifier = "1_memory",
+                    name = "记忆",
+                    content = memoryFormatted,
+                    role = memoryRoleName,
+                    injectionDepth = memoryDepth,
+                    injectionOrder = 100,
+                )
+                ExtensionPromptEngine.POSITION_BEFORE_PROMPT -> effectiveExtensions["1_memory"] =
+                    ExtensionPrompt("1_memory", memoryRoleName, memoryFormatted, "start", memoryDepth)
+                ExtensionPromptEngine.POSITION_IN_PROMPT -> effectiveExtensions["1_memory"] =
+                    ExtensionPrompt("1_memory", memoryRoleName, memoryFormatted, "end", memoryDepth)
+                // POSITION_NONE：官方不注入
+            }
+        }
+
         val result = PromptPipeline.prepare(
             PromptPipeline.PrepareInput(
                 name2 = charName,
@@ -558,6 +603,7 @@ class ChatPromptFactory {
                 imageInlining = imageInlining,
                 videoInlining = videoInlining,
                 audioInlining = audioInlining,
+                quietPrompt = quietPrompt,
             ),
         )
         return Prepared(

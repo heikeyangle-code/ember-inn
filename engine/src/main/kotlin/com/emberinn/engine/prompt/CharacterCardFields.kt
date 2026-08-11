@@ -48,11 +48,15 @@ object CharacterCardFieldsEngine {
         chatMetadataScenario: String = "",
         chatMetadataMesExample: String = "",
         groupCards: GroupCharacterCards? = null,
+        /** 官方 power_user.collapse_newlines：baseChatReplace 折叠连续换行。 */
+        collapseNewlines: Boolean = false,
     ): CharacterCardFields {
         fun baseChatReplace(value: String): String {
             if (value.isEmpty()) return value
             val env = MacroEnv(user = "", char = character?.name ?: "")
-            return MacroEngine.substitute(value, env).replace("\r", "")
+            var out = MacroEngine.substitute(value, env)
+            if (collapseNewlines) out = PromptUtils.collapseNewlines(out)
+            return out.replace("\r", "")
         }
 
         val persona = baseChatReplace(personaDescription.trim())

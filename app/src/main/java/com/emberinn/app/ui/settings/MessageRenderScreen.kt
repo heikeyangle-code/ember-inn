@@ -30,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ColorField
+import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.theme.LocalThemePreset
 import androidx.compose.ui.graphics.luminance
@@ -144,8 +146,48 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                     }
                 }
             }
+            item {
+                var collapse by remember { mutableStateOf(RenderPrefs.collapseNewlines(context)) }
+                var separator by remember { mutableStateOf(RenderPrefs.exampleSeparator(context)) }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("行为与兼容", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "对齐官方 power-user：折叠连续换行（collapse_newlines）与消息示例分隔符（context.example_separator，默认 ***）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        ) {
+                            Text("折叠连续换行", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            EmberSwitch(
+                                checked = collapse,
+                                onCheckedChange = {
+                                    collapse = it
+                                    RenderPrefs.setCollapseNewlines(context, it)
+                                },
+                            )
+                        }
+                        EmberTextField(
+                            value = separator,
+                            onValueChange = {
+                                separator = it
+                                RenderPrefs.setExampleSeparator(context, it)
+                            },
+                            label = { Text("消息示例分隔符（example_separator）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        )
+                    }
+                }
+            }
         }
     }
     }
 }
-

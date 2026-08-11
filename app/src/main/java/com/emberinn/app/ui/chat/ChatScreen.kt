@@ -6,6 +6,7 @@ import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.glassTint
 
 import com.emberinn.app.data.DisplayPipeline
+import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
@@ -14,6 +15,7 @@ import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.settings.RenderPrefs
@@ -804,6 +806,7 @@ fun ChatScreen(
             quickReplies = quickReplies,
             onQuickReply = { label -> vm.runQuickReply(label) },
             onQuickImage = { showImageDialog = true; showQuickBar = false },
+            onQuickCaption = { vm.captionAndSendFirstImage() },
             onQuickContinue = {
                 showQuickBar = false
                 vm.continueGeneration()
@@ -1158,6 +1161,10 @@ fun ChatScreen(
                 MenuRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
                     showMore = false
                     exportChatLauncher.launch("$currentName-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
+                }
+                MenuRow(PhosphorIcons.Book, "记忆总结（立即）") {
+                    showMore = false
+                    vm.forceMemorySummary()
                 }
                 MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
                     showMore = false
@@ -1800,6 +1807,35 @@ private fun MessageRow(
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
+    // 表情精灵：AI 消息按正文分类选立绘（官方 expressions chooseSpriteForExpression 纯逻辑）
+    val spriteFile = remember(text, name, isUser) {
+        if (isUser) {
+            null
+        } else {
+            val prefs = ExpressionPrefs.load(context)
+            if (!prefs.enabled) {
+                null
+            } else {
+                val store = ExpressionStore(context)
+                val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(text)
+                val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
+                    store.sprites(name),
+                    prefs.customLabels,
+                )
+                com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
+                    folderName = name,
+                    expression = expression ?: "",
+                    spriteCache = mapOf(name to groups),
+                    settings = com.emberinn.engine.expression.ExpressionSettings(
+                        fallbackExpression = prefs.fallbackExpression.ifBlank { null },
+                        allowMultiple = prefs.allowMultiple,
+                        rerollIfSame = prefs.rerollIfSame,
+                        customLabels = prefs.customLabels,
+                    ),
+                )?.imageSrc?.let { File(it).takeIf { f -> f.exists() } }
+            }
+        }
+    }
     val textShadow = chatTextShadow()
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
@@ -1834,7 +1870,19 @@ private fun MessageRow(
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         if (!isUser) {
-            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 36)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 36)
+                if (spriteFile != null) {
+                    AsyncImage(
+                        model = spriteFile,
+                        contentDescription = "表情精灵",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .padding(top = 3.dp)
+                            .size(34.dp),
+                    )
+                }
+            }
             Spacer(Modifier.size(10.dp))
         }
         Column(
@@ -3827,6 +3875,7 @@ private fun ChatInputBar(
     quickReplies: List<QuickReplySlot>,
     onQuickReply: (String) -> Unit,
     onQuickImage: () -> Unit,
+    onQuickCaption: () -> Unit,
     onQuickContinue: () -> Unit,
     onQuickImpersonate: () -> Unit,
     onSend: () -> Unit,
@@ -3904,6 +3953,11 @@ private fun ChatInputBar(
                 ) {
                     item(key = "quick-image") {
                         EmberQuickPill("图像", onClick = onQuickImage, enabled = true)
+                    }
+                    if (pendingMedia.any { it.type == "image" }) {
+                        item(key = "quick-caption") {
+                            EmberQuickPill("图片描述", onClick = onQuickCaption, enabled = true)
+                        }
                     }
                     item(key = "quick-continue") {
                         EmberQuickPill("继续", onClick = onQuickContinue, enabled = canQuickContinue)

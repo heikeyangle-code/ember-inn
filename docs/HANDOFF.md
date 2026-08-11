@@ -275,6 +275,13 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - `PromptPipeline.populationInjectionPrompts`：in-chat 扩展现在按官方 getExtensionPrompt 语义 trim → key 升序 → separator 拼接 → wrap → substituteParams（此前原始拼接不替换宏）。
 - 工具调用执行循环已全链接线：`ToolRegistry.executeToolCalls`（兼容引擎 ToolCallAccumulator 快照形状）→ 官方 shouldDeleteMessage（空回复删新发送用户消息）/ finalizeIntermediaryMessage（非空回复先落盘）→ `ChatStore.appendToolInvocations`（官方 saveFunctionToolInvocations：is_system + extra.tool_invocations）→ RECURSE_LIMIT=5 内递归 `Generate('normal')` 重新总装（工具调用历史经 ChatPromptFactory 解析 `extra.tool_invocations` → PromptMessage.toolInvocations，ChatHistoryPopulator 重构 tool_call + tool 结果消息）。
 
+### 3.8.17 记忆扩展 App 层 / 快捷回复多文件 / 表情精灵 / Captions ✅（2026-08-12）
+- 记忆扩展全链接线：`MemoryPrefs`（官方 defaultSettings 全字段）+ `MemoryService`（官方 onChatEvent 触发判定、getSummaryPromptForNow/getRawSummaryPrompt、DEFAULT=generateQuietPrompt / RAW=generateRaw、setMemoryContext 落盘 `extra.memory` 到倒数第二条或 lastUsedIndex）+ 聊天 ⋮“记忆总结（立即）”+ `/summarize` + 设置页；`{{summary}}` 宏与 `1_memory` 注入（位置/深度/角色/scan）经 ChatPromptFactory 接入；消息编辑/删除/滑动/回复完成后自动触发。登记边界：source=main（extras/webllm 未接）；RAW builder 的 promptSize 用当前模型上下文近似官方 getMaxPromptTokens。
+- 快捷回复多文件：QuickReplyStore 改为目录 `filesDir/quick-replies/*.json`（官方 data/default-user/quick-replies 语义），旧单文件自动迁移；设置页预设选择/新建/删除；聊天快捷盘与 automationId 自动执行按当前激活预设。
+- 表情精灵 App 层：`ExpressionStore`（expressions/{角色名}/*.png + Risu 导入）、设置页（启用/兜底/多立绘/去重 + 角色精灵导入/删除）、聊天 AI 消息按正文 `sampleClassifyText` → `chooseSprite` 渲染到头像下方。登记：extra.sprite 持久化未做（渲染期确定性选择）；LLM 分类未接。
+- Captions App 层：`CaptionPrefs` + 输入区“图片描述”按钮（对首张待发图生成描述 → `sendCaptionedMessage` 语义追加 captioned 用户消息 → 触发回复）+ 设置页。登记：source 仅 multimodal（extras/local/horde 未接）；refine_mode/prompt_ask 为开关未接确认弹层。
+- 官方设置对齐：`collapse_newlines`（字段/示例/回复清理折叠换行）与 `example_separator`（默认 ***）已加到 消息渲染 设置页并全链路接线（CharacterCardFieldsEngine/ExampleAssembler/CleanUpConfig）。
+
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
 
 **一句话结论**：OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、xAI、Cohere、AI21 路由全部接完（转换器均已差分移植，网络层用 MockWebServer 单测锁行为）；OpenRouter 已接媒体嵌入/推理签名/reasoning exclude，缓存标记待设置项；只剩 Vertex 服务账号认证未做。
@@ -447,9 +454,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 引擎：{{outlet::key}}、PromptReasoning、正则 flags、世界书正则深度
 - 2026-08-12：/inject 参数映射 + set/getExtensionPrompt + EM 示例 baseChatReplace + 深度提示规格全部下沉引擎并差分（34 例）；WorldInfoScanner scanInjections 缓冲语义修正；populationInjectionPrompts 宏替换对齐；getBiasStrings 引擎接入总装；工具调用执行循环全链接线（ToolRegistry 执行 → 官方 shouldDeleteMessage/saveFunctionToolInvocations → RECURSE_LIMIT 递归重装 → extra.tool_invocations 历史重构）
 
-**剩余**：表情精灵 App 层（引擎 ExpressionEngine/SpriteStorage 已差分，UI 待接）、
-记忆扩展 UI + 总结触发（引擎 MemoryEngine 已差分）、captions 服务与聊天集成、图库（Gallery）完整 UI、
-世界书设置 UI、快捷回复多文件。
+**剩余**：captions extras/local/horde 来源与 refine/prompt_ask 确认弹层（当前 multimodal 已接）、
+表情精灵 extra.sprite 持久化与 LLM 分类、Custom CSS + Moving UI（用户决策延期，见 8.9）、
+Claude/Gemini 官方 web tokenizer（用户豁免）。图库（LIST/GALLERY）、世界书设置 UI、快捷回复多文件均已核实完成。
 
 **已完成（全部经 CI 验证 / 引擎测试全绿）**
 
