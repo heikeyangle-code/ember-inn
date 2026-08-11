@@ -10,6 +10,10 @@ data class BehaviorSettings(
     val trimSentences: Boolean = false,
     val pinExamples: Boolean = false,
     val namesAsStopStrings: Boolean = true,
+    val autoSwipe: Boolean = false,
+    val autoSwipeMinimumLength: Int = 0,
+    val autoSwipeBlacklist: Set<String> = emptySet(),
+    val autoSwipeBlacklistThreshold: Int = 2,
 )
 
 object BehaviorPrefs {
@@ -25,6 +29,10 @@ object BehaviorPrefs {
             trimSentences = p.getBoolean("trim_sentences", false),
             pinExamples = p.getBoolean("pin_examples", false),
             namesAsStopStrings = p.getBoolean("names_as_stop_strings", true),
+            autoSwipe = p.getBoolean("auto_swipe", false),
+            autoSwipeMinimumLength = p.getInt("auto_swipe_minimum_length", 0),
+            autoSwipeBlacklist = (p.getStringSet("auto_swipe_blacklist", emptySet()) ?: emptySet()).toSet(),
+            autoSwipeBlacklistThreshold = p.getInt("auto_swipe_blacklist_threshold", 2),
         )
     }
 
@@ -36,6 +44,10 @@ object BehaviorPrefs {
             .putBoolean("trim_sentences", s.trimSentences)
             .putBoolean("pin_examples", s.pinExamples)
             .putBoolean("names_as_stop_strings", s.namesAsStopStrings)
+            .putBoolean("auto_swipe", s.autoSwipe)
+            .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
+            .putStringSet("auto_swipe_blacklist", s.autoSwipeBlacklist)
+            .putInt("auto_swipe_blacklist_threshold", s.autoSwipeBlacklistThreshold)
             .apply()
     }
 }

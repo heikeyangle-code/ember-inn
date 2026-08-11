@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ColorField
 import com.emberinn.app.ui.components.EmberSwitch
@@ -226,6 +228,44 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             behavior = behavior.copy(namesAsStopStrings = it)
                             BehaviorPrefs.save(context, behavior)
                         }
+                        BehaviorToggle("自动滑动（auto_swipe）", behavior.autoSwipe) {
+                            behavior = behavior.copy(autoSwipe = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        EmberTextField(
+                            value = behavior.autoSwipeMinimumLength.toString(),
+                            onValueChange = {
+                                behavior = behavior.copy(autoSwipeMinimumLength = it.toIntOrNull() ?: 0)
+                                BehaviorPrefs.save(context, behavior)
+                            },
+                            label = { Text("自动滑动最短长度（0=关闭）") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        )
+                        var blacklistText by remember { mutableStateOf(behavior.autoSwipeBlacklist.joinToString(", ")) }
+                        EmberTextField(
+                            value = blacklistText,
+                            onValueChange = {
+                                blacklistText = it
+                                behavior = behavior.copy(autoSwipeBlacklist = it.split(',').map { s -> s.trim() }.filter { s -> s.isNotEmpty() }.toSet())
+                                BehaviorPrefs.save(context, behavior)
+                            },
+                            label = { Text("自动滑动黑名单（逗号分隔）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        )
+                        EmberTextField(
+                            value = behavior.autoSwipeBlacklistThreshold.toString(),
+                            onValueChange = {
+                                behavior = behavior.copy(autoSwipeBlacklistThreshold = it.toIntOrNull() ?: 0)
+                                BehaviorPrefs.save(context, behavior)
+                            },
+                            label = { Text("黑名单命中阈值（次）") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        )
                     }
                 }
             }

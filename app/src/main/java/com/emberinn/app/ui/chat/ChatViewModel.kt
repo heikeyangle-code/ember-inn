@@ -2407,6 +2407,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             reply.isNotBlank() -> {
                 appendAiReply(reply)
                 refreshMessages()
+                // 官方 power_user.auto_swipe：过滤命中（最短长度/黑名单阈值）→ 自动生成新变体
+                if (behavior.autoSwipe && com.emberinn.engine.prompt.SwipeEngine.generatedTextFiltered(
+                        text = reply,
+                        minimumLength = behavior.autoSwipeMinimumLength,
+                        blacklist = behavior.autoSwipeBlacklist.toList(),
+                        threshold = behavior.autoSwipeBlacklistThreshold,
+                    )
+                ) {
+                    val aiIdx = chatStore.messages(sessionId).lastIndex
+                    if (aiIdx >= 0) swipeRight(aiIdx)
+                }
                 val voice = VoicePrefs.read(getApplication())
                 if (voice.enabled && voice.autoGeneration) {
                     narrateLastMessage()
