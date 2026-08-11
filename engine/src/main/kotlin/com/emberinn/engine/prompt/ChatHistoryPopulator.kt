@@ -130,7 +130,10 @@ object ChatHistoryPopulator {
         // 官方 lastUserIdx：原始消息里最后一个 user 的位置（工具推理链 eligibility 用）
         val lastUserIdx = historyMessages.indexOfLast { it.role == "user" }
 
-        // 逆序插入（insertAtStart 后最终为时间正序）
+        // 逆序插入（insertAtStart 后最终为时间正序）。
+        // 普通消息先收集成批，最后一次性 addAll(0)，避免逐条 unshift 的 O(n²)。
+        val historyBatch = mutableListOf<CompletionMessage>()
+        var simulatedBudget = chatCompletion.tokenBudget
         for ((poolIndex, m) in historyMessages.asReversed().withIndex()) {
             val chatIdentifier = "chatHistory-${historyMessages.size - poolIndex}"
 
@@ -180,6 +183,12 @@ object ChatHistoryPopulator {
             }
 
             // 对齐官方：工具调用消息 → tool_call + tool 结果消息（推理链模式/签名按官方 openai.js）
+            // 工具消息与普通消息交错时不能整体批量插队，先把手头普通批次按时间正序落盘
+            if (historyBatch.isNotEmpty()) {
+                chatCompletion.insertAllAtStart(historyBatch.asReversed(), "chatHistory")
+                historyBatch.clear()
+                simulatedBudget = chatCompletion.tokenBudget
+            }
             val invocations = m.toolInvocations
             if (canUseTools && invocations != null && invocations.isNotEmpty()) {
                 val promptIdx = historyMessages.size - 1 - poolIndex
@@ -249,6 +258,7 @@ object ChatHistoryPopulator {
                 if (chatCompletion.canAffordAll(listOf(toolCallMessage) + toolResultMessages)) {
                     toolResultMessages.forEach { chatCompletion.insertAtStart(it, "chatHistory") }
                     chatCompletion.insertAtStart(toolCallMessage, "chatHistory")
+                    simulatedBudget = chatCompletion.tokenBudget
                 } else {
                     break
                 }
@@ -266,13 +276,15 @@ object ChatHistoryPopulator {
                 // 官方：仅 includeSignature 且消息带 signature 时透传（Gemini thoughtSignature）
                 signature = if (includeSignature) m.signature?.takeIf { it.isNotEmpty() } else null,
             )
-            if (chatCompletion.canAfford(chatMessage)) {
-                chatCompletion.insertAtStart(chatMessage, "chatHistory")
+            if (chatMessage.tokens <= simulatedBudget) {
+                historyBatch += chatMessage
+                simulatedBudget -= chatMessage.tokens
             } else {
                 break
             }
         }
 
+        chatCompletion.insertAllAtStart(historyBatch.asReversed(), "chatHistory")
         chatCompletion.freeBudget(newChatMessage)
         chatCompletion.insertAtStart(newChatMessage, "chatHistory")
 

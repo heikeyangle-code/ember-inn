@@ -137,6 +137,17 @@ class ChatCompletion(private val handler: TokenHandler) {
     fun insertAtStart(message: CompletionMessage, identifier: String) =
         insert(message, identifier, "start")
 
+    /** 批量插到集合开头（单次 O(n)，避免逐条 unshift 造成 O(n²)）。 */
+    fun insertAllAtStart(messages: List<CompletionMessage>, identifier: String) {
+        if (messages.isEmpty()) return
+        checkTokenBudget(messages.sumOf { it.tokens })
+        val index = findMessageIndex(identifier)
+        if (index < 0) return
+        val collection = (entries[index] as? ChatEntry.Collection)?.collection ?: return
+        collection.items.addAll(0, messages)
+        tokenBudget -= messages.sumOf { it.tokens }
+    }
+
     fun insertAtEnd(message: CompletionMessage, identifier: String) =
         insert(message, identifier, "end")
 
