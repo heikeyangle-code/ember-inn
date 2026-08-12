@@ -30,6 +30,9 @@ class AppSlashExecutorTest {
         override fun setInput(text: String): String { calls += "setinput:$text"; return text }
         override fun setBackground(text: String): String { calls += "bg:$text"; return "bg.png" }
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
+        override suspend fun continueChat(prompt: String): String { calls += "continue:$prompt"; return "" }
+        override suspend fun regenerateChat(): String { calls += "regenerate"; return "" }
+        override suspend fun swipeChat(direction: String): String { calls += "swipe:$direction"; return "" }
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
         override fun applyPreset(name: String): String { calls += "preset:$name"; return "Default" }
         override suspend fun triggerGeneration(await: Boolean): String { calls += "trigger:$await"; return "" }

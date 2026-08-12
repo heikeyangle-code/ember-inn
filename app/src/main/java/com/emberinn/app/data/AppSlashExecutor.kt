@@ -45,8 +45,14 @@ interface SlashMessageActions {
     fun setInput(text: String): String
     /** /bg：无参返回当前背景；clear 清除；否则设置背景（URL/路径）。 */
     fun setBackground(text: String): String
-    /** /impersonate：触发冒充生成（prompt 可选，覆盖默认冒充提示）；返回提示文本。 */
+    /** /impersonate：触发冒充生成（prompt 可选，官方 quiet_prompt）；返回提示文本。 */
     fun impersonate(prompt: String): String
+    /** /continue：继续最后一条消息（prompt 可选，官方 quiet_prompt+quietToLoud）。 */
+    suspend fun continueChat(prompt: String): String
+    /** /regenerate：重新生成最后一条 AI 回复。 */
+    suspend fun regenerateChat(): String
+    /** /swipe：direction=left/right 切换最后一条 AI 回复（右越界生成新变体）。 */
+    suspend fun swipeChat(direction: String): String
     /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
     fun selectPersona(name: String, mode: String): String
     /** /preset：精确匹配选择 OpenAI 采样预设（官方 presetCommandCallback exact；fuzzy 用子串近似登记）；无参返回当前名。 */
@@ -215,6 +221,27 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "触发冒充生成（官方 impersonate；prompt 可选）",
             rawQuotes = true,
             callback = { inv, _ -> actions.impersonate(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "continue",
+            aliases = listOf("cont"),
+            description = "继续生成最后一条消息（官方 continue；prompt 可选）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ -> actions.continueChat(inv.unnamedArgs.joinToString(" ")) },
+        ),
+        SlashCommandDef(
+            "regenerate",
+            aliases = listOf("regen"),
+            description = "重新生成最后一条 AI 回复（官方 regenerate）",
+            callback = { _, _ -> "" },
+            suspendCallback = { _, _ -> actions.regenerateChat() },
+        ),
+        SlashCommandDef(
+            "swipe",
+            description = "切换最后一条 AI 回复（官方 swipe：direction=left/right，默认 right）",
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ -> actions.swipeChat(inv.namedArgs["direction"] ?: "right") },
         ),
         SlashCommandDef(
             "trigger",

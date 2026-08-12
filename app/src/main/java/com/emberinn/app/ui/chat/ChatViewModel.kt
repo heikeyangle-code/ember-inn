@@ -1661,6 +1661,50 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return cleaned to bias
     }
 
+    override suspend fun continueChat(prompt: String): String {
+        val trimmed = prompt.trim()
+        if (trimmed.isEmpty()) {
+            continueGeneration()
+            return ""
+        }
+        // 官方 continueChatCallback：prompt 走 quiet_prompt+quietToLoud；守卫与 UI 按钮一致
+        if (_isStreaming.value) return ""
+        val msgs = chatStore.messages(sessionId)
+        val last = msgs.lastOrNull() ?: return ""
+        if (isUser(last)) {
+            _notice.value = "（最后一条是你发的消息，先让对方回复或发送后再继续。）"
+            return ""
+        }
+        if (isSystemMsg(last)) {
+            _notice.value = "（最后一条是系统/隐藏消息，不能继续生成。）"
+            return ""
+        }
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            _notice.value = "（未配置模型，请先选一个模型再发送。）"
+            return ""
+        }
+        startStream(
+            history = msgs,
+            type = "continue",
+            continueMode = true,
+            quietPrompt = trimmed,
+        )
+        return ""
+    }
+
+    override suspend fun regenerateChat(): String {
+        regenerate()
+        return ""
+    }
+
+    override suspend fun swipeChat(direction: String): String {
+        val idx = chatStore.messages(sessionId).indexOfLast { !isUser(it) && !isSystemMsg(it) }
+        if (idx < 0) return ""
+        if (direction.lowercase() == "left") swipeLeft(idx) else swipeRight(idx)
+        return ""
+    }
+
     /** 冒充（官方 Generate('impersonate')）：模型以 {{user}} 视角写下一句，流式草稿进输入框，不落历史。 */
     fun impersonate() {
         if (_isStreaming.value) return
