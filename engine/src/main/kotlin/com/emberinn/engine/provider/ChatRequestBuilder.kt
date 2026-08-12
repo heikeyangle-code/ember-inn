@@ -37,8 +37,26 @@ data class SamplerParams(
     val seed: Int = -1,
     /** 官方 settings.n（多回复/多 swipe）。 */
     val n: Int = 1,
-    /** 官方 settings.top_k（OpenAI 系/OpenRouter）。 */
-    val topK: Int = 40,
+    /** 官方 settings.top_k_openai（仅支持源发送；官方默认 0 = 不发送）。 */
+    val topK: Int = 0,
+    /** 官方 settings.min_p_openai（OpenRouter/NanoGPT/Chutes）。 */
+    val minP: Double = 0.0,
+    /** 官方 settings.top_a_openai（OpenRouter/NanoGPT）。 */
+    val topA: Double = 0.0,
+    /** 官方 settings.repetition_penalty_openai（OpenRouter/NanoGPT/Chutes/Workers AI）。 */
+    val repetitionPenalty: Double = 1.0,
+    /** 官方 openrouter_use_fallback（true → route=fallback）。 */
+    val useFallback: Boolean = false,
+    /** 官方 openrouter_providers（provider.order 数组）。 */
+    val openRouterProviders: List<String> = emptyList(),
+    /** 官方 openrouter_quantizations（provider.quantizations 数组）。 */
+    val openRouterQuantizations: List<String> = emptyList(),
+    /** 官方 openrouter_allow_fallbacks（默认 true）。 */
+    val allowFallbacks: Boolean = true,
+    /** 官方 openrouter_middleout：on/off/auto，默认 on。 */
+    val middleout: String = "on",
+    /** 官方 power_user.request_token_probabilities → openai/azure/custom logprobs（top_logprobs=5）。 */
+    val requestTokenProbabilities: Boolean = false,
     /** 官方 settings.logit_bias（仅支持源发送）。 */
     val logitBias: Map<String, Double> = emptyMap(),
     /** 官方 settings.verbosity（gpt-5 系）。 */
@@ -124,6 +142,11 @@ object ChatRequestBuilder {
         extra: JsonObject? = null,
         source: String = "openai",
     ): String {
+        // LlmClient 传真实 provider.id；Azure 归一为官方 azure_openai 常量
+        val officialSource = when (source) {
+            "azure" -> "azure_openai"
+            else -> source
+        }
         val body = buildJsonObject {
             put("model", model)
             put("messages", JsonArray(messages))
@@ -133,25 +156,24 @@ object ChatRequestBuilder {
             put("presence_penalty", params.presencePenalty)
             put("frequency_penalty", params.frequencyPenalty)
             put("stream", params.stream)
-            put("top_k", params.topK)
             if (options.stopSequences.isNotEmpty()) {
                 put("stop", JsonArray(options.stopSequences.map { JsonPrimitive(it) }))
             }
-            if (params.logitBias.isNotEmpty() && source in setOf("openai", "azure_openai", "openrouter", "electronhub", "chutes", "custom")) {
+            if (params.logitBias.isNotEmpty() && officialSource in setOf("openai", "azure_openai", "openrouter", "electronhub", "chutes", "custom")) {
                 put("logit_bias", buildJsonObject {
                     params.logitBias.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
                 })
             }
-            if (source in setOf("openai", "azure_openai", "openrouter", "mistralai", "custom", "cohere", "groq", "electronhub", "nanogpt", "xai", "pollinations", "aimlapi", "vertexai", "makersuite", "chutes") && params.seed >= 0) {
+            if (officialSource in setOf("openai", "azure_openai", "openrouter", "mistralai", "custom", "cohere", "groq", "electronhub", "nanogpt", "xai", "pollinations", "aimlapi", "vertexai", "makersuite", "chutes") && params.seed >= 0) {
                 put("seed", JsonPrimitive(params.seed))
             }
-            if (params.n > 1 && source in setOf("openai", "azure_openai", "custom", "xai", "aimlapi", "moonshot")) {
+            if (params.n > 1 && officialSource in setOf("openai", "azure_openai", "custom", "xai", "aimlapi", "moonshot")) {
                 put("n", JsonPrimitive(params.n))
             }
-            if (params.reasoningEffort.isNotBlank() && source in setOf("custom", "openai") && model in OPENAI_REASONING_EFFORT_MODELS) {
+            if (params.reasoningEffort.isNotBlank() && officialSource in setOf("custom", "openai") && model in OPENAI_REASONING_EFFORT_MODELS) {
                 put("reasoning_effort", JsonPrimitive(OPENAI_FIXED_REASONING_EFFORT[model] ?: OPENAI_REASONING_EFFORT_MAP[params.reasoningEffort] ?: params.reasoningEffort))
             }
-            if (!params.verbosity.isNullOrBlank() && source in setOf("custom", "openai") && OPENAI_VERBOSITY_MODELS.containsMatchIn(model)) {
+            if (!params.verbosity.isNullOrBlank() && officialSource in setOf("custom", "openai") && OPENAI_VERBOSITY_MODELS.containsMatchIn(model)) {
                 put("verbosity", JsonPrimitive(params.verbosity))
             }
             if (options.hasTools) {
@@ -159,18 +181,164 @@ object ChatRequestBuilder {
                 options.toolChoice?.let { put("tool_choice", JsonPrimitive(it)) }
             }
             options.jsonSchema?.let { schema ->
-                put("response_format", buildJsonObject {
-                    put("type", JsonPrimitive("json_schema"))
-                    put("json_schema", buildJsonObject {
-                        put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
-                        put("strict", JsonPrimitive(schema["strict"]?.jsonPrimitive?.content?.toBoolean() ?: true))
-                        put("schema", schema["value"] ?: schema)
+                // 官方后端 setJsonObjectFormat 源（moonshot/zai/siliconflow）走 json_object；
+                // 其余源走 json_schema 结构。
+                if (officialSource in setOf("moonshot", "zai", "siliconflow")) {
+                    put("response_format", buildJsonObject { put("type", JsonPrimitive("json_object")) })
+                } else {
+                    put("response_format", buildJsonObject {
+                        put("type", JsonPrimitive("json_schema"))
+                        put("json_schema", buildJsonObject {
+                            put("name", JsonPrimitive(schema["name"]?.let { it.toString().trim('"') } ?: "json"))
+                            put("strict", JsonPrimitive(schema["strict"]?.jsonPrimitive?.content?.toBoolean() ?: true))
+                            put("schema", schema["value"] ?: schema)
+                        })
                     })
-                })
+                }
             }
             if (extra != null) extra.forEach { (k, v) -> put(k, v) }
         }
-        return applyGpt5Params(body, model, params, source).toString()
+        return applyGpt5Params(
+            applyO1Params(applySourceParams(body, officialSource, model, params), model, params, officialSource, messages),
+            model,
+            params,
+            officialSource,
+        ).toString()
+    }
+
+    /**
+     * 对齐官方 createGenerationParameters / chat-completions.js 的 o1/o3/o4 分支：
+     * max_completion_tokens 替代 max_tokens，删掉不支持参数；纯 o1 把 system 消息改 user，删 n/tools/tool_choice。
+     */
+    private fun applyO1Params(
+        body: JsonObject,
+        model: String,
+        params: SamplerParams,
+        source: String,
+        messages: List<JsonObject>,
+    ): JsonObject {
+        val isO1Family = (source in setOf("openai", "azure_openai") && Regex("^(o1|o3|o4)").containsMatchIn(model)) ||
+            (source == "openrouter" && Regex("^openai/(o1|o3|o4)").containsMatchIn(model))
+        if (!isO1Family) return body
+        val map = body.toMutableMap()
+        map["max_completion_tokens"] = map.remove("max_tokens") ?: JsonNull
+        map.remove("logprobs")
+        map.remove("top_logprobs")
+        map.remove("stop")
+        map.remove("logit_bias")
+        map.remove("temperature")
+        map.remove("top_p")
+        map.remove("frequency_penalty")
+        map.remove("presence_penalty")
+        if (Regex("^(openai/)?(o1)").containsMatchIn(model)) {
+            val newMessages = messages.map { el ->
+                if (el["role"]?.jsonPrimitive?.content == "system") {
+                    el.toMutableMap().apply { put("role", JsonPrimitive("user")) }.let { JsonObject(it) }
+                } else {
+                    el
+                }
+            }
+            map["messages"] = JsonArray(newMessages)
+            map.remove("n")
+            map.remove("tools")
+            map.remove("tool_choice")
+        }
+        return JsonObject(map)
+    }
+
+    /**
+     * 对齐官方 openai.js createGenerationParameters 各厂商采样参数分支
+     * （openrouter/nanogpt/workers_ai/perplexity/electronhub/chutes/zai/minimax/moonshot/deepseek）。
+     */
+    private fun applySourceParams(
+        body: JsonObject,
+        source: String,
+        model: String,
+        params: SamplerParams,
+    ): JsonObject {
+        val map = body.toMutableMap()
+        when (source) {
+            "openrouter", "nanogpt" -> {
+                map["top_k"] = JsonPrimitive(params.topK)
+                map["min_p"] = JsonPrimitive(params.minP)
+                map["repetition_penalty"] = JsonPrimitive(params.repetitionPenalty)
+                map["top_a"] = JsonPrimitive(params.topA)
+                if (source == "openrouter") {
+                    if (!params.verbosity.isNullOrBlank()) map["verbosity"] = JsonPrimitive(params.verbosity)
+                    if (params.useFallback) map["route"] = JsonPrimitive("fallback")
+                    if (params.openRouterProviders.isNotEmpty() || params.openRouterQuantizations.isNotEmpty()) {
+                        map["provider"] = buildJsonObject {
+                            if (params.openRouterProviders.isNotEmpty()) {
+                                put("order", JsonArray(params.openRouterProviders.map { JsonPrimitive(it) }))
+                            }
+                            put("allow_fallbacks", JsonPrimitive(params.allowFallbacks))
+                            if (params.openRouterQuantizations.isNotEmpty()) {
+                                put("quantizations", JsonArray(params.openRouterQuantizations.map { JsonPrimitive(it) }))
+                            }
+                        }
+                    }
+                }
+            }
+            "workers_ai" -> {
+                if (params.topK > 0) map["top_k"] = JsonPrimitive(minOf(params.topK, 50)) else map.remove("top_k")
+                map["repetition_penalty"] = JsonPrimitive(params.repetitionPenalty)
+                if (params.seed >= 1) map["seed"] = JsonPrimitive(params.seed) else map.remove("seed")
+                map["top_p"] = JsonPrimitive(maxOf(params.topP, 0.001))
+                map.remove("n")
+                map.remove("logit_bias")
+            }
+            "perplexity" -> {
+                map["top_k"] = JsonPrimitive(params.topK)
+                map["reasoning_effort"] = JsonPrimitive(params.reasoningEffort.ifBlank { "auto" })
+                map.remove("stop")
+            }
+            "electronhub" -> map["top_k"] = JsonPrimitive(params.topK)
+            "chutes" -> {
+                map["min_p"] = JsonPrimitive(params.minP)
+                if (params.topK > 0) map["top_k"] = JsonPrimitive(params.topK) else map.remove("top_k")
+                map["repetition_penalty"] = JsonPrimitive(params.repetitionPenalty)
+            }
+            "zai" -> {
+                if ((map["top_p"] as? JsonPrimitive)?.content?.toDoubleOrNull() == 0.0) {
+                    map["top_p"] = JsonPrimitive(0.01)
+                }
+                val stops = (map["stop"] as? JsonArray)?.toList().orEmpty().take(1)
+                map["stop"] = if (stops.isEmpty()) JsonNull else JsonArray(stops)
+                map.remove("presence_penalty")
+                map.remove("frequency_penalty")
+                map["thinking"] = buildJsonObject {
+                    put("type", JsonPrimitive(if (params.includeReasoning) "enabled" else "disabled"))
+                }
+            }
+            "minimax" -> {
+                val t = params.temperature
+                if (t.isFinite()) map["temperature"] = JsonPrimitive(t.coerceIn(Math.ulp(1.0), 1.0))
+            }
+            "moonshot" -> {
+                map["thinking"] = buildJsonObject {
+                    put("type", JsonPrimitive(if (params.includeReasoning) "enabled" else "disabled"))
+                }
+                if (Regex("kimi-k2.5").containsMatchIn(model)) {
+                    map.remove("temperature")
+                    map.remove("top_p")
+                    map.remove("frequency_penalty")
+                    map.remove("presence_penalty")
+                }
+            }
+            "deepseek" -> {
+                if ((map["top_p"] as? JsonPrimitive)?.content?.toDoubleOrNull() == 0.0) {
+                    map["top_p"] = JsonPrimitive(Math.ulp(1.0))
+                }
+            }
+            "openai", "azure_openai", "custom" -> {
+                // 官方后端 openai/custom 分支：logprobs>0 → top_logprobs=logprobs, logprobs=true
+                if (params.requestTokenProbabilities) {
+                    map["logprobs"] = JsonPrimitive(true)
+                    map["top_logprobs"] = JsonPrimitive(5)
+                }
+            }
+        }
+        return JsonObject(map)
     }
 
     /**

@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
 const outFile = join(repoRoot, 'engine', 'src', 'test', 'resources', 'diff', 'openai-params.json');
 
-const funcs = `
+export const funcs = `
 const chat_completion_sources = { OPENAI: 'openai', AZURE_OPENAI: 'azure_openai', OPENROUTER: 'openrouter', NANOGPT: 'nanogpt', MAKERSUITE: 'makersuite', VERTEXAI: 'vertexai', MISTRALAI: 'mistralai', CUSTOM: 'custom', COHERE: 'cohere', PERPLEXITY: 'perplexity', GROQ: 'groq', DEEPSEEK: 'deepseek', XAI: 'xai', ELECTRONHUB: 'electronhub', CHUTES: 'chutes', ZAI: 'zai', SILICONFLOW: 'siliconflow', MINIMAX: 'minimax', WORKERS_AI: 'workers_ai', MOONSHOT: 'moonshot' };
 const ZAI_ENDPOINT = { COMMON: 'common' };
 const SILICONFLOW_ENDPOINT = { GLOBAL: 'global' };
@@ -39,6 +39,11 @@ function buildOpenAiParams(settings, model, type, messages) {
         'custom_prompt_post_processing': settings.customPromptPostProcessing,
         'verbosity': settings.verbosity,
     };
+    // 官方 createGenerationParameters：useLogprobs = !!power_user.request_token_probabilities
+    const logprobsSupportedSources = ['openai','azure_openai','custom','deepseek','xai','aimlapi','chutes'];
+    if (settings.requestTokenProbabilities && logprobsSupportedSources.includes(settings.source)) {
+        generate_data.logprobs = 5;
+    }
     if (settings.source === 'azure_openai') {
         generate_data.azure_base_url = settings.azureBaseUrl;
         generate_data.azure_deployment_name = settings.azureDeploymentName;

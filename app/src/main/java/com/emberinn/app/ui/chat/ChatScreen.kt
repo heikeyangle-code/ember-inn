@@ -1983,7 +1983,9 @@ private fun MessageRow(
         }
         Column(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-            modifier = Modifier.fillMaxWidth(if (isUser) 0.78f else 1f),
+            // 用户消息：内容自适应紧凑气泡，上限 320dp（恢复早期 widthIn(max=300dp) 语义，
+            // 避免 fillMaxWidth(0.78f) 把长消息/列表/引用撑成整条宽气泡）
+            modifier = if (isUser) Modifier.widthIn(max = 320.dp) else Modifier.fillMaxWidth(),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

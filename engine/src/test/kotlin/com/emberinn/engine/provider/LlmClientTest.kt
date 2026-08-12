@@ -647,7 +647,9 @@ data: [DONE]
         assertEquals("EmberInn", request.headers["X-Title"])
         val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
         assertEquals(true, body["reasoning"]?.jsonObject?.get("exclude")?.toString()?.toBoolean())
-        assertEquals(0, body["transforms"]?.jsonArray?.size)
+        // 官方 openrouter_middleout 默认 ON → transforms: ['middle-out']
+        assertEquals(1, body["transforms"]?.jsonArray?.size)
+        assertEquals("middle-out", body["transforms"]?.jsonArray?.first()?.toString()?.trim('"'))
         server.close()
     }
 

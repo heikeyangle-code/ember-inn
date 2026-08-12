@@ -204,6 +204,54 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setTopP(v: Double) { _editingSampler.value = _editingSampler.value.copy(topP = v) }
     fun setPresencePenalty(v: Double) { _editingSampler.value = _editingSampler.value.copy(presencePenalty = v) }
     fun setFrequencyPenalty(v: Double) { _editingSampler.value = _editingSampler.value.copy(frequencyPenalty = v) }
+    fun setTopK(v: String) {
+        val n = v.filter { it.isDigit() }.toIntOrNull()
+        _editingSampler.value = _editingSampler.value.copy(topK = (n ?: 0).coerceIn(0, 500))
+    }
+    fun setMinP(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(minP = v.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 0.0)
+    }
+    fun setTopA(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(topA = v.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 0.0)
+    }
+    fun setRepetitionPenalty(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(
+            repetitionPenalty = v.toDoubleOrNull()?.coerceIn(1.0, 2.0) ?: 1.0,
+        )
+    }
+    fun setSeed(v: String) {
+        val n = v.filter { it.isDigit() || it == '-' }.toIntOrNull()
+        _editingSampler.value = _editingSampler.value.copy(seed = (n ?: -1).coerceIn(-1, 1_000_000))
+    }
+    fun setN(v: String) {
+        val n = v.filter { it.isDigit() }.toIntOrNull()
+        _editingSampler.value = _editingSampler.value.copy(n = (n ?: 1).coerceIn(1, 8))
+    }
+    fun setStreaming(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(stream = v)
+    }
+    fun setUseFallback(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(useFallback = v)
+    }
+    fun setOpenRouterProviders(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(
+            openRouterProviders = v.split(',').map { it.trim() }.filter { it.isNotEmpty() },
+        )
+    }
+    fun setOpenRouterQuantizations(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(
+            openRouterQuantizations = v.split(',').map { it.trim() }.filter { it.isNotEmpty() },
+        )
+    }
+    fun setAllowFallbacks(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(allowFallbacks = v)
+    }
+    fun setMiddleout(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(middleout = v)
+    }
+    fun setRequestTokenProbabilities(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(requestTokenProbabilities = v)
+    }
 
     fun save() {
         val spec = provider() ?: return

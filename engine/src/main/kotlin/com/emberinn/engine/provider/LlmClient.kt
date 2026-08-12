@@ -271,6 +271,9 @@ class LlmClient(
     ): Request {
         val base = requireHttpScheme(resolveBase(provider, profile))
         val builder = Request.Builder()
+        // 官方 createGenerationParameters：isO1（openai/azure_openai + o1-2024-12-17/o1）强制非流式
+        val effectiveStream = stream &&
+            !(provider.id in setOf("openai", "azure") && profile.model in setOf("o1-2024-12-17", "o1"))
         when (provider.protocol) {
             "anthropic" -> {
                 val url = base.trimEnd('/') + "/messages"
@@ -278,14 +281,14 @@ class LlmClient(
                 val isAdaptive = Regex("^claude-(opus-4-7)").containsMatchIn(profile.model) ||
                     (profile.sampler.enableAdaptiveThinking && Regex("^claude-(opus-4-6|sonnet-4-6)").containsMatchIn(profile.model))
                 val reasoningBudget = ProviderConverters.calculateClaudeBudgetTokens(
-                    profile.sampler.maxTokens, effort, stream, isAdaptive,
+                    profile.sampler.maxTokens, effort, effectiveStream, isAdaptive,
                 )
                 val request = AnthropicRequestBuilder.build(
                     model = profile.model,
                     messages = messages,
                     maxTokens = profile.sampler.maxTokens,
                     temperature = profile.sampler.temperature,
-                    stream = stream,
+                    stream = effectiveStream,
                     topP = profile.sampler.topP,
                     reasoningEffort = effort,
                     includeReasoning = profile.sampler.includeReasoning,
@@ -314,7 +317,7 @@ class LlmClient(
                 if (provider.authType == "google-key" && profile.apiKey.isNotEmpty()) {
                     params += "key=" + URLEncoder.encode(profile.apiKey, "UTF-8")
                 }
-                if (stream) params += "alt=sse"
+                if (effectiveStream) params += "alt=sse"
                 val url = base.trimEnd('/') + "/" + apiVersion + "/models/" + model + ":generateContent" +
                     (if (params.isNotEmpty()) "?" + params.joinToString("&") else "")
                 val effort = profile.sampler.reasoningEffort
@@ -373,13 +376,6 @@ class LlmClient(
                 if (provider.id == "vertexai") {
                     error("Vertex AI 需要服务账号与项目配置，请使用 Gemini (AI Studio) 或自定义地址。")
                 }
-                // 官方 gptSources 映射：仅 openai/azure_openai/openrouter 对 gpt-5 做参数转换
-                val gptSource = when (provider.id) {
-                    "openrouter" -> "openrouter"
-                    "azure" -> "azure_openai"
-                    "openai" -> "openai"
-                    else -> "other"
-                }
                 val isTextCompletion = profile.model in TEXT_COMPLETION_MODELS && provider.id != "openrouter"
                 val url = when (provider.id) {
                     "azure" -> {
@@ -399,7 +395,7 @@ class LlmClient(
                 }
                 val body = if (isTextCompletion) {
                     val prompt = ProviderConverters.convertTextCompletionPrompt(JsonArray(chatML(messages)))
-                    TextCompletionRequestBuilder.build(profile.model, prompt, profile.sampler.copy(stream = stream))
+                    TextCompletionRequestBuilder.build(profile.model, prompt, profile.sampler.copy(stream = effectiveStream))
                 } else if (provider.id == "openrouter") {
                     val chatMl = chatML(messages).toMutableList()
                     ProviderConverters.addOpenRouterSignatures(chatMl, profile.model)
@@ -416,21 +412,19 @@ class LlmClient(
                         }
                     }
                     val effort = profile.sampler.reasoningEffort
-                    val extra = buildJsonObject {
-                        put("transforms", JsonArray(emptyList()))
-                        put("plugins", JsonArray(emptyList()))
-                        put("reasoning", buildJsonObject {
-                            put("exclude", !profile.sampler.includeReasoning)
-                            if (effort.isNotEmpty()) put("effort", effort)
-                        })
-                    }
+                    val extra = OpenRouterParams.extra(
+                        middleout = profile.sampler.middleout,
+                        enableWebSearch = options.enableWebSearch,
+                        includeReasoning = profile.sampler.includeReasoning,
+                        reasoningEffort = effort,
+                    )
                     ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
                         model = profile.model,
                         messages = chatMl,
-                        params = profile.sampler.copy(stream = stream),
+                        params = profile.sampler.copy(stream = effectiveStream),
                         options = options,
                         extra = extra,
-                        source = gptSource,
+                        source = provider.id,
                     )
                 } else if (provider.id == "deepseek") {
                     // 官方 sendDeepSeekRequest：postProcessPrompt(SEMI_TOOLS) + addAssistantPrefix + addReasoningContentToToolCalls
@@ -479,22 +473,62 @@ class LlmClient(
                     ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
                         model = profile.model,
                         messages = processed,
-                        params = profile.sampler.copy(stream = stream),
+                        params = profile.sampler.copy(stream = effectiveStream),
                         options = options.copy(tools = emptyList(), jsonSchema = null),
                         extra = extra,
-                        source = gptSource,
+                        source = provider.id,
+                    )
+                } else if (provider.id == "moonshot") {
+                    // 官方后端 moonshot 分支：json_schema → setJsonObjectFormat（注入 schema 用户消息 + json_object）；
+                    // 否则 addAssistantPrefix(partial)
+                    val chatMl = chatML(messages).toMutableList()
+                    val schema = options.jsonSchema
+                    if (schema != null) {
+                        chatMl += buildJsonObject {
+                            put("role", JsonPrimitive("user"))
+                            put(
+                                "content",
+                                JsonPrimitive(
+                                    "JSON schema for the response:\n" +
+                                        Json { prettyPrint = true; prettyPrintIndent = "    " }
+                                            .encodeToString(JsonElement.serializer(), schema["value"] ?: schema),
+                                ),
+                            )
+                        }
+                    } else {
+                        ProviderConverters.addAssistantPrefix(chatMl, emptyList(), "partial")
+                    }
+                    ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
+                        model = profile.model,
+                        messages = chatMl,
+                        params = profile.sampler.copy(stream = effectiveStream),
+                        options = options,
+                        source = provider.id,
+                    )
+                } else if (provider.id == "perplexity") {
+                    // 官方后端 perplexity 分支：postProcessPrompt(STRICT) + reasoning_effort
+                    val chatMl = ProviderConverters.postProcessPrompt(chatML(messages), "strict", PromptNames())
+                    ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
+                        model = profile.model,
+                        messages = chatMl,
+                        params = profile.sampler.copy(stream = effectiveStream),
+                        options = options,
+                        source = provider.id,
                     )
                 } else {
                     ChatRequestBuilder.buildOpenAiCompatible(
                         model = profile.model,
                         messages = messages,
-                        params = profile.sampler.copy(stream = stream),
+                        params = profile.sampler.copy(stream = effectiveStream),
                         options = options,
-                        source = gptSource,
+                        source = provider.id,
                     )
                 }
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
+                if (provider.id == "zai") {
+                    builder.header("Accept-Language", "en-US,en")
+                }
             }
         }
         // OpenRouter 的 HTTP-Referer / X-Title 由 providers.json extra_headers 提供（项目身份）

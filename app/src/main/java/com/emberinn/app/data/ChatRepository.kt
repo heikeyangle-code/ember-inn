@@ -325,10 +325,27 @@ class ChatRepository(context: Context) {
             ),
         )
         val finalOptions = options.copy(stopSequences = stopSequences)
+        val effectiveProfile = profile.copy(
+            model = effectiveModel,
+            sampler = sampler.copy(maxTokens = effectiveMaxTokens),
+            contextWindow = effectiveContextWindow,
+        )
+        // 官方 createGenerationParameters：isO1（openai/azure_openai + o1-2024-12-17/o1）强制非流式
+        if (provider.id in setOf("openai", "azure") && effectiveModel in setOf("o1-2024-12-17", "o1")) {
+            return try {
+                val full = client.chatCompletions(provider, effectiveProfile, prepared.messages, finalOptions)
+                onDelta(full)
+                onDone()
+                null
+            } catch (e: Exception) {
+                onError?.invoke(e)
+                null
+            }
+        }
         return client.streamChatCompletionsAsync(
             provider = provider,
             // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）
-            profile = profile.copy(model = effectiveModel, sampler = sampler.copy(maxTokens = effectiveMaxTokens), contextWindow = effectiveContextWindow),
+            profile = effectiveProfile,
             messages = prepared.messages,
             onDelta = onDelta,
             onDone = onDone,

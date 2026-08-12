@@ -42,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -424,6 +425,53 @@ fun ProviderDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            SwitchRow("流式输出（stream）", sampler.stream, vm::setStreaming)
+            IntRow("top_k（0 = 不发送）", sampler.topK.toString(), vm::setTopK)
+            DecimalRow("min_p（0-1）", sampler.minP.toString(), vm::setMinP)
+            DecimalRow("top_a（0-1）", sampler.topA.toString(), vm::setTopA)
+            DecimalRow("repetition_penalty（1-2）", sampler.repetitionPenalty.toString(), vm::setRepetitionPenalty)
+            IntRow("seed（-1 = 不发送）", sampler.seed.toString(), vm::setSeed)
+            IntRow("n（多回复变体，1-8）", sampler.n.toString(), vm::setN)
+            if (spec.id == "openrouter") {
+                SwitchRow("use_fallback（route=fallback）", sampler.useFallback, vm::setUseFallback)
+                SwitchRow("allow_fallbacks", sampler.allowFallbacks, vm::setAllowFallbacks)
+                Text(
+                    "middleout",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 6.dp),
+                ) {
+                    listOf("on", "off", "auto").forEach { value ->
+                        FilterChip(
+                            selected = sampler.middleout == value,
+                            onClick = { vm.setMiddleout(value) },
+                            label = { Text(value) },
+                        )
+                    }
+                }
+                EmberTextField(
+                    value = sampler.openRouterProviders.joinToString(", "),
+                    onValueChange = vm::setOpenRouterProviders,
+                    label = { Text("providers（逗号分隔）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                EmberTextField(
+                    value = sampler.openRouterQuantizations.joinToString(", "),
+                    onValueChange = vm::setOpenRouterQuantizations,
+                    label = { Text("quantizations（逗号分隔）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+            SwitchRow(
+                "请求 token 概率（logprobs，仅支持源生效）",
+                sampler.requestTokenProbabilities,
+                vm::setRequestTokenProbabilities,
+            )
             DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
                 vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
             }
@@ -643,4 +691,27 @@ private fun DecimalRow(label: String, value: String, onChange: (String) -> Unit)
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
+}
+
+@Composable
+private fun IntRow(label: String, value: String, onChange: (String) -> Unit) {
+    EmberTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
 }
