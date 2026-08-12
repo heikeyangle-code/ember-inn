@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（82 组差分 fixture，共 1431 例对拍，全部通过；2026-08-13 全量复算）**：
+**已覆盖（82 组差分 fixture，共 1448 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1431 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1448 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -178,7 +178,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息） | tool-loop-official.mjs | ToolLoopDiffTest | 17 |
 | 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
 | StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
-| 预设应用全链（类型识别/multi-section 校验/context/instruct/sysprompt/reasoning/chat-completion 应用与迁移/保存过滤/名字匹配） | preset-apply-official.mjs | PresetApplyDiffTest | 82 |
+| 预设应用全链（类型识别/multi-section 校验/context/instruct/sysprompt/reasoning/chat-completion 应用与迁移/保存过滤/名字匹配/textgen·novel·kobold 采样器应用/生成参数/autoSelect/敏感字段） | preset-apply-official.mjs | PresetApplyDiffTest | 99 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -248,11 +248,21 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
   - 应用：applyContextPreset（contextControls 循环 + autoFixStoryString）、applyInstructPreset（migrateInstructModeSettings + controls 循环）、applySyspromptPreset（enabled 自动置 true）、applyReasoningPreset、applyChatCompletionPreset（settingsToUpdate 全字段 + extensions 特例 + isConnection 绑定语义）、migrateChatCompletionSettings（含正则迁移）；
   - 保存：getChatCompletionPresetBody / getContextSettingsCompiled / filterPresetSettings（getPresetSettings filteredKeys + genamt/max_length）；
   - 名字匹配：matchPresetNameExact（/preset 精确匹配）+ findMatchingTemplateName（bind_to_context 同名绑定）。
+  - 采样器应用补齐：applyTextgenPreset（setting_names 全量 + extensions/json_schema/order/logit_bias 特例）、
+    applyNovelPreset（nai-settings loadNovelPreset 纯字段）、applyKoboldPreset（kai-settings loadKoboldSettingsFromPreset 纯字段）、
+    applyGenerationParamsFromPreset（MAX_CONTEXT_DEFAULT=8192/MAX_RESPONSE_DEFAULT=2048）、autoSelectPresetDecision、
+    detectSensitivePresetFields（openai sensitiveFields 11 字段）。打桩登记：textgen setSettingByName 的 DOM
+    checkbox/text/parseFloat 归约剥除（设置对象只落原始值）；novel/kobold slider/DOM 剥除；order 默认数组由 orders 参数注入。
 - 类型化包装（ContextApplyResult/InstructSettings/SyspromptSettings/ReasoningSettings）供 App 接线，经同一 JSON 级引擎单一路径。
 
 **App**：
 - 预设页（PresetsScreen）：五类选择即应用（context 写 trim_sentences/names_as_stop_strings→BehaviorPrefs、example_separator→RenderPrefs；sampler 选中即应用到当前活动连接；reasoning 进总装）；每类“保存当前为预设”（引擎过滤语义）；用户预设删除；单预设文件导入（官方 legacy 识别顺序，openai 采样按官方不校验字段）；**多区段 master 导入/导出**（instruct/context/sysprompt/reasoning/srw + textgen preset 区段，导入时按官方全部勾选默认）。
 - `/preset` 斜杠命令：精确匹配（引擎差分）；fuzzy 回退子串近似（Fuse 未移植，8.6 登记）。
+- 官方 openai 预设导入确认已接：敏感字段（reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/
+  include_headers/vertexai_region/express_project_id/azure_base_url/deployment_name/workers_ai_account_id）确认剥离 + 同名覆盖确认。
+- bind_preset_to_connection 开关已接（官方默认 true；关闭时应用采样预设跳过连接类字段）。
+- autoSelectPreset 已接：进入聊天（CHAT_CHANGED）时角色名精确等于采样预设名 → 自动选中并应用。
+- 用户预设同名覆盖官方打包预设（官方服务端同名覆盖语义），列表去重显示。
 - 预设存储：官方打包（engine resources）+ 用户预设 filesDir/presets/{type}/{name}.json（官方 data/default-user/content/presets/{type} 语义）。
 - reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
 
@@ -661,7 +671,8 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | 人设同步 force_avatar | 官方 syncUserNameToPersona 写 `getThumbnailUrl('persona', user_avatar)` 缩略图 URL；App 写本地头像路径（导出 jsonl 时该字段为本地路径，官方无法解析） | 🟡 App 边界 |
 | 人设备份头像 | 官方备份只含 avatar key（头像文件在服务端，缺失时上传默认头像）；App 备份同样只含 key，恢复时本地无该头像文件则回退默认头像 | 🟡 等价边界 |
 | /preset fuzzy | 官方 presetCommandCallback 精确匹配后回退 Fuse.js 模糊；App 精确匹配（引擎差分 82 例内锁定）后回退子串近似（Fuse 未移植） | 🟡 近似 |
-| 预设导入 | 官方 openai 采样预设导入不校验字段、textgen preset 进 textgenerationwebui 管理器；App 合并为单导入入口（legacy 顺序识别为引擎差分），textgen preset 暂存 sampler 目录且不应用（textgen 后端未接） | 🟡 等价边界 |
+| 预设导入 | 官方 openai 采样预设导入不校验字段（敏感字段确认剥离 + 同名覆盖确认已接，引擎差分敏感字段 11 项）、textgen preset 进 textgenerationwebui 管理器；App 合并为单导入入口（legacy 顺序识别为引擎差分），textgen preset 暂存 sampler 目录且不应用（textgen 后端未接） | 🟡 等价边界 |
+| textgen 采样器应用 | 官方 setSettingByName 有 DOM checkbox/text/parseFloat 归约；引擎纯赋值（设置对象落原始值），归约登记剥除（99 例差分内打桩登记） | 🟡 打桩登记 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
 | 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 已编辑 automationId/preventAutoExecute；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |

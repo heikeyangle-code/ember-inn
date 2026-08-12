@@ -9,6 +9,8 @@ data class PresetPrefs(
     val samplerPreset: String = "",
     val syspromptPreset: String = "",
     val reasoningPreset: String = "",
+    /** 官方 oai_settings.bind_preset_to_connection（默认 true）：应用采样预设时是否覆盖连接类字段。 */
+    val bindPresetToConnection: Boolean = true,
 )
 
 object PresetPrefsStore {
@@ -22,6 +24,7 @@ object PresetPrefsStore {
             samplerPreset = p.getString("preset_sampler", "") ?: "",
             syspromptPreset = p.getString("preset_sysprompt", "") ?: "",
             reasoningPreset = p.getString("preset_reasoning", "") ?: "",
+            bindPresetToConnection = p.getBoolean("preset_bind_to_connection", true),
         )
     }
 
@@ -33,6 +36,7 @@ object PresetPrefsStore {
             .putString("preset_sampler", prefs.samplerPreset)
             .putString("preset_sysprompt", prefs.syspromptPreset)
             .putString("preset_reasoning", prefs.reasoningPreset)
+            .putBoolean("preset_bind_to_connection", prefs.bindPresetToConnection)
             .apply()
     }
 }

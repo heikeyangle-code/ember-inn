@@ -446,6 +446,123 @@ function findMatchingTemplateName(name, candidateNames) {
     }
     return null;
 }
+
+// ---- textgen-settings.js:248-297 setting_names + 371-387 selectPreset 纯部分 ----
+// 打桩：setSettingByName 的 DOM checkbox/text/parseFloat 归约与 trigger('input') 回写剥除，
+// 只保留设置对象的纯字段赋值（extensions/json_schema/order/logit_bias 特例逐字）；
+// sampler_order 等默认数组由 orders 参数注入（官方 KOBOLDCPP_ORDER/OOBA_DEFAULT_ORDER 等常量打桩）。
+const textgenSettingNames = [
+    'temp', 'temperature_last', 'rep_pen', 'rep_pen_range', 'rep_pen_decay', 'rep_pen_slope',
+    'no_repeat_ngram_size', 'top_k', 'top_p', 'top_a', 'tfs', 'epsilon_cutoff', 'eta_cutoff',
+    'typical_p', 'min_p', 'penalty_alpha', 'num_beams', 'length_penalty', 'min_length', 'dynatemp',
+    'min_temp', 'max_temp', 'dynatemp_exponent', 'smoothing_factor', 'smoothing_curve',
+    'dry_allowed_length', 'dry_multiplier', 'dry_base', 'dry_sequence_breakers', 'dry_penalty_last_n',
+    'max_tokens_second', 'encoder_rep_pen', 'freq_pen', 'presence_pen', 'skew', 'do_sample',
+    'early_stopping', 'seed', 'add_bos_token', 'ban_eos_token', 'skip_special_tokens',
+    'include_reasoning', 'streaming', 'mirostat_mode', 'mirostat_tau', 'mirostat_eta',
+    'guidance_scale', 'negative_prompt', 'grammar_string', 'json_schema', 'banned_tokens',
+    'global_banned_tokens', 'sampler_order', 'sampler_priority', 'samplers_priorities', 'samplers',
+    'logit_bias', 'send_banned_tokens', 'extensions',
+];
+function applyTextgenPreset(settings, preset, orders) {
+    for (const name of textgenSettingNames) {
+        const value = preset[name];
+        if (name === 'extensions') { settings.extensions = value || {}; continue; }
+        if (name === 'json_schema') { settings.json_schema = value ?? null; continue; }
+        if (value === null || value === undefined) { continue; }
+        if (name === 'sampler_order') { settings.sampler_order = Array.isArray(value) ? value : orders.sampler_order; continue; }
+        if (name === 'sampler_priority') { settings.sampler_priority = Array.isArray(value) ? value : orders.sampler_priority; continue; }
+        if (name === 'samplers_priorities') { settings.samplers_priorities = Array.isArray(value) ? value : orders.samplers_priorities; continue; }
+        if (name === 'samplers') { settings.samplers = Array.isArray(value) ? value : orders.samplers; continue; }
+        if (name === 'logit_bias') { settings.logit_bias = Array.isArray(value) ? value : []; continue; }
+        settings[name] = value;
+    }
+    return settings;
+}
+
+// ---- nai-settings.js:177-213 loadNovelPreset 纯字段部分（DOM loadNovelSettingsUi 剥除）----
+function applyNovelPreset(settings, preset, defaults) {
+    settings.temperature = preset.temperature;
+    settings.repetition_penalty = preset.repetition_penalty;
+    settings.repetition_penalty_range = preset.repetition_penalty_range;
+    settings.repetition_penalty_slope = preset.repetition_penalty_slope;
+    settings.repetition_penalty_frequency = preset.repetition_penalty_frequency;
+    settings.repetition_penalty_presence = preset.repetition_penalty_presence;
+    settings.tail_free_sampling = preset.tail_free_sampling;
+    settings.top_k = preset.top_k;
+    settings.top_p = preset.top_p;
+    settings.top_a = preset.top_a;
+    settings.typical_p = preset.typical_p;
+    settings.min_length = preset.min_length;
+    settings.phrase_rep_pen = preset.phrase_rep_pen;
+    settings.mirostat_lr = preset.mirostat_lr;
+    settings.mirostat_tau = preset.mirostat_tau;
+    settings.prefix = preset.prefix;
+    settings.banned_tokens = preset.banned_tokens || '';
+    settings.order = preset.order || defaults.default_order;
+    settings.logit_bias = preset.logit_bias || [];
+    settings.preamble = preset.preamble || defaults.default_preamble;
+    settings.min_p = preset.min_p || 0;
+    settings.math1_temp = preset.math1_temp || 1;
+    settings.math1_quad = preset.math1_quad || 0;
+    settings.math1_quad_entropy_scale = preset.math1_quad_entropy_scale || 0;
+    settings.extensions = preset.extensions || {};
+    return settings;
+}
+
+// ---- kai-settings.js:134-162 loadKoboldSettingsFromPreset 纯字段部分（slider/DOM 剥除）----
+// 打桩：defaultValues + slider 名单由 keys/defaults/sliderKeys 参数注入；
+// 非 slider 键 official continue 跳过（不写 settings）。
+function applyKoboldPreset(settings, preset, keys, defaults, sliderKeys) {
+    for (const name of keys) {
+        if (name === 'extensions') {
+            settings.extensions = preset.extensions || {};
+            continue;
+        }
+        if (!sliderKeys.includes(name)) {
+            continue;
+        }
+        settings[name] = preset[name] ?? defaults[name];
+    }
+    if (Object.hasOwn(preset, 'streaming_kobold')) {
+        settings.streaming_kobold = preset.streaming_kobold;
+    }
+    if (Object.hasOwn(preset, 'use_default_badwordsids')) {
+        settings.use_default_badwordsids = preset.use_default_badwordsids;
+    }
+    return settings;
+}
+
+// ---- script.js:8062-8077 setGenerationParamsFromPreset 纯部分（DOM 剥除）----
+function applyGenerationParamsFromPreset(preset, state) {
+    const needsUnlock = (preset.max_length ?? state.maxContext) > 8192 || (preset.genamt ?? state.amountGen) > 2048;
+    if (preset.genamt !== undefined) {
+        state.amountGen = preset.genamt;
+    }
+    if (preset.max_length !== undefined) {
+        state.maxContext = preset.max_length;
+    }
+    return { needsUnlock, amountGen: state.amountGen, maxContext: state.maxContext };
+}
+
+// ---- preset-manager.js:46-64 autoSelectPreset 纯决策（DOM/事件剥除）----
+function autoSelectPresetDecision(charName, candidateNames, selectedPreset) {
+    if (!charName) return selectedPreset;
+    const preset = candidateNames.includes(charName) ? charName : undefined;
+    if (preset === selectedPreset) return selectedPreset;
+    if (preset !== undefined && preset !== null) return preset;
+    return selectedPreset;
+}
+
+// ---- openai.js:280-292 sensitiveFields（导入确认剥离用）----
+const openaiSensitiveFields = [
+    'reverse_proxy', 'proxy_password', 'custom_url', 'custom_include_body', 'custom_exclude_body',
+    'custom_include_headers', 'vertexai_region', 'vertexai_express_project_id', 'azure_base_url',
+    'azure_deployment_name', 'workers_ai_account_id',
+];
+function detectSensitivePresetFields(preset) {
+    return openaiSensitiveFields.filter(field => preset[field]);
+}
 `;
 
 const runCase = new Function([
@@ -469,6 +586,12 @@ const runCase = new Function([
     '    if (method === "filterPresetSettings") return filterPresetSettings(JSON.parse(JSON.stringify(b.settings)), b.apiId, b.name, b.currentName, b.isAdvancedFormatting, b.extraGen);',
     '    if (method === "matchExact") return matchPresetNameExact(b.names ?? [], b.name ?? "");',
     '    if (method === "findMatching") return findMatchingTemplateName(b.name ?? "", b.candidateNames ?? []);',
+    '    if (method === "applyTextgen") return applyTextgenPreset(JSON.parse(JSON.stringify(b.settings)), b.preset, b.orders ?? {});',
+    '    if (method === "applyNovel") return applyNovelPreset(JSON.parse(JSON.stringify(b.settings)), b.preset, b.defaults ?? {});',
+    '    if (method === "applyKobold") return applyKoboldPreset(JSON.parse(JSON.stringify(b.settings)), b.preset, b.keys ?? [], b.defaults ?? {}, b.sliderKeys ?? []);',
+    '    if (method === "generationParams") return applyGenerationParamsFromPreset(b.preset, JSON.parse(JSON.stringify(b.state)));',
+    '    if (method === "autoSelect") return autoSelectPresetDecision(b.charName ?? null, b.candidateNames ?? [], b.selectedPreset ?? null);',
+    '    if (method === "sensitiveFields") return detectSensitivePresetFields(b.preset ?? {});',
     '    throw new Error("unknown method");',
     '};',
 ].join('\n'));
@@ -607,6 +730,25 @@ await add('match-exact-empty-query', { method: 'matchExact', names: ['Default'],
 await add('find-matching-hit', { method: 'findMatching', name: 'Alpaca', candidateNames: ['Default', 'Alpaca', 'ChatML'] });
 await add('find-matching-miss', { method: 'findMatching', name: 'Alpaca', candidateNames: ['Default', 'ChatML'] });
 await add('find-matching-empty', { method: 'findMatching', name: 'Alpaca', candidateNames: [] });
+
+// 9. textgen/novel/kobold 采样器应用 + 生成参数 + autoSelect + 敏感字段
+await add('textgen-apply-full', { method: 'applyTextgen', settings: { temp: 0.5, top_p: 0.9 }, preset: { temp: 1.1, top_k: 40, top_p: 0.8, min_p: 0.05, streaming: true, do_sample: false }, orders: {} });
+await add('textgen-apply-specials', { method: 'applyTextgen', settings: {}, preset: { extensions: { x: 1 }, json_schema: null, logit_bias: { a: 1 }, sampler_order: 'not-array', sampler_priority: [1, 2], banned_tokens: 'x' }, orders: { sampler_order: ['a'], sampler_priority: ['b'], samplers_priorities: ['c'], samplers: ['d'] } });
+await add('textgen-apply-null-skip', { method: 'applyTextgen', settings: { temp: 0.5 }, preset: { temp: null, top_p: undefined, rep_pen: 1.2 }, orders: {} });
+await add('novel-apply-full', { method: 'applyNovel', settings: { temperature: 0, prefix: 'old' }, preset: { temperature: 0.8, repetition_penalty: 1.1, top_k: 10, top_p: 0.9, prefix: 'new', banned_tokens: 'x', math1_temp: 0.5, extensions: { y: 2 } }, defaults: { default_order: [0, 1], default_preamble: 'preamble' } });
+await add('novel-apply-empty', { method: 'applyNovel', settings: {}, preset: {}, defaults: { default_order: [0, 1], default_preamble: 'preamble' } });
+await add('kobold-apply-full', { method: 'applyKobold', settings: { temperature: 0 }, preset: { temperature: 0.9, top_k: 50, extensions: null, streaming_kobold: true, use_default_badwordsids: false }, keys: ['temperature', 'top_k', 'extensions', 'not_slider'], defaults: { temperature: 0.7, top_k: 0 }, sliderKeys: ['temperature', 'top_k', 'extensions'] });
+await add('kobold-apply-defaults', { method: 'applyKobold', settings: {}, preset: {}, keys: ['temperature', 'top_p'], defaults: { temperature: 0.7, top_p: 1 }, sliderKeys: ['temperature', 'top_p'] });
+await add('generation-params-both', { method: 'generationParams', preset: { genamt: 120, max_length: 10000 }, state: { amountGen: 80, maxContext: 4096 } });
+await add('generation-params-neither', { method: 'generationParams', preset: {}, state: { amountGen: 80, maxContext: 4096 } });
+await add('generation-params-unlock', { method: 'generationParams', preset: { genamt: 3000 }, state: { amountGen: 80, maxContext: 4096 } });
+await add('autoselect-hit', { method: 'autoSelect', charName: 'Alpaca', candidateNames: ['Default', 'Alpaca', 'ChatML'], selectedPreset: 'Default' });
+await add('autoselect-same', { method: 'autoSelect', charName: 'Alpaca', candidateNames: ['Default', 'Alpaca'], selectedPreset: 'Alpaca' });
+await add('autoselect-miss', { method: 'autoSelect', charName: 'Nobody', candidateNames: ['Default', 'Alpaca'], selectedPreset: 'Default' });
+await add('autoselect-no-char', { method: 'autoSelect', charName: null, candidateNames: ['Default'], selectedPreset: 'Default' });
+await add('sensitive-fields-hit', { method: 'sensitiveFields', preset: { reverse_proxy: 'http://x', proxy_password: 'p', custom_url: '', temperature: 1, azure_base_url: 'https://a' } });
+await add('sensitive-fields-none', { method: 'sensitiveFields', preset: { temperature: 1, top_p: 1 } });
+await add('sensitive-fields-empty', { method: 'sensitiveFields', preset: {} });
 
 writeFileSync(outFile, JSON.stringify({ source: 'preset-manager/power-user/instruct/sysprompt/reasoning/openai 预设纯逻辑（release 8172dcd）', cases }, null, 2));
 console.log('preset-apply:', cases.length, 'cases ->', outFile);

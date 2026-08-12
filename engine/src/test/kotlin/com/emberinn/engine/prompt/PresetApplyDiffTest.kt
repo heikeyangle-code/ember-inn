@@ -2,6 +2,8 @@ package com.emberinn.engine.prompt
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -126,6 +128,51 @@ class PresetApplyDiffTest {
                     body["name"]?.jsonPrimitive?.content ?: "",
                     body.getValue("candidateNames").jsonArray.map { it.jsonPrimitive.content },
                 )?.let { JsonPrimitive(it) } ?: JsonNull
+
+                "applyTextgen" -> PresetApplyEngine.applyTextgenPreset(
+                    body.getValue("settings").jsonObject,
+                    body.getValue("preset").jsonObject,
+                    body["orders"]?.jsonObject ?: JsonObject(emptyMap()),
+                )
+
+                "applyNovel" -> PresetApplyEngine.applyNovelPreset(
+                    body.getValue("settings").jsonObject,
+                    body.getValue("preset").jsonObject,
+                    body["defaults"]?.jsonObject ?: JsonObject(emptyMap()),
+                )
+
+                "applyKobold" -> PresetApplyEngine.applyKoboldPreset(
+                    body.getValue("settings").jsonObject,
+                    body.getValue("preset").jsonObject,
+                    body["keys"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    body["defaults"]?.jsonObject ?: JsonObject(emptyMap()),
+                    body["sliderKeys"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                )
+
+                "generationParams" -> {
+                    val state = body.getValue("state").jsonObject
+                    val r = PresetApplyEngine.applyGenerationParamsFromPreset(
+                        body.getValue("preset").jsonObject,
+                        state.getValue("amountGen").jsonPrimitive.content.toInt(),
+                        state.getValue("maxContext").jsonPrimitive.content.toInt(),
+                    )
+                    buildJsonObject {
+                        put("needsUnlock", JsonPrimitive(r.needsUnlock))
+                        put("amountGen", JsonPrimitive(r.amountGen))
+                        put("maxContext", JsonPrimitive(r.maxContext))
+                    }
+                }
+
+                "autoSelect" -> PresetApplyEngine.autoSelectPresetDecision(
+                    body["charName"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                    body["candidateNames"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    body["selectedPreset"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content,
+                )?.let { JsonPrimitive(it) } ?: JsonNull
+
+                "sensitiveFields" -> JsonArray(
+                    PresetApplyEngine.detectSensitivePresetFields(body["preset"]?.jsonObject ?: JsonObject(emptyMap()))
+                        .map { JsonPrimitive(it) },
+                )
 
                 else -> error("unknown method $method")
             }

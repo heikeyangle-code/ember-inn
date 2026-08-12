@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.InstructSettings
@@ -255,7 +256,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             }
             PresetSection(
                 title = "上下文模板（context）",
-                items = PresetLibrary.contextPresets().map { it.preset to false } +
+                items = (PresetLibrary.contextPresets().map { it.preset } - userPresets["context"].orEmpty().toSet()).map { it to false } +
                     userPresets["context"].orEmpty().map { it to true },
                 selected = prefs.contextPreset,
                 onSelect = { apply("context", it) },
@@ -267,7 +268,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             )
             PresetSection(
                 title = "指导模板（instruct）",
-                items = PresetLibrary.instructPresets().map { it.preset to false } +
+                items = (PresetLibrary.instructPresets().map { it.preset } - userPresets["instruct"].orEmpty().toSet()).map { it to false } +
                     userPresets["instruct"].orEmpty().map { it to true },
                 selected = prefs.instructPreset,
                 onSelect = { apply("instruct", it) },
@@ -280,7 +281,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             PresetSection(
                 title = "采样预设（OpenAI）",
                 items = listOf("" to false) +
-                    PresetLibrary.samplerPresets("openai").map { it.name to false } +
+                    (PresetLibrary.samplerPresets("openai").map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
                     userPresets["sampler"].orEmpty().map { it to true },
                 selected = prefs.samplerPreset,
                 onSelect = { apply("sampler", it) },
@@ -294,7 +295,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             PresetSection(
                 title = "系统提示预设（sysprompt）",
                 items = listOf("" to false) +
-                    PresetLibrary.systemPromptPresets().map { it.name to false } +
+                    (PresetLibrary.systemPromptPresets().map { it.name } - userPresets["sysprompt"].orEmpty().toSet()).map { it to false } +
                     userPresets["sysprompt"].orEmpty().map { it to true },
                 selected = prefs.syspromptPreset,
                 onSelect = { apply("sysprompt", it) },
@@ -308,7 +309,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             PresetSection(
                 title = "推理预设（reasoning）",
                 items = listOf("" to false) +
-                    PresetLibrary.reasoningPresets().map { it.name to false } +
+                    (PresetLibrary.reasoningPresets().map { it.name } - userPresets["reasoning"].orEmpty().toSet()).map { it to false } +
                     userPresets["reasoning"].orEmpty().map { it to true },
                 selected = prefs.reasoningPreset,
                 onSelect = { apply("reasoning", it) },
@@ -351,6 +352,50 @@ fun PresetsScreen(onBack: () -> Unit) {
                 }) { Text("保存") }
             },
             dismissButton = { TextButton(onClick = { saveAsType = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方 onPresetImportFileChange：敏感字段确认（移除后导入 / 原样导入 / 取消）
+    pendingSensitive?.let { (name, content) ->
+        AlertDialog(
+            onDismissRequest = { pendingSensitive = null },
+            title = { Text("预设包含敏感字段") },
+            text = {
+                Text("检测到 proxy / 自定义端点等敏感字段：${PresetApplyEngine.detectSensitivePresetFields(content).joinToString(", ")}")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingSensitive = null
+                    val stripped = content.toMutableMap()
+                    for (field in PresetApplyEngine.openaiSensitiveFields) stripped.remove(field)
+                    proceedSamplerImport(name, JsonObject(stripped))
+                }) { Text("移除后导入") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingSensitive = null
+                        proceedSamplerImport(name, content)
+                    }) { Text("原样导入") }
+                    TextButton(onClick = { pendingSensitive = null }) { Text("取消") }
+                }
+            },
+        )
+    }
+
+    // 官方同名覆盖确认
+    pendingOverwrite?.let { (name, content) ->
+        AlertDialog(
+            onDismissRequest = { pendingOverwrite = null },
+            title = { Text("预设名已存在") },
+            text = { Text("同名预设“$name”已存在，覆盖？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingOverwrite = null
+                    saveSamplerImport(name, content)
+                }) { Text("覆盖") }
+            },
+            dismissButton = { TextButton(onClick = { pendingOverwrite = null }) { Text("取消") } },
         )
     }
 

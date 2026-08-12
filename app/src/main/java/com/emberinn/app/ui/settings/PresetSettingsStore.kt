@@ -103,7 +103,7 @@ object PresetSettingsStore {
         val appliedJson = PresetApplyEngine.applyChatCompletionPresetJson(
             settings = samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens),
             preset = preset,
-            bindPresetToConnection = true,
+            bindPresetToConnection = PresetPrefsStore.load(context).bindPresetToConnection,
         )
         fun d(key: String): Double? = (appliedJson[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
         fun i(key: String): Int? = (appliedJson[key] as? JsonPrimitive)?.content?.toIntOrNull()

@@ -1134,6 +1134,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
         // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”
         val isGroupSession = chatStore.get(sessionId)?.groupId != null
+        // 官方 preset-manager.js autoSelectPreset（CHAT_CHANGED）：角色名精确等于采样预设名 → 自动选中并应用
+        val autoCharName = character?.name
+        if (autoCharName != null && !isGroupSession) {
+            val samplerNames = com.emberinn.engine.prompt.PresetLibrary.samplerPresets("openai").map { it.name } +
+                com.emberinn.app.ui.settings.UserPresetStore.list(getApplication(), "sampler")
+            val presetPrefs = com.emberinn.app.ui.settings.PresetPrefsStore.load(getApplication())
+            val decided = com.emberinn.engine.prompt.PresetApplyEngine.autoSelectPresetDecision(
+                autoCharName, samplerNames, presetPrefs.samplerPreset,
+            )
+            if (decided != null && decided != presetPrefs.samplerPreset) {
+                com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(getApplication(), decided)
+            }
+        }
         if (chatStore.messages(sessionId).isEmpty() && !isGroupSession) {
             val charName = chatStore.get(sessionId)?.name ?: "Assistant"
             val currentCharacter = character

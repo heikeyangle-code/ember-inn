@@ -538,6 +538,136 @@ object PresetApplyEngine {
         candidateNames.firstOrNull { it == name }
 
     // ------------------------------------------------------------------
+    // textgen / novel / kobold 采样器应用 + 生成参数 + autoSelect + 敏感字段
+    // ------------------------------------------------------------------
+
+    /** 官方 textgen-settings.js setting_names（逐字）。 */
+    internal val textgenSettingNames = listOf(
+        "temp", "temperature_last", "rep_pen", "rep_pen_range", "rep_pen_decay", "rep_pen_slope",
+        "no_repeat_ngram_size", "top_k", "top_p", "top_a", "tfs", "epsilon_cutoff", "eta_cutoff",
+        "typical_p", "min_p", "penalty_alpha", "num_beams", "length_penalty", "min_length", "dynatemp",
+        "min_temp", "max_temp", "dynatemp_exponent", "smoothing_factor", "smoothing_curve",
+        "dry_allowed_length", "dry_multiplier", "dry_base", "dry_sequence_breakers", "dry_penalty_last_n",
+        "max_tokens_second", "encoder_rep_pen", "freq_pen", "presence_pen", "skew", "do_sample",
+        "early_stopping", "seed", "add_bos_token", "ban_eos_token", "skip_special_tokens",
+        "include_reasoning", "streaming", "mirostat_mode", "mirostat_tau", "mirostat_eta",
+        "guidance_scale", "negative_prompt", "grammar_string", "json_schema", "banned_tokens",
+        "global_banned_tokens", "sampler_order", "sampler_priority", "samplers_priorities", "samplers",
+        "logit_bias", "send_banned_tokens", "extensions",
+    )
+
+    /** 官方 textgen selectPreset 的 setSettingByName 纯部分（DOM checkbox/text/parseFloat 归约登记剥除）。 */
+    fun applyTextgenPreset(settings: JsonObject, preset: JsonObject, orders: JsonObject): JsonObject {
+        val out = settings.toMutableMap()
+        for (name in textgenSettingNames) {
+            val value = preset[name]
+            when (name) {
+                "extensions" -> {
+                    out["extensions"] = if (jsTruthy(value)) value ?: JsonObject(emptyMap()) else JsonObject(emptyMap())
+                    continue
+                }
+                "json_schema" -> {
+                    out["json_schema"] = value?.takeUnless { it is JsonNull } ?: JsonNull
+                    continue
+                }
+            }
+            if (value == null || value is JsonNull) continue
+            when (name) {
+                "sampler_order", "sampler_priority", "samplers_priorities", "samplers" -> {
+                    val fallback = (value as? JsonArray) ?: orders[name]?.takeUnless { it is JsonNull }
+                    if (fallback != null) out[name] = fallback else out.remove(name)
+                }
+                "logit_bias" -> out[name] = (value as? JsonArray) ?: JsonArray(emptyList())
+                else -> out[name] = value
+            }
+        }
+        return JsonObject(out)
+    }
+
+    /** 官方 nai-settings.js loadNovelPreset 纯字段部分（DOM loadNovelSettingsUi 剥除）。 */
+    fun applyNovelPreset(settings: JsonObject, preset: JsonObject, defaults: JsonObject): JsonObject {
+        val out = settings.toMutableMap()
+        fun putRaw(key: String) {
+            if (preset.containsKey(key)) out[key] = preset[key] ?: JsonNull else out.remove(key)
+        }
+        for (key in listOf(
+            "temperature", "repetition_penalty", "repetition_penalty_range", "repetition_penalty_slope",
+            "repetition_penalty_frequency", "repetition_penalty_presence", "tail_free_sampling", "top_k",
+            "top_p", "top_a", "typical_p", "min_length", "phrase_rep_pen", "mirostat_lr", "mirostat_tau",
+            "prefix",
+        )) putRaw(key)
+        // 官方 preset.banned_tokens || '' 等（falsy → 默认）
+        fun putOr(key: String, fallback: JsonElement) {
+            out[key] = if (jsTruthy(preset[key])) preset[key] ?: JsonNull else fallback
+        }
+        putOr("banned_tokens", JsonPrimitive(""))
+        out["order"] = if (jsTruthy(preset["order"])) preset["order"] ?: JsonNull
+            else defaults["default_order"] ?: JsonArray(emptyList())
+        putOr("logit_bias", JsonArray(emptyList()))
+        out["preamble"] = if (jsTruthy(preset["preamble"])) preset["preamble"] ?: JsonNull
+            else defaults["default_preamble"] ?: JsonPrimitive("")
+        putOr("min_p", JsonPrimitive(0))
+        putOr("math1_temp", JsonPrimitive(1))
+        putOr("math1_quad", JsonPrimitive(0))
+        putOr("math1_quad_entropy_scale", JsonPrimitive(0))
+        out["extensions"] = if (jsTruthy(preset["extensions"])) preset["extensions"] ?: JsonNull else JsonObject(emptyMap())
+        return JsonObject(out)
+    }
+
+    /** 官方 kai-settings.js loadKoboldSettingsFromPreset 纯字段部分（slider/DOM 剥除）。 */
+    fun applyKoboldPreset(
+        settings: JsonObject,
+        preset: JsonObject,
+        keys: List<String>,
+        defaults: JsonObject,
+        sliderKeys: List<String>,
+    ): JsonObject {
+        val out = settings.toMutableMap()
+        for (name in keys) {
+            if (name == "extensions") {
+                out["extensions"] = if (jsTruthy(preset["extensions"])) preset["extensions"] ?: JsonNull else JsonObject(emptyMap())
+                continue
+            }
+            if (name !in sliderKeys) continue
+            val v = preset[name]?.takeUnless { it is JsonNull } ?: defaults[name]?.takeUnless { it is JsonNull }
+            if (v != null) out[name] = v else out.remove(name)
+        }
+        if (preset.containsKey("streaming_kobold")) out["streaming_kobold"] = preset["streaming_kobold"] ?: JsonNull
+        if (preset.containsKey("use_default_badwordsids")) out["use_default_badwordsids"] = preset["use_default_badwordsids"] ?: JsonNull
+        return JsonObject(out)
+    }
+
+    /** 官方 script.js setGenerationParamsFromPreset 纯部分（MAX_CONTEXT_DEFAULT=8192/MAX_RESPONSE_DEFAULT=2048）。 */
+    data class GenerationParamsResult(val needsUnlock: Boolean, val amountGen: Int, val maxContext: Int)
+
+    fun applyGenerationParamsFromPreset(preset: JsonObject, amountGen: Int, maxContext: Int): GenerationParamsResult {
+        val presetMaxLength = (preset["max_length"] as? JsonPrimitive)?.content?.toIntOrNull() ?: maxContext
+        val presetGenamt = (preset["genamt"] as? JsonPrimitive)?.content?.toIntOrNull() ?: amountGen
+        val needsUnlock = presetMaxLength > 8192 || presetGenamt > 2048
+        val outAmount = (preset["genamt"] as? JsonPrimitive)?.content?.toIntOrNull() ?: amountGen
+        val outContext = (preset["max_length"] as? JsonPrimitive)?.content?.toIntOrNull() ?: maxContext
+        return GenerationParamsResult(needsUnlock, outAmount, outContext)
+    }
+
+    /** 官方 preset-manager.js autoSelectPreset 纯决策（候选名精确等于角色名时选中）。 */
+    fun autoSelectPresetDecision(charName: String?, candidateNames: List<String>, selectedPreset: String?): String? {
+        if (charName.isNullOrEmpty()) return selectedPreset
+        val preset = charName.takeIf { it in candidateNames }
+        if (preset == selectedPreset) return selectedPreset
+        return preset ?: selectedPreset
+    }
+
+    /** 官方 openai.js sensitiveFields（导入时确认剥离用，逐字数据）。 */
+    val openaiSensitiveFields = listOf(
+        "reverse_proxy", "proxy_password", "custom_url", "custom_include_body", "custom_exclude_body",
+        "custom_include_headers", "vertexai_region", "vertexai_express_project_id", "azure_base_url",
+        "azure_deployment_name", "workers_ai_account_id",
+    )
+
+    fun detectSensitivePresetFields(preset: JsonObject): List<String> =
+        openaiSensitiveFields.filter { jsTruthy(preset[it]) }
+
+    // ------------------------------------------------------------------
     // 类型化包装（App 接线用；经同一 JSON 级引擎，保证与官方单一路径）
     // ------------------------------------------------------------------
 

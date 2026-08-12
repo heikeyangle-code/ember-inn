@@ -282,7 +282,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         val applied = com.emberinn.engine.prompt.PresetApplyEngine.applyChatCompletionPresetJson(
             settings = settings,
             preset = preset,
-            bindPresetToConnection = true,
+            bindPresetToConnection = PresetPrefsStore.load(getApplication()).bindPresetToConnection,
         )
         fun d(key: String): Double? = (applied[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
         fun i(key: String): Int? = (applied[key] as? JsonPrimitive)?.content?.toIntOrNull()

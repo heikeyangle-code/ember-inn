@@ -3108,6 +3108,423 @@
         }
       },
       "expected": null
+    },
+    {
+      "id": "textgen-apply-full",
+      "args": {
+        "body": {
+          "method": "applyTextgen",
+          "settings": {
+            "temp": 0.5,
+            "top_p": 0.9
+          },
+          "preset": {
+            "temp": 1.1,
+            "top_k": 40,
+            "top_p": 0.8,
+            "min_p": 0.05,
+            "streaming": true,
+            "do_sample": false
+          },
+          "orders": {}
+        }
+      },
+      "expected": {
+        "temp": 1.1,
+        "top_p": 0.8,
+        "top_k": 40,
+        "min_p": 0.05,
+        "do_sample": false,
+        "streaming": true,
+        "json_schema": null,
+        "extensions": {}
+      }
+    },
+    {
+      "id": "textgen-apply-specials",
+      "args": {
+        "body": {
+          "method": "applyTextgen",
+          "settings": {},
+          "preset": {
+            "extensions": {
+              "x": 1
+            },
+            "json_schema": null,
+            "logit_bias": {
+              "a": 1
+            },
+            "sampler_order": "not-array",
+            "sampler_priority": [
+              1,
+              2
+            ],
+            "banned_tokens": "x"
+          },
+          "orders": {
+            "sampler_order": [
+              "a"
+            ],
+            "sampler_priority": [
+              "b"
+            ],
+            "samplers_priorities": [
+              "c"
+            ],
+            "samplers": [
+              "d"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "json_schema": null,
+        "banned_tokens": "x",
+        "sampler_order": [
+          "a"
+        ],
+        "sampler_priority": [
+          1,
+          2
+        ],
+        "logit_bias": [],
+        "extensions": {
+          "x": 1
+        }
+      }
+    },
+    {
+      "id": "textgen-apply-null-skip",
+      "args": {
+        "body": {
+          "method": "applyTextgen",
+          "settings": {
+            "temp": 0.5
+          },
+          "preset": {
+            "temp": null,
+            "rep_pen": 1.2
+          },
+          "orders": {}
+        }
+      },
+      "expected": {
+        "temp": 0.5,
+        "rep_pen": 1.2,
+        "json_schema": null,
+        "extensions": {}
+      }
+    },
+    {
+      "id": "novel-apply-full",
+      "args": {
+        "body": {
+          "method": "applyNovel",
+          "settings": {
+            "temperature": 0,
+            "prefix": "old"
+          },
+          "preset": {
+            "temperature": 0.8,
+            "repetition_penalty": 1.1,
+            "top_k": 10,
+            "top_p": 0.9,
+            "prefix": "new",
+            "banned_tokens": "x",
+            "math1_temp": 0.5,
+            "extensions": {
+              "y": 2
+            }
+          },
+          "defaults": {
+            "default_order": [
+              0,
+              1
+            ],
+            "default_preamble": "preamble"
+          }
+        }
+      },
+      "expected": {
+        "temperature": 0.8,
+        "prefix": "new",
+        "repetition_penalty": 1.1,
+        "top_k": 10,
+        "top_p": 0.9,
+        "banned_tokens": "x",
+        "order": [
+          0,
+          1
+        ],
+        "logit_bias": [],
+        "preamble": "preamble",
+        "min_p": 0,
+        "math1_temp": 0.5,
+        "math1_quad": 0,
+        "math1_quad_entropy_scale": 0,
+        "extensions": {
+          "y": 2
+        }
+      }
+    },
+    {
+      "id": "novel-apply-empty",
+      "args": {
+        "body": {
+          "method": "applyNovel",
+          "settings": {},
+          "preset": {},
+          "defaults": {
+            "default_order": [
+              0,
+              1
+            ],
+            "default_preamble": "preamble"
+          }
+        }
+      },
+      "expected": {
+        "banned_tokens": "",
+        "order": [
+          0,
+          1
+        ],
+        "logit_bias": [],
+        "preamble": "preamble",
+        "min_p": 0,
+        "math1_temp": 1,
+        "math1_quad": 0,
+        "math1_quad_entropy_scale": 0,
+        "extensions": {}
+      }
+    },
+    {
+      "id": "kobold-apply-full",
+      "args": {
+        "body": {
+          "method": "applyKobold",
+          "settings": {
+            "temperature": 0
+          },
+          "preset": {
+            "temperature": 0.9,
+            "top_k": 50,
+            "extensions": null,
+            "streaming_kobold": true,
+            "use_default_badwordsids": false
+          },
+          "keys": [
+            "temperature",
+            "top_k",
+            "extensions",
+            "not_slider"
+          ],
+          "defaults": {
+            "temperature": 0.7,
+            "top_k": 0
+          },
+          "sliderKeys": [
+            "temperature",
+            "top_k",
+            "extensions"
+          ]
+        }
+      },
+      "expected": {
+        "temperature": 0.9,
+        "top_k": 50,
+        "extensions": {},
+        "streaming_kobold": true,
+        "use_default_badwordsids": false
+      }
+    },
+    {
+      "id": "kobold-apply-defaults",
+      "args": {
+        "body": {
+          "method": "applyKobold",
+          "settings": {},
+          "preset": {},
+          "keys": [
+            "temperature",
+            "top_p"
+          ],
+          "defaults": {
+            "temperature": 0.7,
+            "top_p": 1
+          },
+          "sliderKeys": [
+            "temperature",
+            "top_p"
+          ]
+        }
+      },
+      "expected": {
+        "temperature": 0.7,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "generation-params-both",
+      "args": {
+        "body": {
+          "method": "generationParams",
+          "preset": {
+            "genamt": 120,
+            "max_length": 10000
+          },
+          "state": {
+            "amountGen": 80,
+            "maxContext": 4096
+          }
+        }
+      },
+      "expected": {
+        "needsUnlock": true,
+        "amountGen": 120,
+        "maxContext": 10000
+      }
+    },
+    {
+      "id": "generation-params-neither",
+      "args": {
+        "body": {
+          "method": "generationParams",
+          "preset": {},
+          "state": {
+            "amountGen": 80,
+            "maxContext": 4096
+          }
+        }
+      },
+      "expected": {
+        "needsUnlock": false,
+        "amountGen": 80,
+        "maxContext": 4096
+      }
+    },
+    {
+      "id": "generation-params-unlock",
+      "args": {
+        "body": {
+          "method": "generationParams",
+          "preset": {
+            "genamt": 3000
+          },
+          "state": {
+            "amountGen": 80,
+            "maxContext": 4096
+          }
+        }
+      },
+      "expected": {
+        "needsUnlock": true,
+        "amountGen": 3000,
+        "maxContext": 4096
+      }
+    },
+    {
+      "id": "autoselect-hit",
+      "args": {
+        "body": {
+          "method": "autoSelect",
+          "charName": "Alpaca",
+          "candidateNames": [
+            "Default",
+            "Alpaca",
+            "ChatML"
+          ],
+          "selectedPreset": "Default"
+        }
+      },
+      "expected": "Alpaca"
+    },
+    {
+      "id": "autoselect-same",
+      "args": {
+        "body": {
+          "method": "autoSelect",
+          "charName": "Alpaca",
+          "candidateNames": [
+            "Default",
+            "Alpaca"
+          ],
+          "selectedPreset": "Alpaca"
+        }
+      },
+      "expected": "Alpaca"
+    },
+    {
+      "id": "autoselect-miss",
+      "args": {
+        "body": {
+          "method": "autoSelect",
+          "charName": "Nobody",
+          "candidateNames": [
+            "Default",
+            "Alpaca"
+          ],
+          "selectedPreset": "Default"
+        }
+      },
+      "expected": "Default"
+    },
+    {
+      "id": "autoselect-no-char",
+      "args": {
+        "body": {
+          "method": "autoSelect",
+          "charName": null,
+          "candidateNames": [
+            "Default"
+          ],
+          "selectedPreset": "Default"
+        }
+      },
+      "expected": "Default"
+    },
+    {
+      "id": "sensitive-fields-hit",
+      "args": {
+        "body": {
+          "method": "sensitiveFields",
+          "preset": {
+            "reverse_proxy": "http://x",
+            "proxy_password": "p",
+            "custom_url": "",
+            "temperature": 1,
+            "azure_base_url": "https://a"
+          }
+        }
+      },
+      "expected": [
+        "reverse_proxy",
+        "proxy_password",
+        "azure_base_url"
+      ]
+    },
+    {
+      "id": "sensitive-fields-none",
+      "args": {
+        "body": {
+          "method": "sensitiveFields",
+          "preset": {
+            "temperature": 1,
+            "top_p": 1
+          }
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "sensitive-fields-empty",
+      "args": {
+        "body": {
+          "method": "sensitiveFields",
+          "preset": {}
+        }
+      },
+      "expected": []
     }
   ]
 }
