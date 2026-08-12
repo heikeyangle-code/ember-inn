@@ -3,12 +3,19 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.data.WorldStore
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import com.emberinn.app.ui.icons.PhosphorIcons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +40,11 @@ import com.emberinn.engine.worldinfo.WorldInfoSettings
 fun WorldInfoScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(WorldInfoPrefs.read(context)) }
+    val worldStore = remember { WorldStore(context) }
+    var worlds by remember { mutableStateOf(worldStore.list()) }
+    var globalSelect by remember { mutableStateOf(WorldInfoPrefs.globalSelect(context).toSet()) }
+    var strategy by remember { mutableStateOf(WorldInfoPrefs.insertionStrategy(context)) }
+    var newWorldName by remember { mutableStateOf("") }
     fun save() = WorldInfoPrefs.save(context, settings)
 
     SettingsGlassPage { settingsSky ->
@@ -78,6 +90,67 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            Text("外置世界（worlds/*.json）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+            Text(
+                "官方双轨：内嵌卡书（角色详情页）+ 外置世界文件。角色卡用 data.extensions.world 关联（详情页），聊天 metadata.world_info 指定，下方“全局”勾选的世界始终生效。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                EmberTextField(
+                    value = newWorldName,
+                    onValueChange = { newWorldName = it },
+                    label = { Text("新建世界名") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = {
+                    val name = newWorldName.trim()
+                    if (name.isNotEmpty()) {
+                        worldStore.create(name)
+                        worlds = worldStore.list()
+                        newWorldName = ""
+                    }
+                }) { Text("新建") }
+            }
+            worlds.forEach { w ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    FilterChip(
+                        selected = w.name in globalSelect,
+                        onClick = {
+                            globalSelect = if (w.name in globalSelect) globalSelect - w.name else globalSelect + w.name
+                            WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
+                        },
+                        label = { Text("全局") },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("${w.displayName}（${w.entryCount} 条）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        worldStore.delete(w.name)
+                        worlds = worldStore.list()
+                        globalSelect = globalSelect - w.name
+                        WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
+                    }) {
+                        Icon(PhosphorIcons.Delete, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+            Text("插入策略", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                listOf("角色优先(1)" to 1, "全局优先(2)" to 2, "均匀(0)" to 0).forEach { (label, v) ->
+                    FilterChip(
+                        selected = strategy == v,
+                        onClick = {
+                            strategy = v
+                            WorldInfoPrefs.saveInsertionStrategy(context, v)
+                        },
+                        label = { Text(label) },
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                }
+            }
             Spacer(Modifier.height(16.dp))
         }
     }

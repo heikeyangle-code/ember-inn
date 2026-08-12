@@ -45,6 +45,7 @@ import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldBookEntryParser
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.engine.worldinfo.WorldInfoScanner
+import com.emberinn.engine.worldinfo.WorldLoreMerger
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -167,6 +168,16 @@ class ChatPromptFactory {
         collapseNewlines: Boolean = false,
         /** 官方 power_user.context.example_separator（非 OpenAI 消息示例分隔符，默认 ***）。 */
         exampleSeparator: String = "***",
+        /** 官方外置世界书：worlds/*.json 的条目（App WorldStore 加载）。 */
+        externalWorlds: Map<String, List<WorldInfoEntry>> = emptyMap(),
+        /** 官方 data.extensions.world：角色关联的外置世界。 */
+        linkedWorld: String? = null,
+        /** 官方 chat_metadata.world_info：本会话指定世界。 */
+        chatMetadataWorld: String? = null,
+        /** 官方 settings.world_info.globalSelect：全局生效世界。 */
+        globalWorlds: List<String> = emptyList(),
+        /** 官方 world_info_insertion_strategy：CHARACTER_FIRST/GLOBAL_FIRST/EVENLY。 */
+        worldInsertStrategy: Int = WorldLoreMerger.CHARACTER_FIRST,
         /** 官方 setOpenAIMessages isSameModel：当前 API/模型（extra.api/extra.model 比对）。 */
         currentApi: String = "",
         currentModel: String = "",
@@ -489,7 +500,15 @@ class ChatPromptFactory {
         val wiResult = scanner.scan(
             chat = indexedChat.map { it.second.mes },
             maxContext = maxContextTokens,
-            entries = parsed?.worldEntries ?: emptyList(),
+            // 官方 getSortedEntries：内嵌卡书 + 角色关联外置世界 + 聊天指定 + 全局选择 合并
+            entries = WorldLoreMerger.merge(
+                global = globalWorlds.flatMap { externalWorlds[it].orEmpty() },
+                character = (parsed?.worldEntries ?: emptyList()) +
+                    (linkedWorld?.let { externalWorlds[it].orEmpty() } ?: emptyList()),
+                chat = chatMetadataWorld?.let { externalWorlds[it].orEmpty() } ?: emptyList(),
+                persona = emptyList(),
+                strategy = worldInsertStrategy,
+            ),
             settings = worldInfoSettings,
             global = GlobalScanData(characterName = charName),
             // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）

@@ -32,4 +32,25 @@ object WorldInfoPrefs {
             .putInt("max_recursion_steps", settings.maxRecursionSteps)
             .apply()
     }
+
+    /** 官方 settings.world_info.globalSelect：全局始终生效的外置世界。 */
+    fun globalSelect(context: Context): List<String> =
+        (context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getStringSet("global_select", emptySet()) ?: emptySet()).toList()
+
+    fun saveGlobalSelect(context: Context, worlds: List<String>) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putStringSet("global_select", worlds.toSet())
+            .apply()
+    }
+
+    /** 官方 world_info_insertion_strategy：0=EVENLY 1=CHARACTER_FIRST 2=GLOBAL_FIRST。 */
+    fun insertionStrategy(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("insertion_strategy", 1)
+
+    fun saveInsertionStrategy(context: Context, strategy: Int) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putInt("insertion_strategy", strategy)
+            .apply()
+    }
 }

@@ -316,6 +316,10 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - auto_swipe（最短长度/黑名单/阈值）：设置页 + finalizeStream 正常回复落盘后按 SwipeEngine.generatedTextFiltered 命中自动生成新变体（官方 power_user.auto_swipe 语义）。
 - 世界书条目编辑器补齐全部官方字段（原仅 7 个）：position 整数枚举/深度/角色/selectiveLogic/大小写/整词/scanDepth/六个 match 开关/prevent/exclude/delayUntilRecursion/概率/ignoreBudget/triggers/outletName/sticky/cooldown/delay/group/组权重/组覆盖/组评分/角色过滤/vectorized/addMemo/automationId/displayIndex/keysecondary；读写按官方字段位置（case_sensitive 等进 entry.extensions）。
 - strip_examples（完全移除示例）与 message_token_count（落盘 extra.token_count + 消息时间旁显示 token 数）已接。
+- 外置世界书（官方双轨外置轨）数据层已接：WorldStore（filesDir/worlds/*.json，{name, entries:{uid:entry}} 官方格式）、
+  CharacterCardEdit.readWorldLink/applyWorldLink（data.extensions.world）、chat_metadata.world_info 指定、
+  settings 全局选择 globalSelect 与插入策略；ChatPromptFactory 用 WorldLoreMerger 把内嵌卡书+关联+聊天+全局合并进扫描。
+  登记：世界文件导入导出 UI、角色详情页关联选择 UI、聊天级 world_info 设置 UI 尚未接（数据字段与扫描已通）。
 - `/trigger await`：await=true 等待生成结束（官方语义）；`/inject filter`：filter 参数持久化，生成前用 SlashEngine 求值（true/1/yes 才注入；解析失败/空=始终注入，与官方 filter 复活失败同语义；闭包上下文为 App 近似）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）

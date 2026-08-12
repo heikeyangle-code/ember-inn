@@ -2021,6 +2021,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val worldInfoSettings = WorldInfoPrefs.read(getApplication())
             val memorySettings = MemoryPrefs.load(getApplication())
             val behavior = BehaviorPrefs.load(getApplication())
+            // 官方外置世界书：角色关联 + 聊天指定 + 全局选择，合并成扫描条目池
+            val worldStore = com.emberinn.app.data.WorldStore(getApplication())
+            val linkedWorld = (characterRawJsonOverride ?: character?.rawJson)
+                ?.let { com.emberinn.app.data.CharacterCardEdit.readWorldLink(it) }
+            val chatMetaWorld = chatStore.metadata(sessionId)["world_info"]?.jsonPrimitive?.contentOrNull
+            val globalSelect = WorldInfoPrefs.globalSelect(getApplication())
+            val externalWorlds = (listOfNotNull(linkedWorld, chatMetaWorld) + globalSelect)
+                .distinct()
+                .associateWith { worldStore.entries(it) }
             val globalRegexScripts = GlobalRegexPrefs.read(getApplication())
             // 官方 regex getScriptsByType(SCOPED)：allowedOnly 时角色头像必须在 character_allowed_regex 中
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
@@ -2146,6 +2155,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 pinExamples = behavior.pinExamples,
                 stripExamples = behavior.stripExamples,
                 namesAsStopStrings = behavior.namesAsStopStrings,
+                externalWorlds = externalWorlds,
+                linkedWorld = linkedWorld,
+                chatMetadataWorld = chatMetaWorld,
+                globalWorlds = globalSelect,
+                worldInsertStrategy = WorldInfoPrefs.insertionStrategy(getApplication()),
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

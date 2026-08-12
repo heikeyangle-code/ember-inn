@@ -282,6 +282,21 @@ object CharacterCardEdit {
         }
     }.getOrDefault(emptyList())
 
+    /** 官方 data.extensions.world：角色关联的外置世界名。 */
+    fun readWorldLink(raw: String): String? = runCatching {
+        dataLayer(parseCached(raw))["extensions"]?.jsonObject
+            ?.get("world")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+    }.getOrDefault(null)
+
+    /** 保存角色关联的外置世界（官方 data.extensions.world）。 */
+    fun applyWorldLink(raw: String, worldName: String): String = updateData(raw) { data ->
+        val m = data.toMutableMap()
+        val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        if (worldName.isBlank()) ext.remove("world") else ext["world"] = JsonPrimitive(worldName)
+        m["extensions"] = JsonObject(ext)
+        JsonObject(m)
+    }
+
     /** 保存角色字段：v2 归一写回（tags 数组、depth_prompt 进 extensions、talkativeness 进 extensions、alternate_greetings 数组）。 */
     fun applyFields(raw: String, fields: CharacterDetailFields): String = updateData(raw) { data ->
         val m = data.toMutableMap()

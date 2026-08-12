@@ -201,6 +201,11 @@ class ChatRepository(context: Context) {
         pinExamples: Boolean = false,
         stripExamples: Boolean = false,
         namesAsStopStrings: Boolean = true,
+        externalWorlds: Map<String, List<com.emberinn.engine.worldinfo.WorldInfoEntry>> = emptyMap(),
+        linkedWorld: String? = null,
+        chatMetadataWorld: String? = null,
+        globalWorlds: List<String> = emptyList(),
+        worldInsertStrategy: Int = com.emberinn.engine.worldinfo.WorldLoreMerger.CHARACTER_FIRST,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -286,6 +291,11 @@ class ChatRepository(context: Context) {
             userPromptBias = userPromptBias,
             pinExamples = pinExamples,
             stripExamples = stripExamples,
+            externalWorlds = externalWorlds,
+            linkedWorld = linkedWorld,
+            chatMetadataWorld = chatMetadataWorld,
+            globalWorlds = globalWorlds,
+            worldInsertStrategy = worldInsertStrategy,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
