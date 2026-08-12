@@ -17,6 +17,7 @@ import com.emberinn.engine.prompt.AuthorsNoteBuilder
 import com.emberinn.engine.prompt.AuthorsNoteEngine
 import com.emberinn.engine.prompt.AuthorsNoteMetadata
 import com.emberinn.engine.prompt.AuthorsNoteSettings
+import com.emberinn.engine.prompt.CharaNote
 import com.emberinn.engine.prompt.BiasEngine
 import com.emberinn.engine.prompt.BiasChatMessage
 import com.emberinn.engine.prompt.BiasConfig
@@ -139,6 +140,8 @@ class ChatPromptFactory {
         personaPosition: Int = 0,
         personaDepth: Int = 4,
         personaRole: Int = 0,
+        anSettings: AuthorsNoteSettings = AuthorsNoteSettings(),
+        charaNote: CharaNote? = null,
         vectorStore: VectorStore? = null,
         vectorChatSettings: VectorChatSettings = VectorChatSettings(),
         vectorWorldSettings: VectorSettings = VectorSettings(),
@@ -564,7 +567,7 @@ class ChatPromptFactory {
                 depth = chatMetadata?.get("note_depth")?.jsonPrimitive?.content?.toIntOrNull(),
                 role = chatMetadata?.get("note_role")?.jsonPrimitive?.content?.toIntOrNull(),
             ),
-            settings = AuthorsNoteSettings(),
+            settings = anSettings,
         )
         // 官方 authors-note.js：统计“用户消息数”而非总消息数，interval 1 恒注入
         val userMessageCount = history.count { el ->
@@ -572,7 +575,12 @@ class ChatPromptFactory {
             obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
         }
         val shouldInjectNote = AuthorsNoteEngine.shouldInjectNote(userMessageCount, note.interval)
-        val noteContent = if (shouldInjectNote) note.content else ""
+        val noteContent = if (shouldInjectNote) {
+            // 官方 authors-note.js：角色备注 useChara 时 before/after/replace 合并
+            AuthorsNoteEngine.applyCharaNote(note.content, charaNote)
+        } else {
+            ""
+        }
         val anTextRaw = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
         // 官方 script.js：persona_description_position=TOP_AN(2)/BOTTOM_AN(3) 时把人设描述合并进作者注释
         val anText = when (personaPosition) {

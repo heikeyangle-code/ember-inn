@@ -22,6 +22,14 @@ data class AuthorsNoteSettings(
     val allowWIScan: Boolean = false,
 )
 
+/** 官方角色备注（extension_settings.note.chara 条目）。position：0=replace/1=before/2=after。 */
+data class CharaNote(
+    val name: String,
+    val prompt: String = "",
+    val useChara: Boolean = false,
+    val position: Int = 0,
+)
+
 /** 聊天元数据里的导演备注覆盖（对齐 metadata_keys）。 */
 data class AuthorsNoteMetadata(
     val prompt: String? = null,
@@ -67,6 +75,16 @@ object AuthorsNoteEngine {
     fun composeWithWorldInfo(original: String, top: List<String> = emptyList(), bottom: List<String> = emptyList()): String {
         val joined = listOf(top.joinToString("\n"), original, bottom.joinToString("\n")).joinToString("\n")
         return joined.removePrefix("\n").removeSuffix("\n")
+    }
+
+    /** 官方 authors-note.js 角色备注应用：useChara 时 before=前置/after=后置/replace=替换。 */
+    fun applyCharaNote(prompt: String, charaNote: CharaNote?): String {
+        if (charaNote == null || !charaNote.useChara) return prompt
+        return when (charaNote.position) {
+            1 -> charaNote.prompt + "\n" + prompt
+            2 -> prompt + "\n" + charaNote.prompt
+            else -> charaNote.prompt
+        }
     }
 }
 

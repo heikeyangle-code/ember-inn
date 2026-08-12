@@ -252,6 +252,7 @@ fun ChatScreen(
     val chatBackground by vm.chatBackground.collectAsState()
     val personas by vm.personas.collectAsState()
     val activePersona by vm.activePersona.collectAsState()
+    val defaultPersona by vm.defaultPersona.collectAsState()
     val bookmarks by vm.bookmarks.collectAsState()
     val dataBank by vm.dataBank.collectAsState()
 
@@ -276,6 +277,10 @@ fun ChatScreen(
     var personaDraftPosition by remember { mutableStateOf(0) }
     var personaDraftDepth by remember { mutableStateOf(4) }
     var personaDraftRole by remember { mutableStateOf(0) }
+    var personaDraftTitle by remember { mutableStateOf("") }
+    var personaDraftLorebook by remember { mutableStateOf("") }
+    var personaDraftConnectChar by remember { mutableStateOf(false) }
+    var personaDraftConnectGroup by remember { mutableStateOf(false) }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkDraftName by remember { mutableStateOf("") }
@@ -291,6 +296,9 @@ fun ChatScreen(
     var anDepth by remember { mutableStateOf(4) }
     var anRole by remember { mutableStateOf(0) }
     var anInterval by remember { mutableStateOf(1) }
+    var charaNotePrompt by remember { mutableStateOf("") }
+    var charaNoteUse by remember { mutableStateOf(false) }
+    var charaNotePosition by remember { mutableStateOf(0) }
     var showGroupSettings by remember { mutableStateOf(false) }
     var pendingDisplay by remember { mutableStateOf<String?>(null) }
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
@@ -1152,6 +1160,10 @@ fun ChatScreen(
                     anDepth = draft.depth
                     anRole = draft.role
                     anInterval = draft.interval
+                    val charaDraft = vm.charaNoteDraft()
+                    charaNotePrompt = charaDraft?.prompt.orEmpty()
+                    charaNoteUse = charaDraft?.useChara == true
+                    charaNotePosition = charaDraft?.position ?: 0
                     showAuthorsNote = true
                 }
                 if (vm.group != null) {
@@ -1244,11 +1256,56 @@ fun ChatScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
+                    if (vm.character != null) {
+                        Text(
+                            "角色备注（${vm.character?.name}）",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(top = 14.dp),
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        ) {
+                            Text("启用角色备注（useChara）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            androidx.compose.material3.Switch(
+                                checked = charaNoteUse,
+                                onCheckedChange = { charaNoteUse = it },
+                            )
+                        }
+                        if (charaNoteUse) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                                FilterChip(selected = charaNotePosition == 0, onClick = { charaNotePosition = 0 }, label = { Text("替换") })
+                                FilterChip(selected = charaNotePosition == 1, onClick = { charaNotePosition = 1 }, label = { Text("前置") })
+                                FilterChip(selected = charaNotePosition == 2, onClick = { charaNotePosition = 2 }, label = { Text("后置") })
+                            }
+                            EmberTextField(
+                                value = charaNotePrompt,
+                                onValueChange = { charaNotePrompt = it },
+                                label = { Text("角色备注内容") },
+                                minLines = 2,
+                                maxLines = 4,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     vm.saveAuthorsNote(anPrompt.trim(), anPosition, anDepth, anRole, anInterval)
+                    if (vm.character != null) {
+                        if (charaNoteUse && charaNotePrompt.isNotBlank()) {
+                            vm.saveCharaNote(
+                                com.emberinn.app.ui.settings.CharaNoteData(
+                                    prompt = charaNotePrompt.trim(),
+                                    useChara = true,
+                                    position = charaNotePosition,
+                                ),
+                            )
+                        } else {
+                            vm.deleteCharaNote()
+                        }
+                    }
                     showAuthorsNote = false
                 }) { Text("保存") }
             },
@@ -1358,6 +1415,20 @@ fun ChatScreen(
                         if (activePersona?.id == p.id) {
                             Text("当前", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         }
+                        if (defaultPersona?.id == p.id) {
+                            Text("默认", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        }
+                        IconButton(
+                            onClick = { vm.setDefaultPersona(p.id) },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                PhosphorIcons.Star,
+                                contentDescription = "设为人设默认",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (defaultPersona?.id == p.id) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                            )
+                        }
                         IconButton(onClick = {
                             editingPersona = p
                             personaDraftName = p.name
@@ -1365,6 +1436,10 @@ fun ChatScreen(
                             personaDraftPosition = p.position
                             personaDraftDepth = p.depth
                             personaDraftRole = p.role
+                            personaDraftTitle = p.title
+                            personaDraftLorebook = p.lorebook
+                            personaDraftConnectChar = p.connections.any { it.type == "character" && it.id == vm.characterId }
+                            personaDraftConnectGroup = p.connections.any { it.type == "group" && it.id == vm.group?.id }
                         }, modifier = Modifier.size(32.dp)) {
                             Icon(PhosphorIcons.Edit, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
                         }
@@ -1382,9 +1457,27 @@ fun ChatScreen(
                         personaDraftPosition = 0
                         personaDraftDepth = 4
                         personaDraftRole = 0
+                        personaDraftTitle = ""
+                        personaDraftLorebook = ""
+                        personaDraftConnectChar = false
+                        personaDraftConnectGroup = false
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 ) { Text("＋ 新建人设") }
+                val locked = vm.lockedPersonaId()
+                TextButton(
+                    onClick = {
+                        if (locked != null) {
+                            vm.lockPersonaToChat(null)
+                        } else {
+                            activePersona?.let { vm.lockPersonaToChat(it.id) }
+                        }
+                        showPersonaPicker = false
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) {
+                    Text(if (locked != null) "解除人设聊天锁" else "锁定当前人设到本聊天")
+                }
             }
         }
     }
@@ -1444,10 +1537,56 @@ fun ChatScreen(
                         FilterChip(selected = personaDraftRole == 1, onClick = { personaDraftRole = 1 }, label = { Text("用户") })
                         FilterChip(selected = personaDraftRole == 2, onClick = { personaDraftRole = 2 }, label = { Text("助手") })
                     }
+                    EmberTextField(
+                        value = personaDraftTitle,
+                        onValueChange = { personaDraftTitle = it },
+                        label = { Text("标题（官方 title）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    EmberTextField(
+                        value = personaDraftLorebook,
+                        onValueChange = { personaDraftLorebook = it },
+                        label = { Text("世界书（官方 lorebook，参与扫描）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    if (vm.character != null || vm.group != null) {
+                        Text(
+                            "连接（绑定角色/群聊时自动使用）",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (vm.character != null) {
+                                FilterChip(
+                                    selected = personaDraftConnectChar,
+                                    onClick = { personaDraftConnectChar = !personaDraftConnectChar },
+                                    label = { Text("当前角色") },
+                                )
+                            }
+                            if (vm.group != null) {
+                                FilterChip(
+                                    selected = personaDraftConnectGroup,
+                                    onClick = { personaDraftConnectGroup = !personaDraftConnectGroup },
+                                    label = { Text("当前群聊") },
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
+                    val connections = buildList {
+                        if (personaDraftConnectChar && vm.characterId != null) {
+                            add(com.emberinn.app.data.PersonaConnection(type = "character", id = vm.characterId))
+                        }
+                        if (personaDraftConnectGroup && vm.group?.id != null) {
+                            add(com.emberinn.app.data.PersonaConnection(type = "group", id = vm.group!!.id))
+                        }
+                    }
                     vm.savePersona(
                         target.copy(
                             name = personaDraftName.trim(),
@@ -1455,6 +1594,9 @@ fun ChatScreen(
                             position = personaDraftPosition,
                             depth = personaDraftDepth,
                             role = personaDraftRole,
+                            title = personaDraftTitle.trim(),
+                            lorebook = personaDraftLorebook.trim(),
+                            connections = connections,
                         ),
                     )
                     editingPersona = null

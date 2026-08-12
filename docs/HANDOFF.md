@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（81 组差分 fixture，共 1343 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1343 例（机器数）为准。
+**已覆盖（81 组差分 fixture，共 1349 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1343 例。
+> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1349 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -140,7 +140,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
 | 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 10 |
-| 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 14 |
+| 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 20 |
 | 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 26 |
 | 群聊完整循环 | group-loop-official.mjs | GroupLoopDiffTest | 11 |
 | OpenAI 请求体（全厂商） | openai-params-official.mjs | OpenAiParamsDiffTest | 27 |
@@ -483,9 +483,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
-| 人设 | `public/scripts/personas.js` | ✅ PersonaStore（官方字段：name/description/position/depth/role；lorebook/title 已入模型未接扫描/显示）+ 聊天 ⋮ 人设选择/新建/编辑/删除；注入按官方 persona_description_positions：0=IN_PROMPT（story string）、2/3=TOP/BOTTOM_AN（合并作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE；lorebook 参与世界书扫描未接（登记） |
+| 人设 | `public/scripts/personas.js` | ✅ PersonaStore 官方全字段（name/description/title/lorebook/position/depth/role/connections）+ 聊天 ⋮ 人设选择/新建/编辑/删除/设为默认/锁定到本聊天（chat_metadata.persona）；发送时 effectivePersona = 引擎 PersonaEngine.resolve（聊天锁 > 角色/群聊连接 > 默认 > 当前选择）；注入按官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN（合并作者注释）/4=AT_DEPTH/9=NONE；lorebook 官方 1.18 未消费（存储透传） |
 | 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ 2026-08-10 ：VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
-| 作者注释 | `public/scripts/authors-note.js` | ✅ AuthorsNoteEngine.resolve 每 N 条消息刷新（note_interval 默认 1，按用户消息数），ANWithWI 合并世界书结果后注入；聊天 ⋮ 作者注释弹层 = 内容/位置（0 提示词内/1 对话内/2 提示词前，官方 extension_prompt_types）/深度/角色/间隔；默认 position=1 对齐官方 |
+| 作者注释 | `public/scripts/authors-note.js` | ✅ 三层：设置页全局默认（default/defaultPosition/defaultDepth/defaultInterval/defaultRole/allowWIScan）+ 角色备注（extension_settings.note.chara：useChara/before/after/replace，引擎 applyCharaNote 差分 6 例）+ 聊天级 note_*（内容/位置/深度/角色/间隔）；AuthorsNoteEngine.resolve 按用户消息数注入，ANWithWI 合并世界书 |
 | tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
 | 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
 
@@ -519,7 +519,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 328 测全绿、差分 81 组 / 1343 例）：
+**新增完成**（全部 CI 绿、引擎 328 测全绿、差分 81 组 / 1349 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -548,7 +548,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 81 组差分 fixture / 1343 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29、persona-engine 26、authors-note 14、authors-note-inject 14 等）
+- 81 组差分 fixture / 1349 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29、persona-engine 26、authors-note 20、authors-note-inject 14 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 

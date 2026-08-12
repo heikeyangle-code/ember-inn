@@ -26,6 +26,7 @@ import com.emberinn.app.data.GroupStore
 import com.emberinn.app.data.ImageGenClient
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
+import com.emberinn.engine.persona.PersonaEngine
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.data.ThemeState
@@ -39,6 +40,8 @@ import com.emberinn.app.ui.settings.BehaviorPrefs
 import com.emberinn.app.ui.settings.CaptionPrefs
 import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.MemoryPrefs
+import com.emberinn.app.ui.settings.AuthorsNotePrefsStore
+import com.emberinn.app.ui.settings.CharaNoteData
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.ui.settings.VoicePrefs
@@ -770,11 +773,55 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     val personas: StateFlow<List<Persona>> = _personas
     private val _activePersona = MutableStateFlow(personaStore.active())
     val activePersona: StateFlow<Persona?> = _activePersona
+    private val _defaultPersona = MutableStateFlow(personaStore.default())
+    val defaultPersona: StateFlow<Persona?> = _defaultPersona
 
     fun setPersona(id: String) {
         personaStore.setActive(id)
         _activePersona.value = personaStore.active()
         _personas.value = personaStore.list()
+    }
+
+    fun setDefaultPersona(id: String) {
+        personaStore.setDefault(id)
+        _defaultPersona.value = personaStore.default()
+        _personas.value = personaStore.list()
+    }
+
+    /** 官方 chat_metadata.persona：人设锁定到当前聊天。 */
+    fun lockedPersonaId(): String? =
+        chatStore.metadata(sessionId)["persona"]?.jsonPrimitive?.contentOrNull
+
+    fun lockPersonaToChat(id: String?) {
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        if (id == null) meta.remove("persona") else meta["persona"] = JsonPrimitive(id)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _notice.value = if (id == null) "（已解除人设聊天锁）" else "（人设已锁定到本聊天）"
+    }
+
+    /**
+     * 官方 resolvePersonaForChat：聊天锁 > 角色/群聊连接 > 默认人设 > 当前选择。
+     * 决策下沉引擎 PersonaEngine.resolve（差分锁定）。
+     */
+    fun effectivePersona(): Persona? {
+        val list = personaStore.list()
+        if (list.isEmpty()) return null
+        val connectedIds = list.filter { p ->
+            p.connections.any { c ->
+                (c.type == "character" && c.id == characterId) ||
+                    (c.type == "group" && c.id == group?.id)
+            }
+        }.map { it.id }
+        val resolved = PersonaEngine.resolve(
+            chatMetaPersona = lockedPersonaId(),
+            userAvatars = list.map { it.id },
+            connectedPersonas = connectedIds,
+            defaultPersona = _defaultPersona.value?.id,
+            allowMultiConnections = false,
+            userAvatar = _activePersona.value?.id.orEmpty(),
+            personaAutoLock = false,
+        )
+        return list.firstOrNull { it.id == resolved.chatPersona } ?: _activePersona.value
     }
 
     fun savePersona(persona: Persona) {
@@ -784,15 +831,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else {
             list + persona
         }
-        personaStore.save(next, activeId = persona.id)
+        personaStore.save(next, activeId = persona.id, defaultId = if (list.isEmpty()) persona.id else null)
         _personas.value = personaStore.list()
         _activePersona.value = personaStore.active()
+        _defaultPersona.value = personaStore.default()
     }
 
     fun deletePersona(id: String) {
         personaStore.save(personaStore.list().filterNot { it.id == id })
         _personas.value = personaStore.list()
         _activePersona.value = personaStore.active()
+        _defaultPersona.value = personaStore.default()
     }
 
     val characterId: String? = chatStore.get(sessionId)?.characterId
@@ -863,6 +912,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         meta["note_interval"] = JsonPrimitive(interval)
         chatStore.saveMetadata(sessionId, JsonObject(meta))
         _notice.value = if (prompt.isBlank()) "（作者注释已清除）" else "（作者注释已保存，下次发送生效）"
+    }
+
+    /** 当前角色的角色备注（官方 extension_settings.note.chara[charName]）。 */
+    fun charaNoteDraft(): CharaNoteData? =
+        character?.let { AuthorsNotePrefsStore.load(application).charaNotes[it.name] }
+
+    fun saveCharaNote(data: CharaNoteData) {
+        val name = character?.name ?: return
+        val prefs = AuthorsNotePrefsStore.load(application)
+        AuthorsNotePrefsStore.save(
+            application,
+            prefs.copy(charaNotes = prefs.charaNotes + (name to data)),
+        )
+        _notice.value = "（角色备注已保存）"
+    }
+
+    fun deleteCharaNote() {
+        val name = character?.name ?: return
+        val prefs = AuthorsNotePrefsStore.load(application)
+        AuthorsNotePrefsStore.save(application, prefs.copy(charaNotes = prefs.charaNotes - name))
+        _notice.value = "（角色备注已清除）"
     }
 
     fun setChatBackground(uri: Uri) {
@@ -2146,13 +2216,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 impersonationPrompt = impersonationPrompt,
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
-                personaDescription = _activePersona.value?.description.orEmpty(),
+                personaDescription = effectivePersona()?.description.orEmpty(),
+                anSettings = AuthorsNotePrefsStore.load(application).let {
+                    com.emberinn.engine.prompt.AuthorsNoteSettings(
+                        default = it.defaultPrompt,
+                        defaultPosition = it.defaultPosition,
+                        defaultDepth = it.defaultDepth,
+                        defaultInterval = it.defaultInterval,
+                        defaultRole = it.defaultRole,
+                        allowWIScan = it.allowWIScan,
+                    )
+                },
+                charaNote = character?.let { AuthorsNotePrefsStore.charaNote(application, it.name) },
                 // 官方 persona_description_positions：0=IN_PROMPT（story string 注入）、
                 // 2/3=TOP/BOTTOM_AN（合并进作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE 不注入
-                personaInPrompt = _activePersona.value?.position == 0 && _activePersona.value != null,
-                personaPosition = _activePersona.value?.position ?: 0,
-                personaDepth = _activePersona.value?.depth ?: 4,
-                personaRole = _activePersona.value?.role ?: 0,
+                personaInPrompt = effectivePersona()?.position == 0 && effectivePersona() != null,
+                personaPosition = effectivePersona()?.position ?: 0,
+                personaDepth = effectivePersona()?.depth ?: 4,
+                personaRole = effectivePersona()?.role ?: 0,
                 vectorStore = vectorStore,
                 vectorChatSettings = vectorSettings,
                 vectorWorldSettings = vectorWorldSettings,

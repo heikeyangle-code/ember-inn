@@ -3,6 +3,7 @@ package com.emberinn.engine.prompt
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -67,6 +68,19 @@ class AuthorsNoteDiffTest {
                         original = body["original"]?.jsonPrimitive?.content ?: "",
                         top = body["top"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                         bottom = body["bottom"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    ),
+                )
+                "chara" -> JsonPrimitive(
+                    AuthorsNoteEngine.applyCharaNote(
+                        prompt = body["prompt"]?.jsonPrimitive?.content ?: "",
+                        charaNote = body["chara"]?.takeUnless { it is JsonNull }?.jsonObject?.let { c ->
+                            CharaNote(
+                                name = c["name"]?.jsonPrimitive?.content ?: "",
+                                prompt = c["prompt"]?.jsonPrimitive?.content ?: "",
+                                useChara = c["useChara"]?.jsonPrimitive?.content == "true",
+                                position = c["position"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            )
+                        },
                     ),
                 )
                 else -> error("unknown method")

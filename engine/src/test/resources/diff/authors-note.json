@@ -261,6 +261,97 @@
         }
       },
       "expected": "\nnote\n"
+    },
+    {
+      "id": "chara-replace",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 0
+          }
+        }
+      },
+      "expected": "角色备注"
+    },
+    {
+      "id": "chara-before",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 1
+          }
+        }
+      },
+      "expected": "角色备注\n聊天备注"
+    },
+    {
+      "id": "chara-after",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 2
+          }
+        }
+      },
+      "expected": "聊天备注\n角色备注"
+    },
+    {
+      "id": "chara-disabled",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": false,
+            "position": 0
+          }
+        }
+      },
+      "expected": "聊天备注"
+    },
+    {
+      "id": "chara-null",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": null
+        }
+      },
+      "expected": "聊天备注"
+    },
+    {
+      "id": "chara-empty-prompt",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "",
+            "useChara": true,
+            "position": 1
+          }
+        }
+      },
+      "expected": "\n聊天备注"
     }
   ]
 }

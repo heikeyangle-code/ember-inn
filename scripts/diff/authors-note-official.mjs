@@ -31,6 +31,16 @@ const runCase = new Function([
     '        const original = request.body.original ?? "";',
     '        return `${top.join("\\n")}\\n${original}\\n${bottom.join("\\n")}`.replace(/(^\\n)|(\\n$)/g, "");',
     '    }',
+    '    if (method === "chara") {',
+    '        const prompt = request.body.prompt ?? "";',
+    '        const charaNote = request.body.chara;',
+    '        if (!charaNote || !charaNote.useChara) return prompt;',
+    '        switch (charaNote.position) {',
+    '            case 1: return charaNote.prompt + "\\n" + prompt;',
+    '            case 2: return prompt + "\\n" + charaNote.prompt;',
+    '            default: return charaNote.prompt;',
+    '        }',
+    '    }',
     '    throw new Error("unknown method");',
     '};',
 ].join('\n'));
@@ -80,6 +90,13 @@ await add('resolve-only-interval', {
 await add('compose-multi-newlines', { method: 'compose', top: ['a\nb'], bottom: ['c\nd'], original: 'note' });
 await add('compose-empty-all', { method: 'compose', top: [], bottom: [], original: '' });
 await add('compose-original-with-newlines', { method: 'compose', top: [], bottom: [], original: '\nnote\n' });
+// ---- 2026-08-12 角色备注（chara note）：before/after/replace/未启用/null ----
+await add('chara-replace', { method: 'chara', prompt: '聊天备注', chara: { name: 'Char', prompt: '角色备注', useChara: true, position: 0 } });
+await add('chara-before', { method: 'chara', prompt: '聊天备注', chara: { name: 'Char', prompt: '角色备注', useChara: true, position: 1 } });
+await add('chara-after', { method: 'chara', prompt: '聊天备注', chara: { name: 'Char', prompt: '角色备注', useChara: true, position: 2 } });
+await add('chara-disabled', { method: 'chara', prompt: '聊天备注', chara: { name: 'Char', prompt: '角色备注', useChara: false, position: 0 } });
+await add('chara-null', { method: 'chara', prompt: '聊天备注', chara: null });
+await add('chara-empty-prompt', { method: 'chara', prompt: '聊天备注', chara: { name: 'Char', prompt: '', useChara: true, position: 1 } });
 
 writeFileSync(outFile, JSON.stringify({ source: 'authors-note.js + world-info.js ANWithWI', cases }, null, 2));
 console.log('authors-note:', cases.length, 'cases ->', outFile);
