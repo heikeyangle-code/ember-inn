@@ -285,6 +285,7 @@ fun ChatScreen(
     var personaDraftConnectGroup by remember { mutableStateOf(false) }
     var personaDraftAvatar by remember { mutableStateOf("") }
     var personaShowLorePicker by remember { mutableStateOf(false) }
+    var showSyncNameConfirm by remember { mutableStateOf(false) }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkDraftName by remember { mutableStateOf("") }
@@ -1535,8 +1536,32 @@ fun ChatScreen(
                 ) {
                     Text(if (locked != null) "解除人设聊天锁" else "锁定当前人设到本聊天")
                 }
+                TextButton(
+                    onClick = { showSyncNameConfirm = true },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) {
+                    Text("同步名称到历史消息")
+                }
             }
         }
+    }
+
+    if (showSyncNameConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSyncNameConfirm = false },
+            title = { Text("确认同步？") },
+            text = { Text("本聊天所有用户消息将改名为 ${vm.userName}（官方 syncUserNameToPersona 语义）。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSyncNameConfirm = false
+                    showPersonaPicker = false
+                    vm.syncUserNameToPersona()
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSyncNameConfirm = false }) { Text("取消") }
+            },
+        )
     }
 
     editingPersona?.let { target ->

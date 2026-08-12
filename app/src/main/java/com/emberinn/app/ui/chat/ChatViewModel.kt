@@ -857,6 +857,34 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _defaultPersona.value = personaStore.default()
     }
 
+    /** 官方 syncUserNameToPersona：本聊天所有用户消息 name=当前用户名，force_avatar=人设头像。 */
+    fun syncUserNameToPersona() {
+        val persona = _activePersona.value
+        if (persona == null) {
+            _notice.value = "（请先选择人设）"
+            return
+        }
+        val current = chatStore.messages(sessionId)
+        val updated = current.map { el ->
+            val obj = el.jsonObject
+            val isUser = obj["is_user"]?.jsonPrimitive
+                ?.let { it.booleanOrNull ?: (it.content == "true") } == true
+            if (isUser) {
+                JsonObject(
+                    obj.toMutableMap().apply {
+                        put("name", JsonPrimitive(currentUserName))
+                        if (persona.avatarPath.isNotBlank()) put("force_avatar", JsonPrimitive(persona.avatarPath))
+                    },
+                )
+            } else {
+                el
+            }
+        }
+        chatStore.replace(sessionId, updated)
+        refreshMessages()
+        _notice.value = "（已把本聊天用户消息名称同步为 $currentUserName）"
+    }
+
     val characterId: String? = chatStore.get(sessionId)?.characterId
     val character: CharacterRecord?
         get() = characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
@@ -1029,6 +1057,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val ephemeralInjectIds = mutableSetOf<String>()
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
+    val userName: String get() = currentUserName
 
     init {
         // 第三层主题（角色配方）：当前角色进入全局主题管线；离开聊天由 ChatScreen 清空回全局
