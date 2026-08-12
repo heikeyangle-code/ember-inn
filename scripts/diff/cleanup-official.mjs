@@ -324,7 +324,27 @@ await add('group-no-match', {
 });
 
 // cleanUpMessage
-await add('clean-empty', { method: 'clean', text: '' });
+// 追加穷举：endoftext / 名字裁剪 / instruct / 停用词 / 不完整句 / 折叠换行 / Unicode
+await add('fix-display-odd-star-trailing', { method: 'fixMarkdown', text: 'line *  ', forDisplay: true });
+await add('fix-display-odd-quote-trailing', { method: 'fixMarkdown', text: 'say "hello  ', forDisplay: true });
+await add('fix-display-double-star-spaced', { method: 'fixMarkdown', text: 'a ** b ** c', forDisplay: false });
+await add('fix-display-unicode', { method: 'fixMarkdown', text: '你 *好* 世界', forDisplay: false });
+await add('clean-endoftext', { method: 'clean', text: 'reply<|endoftext|>more' });
+await add('clean-trim-name', { method: 'clean', text: 'Char: hello', name2: 'Char' });
+await add('clean-trim-name-off', { method: 'clean', text: 'Char: hello', name2: 'Char', trimNames: false });
+await add('clean-wrong-name', { method: 'clean', text: 'Wrong: hi', name2: 'Char' });
+await add('clean-unicode-name', { method: 'clean', text: '小炭: 你好', name2: '小炭' });
+await add('clean-instruct-output', {
+    method: 'clean', text: '### hello', instructEnabled: true, instructOutputSequence: '###',
+});
+await add('clean-stop-suffix', { method: 'clean', text: 'hello STOP', stoppingStrings: ['STOP'] });
+await add('clean-bias-not-impersonate', {
+    method: 'clean', text: 'reply', userPromptBias: 'Bias: ', isImpersonate: true, includeUserPromptBias: true,
+});
+await add('clean-incomplete-off', { method: 'clean', text: 'hello. unfinished sen', displayIncompleteSentences: false });
+await add('clean-incomplete-on', { method: 'clean', text: 'hello. unfinished sen', displayIncompleteSentences: true });
+await add('clean-collapse-newlines', { method: 'clean', text: 'a\n\n\nb', collapseNewlines: true });
+await add('clean-trim-spaces', { method: 'clean', text: '  hello world  ', trimSpaces: true });
 await add('clean-prompt-bias', {
     method: 'clean', text: 'reply', userPromptBias: 'Bias: ', includeUserPromptBias: true,
 });

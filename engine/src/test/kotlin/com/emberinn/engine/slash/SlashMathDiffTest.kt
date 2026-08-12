@@ -46,7 +46,20 @@ class SlashMathDiffTest {
             } catch (e: Exception) {
                 if (throws) e.message.orEmpty() else throw AssertionError("unexpected throw: $e", e)
             }
-            assertEquals("case $kind: ${(c["op"] as? JsonPrimitive)?.contentOrNull ?: (c["value"] as? JsonPrimitive)?.contentOrNull}", expected, actual)
+            val label = "case $kind: ${(c["op"] as? JsonPrimitive)?.contentOrNull ?: (c["value"] as? JsonPrimitive)?.contentOrNull}"
+            if (kind == "math" && c["op"]?.jsonPrimitive?.content in setOf("sin", "cos", "log")) {
+                // JS Math.sin/cos/log 与 Java StrictMath 允许 1 ULP 级差异（cos(1000) 实测尾差 1 ULP），
+                // 仍能锁定函数语义；其余命令逐字断言。
+                val e = expected.toDoubleOrNull()
+                val a = actual.toDoubleOrNull()
+                if (e != null && a != null) {
+                    assertEquals(label, e, a, 1e-12)
+                } else {
+                    assertEquals(label, expected, actual)
+                }
+            } else {
+                assertEquals(label, expected, actual)
+            }
         }
     }
 

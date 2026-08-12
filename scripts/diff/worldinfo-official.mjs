@@ -138,6 +138,28 @@ const cases = [
     { id: 'dec_triple_skipped', fn: 'parseDecorators', args: { content: '@@@activate\nbody' } },
     { id: 'dec_unknown_then_known', fn: 'parseDecorators', args: { content: '@@bogus\n@@activate\nbody' } },
     { id: 'dec_blank_line', fn: 'parseDecorators', args: { content: '@@activate\n\nbody' } },
+    // 追加穷举：Unicode / 空输入 / 多个已知装饰器 / @@@ 跳过 / 无正文 / 正文内再次出现 @@
+    { id: 'mk_unicode_cn', fn: 'matchKeys', args: { haystack: '你好世界', needle: '世界', messages: ['你好世界'] } },
+    { id: 'mk_unicode_cs', fn: 'matchKeys', args: { haystack: '你好世界', needle: '世界', messages: ['你好世界'], caseSensitive: true } },
+    { id: 'mk_emoji', fn: 'matchKeys', args: { haystack: 'a😀b', needle: '😀', messages: ['a😀b'] } },
+    { id: 'mk_empty_haystack', fn: 'matchKeys', args: { haystack: '', needle: 'x', messages: [''] } },
+    { id: 'mk_empty_needle', fn: 'matchKeys', args: { haystack: 'abc', needle: '', messages: ['abc'] } },
+    { id: 'mk_regex_multiline', fn: 'matchKeys', args: { haystack: 'line1\nline2', needle: '/^line2$/m', messages: ['line1\nline2'] } },
+    { id: 'mk_regex_unicode', fn: 'matchKeys', args: { haystack: '你好世界', needle: '/世界/u', messages: ['你好世界'] } },
+    { id: 'mk_whole_word_hyphen', fn: 'matchKeys', args: { haystack: 'well-known', needle: 'well', messages: ['well-known'], matchWholeWords: true } },
+    { id: 'mk_whole_word_unicode', fn: 'matchKeys', args: { haystack: '你 好 世界', needle: '好', messages: ['你 好 世界'], matchWholeWords: true } },
+    { id: 'mk_multiline_messages', fn: 'matchKeys', args: { haystack: 'a\nb', needle: 'b', messages: ['a\nb'] } },
+    { id: 'score_or_any', fn: 'getScore', args: { messages: ['a'], key: ['a'], keysecondary: ['b'], selectiveLogic: 1 } },
+    { id: 'score_or_all', fn: 'getScore', args: { messages: ['a b'], key: ['a'], keysecondary: ['b'], selectiveLogic: 1 } },
+    { id: 'score_and_any_missing', fn: 'getScore', args: { messages: ['a'], key: ['a'], keysecondary: ['b'], selectiveLogic: 2 } },
+    { id: 'score_secondary_only', fn: 'getScore', args: { messages: ['b'], key: [], keysecondary: ['b'] } },
+    { id: 'score_empty_messages', fn: 'getScore', args: { messages: [], key: ['a'] } },
+    { id: 'score_unicode', fn: 'getScore', args: { messages: ['你好'], key: ['你好'] } },
+    { id: 'dec_activate_only', fn: 'parseDecorators', args: { content: '@@activate' } },
+    { id: 'dec_two_known', fn: 'parseDecorators', args: { content: '@@activate\n@@dont_activate\nbody' } },
+    { id: 'dec_triple_then_known', fn: 'parseDecorators', args: { content: '@@@activate\n@@dont_activate\nbody' } },
+    { id: 'dec_prefix_match', fn: 'parseDecorators', args: { content: '@@activate_extra\nbody' } },
+    { id: 'dec_body_contains_at', fn: 'parseDecorators', args: { content: '@@activate\nline @@activate inside' } },
 ];
 
 const moduleText = stub + `

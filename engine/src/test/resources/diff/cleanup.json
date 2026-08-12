@@ -191,14 +191,185 @@
       "expected": "Just text"
     },
     {
-      "id": "clean-empty",
+      "id": "fix-display-odd-star-trailing",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "line *  ",
+          "forDisplay": true
+        }
+      },
+      "expected": "line **"
+    },
+    {
+      "id": "fix-display-odd-quote-trailing",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "say \"hello  ",
+          "forDisplay": true
+        }
+      },
+      "expected": "say \"hello\""
+    },
+    {
+      "id": "fix-display-double-star-spaced",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "a ** b ** c",
+          "forDisplay": false
+        }
+      },
+      "expected": "a **b** c"
+    },
+    {
+      "id": "fix-display-unicode",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "你 *好* 世界",
+          "forDisplay": false
+        }
+      },
+      "expected": "你 *好* 世界"
+    },
+    {
+      "id": "clean-endoftext",
       "args": {
         "body": {
           "method": "clean",
-          "text": ""
+          "text": "reply<|endoftext|>more"
         }
       },
-      "expected": ""
+      "expected": "reply"
+    },
+    {
+      "id": "clean-trim-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: hello",
+          "name2": "Char"
+        }
+      },
+      "expected": "Char: hello"
+    },
+    {
+      "id": "clean-trim-name-off",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: hello",
+          "name2": "Char",
+          "trimNames": false
+        }
+      },
+      "expected": "Char: hello"
+    },
+    {
+      "id": "clean-wrong-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Wrong: hi",
+          "name2": "Char"
+        }
+      },
+      "expected": "Wrong: hi"
+    },
+    {
+      "id": "clean-unicode-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "小炭: 你好",
+          "name2": "小炭"
+        }
+      },
+      "expected": "小炭: 你好"
+    },
+    {
+      "id": "clean-instruct-output",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "### hello",
+          "instructEnabled": true,
+          "instructOutputSequence": "###"
+        }
+      },
+      "expected": "### hello"
+    },
+    {
+      "id": "clean-stop-suffix",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello STOP",
+          "stoppingStrings": [
+            "STOP"
+          ]
+        }
+      },
+      "expected": "hello"
+    },
+    {
+      "id": "clean-bias-not-impersonate",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "reply",
+          "userPromptBias": "Bias: ",
+          "isImpersonate": true,
+          "includeUserPromptBias": true
+        }
+      },
+      "expected": "reply"
+    },
+    {
+      "id": "clean-incomplete-off",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello. unfinished sen",
+          "displayIncompleteSentences": false
+        }
+      },
+      "expected": "hello. unfinished sen"
+    },
+    {
+      "id": "clean-incomplete-on",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello. unfinished sen",
+          "displayIncompleteSentences": true
+        }
+      },
+      "expected": "hello. unfinished sen"
+    },
+    {
+      "id": "clean-collapse-newlines",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "a\n\n\nb",
+          "collapseNewlines": true
+        }
+      },
+      "expected": "a\nb"
+    },
+    {
+      "id": "clean-trim-spaces",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  hello world  ",
+          "trimSpaces": true
+        }
+      },
+      "expected": "hello world"
     },
     {
       "id": "clean-prompt-bias",

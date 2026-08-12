@@ -93,13 +93,13 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（83 组差分 fixture，共 1736 例对拍，全部通过；2026-08-13 全量复算）**：
+**已覆盖（83 组差分 fixture，共 1928 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1736 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1928 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
-| 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
+| 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 40 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
 | 世界书正则深度（regexDepth） | worldinfo-regex-depth-official.mjs | WorldInfoRegexDepthDiffTest | 40 |
 | outlet 宏（{{outlet::key}}） | outlet-macro-official.mjs | OutletMacroDiffTest | 5 |
@@ -136,7 +136,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
 | 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
-| 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 288 |
+| 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 444 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
@@ -159,7 +159,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 思考入提示词（PromptReasoning.addToMessage） | prompt-reasoning-official.mjs | PromptReasoningDiffTest | 7 |
 | 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
 | 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
-| 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 34 |
+| 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 49 |
 | 响应数据提取（extractMessageFromData/extractJsonFromData） | response-data-official.mjs | ResponseDataDiffTest | 31 |
 | 自动续写判定（shouldAutoContinue） | auto-continue-official.mjs | AutoContinueDiffTest | 11 |
 | 停用词全链（getStoppingStrings/getCustomStoppingStrings） | stopping-strings-official.mjs | StoppingStringsDiffTest | 14 |
@@ -556,7 +556,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 83 组 / 1736 例）：
+**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 83 组 / 1928 例）：
 - 预设全链：引擎 PresetApplyEngine 官方差分 82 例（类型识别/五类应用/迁移/保存过滤/名字匹配）+ 预设页选择即应用/保存当前为预设/删除 + 单文件导入 + 多区段 master 导入导出 + /preset 命令 + reasoning 进总装
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验

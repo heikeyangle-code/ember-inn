@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T19:46:30.612Z",
+  "generated": "2026-08-12T20:15:40.133Z",
   "source": "sillytavern-ref release",
   "cases": [
     {
@@ -253,6 +253,284 @@
           "@@activate"
         ],
         "\nbody"
+      ]
+    },
+    {
+      "id": "mk_unicode_cn",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "你好世界",
+        "needle": "世界",
+        "messages": [
+          "你好世界"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_unicode_cs",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "你好世界",
+        "needle": "世界",
+        "messages": [
+          "你好世界"
+        ],
+        "caseSensitive": true
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_emoji",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "a😀b",
+        "needle": "😀",
+        "messages": [
+          "a😀b"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_empty_haystack",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "",
+        "needle": "x",
+        "messages": [
+          ""
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "mk_empty_needle",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "abc",
+        "needle": "",
+        "messages": [
+          "abc"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_regex_multiline",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "line1\nline2",
+        "needle": "/^line2$/m",
+        "messages": [
+          "line1\nline2"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_regex_unicode",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "你好世界",
+        "needle": "/世界/u",
+        "messages": [
+          "你好世界"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_whole_word_hyphen",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "well-known",
+        "needle": "well",
+        "messages": [
+          "well-known"
+        ],
+        "matchWholeWords": true
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_whole_word_unicode",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "你 好 世界",
+        "needle": "好",
+        "messages": [
+          "你 好 世界"
+        ],
+        "matchWholeWords": true
+      },
+      "expected": true
+    },
+    {
+      "id": "mk_multiline_messages",
+      "fn": "matchKeys",
+      "args": {
+        "haystack": "a\nb",
+        "needle": "b",
+        "messages": [
+          "a\nb"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "score_or_any",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b"
+        ],
+        "selectiveLogic": 1
+      },
+      "expected": 1
+    },
+    {
+      "id": "score_or_all",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a b"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b"
+        ],
+        "selectiveLogic": 1
+      },
+      "expected": 1
+    },
+    {
+      "id": "score_and_any_missing",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "a"
+        ],
+        "key": [
+          "a"
+        ],
+        "keysecondary": [
+          "b"
+        ],
+        "selectiveLogic": 2
+      },
+      "expected": 1
+    },
+    {
+      "id": "score_secondary_only",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "b"
+        ],
+        "key": [],
+        "keysecondary": [
+          "b"
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "id": "score_empty_messages",
+      "fn": "getScore",
+      "args": {
+        "messages": [],
+        "key": [
+          "a"
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "id": "score_unicode",
+      "fn": "getScore",
+      "args": {
+        "messages": [
+          "你好"
+        ],
+        "key": [
+          "你好"
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "id": "dec_activate_only",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate"
+      },
+      "expected": [
+        [
+          "@@activate"
+        ],
+        "@@activate"
+      ]
+    },
+    {
+      "id": "dec_two_known",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate\n@@dont_activate\nbody"
+      },
+      "expected": [
+        [
+          "@@activate",
+          "@@dont_activate"
+        ],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_triple_then_known",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@@activate\n@@dont_activate\nbody"
+      },
+      "expected": [
+        [
+          "@@dont_activate"
+        ],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_prefix_match",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate_extra\nbody"
+      },
+      "expected": [
+        [
+          "@@activate_extra"
+        ],
+        "body"
+      ]
+    },
+    {
+      "id": "dec_body_contains_at",
+      "fn": "parseDecorators",
+      "args": {
+        "content": "@@activate\nline @@activate inside"
+      },
+      "expected": [
+        [
+          "@@activate"
+        ],
+        "line @@activate inside"
       ]
     }
   ]

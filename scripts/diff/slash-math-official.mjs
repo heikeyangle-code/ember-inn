@@ -13,6 +13,8 @@
  *   - 已知未覆盖差异登记：JS Number.toString 在 >=1e21 用科学计数法、Kotlin 阈值不同；
  *     十六进制/Infinity 字面量 Number() 解析差异；二者本脚本用例均限制在常规十进制区间，
  *     Kotlin 侧用“整数值 → Long 字符串，否则 Double.toString”复刻 JS 常规输出。
+ *   - sin/cos/log：JS Math.* 与 Java StrictMath 个别输入存在 1 ULP 尾差（如 cos(1000)），
+ *     差分断言对这三者允许 1e-12 容差，其余命令逐字比对。
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -212,6 +214,18 @@ for (const op of ['add', 'mul', 'min', 'max', 'sub', 'div', 'mod', 'pow', 'round
     math(op, '["x"]', scope);
     math(op, '-3 4');         // 验证单目只取第一个、双目只取前两个
 }
+// 追加穷举：边界 / 格式 / 混合类型 / Unicode / 缺失操作数
+for (const op of ['add', 'mul', 'min', 'max', 'sub', 'div', 'mod', 'pow', 'round', 'abs', 'sqrt', 'sin', 'cos', 'log']) {
+    math(op, '-0');
+    math(op, '0.1 0.2');
+    math(op, '1 2 3 4 5');
+    math(op, '1e3 2e2');
+    math(op, '9999999999999999');
+    math(op, ' 10   20 ');
+    math(op, '1.5');
+    math(op, '["1", 2, "3.5"]');
+    math(op, '["i", "count"]', scope);
+}
 // evalBoolean
 function eb(rule, a, b) {
     cases.push({ kind: 'bool', rule: rule === undefined ? '__none__' : rule, a, b: b === undefined ? '__none__' : b });
@@ -242,8 +256,21 @@ eb(undefined, 0, undefined);
 eb('gt', 5, undefined); // 无右操作数 + gt → 抛错
 eb('eq', 10, 10.0);
 eb('in', 10, 45);
+eb('eq', '10', 10);
+eb('eq', 10, '10.0');
+eb('in', 123, '2');
+eb('nin', 'abc', '');
+eb(undefined, '', undefined);
+eb('not', '', undefined);
+eb('not', '0', undefined);
+eb(undefined, '0', undefined);
+eb(undefined, 0, undefined);
+eb('eq', 'ABC', 'abc');
+eb('in', 'hello', '');
+eb('__none__', 'x', undefined);
 // len
-for (const v of ['hello', 'hello world', '', '123', '-3.5', '[1,2,3]', '[]', '{"a":1,"b":2}', '{}', 'true', 'false', 'null', '["a","b"]', '[{"x":1}]']) {
+for (const v of ['hello', 'hello world', '', '123', '-3.5', '[1,2,3]', '[]', '{"a":1,"b":2}', '{}', 'true', 'false', 'null', '["a","b"]', '[{"x":1}]',
+    '"123"', '"hello"', '[1,2,3,4]', '{"a":1,"b":2,"c":3}', '1e3', '0.001', '-0', '"你好"', '  hello  ', '[[1],[2],[3]]']) {
     cases.push({ kind: 'len', value: v });
 }
 // sort
@@ -258,6 +285,14 @@ const sortCases = [
     ['{"b":"x","a":"y"}', 'false'],
     ['not json', undefined],
     ['{"z":1,"a":2}', 'off'],
+    ['[5,"a",true,3,"b"]', undefined],
+    ['{"x":1,"y":2}', undefined],
+    ['[2,1,2,3]', undefined],
+    ['["b","B","a"]', undefined],
+    ['[1,null,2]', undefined],
+    ['[true,false]', undefined],
+    ['{"2":"b","1":"a","10":"c"}', undefined],
+    ['["hello","world","hello"]', undefined],
 ];
 for (const [value, keysort] of sortCases) {
     cases.push({ kind: 'sort', value, keysort: keysort ?? null });
