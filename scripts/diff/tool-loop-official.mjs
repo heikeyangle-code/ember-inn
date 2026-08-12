@@ -32,7 +32,8 @@ function toolLoopDecision(c) {
         const isStreamFinished = c.isStreamFinished;
         const isStreamWithToolCalls = c.isStreamWithToolCalls;
         if (canPerform && isStreamFinished && isStreamWithToolCalls) {
-            const lastMessage = { mes: c.lastMessageMes, extra: { reasoning: c.hasReasoning ? 'x' : undefined } };
+            // 官方 lastMessage = chat[chat.length - 1]；空聊天时 undefined → lastMessage?.mes = undefined
+            const lastMessage = c.lastMessageExists === false ? undefined : { mes: c.lastMessageMes, extra: { reasoning: c.hasReasoning ? 'x' : undefined } };
             const hasToolCalls = c.hasToolCalls;
             shouldDeleteMessage = c.type !== 'swipe' && ['', '...'].includes(lastMessage?.mes) && !lastMessage?.extra?.reasoning && ['', '...'].includes(c.streamingResult);
             const invocationResult = { invocations: new Array(c.invocationCount), stealthCalls: new Array(c.stealthCalls ? 1 : 0) };
@@ -92,6 +93,7 @@ add('depth-limit', { dryRun: false, type: 'normal', depth: 5, recurseLimit: 5, t
 add('swipe-no-delete', { dryRun: false, type: 'swipe', depth: 0, recurseLimit: 5, toolCallingSupported: true, isStreaming: false, isStreamFinished: true, isStreamWithToolCalls: false, hasToolCalls: true, lastMessageMes: '', hasReasoning: false, streamingResult: '', invocationCount: 3, stealthCalls: false });
 add('ellipsis-mes-delete', { dryRun: false, type: 'normal', depth: 0, recurseLimit: 5, toolCallingSupported: true, isStreaming: false, isStreamFinished: true, isStreamWithToolCalls: false, hasToolCalls: true, lastMessageMes: '...', hasReasoning: false, streamingResult: '...', invocationCount: 0, stealthCalls: false });
 add('normal-mes-keep', { dryRun: false, type: 'normal', depth: 0, recurseLimit: 5, toolCallingSupported: true, isStreaming: false, isStreamFinished: true, isStreamWithToolCalls: false, hasToolCalls: true, lastMessageMes: 'hello', hasReasoning: false, streamingResult: 'hello', invocationCount: 0, stealthCalls: false });
+add('streaming-no-last-message', { dryRun: false, type: 'normal', depth: 0, recurseLimit: 5, toolCallingSupported: true, isStreaming: true, isStreamFinished: true, isStreamWithToolCalls: true, hasToolCalls: true, lastMessageExists: false, lastMessageMes: '', hasReasoning: false, streamingResult: '', invocationCount: 2, stealthCalls: false });
 
 writeFileSync(outFile, JSON.stringify({ source: 'script.js 工具循环决策 + tool-calling.js canPerformToolCalls', cases }, null, 2));
 console.log('tool-loop:', cases.length, 'cases ->', outFile);

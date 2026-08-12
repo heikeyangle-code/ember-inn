@@ -43,6 +43,7 @@ class ToolLoopDiffTest {
                 isStreamFinished = c["isStreamFinished"]?.jsonPrimitive?.content != "false",
                 isStreamWithToolCalls = c["isStreamWithToolCalls"]?.jsonPrimitive?.content == "true",
                 hasToolCalls = c["hasToolCalls"]?.jsonPrimitive?.content == "true",
+                lastMessageExists = c["lastMessageExists"]?.jsonPrimitive?.content != "false",
                 lastMessageMes = c["lastMessageMes"]?.jsonPrimitive?.content ?: "",
                 hasReasoning = c["hasReasoning"]?.jsonPrimitive?.content == "true",
                 streamingResult = c["streamingResult"]?.jsonPrimitive?.content ?: "",

@@ -2286,21 +2286,39 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val snapshot = pendingToolCalls ?: return false
         pendingToolCalls = null
         val executed = ToolRegistry.executeToolCalls(snapshot)
-        if (executed.isEmpty()) return false
         val toolCalls = executed.map { ToolCall(it.id, it.name, it.arguments) }
-        if (!ToolLoopPlanner.shouldContinue(toolCalls, toolLoopRuns)) return false
         val params = currentStreamParams ?: return false
         val reply = _streamingText.value
         val reasoning = _streamingReasoning.value
         val msgs = chatStore.messages(sessionId)
-        // 官方 shouldDeleteMessage：新发送的空用户消息 + 空回复 + 无思考 → 删除，避免悬空
-        val lastIsFreshUser = msgs.isNotEmpty() && isUser(msgs.last()) && reply.isBlank() && reasoning.isBlank()
-        if (lastIsFreshUser) {
+        // 官方 script.js 工具循环决策下沉引擎（ToolLoopPlanner.decide 差分锁定）：
+        // shouldDeleteMessage（空回复+无思考+空用户消息）、shouldStopGeneration（无调用结果/stealth）、
+        // shouldRecurse（有 tool_calls && 未 stop），nextDepth 只在递归时 +1。
+        val decision = ToolLoopPlanner.decide(
+            dryRun = false,
+            type = "normal",
+            depth = toolLoopRuns,
+            recurseLimit = ToolLoopPlanner.DEFAULT_RECURSE_LIMIT,
+            toolCallingSupported = true,
+            isStreaming = true,
+            isStreamFinished = true,
+            isStreamWithToolCalls = snapshot.isNotEmpty(),
+            hasToolCalls = snapshot.isNotEmpty(),
+            lastMessageExists = msgs.isNotEmpty(),
+            lastMessageMes = msgs.lastOrNull()?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: "",
+            hasReasoning = reasoning.isNotBlank(),
+            streamingResult = reply,
+            invocationCount = executed.size,
+            stealthCalls = false, // App 无 stealth 概念（工具执行异常计入 executed 空）
+        )
+        // 官方流式分支：shouldDeleteMessage → 删空用户消息；否则有回复先落盘中间 assistant 消息
+        if (decision.shouldDeleteMessage) {
             chatStore.removeAt(sessionId, msgs.lastIndex)
         } else if (reply.isNotBlank()) {
             appendAiReply(reply)
         }
         refreshMessages()
+        if (!decision.shouldRecurse) return false
         val profile = chatRepository.profile()
         chatStore.appendToolInvocations(
             sessionId = sessionId,
@@ -2310,7 +2328,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             reasoning = reasoning.takeIf { it.isNotBlank() },
         )
         refreshMessages()
-        toolLoopRuns++
+        toolLoopRuns = decision.nextDepth
         _streamingText.value = ""
         _streamingReasoning.value = ""
         // 官方递归 Generate('normal')：重新总装（工具调用历史经 extra.tool_invocations 进提示词）

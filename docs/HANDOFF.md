@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（81 组差分 fixture，共 1319 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1319 例（机器数）为准。
+**已覆盖（81 组差分 fixture，共 1320 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1320 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1319 例。
+> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1320 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -175,7 +175,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 世界书 EM 示例（baseChatReplace+unshift/push） | em-examples-official.mjs | EmExamplesDiffTest | 9 |
 | 深度提示注入规格（角色/群聊/世界书） | depth-inject-official.mjs | DepthPromptDiffTest | 6 |
 | setOpenAIMessages 构造循环（names 各模式/isSameModel/narrator/工具过滤/forceAvatar/回车清理） | set-openai-messages-official.mjs | SetOpenAiMessagesDiffTest | 16 |
-| 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归） | tool-loop-official.mjs | ToolLoopDiffTest | 16 |
+| 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息） | tool-loop-official.mjs | ToolLoopDiffTest | 17 |
 | 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
 | StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
 
@@ -230,7 +230,7 @@ SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（�
 剩余偏差：惰性闭包仍即时求值；/genraw 的 instruct/as/stop/trim 参数未实现；/inject filter 闭包（元数据复活 + 异步判定）未实现；/trigger await 不等待。官方 1.18 无 /while。
 
 ### 3.5 提示词组装 ✅（核心）
-PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5，tool-loop 官方差分 16 例：canPerformToolCalls 禁用集/流式与静默分支/shouldDeleteMessage/shouldStopGeneration/递归；工具真正执行已接线，见 3.8.16）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 29 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁；2026-08-12 起 getExtensionPrompt 过滤/拼接/wrap/宏替换已差分 19 例并接入 populationInjectionPrompts）、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
+PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5，tool-loop 官方差分 17 例：canPerformToolCalls 禁用集/流式与静默分支/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息；工具真正执行已接线，App 决策走 ToolLoopPlanner.decide，见 3.8.16）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 29 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁；2026-08-12 起 getExtensionPrompt 过滤/拼接/wrap/宏替换已差分 19 例并接入 populationInjectionPrompts）、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
 ✅ 历史 reasoning 注入（PromptReasoningEngine.addToMessage 官方 1:1 差分 7 例；App 总装时先过 REASONING 正则（isPrompt=true+depth）再注入；power_user.reasoning.add_to_prompts 默认关，设置→服务开关；continue 最后一条 prefix 不受开关限制，官方语义）；✅ 角色 system_prompt / 剧情后指令已真正进请求体（2026-08-10 修复：官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride，App 此前漏传——角色系统提示词从未生效；现按官方语义传 fields.system/jailbreak，且 chat_metadata 同名键优先）；✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ 角色宏环境接线（2026-08-10：ChatPromptFactory env.character=CharacterFields(system/jailbreak/description/…/charDepthPrompt)+system.model，官方 MacroEnvBuilder 映射 1:1，{{chardepthprompt}} 等历史消息宏可用）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；2026-08-09 修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；✅ 工具真正执行 App 注册表已接线（2026-08-12，见 3.8.16）。
 
 ### 3.6 正则 ✅
@@ -519,7 +519,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1319 例）：
+**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1320 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -548,7 +548,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 81 组差分 fixture / 1319 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 16、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29 等）
+- 81 组差分 fixture / 1320 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 
@@ -610,7 +610,18 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | send_if_empty | 未做 | ✅ 空输入且最后一条为 AI 时发送配置文本续聊（官方 oai_settings.send_if_empty） |
 | 斜杠异步命令 | 无异步执行器 | ✅ executeAsync + /gen /genraw（；官方无 /while，误记已删） |
 
-**剩余已知半成品（继续治理中）**：工具调用 App 注册表/执行器（引擎已差分）、表情精灵 App 层（引擎已差分）。
+**剩余已知半成品（继续治理中，2026-08-12 App 接线扫描）**：
+- Captions：refine_mode 确认弹层未接、prompt_ask 未接；source 仅 multimodal（extras/local/horde 未接）。
+- 表情精灵：LLM 分类未接（官方 expressions LLM 模式）；extra.sprite 不持久化（渲染期按正文确定性分类，同消息结果稳定）。
+- 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
+- TTS：朗读文本未过 substituteParams 宏替换；多语音/对话专属/引号专属未实现。
+- 主题配方：字体文件下载、风格档位映射未做。
+- 设置项 UI 未接：reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、
+  show_external_models、Prompt Manager 面板/dryRun 预览（引擎字段部分已有，见 12.12/12.16）。
+- 发送链路未接（12.16 登记）：quiet/quietImage/quietToLoud、runGenerationInterceptors、
+  appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2、
+  非流式 title/reasoning/image 提取、token_count 落盘、StreamingReplyParser/ReasoningEngine/TokenBudgetEngine 接线。
+- auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项）。
 
 ### 8.6 与官方不一致登记（防漏机制）
 
@@ -629,7 +640,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | {{bias}} 提示词 | 官方 getBiasStrings 从输入/最近用户消息 extra.bias 提取；App 此前不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ 已修 |
 | chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 此前恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
 | 人设 personaDescription | ✅ 已接（2026-08-10）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
-| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 已差分；App 作者注释已接；记忆 UI 待做（官方默认关） | 🟡 记忆 UI 待做 |
+| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 已差分；App 作者注释已接；记忆扩展已接（MemoryScreen + MemoryService + /summarize，source=main；extras/webllm 未接） | 🟡 extras/webllm |
 | 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；ToolCallParser 与 ToolLoopPlanner 已差分；App ToolRegistry 执行/历史重构/递归重装已接（见 3.8.16） | ✅ 已接 |
 | 世界书设置 | 已做（设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景，全局形状/字体/浅深锁定管线已做；配方导出/分享已做 | ✅ |
@@ -928,7 +939,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - `ChatPromptFactory` / `ChatViewModel` 的 `{{bias}}` 提取与宏剥离已从私有正则改为 `BiasEngine`（官方 Handlebars 语义；同时兼容历史 `{{bias:...}}` 冒号写法，作为 README 扩展保留）。
 - `ChatViewModel.finalizeStream` 保存回复前已接 `CleanUpMessageEngine` + `StoppingStringsEngine`（停用词/名字/群消息/trim 全链），替换原先只过正则的保存路径。
 - 单聊自动续写已接 `AutoContinueEngine`（原只有群聊 `GroupLoopEngine`），最大 5 轮与群聊一致。
-- `LlmClient` OpenAI 兼容非流式最终响应已改用 `ResponseDataExtractor`；`StreamingReplyParser` / `ReasoningEngine` / `TokenBudgetEngine` / `SwipeEngine` 引擎已差分就绪，App 剩余接线点：流式 SSE delta（StreamingReplyParser）、removeReasoning（ReasoningEngine）、Token 预算默认值（TokenBudgetEngine）、滑动 UI 判定（SwipeEngine）。
+- `LlmClient` OpenAI 兼容非流式最终响应已改用 `ResponseDataExtractor`；`StreamingReplyParser` / `ReasoningEngine` / `TokenBudgetEngine` 引擎已差分就绪但 App 未接（流式 SSE delta 解析走 SseChunkParser、removeReasoning/token 预算未接，见 12.16）；`SwipeEngine.generatedTextFiltered` 已接（自动滑动判定）。
 
 ### 12.16 发送链路审计
 对照官方 `sendTextareaMessage → Generate → prepareOpenAIMessages/populateChatCompletion → createGenerationParameters → sendOpenAIRequest → saveReply`：

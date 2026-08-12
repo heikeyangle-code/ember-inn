@@ -416,6 +416,33 @@
         "shouldRecurse": true,
         "nextDepth": 1
       }
+    },
+    {
+      "id": "streaming-no-last-message",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageExists": false,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 2,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
     }
   ]
 }

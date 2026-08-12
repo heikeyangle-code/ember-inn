@@ -19,8 +19,8 @@ import java.util.concurrent.TimeUnit
 /**
  * 图像生成执行层：对齐官方 stable-diffusion 扩展。
  * 已实现：AUTOMATIC1111（auto）、SDCPP（sdcpp，同 /sdapi/v1/txt2img）、NovelAI（zip→png）、
- * OpenAI gpt-image、Hugging Face Inference（原始字节）。
- * 开发中（UI 如实标注）：ComfyUI / Draw Things / Stable Horde。
+ * OpenAI gpt-image、Hugging Face Inference（原始字节）、Stable Horde（异步轮询）、
+ * ComfyUI（workflow JSON + /prompt + /history + /view）。DrawThings 仅 macOS，Android 不适用已移除。
  */
 class ImageGenClient {
 

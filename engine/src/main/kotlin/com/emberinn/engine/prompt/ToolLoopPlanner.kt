@@ -39,6 +39,7 @@ object ToolLoopPlanner {
         isStreamFinished: Boolean = true,
         isStreamWithToolCalls: Boolean = false,
         hasToolCalls: Boolean = false,
+        lastMessageExists: Boolean = true,
         lastMessageMes: String = "",
         hasReasoning: Boolean = false,
         streamingResult: String = "",
@@ -48,9 +49,9 @@ object ToolLoopPlanner {
         val canPerform = !dryRun && toolCallingSupported && type !in NO_TOOL_CALL_TYPES && depth < recurseLimit
         val loopActive = canPerform && if (isStreaming) isStreamFinished && isStreamWithToolCalls else true
         val shouldDelete = loopActive && if (isStreaming) {
-            type != "swipe" && lastMessageMes in setOf("", "...") && !hasReasoning && streamingResult in setOf("", "...")
+            type != "swipe" && lastMessageExists && lastMessageMes in setOf("", "...") && !hasReasoning && streamingResult in setOf("", "...")
         } else {
-            type != "swipe" && lastMessageMes in setOf("", "...") && !hasReasoning
+            type != "swipe" && lastMessageExists && lastMessageMes in setOf("", "...") && !hasReasoning
         }
         val shouldStop = if (loopActive) {
             (invocationCount == 0 && shouldDelete) || stealthCalls
