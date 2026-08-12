@@ -168,7 +168,7 @@ class ChatPromptFactory {
         collapseNewlines: Boolean = false,
         /** 官方 power_user.context.example_separator（非 OpenAI 消息示例分隔符，默认 ***）。 */
         exampleSeparator: String = "***",
-        /** 官方外置世界书：worlds/*.json 的条目（App WorldStore 加载）。 */
+        /** 官方外置世界书：worlds 目录的 *.json 条目（App WorldStore 加载）。 */
         externalWorlds: Map<String, List<WorldInfoEntry>> = emptyMap(),
         /** 官方 data.extensions.world：角色关联的外置世界。 */
         linkedWorld: String? = null,

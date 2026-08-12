@@ -14,7 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-/** 外置世界书存储（对齐官方 data/default-user/worlds/*.json：{name, entries:{uid:entry}}）。 */
+/** 外置世界书存储（对齐官方 data/default-user/worlds 目录的 *.json：{name, entries:{uid:entry}}）。 */
 class WorldStore(context: Context) {
 
     private val dir = File(context.filesDir, "worlds").apply { mkdirs() }
