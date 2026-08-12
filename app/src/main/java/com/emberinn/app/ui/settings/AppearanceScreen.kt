@@ -493,6 +493,7 @@ fun AppearanceScreen(
                         
                     }
                 }
+            }
 
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val typeContext = LocalContext.current
