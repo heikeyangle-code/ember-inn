@@ -53,6 +53,6 @@ object UserPresetStore {
         "sysprompt" -> "sysprompt"
         "preset" -> "sampler"
         "reasoning" -> "reasoning"
-        null -> if (obj["temperature"] != null && obj["openai_max_tokens"] != null) "sampler" else null
+        else -> if (obj["temperature"] != null && obj["openai_max_tokens"] != null) "sampler" else null
     }
 }

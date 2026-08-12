@@ -21,6 +21,15 @@ import kotlinx.serialization.json.put
  * - openai.js：settingsToUpdate + onSettingsPresetChange 纯循环 + migrateChatCompletionSettings + getChatCompletionPreset。
  * 打桩登记：DOM/save/事件剥除；Fuse 模糊匹配未移植（App 子串近似，HANDOFF 8.6 登记）。
  */
+/** 官方 power_user.sysprompt（enabled 默认 true；默认 "Neutral - Chat"）。 */
+@Serializable
+data class SyspromptSettings(
+    val enabled: Boolean = true,
+    val name: String = "Neutral - Chat",
+    val content: String = "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.",
+    val postHistory: String = "",
+)
+
 object PresetApplyEngine {
 
     // ------------------------------------------------------------------
@@ -543,14 +552,6 @@ object PresetApplyEngine {
         val context: ContextSettings,
         val globals: ContextGlobals,
         val presetName: String,
-    )
-
-    @Serializable
-    data class SyspromptSettings(
-        val enabled: Boolean = true,
-        val name: String = "Neutral - Chat",
-        val content: String = "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.",
-        val postHistory: String = "",
     )
 
     fun applyContextPreset(context: ContextSettings, globals: ContextGlobals, preset: JsonObject): ContextApplyResult {

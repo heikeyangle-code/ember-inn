@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -263,6 +264,7 @@ fun ProviderDetailScreen(
     providerId: String,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val spec = remember(providerId) { vm.providers.firstOrNull { it.id == providerId } }
     if (spec == null) {
         Text("提供商不存在", modifier = Modifier.padding(24.dp))

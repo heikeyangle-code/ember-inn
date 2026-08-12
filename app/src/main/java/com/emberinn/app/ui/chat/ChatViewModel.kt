@@ -1023,13 +1023,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 当前角色的角色备注（官方 extension_settings.note.chara[charName]）。 */
     fun charaNoteDraft(): CharaNoteData? =
-        character?.let { AuthorsNotePrefsStore.load(application).charaNotes[it.name] }
+        character?.let { AuthorsNotePrefsStore.load(getApplication<android.app.Application>()).charaNotes[it.name] }
 
     fun saveCharaNote(data: CharaNoteData) {
         val name = character?.name ?: return
-        val prefs = AuthorsNotePrefsStore.load(application)
+        val prefs = AuthorsNotePrefsStore.load(getApplication<android.app.Application>())
         AuthorsNotePrefsStore.save(
-            application,
+            getApplication(),
             prefs.copy(charaNotes = prefs.charaNotes + (name to data)),
         )
         _notice.value = "（角色备注已保存）"
@@ -1037,8 +1037,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun deleteCharaNote() {
         val name = character?.name ?: return
-        val prefs = AuthorsNotePrefsStore.load(application)
-        AuthorsNotePrefsStore.save(application, prefs.copy(charaNotes = prefs.charaNotes - name))
+        val prefs = AuthorsNotePrefsStore.load(getApplication<android.app.Application>())
+        AuthorsNotePrefsStore.save(getApplication(), prefs.copy(charaNotes = prefs.charaNotes - name))
         _notice.value = "（角色备注已清除）"
     }
 
@@ -2329,7 +2329,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
                 personaDescription = effectivePersona()?.description.orEmpty(),
-                anSettings = AuthorsNotePrefsStore.load(application).let {
+                anSettings = AuthorsNotePrefsStore.load(getApplication<android.app.Application>()).let {
                     com.emberinn.engine.prompt.AuthorsNoteSettings(
                         default = it.defaultPrompt,
                         defaultPosition = it.defaultPosition,
@@ -2339,7 +2339,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         allowWIScan = it.allowWIScan,
                     )
                 },
-                charaNote = character?.let { AuthorsNotePrefsStore.charaNote(application, it.name) },
+                charaNote = character?.let { AuthorsNotePrefsStore.charaNote(getApplication(), it.name) },
                 // 官方 persona_description_positions：0=IN_PROMPT（story string 注入）、
                 // 2/3=TOP/BOTTOM_AN（合并进作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE 不注入
                 personaInPrompt = effectivePersona()?.position == 0 && effectivePersona() != null,
@@ -2509,8 +2509,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             toolCallingSupported = true,
             isStreaming = true,
             isStreamFinished = true,
-            isStreamWithToolCalls = snapshot.isNotEmpty(),
-            hasToolCalls = snapshot.isNotEmpty(),
+            isStreamWithToolCalls = executed.isNotEmpty(),
+            hasToolCalls = executed.isNotEmpty(),
             lastMessageExists = msgs.isNotEmpty(),
             lastMessageMes = msgs.lastOrNull()?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: "",
             hasReasoning = reasoning.isNotBlank(),
