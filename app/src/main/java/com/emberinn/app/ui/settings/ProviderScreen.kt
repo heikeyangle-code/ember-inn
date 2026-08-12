@@ -95,7 +95,12 @@ fun ProviderListScreen(
 
     SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "提供商与模型", subtitle = "24 家服务商，点卡片配置", onBack = onBack, sky = settingsSky)
+        SettingsTopBar(
+            title = "提供商与模型",
+            subtitle = "${vm.providers.size} 家服务商，点卡片配置",
+            onBack = onBack,
+            sky = settingsSky,
+        )
         EmberTextField(
             value = query,
             onValueChange = { query = it },

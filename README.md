@@ -488,14 +488,14 @@ workers result[].name、azure value[].id；拉不到时用 default_models 兜底
 > 底层协议与接口仍按酒馆官方 1:1（见“服务商注册表”），UI 层自由。
 
 1. **提供商列表**：品牌 SVG 头像（`assets/icons`，参照命理2 AutoAIIcon；无品牌图标的厂商用首字母圆形兜底）+ 名称 + 一句话说明 + 已配置/未配置状态；顶部搜索，已保存连接可快速切换/删除
-2. **详情编辑**：名称 / API Key（密码遮罩 + 显示切换，粘贴自动去空格）/ 接口地址 / 区域（硅基流动、Z.AI、MiniMax）/ Workers 账户 ID / Azure API 版本 / 默认模型（底部弹层 + 搜索选择）
+2. **详情编辑**：名称 / API Key（密码遮罩 + 显示切换，粘贴自动去空格）/ 接口地址（未配置时自动预填厂商默认地址，来自 providers.json）/ 区域（硅基流动、Z.AI、MiniMax）/ Workers 账户 ID / Azure API 版本 / 默认模型（底部弹层 + 搜索选择）
 3. **测试连接**：一键验证（复用官方 /status 模型列表逻辑；无模型列表端点的厂商走最小对话探测），成功自动拉取模型列表；拉不到用预填 default_models 兜底
 
 **连接档案**：可建多个（命名、切换）、全局默认 + 每角色可选覆盖（呼应官方 EPIC #3139）；扫码导入导出分享（沿用旧项目概念）
 
 ## 上游跟进与扩展策略
 
-- **供应商 = 数据 + 3 个协议类**：openai-compatible / anthropic / google，加新厂商只改注册表 JSON，不动协议代码
+- **供应商 = 数据 + 协议路由**：openai-compatible / anthropic / google / mistral / xai / cohere / ai21，加新厂商只改注册表 JSON，不动协议代码
 - **可扩展接口**：LlmProvider / CardParser / WorldBookScanner / MacroEngine / SlashParser / PromptAssembler / TTS / ImageGen / VectorStore / Translator / ThemeSource——新功能按接口插，不侵入核心
 - **上游跟进（我们是重写，不是 git 合并官方）**：官方发版 → 对照 CHANGELOG + 官方行为回归测试 → 翻译/移植新功能到对应模块 → CI 全量验证；按版本节奏（每月/每大版）例行执行
 - **分层纪律**：engine 不依赖 UI；data 不依赖 engine；provider 只做协议；新增功能先落接口再落实现

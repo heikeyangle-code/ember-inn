@@ -116,7 +116,7 @@
       "icon": "deepseek-color.svg",
       "protocol": "openai-compatible",
       "auth_type": "bearer",
-      "base_url": "https://api.deepseek.com/beta",
+      "base_url": "https://api.deepseek.com/v1",
       "models_endpoint": "models",
       "models_format": "openai",
       "default_models": [
@@ -576,7 +576,7 @@
       "icon": "cohere-color.svg",
       "protocol": "cohere",
       "auth_type": "bearer",
-      "base_url": "https://api.cohere.ai/v2",
+      "base_url": "https://api.cohere.com/v2",
       "region_variants": [],
       "region_bases": {},
       "extra_headers": {},
@@ -620,6 +620,289 @@
       "model_contexts": {
         "jamba-large": 262144
       }
+    },
+    {
+      "id": "together",
+      "display_name": "Together AI",
+      "description": "开源模型托管（Llama / DeepSeek / Qwen）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.together.xyz/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "deepseek-ai/DeepSeek-V3.1",
+        "Qwen/Qwen2.5-72B-Instruct-Turbo"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.together.ai/docs/quickstart",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "meta-llama/Llama-3.3-70B-Instruct-Turbo": 131072,
+        "deepseek-ai/DeepSeek-V3.1": 131072,
+        "Qwen/Qwen2.5-72B-Instruct-Turbo": 131072
+      }
+    },
+    {
+      "id": "cerebras",
+      "display_name": "Cerebras",
+      "description": "超高速推理（Llama 系列）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.cerebras.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "llama-3.3-70b",
+        "llama-3.1-8b"
+      ],
+      "requires_key": true,
+      "docs_url": "https://inference-docs.cerebras.ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "llama-3.3-70b": 131072,
+        "llama-3.1-8b": 131072
+      }
+    },
+    {
+      "id": "sambanova",
+      "display_name": "SambaNova",
+      "description": "超快开源模型推理（Llama / Qwen）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.sambanova.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "Meta-Llama-3.3-70B-Instruct",
+        "Qwen2.5-72B-Instruct"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.sambanova.ai/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "Meta-Llama-3.3-70B-Instruct": 131072,
+        "Qwen2.5-72B-Instruct": 131072
+      }
+    },
+    {
+      "id": "nvidia",
+      "display_name": "NVIDIA NIM",
+      "description": "NVIDIA 推理微服务（Llama / DeepSeek）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "meta/llama-3.3-70b-instruct",
+        "deepseek-ai/deepseek-r1"
+      ],
+      "requires_key": true,
+      "docs_url": "https://build.nvidia.com/docs/",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "meta/llama-3.3-70b-instruct": 131072,
+        "deepseek-ai/deepseek-r1": 131072
+      }
+    },
+    {
+      "id": "github-models",
+      "display_name": "GitHub Models",
+      "description": "GitHub 内置模型（GPT / Llama / Phi）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://models.github.ai/inference",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "gpt-4.1",
+        "gpt-4o",
+        "o3-mini"
+      ],
+      "requires_key": true,
+      "docs_url": "https://docs.github.com/en/copilot/using-github-copilot/using-models-to-build-applications",
+      "default_max_tokens": 8192,
+      "default_context_window": 200000,
+      "model_contexts": {
+        "gpt-4.1": 1048576,
+        "gpt-4o": 131072,
+        "o3-mini": 200000
+      }
+    },
+    {
+      "id": "huggingface",
+      "display_name": "Hugging Face",
+      "description": "HF Inference Providers 聚合",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://router.huggingface.co/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "meta-llama/Llama-3.3-70B-Instruct",
+        "Qwen/Qwen2.5-72B-Instruct",
+        "deepseek-ai/DeepSeek-R1"
+      ],
+      "requires_key": true,
+      "docs_url": "https://huggingface.co/docs/inference-providers/en",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "meta-llama/Llama-3.3-70B-Instruct": 131072,
+        "Qwen/Qwen2.5-72B-Instruct": 131072,
+        "deepseek-ai/DeepSeek-R1": 131072
+      }
+    },
+    {
+      "id": "hunyuan",
+      "display_name": "腾讯混元",
+      "description": "腾讯混元大模型（国内）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.hunyuan.cloud.tencent.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "hunyuan-turbos-latest",
+        "hunyuan-turbo-latest",
+        "hunyuan-standard"
+      ],
+      "requires_key": true,
+      "docs_url": "https://cloud.tencent.com/document/product/1729",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "hunyuan-turbos-latest": 131072,
+        "hunyuan-turbo-latest": 131072,
+        "hunyuan-standard": 32768
+      }
+    },
+    {
+      "id": "stepfun",
+      "display_name": "阶跃星辰",
+      "description": "StepFun（Step 系列，国内）",
+      "icon": "stepfun-color.svg",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.stepfun.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "step-2-16k",
+        "step-1-8k"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.stepfun.com/docs/guide/text",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "step-2-16k": 16000,
+        "step-1-8k": 8000
+      }
+    },
+    {
+      "id": "lingyiwanwu",
+      "display_name": "零一万物",
+      "description": "Yi 系列（国内）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.lingyiwanwu.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "yi-large",
+        "yi-medium",
+        "yi-lightning"
+      ],
+      "requires_key": true,
+      "docs_url": "https://platform.lingyiwanwu.com/docs",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "yi-large": 32768,
+        "yi-medium": 32768,
+        "yi-lightning": 16384
+      }
+    },
+    {
+      "id": "qianfan",
+      "display_name": "百度千帆",
+      "description": "百度智能云千帆（ERNIE 系列，国内）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://qianfan.baidubce.com/v2",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "ernie-4.5-turbo-128k",
+        "ernie-4.5-8k",
+        "ernie-4.0-turbo-8k"
+      ],
+      "requires_key": true,
+      "docs_url": "https://cloud.baidu.com/doc/WENXINWORKSHOP/index.html",
+      "default_max_tokens": 8192,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "ernie-4.5-turbo-128k": 131072,
+        "ernie-4.5-8k": 8192,
+        "ernie-4.0-turbo-8k": 8192
+      }
+    },
+    {
+      "id": "iflytek",
+      "display_name": "讯飞星火",
+      "description": "讯飞星火（Spark 系列，国内）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://spark-api-open.xf-yun.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "4.0Ultra",
+        "generalv3.5",
+        "generalv3"
+      ],
+      "requires_key": true,
+      "docs_url": "https://www.xfyun.cn/doc/spark/HTTP%E8%B0%83%E7%94%A8%E6%96%87%E6%A1%A3.html",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072,
+      "model_contexts": {
+        "4.0Ultra": 131072,
+        "generalv3.5": 131072,
+        "generalv3": 8192
+      }
+    },
+    {
+      "id": "lmstudio",
+      "display_name": "LM Studio (本地)",
+      "description": "本机 LM Studio 服务器，无需 Key",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "none",
+      "base_url": "http://localhost:1234/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [],
+      "requires_key": false,
+      "docs_url": "https://lmstudio.ai/docs/local-server",
+      "default_max_tokens": 4096,
+      "default_context_window": 32768
     }
   ]
 }

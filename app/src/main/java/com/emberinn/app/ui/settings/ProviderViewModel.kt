@@ -98,10 +98,11 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _providerId.value = id
         _profileName.value = existing?.name?.ifBlank { spec.displayName } ?: spec.displayName
         _apiKey.value = existing?.apiKey.orEmpty()
-        _baseUrl.value = existing?.baseUrlOverride?.ifBlank { spec.baseUrl }.orEmpty()
-        _region.value = existing?.region.orEmpty()
+        _baseUrl.value = existing?.baseUrlOverride?.takeIf { it.isNotBlank() } ?: spec.baseUrl
+        _region.value = existing?.region?.takeIf { it.isNotBlank() }
+            ?: spec.regionVariants.firstOrNull().orEmpty()
         _accountId.value = existing?.accountId.orEmpty()
-        _apiVersion.value = existing?.apiVersionOverride.orEmpty()
+        _apiVersion.value = existing?.apiVersionOverride?.takeIf { it.isNotBlank() } ?: spec.apiVersion
         val model = existing?.model?.takeIf { it.isNotBlank() }
             ?: spec.defaultModels.firstOrNull().orEmpty()
         val list = spec.defaultModels.toMutableList()
