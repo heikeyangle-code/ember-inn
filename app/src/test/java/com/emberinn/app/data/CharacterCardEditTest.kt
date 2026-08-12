@@ -154,7 +154,7 @@ class CharacterCardEditTest {
         assertEquals(false, first["enabled"]!!.jsonPrimitive.content.toBoolean())
         assertEquals(80, first["probability"]!!.jsonPrimitive.intOrNull)
         assertEquals(true, first["extensions"]!!.jsonObject["vectorized"]!!.jsonPrimitive.content.toBoolean())
-        assertEquals("before_char", first["position"]!!.jsonPrimitive.content)
+        assertEquals(0, first["position"]!!.jsonPrimitive.intOrNull)
         assertNull(first["key"])
         assertNull(first["order"])
         assertNull(first["disable"])
