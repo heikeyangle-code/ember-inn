@@ -40,6 +40,7 @@ import com.emberinn.engine.worldinfo.WorldInfoSettings
 fun WorldInfoScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(WorldInfoPrefs.read(context)) }
+    var includeNames by remember { mutableStateOf(WorldInfoPrefs.includeNames(context)) }
     val worldStore = remember { WorldStore(context) }
     var worlds by remember { mutableStateOf(worldStore.list()) }
     var globalSelect by remember { mutableStateOf(WorldInfoPrefs.globalSelect(context).toSet()) }
@@ -69,8 +70,14 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             NumberRow("最少激活数（minActivations）", settings.minActivations.toString()) { v ->
                 settings = settings.copy(minActivations = v.toIntOrNull() ?: 0); save()
             }
+            NumberRow("最少激活深度上限（minActivationsDepthMax）", settings.minActivationsDepthMax.toString()) { v ->
+                settings = settings.copy(minActivationsDepthMax = v.toIntOrNull() ?: 0); save()
+            }
             NumberRow("预算百分比（%）", settings.budgetPercent.toString()) { v ->
                 settings = settings.copy(budgetPercent = (v.toIntOrNull() ?: 25).coerceIn(1, 100)); save()
+            }
+            NumberRow("预算上限（budgetCap，0=不限）", settings.budgetCap.toString()) { v ->
+                settings = settings.copy(budgetCap = v.toIntOrNull() ?: 0); save()
             }
             NumberRow("最大递归步数（0=不限制）", settings.maxRecursionSteps.toString()) { v ->
                 settings = settings.copy(maxRecursionSteps = v.toIntOrNull() ?: 0); save()
@@ -78,6 +85,8 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             ToggleRow("递归扫描（recursive）", settings.recursive) { settings = settings.copy(recursive = it); save() }
             ToggleRow("区分大小写（caseSensitive）", settings.caseSensitive) { settings = settings.copy(caseSensitive = it); save() }
             ToggleRow("整词匹配（matchWholeWords）", settings.matchWholeWords) { settings = settings.copy(matchWholeWords = it); save() }
+            ToggleRow("分组评分（useGroupScoring）", settings.useGroupScoring) { settings = settings.copy(useGroupScoring = it); save() }
+            ToggleRow("扫描带名字（include_names）", includeNames) { includeNames = it; WorldInfoPrefs.saveIncludeNames(context, it) }
             Text(
                 "高级：分组评分、时间效果、角色过滤等字段由角色卡条目自身控制。",
                 style = MaterialTheme.typography.bodySmall,

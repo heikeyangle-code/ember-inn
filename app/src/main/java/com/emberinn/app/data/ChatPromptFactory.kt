@@ -178,6 +178,8 @@ class ChatPromptFactory {
         globalWorlds: List<String> = emptyList(),
         /** 官方 world_info_insertion_strategy：CHARACTER_FIRST/GLOBAL_FIRST/EVENLY。 */
         worldInsertStrategy: Int = WorldLoreMerger.CHARACTER_FIRST,
+        /** 官方 world_info_include_names：世界书扫描文本带 "name: mes" 前缀。 */
+        wiIncludeNames: Boolean = true,
         /** 官方 setOpenAIMessages isSameModel：当前 API/模型（extra.api/extra.model 比对）。 */
         currentApi: String = "",
         currentModel: String = "",
@@ -498,7 +500,10 @@ class ChatPromptFactory {
         }
 
         val wiResult = scanner.scan(
-            chat = indexedChat.map { it.second.mes },
+            // 官方：chatForWI = coreChat.map(x => include_names ? `${x.name}: ${x.mes}` : x.mes).reverse()
+            chat = indexedChat.map { it.second }.map { m ->
+                if (wiIncludeNames) "${m.name ?: ""}: ${m.mes}" else m.mes
+            },
             maxContext = maxContextTokens,
             // 官方 getSortedEntries：内嵌卡书 + 角色关联外置世界 + 聊天指定 + 全局选择 合并
             entries = WorldLoreMerger.merge(

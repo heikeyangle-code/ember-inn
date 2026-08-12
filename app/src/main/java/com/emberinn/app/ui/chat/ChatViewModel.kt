@@ -2173,6 +2173,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 chatMetadataWorld = chatMetaWorld,
                 globalWorlds = globalSelect,
                 worldInsertStrategy = WorldInfoPrefs.insertionStrategy(getApplication()),
+                wiIncludeNames = WorldInfoPrefs.includeNames(getApplication()),
                 onPrepared = { info ->
                     if (streamActive) {
                         _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->

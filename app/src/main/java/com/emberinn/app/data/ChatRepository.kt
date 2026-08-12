@@ -206,6 +206,7 @@ class ChatRepository(context: Context) {
         chatMetadataWorld: String? = null,
         globalWorlds: List<String> = emptyList(),
         worldInsertStrategy: Int = com.emberinn.engine.worldinfo.WorldLoreMerger.CHARACTER_FIRST,
+        wiIncludeNames: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
         val profile = store.load() ?: return null
@@ -296,6 +297,7 @@ class ChatRepository(context: Context) {
             chatMetadataWorld = chatMetadataWorld,
             globalWorlds = globalWorlds,
             worldInsertStrategy = worldInsertStrategy,
+            wiIncludeNames = wiIncludeNames,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)

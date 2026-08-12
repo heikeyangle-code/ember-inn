@@ -320,7 +320,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
   CharacterCardEdit.readWorldLink/applyWorldLink（data.extensions.world）、chat_metadata.world_info 指定、
   settings 全局选择 globalSelect 与插入策略；ChatPromptFactory 用 WorldLoreMerger 把内嵌卡书+关联+聊天+全局合并进扫描。
   角色详情页“关联外置世界”选择、聊天 ⋮“外置世界（本会话）”指定（chat_metadata.world_info）已接；
-  登记：世界文件导入/导出 UI 尚未接（引擎 WorldInfoFile 已差分，WorldStore 可读写官方格式，缺文件选择器/SAF 导出入口）。
+  世界书扫描设置补全官方字段：minActivationsDepthMax/budgetCap/useGroupScoring/include_names（扫描文本带名字前缀）已接线；
+  登记：世界文件导入/导出 UI、外置世界条目编辑器（当前只有内嵌全字段编辑器，外置世界只有管理 UI）、overflow_alert（纯 toast 提示）尚未接。
 - `/trigger await`：await=true 等待生成结束（官方语义）；`/inject filter`：filter 参数持久化，生成前用 SlashEngine 求值（true/1/yes 才注入；解析失败/空=始终注入，与官方 filter 复活失败同语义；闭包上下文为 App 近似）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
