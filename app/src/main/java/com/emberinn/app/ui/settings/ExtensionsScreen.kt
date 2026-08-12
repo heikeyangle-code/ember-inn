@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.EmberSwitch
 
-/** 扩展插件：交互 HTML 卡片总开关（默认开）。 */
+/** 扩展插件：HTML 卡片的“可交互性”开关（默认开）。渲染与交互分离：卡片始终渲染，此开关只决定脚本是否执行。 */
 @Composable
 fun ExtensionsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -57,8 +57,8 @@ fun ExtensionsScreen(onBack: () -> Unit) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("交互 HTML 卡片", style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                "消息里 ``` 包着的 HTML 代码块 → 独立 iframe 运行，按钮/状态栏/脚本可交互；\n" +
-                                    "包含角色头像类 .char-avatar、{{charAvatarPath}} 宏、原代码折叠、自动测高。默认开。",
+                                "消息里 ``` 包着的 HTML 代码块始终渲染成网页卡片；此开关只决定卡片内的脚本/按钮是否可交互。\n" +
+                                    "关闭后卡片照常显示，但脚本被沙箱禁止、不再执行。包含 .char-avatar、{{charAvatarPath}} 宏、原代码折叠、自动测高。默认开。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -82,9 +82,9 @@ fun ExtensionsScreen(onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("说明与安全", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "此开关对齐酒馆助手（Tavern Helper）渲染器与 HTML 代码注入器：\n" +
-                                "卡片内的 JavaScript 会真实执行，可发网络请求；没有 JS 桥，碰不到 App 数据与 Android 功能。\n" +
-                                "仅执行你信任的角色卡代码。官方 SillyTavern 默认禁止消息脚本，本功能为有意放开。",
+                            "渲染与交互分离：卡片渲染不依赖本开关。\n" +
+                                "打开时卡片内 JavaScript 会真实执行、可发网络请求（没有 JS 桥，碰不到 App 数据与 Android 功能），仅执行你信任的角色卡代码；\n" +
+                                "关闭时脚本与表单被 sandbox 沙箱禁止，卡片按静态页面显示。官方 SillyTavern 核心对 ``` 代码块只显示代码框，iframe 卡片来自第三方 HTML 代码注入器。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

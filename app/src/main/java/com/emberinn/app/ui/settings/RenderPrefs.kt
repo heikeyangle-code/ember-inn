@@ -2,18 +2,26 @@ package com.emberinn.app.ui.settings
 
 import android.content.Context
 
-/** 消息渲染偏好：HTML 消息开关（官方 Showdown HTML；本 App 用 WebView 兜底渲染）。 */
+/** 消息渲染偏好。HTML 渲染只由官方唯一开关 encode_tags 决定（存在 AppearancePrefs.encodeTags，默认 false=渲染）：
+ *  encode_tags=false → 消息 HTML 走 WebView 渲染；
+ *  encode_tags=true → 显示管线把 < > 转义为纯文本，不进 WebView。
+ *  htmlEnabled() 是渲染层的便捷取反；旧“HTML 消息（WebView 渲染）”键 html_enabled 已折算迁移。 */
 object RenderPrefs {
 
     private const val NAME = "ember_render"
 
-    fun htmlEnabled(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("html_enabled", true)
-
-    fun setHtmlEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean("html_enabled", enabled)
-            .apply()
+    fun htmlEnabled(context: Context): Boolean {
+        // 旧键 html_enabled（true=渲染 HTML）→ 官方 encode_tags（false=渲染）：
+        // 旧值 false（用户关过 HTML 渲染）折算为 encode_tags=true；迁移后删旧键，只发生一次。
+        val sp = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        if (sp.contains("html_enabled")) {
+            val legacyRender = sp.getBoolean("html_enabled", true)
+            sp.edit().remove("html_enabled").apply()
+            if (!legacyRender) {
+                AppearancePrefs.saveEncodeTags(context, true)
+            }
+        }
+        return !AppearancePrefs.encodeTags(context)
     }
 
     /** 官方 power_user.collapse_newlines：字段/示例/回复清理时折叠连续换行。 */

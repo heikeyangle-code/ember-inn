@@ -507,7 +507,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ HTML 消息开关 / Mermaid WebView 兜底（硬化：mermaid.min.js 本地资源离线渲染、放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）； JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记）） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ 官方 encode_tags 开关（AppearancePrefs.encodeTags，默认关=渲染 HTML，显示管线转义 < >）/ Mermaid WebView 兜底（硬化：mermaid.min.js 本地资源离线渲染、放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）； JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记）） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -719,7 +719,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 
 ### 8.8 设置即时生效与默认值
-- HTML 消息开关默认改为开（RenderPrefs html_enabled=true）
+- HTML 渲染统一走官方 encode_tags 一个开关（AppearancePrefs.encodeTags，默认关=渲染）；旧“HTML 消息（WebView 渲染）”键 html_enabled 已折算迁移，RenderPrefs.htmlEnabled() 只做取反派生
 - 角色卡“允许此角色应用该卡正则”默认改为开（CharacterDetailScreen regexAllowed=true；显式关闭仍会写入允许列表移除）
 - 即时生效补全：
  - TextTypographyScreen / MessageRenderScreen 接入 onAppearanceChanged（原来保存后不触发刷新）
@@ -750,23 +750,23 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 ### 10.3 设置入口与总开关（只留 1 个开关）
 - 设置 → **扩展插件** → **交互 HTML 卡片**（`ExtensionPrefs.interactiveCards`，默认开）。
-- 关闭后：``` 内 HTML 代码块不再转 iframe，按普通代码块原生显示。
-- 头像类/宏、原代码折叠、自动测高随总开关一起生效；JS 全开、网络/外链放开、Mermaid、HTML 消息均不是独立开关。
+- 渲染与交互分离：``` 内 HTML 代码块无论开关都渲染成 iframe 卡片；关闭时卡片照常静态显示，脚本/表单被 `sandbox="allow-same-origin"` 沙箱禁止（无 allow-scripts/allow-forms）。
+- 头像类/宏、原代码折叠、自动测高随卡片一起保留；JS 执行、网络/外链放开、Mermaid 均不是独立开关。
 
 ### 10.4 实现位置与行为（维护必读）
 - `ChatScreen.kt / ChatMarkdown`：消息先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段（``` 内以 `<` 开头以 `>` 结尾或含 `<body>`）与 Mermaid / 富 HTML 段各自进独立 WebView，围栏外文本走原生 Markdown（详见第 12 章）。
 - `ChatScreen.kt / embedInteractiveBlocks`（在 officialStyledHtml 内对 WebView 页面调用）：
- - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
- - 非交互代码块 → `<pre><code>`（转义）；
+ - HTML 围栏 → `<iframe srcdoc="...">` 始终渲染；扩展开时无 sandbox（脚本可跑），关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用、保留同源供父页测高）；内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
+ - 非 HTML 围栏 → `<pre><code>`（转义）；
  - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
-- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层高度上限仍 75% 屏高，超出后卡片内部滚动；加载方式 = 原文 UTF-8 + file base（2026-08-12 修正，旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
+- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层按实测全高展开、随消息列表滚动（不再封顶 75% 屏高——旧封顶把长网页裁进内部滚动小盒子，是“被框住/显示不全”根因）；加载方式 = 原文 UTF-8 + file base（2026-08-12 修正，旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
 - 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
 
 ### 10.5 与 Tavern Helper 能力对照
 | 能力 | 状态 |
 |---|---|
 | ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
-| 非交互代码块保留显示 | ✅ 已实现（pre/code） |
+| 非 HTML 代码块保留显示 | ✅ 已实现（pre/code） |
 | iframe 自动测高 | ✅ 已实现（onload + 150/500/1500/3000ms 复测；iframe 内 ResizeObserver/MutationObserver 持续同步高度；外层 ResizeObserver 上报） |
 | 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
 | 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
@@ -780,10 +780,10 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
 3. 纯 HTML 消息（无代码围栏）：行为同（透明底、图片加载、外链跳系统浏览器）
 4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
-5. 长交互页：外层 75% 屏高上限，内部滚动正常，聊天列表滚动不被卡死
+5. 长网页：外层按实测全高展开，随消息列表滚动（无内部滚动框、不再裁切）
 
 ### 10.7 安全与许可证
-- 交互代码块 = 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；唯一的 JS 桥 `EmberInnBridge` 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。
+- 交互代码块（开关开时）= 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；开关关时 iframe 带 `sandbox="allow-same-origin"`，脚本/表单不执行。唯一的 JS 桥 `EmberInnBridge` 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。
 - 与 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
 ## 11. 渲染与官方源码逐项对照（审计）
@@ -844,7 +844,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
 | Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
 | reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
-| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 初始 160dp 可见兜底；scrollHeight 按 CSS 像素 1:1 转 dp（不是 Android 物理像素）；iframe 150/500/1500/3000ms 复测 + iframe 内 ResizeObserver/MutationObserver 持续同步；上限 75% 屏高（替换旧 250ms 轮询） | ✅ 机制自研 |
+| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 初始 160dp 可见兜底；scrollHeight 按 CSS 像素 1:1 转 dp（不是 Android 物理像素）；iframe 150/500/1500/3000ms 复测 + iframe 内 ResizeObserver/MutationObserver 持续同步；实测全高展开、不封顶（替换旧 75% 屏高内滚与 250ms 轮询） | ✅ 机制自研 |
 
 ### 11.2 已知 bug / 限制登记（继续治理清单）
 1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
@@ -852,7 +852,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 3. 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）
 4. Markdown 表格单元格/任务列表 checkbox 文本仍走库内直绘，引号等官方字段可能残留占位符（低频）
 5. 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致
-6. WebView 高度上限 75% 屏高，超长内容卡内滚动（防单条撑爆列表）
+6. WebView 按实测全高渲染、随列表滚动（官方页面流语义；旧 75% 封顶内滚已移除）
 7. 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（登记）
 8. abbr/acronym 官方为虚线下划线，Compose 无虚线，用实线近似；嵌套 sub/sup/small 缩放按单层 0.83× 计算（官方逐层累乘），极低频偏差
 
@@ -888,10 +888,10 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 ### 12.2 分段渲染（ChatScreen.kt：buildMessageSegments / SegmentedMarkdown）
 - **第一步：Web 元素切分（本轮新增）**：`carveWebElementRanges` 在围栏外找出“真正需要 WebView”的块级/结构元素（table/ul/ol/li/blockquote/pre/h1-6/center/figure/…/video/audio/canvas/svg/math/iframe/style/script/form 等，以及带属性的 div/p、face/size 的 font），从开标签到同名闭标签（同层嵌套计数、自闭合除外）切出独立 WebView 段；**周围文字保持原生 Markdown**，不再“一条消息有一点 HTML 就整条 Web”。切分受 `htmlEnabled` 控制，开关关闭时该区间并入原生段，不创建 WebView。
 - **第二步：非 Web 部分按围栏切分**：`ANY_FENCE` 按 ``` / ~~~ 分段：
- - 交互卡段：``` 内以 `<` 开头以 `>` 结尾或含 `<body>`（`INTERACTIVE_FENCE` 与 `embedInteractiveBlocks` 同一正则）→ 独立 WebViewHtml，内部仍是 details 原代码 + iframe srcdoc，脚本照常执行
+ - HTML 围栏段：``` 内以 `<` 开头以 `>` 结尾或含 `<body>`（`INTERACTIVE_FENCE` 与 `embedInteractiveBlocks` 同一正则）→ 独立 WebViewHtml，内部 details 原代码 + iframe srcdoc；渲染不依赖扩展开关，开关只决定 iframe 是否 sandbox（脚本是否可执行）
  - Mermaid 段：```mermaid → 独立 WebViewHtml（mermaid.min.js 本地 asset）
  - 普通代码块段：原样交给原生 Markdown
- - 围栏外文本段：先 `preprocessOfficialHtml`（本轮新增 a/img 原生转换（支持无引号属性、保留 img alt）、无属性 div/p/span 剥标签、`<br>` 硬换行、`<hr>` 空行分隔），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等）或 `looksLikeHtml` 且 `htmlEnabled` → 整段 WebView 兜底；否则原生 Markdown
+ - 围栏外文本段：先 `preprocessOfficialHtml`（本轮新增 a/img 原生转换（支持无引号属性、保留 img alt）、无属性 div/p/span 剥标签、`<br>` 硬换行、`<hr>` 空行分隔），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等；标签名统一 `(?=[\s/>])` 边界、不再用 ASCII \b，避免 `a<p<b`、中文 `x <p值` 误判）或 `looksLikeHtml`（必须是带属性且以 `>` 结尾的良构标签，纯文字比较式 `a<b，而 c=1` 不再误判）且 `htmlEnabled` → 整段 WebView 兜底；否则原生 Markdown
 - 纯 Markdown 消息（全段 Native）仍整条一次原生渲染，不拆散列表 / 引用等跨段 Markdown 结构。
 - 段间 `Arrangement.spacedBy(6.dp)`；外层 modifier（气泡 / 长按 / 滑回复）包在整条 Column 上。
 - 保留：`officialStyledHtml` / `embedInteractiveBlocks` / `embedPlainText`（iframe 转换与 CSS 样式仍按原机制），`sanitizeHtmlForWebView`（只拦 javascript:）。
@@ -907,7 +907,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - 高度经 `window.EmberInnBridge.onMeasure(h,p)` 直接回调 Kotlin（`addJavascriptInterface`，仅回传高度/未加载图片数，不暴露其它能力）；`onPageFinished` 轮询作为第二道兜底。
 - `onPageFinished` 改为 ≤15s 轮询兜底（纯字符串 `高度:未加载图片数`，避免 JSON 转义问题）；初始测高未返回时给 160dp 可见兜底，打破“高度 0 → 不布局 → 量不到高度”的死循环。
 - **CSS 像素换算（本轮修复）**：`scrollHeight` 是 WebView 的 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素除以 density，高密度屏上 HTML/卡片被压成细条甚至不可见；现改为 `heightPx.toFloat().dp`。
-- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）；外层高度上限仍是 75% 屏高，超长卡内滚动。
+- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）；外层按实测全高展开（不再 75% 封顶）。
 - token 机制保证复用后旧页面的上报不会写进新消息的高度状态。
 
 ### 12.7 滚动 / 键盘卡顿治理
@@ -1004,7 +1004,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - Web 元素切分边界：无闭标签的残缺元素延伸到消息末尾；同名嵌套按层计数；跨围栏的残缺 HTML（开标签在围栏外、闭标签在围栏后）会按片段分别处理（低频边缘，行为不崩溃）。
 - iframe 内部动态改高：已从父页对同源 srcdoc 文档挂 ResizeObserver/MutationObserver 持续同步，不再只靠 3s 内复测（未向卡片脚本注入代码）。
 - WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
-- **2026-08-11 渲染修复**：普通 `\n` 已按官方 `simpleLineBreaks:true` 打开 `eolAsNewLine`；HTML 开关现在真正关闭 WebView（围栏外一律原生）；WebView 链接补 `text-decoration:none`；WebView 高度允许回缩、上限严格 75%；用户消息改走与 AI 同一条 Markdown/HTML 渲染管线。
+- **2026-08-11 渲染修复**：普通 `\n` 已按官方 `simpleLineBreaks:true` 打开 `eolAsNewLine`；encode_tags 开关开启时围栏外一律原生且 < > 已转义；WebView 链接补 `text-decoration:none`；WebView 高度允许回缩、按实测全高展开（不再封顶）；用户消息改走与 AI 同一条 Markdown/HTML 渲染管线。
 - 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
 
 ### 8.9 用户决策延期：自定义 CSS + Moving UI（暂不做）

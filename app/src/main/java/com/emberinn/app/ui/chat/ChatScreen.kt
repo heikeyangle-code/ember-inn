@@ -116,7 +116,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.viewinterop.AndroidView
@@ -3472,16 +3471,16 @@ private fun OfficialMarkdownNode(
 
 /** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
 private val OFFICIAL_HTML_TAG = Regex(
-    "<font\\b|</?span|</?div|<style|<table|<img|<a\\b|</?blockquote|<ul\\b|<ol\\b|<li\\b|<p\\b|<pre\\b|<h[1-6]\\b|<center\\b|<figure\\b|<video\\b|<audio\\b|<button\\b" +
-        "|</?section|</?header|</?footer|</?main|</?nav|</?aside|</?article|</?form|<input\\b|<select\\b|<textarea\\b|<label\\b|<details\\b|<summary\\b|<canvas\\b|<svg\\b|<math\\b|<template\\b|<mark\\b|<progress\\b|<meter\\b|<output\\b|<fieldset\\b|<legend\\b|<dialog\\b|<menu\\b|<picture\\b|<source\\b|<track\\b|<map\\b|<area\\b|<iframe\\b|<hgroup\\b|<address\\b|<figcaption\\b|<data\\b|<time\\b|<var\\b|<samp\\b|<kbd\\b|<abbr\\b|<bdi\\b|<bdo\\b|<ruby\\b|<rt\\b|<rp\\b" +
+    "<font(?=[\s/>])|</?span(?=[\s/>])|</?div(?=[\s/>])|<style(?=[\s/>])|<table(?=[\s/>])|<img(?=[\s/>])|<a(?=[\s/>])|</?blockquote(?=[\s/>])|<ul(?=[\s/>])|<ol(?=[\s/>])|<li(?=[\s/>])|<p(?=[\s/>])|<pre(?=[\s/>])|<h[1-6](?=[\s/>])|<center(?=[\s/>])|<figure(?=[\s/>])|<video(?=[\s/>])|<audio(?=[\s/>])|<button(?=[\s/>])" +
+        "|</?section(?=[\s/>])|</?header(?=[\s/>])|</?footer(?=[\s/>])|</?main(?=[\s/>])|</?nav(?=[\s/>])|</?aside(?=[\s/>])|</?article(?=[\s/>])|</?form(?=[\s/>])|<input(?=[\s/>])|<select(?=[\s/>])|<textarea(?=[\s/>])|<label(?=[\s/>])|<details(?=[\s/>])|<summary(?=[\s/>])|<canvas(?=[\s/>])|<svg(?=[\s/>])|<math(?=[\s/>])|<template(?=[\s/>])|<mark(?=[\s/>])|<progress(?=[\s/>])|<meter(?=[\s/>])|<output(?=[\s/>])|<fieldset(?=[\s/>])|<legend(?=[\s/>])|<dialog(?=[\s/>])|<menu(?=[\s/>])|<picture(?=[\s/>])|<source(?=[\s/>])|<track(?=[\s/>])|<map(?=[\s/>])|<area(?=[\s/>])|<iframe(?=[\s/>])|<hgroup(?=[\s/>])|<address(?=[\s/>])|<figcaption(?=[\s/>])|<data(?=[\s/>])|<time(?=[\s/>])|<var(?=[\s/>])|<samp(?=[\s/>])|<kbd(?=[\s/>])|<abbr(?=[\s/>])|<bdi(?=[\s/>])|<bdo(?=[\s/>])|<ruby(?=[\s/>])|<rt(?=[\s/>])|<rp(?=[\s/>])" +
         // DOMPurify 默认白名单里文本级标签已由 preprocessOfficialHtml 原生转换（sub/sup/ins/small/big/
         // mark/kbd/samp/tt/code/var/dfn/cite/abbr/acronym）；这里保留它们作为转换失败时的 Web 兜底。
-        "|<sub\\b|<sup\\b|<ins\\b|<small\\b|<big\\b|<tt\\b|<acronym\\b|<dfn\\b|<cite\\b|<code\\b" +
+        "|<sub(?=[\s/>])|<sup(?=[\s/>])|<ins(?=[\s/>])|<small(?=[\s/>])|<big(?=[\s/>])|<tt(?=[\s/>])|<acronym(?=[\s/>])|<dfn(?=[\s/>])|<cite(?=[\s/>])|<code(?=[\s/>])" +
         // 布局/交互/媒体/完整网页标签：官方 DOMPurify 白名单放行，浏览器原生渲染，WebView 兜底。
-        "|<script\\b|</?html|<head\\b|<body\\b|<title\\b|<meta\\b|<link\\b" +
-        "|<caption\\b|<col\\b|<colgroup\\b|<tbody\\b|<thead\\b|<tfoot\\b|<tr\\b|<td\\b|<th\\b" +
-        "|<dl\\b|<dt\\b|<dd\\b|<datalist\\b|<optgroup\\b|<option\\b" +
-        "|<marquee\\b|<blink\\b|<nobr\\b|<xmp\\b|<shadow\\b|<menuitem\\b|<slot\\b",
+        "|<script(?=[\s/>])|</?html(?=[\s/>])|<head(?=[\s/>])|<body(?=[\s/>])|<title(?=[\s/>])|<meta(?=[\s/>])|<link(?=[\s/>])" +
+        "|<caption(?=[\s/>])|<col(?=[\s/>])|<colgroup(?=[\s/>])|<tbody(?=[\s/>])|<thead(?=[\s/>])|<tfoot(?=[\s/>])|<tr(?=[\s/>])|<td(?=[\s/>])|<th(?=[\s/>])" +
+        "|<dl(?=[\s/>])|<dt(?=[\s/>])|<dd(?=[\s/>])|<datalist(?=[\s/>])|<optgroup(?=[\s/>])|<option(?=[\s/>])" +
+        "|<marquee(?=[\s/>])|<blink(?=[\s/>])|<nobr(?=[\s/>])|<xmp(?=[\s/>])|<shadow(?=[\s/>])|<menuitem(?=[\s/>])|<slot(?=[\s/>])",
     RegexOption.IGNORE_CASE,
 )
 
@@ -3494,8 +3493,9 @@ private val ANY_FENCE = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
 private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
 private val MERMAID_FENCE = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
 
-/** 交互卡片判定：与 embedInteractiveBlocks 同一套正则，避免分段器与 iframe 转换器不一致。 */
-private fun isInteractiveFence(raw: String): Boolean {
+/** HTML 围栏判定：与 embedInteractiveBlocks 同一套正则，避免分段器与 iframe 转换器不一致。
+ *  渲染与交互分离：HTML 围栏始终进 iframe 卡片渲染，脚本是否可交互由扩展开关决定（embedInteractiveBlocks）。 */
+private fun isHtmlFence(raw: String): Boolean {
     if (!raw.startsWith("```")) return false
     val m = INTERACTIVE_FENCE.find(raw) ?: return false
     val inner = m.groupValues[1].trim()
@@ -3537,9 +3537,9 @@ private fun appendTextSegment(
  *  行内 Web 标签（button/input/span[属性]/font face-size/ruby/bdi/bdo 等）无法与原生文本混排，
  *  仍按 12.6 登记整段走 Web；a/img 已原生转换，不进此清单。 */
 private val WEB_BLOCK_TAG = Regex(
-    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe)\\b" +
-        "|<(div|p)\\b(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
-        "|<font\\b(?=[^>]*\\s(?:face|size)=)",
+    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe)(?=[\\s/>])" +
+        "|<(div|p)(?=[\\s/>])(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
+        "|<font(?=[\\s/>])(?=[^>]*\\s(?:face|size)=)",
     RegexOption.IGNORE_CASE,
 )
 
@@ -3597,7 +3597,6 @@ private fun buildMessageSegments(
     content: String,
     isSystem: Boolean,
     htmlEnabled: Boolean,
-    interactiveCardsOn: Boolean,
 ): List<ChatSegment> {
     // 完整网页整段走 WebView：交给下面的切分器会把 <head>/<style>/<body> 拆成多段，
     // 每段再套独立页面 → 网页永远渲染不出来（用户报告的多轮“渲染空白”根因之一）。
@@ -3611,7 +3610,7 @@ private fun buildMessageSegments(
             appendTextSegment(out, text.substring(last, m.range.first), isSystem, htmlEnabled)
             val raw = m.value
             when {
-                interactiveCardsOn && isInteractiveFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
+                isHtmlFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
                 MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
                 else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
             }
@@ -3851,6 +3850,7 @@ private fun SegmentedMarkdown(
     isSystem: Boolean = false,
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
+    interactiveCardsOn: Boolean = true,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         segments.forEach { seg ->
@@ -3866,18 +3866,21 @@ private fun SegmentedMarkdown(
                     modifier = Modifier.fillMaxWidth(),
                     charAvatarPath = charAvatarPath,
                     userAvatarPath = userAvatarPath,
+                    interactiveCardsOn = interactiveCardsOn,
                 )
                 SegmentKind.Interactive -> WebViewHtml(
                     html = sanitizeHtmlForWebView(seg.raw),
                     modifier = Modifier.fillMaxWidth(),
                     charAvatarPath = charAvatarPath,
                     userAvatarPath = userAvatarPath,
+                    interactiveCardsOn = interactiveCardsOn,
                 )
                 SegmentKind.Mermaid -> WebViewHtml(
                     html = mermaidHtmlOf(seg.raw) ?: sanitizeHtmlForWebView(seg.raw),
                     modifier = Modifier.fillMaxWidth(),
                     charAvatarPath = charAvatarPath,
                     userAvatarPath = userAvatarPath,
+                    interactiveCardsOn = interactiveCardsOn,
                 )
             }
         }
@@ -3897,8 +3900,8 @@ private fun ChatMarkdown(
     val context = LocalContext.current
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
     val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
-    val segments = remember(content, isSystem, htmlEnabled, interactiveCardsOn) {
-        buildMessageSegments(content, isSystem, htmlEnabled, interactiveCardsOn)
+    val segments = remember(content, isSystem, htmlEnabled) {
+        buildMessageSegments(content, isSystem, htmlEnabled)
     }
     // 全原生段（纯 Markdown/普通代码块/官方行内字段）仍按整条一次渲染，保持原有排版；
     // 只有出现 WebView 段（富 HTML/交互卡/Mermaid）才分段，避免拆散列表/引用等跨段 Markdown 结构
@@ -3920,6 +3923,7 @@ private fun ChatMarkdown(
             isSystem = isSystem,
             charAvatarPath = charAvatarPath,
             userAvatarPath = userAvatarPath,
+            interactiveCardsOn = interactiveCardsOn,
         )
     }
 }
@@ -3936,13 +3940,17 @@ private fun mermaidHtmlOf(content: String): String? {
 <script>mermaid.initialize({startOnLoad:true,theme:'base'});</script>"""
 }
 
-/** 粗略 HTML 判定：围栏外存在带属性或自闭合的标签才算富 HTML（忽略 markdown 代码围栏内的）。
+/** 良构的“带属性标签”判定：<标签名 属性=值 … > 必须以 > 结尾才算富 HTML。
  *  裸标签（<b>/<i>/<q>/<u>/<s>/<font color> 等）已被 preprocessOfficialHtml 原生转换，
- *  官方富标签由 OFFICIAL_HTML_TAG 接管；这里只兜底自定义/带属性标签，避免 <tag> 出现在
- *  普通文字里（如 JSON 示例、a<b> 比较）把整条消息误送进 WebView 变成空白。 */
+ *  官方富标签由 OFFICIAL_HTML_TAG 接管；这里只兜底自定义/带属性标签。
+ *  旧正则 <[a-zA-Z][^>]*(?:=|/>) 不要求闭合 >，且 [^>] 可跨行，会把 a<b、而 c=1 / x<10,y=20
+ *  这类纯文字比较式误判成 HTML（“纯文字也走 Web 渲染”根因）。 */
+private val LOOKS_LIKE_HTML_TAG = Regex(
+    "<[a-zA-Z][a-zA-Z0-9-]*(?:\\s+[^<>]*?\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s\"'=<>`]+))+\\s*/?>",
+)
 private fun looksLikeHtml(content: String): Boolean {
     val outsideFence = content.replace(ANY_FENCE, "")
-    return Regex("<[a-zA-Z][^>]*(?:=|/>)").containsMatchIn(outsideFence)
+    return LOOKS_LIKE_HTML_TAG.containsMatchIn(outsideFence)
 }
 
 /** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
@@ -4119,9 +4127,9 @@ private fun WebViewHtml(
     modifier: Modifier = Modifier,
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
+    interactiveCardsOn: Boolean = true,
 ) {
     val context = LocalContext.current
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp
     var heightPx by remember { mutableIntStateOf(0) }
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
@@ -4129,9 +4137,9 @@ private fun WebViewHtml(
     val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: (if (stDark) stTheme.stEm else null)
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: (if (stDark) stTheme.stUnderline else null)
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: (if (stDark) stTheme.stQuote else null)
-    val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath) {
+    val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn) {
         injectMeasureScript(
-            officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath),
+            officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn),
         )
     }
     val webView = remember { WebViewPool.acquire(context) }
@@ -4171,16 +4179,10 @@ private fun WebViewHtml(
         onRelease = { view -> WebViewPool.release(view) },
         modifier = modifier
             .fillMaxWidth()
-            .height(
-                run {
-                    val maxHeight = (screenHeightDp * 0.75f).dp
-                    // WebView 的 scrollHeight 是 CSS 像素，1 CSS px == 1 dp，不能按 Android 物理像素换算；
-                    // 旧代码 heightPx.toDp() 在高密度屏上会把高度除以 density，HTML 卡被压成几乎看不见的细条。
-                    val measured = heightPx.toFloat().dp.coerceAtMost(maxHeight)
-                    // 测高还没回来时给一个可见兜底高度，否则 WebView 高度恒 0、内容永远渲染不出来
-                    if (heightPx > 0) measured else minOf(160.dp, maxHeight)
-                }
-            )
+            // 官方 HTML 消息在页面流里全高渲染（无内部滚动框）。WebView 不是普通 Compose 子组件，
+            // 高度只能靠 JS 读 scrollHeight 回报；测高未回来时先给 160dp 可见兜底，测到后按实测全高展开。
+            // 不再封顶 75% 屏高：旧封顶把长网页裁进内部滚动小盒子（“被框住/显示不全”根因）。
+            .height(if (heightPx > 0) heightPx.toFloat().dp else 160.dp)
             .clip(RoundedCornerShape(12.dp)),
     )
 }
@@ -4190,7 +4192,7 @@ private fun WebViewHtml(
  *  卡内 <script>/onclick/框架 JS 在 iframe 里正常运行（按钮/状态栏/表单可交互）；onload 自动按内容测高。
  *  非交互代码块保留为 <pre><code>；围栏外的纯文本转义后按 pre-wrap 显示（保留换行）。
  *  安全提示：交互代码块等同于执行任意脚本，与第 178 轮 JS 全开同等级，已在 HANDOFF 登记。 */
-private fun embedInteractiveBlocks(raw: String): String {
+private fun embedInteractiveBlocks(raw: String, interactive: Boolean): String {
     val fence = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
     val out = StringBuilder()
     var last = 0
@@ -4206,8 +4208,12 @@ private fun embedInteractiveBlocks(raw: String): String {
             out.append("<details style=\"margin-bottom:4px\"><summary>原代码</summary><pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
                 .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
                 .append("</code></pre></details>")
+            // 渲染与交互分离：HTML 围栏始终渲染成 iframe 卡片；扩展开关只决定脚本/表单是否可交互。
+            // 关闭时 sandbox="allow-same-origin"（不给 allow-scripts/allow-forms）：静态渲染、
+            // 脚本被沙箱禁止，同时保留同源，父页 onload 仍可读 scrollHeight 自动测高。
+            val sandbox = if (interactive) "" else " sandbox=\"allow-same-origin\""
             out.append(
-                "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\" " +
+                "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\"$sandbox " +
                     "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500);setTimeout(h,3000);var d=f.contentWindow.document;if(d&&d.documentElement){if(window.ResizeObserver){new ResizeObserver(h).observe(d.documentElement);}if(window.MutationObserver){new MutationObserver(h).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});}}\"></iframe>",
             )
         } else {
@@ -4239,6 +4245,7 @@ private fun officialStyledHtml(
     quote: androidx.compose.ui.graphics.Color?,
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
+    interactiveCardsOn: Boolean = true,
 ): String {
     val fontSize = when (AppearancePrefs.textSize(context)) {
         "small" -> "14px"
@@ -4273,7 +4280,7 @@ private fun officialStyledHtml(
     } else {
         ""
     }
-    val bodyHtml = embedInteractiveBlocks(raw)
+    val bodyHtml = embedInteractiveBlocks(raw, interactiveCardsOn)
         .replace("{{charAvatarPath}}", charAvatarPath ?: "")
         .replace("{{userAvatarPath}}", userAvatarPath ?: "")
     fun avatarUrl(path: String?): String? = path?.let {

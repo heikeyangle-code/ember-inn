@@ -493,34 +493,7 @@ fun AppearanceScreen(
                         
                     }
                 }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val renderContext = LocalContext.current
-                var htmlEnabled by remember { mutableStateOf(RenderPrefs.htmlEnabled(renderContext)) }
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { htmlEnabled = !htmlEnabled; RenderPrefs.setHtmlEnabled(renderContext, htmlEnabled); onAppearanceChanged() }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("HTML 消息（WebView 渲染）", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                "消息含 HTML 标签时用 WebView 展示；Mermaid 代码块始终走 WebView 兜底",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        EmberSwitch(checked = htmlEnabled, onCheckedChange = { htmlEnabled = it; RenderPrefs.setHtmlEnabled(renderContext, it); onAppearanceChanged() })
-                    }
-                }
-            }
+
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val typeContext = LocalContext.current
                 var textSize by remember { mutableStateOf(AppearancePrefs.textSize(typeContext)) }
@@ -624,7 +597,7 @@ fun AppearanceScreen(
                         ) {
                         Column(modifier = Modifier.weight(1f)) {
                         Text("转义标签（encode_tags）", style = MaterialTheme.typography.bodyLarge)
-                        Text("官方 power_user.encode_tags：显示时把 < > 转义为 &lt; &gt;（默认关）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("官方 power_user.encode_tags（默认关）：开=把 < > 转义为纯文本、HTML 不再渲染；关=允许部分 HTML 标签按网页渲染", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it); onAppearanceChanged() })
                         }
