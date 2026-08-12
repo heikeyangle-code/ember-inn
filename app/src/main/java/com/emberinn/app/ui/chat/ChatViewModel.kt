@@ -844,6 +844,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _defaultPersona.value = personaStore.default()
     }
 
+    fun duplicatePersona(id: String) {
+        val source = personaStore.list().firstOrNull { it.id == id } ?: return
+        val copy = source.copy(
+            id = "p-" + System.nanoTime().toString(36),
+            name = source.name + " 副本",
+            connections = emptyList(),
+        )
+        personaStore.save(personaStore.list() + copy, activeId = copy.id)
+        _personas.value = personaStore.list()
+        _activePersona.value = personaStore.active()
+        _defaultPersona.value = personaStore.default()
+    }
+
     val characterId: String? = chatStore.get(sessionId)?.characterId
     val character: CharacterRecord?
         get() = characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
@@ -2118,7 +2131,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 ?.let { com.emberinn.app.data.CharacterCardEdit.readWorldLink(it) }
             val chatMetaWorld = chatStore.metadata(sessionId)["world_info"]?.jsonPrimitive?.contentOrNull
             val globalSelect = WorldInfoPrefs.globalSelect(getApplication())
-            val externalWorlds = (listOfNotNull(linkedWorld, chatMetaWorld) + globalSelect)
+            // 官方 getPersonaLore：人设关联世界书（persona_description_lorebook）——
+            // 已激活在聊天/全局世界书时跳过，否则并入扫描
+            val personaLoreWorld = effectivePersona()?.lorebook
+                ?.takeIf { it.isNotBlank() && it !in listOfNotNull(linkedWorld, chatMetaWorld) && it !in globalSelect }
+            val externalWorlds = (listOfNotNull(linkedWorld, chatMetaWorld) + globalSelect + listOfNotNull(personaLoreWorld))
                 .distinct()
                 .associateWith { worldStore.entries(it) }
             val globalRegexScripts = GlobalRegexPrefs.read(getApplication())
@@ -2265,7 +2282,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 externalWorlds = externalWorlds,
                 linkedWorld = linkedWorld,
                 chatMetadataWorld = chatMetaWorld,
-                globalWorlds = globalSelect,
+                globalWorlds = globalSelect + listOfNotNull(personaLoreWorld),
                 worldInsertStrategy = WorldInfoPrefs.insertionStrategy(getApplication()),
                 wiIncludeNames = WorldInfoPrefs.includeNames(getApplication()),
                 onPrepared = { info ->

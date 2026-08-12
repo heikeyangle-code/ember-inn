@@ -75,6 +75,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -281,6 +283,8 @@ fun ChatScreen(
     var personaDraftLorebook by remember { mutableStateOf("") }
     var personaDraftConnectChar by remember { mutableStateOf(false) }
     var personaDraftConnectGroup by remember { mutableStateOf(false) }
+    var personaDraftAvatar by remember { mutableStateOf("") }
+    var personaShowLorePicker by remember { mutableStateOf(false) }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkDraftName by remember { mutableStateOf("") }
@@ -299,6 +303,19 @@ fun ChatScreen(
     var charaNotePrompt by remember { mutableStateOf("") }
     var charaNoteUse by remember { mutableStateOf(false) }
     var charaNotePosition by remember { mutableStateOf(0) }
+    val openAuthorsNote = {
+        val draft = vm.authorsNoteDraft()
+        anPrompt = draft.prompt
+        anPosition = draft.position
+        anDepth = draft.depth
+        anRole = draft.role
+        anInterval = draft.interval
+        val charaDraft = vm.charaNoteDraft()
+        charaNotePrompt = charaDraft?.prompt.orEmpty()
+        charaNoteUse = charaDraft?.useChara == true
+        charaNotePosition = charaDraft?.position ?: 0
+        showAuthorsNote = true
+    }
     var showGroupSettings by remember { mutableStateOf(false) }
     var pendingDisplay by remember { mutableStateOf<String?>(null) }
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
@@ -351,6 +368,22 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let { vm.addDataBankFile(it) }
+    }
+
+    val personaAvatarPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        val target = editingPersona
+        if (uri != null && target != null) {
+            val dir = File(context.filesDir, "persona-avatars").apply { mkdirs() }
+            val dest = File(dir, target.id + ".png")
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                }
+                personaDraftAvatar = dest.absolutePath
+            }
+        }
     }
 
     // 附件来源选择：本地文件 / URL（官方 Message.addImage 等支持 URL 来源）
@@ -793,6 +826,8 @@ fun ChatScreen(
             accent = accent,
             onBack = onBack,
             onMenu = { showMore = true },
+            onPersona = { showPersonaPicker = true },
+            onAuthorsNote = { openAuthorsNote() },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
@@ -1396,6 +1431,15 @@ fun ChatScreen(
                             showPersonaPicker = false
                         }.padding(horizontal = 20.dp, vertical = 8.dp),
                     ) {
+                        if (p.avatarPath.isNotBlank() && File(p.avatarPath).exists()) {
+                            AsyncImage(
+                                model = File(p.avatarPath),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 p.name.ifBlank { "（未命名）" },
@@ -1429,6 +1473,17 @@ fun ChatScreen(
                                 tint = if (defaultPersona?.id == p.id) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
                             )
                         }
+                        IconButton(
+                            onClick = { vm.duplicatePersona(p.id) },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                PhosphorIcons.Copy,
+                                contentDescription = "复制人设",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.outline,
+                            )
+                        }
                         IconButton(onClick = {
                             editingPersona = p
                             personaDraftName = p.name
@@ -1438,6 +1493,7 @@ fun ChatScreen(
                             personaDraftRole = p.role
                             personaDraftTitle = p.title
                             personaDraftLorebook = p.lorebook
+                            personaDraftAvatar = p.avatarPath
                             personaDraftConnectChar = p.connections.any { it.type == "character" && it.id == vm.characterId }
                             personaDraftConnectGroup = p.connections.any { it.type == "group" && it.id == vm.group?.id }
                         }, modifier = Modifier.size(32.dp)) {
@@ -1459,6 +1515,7 @@ fun ChatScreen(
                         personaDraftRole = 0
                         personaDraftTitle = ""
                         personaDraftLorebook = ""
+                        personaDraftAvatar = ""
                         personaDraftConnectChar = false
                         personaDraftConnectGroup = false
                     },
@@ -1537,6 +1594,27 @@ fun ChatScreen(
                         FilterChip(selected = personaDraftRole == 1, onClick = { personaDraftRole = 1 }, label = { Text("用户") })
                         FilterChip(selected = personaDraftRole == 2, onClick = { personaDraftRole = 2 }, label = { Text("助手") })
                     }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    ) {
+                        if (personaDraftAvatar.isNotBlank()) {
+                            AsyncImage(
+                                model = File(personaDraftAvatar),
+                                contentDescription = "人设头像",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        OutlinedButton(onClick = { personaAvatarPicker.launch(arrayOf("image/*")) }) {
+                            Text("选择头像")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        if (personaDraftAvatar.isNotBlank()) {
+                            TextButton(onClick = { personaDraftAvatar = "" }) { Text("清除") }
+                        }
+                    }
                     EmberTextField(
                         value = personaDraftTitle,
                         onValueChange = { personaDraftTitle = it },
@@ -1544,13 +1622,38 @@ fun ChatScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
-                        value = personaDraftLorebook,
-                        onValueChange = { personaDraftLorebook = it },
-                        label = { Text("世界书（官方 lorebook，参与扫描）") },
-                        singleLine = true,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    )
+                    ) {
+                        Text("人设世界书（官方 lorebook，参与扫描）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Box {
+                            TextButton(onClick = { personaShowLorePicker = true }) {
+                                Text(if (personaDraftLorebook.isBlank()) "未选择" else personaDraftLorebook)
+                            }
+                            DropdownMenu(
+                                expanded = personaShowLorePicker,
+                                onDismissRequest = { personaShowLorePicker = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("无") },
+                                    onClick = {
+                                        personaDraftLorebook = ""
+                                        personaShowLorePicker = false
+                                    },
+                                )
+                                vm.externalWorlds().forEach { w ->
+                                    DropdownMenuItem(
+                                        text = { Text(w.displayName) },
+                                        onClick = {
+                                            personaDraftLorebook = w.name
+                                            personaShowLorePicker = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                     if (vm.character != null || vm.group != null) {
                         Text(
                             "连接（绑定角色/群聊时自动使用）",
@@ -1596,6 +1699,7 @@ fun ChatScreen(
                             role = personaDraftRole,
                             title = personaDraftTitle.trim(),
                             lorebook = personaDraftLorebook.trim(),
+                            avatarPath = personaDraftAvatar,
                             connections = connections,
                         ),
                     )
@@ -1973,6 +2077,8 @@ private fun ChatTopBar(
     accent: Color,
     onBack: () -> Unit,
     onMenu: () -> Unit,
+    onPersona: () -> Unit = {},
+    onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -2003,6 +2109,12 @@ private fun ChatTopBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            IconButton(onClick = onAuthorsNote, modifier = Modifier.size(44.dp)) {
+                Icon(PhosphorIcons.FileText, contentDescription = "作者注释")
+            }
+            IconButton(onClick = onPersona, modifier = Modifier.size(44.dp)) {
+                Icon(PhosphorIcons.Person, contentDescription = "人设")
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
                 Icon(PhosphorIcons.MoreVert, contentDescription = "更多")

@@ -22,6 +22,8 @@ data class Persona(
     val name: String = "",
     val description: String = "",
     val title: String = "",
+    /** 官方 persona avatar：本地图片路径（filesDir/persona-avatars/{id}.png）。 */
+    val avatarPath: String = "",
     val lorebook: String = "",
     /** 官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN/4=AT_DEPTH/9=NONE。 */
     val position: Int = 0,
