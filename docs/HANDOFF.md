@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 325 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 326 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -79,7 +79,7 @@ gh run list --limit 3
 gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **325 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **326 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（82 组差分 fixture，共 1448 例对拍，全部通过；2026-08-13 全量复算）**：
+**已覆盖（83 组差分 fixture，共 1736 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1448 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1736 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -136,6 +136,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
 | 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
+| 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 288 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
@@ -227,7 +228,9 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol）官方差分 27 例；参数解析核心 43 例差分。
-已接：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器；/inject 支持 chat_metadata.script_injects 持久化、before/after/chat/none/scan/ephemeral；2026-08-12 起参数归一按官方 injectCallback（数字枚举持久化，旧字符串兼容读取），scan 已真正传入元数据。
+斜杠数学/布尔命令已 1:1（SlashMathEngine + slash-math-official.mjs 288 例差分）：add/mul/min/max/sub/div/mod/pow/round/abs/sqrt/sin/cos/log（官方 parseNumericSeries 变量解析 + performOperation：空值/空数组/NaN→"0"、div/mod/pow 只取前两个操作数、单目只取第一个、JS Number 字符串化），evalBoolean（大小写不敏感、数字/字符串分支、truthy 检查、无右操作数/非法 rule 抛错、a/first/x、b/second/y 别名），len（JSON 数组/对象/字符串/数字/布尔），sort（列表按值、字典 keysort 键/值、混合类型按 typeof）；/if 已切到该实现。
+已接：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器。
+消息类命令本轮对齐官方：/sendas（name 缺省当前角色、SLASH_COMMAND 正则 characterOverride、{{bias}} 只偏置→系统消息 is_system、{{user}}/{{char}} 宏替换、at= 插入/负数倒数/-0 追加、avatar/compact 落 extra/force_avatar/isSmallSys、swipes 初始化）；/send（name 缺省 {{user}}、at/compact/bias）；/impersonate 的 prompt 参数改走 quietPrompt（官方 quiet_prompt+quietToLoud），不再覆盖冒充系统指令。登记：sendas/send 的 return= 返回模式与按角色头像渲染未接（数据已落 force_avatar）；/tokens 用 cl100k 近似。/inject 支持 chat_metadata.script_injects 持久化、before/after/chat/none/scan/ephemeral；2026-08-12 起参数归一按官方 injectCallback（数字枚举持久化，旧字符串兼容读取），scan 已真正传入元数据。
 剩余偏差：惰性闭包仍即时求值；/genraw 的 instruct/as/stop/trim 参数未实现；/inject filter 闭包（元数据复活 + 异步判定）未实现；/trigger await 不等待。官方 1.18 无 /while。
 
 ### 3.5 提示词组装 ✅（核心）
@@ -369,7 +372,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 3.8.18 setOpenAIMessages 构造循环 ✅
 - `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
 - ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 325 测全绿。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 326 测全绿。
 
 ### 3.8.19 边界补齐
 - Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
@@ -432,7 +435,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 325 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 326 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 ：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -552,7 +555,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 82 组 / 1431 例）：
+**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 83 组 / 1736 例）：
 - 预设全链：引擎 PresetApplyEngine 官方差分 82 例（类型识别/五类应用/迁移/保存过滤/名字匹配）+ 预设页选择即应用/保存当前为预设/删除 + 单文件导入 + 多区段 master 导入导出 + /preset 命令 + reasoning 进总装
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验

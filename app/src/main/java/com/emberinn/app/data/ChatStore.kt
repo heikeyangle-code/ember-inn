@@ -501,20 +501,36 @@ class ChatStore(private val context: Context) {
     }
 
     /** 手动角色消息（/sendas：is_user=false；/send：is_user=true）；带 swipes 初始化，对齐官方 sendMessageAs。 */
-    fun appendManualMessage(sessionId: String, isUser: Boolean, content: String, name: String, at: Int? = null) {
+    fun appendManualMessage(
+        sessionId: String,
+        isUser: Boolean,
+        content: String,
+        name: String,
+        at: Int? = null,
+        isSystem: Boolean = false,
+        bias: String? = null,
+        compact: Boolean = false,
+        avatar: String? = null,
+    ) {
         val now = java.time.Instant.now().toString()
         val message = buildJsonObject {
             put("name", JsonPrimitive(name))
             put("is_user", JsonPrimitive(isUser))
-            put("is_system", JsonPrimitive(false))
+            put("is_system", JsonPrimitive(isSystem))
             put("send_date", JsonPrimitive(now))
             put("mes", JsonPrimitive(content))
+            avatar?.takeIf { it.isNotBlank() }?.let {
+                put("force_avatar", JsonPrimitive(it))
+                put("original_avatar", JsonPrimitive(it))
+            }
             put(
                 "extra",
                 buildJsonObject {
                     put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
+                    bias?.takeIf { it.isNotBlank() }?.let { put("bias", JsonPrimitive(it)) }
+                    if (compact) put("isSmallSys", JsonPrimitive(true))
                 },
             )
             put("swipe_id", JsonPrimitive(0))
@@ -533,6 +549,8 @@ class ChatStore(private val context: Context) {
                                     put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                                     put("api", JsonPrimitive("manual"))
                                     put("model", JsonPrimitive("slash command"))
+                                    bias?.takeIf { it.isNotBlank() }?.let { put("bias", JsonPrimitive(it)) }
+                                    if (compact) put("isSmallSys", JsonPrimitive(true))
                                 },
                             )
                         },

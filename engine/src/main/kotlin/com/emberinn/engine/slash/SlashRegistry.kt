@@ -243,19 +243,22 @@ object SlashRegistry : SlashCommandResolver {
         register(
             SlashCommandDef(
                 "if",
-                description = "条件比较：left/right/rule + 无名 then + else= 命名参数（闭包已由 SlashEngine 预解析）",
+                description = "条件比较（官方 variables.js if）：left/a/first/x、right/b/second/y、rule、then、else",
                 callback = { inv, _ ->
-                    val left = inv.namedArgs["left"] ?: ""
-                    val right = inv.namedArgs["right"] ?: ""
-                    val rule = inv.namedArgs["rule"] ?: "eq"
+                    // 官方 parseConditionArgs 别名；NUMBER 类型操作数由解析器转数字，App 用数值串等价转换
+                    val leftRaw = inv.namedArgs["left"] ?: inv.namedArgs["a"] ?: inv.namedArgs["first"] ?: inv.namedArgs["x"] ?: ""
+                    val rightRaw = inv.namedArgs["right"] ?: inv.namedArgs["b"] ?: inv.namedArgs["second"] ?: inv.namedArgs["y"]
+                    val rule = inv.namedArgs["rule"]
                     val then = inv.unnamedArgs.joinToString(" ")
                     val els = inv.namedArgs["else"] ?: ""
-                    if (evalBoolean(rule, left, right)) then else els
+                    val a = coerceOperand(leftRaw)
+                    val b = rightRaw?.let { coerceOperand(it) }
+                    if (SlashMathEngine.evalBoolean(rule, a, b)) then else els
                 },
             ),
         )
 
-        // ---- 官方常用纯函数命令（slash-commands.js / variables.js 语义）----
+        // ---- 官方常用纯函数命令（slash-commands.js / variables.js 语义；数学走 SlashMathEngine 差分）----
 
         register(
             SlashCommandDef(
@@ -294,6 +297,23 @@ object SlashRegistry : SlashCommandResolver {
         )
         register(
             SlashCommandDef(
+                "len",
+                aliases = listOf("length"),
+                description = "长度（官方 len：字符串字符数 / 列表字典元素数 / 数字位数）",
+                callback = { inv, _ -> SlashMathEngine.lenValue(inv.unnamedArgs.joinToString(" ")) },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "sort",
+                description = "列表/字典排序（官方 sort：keysort 默认按 key）",
+                callback = { inv, _ ->
+                    SlashMathEngine.sortValue(inv.unnamedArgs.joinToString(" "), inv.namedArgs["keysort"])
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
                 "trimstart",
                 description = "裁剪到第一句完整句子的开头",
                 callback = { inv, _ -> VectorTextUtils.trimToStartSentence(inv.unnamedArgs.joinToString(" ")) },
@@ -316,110 +336,147 @@ object SlashRegistry : SlashCommandResolver {
         register(
             SlashCommandDef(
                 "add",
-                description = "多个值相加",
+                description = "多个值相加（官方 addValuesCallback）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> a + b } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::add, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "sub",
-                description = "第一个值减其余值",
+                description = "第一个值减其余值（官方 subValuesCallback）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> a - b } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::sub, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "mul",
-                description = "多个值相乘",
+                description = "多个值相乘（官方 mulValuesCallback）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> a * b } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::mul, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "div",
-                description = "第一个值除以其余值",
+                description = "第一个值除第二个（官方 divValuesCallback，只取前两个）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> if (b == 0.0) 0.0 else a / b } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::div, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "mod",
-                description = "第一个值取模其余值",
+                description = "第一个值对第二个取模（官方 modValuesCallback，只取前两个）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> if (b == 0.0) 0.0 else a % b } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::mod, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "pow",
-                description = "第一个值的其余值次方",
+                description = "第一个值的第二个值次方（官方 powValuesCallback，只取前两个）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> a.pow(b) } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::pow, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "max",
-                description = "取最大值",
+                description = "取最大值（官方 maxValuesCallback）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> max(a, b) } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::maxOfSeries, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "min",
-                description = "取最小值",
+                description = "取最小值（官方 minValuesCallback）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, b -> min(a, b) } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::minOfSeries, false, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "abs",
-                description = "取绝对值",
+                description = "取绝对值（官方 absValuesCallback，只取第一个值）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, _ -> abs(a) } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::absOp, true, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "sqrt",
-                description = "取平方根",
+                description = "取平方根（官方 sqrtValuesCallback，只取第一个值）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, _ -> sqrt(a) } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::sqrtOp, true, state.variables)
+                },
             ),
         )
         register(
             SlashCommandDef(
                 "round",
-                description = "四舍五入",
+                description = "四舍五入（官方 roundValuesCallback，只取第一个值）",
                 splitUnnamedArgument = true,
-                callback = { inv, _ -> numericFold(inv.unnamedArgs) { a, _ -> a.roundToInt().toDouble() } },
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::roundOp, true, state.variables)
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "sin",
+                description = "正弦（官方 sinValuesCallback，只取第一个值）",
+                splitUnnamedArgument = true,
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::sinOp, true, state.variables)
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "cos",
+                description = "余弦（官方 cosValuesCallback，只取第一个值）",
+                splitUnnamedArgument = true,
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::cosOp, true, state.variables)
+                },
+            ),
+        )
+        register(
+            SlashCommandDef(
+                "log",
+                description = "自然对数（官方 logValuesCallback，只取第一个值）",
+                splitUnnamedArgument = true,
+                callback = { inv, state ->
+                    SlashMathEngine.performOperation(inv.unnamedArgs.joinToString(" "), SlashMathEngine::logOp, true, state.variables)
+                },
             ),
         )
     }
 
-    /** 对齐 variables.js evalBoolean（eq/neq/in/nin/gt/gte/lt/lte/not）。 */
-    private fun evalBoolean(rule: String, left: String, right: String): Boolean {
-        val l = left
-        val r = right
-        return when (rule.lowercase()) {
-            "eq" -> l == r
-            "neq" -> l != r
-            "in" -> l.contains(r)
-            "nin" -> !l.contains(r)
-            "gt" -> (l.toDoubleOrNull() ?: Double.NaN) > (r.toDoubleOrNull() ?: Double.NaN)
-            "gte" -> (l.toDoubleOrNull() ?: Double.NaN) >= (r.toDoubleOrNull() ?: Double.NaN)
-            "lt" -> (l.toDoubleOrNull() ?: Double.NaN) < (r.toDoubleOrNull() ?: Double.NaN)
-            "lte" -> (l.toDoubleOrNull() ?: Double.NaN) <= (r.toDoubleOrNull() ?: Double.NaN)
-            "not" -> l.isBlank()
-            else -> false
-        }
-    }
+    /** 官方 /if NUMBER 类型操作数的解析器等价：数值串转 Double，否则保持字符串。 */
+    private fun coerceOperand(raw: String): Any = raw.toDoubleOrNull() ?: raw
 
     private fun addVariable(current: String?, value: String): String {
         if (current != null && current.trimStart().startsWith("[")) {
@@ -466,12 +523,5 @@ object SlashRegistry : SlashCommandResolver {
             }
             else -> text
         }
-    }
-
-    private fun numericFold(values: List<String>, op: (Double, Double) -> Double): String {
-        val nums = values.mapNotNull { it.toDoubleOrNull() }
-        if (nums.isEmpty()) return ""
-        val result = nums.drop(1).fold(nums.first(), op)
-        return if (result == result.toLong().toDouble()) result.toLong().toString() else result.toString()
     }
 }

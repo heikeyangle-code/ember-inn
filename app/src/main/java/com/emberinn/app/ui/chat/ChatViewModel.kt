@@ -541,19 +541,70 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     // ---- SlashMessageActions（消息类斜杠命令；对齐官方 slash-commands.js）----
 
-    override fun sendAsCharacter(name: String, text: String): String {
-        if (text.isBlank()) return ""
-        // 官方 sendas：name 缺省用当前角色名
-        chatStore.appendManualMessage(sessionId, isUser = false, content = text, name = name.ifBlank { currentCharName })
+    override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String {
+        val mesText = text.trim()
+        if (mesText.isBlank()) return ""
+        val resolvedName = name.ifBlank { currentCharName }
+        // 官方 sendas：SLASH_COMMAND 正则（characterOverride=目标角色名）
+        var raw = mesText
+        if (GlobalRegexPrefs.enabled(getApplication())) {
+            raw = RegexPipelineEngine.apply(
+                raw = raw,
+                placement = ChatPromptFactory.REGEX_SLASH_COMMAND,
+                scripts = resolveCurrentRegexScripts(),
+                characterOverride = resolvedName,
+            )
+        }
+        // 官方：只设置 bias 的消息是系统消息（is_system=true、mes 为空），不进上下文
+        val bias = BiasEngine.extractMessageBias(raw)
+        val isSystem = bias.isNotBlank() && BiasEngine.removeMacros(raw).isEmpty()
+        val substituted = MacroEngine.substitute(raw, MacroEnv(user = currentUserName, char = resolvedName))
+        chatStore.appendManualMessage(
+            sessionId = sessionId,
+            isUser = false,
+            content = substituted,
+            name = resolvedName,
+            at = at,
+            isSystem = isSystem,
+            bias = bias.trim().takeIf { it.isNotBlank() },
+            compact = compact,
+            avatar = avatar,
+        )
         refreshMessages()
         return ""
     }
 
-    override fun sendAsUser(text: String): String {
-        if (text.isBlank()) return ""
-        chatStore.appendManualMessage(sessionId, isUser = true, content = text, name = currentUserName)
+    override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String {
+        val mesText = text.trim()
+        if (mesText.isBlank()) return ""
+        // 官方 send：name 参数存在时按参数显示（可为空=不显示名）；缺省用当前用户名
+        val resolvedName = if (name != null) name else currentUserName
+        val bias = BiasEngine.extractMessageBias(mesText)
+        val substituted = MacroEngine.substitute(mesText, MacroEnv(user = resolvedName, char = currentCharName))
+        chatStore.appendManualMessage(
+            sessionId = sessionId,
+            isUser = true,
+            content = substituted,
+            name = resolvedName,
+            at = at,
+            isSystem = false,
+            bias = bias.trim().takeIf { it.isNotBlank() },
+            compact = compact,
+        )
         refreshMessages()
         return ""
+    }
+
+    /** 当前会话正则脚本（全局 + 角色 + 预设），供 /sendas 等 SLASH_COMMAND 位点复用。 */
+    private fun resolveCurrentRegexScripts(): List<RegexPipelineScript> {
+        val (presetScripts, presetAllowed) = presetRegex()
+        return ChatPromptFactory().resolveRegexScripts(
+            characterRawJson = character?.rawJson,
+            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+            presetScripts = presetScripts,
+            presetAllowed = presetAllowed,
+        )
     }
 
     override fun sendSystemMessage(text: String, name: String): String {
@@ -764,7 +815,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             history = chatStore.messages(sessionId),
             type = "impersonate",
             impersonation = true,
-            impersonationPrompt = prompt.trim().ifBlank { ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT },
+            impersonationPrompt = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
+            quietPrompt = prompt.trim(),
         )
         return ""
     }
@@ -2184,6 +2236,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         continueMode: Boolean = false,
         swipeMode: Boolean = false,
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
+        quietPrompt: String = "",
         mediaInlining: Boolean = true,
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),
@@ -2340,6 +2393,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 continuePrefill = continuePrefill,
                 cyclePrompt = cyclePrompt,
                 impersonationPrompt = impersonationPrompt,
+                quietPrompt = quietPrompt,
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
                 personaDescription = effectivePersona()?.description.orEmpty(),

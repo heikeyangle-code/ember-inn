@@ -12,10 +12,10 @@ import com.emberinn.engine.slash.SlashState
  * hide/unhide/delname/addswipe/delswipe。UI 已有按钮的功能（继续/重生成/滑动/停止/人设/模型）不在此列。
  */
 interface SlashMessageActions {
-    /** /sendas：以指定角色插入一条消息（不触发生成）；返回提示文本（空=成功）。 */
-    fun sendAsCharacter(name: String, text: String): String
-    /** /send：以用户身份插入一条消息（不触发生成）。 */
-    fun sendAsUser(text: String): String
+    /** /sendas：以指定角色插入一条消息（不触发生成；at=插入位，avatar=头像覆盖，compact=紧凑布局）。 */
+    fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String
+    /** /send：以用户身份插入一条消息（不触发生成；name=显示名，at=插入位，compact=紧凑布局）。 */
+    fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String
     /** /sys：插入旁白消息（name 空则用会话旁白名/System）。 */
     fun sendSystemMessage(text: String, name: String): String
     /** /sysname：设置会话旁白显示名（空=重置为 System）。 */
@@ -81,18 +81,30 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
     private val messageCommands = listOf(
         SlashCommandDef(
             "sendas",
-            description = "以指定角色发送消息（name= 必填；at= 可插入指定位置）",
+            description = "以指定角色发送消息（官方 sendas：name 缺省用当前角色；at/avatar/compact/return）",
             rawQuotes = true,
             callback = { inv, _ ->
-                // 官方 sendas：缺省 name 用当前角色名（不报错）；ChatViewModel 兜底
-                actions.sendAsCharacter(inv.namedArgs["name"]?.trim().orEmpty(), inv.unnamedArgs.joinToString(" "))
+                actions.sendAsCharacter(
+                    inv.namedArgs["name"]?.trim().orEmpty(),
+                    inv.unnamedArgs.joinToString(" "),
+                    atOf(inv.namedArgs["at"]),
+                    inv.namedArgs["avatar"]?.trim().orEmpty(),
+                    isTrue(inv.namedArgs["compact"]),
+                )
             },
         ),
         SlashCommandDef(
             "send",
-            description = "以用户身份发送消息（不触发生成）",
+            description = "以用户身份发送消息（官方 send：不触发生成；name/at/compact/return）",
             rawQuotes = true,
-            callback = { inv, _ -> actions.sendAsUser(inv.unnamedArgs.joinToString(" ")) },
+            callback = { inv, _ ->
+                actions.sendAsUser(
+                    inv.unnamedArgs.joinToString(" "),
+                    inv.namedArgs["name"]?.trim(),
+                    atOf(inv.namedArgs["at"]),
+                    isTrue(inv.namedArgs["compact"]),
+                )
+            },
         ),
         SlashCommandDef(
             "sys",
@@ -302,7 +314,8 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
     suspend fun executeAsync(text: String, state: SlashState = SlashState()): String =
         SlashEngine.executeAsync(text, state, this)
 
-    private fun atOf(raw: String?): Int = raw?.toIntOrNull() ?: -1
+    /** 官方 Number(args.at)：负数=从末尾倒数；-0 等价“末尾追加”，因此映射为 null（追加）。 */
+    private fun atOf(raw: String?): Int? = raw?.toIntOrNull()?.let { if (raw == "-0") null else it }
 
     private fun rangeStart(raw: String?): Int = raw?.substringBefore('-')?.toIntOrNull() ?: -1
 
