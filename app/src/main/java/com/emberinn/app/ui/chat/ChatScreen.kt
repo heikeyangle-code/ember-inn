@@ -3650,7 +3650,9 @@ private fun structuralTagPositions(html: String, tagRegex: Regex): List<Int> {
 }
 
 private fun injectMeasureScript(html: String): String {
-    val idx = structuralTagPositions(html, Regex("(?i)</body\\s*>")).lastOrNull() ?: -1
+    val idx = structuralTagPositions(html, Regex("(?i)</body\\s*>")).lastOrNull()
+        ?: structuralTagPositions(html, Regex("(?i)</html\\s*>")).lastOrNull()
+        ?: -1
     return if (idx >= 0) {
         html.substring(0, idx) + WEBVIEW_MEASURE_SCRIPT + html.substring(idx)
     } else {
