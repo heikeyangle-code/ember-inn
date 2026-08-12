@@ -472,6 +472,11 @@ fun ProviderDetailScreen(
                 sampler.requestTokenProbabilities,
                 vm::setRequestTokenProbabilities,
             )
+            SwitchRow(
+                "use_sysprompt（Claude/Gemini system 独立角色，官方默认关）",
+                sampler.useSysprompt,
+                vm::setUseSysprompt,
+            )
             DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
                 vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
             }

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.Assert.assertEquals
@@ -172,6 +173,70 @@ class LlmClientTest {
         assertEquals("/v1beta/models/gemini-3.6-flash:generateContent", request.url.encodedPath)
         assertEquals("key=gkey", request.url.query)
         assertEquals("你好", out)
+        server.close()
+    }
+
+    @Test
+    fun `anthropic defaults use_sysprompt false so system messages become user`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"content":[{"type":"text","text":"ok"}]}""")
+                .build(),
+        )
+        val anthropic = ProviderRegistry.get("anthropic")!!
+        LlmClient().chatCompletions(
+            anthropic,
+            ConnectionProfile(
+                providerId = "anthropic",
+                apiKey = "sk-ant",
+                model = "claude-sonnet-5",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            ),
+            listOf(
+                CompletionMessage("system", "你是助手"),
+                CompletionMessage("user", "hi"),
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        val roles = body["messages"]!!.jsonArray.map { it.jsonObject["role"]!!.jsonPrimitive.content }
+        // 官方 use_sysprompt 默认 false：system 消息转成 user（convertClaudeMessages 语义）
+        assertTrue(roles.none { it == "system" })
+        assertTrue(roles.first() == "user")
+        server.close()
+    }
+
+    @Test
+    fun `gemini gets topK when set and defaults use_sysprompt false`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}""")
+                .build(),
+        )
+        val google = ProviderRegistry.get("google")!!
+        LlmClient().chatCompletions(
+            google,
+            ConnectionProfile(
+                providerId = "google",
+                apiKey = "gkey",
+                model = "gemini-3.6-flash",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(topK = 32),
+            ),
+            listOf(
+                CompletionMessage("system", "S"),
+                CompletionMessage("user", "hi"),
+            ),
+        )
+        val body = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
+        assertEquals(32, body["generationConfig"]?.jsonObject?.get("topK")?.jsonPrimitive?.content?.toInt())
+        // 官方 use_sysprompt 默认 false：无 systemInstruction 顶层键
+        assertNull(body["systemInstruction"])
         server.close()
     }
 

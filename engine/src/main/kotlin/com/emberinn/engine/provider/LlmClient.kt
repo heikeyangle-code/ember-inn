@@ -294,6 +294,7 @@ class LlmClient(
                     includeReasoning = profile.sampler.includeReasoning,
                     reasoningBudget = reasoningBudget,
                     enableAdaptiveThinking = profile.sampler.enableAdaptiveThinking,
+                    useSystemPrompt = profile.sampler.useSysprompt,
                     tools = options.tools.map { AnthropicTool(it.name, it.description, it.parameters) },
                     toolChoice = options.toolChoice,
                     stop = options.stopSequences,
@@ -345,6 +346,8 @@ class LlmClient(
                     responseSchema = options.jsonSchema?.let { schema ->
                         schema["value"] as? JsonObject ?: schema
                     },
+                    topK = profile.sampler.topK.takeIf { it > 0 },
+                    useSystemPrompt = profile.sampler.useSysprompt,
                 )
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
             }

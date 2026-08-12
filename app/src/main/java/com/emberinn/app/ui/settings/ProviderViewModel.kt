@@ -252,6 +252,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setRequestTokenProbabilities(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(requestTokenProbabilities = v)
     }
+    fun setUseSysprompt(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(useSysprompt = v)
+    }
 
     fun save() {
         val spec = provider() ?: return

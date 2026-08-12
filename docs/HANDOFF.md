@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 325 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 327 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -323,7 +323,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 3.8.18 setOpenAIMessages 构造循环 ✅
 - `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
 - ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 325 测全绿。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 327 测全绿。
 
 ### 3.8.19 边界补齐
 - Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
@@ -386,7 +386,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 325 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 327 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 ：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -505,7 +505,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 81 组 / 1284 例）：
+**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1284 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -616,7 +616,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 此前恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
 | 人设 personaDescription | ✅ 已接（2026-08-10）：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
 | 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 已差分；App 作者注释已接；记忆 UI 待做（官方默认关） | 🟡 记忆 UI 待做 |
-| 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；ToolCallParser 已差分；App 工具注册表/执行器待接 | 🟡 App 待接 |
+| 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；ToolCallParser 与 ToolLoopPlanner 已差分；App ToolRegistry 执行/历史重构/递归重装已接（见 3.8.16） | ✅ 已接 |
 | 世界书设置 | 已做（设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
 | 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景，全局形状/字体/浅深锁定管线已做；配方导出/分享已做 | ✅ |
 | 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）；✅ URL 下载已做（数据银行对话框“从 URL 添加”，对齐官方 vectors 扩展 Data Bank URL 上传语义）；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
@@ -878,7 +878,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - **模型页（ProviderScreen）UI 升级**：ProviderCard 补彩色阴影、状态胶囊改 999 圆角、箭头换 PhosphorIcons；默认模型选择卡片同款阴影；ModelPickerSheet 选中行 tonal 高亮 + 主色 ✓ 圆点；服务商文案动态显示 `vm.providers.size` 家。
 - **providers.json 默认值**：36 家全部预置 base_url / default_models / default_context_window / default_max_tokens / docs_url（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 `api.cohere.com/v2`；DeepSeek 默认 `/v1`）。azure/custom 保持空（Azure 部署名、自定义地址必须用户填，不硬编码）。
 - **默认地址补齐（现状）**：详情页无已保存连接时自动预填 providers.json 默认 base_url / 区域（第一个 variant）/ API 版本（spec.api_version，如 Azure 2024-12-01）；默认模型与窗口为各厂商公开常见值，模型列表以“测试连接”拉取为准。
-- **官方模型设置项对照（现状）**：UI 已覆盖 名称/API Key/接口地址/区域/账户 ID/API 版本/默认模型/上下文上限/最大回复/温度/topP/存在惩罚/频率惩罚/测试连接 + **top_k/min_p/top_a/repetition_penalty/seed/n/流式开关/请求 token 概率（logprobs）**；OpenRouter 详情页另有 use_fallback/allow_fallbacks/middleout/providers/quantizations。引擎 `SamplerParams` 全字段对应官方 oai_settings（topK 默认 0=不发送、minP=0、topA=0、repetitionPenalty=1、seed=-1、n=1、middleout=on、requestTokenProbabilities=false）。实际请求体已按官方后端 chat-completions.js 差分 18 例（chat-request-body-official.mjs → ChatRequestBodyDiffTest），覆盖 openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5 分支；o1 强制非流式（App 走非流式路径）。官方面板仍有：max_context_unlocked、show_external_models、reverse_proxy（代理+预设）、custom_url、custom_headers、custom_include/exclude_body、assistant_prefill、continue_prefill、function_calling（引擎已支持 tools，UI 无总开关）、squash_system_messages、media_inlining、inline_image_quality、names_behavior、use_sysprompt、bind_preset_to_connection、request_images、web_search、verbosity、reasoning_effort、show_thoughts、tool_reasoning_mode、bypass_status_check、continue_postfix、custom_prompt_post_processing——部分引擎字段已有（reasoningEffort/verbosity/webSearch/tools），UI 设置入口与 reverse_proxy/custom_headers 网络层为待办，不伪造 ✅。
+- **官方模型设置项对照（现状）**：UI 已覆盖 名称/API Key/接口地址/区域/账户 ID/API 版本/默认模型/上下文上限/最大回复/温度/topP/存在惩罚/频率惩罚/测试连接 + **top_k/min_p/top_a/repetition_penalty/seed/n/流式开关/请求 token 概率（logprobs）/use_sysprompt**；OpenRouter 详情页另有 use_fallback/allow_fallbacks/middleout/providers/quantizations。引擎 `SamplerParams` 全字段对应官方 oai_settings（topK 默认 0=不发送、minP=0、topA=0、repetitionPenalty=1、seed=-1、n=1、middleout=on、requestTokenProbabilities=false、**useSysprompt=false=官方默认**）。实际请求体已按官方后端 chat-completions.js 差分 18 例（chat-request-body-official.mjs → ChatRequestBodyDiffTest），覆盖 openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5 分支；o1 强制非流式（App 走非流式路径）；**Claude/Gemini 的 use_sysprompt 已按官方默认 false 接线（system 消息转 user），Gemini topK 已接线**（LlmClientTest 锁定）。官方面板仍有：max_context_unlocked、show_external_models、reverse_proxy（代理+预设）、custom_url、custom_headers、custom_include/exclude_body、assistant_prefill、continue_prefill、function_calling（引擎已支持 tools，UI 无总开关）、squash_system_messages、media_inlining、inline_image_quality、names_behavior、bind_preset_to_connection、request_images、web_search、verbosity、reasoning_effort、show_thoughts、tool_reasoning_mode、bypass_status_check、continue_postfix、custom_prompt_post_processing——部分引擎字段已有（reasoningEffort/verbosity/webSearch/tools），UI 设置入口与 reverse_proxy/custom_headers 网络层为待办，不伪造 ✅。
 - **官方字段审计（对照 SillyTavern V2 spec + char-data.js）**：角色详情页已 1:1 覆盖 V2 核心字段——name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings；extensions 已接线：talkativeness（话痨滑杆）、depth_prompt（深度提示）、regex_scripts（卡正则）、fav（置顶）、world（内嵌世界书，导入端处理 `embeded://`/`__asset:` 资源）。明确不做的两项（避免“无效接线”）：group_only（引擎无消费点，只加 UI 不生效）、官方“linked world name”字符串引用（本 App 用卡内嵌世界书，不依赖官方世界书文件体系）。
 - 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
 - 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。
