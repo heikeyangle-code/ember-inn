@@ -547,7 +547,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): ManualSendResult {
         val mesText = text.trim()
-        if (mesText.isBlank()) return ""
+        if (mesText.isBlank()) return ManualSendResult("", "{}")
         val resolvedName = name.ifBlank { currentCharName }
         // 官方 sendas：SLASH_COMMAND 正则（characterOverride=目标角色名）
         var raw = mesText
@@ -583,7 +583,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): ManualSendResult {
         val mesText = text.trim()
-        if (mesText.isBlank()) return ""
+        if (mesText.isBlank()) return ManualSendResult("", "{}")
         // 官方 send：name 参数存在时按参数显示（可为空=不显示名）；缺省用当前用户名
         val resolvedName = if (name != null) name else currentUserName
         val bias = BiasEngine.extractMessageBias(mesText)
