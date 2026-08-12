@@ -164,6 +164,22 @@ fun PresetsScreen(onBack: () -> Unit) {
         }
     }
 
+    fun proceedSamplerImport(name: String, content: JsonObject) {
+        val exists = UserPresetStore.list(context, "sampler").contains(name) ||
+            PresetLibrary.samplerPresets("openai").any { it.name == name }
+        if (exists) {
+            pendingOverwrite = name to content
+        } else {
+            saveSamplerImport(name, content)
+        }
+    }
+
+    fun saveSamplerImport(name: String, content: JsonObject) {
+        val ok = UserPresetStore.save(context, "sampler", name, content.toString())
+        importMessage = if (ok) "已导入：sampler / $name" else "导入失败：文件名无效"
+        userPresets = userPresets + ("sampler" to UserPresetStore.list(context, "sampler"))
+    }
+
     // 单预设文件导入（官方 performMasterImport legacy 顺序识别）
     val presetImporter = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -200,21 +216,6 @@ fun PresetsScreen(onBack: () -> Unit) {
         userPresets = userPresets + (type to UserPresetStore.list(context, type))
     }
 
-    fun proceedSamplerImport(name: String, content: JsonObject) {
-        val exists = UserPresetStore.list(context, "sampler").contains(name) ||
-            PresetLibrary.samplerPresets("openai").any { it.name == name }
-        if (exists) {
-            pendingOverwrite = name to content
-        } else {
-            saveSamplerImport(name, content)
-        }
-    }
-
-    fun saveSamplerImport(name: String, content: JsonObject) {
-        val ok = UserPresetStore.save(context, "sampler", name, content.toString())
-        importMessage = if (ok) "已导入：sampler / $name" else "导入失败：文件名无效"
-        userPresets = userPresets + ("sampler" to UserPresetStore.list(context, "sampler"))
-    }
 
     // 多区段主导出（官方 af_master_export：instruct/context/sysprompt/reasoning/srw）
     val masterExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
