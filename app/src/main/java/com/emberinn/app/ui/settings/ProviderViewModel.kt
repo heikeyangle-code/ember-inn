@@ -11,6 +11,8 @@ import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.ProviderSpec
+import com.emberinn.engine.prompt.PresetLibrary
+import kotlinx.serialization.json.JsonPrimitive
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -254,6 +256,32 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     }
     fun setUseSysprompt(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(useSysprompt = v)
+    }
+
+    /** 应用官方 OpenAI 采样预设（sampler-openai preset → SamplerParams/上下文/最大回复）。 */
+    fun applySamplerPreset(name: String) {
+        if (name.isBlank()) return
+        val preset = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name } ?: return
+        val s = preset.settings
+        fun d(key: String): Double? = (s[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
+        fun i(key: String): Int? = (s[key] as? JsonPrimitive)?.content?.toIntOrNull()
+        fun b(key: String): Boolean = (s[key] as? JsonPrimitive)?.content == "true"
+        _editingSampler.value = _editingSampler.value.copy(
+            temperature = d("temperature") ?: _editingSampler.value.temperature,
+            topP = d("top_p") ?: _editingSampler.value.topP,
+            presencePenalty = d("presence_penalty") ?: _editingSampler.value.presencePenalty,
+            frequencyPenalty = d("frequency_penalty") ?: _editingSampler.value.frequencyPenalty,
+            topK = i("top_k") ?: _editingSampler.value.topK,
+            minP = d("min_p") ?: _editingSampler.value.minP,
+            topA = d("top_a") ?: _editingSampler.value.topA,
+            repetitionPenalty = d("repetition_penalty") ?: _editingSampler.value.repetitionPenalty,
+            seed = i("seed") ?: _editingSampler.value.seed,
+            n = i("n") ?: _editingSampler.value.n,
+            stream = b("stream_openai"),
+        )
+        _maxTokens.value = i("openai_max_tokens") ?: _maxTokens.value
+        _contextWindow.value = i("openai_max_context") ?: _contextWindow.value
+        _message.value = "已应用采样预设：$name"
     }
 
     fun save() {

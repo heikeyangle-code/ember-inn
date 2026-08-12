@@ -522,7 +522,7 @@ class ChatPromptFactory {
                 strategy = worldInsertStrategy,
             ),
             settings = worldInfoSettings,
-            global = GlobalScanData(characterName = charName),
+            global = GlobalScanData(characterName = charName, personaDescription = personaDescription),
             // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
                 .associateBy { "${it.world}.${it.uid}" },

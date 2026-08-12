@@ -35,6 +35,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,6 +71,7 @@ import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderSpec
+import com.emberinn.engine.prompt.PresetLibrary
 
 /** 提供商列表（参照命理2：搜索 + 卡片列表 + 头像；点卡片进详情）。 */
 @Composable
@@ -425,6 +428,41 @@ fun ProviderDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            var showSamplerPreset by remember { mutableStateOf(false) }
+            var samplerPresetName by remember { mutableStateOf("") }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text("采样预设（官方 sampler-openai）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Box {
+                    TextButton(onClick = { showSamplerPreset = true }) {
+                        Text(if (samplerPresetName.isBlank()) "默认" else samplerPresetName)
+                    }
+                    DropdownMenu(
+                        expanded = showSamplerPreset,
+                        onDismissRequest = { showSamplerPreset = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("默认（不应用）") },
+                            onClick = {
+                                samplerPresetName = ""
+                                showSamplerPreset = false
+                            },
+                        )
+                        PresetLibrary.samplerPresets("openai").forEach { p ->
+                            DropdownMenuItem(
+                                text = { Text(p.name) },
+                                onClick = {
+                                    samplerPresetName = p.name
+                                    vm.applySamplerPreset(p.name)
+                                    showSamplerPreset = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
             SwitchRow("流式输出（stream）", sampler.stream, vm::setStreaming)
             IntRow("top_k（0 = 不发送）", sampler.topK.toString(), vm::setTopK)
             DecimalRow("min_p（0-1）", sampler.minP.toString(), vm::setMinP)

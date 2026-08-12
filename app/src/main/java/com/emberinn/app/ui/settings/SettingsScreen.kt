@@ -61,7 +61,7 @@ import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE }
+private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS }
 
 /** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
 @Composable
@@ -150,6 +150,7 @@ fun SettingsScreen(
         SettingsPage.EXPRESSION -> ExpressionScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.REGEX -> RegexScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.AUTHORS_NOTE -> AuthorsNoteSettingsScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.PRESETS -> PresetsScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
         else -> SettingsHome(
@@ -170,6 +171,7 @@ fun SettingsScreen(
             onOpenExpression = { page = SettingsPage.EXPRESSION },
             onOpenRegex = { page = SettingsPage.REGEX },
             onOpenAuthorsNote = { page = SettingsPage.AUTHORS_NOTE },
+            onOpenPresets = { page = SettingsPage.PRESETS },
             onOpenData = { page = SettingsPage.DATA },
             onOpenAbout = { page = SettingsPage.ABOUT },
         )
@@ -199,6 +201,7 @@ private fun SettingsHome(
     onOpenWorldInfo: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenAuthorsNote: () -> Unit,
+    onOpenPresets: () -> Unit,
     onOpenCaption: () -> Unit,
     onOpenExpression: () -> Unit,
     onOpenRegex: () -> Unit,
@@ -270,6 +273,7 @@ private fun SettingsHome(
                 SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo),
                 SettingRow("记忆扩展", "自动摘要 · {{summary}} 注入 · 立即总结", Color.Unspecified, onOpenMemory),
                 SettingRow("作者注释", "全局默认 · 间隔 · 角色备注", Color.Unspecified, onOpenAuthorsNote),
+                SettingRow("预设", "上下文 · 指导 · 采样 · 系统提示 · 推理", Color.Unspecified, onOpenPresets),
                 SettingRow("图片描述（Caption）", "图片生成描述并发送（multimodal）", Color.Unspecified, onOpenCaption),
                 SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex),
             ),
