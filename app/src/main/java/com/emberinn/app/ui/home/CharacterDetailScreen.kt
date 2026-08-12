@@ -1428,7 +1428,7 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
 }
 
 @Composable
-private fun WorldEntryEditorSheet(
+fun WorldEntryEditorSheet(
     initial: WorldEntryDraft,
     isNew: Boolean,
     onSave: (WorldEntryDraft) -> Unit,

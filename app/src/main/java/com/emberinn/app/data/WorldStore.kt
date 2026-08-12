@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -50,6 +51,60 @@ class WorldStore(context: Context) {
                 }
             } ?: emptyList()
         }.getOrDefault(emptyList())
+    }
+
+    /** 读取外置世界条目为全字段草稿（复用 CharacterCardEdit 的 v2 归一解析）。 */
+    fun drafts(name: String): List<WorldEntryDraft> {
+        val file = fileOf(name) ?: return emptyList()
+        return runCatching {
+            val root = json.parseToJsonElement(file.readText()).jsonObject
+            val entriesArr = (root["entries"] as? JsonObject)?.values?.toList() ?: return@runCatching emptyList()
+            val fakeCard = buildJsonObject {
+                put(
+                    "data",
+                    buildJsonObject {
+                        put(
+                            "character_book",
+                            buildJsonObject { put("entries", JsonArray(entriesArr)) },
+                        )
+                    },
+                )
+            }
+            CharacterCardEdit.readWorldEntries(fakeCard.toString())
+        }.getOrDefault(emptyList())
+    }
+
+    /** 保存外置世界条目（草稿 → 官方 world 文件 {name, entries:{uid:entry}}）。 */
+    fun saveDrafts(name: String, displayName: String, drafts: List<WorldEntryDraft>) {
+        val fakeCard = buildJsonObject {
+            put(
+                "data",
+                buildJsonObject {
+                    put(
+                        "character_book",
+                        buildJsonObject { put("entries", JsonArray(emptyList())) },
+                    )
+                },
+            )
+        }
+        val normalized = runCatching {
+            CharacterCardEdit.applyWorldEntries(fakeCard.toString(), drafts)
+        }.getOrNull()?.let { json.parseToJsonElement(it).jsonObject["data"]?.jsonObject }
+        val entriesArr = normalized?.get("character_book")?.jsonObject?.get("entries")?.jsonArray
+            ?: JsonArray(emptyList())
+        val payload = buildJsonObject {
+            put("name", JsonPrimitive(displayName))
+            put(
+                "entries",
+                JsonObject(
+                    entriesArr.mapIndexed { index, el ->
+                        (index + 1).toString() to el
+                    }.toMap(),
+                ),
+            )
+        }
+        val safe = sanitize(name)
+        File(dir, "$safe.json").writeText(json.encodeToString(JsonObject.serializer(), payload))
     }
 
     fun create(name: String) {

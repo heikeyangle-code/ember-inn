@@ -1,13 +1,17 @@
 package com.emberinn.app.ui.settings
 
 
+import androidx.compose.foundation.clickable
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.data.WorldStore
+import com.emberinn.app.data.WorldEntryDraft
+import com.emberinn.app.ui.home.WorldEntryEditorSheet
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import com.emberinn.app.ui.icons.PhosphorIcons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +50,10 @@ fun WorldInfoScreen(onBack: () -> Unit) {
     var globalSelect by remember { mutableStateOf(WorldInfoPrefs.globalSelect(context).toSet()) }
     var strategy by remember { mutableStateOf(WorldInfoPrefs.insertionStrategy(context)) }
     var newWorldName by remember { mutableStateOf("") }
+    var editingWorld by remember { mutableStateOf<String?>(null) }
+    var editingDrafts by remember { mutableStateOf<List<WorldEntryDraft>>(emptyList()) }
+    var editingEntryIdx by remember { mutableStateOf<Int?>(null) }
+    var addingEntry by remember { mutableStateOf(false) }
     fun save() = WorldInfoPrefs.save(context, settings)
 
     SettingsGlassPage { settingsSky ->
@@ -124,25 +132,73 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                     }
                 }) { Text("新建") }
             }
-            worlds.forEach { w ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    FilterChip(
-                        selected = w.name in globalSelect,
-                        onClick = {
-                            globalSelect = if (w.name in globalSelect) globalSelect - w.name else globalSelect + w.name
+            val currentEditing = editingWorld
+            if (currentEditing != null) {
+                val w = worlds.firstOrNull { it.name == currentEditing }
+                if (w != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        TextButton(onClick = { editingWorld = null; editingEntryIdx = null; addingEntry = false }) { Text("← 返回世界列表") }
+                        Spacer(Modifier.weight(1f))
+                        Text("${w.displayName}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (editingDrafts.isEmpty()) {
+                        Text(
+                            "没有条目。点下方新增，字段与内嵌世界书编辑器完全一致（官方全字段）。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
+                        )
+                    }
+                    editingDrafts.forEachIndexed { i, e ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Text(
+                                e.keys.ifBlank { "（无触发词）" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f).clickable { editingEntryIdx = i },
+                            )
+                            IconButton(onClick = { editingEntryIdx = i }) {
+                                Icon(PhosphorIcons.Edit, contentDescription = "编辑条目")
+                            }
+                            IconButton(onClick = {
+                                editingDrafts = editingDrafts.filterIndexed { j, _ -> j != i }
+                                worldStore.saveDrafts(currentEditing, w.displayName, editingDrafts)
+                                worlds = worldStore.list()
+                            }) {
+                                Icon(PhosphorIcons.Delete, contentDescription = "删除条目", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                    Button(onClick = { addingEntry = true }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        Text("＋ 新增条目（官方全字段）")
+                    }
+                }
+            } else {
+                worlds.forEach { w ->
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        FilterChip(
+                            selected = w.name in globalSelect,
+                            onClick = {
+                                globalSelect = if (w.name in globalSelect) globalSelect - w.name else globalSelect + w.name
+                                WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
+                            },
+                            label = { Text("全局") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("${w.displayName}（${w.entryCount} 条）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            editingWorld = w.name
+                            editingDrafts = worldStore.drafts(w.name)
+                        }) {
+                            Icon(PhosphorIcons.Edit, contentDescription = "编辑世界条目")
+                        }
+                        IconButton(onClick = {
+                            worldStore.delete(w.name)
+                            worlds = worldStore.list()
+                            globalSelect = globalSelect - w.name
                             WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
-                        },
-                        label = { Text("全局") },
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("${w.displayName}（${w.entryCount} 条）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    IconButton(onClick = {
-                        worldStore.delete(w.name)
-                        worlds = worldStore.list()
-                        globalSelect = globalSelect - w.name
-                        WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
-                    }) {
-                        Icon(PhosphorIcons.Delete, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
+                        }) {
+                            Icon(PhosphorIcons.Delete, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
@@ -163,6 +219,54 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(16.dp))
         }
     }
+    }
+
+    val editing = editingWorld
+    if (editing != null && (addingEntry || editingEntryIdx != null)) {
+        val current = worlds.firstOrNull { it.name == editing }
+        val initial = if (addingEntry) {
+            WorldEntryDraft(
+                id = editingDrafts.size + 1,
+                keys = "",
+                content = "",
+                comment = "",
+                constant = false,
+                selective = true,
+                enabled = true,
+                insertionOrder = 100,
+            )
+        } else {
+            editingDrafts.getOrNull(editingEntryIdx ?: -1)
+        }
+        if (initial != null) {
+            WorldEntryEditorSheet(
+                initial = initial,
+                isNew = addingEntry,
+                onSave = { draft ->
+                    val next = if (addingEntry) editingDrafts + draft
+                    else editingDrafts.mapIndexed { i, d -> if (i == editingEntryIdx) draft else d }
+                    editingDrafts = next
+                    current?.let { worldStore.saveDrafts(editing, it.displayName, next) }
+                    worlds = worldStore.list()
+                    addingEntry = false
+                    editingEntryIdx = null
+                },
+                onDelete = {
+                    val idx = editingEntryIdx
+                    if (idx != null && idx in editingDrafts.indices) {
+                        editingDrafts = editingDrafts.filterIndexed { i, _ -> i != idx }
+                        current?.let { worldStore.saveDrafts(editing, it.displayName, editingDrafts) }
+                        worlds = worldStore.list()
+                    }
+                    addingEntry = false
+                    editingEntryIdx = null
+                },
+                onDismiss = {
+                    addingEntry = false
+                    editingEntryIdx = null
+                },
+            )
+        }
     }
 }
 
