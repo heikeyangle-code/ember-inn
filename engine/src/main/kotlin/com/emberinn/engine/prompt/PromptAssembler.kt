@@ -159,10 +159,11 @@ object PromptAssembler {
             personaInPrompt = personaInPrompt,
         )
 
-        val collection = PromptManagerCore.getCollection(userOrder, userPrompts, type, env)
+        // 官方默认顺序由调用方注入（getPromptOrderForCharacter 无存储时返回 []，此处补默认）
+        val order = userOrder.ifEmpty { PromptManagerCore.DEFAULT_ORDER_ENTRIES }
+        val collection = PromptManagerCore.getCollection(order, userPrompts, type, env)
         val merged = PromptManagerCore.mergeSystemPrompts(collection, systemPrompts, env)
 
-        val order = userOrder.ifEmpty { PromptManagerCore.DEFAULT_ORDER_ENTRIES }
         val mainEnabled = order.firstOrNull { it.identifier == "main" }?.enabled ?: true
         val jailbreakEnabled = order.firstOrNull { it.identifier == "jailbreak" }?.enabled ?: true
 

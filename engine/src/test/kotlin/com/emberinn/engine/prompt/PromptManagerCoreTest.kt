@@ -15,8 +15,9 @@ class PromptManagerCoreTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `default order matches official`() {
-        val ids = PromptManagerCore.getCollection(emptyList(), emptyList(), "normal", env)
+    fun `default order matches official when injected by caller`() {
+        // 官方 getPromptOrderForCharacter 无存储时返回 []；默认顺序由调用方（PromptAssembler）注入
+        val ids = PromptManagerCore.getCollection(PromptManagerCore.DEFAULT_ORDER_ENTRIES, emptyList(), "normal", env)
             .collection.map { it.identifier }
         assertEquals(
             listOf(

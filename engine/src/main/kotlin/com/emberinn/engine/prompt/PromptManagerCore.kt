@@ -82,8 +82,9 @@ object PromptManagerCore {
         PromptOrderEntry("jailbreak"),
     )
 
-    fun shouldTrigger(prompt: PromptItem, generationType: String): Boolean {
-        if (prompt.injectionTrigger.isEmpty()) return true
+    fun shouldTrigger(prompt: PromptItem?, generationType: String): Boolean {
+        // 官方：injection_trigger 非数组（含 prompt 不存在时 undefined）→ 恒 true
+        if (prompt == null || prompt.injectionTrigger.isEmpty()) return true
         return generationType in prompt.injectionTrigger
     }
 
@@ -113,15 +114,22 @@ object PromptManagerCore {
      * 对齐 getPromptCollection：按用户顺序（缺省用官方默认）收集已启用提示；
      * main 被禁用时补一个空 content 的占位（相对插入依赖它）。
      */
+    /** 对齐官方 getPromptOrderForCharacter：无角色→[]；按 String(character_id)===String(id) 匹配，无存储→[]。 */
+    fun resolveOrder(characterId: String?, lists: List<PromptOrderList>): List<PromptOrderEntry> {
+        if (characterId == null) return emptyList()
+        return lists.firstOrNull { it.characterId?.toString() == characterId }?.order ?: emptyList()
+    }
+
     fun getCollection(
         userOrder: List<PromptOrderEntry>,
         userPrompts: List<PromptItem>,
         generationType: String,
         env: MacroEnv,
     ): PromptItems {
-        // 对齐官方 getPromptCollection：generationType 归一（空→normal、小写、去空白）
+        // 对齐官方 getPromptCollection：generationType 归一（空→normal、小写、去空白）；
+        // order 直接用传入值（官方 getPromptOrderForCharacter 无存储时返回 []，默认顺序由调用方接线）
         val normalizedType = generationType.ifBlank { "normal" }.lowercase().trim()
-        val order = userOrder.ifEmpty { DEFAULT_ORDER_ENTRIES }
+        val order = userOrder
         val collection = PromptItems()
         val defaults = PromptCollection.DEFAULT_PROMPTS.associateBy { it.identifier }
 

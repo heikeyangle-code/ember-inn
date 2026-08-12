@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 326 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 327 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -79,7 +79,7 @@ gh run list --limit 3
 gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **326 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **327 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（83 组差分 fixture，共 1928 例对拍，全部通过；2026-08-13 全量复算）**：
+**已覆盖（84 组差分 fixture，共 1957 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1928 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1957 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 40 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -137,6 +137,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
 | 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
 | 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 444 |
+| Prompt Manager 纯逻辑 | prompt-manager-official.mjs | PromptManagerDiffTest | 29 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
@@ -556,7 +557,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 83 组 / 1928 例）：
+**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 84 组 / 1957 例）：
 - 预设全链：引擎 PresetApplyEngine 官方差分 82 例（类型识别/五类应用/迁移/保存过滤/名字匹配）+ 预设页选择即应用/保存当前为预设/删除 + 单文件导入 + 多区段 master 导入导出 + /preset 命令 + reasoning 进总装
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
