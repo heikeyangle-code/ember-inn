@@ -131,7 +131,7 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "获取/设置消息角色（user/assistant/system；at= 负数=倒数）",
             callback = { inv, _ ->
                 actions.getSetMessageRole(
-                    atOf(inv.namedArgs["at"]),
+                    atOf(inv.namedArgs["at"]) ?: -1,
                     inv.unnamedArgs.joinToString(" "),
                 )
             },
@@ -141,7 +141,7 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "获取/设置消息显示名（at= 负数=倒数）",
             callback = { inv, _ ->
                 actions.getSetMessageName(
-                    atOf(inv.namedArgs["at"]),
+                    atOf(inv.namedArgs["at"]) ?: -1,
                     inv.unnamedArgs.joinToString(" "),
                 )
             },
