@@ -237,8 +237,20 @@ PromptManagerCore（默认/用户顺序、enabled、injection_trigger、prepareP
 RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m/s、x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过、u 原生 flag 应用、重复 flags 回退整体正则——全部对照官方 regexFromString 1:1）；世界书 key 解析 parseRegexFromString 差分 9→15 例（扩：x/X/A/J/U 无效 → null、重复 flag → null，WorldRegexUtils 已补重复 flag 拒绝；u/y 原生 flag 仍为边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
 ✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；✅ preset 脚本存储/UI（命名预设集保存/恢复/编辑 + preset_allowed_regex[openai] 允许开关 + 存前/总装/编辑/开场白全位点接线；App 无采样预设管理器，命名集为官方 preset 扩展 regex_scripts 字段的结构等价，登记）。
 
-### 3.7 预设 ✅
-官方 127 个预设打包 + PresetLibrary；quick-replies 打包 + 执行器。设置 → 预设 管理器：上下文/指导/采样/系统提示/推理五类选择保存；**采样预设（sampler-openai）已应用到提供商详情页**（选择后覆盖采样参数/上下文/最大回复）；context/instruct 预设的消费点是 textgen 后端（未接，选择先保存）；sysprompt/reasoning 与 Prompt Manager 一起待接。moving-ui（界面预设）未打包，用户决策延期见 8.9。
+### 3.7 预设 🟡（选择层 ✅ / 应用层部分）
+
+**已做**：
+- 官方 127 个预设打包（context 34 / instruct 38 / sampler-openai 1 / sampler-textgen 6 / sampler-novel 24 / sampler-kobold 6 / sysprompt 13 / reasoning 5）+ quick-replies；PresetLibrary 加载 + 完整性测试（PresetLibraryTest 锁数量与可解析）。
+- 设置 → 预设 管理器：上下文/指导/采样/系统提示/推理五类选择 + 保存（PresetPrefs）。
+- **采样预设（sampler-openai）已应用**：提供商详情页选择即覆盖 temperature/top_p/presence/frequency/top_k/min_p/top_a/repetition_penalty/seed/n/stream/上下文/最大回复（ProviderViewModel.applySamplerPreset）。
+- 快捷回复预设：QuickReplyStore 多文件（官方 data/default-user/quick-replies 语义）+ 设置页预设选择/新建/删除（3.8.17）。
+
+**未做（接手人继续）**：
+- context/instruct 预设应用：消费点是 textgen 协议后端（KoboldAI/TextGenWebUI/Mancer 等，见第 5 节）——选择已保存，后端接入时把 ContextSettings/InstructSettings 传进 InstructMode/PromptAssembler。
+- sysprompt/reasoning 预设应用：官方在 Prompt Manager 里选择；Prompt Manager UI（编辑 main/system/jailbreak/impersonation 等提示词 + 预设选择/保存/删除）未做（12.16 登记）。
+- 自定义预设保存/删除/设为默认：官方预设管理器可把当前设置存为新预设、删除预设；App 目前只能从官方打包预设中选择，不能保存/删除自己的预设。
+- sampler-textgen/novel/kobold 应用：对应后端未做，先不暴露。
+- moving-ui（界面预设）：用户决策延期见 8.9。
 
 ### 3.8 聊天 🟡
 jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 层，对齐官方 `swipe_id`/`swipes[]`/`swipe_info[]`：ensureSwipes 初始化、syncSwipeToMes 同步、Generate('swipe') 追加、deleteSwipe、editMessage 写回）**。
@@ -618,6 +630,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - 主题配方：字体文件下载、风格档位映射未做。
 - 设置项 UI 未接：reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、
   show_external_models、Prompt Manager 面板/dryRun 预览（引擎字段部分已有，见 12.12/12.16）。
+- 预设未做：自定义预设保存/删除/设为默认、sysprompt/reasoning 应用、context/instruct 应用（等 textgen），见 3.7。
 - 发送链路未接（12.16 登记）：quiet/quietImage/quietToLoud、runGenerationInterceptors、
   appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2、
   非流式 title/reasoning/image 提取、token_count 落盘、StreamingReplyParser/ReasoningEngine/TokenBudgetEngine 接线。
