@@ -96,10 +96,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -193,14 +191,6 @@ private sealed interface ChatItem {
     /** 思考过程但没有可挂载的 AI 消息（空正文场景），独立成卡，避免思考完就消失。 */
     data object ReasoningOnly : ChatItem
 }
-
-/** 贴底跟随采样：滚动方向 + 是否真正处于内容末端（最后一项底边贴近视口底）。 */
-private data class ScrollSample(
-    val inProgress: Boolean,
-    val firstIndex: Int,
-    val firstOffset: Int,
-    val atTrueEnd: Boolean,
-)
 
 /** 一条消息在组合期的派生字段缓存（元素不变即复用，流式 tick 不重复解析）。 */
 private data class ChatItemDerived(
@@ -452,19 +442,22 @@ fun ChatScreen(
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
     val items = remember(messages, isStreaming, lastReasoning) {
         buildList {
-            messages.forEachIndexed { i, el -> add(ChatItem.Message(i, el)) }
+            // reverseLayout=true：第 0 项固定在视口底部，因此最新内容（流式/最后一条）放在最前。
             if (isStreaming) {
                 add(ChatItem.Streaming)
             } else if (lastReasoning != null && messages.indexOfLast { el -> !isUser(el) } < 0) {
                 // 空正文场景：思考过程独立成卡，不随流式结束消失
                 add(ChatItem.ReasoningOnly)
             }
+            for (i in messages.indices.reversed()) {
+                add(ChatItem.Message(i, messages[i]))
+            }
         }
     }
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
 
-    // 自动滚底：贴底跟随；用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
-    // 贴底判定 = 最后一项（含流式项）可见，不再用 3 项容差——消息少时看历史曾被误判“贴底”而拽回。
+    // 贴底跟随：用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
+    // reverseLayout=true：贴底判定 = firstVisibleItemIndex == 0（官方 LazyColumn 语义，不再读 layoutInfo）。
     var followBottom by remember { mutableStateOf(true) }
     // 全局快捷回复输出填输入框（官方点击槽位执行斜杠链；本 App 把文本输出放进输入框，用户可改可发）
     LaunchedEffect(quickReplyOutput) {
@@ -506,63 +499,28 @@ fun ChatScreen(
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
-    // 贴底跟随：改为滚动方向判定。长消息流式途中上滑阅读不会因“最后一项仍可见”被拽回；
-    // 只有真正滚回内容末端（最后一项底边贴近视口底）才恢复跟随。
-    val scrollDensity = LocalDensity.current
-    LaunchedEffect(listState, isStreaming) {
-        var prevFirstIndex = -1
-        var prevFirstOffset = 0
-        snapshotFlow {
-            val info = listState.layoutInfo
-            val first = info.visibleItemsInfo.firstOrNull()
-            val last = info.visibleItemsInfo.lastOrNull()
-            val atTrueEnd = last != null && last.index >= info.totalItemsCount - 1 &&
-                last.offset + last.size <= info.viewportEndOffset + with(scrollDensity) { 36.dp.toPx() }
-            ScrollSample(
-                inProgress = listState.isScrollInProgress,
-                firstIndex = first?.index ?: -1,
-                firstOffset = first?.offset ?: 0,
-                atTrueEnd = atTrueEnd,
-            )
-        }.collect { s ->
-            if (s.inProgress) {
-                val movedUp = s.firstIndex < prevFirstIndex ||
-                    (s.firstIndex == prevFirstIndex && s.firstOffset < prevFirstOffset)
-                if (movedUp) followBottom = false
-            } else if (s.atTrueEnd) {
-                followBottom = true
+    // 贴底跟随（reverseLayout=true）：官方 LazyColumn 语义下 firstVisibleItemIndex==0 即“滚到底部”。
+    // 新消息/流式内容增长时底部天然钉住，无需任何 scrollToItem 强制滚动（旧的 layoutInfo 采样 +
+    // 多条 scrollToItem(Int.MAX_VALUE) 是滚动卡顿主因）。只有用户上滑（滚动位置变大）才暂停跟随。
+    LaunchedEffect(listState) {
+        var prevIndex = 0
+        var prevOffset = 0
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val movedAway = listState.isScrollInProgress &&
+                    (index > prevIndex || (index == prevIndex && offset > prevOffset))
+                if (movedAway) followBottom = false
+                if (index == 0 && offset == 0) followBottom = true
+                prevIndex = index
+                prevOffset = offset
             }
-            prevFirstIndex = s.firstIndex
-            prevFirstOffset = s.firstOffset
-        }
     }
-    // 只有处于“贴底跟随”状态才滚底；用户上滑查看历史时不拽走。
-    // 新消息/流式结束都滚到消息底边（长消息停在底部而不是顶部）。
+    // 用户上滑看历史期间新消息到了不拽走；发送/快捷回复重新打开跟随时才回到最新。
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty() && followBottom) {
-            listState.scrollToItem(messages.lastIndex, scrollOffset = Int.MAX_VALUE)
-        }
-    }
-    // 进入聊天：首帧布局完成后直接滚到底（首帧未测量时 scrollToItem 会被吞，内容先空后跳）。
-    // 不用组合期捕获的 items（消息异步加载时可能仍是空列表），直接读当前布局总数。
-    LaunchedEffect(Unit) {
-        snapshotFlow { listState.layoutInfo.totalItemsCount }
-            .first { it > 0 }
-        val target = listState.layoutInfo.totalItemsCount - 1
-        if (target >= 0) {
-            listState.scrollToItem(target, scrollOffset = Int.MAX_VALUE)
-        }
-    }
-    // 流式：贴底时以 120ms 节流滚动到流式项末尾（与显示同频，不再每 token 强制布局/跳动）。
-    LaunchedEffect(Unit) {
-        var lastScrollNanos = 0L
-        snapshotFlow { streamingText to streamingReasoning }.collect { _ ->
-            val now = System.nanoTime()
-            if (isStreaming && followBottom && now - lastScrollNanos >= 120_000_000L) {
-                val target = listState.layoutInfo.totalItemsCount - 1
-                if (target >= 0) listState.scrollToItem(target, scrollOffset = Int.MAX_VALUE)
-                lastScrollNanos = now
-            }
+            // 首帧尚未测量时 animateScrollToItem 会被吞甚至越界：先等列表布局出条目再滚。
+            snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -594,7 +552,6 @@ fun ChatScreen(
 
     val sky = rememberSky()
     val keyboardController = LocalSoftwareKeyboardController.current
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     // 行级外观设置：在 ChatScreen 层读一次传给列表，避免每条消息组合时各自读 SharedPreferences
     val rowDensity = AppearancePrefs.density(context)
@@ -603,15 +560,12 @@ fun ChatScreen(
     // 玻璃边缘高光用到的深浅判断（同屏只有顶栏/输入栏两处玻璃，正文区保持干净）
     val glassDark = isDarkThemeSurface()
     var topBarHeight by remember { mutableStateOf(0) }
-    var inputBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
-    val inputBarPad = with(density) { inputBarHeight.toDp() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
-            .imePadding()
             // README 返回手势：左右边缘滑动退出
             .edgeSwipeBack(onBack = onBack),
     ) {
@@ -679,13 +633,14 @@ fun ChatScreen(
 
         } // 静态背景层结束
 
-        // 消息列表：上下留出浮层高度（不再是模糊源，滚动/键盘动画不再触发整屏模糊重绘）
+        // 消息列表 + 输入栏同一列：列表 weight(1f) 占满剩余空间，输入栏沉底；imePadding 只作用这一列
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // 最小安全留白：浮层实测高度未就绪（首帧/键盘变化）时也不会盖住消息
-                .padding(top = maxOf(topBarPad, 64.dp))
-                .padding(bottom = maxOf(inputBarPad, 96.dp)),
+                // imePadding 只作用于“列表 + 输入栏”这一列：键盘开合只托起输入栏、列表从底部收放，
+                // 顶部栏与静态背景不参与 IME 重排，键盘动画不再整屏跳动。
+                .imePadding()
+                .padding(top = maxOf(topBarPad, 64.dp)),
         ) {
             if (!providerConfigured) {
                 UnconfiguredBanner(onOpenSettings = onOpenSettings)
@@ -693,6 +648,7 @@ fun ChatScreen(
 
             LazyColumn(
                 state = listState,
+                reverseLayout = true,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(
                     if (rowDensity == "compact") 4.dp else 8.dp,
@@ -829,6 +785,65 @@ fun ChatScreen(
                 }
             }
 
+            ChatInputBar(
+                accent = accent,
+                input = input,
+                onInputChange = { input = it },
+                pendingMedia = pendingMedia,
+                pendingDisplay = pendingDisplay,
+                onDisplayChange = { pendingDisplay = it },
+                onRemoveMedia = { index -> vm.removePendingMedia(index) },
+                isStreaming = isStreaming,
+                canQuickContinue = !isStreaming && vm.canContinueGeneration(),
+                quickBarOpen = showQuickBar,
+                worldHitsCount = worldHits.size,
+                contextUsage = contextUsage,
+                onOpenWorldPanel = { worldPanel = true },
+                onOpenContextDetail = { contextDetail = true },
+                onToggleQuickBar = { showQuickBar = !showQuickBar },
+                quickReplies = quickReplies,
+                onQuickReply = { label -> vm.runQuickReply(label) },
+                onQuickImage = { showImageDialog = true; showQuickBar = false },
+                onQuickCaption = { vm.startCaptionFlow() },
+                onQuickContinue = {
+                    showQuickBar = false
+                    vm.continueGeneration()
+                },
+                onQuickImpersonate = {
+                    showQuickBar = false
+                    vm.impersonate()
+                },
+                onSend = {
+                    val text = input.trim()
+                    if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
+                        followBottom = true
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                        val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
+                        if (accepted) {
+                            input = ""
+                            pendingDisplay = null
+                            keyboardController?.hide()
+                        }
+                    }
+                },
+                onStop = { vm.stop() },
+                onAttach = {
+                    showAttachOptions = true
+                },
+                onVoice = {
+                    Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .glassEdgeHighlight(dark = glassDark, atTop = true)
+                    .then(
+                        if (AppearancePrefs.backgroundBlur(context)) {
+                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
+                        } else {
+                            Modifier.background(MaterialTheme.colorScheme.surface)
+                        },
+                    ),
+            )
         }
 
         ChatTopBar(
@@ -853,74 +868,6 @@ fun ChatScreen(
                 ),
         )
 
-        ChatInputBar(
-            accent = accent,
-            input = input,
-            onInputChange = { input = it },
-            pendingMedia = pendingMedia,
-            pendingDisplay = pendingDisplay,
-            onDisplayChange = { pendingDisplay = it },
-            onRemoveMedia = { index -> vm.removePendingMedia(index) },
-            isStreaming = isStreaming,
-            canQuickContinue = !isStreaming && vm.canContinueGeneration(),
-            quickBarOpen = showQuickBar,
-            worldHitsCount = worldHits.size,
-            contextUsage = contextUsage,
-            onOpenWorldPanel = { worldPanel = true },
-            onOpenContextDetail = { contextDetail = true },
-            onToggleQuickBar = { showQuickBar = !showQuickBar },
-            quickReplies = quickReplies,
-            onQuickReply = { label -> vm.runQuickReply(label) },
-            onQuickImage = { showImageDialog = true; showQuickBar = false },
-            onQuickCaption = { vm.startCaptionFlow() },
-            onQuickContinue = {
-                showQuickBar = false
-                vm.continueGeneration()
-            },
-            onQuickImpersonate = {
-                showQuickBar = false
-                vm.impersonate()
-            },
-            onSend = {
-                val text = input.trim()
-                if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
-                    followBottom = true
-                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
-                    if (accepted) {
-                        input = ""
-                        pendingDisplay = null
-                        // 发完先滚底再收键盘：滚动在键盘未收起的小视口里完成，键盘收起后视口向下扩展，
-                        // 最后一条仍钉在底部——不猜动画时长，也没有“滚到旧视口”的中间态
-                        scope.launch {
-                            if (messages.isNotEmpty()) {
-                                listState.scrollToItem(messages.lastIndex, scrollOffset = Int.MAX_VALUE)
-                            }
-                            keyboardController?.hide()
-                        }
-                    }
-                }
-            },
-            onStop = { vm.stop() },
-            onAttach = {
-                showAttachOptions = true
-            },
-            onVoice = {
-                Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .onSizeChanged { inputBarHeight = it.height }
-                .glassEdgeHighlight(dark = glassDark, atTop = true)
-                .then(
-                    if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
-                    } else {
-                        Modifier.background(MaterialTheme.colorScheme.surface)
-                    },
-                ),
-        )
     }
 
     if (worldPanel) {

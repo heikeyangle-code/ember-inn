@@ -460,8 +460,8 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ✅ 滑动切回复的 swipe picker（复验：长按菜单“变体列表”→ ModalBottomSheet，逐条显示当前高亮，点击即跳转并关层；数据/跳转/删除接口均已接线）。
 ✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
 ⚠️ 快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行（世界书命中条目 automationId 匹配槽位自动执行，prevent 栈 1:1）；图像生成/附件/TTS 已入快捷工具盘与长按菜单，全局正则开关在设置→正则页（disabledExtensions.regex 语义）。✅ 聊天元数据（2026-08-10）：chats/{id}.json 官方 ChatHeader 读写；chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡（引擎参数已接）；custom_background 聊天背景（⋮ 菜单选图/清除，消息区低透明铺底）；✅ 书签（存档 + bookmark_link + 载入，复验）；✅ 设置快照（见 3.8）。
-现状补充：键盘适配（adjustResize + imePadding）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
-聊天页现状：自动滚底=贴底跟随+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；滚动跟随仅贴底时滚、发送复位；首页预览走 ViewModel 缓存（不在组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
+现状补充：键盘适配（adjustResize + imePadding 只作用“消息列表 + 输入栏”同一列，顶栏与静态背景不参与 IME 重排）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
+聊天页现状：列表 `reverseLayout=true`（官方 Jetchat 方案），最新消息天然钉在视口底部——新消息/流式内容增长无需 scrollToItem 强制滚动，键盘开合只让列表+输入栏列从底部收放；自动滚底=贴底跟随（`firstVisibleItemIndex==0`）+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；发送复位跟随；首页预览走 ViewModel 缓存（不在组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
 全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。
@@ -605,14 +605,14 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
  结束由 ChatMarkdown 完整重渲染；balanceStreamingDelimiters 为 App 增强（官方 1.18 无此函数）
 - 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
  MessageRow 派生字段 remember(el) 一次缓存
-- 自动触底：最后一项可见=贴底；上滑暂停、回底恢复；首帧滚底读当前 layoutInfo
+- 自动触底：`reverseLayout=true`，`firstVisibleItemIndex==0` 即贴底（官方 LazyColumn 语义）；上滑暂停、回底恢复；新消息/流式增长底部天然钉住，不再 scrollToItem/layoutInfo 采样
 - 登记未做：auto_scroll_chat_to_bottom 开关（官方默认开，App 恒开）、
  LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器
 
 ### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
 - CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
  displayCache 按消息索引缓存显示文本，组合期不再读盘/跑正则
-- 进聊天首帧滚底等 totalItemsCount>0 再 scrollToItem；流式不再每 tick 整段 Markdown 解析/正则
+- 进聊天首帧即钉底（reverseLayout 初始偏移=0）；流式不再每 tick 整段 Markdown 解析/正则、也不再每 tick 滚动
 - 角色卡去掉逐卡 dropShadow；WebView 兜底项高度突变登记为潜在滚动跳变源（测高机制见第 12 章）
 
 ### 8.4 主题系统现状
@@ -913,7 +913,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 ### 12.7 滚动 / 键盘卡顿治理
 - **animateItem 移除（“每条消息都在动”根因）**：消息行原本挂 `Modifier.animateItem()`，对应 Google Issue Tracker 395536917（BOM 2025.01.01 复现，2026-03 仍 Not started）：上下滚动时条目位移动画持续触发，表现为“列表自己在动 / 每条消息都在动”。聊天列表不需要位移动画（google compose-samples 的 Jetchat 消息行不用），已移除。
 - **毛玻璃静态化（滚动卡顿主因之二）**：原实现把“消息列表”整列作为 Cloudy `sky` 模糊源；Cloudy 0.7.1 的 SkyFrameDriver 检测到滚动活动后，滚动期间每帧重捕整屏并重模糊。现改为只把“静态背景层”（氛围渐变 + 光晕 + 显式/头像背景）作为 sky 源，消息列表不再参与模糊重绘；顶栏/输入栏保留玻璃质感，只是不再实时模糊滚过的消息文字。
-- **发送后先滚底再收键盘**：`scrollToItem(last, Int.MAX_VALUE)` 在键盘未收起的小视口内完成，键盘收起后视口向下扩展、最后一条仍钉在底部；删掉了原来“等 280ms 再滚”的猜时长逻辑。
+- **reverseLayout 重构（键盘/触底卡顿根治）**：列表改 `reverseLayout=true`（google compose-samples Jetchat 方案），第 0 项=最新消息固定在视口底部；内容增长时底部天然钉住，彻底删掉三条 `scrollToItem(Int.MAX_VALUE)` 强制滚动（新消息、首帧、流式节流滚动）与每帧读 `layoutInfo` 的手写贴底判定。IME 处理改为 `imePadding()` 只作用于“消息列表 + 输入栏”同一列（输入栏沉底进列、不再悬浮叠加），顶栏与静态背景不再随键盘整屏重排；发送后只收键盘、不再先滚底。
 - **热路径缓存**：`chatTypography()` / `chatTextShadow()` 按设置值 `remember`（流式每 tick、每条消息重组时不再重建几十个 TextStyle / Shadow）；`NativeMarkdown` 的 colors / typography / padding / components 按实际值缓存，参数不变即复用同一实例（对照 mikepenz 官方 PR #408 的 remember 复用方向）。
 - **行级参数稳定化**：`immersiveActions` / `bubbleStyle` / `density` 在 ChatScreen 层读一次传入列表，避免每条消息组合时各自读 SharedPreferences；`List<MediaAttachment>` 包成 `@Immutable ChatMedia`，让 MessageRow 可跳过重组（Compose 把 List 判为不稳定参数）。
 - **玻璃边缘高光（毛玻璃美化，全量铺开）**：共用 `EmberFx.glassEdgeHighlight` 画 1dp 白色渐变细线（深色 0.16 / 浅色 0.30）——聊天顶栏下缘、聊天输入栏上缘、首页顶栏下缘、搜索态顶栏下缘、AI 对话玻璃渐变卡上缘、首页玻璃 FAB 上缘；补上 README 遗留的“1px 高光描边”。边缘反光是毛玻璃“高级感”的主要来源，tint / 阴影保持克制（README 格调守则）。全 app 真模糊玻璃共 5 处：聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB，已全部覆盖。
@@ -994,7 +994,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
 - **重组 / 分配**：skydoves compose-performance-skills（optimizing-lazy-layouts / deferring-state-reads / choosing-derivedstateof）——分配重的值移出 items lambda 并 remember；滚动/动画状态读进 `LaunchedEffect` / `snapshotFlow` 或 `graphicsLayer`（Draw 阶段），不在 Composition 阶段读滚动值。本项目 followBottom 只在 effect 里消费、光标动画已走 graphicsLayer，符合该规范。
 - **Markdown**：mikepenz PR #408 官方性能方向——解析/参数 remember 复用，内容未变不重建组件模型；本项目流式走轻量渲染器、结束后一次性完整渲染，与官方 streaming_fps 语义一致。
-- **键盘 / 滚底**：先滚底再收键盘（小视口滚底、大视口锚底）避免“滚到旧视口”。聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat）可彻底消除键盘开合/新消息的底部跳动，但需重写滚动跟随与 key 逻辑，风险高，列为后续方案（当前未采用）。
+- **键盘 / 滚底**：已采用聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat；官方 LazyColumn 文档：reverse 布局下 `firstVisibleItemIndex==0` 即滚到底部），新消息/键盘开合天然锚底、无底部跳动；IME 用 `imePadding()` 只垫“列表+输入栏”列（SO 78736912 结论 + 官方 insets 文档），不在根节点读 `WindowInsets.ime` 手动垫。
 
 ### 12.6 已知边界
 - **行内 Web 标签仍整段走 Web（无法与原生文本混排）**：button/input/select/textarea/label/progress/meter/output/map/area/object/span[属性]/font face-size/ruby/rt/rp/bdi/bdo 等出现在围栏外文字里时，所在整段仍进 WebView（Compose 不支持“原生文字 + 任意行内 HTML 控件”混排）；块级卡片/表格/媒体已独立切出，周围文字不再被拖入。
