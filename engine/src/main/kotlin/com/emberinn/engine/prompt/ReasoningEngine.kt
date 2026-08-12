@@ -6,9 +6,10 @@ package com.emberinn.engine.prompt
  */
 @kotlinx.serialization.Serializable
 data class ReasoningTemplate(
-    val prefix: String = "",
-    val suffix: String = "",
-    val separator: String = "",
+    /** 官方 power_user.reasoning 默认：prefix <think> / suffix </think> / separator \n。 */
+    val prefix: String = "<think>",
+    val suffix: String = "</think>",
+    val separator: String = "\n",
 )
 
 @kotlinx.serialization.Serializable
