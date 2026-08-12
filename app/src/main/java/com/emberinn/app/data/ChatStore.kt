@@ -511,7 +511,7 @@ class ChatStore(private val context: Context) {
         bias: String? = null,
         compact: Boolean = false,
         avatar: String? = null,
-    ) {
+    ): kotlinx.serialization.json.JsonObject {
         val now = java.time.Instant.now().toString()
         val message = buildJsonObject {
             put("name", JsonPrimitive(name))
@@ -559,6 +559,7 @@ class ChatStore(private val context: Context) {
             )
         }
         insertMessage(sessionId, message, at)
+        return message
     }
 
     /** 官方 ToolManager.saveFunctionToolInvocations：工具执行结果落成一条 system 消息（extra.tool_invocations）。 */

@@ -545,7 +545,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     // ---- SlashMessageActions（消息类斜杠命令；对齐官方 slash-commands.js）----
 
-    override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String {
+    override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): ManualSendResult {
         val mesText = text.trim()
         if (mesText.isBlank()) return ""
         val resolvedName = name.ifBlank { currentCharName }
@@ -581,7 +581,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         )
     }
 
-    override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String {
+    override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): ManualSendResult {
         val mesText = text.trim()
         if (mesText.isBlank()) return ""
         // 官方 send：name 参数存在时按参数显示（可为空=不显示名）；缺省用当前用户名
