@@ -451,6 +451,326 @@
         "willSwitch": false,
         "autoLock": true
       }
+    },
+    {
+      "id": "states-no-persona-no-group",
+      "args": {
+        "body": {
+          "method": "states",
+          "avatarId": "a",
+          "powerUser": {
+            "default_persona": "d",
+            "persona_descriptions": {
+              "a": {
+                "connections": [
+                  {
+                    "type": "character",
+                    "id": "char1"
+                  }
+                ],
+                "description": "A"
+              },
+              "b": {
+                "connections": [
+                  {
+                    "type": "group",
+                    "id": "g1"
+                  }
+                ]
+              },
+              "c": {
+                "connections": []
+              }
+            },
+            "persona_description": "默认描述",
+            "persona_description_position": 0,
+            "persona_description_depth": 4,
+            "persona_description_role": 0,
+            "persona_description_lorebook": ""
+          },
+          "chatPersona": null,
+          "selectedGroup": null,
+          "charAvatar": null
+        }
+      },
+      "expected": {
+        "avatarId": "a",
+        "default": false,
+        "locked": {
+          "chat": false,
+          "character": false
+        }
+      }
+    },
+    {
+      "id": "states-no-description",
+      "args": {
+        "body": {
+          "method": "states",
+          "avatarId": "x",
+          "powerUser": {
+            "default_persona": "d",
+            "persona_descriptions": {
+              "a": {
+                "connections": [
+                  {
+                    "type": "character",
+                    "id": "char1"
+                  }
+                ],
+                "description": "A"
+              },
+              "b": {
+                "connections": [
+                  {
+                    "type": "group",
+                    "id": "g1"
+                  }
+                ]
+              },
+              "c": {
+                "connections": []
+              }
+            },
+            "persona_description": "默认描述",
+            "persona_description_position": 0,
+            "persona_description_depth": 4,
+            "persona_description_role": 0,
+            "persona_description_lorebook": ""
+          },
+          "chatPersona": "x",
+          "selectedGroup": null,
+          "charAvatar": "char1"
+        }
+      },
+      "expected": {
+        "avatarId": "x",
+        "default": false,
+        "locked": {
+          "chat": true,
+          "character": false
+        }
+      }
+    },
+    {
+      "id": "temporary-empty-personas",
+      "args": {
+        "body": {
+          "method": "temporary",
+          "userAvatar": "a",
+          "chatPersona": "b",
+          "defaultPersona": "d",
+          "personas": {}
+        }
+      },
+      "expected": {
+        "isTemporary": true,
+        "hasDifferentChatLock": true,
+        "hasDifferentDefaultLock": true,
+        "info": "Current:  Chat:  Default: "
+      }
+    },
+    {
+      "id": "connected-multi",
+      "args": {
+        "body": {
+          "method": "connected",
+          "personaDescriptions": {
+            "a": {
+              "connections": [
+                {
+                  "type": "character",
+                  "id": "char1"
+                },
+                {
+                  "type": "group",
+                  "id": "g1"
+                }
+              ],
+              "description": "A"
+            },
+            "b": {
+              "connections": [
+                {
+                  "type": "character",
+                  "id": "char1"
+                }
+              ],
+              "description": "B"
+            }
+          },
+          "characterKey": "char1"
+        }
+      },
+      "expected": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "connection-obj-none",
+      "args": {
+        "body": {
+          "method": "connectionObj",
+          "selectedGroup": null,
+          "charAvatar": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "descriptor-existing",
+      "args": {
+        "body": {
+          "method": "descriptor",
+          "userAvatar": "a",
+          "powerUser": {
+            "default_persona": "d",
+            "persona_descriptions": {
+              "a": {
+                "connections": [
+                  {
+                    "type": "character",
+                    "id": "char1"
+                  }
+                ],
+                "description": "A"
+              },
+              "b": {
+                "connections": [
+                  {
+                    "type": "group",
+                    "id": "g1"
+                  }
+                ]
+              },
+              "c": {
+                "connections": []
+              }
+            },
+            "persona_description": "默认描述",
+            "persona_description_position": 0,
+            "persona_description_depth": 4,
+            "persona_description_role": 0,
+            "persona_description_lorebook": ""
+          }
+        }
+      },
+      "expected": {
+        "connections": [
+          {
+            "type": "character",
+            "id": "char1"
+          }
+        ],
+        "description": "A"
+      }
+    },
+    {
+      "id": "resolve-all-empty",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": null,
+          "userAvatars": [],
+          "connectedPersonas": [],
+          "defaultPersona": null,
+          "allowMultiConnections": false,
+          "userAvatar": "a"
+        }
+      },
+      "expected": {
+        "chatPersona": "",
+        "connectType": null,
+        "unlockChat": false,
+        "clearDefault": false,
+        "willSwitch": false,
+        "autoLock": false
+      }
+    },
+    {
+      "id": "resolve-multi-connections-allow",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": null,
+          "userAvatars": [
+            "a",
+            "b"
+          ],
+          "connectedPersonas": [
+            "a",
+            "b"
+          ],
+          "defaultPersona": null,
+          "allowMultiConnections": true,
+          "userAvatar": "a"
+        }
+      },
+      "expected": {
+        "chatPersona": "",
+        "connectType": null,
+        "unlockChat": false,
+        "clearDefault": false,
+        "willSwitch": false,
+        "autoLock": false
+      }
+    },
+    {
+      "id": "resolve-connected-plus-chatmeta",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": "a",
+          "userAvatars": [
+            "a",
+            "b"
+          ],
+          "connectedPersonas": [
+            "b"
+          ],
+          "defaultPersona": "d",
+          "allowMultiConnections": false,
+          "userAvatar": "b"
+        }
+      },
+      "expected": {
+        "chatPersona": "a",
+        "connectType": "chat",
+        "unlockChat": false,
+        "clearDefault": true,
+        "willSwitch": true,
+        "autoLock": false
+      }
+    },
+    {
+      "id": "resolve-autolock-multi",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "chatMetaPersona": null,
+          "userAvatars": [
+            "a",
+            "b"
+          ],
+          "connectedPersonas": [
+            "a",
+            "b"
+          ],
+          "defaultPersona": null,
+          "allowMultiConnections": true,
+          "userAvatar": "b",
+          "personaAutoLock": true
+        }
+      },
+      "expected": {
+        "chatPersona": "",
+        "connectType": null,
+        "unlockChat": false,
+        "clearDefault": false,
+        "willSwitch": false,
+        "autoLock": false
+      }
     }
   ]
 }

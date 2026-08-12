@@ -48,6 +48,13 @@ await add('equal-interval', { userMessages: 4, interval: 4 });
 await add('multiple-interval', { userMessages: 8, interval: 4 });
 await add('remainder', { userMessages: 6, interval: 4 });
 await add('zero-interval', { userMessages: 2, interval: 0 });
+// ---- 2026-08-12 穷举复验补充：负数/极大/非整除 ----
+await add('negative-interval', { userMessages: 4, interval: -2 });
+await add('negative-messages', { userMessages: -1, interval: 3 });
+await add('huge-interval', { userMessages: 5, interval: 1000000 });
+await add('huge-messages', { userMessages: 1000001, interval: 1000000 });
+await add('interval-two-not-aligned', { userMessages: 5, interval: 2 });
+await add('interval-two-aligned', { userMessages: 6, interval: 2 });
 
 writeFileSync(outFile, JSON.stringify({ source: 'authors-note shouldInject', cases }, null, 2));
 console.log('authors-note-inject:', cases.length, 'cases ->', outFile);

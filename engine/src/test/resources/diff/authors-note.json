@@ -130,6 +130,137 @@
         }
       },
       "expected": "a\n\nc"
+    },
+    {
+      "id": "resolve-all-fields-zero",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "",
+            "interval": 0,
+            "position": 0,
+            "depth": 0,
+            "role": 0
+          },
+          "defaults": {
+            "default": "默认",
+            "defaultInterval": 1,
+            "defaultPosition": 1,
+            "defaultDepth": 4,
+            "defaultRole": 0
+          }
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 0,
+        "position": 0,
+        "depth": 0,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-negative-values",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P",
+            "interval": -1,
+            "position": -2,
+            "depth": -3,
+            "role": -1
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": -1,
+        "position": -2,
+        "depth": -3,
+        "role": -1
+      }
+    },
+    {
+      "id": "resolve-huge-depth",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P",
+            "depth": 999999
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": 1,
+        "position": 1,
+        "depth": 999999,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-only-interval",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "interval": 7
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 7,
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "compose-multi-newlines",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a\nb"
+          ],
+          "bottom": [
+            "c\nd"
+          ],
+          "original": "note"
+        }
+      },
+      "expected": "a\nb\nnote\nc\nd"
+    },
+    {
+      "id": "compose-empty-all",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "compose-original-with-newlines",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": "\nnote\n"
+        }
+      },
+      "expected": "\nnote\n"
     }
   ]
 }

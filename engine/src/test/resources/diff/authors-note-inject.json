@@ -80,6 +80,66 @@
         }
       },
       "expected": false
+    },
+    {
+      "id": "negative-interval",
+      "args": {
+        "body": {
+          "userMessages": 4,
+          "interval": -2
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "negative-messages",
+      "args": {
+        "body": {
+          "userMessages": -1,
+          "interval": 3
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "huge-interval",
+      "args": {
+        "body": {
+          "userMessages": 5,
+          "interval": 1000000
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "huge-messages",
+      "args": {
+        "body": {
+          "userMessages": 1000001,
+          "interval": 1000000
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "interval-two-not-aligned",
+      "args": {
+        "body": {
+          "userMessages": 5,
+          "interval": 2
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "interval-two-aligned",
+      "args": {
+        "body": {
+          "userMessages": 6,
+          "interval": 2
+        }
+      },
+      "expected": true
     }
   ]
 }

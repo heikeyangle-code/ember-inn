@@ -56,6 +56,30 @@ await add('compose-empty', { method: 'compose', top: [], bottom: [], original: '
 await add('compose-top', { method: 'compose', top: ['a', 'b'], bottom: [], original: 'note' });
 await add('compose-both', { method: 'compose', top: ['a'], bottom: ['c', 'd'], original: 'note' });
 await add('compose-empty-original', { method: 'compose', top: ['a'], bottom: ['c'], original: '' });
+// ---- 2026-08-12 穷举复验补充：显式 0/非法值/换行内容/全空 ----
+await add('resolve-all-fields-zero', {
+    method: 'resolve',
+    meta: { prompt: '', interval: 0, position: 0, depth: 0, role: 0 },
+    defaults: { default: '默认', defaultInterval: 1, defaultPosition: 1, defaultDepth: 4, defaultRole: 0 },
+});
+await add('resolve-negative-values', {
+    method: 'resolve',
+    meta: { prompt: 'P', interval: -1, position: -2, depth: -3, role: -1 },
+    defaults: {},
+});
+await add('resolve-huge-depth', {
+    method: 'resolve',
+    meta: { prompt: 'P', depth: 999999 },
+    defaults: {},
+});
+await add('resolve-only-interval', {
+    method: 'resolve',
+    meta: { interval: 7 },
+    defaults: {},
+});
+await add('compose-multi-newlines', { method: 'compose', top: ['a\nb'], bottom: ['c\nd'], original: 'note' });
+await add('compose-empty-all', { method: 'compose', top: [], bottom: [], original: '' });
+await add('compose-original-with-newlines', { method: 'compose', top: [], bottom: [], original: '\nnote\n' });
 
 writeFileSync(outFile, JSON.stringify({ source: 'authors-note.js + world-info.js ANWithWI', cases }, null, 2));
 console.log('authors-note:', cases.length, 'cases ->', outFile);

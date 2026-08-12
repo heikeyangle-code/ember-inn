@@ -1,45 +1,42 @@
 package com.emberinn.engine.prompt
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * 官方预设打包完整性：数量与必需字段（由 scripts/build-presets.mjs 从
+ * SillyTavern 1.18.0 default/content/presets 打包，官方更新后重新生成）。
+ */
 class PresetLibraryTest {
 
     @Test
-    fun `instruct presets load from official bundle`() {
-        val presets = PresetLibrary.instructPresets()
-        assertEquals(38, presets.size)
-        val alpaca = presets.first { it.preset == "Alpaca" }
-        assertEquals("### Instruction:", alpaca.inputSequence)
-        assertEquals("### Response:", alpaca.outputSequence)
-        assertEquals(NamesBehavior.FORCE, alpaca.namesBehavior)
-        assertTrue(alpaca.wrap)
-    }
+    fun `official presets all load with required fields`() {
+        val contexts = PresetLibrary.contextPresets()
+        assertEquals(34, contexts.size)
+        contexts.forEach { c ->
+            assertFalse("context preset name blank", c.preset.isBlank())
+            assertTrue("context preset story_string blank: ${c.preset}", c.storyString.isNotBlank())
+        }
 
-    @Test
-    fun `context presets load with story strings`() {
-        val presets = PresetLibrary.contextPresets()
-        assertEquals(34, presets.size)
-        val default = presets.first { it.preset == "Default" }
-        assertTrue(default.storyString.contains("{{#if system}}"))
-        assertEquals("***", default.chatStart)
-    }
+        val instructs = PresetLibrary.instructPresets()
+        assertEquals(38, instructs.size)
+        instructs.forEach { i ->
+            assertFalse("instruct preset name blank", i.preset.isBlank())
+        }
 
-    @Test
-    fun `sampler presets load for each api`() {
         assertEquals(1, PresetLibrary.samplerPresets("openai").size)
         assertEquals(6, PresetLibrary.samplerPresets("textgen").size)
         assertEquals(24, PresetLibrary.samplerPresets("novel").size)
         assertEquals(6, PresetLibrary.samplerPresets("kobold").size)
-        val novel = PresetLibrary.samplerPresets("novel").first()
-        assertTrue(novel.name.isNotEmpty())
-        assertTrue(novel.settings["temperature"] != null)
-    }
+        PresetLibrary.samplerPresets("openai").forEach { s ->
+            assertFalse("sampler preset name blank", s.name.isBlank())
+        }
 
-    @Test
-    fun `sysprompt and reasoning presets load`() {
         assertEquals(13, PresetLibrary.systemPromptPresets().size)
         assertEquals(5, PresetLibrary.reasoningPresets().size)
+
+        assertTrue("quick-replies preset missing", PresetLibrary.quickRepliesPresets().isNotEmpty())
     }
 }

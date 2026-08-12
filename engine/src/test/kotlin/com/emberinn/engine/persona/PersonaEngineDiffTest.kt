@@ -86,20 +86,37 @@ class PersonaEngineDiffTest {
                         role = pu["persona_description_role"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
                         lorebook = pu["persona_description_lorebook"]?.jsonPrimitive?.content ?: "",
                     )
-                    val d = PersonaEngine.getOrCreateDescriptor(
-                        body["userAvatar"]!!.jsonPrimitive.content,
-                        mutableMapOf(),
-                        defaults,
-                    )
-                    buildJsonObject {
-                        put("description", JsonPrimitive(d.description))
-                        put("position", JsonPrimitive(d.position))
-                        put("depth", JsonPrimitive(d.depth))
-                        put("role", JsonPrimitive(d.role))
-                        put("lorebook", JsonPrimitive(d.lorebook))
-                        put("connections", JsonArray(emptyList()))
-                        put("title", JsonPrimitive(d.title))
-                    }
+                    val existing = pu["persona_descriptions"]?.jsonObject?.mapValues { (_, v) ->
+                        val o = v.jsonObject
+                        PersonaDescriptor(
+                            description = o["description"]?.jsonPrimitive?.content ?: "",
+                            position = o["position"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            depth = o["depth"]?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
+                            role = o["role"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            lorebook = o["lorebook"]?.jsonPrimitive?.content ?: "",
+                            connections = o["connections"]?.jsonArray?.mapNotNull { el ->
+                                val c = el.jsonObject
+                                val type = c["type"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                                val id = c["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                                PersonaConnection(type = type, id = id)
+                            } ?: emptyList(),
+                            title = o["title"]?.jsonPrimitive?.content ?: "",
+                        )
+                    }?.toMutableMap() ?: mutableMapOf()
+                    val avatar = body["userAvatar"]!!.jsonPrimitive.content
+                    val d = PersonaEngine.getOrCreateDescriptor(avatar, existing, defaults)
+                    // 官方 getOrCreatePersonaDescriptor：已存在时原样返回（只含存储字段）；
+                    // 新建时返回默认模板（description/position/depth/role/lorebook + connections/title）。
+                    pu["persona_descriptions"]?.jsonObject?.get(avatar)
+                        ?: buildJsonObject {
+                            put("description", JsonPrimitive(d.description))
+                            put("position", JsonPrimitive(d.position))
+                            put("depth", JsonPrimitive(d.depth))
+                            put("role", JsonPrimitive(d.role))
+                            put("lorebook", JsonPrimitive(d.lorebook))
+                            put("connections", JsonArray(emptyList()))
+                            put("title", JsonPrimitive(d.title))
+                        }
                 }
                 "resolve" -> {
                     val r = PersonaEngine.resolve(

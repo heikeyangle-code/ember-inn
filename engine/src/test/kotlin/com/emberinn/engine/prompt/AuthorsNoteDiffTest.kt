@@ -59,7 +59,7 @@ class AuthorsNoteDiffTest {
                         put("interval", JsonPrimitive(note.interval))
                         put("position", JsonPrimitive(note.position))
                         put("depth", JsonPrimitive(note.depth))
-                        put("role", JsonPrimitive(roleValue(note.role)))
+                        put("role", JsonPrimitive(note.roleRaw ?: roleValue(note.role)))
                     }
                 }
                 "compose" -> JsonPrimitive(

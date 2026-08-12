@@ -142,6 +142,20 @@ await add('resolve-default', { method: 'resolve', chatMetaPersona: null, userAva
 await add('resolve-invalid', { method: 'resolve', chatMetaPersona: 'x', userAvatars: ['a'], connectedPersonas: [], defaultPersona: 'd', allowMultiConnections: false, userAvatar: 'a' });
 await add('resolve-auto-lock-switch', { method: 'resolve', chatMetaPersona: 'a', userAvatars: ['a', 'b'], connectedPersonas: [], defaultPersona: null, allowMultiConnections: false, userAvatar: 'b', personaAutoLock: true });
 await add('resolve-auto-lock-same', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'b'], connectedPersonas: ['a'], defaultPersona: null, allowMultiConnections: false, userAvatar: 'a', personaAutoLock: true });
+// ---- 2026-08-12 穷举复验补充：全空/多连接/连接冲突/描述已存在/无群聊状态 ----
+await add('states-no-persona-no-group', { method: 'states', avatarId: 'a', powerUser, chatPersona: null, selectedGroup: null, charAvatar: null });
+await add('states-no-description', { method: 'states', avatarId: 'x', powerUser, chatPersona: 'x', selectedGroup: null, charAvatar: 'char1' });
+await add('temporary-empty-personas', { method: 'temporary', userAvatar: 'a', chatPersona: 'b', defaultPersona: 'd', personas: {} });
+await add('connected-multi', { method: 'connected', personaDescriptions: {
+    a: { connections: [{ type: 'character', id: 'char1' }, { type: 'group', id: 'g1' }], description: 'A' },
+    b: { connections: [{ type: 'character', id: 'char1' }], description: 'B' },
+}, characterKey: 'char1' });
+await add('connection-obj-none', { method: 'connectionObj', selectedGroup: null, charAvatar: null });
+await add('descriptor-existing', { method: 'descriptor', userAvatar: 'a', powerUser });
+await add('resolve-all-empty', { method: 'resolve', chatMetaPersona: null, userAvatars: [], connectedPersonas: [], defaultPersona: null, allowMultiConnections: false, userAvatar: 'a' });
+await add('resolve-multi-connections-allow', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'b'], connectedPersonas: ['a', 'b'], defaultPersona: null, allowMultiConnections: true, userAvatar: 'a' });
+await add('resolve-connected-plus-chatmeta', { method: 'resolve', chatMetaPersona: 'a', userAvatars: ['a', 'b'], connectedPersonas: ['b'], defaultPersona: 'd', allowMultiConnections: false, userAvatar: 'b' });
+await add('resolve-autolock-multi', { method: 'resolve', chatMetaPersona: null, userAvatars: ['a', 'b'], connectedPersonas: ['a', 'b'], defaultPersona: null, allowMultiConnections: true, userAvatar: 'b', personaAutoLock: true });
 
 
 writeFileSync(outFile, JSON.stringify({ source: 'personas.js 纯逻辑', cases }, null, 2));

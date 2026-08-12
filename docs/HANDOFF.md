@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 327 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 328 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（81 组差分 fixture，共 1320 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1320 例（机器数）为准。
+**已覆盖（81 组差分 fixture，共 1343 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1343 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1320 例。
+> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1343 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -140,8 +140,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
 | 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 10 |
-| 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 7 |
-| 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 16 |
+| 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 14 |
+| 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 26 |
 | 群聊完整循环 | group-loop-official.mjs | GroupLoopDiffTest | 11 |
 | OpenAI 请求体（全厂商） | openai-params-official.mjs | OpenAiParamsDiffTest | 27 |
 | 工具 token 预分配 | tool-budget-official.mjs | ToolBudgetDiffTest | 4 |
@@ -170,7 +170,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 工具调用增量解析（ToolManager.parseToolCalls） | tool-calls-official.mjs | ToolCallDiffTest | 8 |
 | 记忆扩展纯逻辑（memory） | memory-official.mjs | MemoryDiffTest | 14 |
 | append_title 标题追加（coreChat.map） | append-title-official.mjs | AppendTitleDiffTest | 5 |
-| 作者注释注入判定（authors-note.shouldInject） | authors-note-inject-official.mjs | AuthorsNoteInjectDiffTest | 8 |
+| 作者注释注入判定（authors-note.shouldInject） | authors-note-inject-official.mjs | AuthorsNoteInjectDiffTest | 14 |
 | 扩展提示 set/get + /inject 参数映射 | extension-prompt-official.mjs | ExtensionPromptDiffTest | 19 |
 | 世界书 EM 示例（baseChatReplace+unshift/push） | em-examples-official.mjs | EmExamplesDiffTest | 9 |
 | 深度提示注入规格（角色/群聊/世界书） | depth-inject-official.mjs | DepthPromptDiffTest | 6 |
@@ -337,7 +337,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 3.8.18 setOpenAIMessages 构造循环 ✅
 - `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
 - ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 327 测全绿。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 328 测全绿。
 
 ### 3.8.19 边界补齐
 - Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
@@ -400,7 +400,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 327 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 328 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 ：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -519,7 +519,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1320 例）：
+**新增完成**（全部 CI 绿、引擎 328 测全绿、差分 81 组 / 1343 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -548,7 +548,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 81 组差分 fixture / 1320 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29 等）
+- 81 组差分 fixture / 1343 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29、persona-engine 26、authors-note 14、authors-note-inject 14 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 

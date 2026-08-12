@@ -7,6 +7,8 @@ data class AuthorsNote(
     val position: Int = 1,
     val depth: Int = 4,
     val role: String = "system",
+    /** 官方 resolve 的原始数字 role（透传，含非法值；注入时按官方查表转字符串）。 */
+    val roleRaw: Int? = null,
     val allowWIScan: Boolean = true,
 )
 
@@ -39,6 +41,8 @@ object AuthorsNoteEngine {
             interval = meta.interval ?: settings.defaultInterval ?: 1,
             position = meta.position ?: settings.defaultPosition ?: 1,
             depth = meta.depth ?: settings.defaultDepth ?: 4,
+            roleRaw = roleValue,
+            // 官方 getExtensionPromptRoleByName 查表：0=system/1=user/2=assistant，其它（含非法）默认 system
             role = when (roleValue) { 1 -> "user"; 2 -> "assistant"; else -> "system" },
             allowWIScan = settings.allowWIScan,
         )
@@ -59,11 +63,11 @@ object AuthorsNoteEngine {
         return messagesTillInsertion == 0
     }
 
-    /** 对齐 world-info.js ANWithWI：top + 原文 + bottom，去掉首尾换行。 */
-    fun composeWithWorldInfo(original: String, top: List<String> = emptyList(), bottom: List<String> = emptyList()): String =
-        listOf(top.joinToString("\n"), original, bottom.joinToString("\n"))
-            .joinToString("\n")
-            .replace(Regex("""^\n|\n$"""), "")
+    /** 对齐 world-info.js ANWithWI：top + 原文 + bottom，只去掉一个首部换行和一个尾部换行（官方 replace /(^\n)|(\n$)/g）。 */
+    fun composeWithWorldInfo(original: String, top: List<String> = emptyList(), bottom: List<String> = emptyList()): String {
+        val joined = listOf(top.joinToString("\n"), original, bottom.joinToString("\n")).joinToString("\n")
+        return joined.removePrefix("\n").removeSuffix("\n")
+    }
 }
 
 /** 对齐官方 ANWithWI 组合：AN 前后并入世界书 AN 注入，去掉首尾换行。 */
