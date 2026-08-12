@@ -382,7 +382,7 @@ class ChatRepository(context: Context) {
             userName = "User",
             charName = "Assistant",
             model = profile.model,
-            maxContextTokens = profile.contextWindow.takeIf { it > 0 } ?: 8192,
+            maxContextTokens = profile.contextWindow.takeIf { it > 0 } ?: DEFAULT_CONTEXT_WINDOW,
             maxTokens = if (responseLength > 0) responseLength else profile.sampler.maxTokens.takeIf { it > 0 } ?: 512,
             type = "quiet",
             quietPrompt = quietPrompt,

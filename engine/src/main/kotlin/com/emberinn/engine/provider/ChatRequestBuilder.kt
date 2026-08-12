@@ -17,7 +17,7 @@ import kotlinx.serialization.json.put
 data class SamplerParams(
     val temperature: Double = 1.0,
     val topP: Double = 1.0,
-    val maxTokens: Int = 512,
+    val maxTokens: Int = 300,
     val presencePenalty: Double = 0.0,
     val frequencyPenalty: Double = 0.0,
     val stream: Boolean = false,

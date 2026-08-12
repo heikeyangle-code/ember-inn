@@ -911,6 +911,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 ### 12.16 发送链路审计（2026-08-12）
 对照官方 `sendTextareaMessage → Generate → prepareOpenAIMessages/populateChatCompletion → createGenerationParameters → sendOpenAIRequest → saveReply`：
 - ✅ 已对齐：continue_on_send、send_if_empty（仅 OpenAI 系）、用户消息 `extra.bias` + removeMacros + substituteParams、append_title/媒体标题、请求 stop/seed/n/top_k/logit_bias/reasoning_effort/verbosity（官方源白名单）、默认上下文 4095 / 最大回复 300、getMaxPromptTokens=context-response（不再扣非官方安全余量）、流式 tool_calls 回调管线。
+- 2026-08-12 默认值复核：官方 `oai_settings` 默认 = `openai_max_context: max_4k(4095)`、`openai_max_tokens: 300`（openai.js default_settings）。App UI 常量此前已 4095/300；**引擎 `ConnectionProfile.contextWindow` 与 `SamplerParams.maxTokens` 的旧默认 8192/512 已修正为 4095/300**（旧注释误标“官方 8192”），ChatPromptFactory/MemoryService 兜底同步。必选提示词超限：官方 `TokenBudgetExceededError` → toast “Mandatory prompts exceed the context size.” + Prompt Manager 提示调大限额，随后仍带残缺消息请求（空数组会 API 400）；我方引擎管线同语义（抛错→返回已装下部分），App 层在空消息时直接给友好错误、不请求 API（有意收敛）。聊天历史超限：官方与引擎都是**静默丢弃最老消息**直到能装下，不报错。
 - 🟡 仍未接：quiet/quietImage/quietToLoud、dryRun 提示词预览、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取、token_count 落盘。
 - 规则：这些缺口不会伪造“已对齐”；HANDOFF 只在真正接完并 CI 绿后改成 ✅。
 

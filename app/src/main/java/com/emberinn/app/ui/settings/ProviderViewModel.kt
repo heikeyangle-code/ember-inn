@@ -108,7 +108,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
         _models.value = list
         _selectedModel.value = model
-        // 官方 1.18：只有“从未设置”才用默认值；用户存的 8192/512 原样保留。
+        // 官方 1.18：只有“从未设置”才用默认值（4095/300）；用户存的值原样保留。
         val storedContext = existing?.contextWindow
         val legacyDefault = storedContext == null
         _contextAuto.value = false
@@ -151,10 +151,10 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _contextWindow.value = (n ?: DEFAULT_CONTEXT_WINDOW).coerceIn(256, 2_000_000)
     }
 
-    /** 最大回复 tokens：推理模型思考会占额度，512 太小正文常被掐空。 */
+    /** 最大回复 tokens：推理模型思考会占额度，默认按官方 300。 */
     fun setMaxTokens(value: String) {
         val n = value.filter { it.isDigit() }.toIntOrNull()
-        _maxTokens.value = (n ?: 512).coerceIn(64, 262_144)
+        _maxTokens.value = (n ?: DEFAULT_MAX_TOKENS).coerceIn(64, 262_144)
     }
 
     fun selectModel(model: String) {

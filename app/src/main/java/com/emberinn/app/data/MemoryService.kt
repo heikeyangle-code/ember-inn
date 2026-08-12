@@ -117,7 +117,8 @@ class MemoryService(
         // RAW_BLOCKING(1) / RAW_NON_BLOCKING(2)：官方 getRawSummaryPrompt + generateRaw
         val profile = chatRepository.profile()
         val model = profile?.model.orEmpty()
-        val maxContext = profile?.contextWindow?.takeIf { it > 0 } ?: 8192
+        val maxContext = profile?.contextWindow?.takeIf { it > 0 }
+            ?: ChatRepository.DEFAULT_CONTEXT_WINDOW
         val currentMaxTokens = profile?.sampler?.maxTokens?.takeIf { it > 0 } ?: 512
         val promptSize = if (s.overrideResponseLength > 0) {
             maxContext - s.overrideResponseLength

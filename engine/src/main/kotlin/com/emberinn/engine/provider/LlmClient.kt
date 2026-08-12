@@ -33,8 +33,8 @@ data class ConnectionProfile(
     val region: String = "",
     val accountId: String = "",
     val apiVersionOverride: String = "",
-    /** 上下文上限（tokens），对齐官方 openai_max_context 默认 8192；App 配置后作为占比胶囊分母。 */
-    val contextWindow: Int = 8192,
+    /** 上下文上限（tokens），对齐官方 openai_max_context 默认 max_4k=4095；App 配置后作为占比胶囊分母。 */
+    val contextWindow: Int = 4095,
 )
 
 /** 提供商连接存储（JSON 文件，多档案：profiles.json，旧单档案 connection.json 自动迁移）。 */

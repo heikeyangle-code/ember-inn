@@ -85,7 +85,7 @@ class ChatPromptFactory {
         val messages: List<CompletionMessage>,
         val activatedWorldInfo: List<WorldInfoEntry>,
         val counts: Map<String, Int> = emptyMap(),
-        val maxContextTokens: Int = 8192,
+        val maxContextTokens: Int = 4095,
     )
 
     /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects），引擎 1:1 模型。 */
@@ -120,8 +120,8 @@ class ChatPromptFactory {
         userName: String,
         charName: String,
         model: String,
-        maxContextTokens: Int = 8192,
-        maxTokens: Int = 512,
+        maxContextTokens: Int = 4095,
+        maxTokens: Int = 300,
         type: String = "generate",
         /** 官方 Generate 的 textareaText（getBiasStrings 用；regenerate/swipe/continue 空输入回溯 extra.bias）。 */
         textareaText: String = "",
