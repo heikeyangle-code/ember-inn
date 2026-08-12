@@ -895,18 +895,22 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }.onFailure { _notice.value = "（人设备份失败：${it.message}）" }
     }
 
-    /** 官方 Restore Personas：导入并整体替换。 */
+    /** 官方 Restore Personas：合并语义（已存在跳过，default_persona 存在才应用）。 */
     fun restorePersonas(uri: android.net.Uri) {
-        val ok = runCatching {
+        val result = runCatching {
             val text = getApplication<android.app.Application>().contentResolver.openInputStream(uri)
                 ?.bufferedReader()?.use { it.readText() }.orEmpty()
             personaStore.importJson(text)
-        }.getOrDefault(false)
-        if (ok) {
+        }.getOrNull()
+        if (result != null && result.ok) {
             _personas.value = personaStore.list()
             _activePersona.value = personaStore.active()
             _defaultPersona.value = personaStore.default()
-            _notice.value = "（人设已恢复）"
+            _notice.value = if (result.warnings.isEmpty()) {
+                "（人设已恢复）"
+            } else {
+                "（人设已恢复，${result.warnings.size} 条跳过提示）"
+            }
         } else {
             _notice.value = "（人设恢复失败：文件格式不正确）"
         }
@@ -2324,7 +2328,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 // 2/3=TOP/BOTTOM_AN（合并进作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE 不注入
                 personaInPrompt = effectivePersona()?.position == 0 && effectivePersona() != null,
                 personaPosition = effectivePersona()?.position ?: 0,
-                personaDepth = effectivePersona()?.depth ?: 4,
+                personaDepth = effectivePersona()?.depth ?: 2,
                 personaRole = effectivePersona()?.role ?: 0,
                 vectorStore = vectorStore,
                 vectorChatSettings = vectorSettings,

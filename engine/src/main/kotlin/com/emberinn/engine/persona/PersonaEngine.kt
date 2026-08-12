@@ -7,7 +7,7 @@ data class PersonaConnection(val type: String, val id: String)
 data class PersonaDescriptor(
     val description: String = "",
     val position: Int = 0,
-    val depth: Int = 4,
+    val depth: Int = 2,
     val role: Int = 0,
     val lorebook: String = "",
     val connections: List<PersonaConnection> = emptyList(),

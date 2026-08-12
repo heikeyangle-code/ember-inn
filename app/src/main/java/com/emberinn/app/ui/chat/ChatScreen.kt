@@ -277,7 +277,7 @@ fun ChatScreen(
     var personaDraftName by remember { mutableStateOf("") }
     var personaDraftDesc by remember { mutableStateOf("") }
     var personaDraftPosition by remember { mutableStateOf(0) }
-    var personaDraftDepth by remember { mutableStateOf(4) }
+    var personaDraftDepth by remember { mutableStateOf(2) }
     var personaDraftRole by remember { mutableStateOf(0) }
     var personaDraftTitle by remember { mutableStateOf("") }
     var personaDraftLorebook by remember { mutableStateOf("") }
@@ -1441,7 +1441,11 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 Row(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    TextButton(onClick = { personaBackupLauncher.launch("personas.json") }) { Text("备份") }
+                    TextButton(onClick = {
+                            val stamp = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
+                                .format(java.util.Date())
+                            personaBackupLauncher.launch("personas_$stamp.json")
+                        }) { Text("备份") }
                     TextButton(onClick = { personaRestoreLauncher.launch(arrayOf("application/json")) }) { Text("恢复") }
                 }
                 val filteredPersonas = remember(personas, personaQuery) {
@@ -1546,7 +1550,7 @@ fun ChatScreen(
                         personaDraftName = ""
                         personaDraftDesc = ""
                         personaDraftPosition = 0
-                        personaDraftDepth = 4
+                        personaDraftDepth = 2
                         personaDraftRole = 0
                         personaDraftTitle = ""
                         personaDraftLorebook = ""
