@@ -224,8 +224,16 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             behavior = behavior.copy(pinExamples = it)
                             BehaviorPrefs.save(context, behavior)
                         }
+                        BehaviorToggle("完全移除示例（strip_examples）", behavior.stripExamples) {
+                            behavior = behavior.copy(stripExamples = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
                         BehaviorToggle("名字作为停用词（names_as_stop_strings）", behavior.namesAsStopStrings) {
                             behavior = behavior.copy(namesAsStopStrings = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
+                        BehaviorToggle("消息显示 token 数（message_token_count）", behavior.messageTokenCount) {
+                            behavior = behavior.copy(messageTokenCount = it)
                             BehaviorPrefs.save(context, behavior)
                         }
                         BehaviorToggle("自动滑动（auto_swipe）", behavior.autoSwipe) {

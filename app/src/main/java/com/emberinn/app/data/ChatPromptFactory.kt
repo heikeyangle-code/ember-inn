@@ -174,6 +174,8 @@ class ChatPromptFactory {
         userPromptBias: String = "",
         /** 官方 power_user.pin_examples（示例固定顶部）。 */
         pinExamples: Boolean = false,
+        /** 官方 power_user.strip_examples（完全移除示例对话）。 */
+        stripExamples: Boolean = false,
         /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
         localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
@@ -518,7 +520,12 @@ class ChatPromptFactory {
             exampleSeparator = exampleSeparator,
             mainApiIsOpenAi = chatCompletionSource != "claude",
         )
-        val examples = PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
+        // 官方 script.js：power_user.strip_examples → mesExamplesArray = []（完全移除示例）
+        val examples = if (stripExamples) {
+            emptyList()
+        } else {
+            PromptPipeline.setOpenAIMessageExamples(exampleBlocks, userName, charName)
+        }
 
         // 官方 authors-note.js：note_prompt/note_position/note_depth/note_role + ANWithWI 合并世界书 AN 前后注入
         val note = AuthorsNoteEngine.resolve(

@@ -1415,12 +1415,48 @@ private fun WorldEntryEditorSheet(
     onDismiss: () -> Unit,
 ) {
     var keys by remember(initial) { mutableStateOf(initial.keys) }
+    var keySecondary by remember(initial) { mutableStateOf(initial.keySecondary) }
     var content by remember(initial) { mutableStateOf(initial.content) }
     var comment by remember(initial) { mutableStateOf(initial.comment) }
     var constant by remember(initial) { mutableStateOf(initial.constant) }
     var selective by remember(initial) { mutableStateOf(initial.selective) }
+    var selectiveLogic by remember(initial) { mutableStateOf(initial.selectiveLogic.toString()) }
     var enabled by remember(initial) { mutableStateOf(initial.enabled) }
     var order by remember(initial) { mutableStateOf(initial.insertionOrder.toString()) }
+    var position by remember(initial) { mutableStateOf(initial.position) }
+    var depth by remember(initial) { mutableStateOf(initial.depth?.toString() ?: "") }
+    var role by remember(initial) { mutableStateOf(initial.role) }
+    var caseSensitive by remember(initial) { mutableStateOf(initial.caseSensitive) }
+    var matchWholeWords by remember(initial) { mutableStateOf(initial.matchWholeWords) }
+    var scanDepth by remember(initial) { mutableStateOf(initial.scanDepth?.toString() ?: "") }
+    var matchPersona by remember(initial) { mutableStateOf(initial.matchPersonaDescription) }
+    var matchCharDesc by remember(initial) { mutableStateOf(initial.matchCharacterDescription) }
+    var matchCharPersona by remember(initial) { mutableStateOf(initial.matchCharacterPersonality) }
+    var matchCharDepth by remember(initial) { mutableStateOf(initial.matchCharacterDepthPrompt) }
+    var matchScenario by remember(initial) { mutableStateOf(initial.matchScenario) }
+    var matchCreatorNotes by remember(initial) { mutableStateOf(initial.matchCreatorNotes) }
+    var preventRecursion by remember(initial) { mutableStateOf(initial.preventRecursion) }
+    var excludeRecursion by remember(initial) { mutableStateOf(initial.excludeRecursion) }
+    var delayUntilRecursion by remember(initial) { mutableStateOf(initial.delayUntilRecursion.toString()) }
+    var useProbability by remember(initial) { mutableStateOf(initial.useProbability) }
+    var probability by remember(initial) { mutableStateOf(initial.probability.toString()) }
+    var ignoreBudget by remember(initial) { mutableStateOf(initial.ignoreBudget) }
+    var triggers by remember(initial) { mutableStateOf(initial.triggers) }
+    var outletName by remember(initial) { mutableStateOf(initial.outletName) }
+    var sticky by remember(initial) { mutableStateOf(initial.sticky?.toString() ?: "") }
+    var cooldown by remember(initial) { mutableStateOf(initial.cooldown?.toString() ?: "") }
+    var delay by remember(initial) { mutableStateOf(initial.delay?.toString() ?: "") }
+    var group by remember(initial) { mutableStateOf(initial.group) }
+    var groupWeight by remember(initial) { mutableStateOf(initial.groupWeight.toString()) }
+    var groupOverride by remember(initial) { mutableStateOf(initial.groupOverride) }
+    var useGroupScoring by remember(initial) { mutableStateOf(initial.useGroupScoring) }
+    var filterNames by remember(initial) { mutableStateOf(initial.characterFilterNames) }
+    var filterTags by remember(initial) { mutableStateOf(initial.characterFilterTags) }
+    var filterExclude by remember(initial) { mutableStateOf(initial.characterFilterExclude) }
+    var vectorized by remember(initial) { mutableStateOf(initial.vectorized) }
+    var addMemo by remember(initial) { mutableStateOf(initial.addMemo) }
+    var automationId by remember(initial) { mutableStateOf(initial.automationId) }
+    var displayIndex by remember(initial) { mutableStateOf(initial.displayIndex?.toString() ?: "") }
 
     EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -1451,6 +1487,13 @@ private fun WorldEntryEditorSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             EmberTextField(
+                value = keySecondary,
+                onValueChange = { keySecondary = it },
+                label = { Text("次要触发词 keysecondary（逗号分隔）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
                 value = content,
                 onValueChange = { content = it },
                 label = { Text("内容") },
@@ -1473,6 +1516,161 @@ private fun WorldEntryEditorSheet(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            Text("位置（官方 world_info_position）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("角色前(0)" to 0, "角色后(1)" to 1, "AN上(2)" to 2, "AN下(3)" to 3).forEach { (label, v) ->
+                    FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("深度(4)" to 4, "EM上(5)" to 5, "EM下(6)" to 6, "出口(7)" to 7).forEach { (label, v) ->
+                    FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
+                }
+            }
+            EmberTextField(
+                value = depth,
+                onValueChange = { depth = it.filter { c -> c.isDigit() } },
+                label = { Text("深度（at_depth 时生效）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("system" to "system", "user" to "user", "assistant" to "assistant").forEach { (label, v) ->
+                    FilterChip(selected = role == v, onClick = { role = v }, label = { Text(label) })
+                }
+            }
+            EmberTextField(
+                value = selectiveLogic,
+                onValueChange = { selectiveLogic = it.filter { c -> c.isDigit() } },
+                label = { Text("选择逻辑 selectiveLogic（0=AND_ANY 1=AND_ALL）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = scanDepth,
+                onValueChange = { scanDepth = it.filter { c -> c.isDigit() } },
+                label = { Text("扫描深度 scanDepth（空=默认）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            SwitchRow("大小写敏感 caseSensitive", caseSensitive) { caseSensitive = it }
+            SwitchRow("整词匹配 matchWholeWords", matchWholeWords) { matchWholeWords = it }
+            SwitchRow("匹配人设描述", matchPersona) { matchPersona = it }
+            SwitchRow("匹配角色描述", matchCharDesc) { matchCharDesc = it }
+            SwitchRow("匹配角色性格", matchCharPersona) { matchCharPersona = it }
+            SwitchRow("匹配角色深度提示", matchCharDepth) { matchCharDepth = it }
+            SwitchRow("匹配场景", matchScenario) { matchScenario = it }
+            SwitchRow("匹配作者备注", matchCreatorNotes) { matchCreatorNotes = it }
+            SwitchRow("禁止递归 preventRecursion", preventRecursion) { preventRecursion = it }
+            SwitchRow("排除递归 excludeRecursion", excludeRecursion) { excludeRecursion = it }
+            EmberTextField(
+                value = delayUntilRecursion,
+                onValueChange = { delayUntilRecursion = it.filter { c -> c.isDigit() } },
+                label = { Text("延迟到递归 delayUntilRecursion") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            SwitchRow("按概率触发 useProbability", useProbability) { useProbability = it }
+            EmberTextField(
+                value = probability,
+                onValueChange = { probability = it.filter { c -> c.isDigit() } },
+                label = { Text("概率 %（1-100）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            SwitchRow("不计入预算 ignoreBudget", ignoreBudget) { ignoreBudget = it }
+            EmberTextField(
+                value = triggers,
+                onValueChange = { triggers = it },
+                label = { Text("生成类型触发 triggers（逗号分隔）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = outletName,
+                onValueChange = { outletName = it },
+                label = { Text("出口名 outletName（{{outlet::key}}）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sticky,
+                onValueChange = { sticky = it.filter { c -> c.isDigit() } },
+                label = { Text("sticky（回合数，空=关闭）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = cooldown,
+                onValueChange = { cooldown = it.filter { c -> c.isDigit() } },
+                label = { Text("cooldown（回合数，空=关闭）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = delay,
+                onValueChange = { delay = it.filter { c -> c.isDigit() } },
+                label = { Text("delay（回合数，空=关闭）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = group,
+                onValueChange = { group = it },
+                label = { Text("分组 group（同组互斥/加权）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = groupWeight,
+                onValueChange = { groupWeight = it.filter { c -> c.isDigit() } },
+                label = { Text("组权重 groupWeight") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            SwitchRow("组内优先 groupOverride", groupOverride) { groupOverride = it }
+            SwitchRow("使用组评分 useGroupScoring", useGroupScoring) { useGroupScoring = it }
+            EmberTextField(
+                value = filterNames,
+                onValueChange = { filterNames = it },
+                label = { Text("角色过滤 names（逗号分隔）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = filterTags,
+                onValueChange = { filterTags = it },
+                label = { Text("角色过滤 tags（逗号分隔）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            SwitchRow("角色过滤取反 isExclude", filterExclude) { filterExclude = it }
+            SwitchRow("向量化 vectorized（RAG）", vectorized) { vectorized = it }
+            SwitchRow("addMemo", addMemo) { addMemo = it }
+            EmberTextField(
+                value = automationId,
+                onValueChange = { automationId = it },
+                label = { Text("automationId（快捷回复自动执行）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = displayIndex,
+                onValueChange = { displayIndex = it.filter { c -> c.isDigit() } },
+                label = { Text("编辑器排序 displayIndex（空=自动）") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             SwitchRow("恒定（常驻上下文）", constant) { constant = it }
             SwitchRow("选择性（配合逻辑）", selective) { selective = it }
             SwitchRow("启用", enabled) { enabled = it }
@@ -1490,12 +1688,48 @@ private fun WorldEntryEditorSheet(
                             WorldEntryDraft(
                                 id = initial.id,
                                 keys = keys.trim(),
+                                keySecondary = keySecondary.trim(),
                                 content = content,
                                 comment = comment,
                                 constant = constant,
                                 selective = selective,
+                                selectiveLogic = selectiveLogic.toIntOrNull() ?: 0,
                                 enabled = enabled,
                                 insertionOrder = order.toIntOrNull() ?: 100,
+                                position = position,
+                                depth = depth.toIntOrNull(),
+                                role = role,
+                                caseSensitive = caseSensitive,
+                                matchWholeWords = matchWholeWords,
+                                scanDepth = scanDepth.toIntOrNull(),
+                                matchPersonaDescription = matchPersona,
+                                matchCharacterDescription = matchCharDesc,
+                                matchCharacterPersonality = matchCharPersona,
+                                matchCharacterDepthPrompt = matchCharDepth,
+                                matchScenario = matchScenario,
+                                matchCreatorNotes = matchCreatorNotes,
+                                preventRecursion = preventRecursion,
+                                excludeRecursion = excludeRecursion,
+                                delayUntilRecursion = delayUntilRecursion.toIntOrNull() ?: 0,
+                                useProbability = useProbability,
+                                probability = probability.toIntOrNull() ?: 100,
+                                ignoreBudget = ignoreBudget,
+                                triggers = triggers.trim(),
+                                outletName = outletName.trim(),
+                                sticky = sticky.toIntOrNull(),
+                                cooldown = cooldown.toIntOrNull(),
+                                delay = delay.toIntOrNull(),
+                                group = group.trim(),
+                                groupWeight = groupWeight.toIntOrNull() ?: 100,
+                                groupOverride = groupOverride,
+                                useGroupScoring = useGroupScoring,
+                                characterFilterNames = filterNames.trim(),
+                                characterFilterTags = filterTags.trim(),
+                                characterFilterExclude = filterExclude,
+                                vectorized = vectorized,
+                                addMemo = addMemo,
+                                automationId = automationId.trim(),
+                                displayIndex = displayIndex.toIntOrNull(),
                             ),
                         )
                     },

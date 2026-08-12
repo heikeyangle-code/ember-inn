@@ -199,6 +199,7 @@ class ChatRepository(context: Context) {
         exampleSeparator: String = "***",
         userPromptBias: String = "",
         pinExamples: Boolean = false,
+        stripExamples: Boolean = false,
         namesAsStopStrings: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
@@ -284,6 +285,7 @@ class ChatRepository(context: Context) {
             currentModel = effectiveModel,
             userPromptBias = userPromptBias,
             pinExamples = pinExamples,
+            stripExamples = stripExamples,
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)

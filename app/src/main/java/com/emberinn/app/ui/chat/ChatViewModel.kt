@@ -2144,6 +2144,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 exampleSeparator = RenderPrefs.exampleSeparator(getApplication()),
                 userPromptBias = behavior.userPromptBias,
                 pinExamples = behavior.pinExamples,
+                stripExamples = behavior.stripExamples,
                 namesAsStopStrings = behavior.namesAsStopStrings,
                 onPrepared = { info ->
                     if (streamActive) {
@@ -2511,6 +2512,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "sprite", chosen)
                 }
             }
+        }
+        // 官方 power_user.message_token_count_enabled：extra.token_count 落盘
+        if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
+            val model = profile?.model.orEmpty()
+            val count = runCatching {
+                com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model)
+                    .count((_streamingReasoning.value + reply))
+            }.getOrDefault(reply.length / 4)
+            val idx = chatStore.messages(sessionId).lastIndex
+            if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
         }
     }
 

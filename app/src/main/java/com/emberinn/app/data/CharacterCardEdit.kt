@@ -52,12 +52,49 @@ data class CharacterDetailFields(
 data class WorldEntryDraft(
     val id: Int,
     val keys: String,
+    val keySecondary: String = "",
     val content: String,
     val comment: String,
     val constant: Boolean,
     val selective: Boolean,
+    val selectiveLogic: Int = 0,
     val enabled: Boolean,
     val insertionOrder: Int,
+    /** 官方 world_info_position 整数：0 before / 1 after / 2 ANTop / 3 ANBottom / 4 atDepth / 5 EMTop / 6 EMBottom / 7 outlet。 */
+    val position: Int = 0,
+    val depth: Int? = 4,
+    val role: String = "system",
+    val caseSensitive: Boolean = false,
+    val matchWholeWords: Boolean = false,
+    val scanDepth: Int? = null,
+    val matchPersonaDescription: Boolean = false,
+    val matchCharacterDescription: Boolean = false,
+    val matchCharacterPersonality: Boolean = false,
+    val matchCharacterDepthPrompt: Boolean = false,
+    val matchScenario: Boolean = false,
+    val matchCreatorNotes: Boolean = false,
+    val preventRecursion: Boolean = false,
+    val excludeRecursion: Boolean = false,
+    val delayUntilRecursion: Int = 0,
+    val useProbability: Boolean = true,
+    val probability: Int = 100,
+    val ignoreBudget: Boolean = false,
+    val triggers: String = "",
+    val outletName: String = "",
+    val sticky: Int? = null,
+    val cooldown: Int? = null,
+    val delay: Int? = null,
+    val group: String = "",
+    val groupWeight: Int = 100,
+    val groupOverride: Boolean = false,
+    val useGroupScoring: Boolean = false,
+    val characterFilterNames: String = "",
+    val characterFilterTags: String = "",
+    val characterFilterExclude: Boolean = false,
+    val vectorized: Boolean = false,
+    val addMemo: Boolean = false,
+    val automationId: String = "",
+    val displayIndex: Int? = null,
 )
 
 
@@ -178,16 +215,69 @@ object CharacterCardEdit {
             val allKeys = keysArr ?: keysStr ?: listOfNotNull(keySingle)
             val enabledRaw = (e["enabled"] as? JsonPrimitive)?.booleanOrNull
             val disableRaw = (e["disable"] as? JsonPrimitive)?.booleanOrNull
+            fun str(key: String): String = (e[key] as? JsonPrimitive)?.contentOrNull ?: ""
+            fun bool(key: String, def: Boolean): Boolean = (e[key] as? JsonPrimitive)?.booleanOrNull ?: def
+            fun int(key: String): Int? = (e[key] as? JsonPrimitive)?.intOrNull
+            fun intOr(key: String, def: Int): Int = int(key) ?: def
+            fun list(obj: JsonObject, key: String): List<String> =
+                (obj[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                    ?: (obj[key] as? JsonPrimitive)?.contentOrNull
+                        ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+                    ?: emptyList()
+            val ext = (e["extensions"] as? JsonObject) ?: JsonObject(emptyMap())
+            fun extBool(key: String, def: Boolean): Boolean = (ext[key] as? JsonPrimitive)?.booleanOrNull ?: def
+            fun extInt(key: String): Int? = (ext[key] as? JsonPrimitive)?.intOrNull
+            fun extStr(key: String): String = (ext[key] as? JsonPrimitive)?.contentOrNull ?: ""
+            val filter = e["characterFilter"]?.jsonObject
             WorldEntryDraft(
                 id = (e["id"] as? JsonPrimitive)?.intOrNull ?: (i + 1),
                 keys = allKeys.joinToString(", "),
+                keySecondary = list(e, "keysecondary").ifEmpty { list(e, "secondary_keys") }.joinToString(", "),
                 content = (e["content"] as? JsonPrimitive)?.contentOrNull ?: "",
                 comment = (e["comment"] as? JsonPrimitive)?.contentOrNull ?: "",
                 constant = (e["constant"] as? JsonPrimitive)?.booleanOrNull ?: false,
                 selective = (e["selective"] as? JsonPrimitive)?.booleanOrNull ?: true,
+                selectiveLogic = intOr("selectiveLogic", 0),
                 enabled = enabledRaw ?: (disableRaw?.let { !it } ?: true),
                 insertionOrder = (e["insertion_order"] as? JsonPrimitive)?.intOrNull
                     ?: (e["order"] as? JsonPrimitive)?.intOrNull ?: 100,
+                position = intOr("position", 0),
+                depth = int("depth") ?: 4,
+                role = str("role").ifBlank { "system" },
+                caseSensitive = bool("caseSensitive", false) || extBool("case_sensitive", false),
+                matchWholeWords = bool("matchWholeWords", false) || extBool("match_whole_words", false),
+                scanDepth = int("scanDepth") ?: extInt("scan_depth"),
+                matchPersonaDescription = bool("matchPersonaDescription", false),
+                matchCharacterDescription = bool("matchCharacterDescription", false),
+                matchCharacterPersonality = bool("matchCharacterPersonality", false),
+                matchCharacterDepthPrompt = bool("matchCharacterDepthPrompt", false),
+                matchScenario = bool("matchScenario", false),
+                matchCreatorNotes = bool("matchCreatorNotes", false),
+                preventRecursion = bool("preventRecursion", false) || extBool("prevent_recursion", false),
+                excludeRecursion = bool("excludeRecursion", false) || extBool("exclude_recursion", false),
+                delayUntilRecursion = int("delayUntilRecursion") ?: extInt("delay_until_recursion") ?: 0,
+                useProbability = bool("useProbability", true),
+                probability = intOr("probability", 100),
+                ignoreBudget = bool("ignoreBudget", false) || extBool("ignore_budget", false),
+                triggers = list(e, "triggers").joinToString(", "),
+                outletName = str("outletName"),
+                sticky = int("sticky"),
+                cooldown = int("cooldown"),
+                delay = int("delay"),
+                group = str("group"),
+                groupWeight = intOr("groupWeight", 100),
+                groupOverride = bool("groupOverride", false),
+                useGroupScoring = bool("useGroupScoring", false),
+                characterFilterNames = filter?.let { list(it, "names") }?.joinToString(", ")
+                    ?: list(e, "characterFilterNames").joinToString(", "),
+                characterFilterTags = filter?.let { list(it, "tags") }?.joinToString(", ")
+                    ?: list(e, "characterFilterTags").joinToString(", "),
+                characterFilterExclude = filter?.let { (it["isExclude"] as? JsonPrimitive)?.booleanOrNull ?: false }
+                    ?: bool("characterFilterExclude", false),
+                vectorized = bool("vectorized", false) || extBool("vectorized", false),
+                addMemo = bool("addMemo", false),
+                automationId = str("automationId").ifBlank { extStr("automation_id") },
+                displayIndex = int("displayIndex") ?: int("display_index") ?: extInt("display_index"),
             )
         }
     }.getOrDefault(emptyList())
@@ -243,17 +333,89 @@ object CharacterCardEdit {
                 base.remove("key")
                 base.remove("order")
                 base.remove("disable")
+                base.remove("caseSensitive")
+                base.remove("matchWholeWords")
+                base.remove("scanDepth")
+                base.remove("preventRecursion")
+                base.remove("excludeRecursion")
+                base.remove("delayUntilRecursion")
+                base.remove("ignoreBudget")
+                base.remove("vectorized")
+                base.remove("automationId")
+                base.remove("displayIndex")
+                base.remove("display_index")
+                base.remove("characterFilter")
+                base.remove("characterFilterNames")
+                base.remove("characterFilterTags")
+                base.remove("characterFilterExclude")
                 base["id"] = JsonPrimitive(d.id)
                 base["keys"] = JsonArray(
                     d.keys.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map(::JsonPrimitive),
                 )
+                if (d.keySecondary.isNotBlank()) {
+                    base["keysecondary"] = JsonArray(
+                        d.keySecondary.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map(::JsonPrimitive),
+                    )
+                } else {
+                    base.remove("keysecondary")
+                }
                 base["content"] = JsonPrimitive(d.content)
                 base["comment"] = JsonPrimitive(d.comment)
                 base["constant"] = JsonPrimitive(d.constant)
                 base["selective"] = JsonPrimitive(d.selective)
+                base["selectiveLogic"] = JsonPrimitive(d.selectiveLogic)
                 base["enabled"] = JsonPrimitive(d.enabled)
                 base["insertion_order"] = JsonPrimitive(d.insertionOrder)
-                if (!base.containsKey("position")) base["position"] = JsonPrimitive("before_char")
+                base["position"] = JsonPrimitive(d.position)
+                d.depth?.let { base["depth"] = JsonPrimitive(it) } ?: base.remove("depth")
+                if (d.role.isNotBlank()) base["role"] = JsonPrimitive(d.role) else base.remove("role")
+                base["matchPersonaDescription"] = JsonPrimitive(d.matchPersonaDescription)
+                base["matchCharacterDescription"] = JsonPrimitive(d.matchCharacterDescription)
+                base["matchCharacterPersonality"] = JsonPrimitive(d.matchCharacterPersonality)
+                base["matchCharacterDepthPrompt"] = JsonPrimitive(d.matchCharacterDepthPrompt)
+                base["matchScenario"] = JsonPrimitive(d.matchScenario)
+                base["matchCreatorNotes"] = JsonPrimitive(d.matchCreatorNotes)
+                base["useProbability"] = JsonPrimitive(d.useProbability)
+                base["probability"] = JsonPrimitive(d.probability)
+                base["delayUntilRecursion"] = JsonPrimitive(d.delayUntilRecursion)
+                if (d.triggers.isNotBlank()) {
+                    base["triggers"] = JsonArray(d.triggers.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map(::JsonPrimitive))
+                } else {
+                    base.remove("triggers")
+                }
+                if (d.outletName.isNotBlank()) base["outletName"] = JsonPrimitive(d.outletName) else base.remove("outletName")
+                d.sticky?.let { base["sticky"] = JsonPrimitive(it) } ?: base.remove("sticky")
+                d.cooldown?.let { base["cooldown"] = JsonPrimitive(it) } ?: base.remove("cooldown")
+                d.delay?.let { base["delay"] = JsonPrimitive(it) } ?: base.remove("delay")
+                if (d.group.isNotBlank()) base["group"] = JsonPrimitive(d.group) else base.remove("group")
+                base["groupWeight"] = JsonPrimitive(d.groupWeight)
+                base["groupOverride"] = JsonPrimitive(d.groupOverride)
+                base["useGroupScoring"] = JsonPrimitive(d.useGroupScoring)
+                val filterNames = d.characterFilterNames.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                val filterTags = d.characterFilterTags.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                if (filterNames.isNotEmpty() || filterTags.isNotEmpty()) {
+                    base["characterFilter"] = buildJsonObject {
+                        if (filterNames.isNotEmpty()) put("names", JsonArray(filterNames.map(::JsonPrimitive)))
+                        if (filterTags.isNotEmpty()) put("tags", JsonArray(filterTags.map(::JsonPrimitive)))
+                        put("isExclude", JsonPrimitive(d.characterFilterExclude))
+                    }
+                } else {
+                    base.remove("characterFilter")
+                }
+                base["addMemo"] = JsonPrimitive(d.addMemo)
+                if (d.automationId.isNotBlank()) base["automationId"] = JsonPrimitive(d.automationId) else base.remove("automationId")
+                // 官方把下列字段放 entry.extensions（world-info.js setWIOriginalDataValue 映射）
+                val ext = (base["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+                ext["case_sensitive"] = JsonPrimitive(d.caseSensitive)
+                ext["match_whole_words"] = JsonPrimitive(d.matchWholeWords)
+                d.scanDepth?.let { ext["scan_depth"] = JsonPrimitive(it) } ?: ext.remove("scan_depth")
+                ext["prevent_recursion"] = JsonPrimitive(d.preventRecursion)
+                ext["exclude_recursion"] = JsonPrimitive(d.excludeRecursion)
+                ext["delay_until_recursion"] = JsonPrimitive(d.delayUntilRecursion)
+                ext["ignore_budget"] = JsonPrimitive(d.ignoreBudget)
+                ext["vectorized"] = JsonPrimitive(d.vectorized)
+                d.displayIndex?.let { ext["display_index"] = JsonPrimitive(it) } ?: ext.remove("display_index")
+                base["extensions"] = JsonObject(ext)
                 JsonObject(base)
             })
             val book = (data["character_book"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()

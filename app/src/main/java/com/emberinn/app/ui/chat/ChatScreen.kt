@@ -715,6 +715,8 @@ fun ChatScreen(
                                 avatarPath = if (isUserMsg) null else vm.avatarPath,
                                 spritePath = (item.element.jsonObject["extra"] as? JsonObject)
                                     ?.get("sprite")?.jsonPrimitive?.contentOrNull,
+                                tokenCount = (item.element.jsonObject["extra"] as? JsonObject)
+                                    ?.get("token_count")?.jsonPrimitive?.contentOrNull,
                                 accent = accent,
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
@@ -1842,6 +1844,7 @@ private fun MessageRow(
     time: String,
     avatarPath: String?,
     spritePath: String? = null,
+    tokenCount: String? = null,
     accent: Color,
     dateLabel: String?,
     showActions: Boolean,
@@ -1963,6 +1966,14 @@ private fun MessageRow(
                     style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
                     color = emColor,
                 )
+                if (tokenCount != null) {
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        text = "· ${tokenCount}t",
+                        style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                        color = emColor,
+                    )
+                }
             }
             // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
             if (!reasoning.isNullOrBlank()) {
