@@ -172,6 +172,10 @@ function substituteParams(text) { return String(text); }
 function getRegexedString(content) { return content; }
 const regex_placement = { WORLD_INFO: 0 };
 async function getTokenCountAsync(text) { return typeof text === 'string' ? text.length : 0; }
+// 官方 utils.js escapeRegex（world-info.js matchWholeWords 路径依赖；此前用例未触发，2026-08-12 补）
+function escapeRegex(string) {
+    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
 async function getSortedEntries() {
     return structuredClone(worldEntries).map((entry) => {
         const [decorators, content] = parseDecorators(entry.content || '');
@@ -346,6 +350,78 @@ const cases = [
             entries: [{ uid: 1, world: 'w', order: 1, key: ['a'], content: '粘住', sticky: 2, useProbability: true, probability: 1 }],
         },
         random: [0.005, 99.0],
+    },
+    // ---- 2026-08-12 穷举复验补充：深度/大小写/整词/概率/常驻禁用/分组/递归上限 ----
+    {
+        id: 'depth_zero',
+        settings: { depth: 0, budget: 100 },
+        chat: ['钥匙'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['钥匙'], content: 'X' }],
+    },
+    {
+        id: 'case_sensitive_match',
+        settings: { depth: 2, budget: 100, caseSensitive: true },
+        chat: ['KEY'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['KEY'], content: 'X' }],
+    },
+    {
+        id: 'case_sensitive_miss',
+        settings: { depth: 2, budget: 100, caseSensitive: true },
+        chat: ['KEY'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['key'], content: 'X' }],
+    },
+    {
+        id: 'whole_word_match',
+        settings: { depth: 2, budget: 100, matchWholeWords: true },
+        chat: ['猫'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['猫'], content: 'X' }],
+    },
+    {
+        id: 'whole_word_miss',
+        settings: { depth: 2, budget: 100, matchWholeWords: true },
+        chat: ['猫粮'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['猫'], content: 'X' }],
+    },
+    {
+        id: 'probability_pass',
+        settings: { depth: 2, budget: 100 },
+        chat: ['a'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['a'], content: 'X', useProbability: true, probability: 100 }],
+        random: [0.0],
+    },
+    {
+        id: 'constant_disable',
+        settings: { depth: 2, budget: 100 },
+        chat: ['钥匙'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['钥匙'], content: 'X', constant: true, disable: true }],
+    },
+    {
+        id: 'group_no_scoring_all',
+        settings: { depth: 2, budget: 100, useGroupScoring: false },
+        chat: ['a b'],
+        maxContext: 100,
+        entries: [
+            { uid: 1, world: 'w', order: 1, key: ['a'], content: 'A', group: 'g' },
+            { uid: 2, world: 'w', order: 2, key: ['b'], content: 'B', group: 'g' },
+        ],
+    },
+    {
+        id: 'recursion_steps_limit',
+        settings: { depth: 2, budget: 100, recursive: true, maxRecursionSteps: 1 },
+        chat: ['线索'],
+        maxContext: 100,
+        entries: [
+            { uid: 1, world: 'w', order: 1, key: ['线索'], content: '暗门' },
+            { uid: 2, world: 'w', order: 2, key: ['暗门'], content: '更深' },
+            { uid: 3, world: 'w', order: 3, key: ['更深'], content: '宝藏' },
+        ],
     },
 ];
 

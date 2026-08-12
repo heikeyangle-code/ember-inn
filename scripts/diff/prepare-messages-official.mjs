@@ -508,5 +508,53 @@ await add('media-disabled-skip', {
     ],
 });
 
+// ---- 2026-08-12 穷举复验补充：空历史 / 预算裁剪 / 多 system squash / AN 位置 / 世界书空 / 无示例 ----
+await add('empty-chat', { ...base, messages: [] });
+await add('budget-truncates-oldest', {
+    ...base,
+    maxContextTokens: 60,
+    maxTokens: 16,
+    messages: [
+        { role: 'user', content: '最老第一条' },
+        { role: 'assistant', content: '老回复', name: 'Char' },
+        { role: 'user', content: '中间第二条' },
+        { role: 'assistant', content: '中回复', name: 'Char' },
+        { role: 'user', content: '最新第三条' },
+    ],
+});
+await add('squash-multiple-systems', {
+    ...base,
+    promptCollection: [
+        ...base.promptCollection,
+        { identifier: 'extraSystem', role: 'system', content: '额外系统', name: null, system_prompt: true, injection_position: 0 },
+    ],
+});
+await add('an-position-before', {
+    ...base,
+    extensionPrompts: { '2_floating_prompt': { identifier: '2_floating_prompt', role: 'system', content: '作者注释', position: 'before' } },
+    promptCollection: [...base.promptCollection,
+        { identifier: 'authorsNote', role: 'system', content: '作者注释', name: null, system_prompt: true, injection_position: 0, position: 'before', extension: true }],
+});
+await add('an-position-chat-depth', {
+    ...base,
+    extensionPrompts: { '2_floating_prompt': { identifier: '2_floating_prompt', role: 'system', content: '作者注释', position: 'chat', depth: 3 } },
+    promptCollection: [...base.promptCollection,
+        { identifier: 'authorsNote', role: 'system', content: '作者注释', name: null, system_prompt: true, injection_position: 1, injection_depth: 3, position: 'chat', extension: true }],
+});
+await add('worldinfo-empty', { ...base, worldInfoBefore: '', worldInfoAfter: '' });
+await add('no-examples', { ...base, mesExamples: '' });
+await add('long-single-message', {
+    ...base,
+    maxContextTokens: 40,
+    maxTokens: 16,
+    messages: [{ role: 'user', content: '这是一个特别特别长的单条用户消息，用来验证总装对超长单条消息的处理，必须被裁剪或保留——长内容长内容长内容长内容长内容长内容长内容长内容长内容长内容' }],
+});
+await add('impersonate-no-quiet', {
+    ...base,
+    type: 'impersonate',
+    promptCollection: [...base.promptCollection,
+        { identifier: 'impersonate', role: 'assistant', content: '冒充内容', name: null, system_prompt: false, injection_position: 0 }],
+});
+
 writeFileSync(outFile, JSON.stringify({ source: 'openai.js prepareOpenAIMessages + populateChatCompletion 整链', cases }, null, 2));
 console.log('prepare-messages:', cases.length, 'cases ->', outFile);

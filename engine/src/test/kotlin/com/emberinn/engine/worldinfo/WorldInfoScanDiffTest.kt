@@ -104,6 +104,8 @@ class WorldInfoScanDiffTest {
             minActivationsDepthMax = int(settings, "minActivationsDepthMax", 0),
             maxRecursionSteps = int(settings, "maxRecursionSteps", 0),
             useGroupScoring = bool(settings, "useGroupScoring", false),
+            caseSensitive = bool(settings, "caseSensitive", false),
+            matchWholeWords = bool(settings, "matchWholeWords", false),
         ),
         global = global,
         timedMetadata = metadata,

@@ -158,9 +158,8 @@ object ChatRequestBuilder {
             put("presence_penalty", params.presencePenalty)
             put("frequency_penalty", params.frequencyPenalty)
             put("stream", params.stream)
-            if (options.stopSequences.isNotEmpty()) {
-                put("stop", JsonArray(options.stopSequences.map { JsonPrimitive(it) }))
-            }
+            // 官方后端 requestBody 恒带 stop（generate_data.stop，空数组也发；text completion 走独立 builder）
+            put("stop", JsonArray(options.stopSequences.map { JsonPrimitive(it) }))
             if (params.logitBias.isNotEmpty() && officialSource in setOf("openai", "azure_openai", "openrouter", "electronhub", "chutes", "custom")) {
                 put("logit_bias", buildJsonObject {
                     params.logitBias.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
@@ -305,7 +304,7 @@ object ChatRequestBuilder {
                     map["top_p"] = JsonPrimitive(0.01)
                 }
                 val stops = (map["stop"] as? JsonArray)?.toList().orEmpty().take(1)
-                map["stop"] = if (stops.isEmpty()) JsonNull else JsonArray(stops)
+                map["stop"] = JsonArray(stops)
                 map.remove("presence_penalty")
                 map.remove("frequency_penalty")
                 map["thinking"] = buildJsonObject {

@@ -189,6 +189,17 @@ await add('minimax', { settings: { ...baseSettings, source: 'minimax', temp: 0 }
 await add('workers-ai', { settings: { ...baseSettings, source: 'workers_ai', topK: 80, seed: 3 }, model: 'llama', type: 'normal', messages: [] });
 await add('o1', { settings: { ...baseSettings }, model: 'o1', type: 'normal', messages: [{ role: 'system', content: 'x' }] });
 await add('gpt5', { settings: { ...baseSettings }, model: 'gpt-5.5', type: 'normal', messages: [{ role: 'user', content: 'hi' }] });
+// ---- 2026-08-12 穷举复验补充 ----
+await add('openrouter-providers-empty', { settings: { ...baseSettings, source: 'openrouter', provider: [], quantizations: [] }, model: 'openai/gpt-4o', type: 'normal', messages: [] });
+await add('openrouter-topk-zero', { settings: { ...baseSettings, source: 'openrouter', topK: 0 }, model: 'openai/gpt-4o', type: 'normal', messages: [] });
+await add('openrouter-no-verbosity', { settings: { ...baseSettings, source: 'openrouter', verbosity: undefined }, model: 'openai/gpt-4o', type: 'normal', messages: [] });
+await add('minimax-temp-clamp-high', { settings: { ...baseSettings, source: 'minimax', temp: 2.5 }, model: 'm', type: 'normal', messages: [] });
+await add('minimax-temp-clamp-low', { settings: { ...baseSettings, source: 'minimax', temp: 0 }, model: 'm', type: 'normal', messages: [] });
+await add('workers-ai-seed-zero', { settings: { ...baseSettings, source: 'workers_ai', topK: 10, seed: 0 }, model: 'llama', type: 'normal', messages: [] });
+await add('custom-no-stop', { settings: { ...baseSettings, source: 'custom', stopStrings: [] }, model: 'm', type: 'normal', messages: [] });
+await add('nonstream', { settings: { ...baseSettings, stream: false }, model: 'gpt-4o', type: 'normal', messages: [] });
+await add('perplexity-reasoning-auto', { settings: { ...baseSettings, source: 'perplexity', reasoningEffort: 'auto' }, model: 'p', type: 'normal', messages: [] });
+await add('moonshot-no-thinking', { settings: { ...baseSettings, source: 'moonshot', showThoughts: false }, model: 'kimi-k2.6', type: 'normal', messages: [{ role: 'assistant', content: 'x' }] });
 
 writeFileSync(outFile, JSON.stringify({ source: 'chat-completions.js OpenAI 兼容 requestBody 构造', cases }, null, 2));
 console.log('chat-request-body:', cases.length, 'cases ->', outFile);
