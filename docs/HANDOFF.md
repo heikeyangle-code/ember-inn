@@ -507,7 +507,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
 | 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
 | 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ 官方 encode_tags 开关（AppearancePrefs.encodeTags，默认关=渲染 HTML，显示管线转义 < >）/ Mermaid WebView 兜底（硬化：mermaid.min.js 本地资源离线渲染、放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）； JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记）） |
+| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ 官方 encode_tags 开关（AppearancePrefs.encodeTags，默认关=渲染 HTML，行首 > 保留的官方转义）/ Mermaid WebView 兜底（硬化：mermaid.min.js 本地资源离线渲染、放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）； JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记）） |
 | 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
 | 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
 | 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
@@ -599,7 +599,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
  ColorField（色块即选色入口 + hex 等宽预览 + 选色盘）、ColorPickerDialog（20 色板+RGB+hex）
 
 ### 8.2 显示管线 / 流式 / 滚动（官方对照结论）
-- displayTextOf：显示位点正则（用户/旁白/AI + 官方 depth）→ fixMarkdown(forDisplay=true) → encode_tags（可选）；
+- displayTextOf：显示位点正则（用户/旁白/AI + 官方 depth）→ fixMarkdown(forDisplay=true，跟随官方 auto_fix_generated_markdown 开关，默认开）→ encode_tags（可选，官方负向后顾等价：行首 > 保留）；
  复制/编辑用原始落盘文本，显示与操作分离
 - 流式：120ms 节流；StreamingMarkdown 轻量 AnnotatedString 一次构建（粗/斜/删/下划线/行内码/引号/链接），
  结束由 ChatMarkdown 完整重渲染；balanceStreamingDelimiters 为 App 增强（官方 1.18 无此函数）
@@ -837,7 +837,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | 用户/AI 气泡底（style.css :root） | rgba(0,0,0,.3) / rgba(60,60,60,.3) | stUserBubble #4D000000 / stBotBubble #4D3C3C3C | ✅ 色值；气泡无官方玻璃模糊 🟡 |
 | 头像圆角（style.css :root） | 2px / 10px / 50% | avatarShape square/rounded/circle | ✅（默认圆形，官方默认方形，可改） |
 | 主字体/字号（style.css :root） | Noto Sans / 15px（fontScale=1） | Noto Sans 4 面下载 / textSize=official 15px | ✅（默认 16px，可切官方 15） |
-| encode_tags（script.js） | `<`/`>` 转义（负向后顾版本差异） | AppearancePrefs.encodeTags，非系统消息 | ✅ |
+| encode_tags（script.js） | `<` 全转义；行首/换行+空白后的 `>` 保留（负向后顾 (?<!^|\n\s*)） | AppearancePrefs.encodeTags（等价字符扫描实现，非系统消息） | ✅ |
 | 流式渲染（官方 StreamingProcessor） | 增量整段 messageFormatting | StreamingMarkdown 轻量着色，结束完整重渲染 | 🟡 中间态近似，最终一致 |
 | DOMPurify（script.js） | 剥 script/on*，白名单 | JS 全开、网络全开（用户要求），只拦 javascript: URL | ❌ 有意偏差，风险登记 |
 | `<style>` | 官方默认剥除（角色开关恢复+前缀） | 默认放行，且只影响该消息自己的 WebView | ❌ 有意偏差 |

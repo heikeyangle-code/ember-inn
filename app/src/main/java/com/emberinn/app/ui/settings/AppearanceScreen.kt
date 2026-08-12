@@ -575,6 +575,7 @@ fun AppearanceScreen(
                 val optContext = LocalContext.current
                 var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
+                var fixMarkdown by remember { mutableStateOf(AppearancePrefs.fixMarkdown(optContext)) }
                 Surface(
                     shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -600,6 +601,16 @@ fun AppearanceScreen(
                         Text("官方 power_user.encode_tags（默认关）：开=把 < > 转义为纯文本、HTML 不再渲染；关=允许部分 HTML 标签按网页渲染", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it); onAppearanceChanged() })
+                        }
+                        Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { fixMarkdown = !fixMarkdown; AppearancePrefs.saveFixMarkdown(optContext, fixMarkdown); onAppearanceChanged() }.padding(vertical = 6.dp),
+                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                        Text("自动修复 Markdown", style = MaterialTheme.typography.bodyLarge)
+                        Text("官方 power_user.auto_fix_generated_markdown（默认开）：显示前修复模型生成的坏 Markdown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        EmberSwitch(checked = fixMarkdown, onCheckedChange = { fixMarkdown = it; AppearancePrefs.saveFixMarkdown(optContext, it); onAppearanceChanged() })
                         }
                     }
                 }

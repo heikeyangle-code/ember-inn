@@ -74,6 +74,17 @@ object AppearancePrefs {
         com.emberinn.app.data.DisplayCacheVersion.bump()
     }
 
+    /** 官方 power_user.auto_fix_generated_markdown（默认开）：显示前修复模型生成坏的 Markdown。 */
+    fun fixMarkdown(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("auto_fix_generated_markdown", true)
+
+    fun saveFixMarkdown(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("auto_fix_generated_markdown", enabled)
+            .apply()
+        com.emberinn.app.data.DisplayCacheVersion.bump()
+    }
+
     /** 全局文字阴影（对齐官方 style.css：* { text-shadow: 0 0 2px rgba(0,0,0,.5) }）。默认开、2px。 */
     fun textShadowEnabled(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("text_shadow", true)

@@ -3471,16 +3471,16 @@ private fun OfficialMarkdownNode(
 
 /** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
 private val OFFICIAL_HTML_TAG = Regex(
-    "<font(?=[\s/>])|</?span(?=[\s/>])|</?div(?=[\s/>])|<style(?=[\s/>])|<table(?=[\s/>])|<img(?=[\s/>])|<a(?=[\s/>])|</?blockquote(?=[\s/>])|<ul(?=[\s/>])|<ol(?=[\s/>])|<li(?=[\s/>])|<p(?=[\s/>])|<pre(?=[\s/>])|<h[1-6](?=[\s/>])|<center(?=[\s/>])|<figure(?=[\s/>])|<video(?=[\s/>])|<audio(?=[\s/>])|<button(?=[\s/>])" +
-        "|</?section(?=[\s/>])|</?header(?=[\s/>])|</?footer(?=[\s/>])|</?main(?=[\s/>])|</?nav(?=[\s/>])|</?aside(?=[\s/>])|</?article(?=[\s/>])|</?form(?=[\s/>])|<input(?=[\s/>])|<select(?=[\s/>])|<textarea(?=[\s/>])|<label(?=[\s/>])|<details(?=[\s/>])|<summary(?=[\s/>])|<canvas(?=[\s/>])|<svg(?=[\s/>])|<math(?=[\s/>])|<template(?=[\s/>])|<mark(?=[\s/>])|<progress(?=[\s/>])|<meter(?=[\s/>])|<output(?=[\s/>])|<fieldset(?=[\s/>])|<legend(?=[\s/>])|<dialog(?=[\s/>])|<menu(?=[\s/>])|<picture(?=[\s/>])|<source(?=[\s/>])|<track(?=[\s/>])|<map(?=[\s/>])|<area(?=[\s/>])|<iframe(?=[\s/>])|<hgroup(?=[\s/>])|<address(?=[\s/>])|<figcaption(?=[\s/>])|<data(?=[\s/>])|<time(?=[\s/>])|<var(?=[\s/>])|<samp(?=[\s/>])|<kbd(?=[\s/>])|<abbr(?=[\s/>])|<bdi(?=[\s/>])|<bdo(?=[\s/>])|<ruby(?=[\s/>])|<rt(?=[\s/>])|<rp(?=[\s/>])" +
+    "<font(?=[\\s/>])|</?span(?=[\\s/>])|</?div(?=[\\s/>])|<style(?=[\\s/>])|<table(?=[\\s/>])|<img(?=[\\s/>])|<a(?=[\\s/>])|</?blockquote(?=[\\s/>])|<ul(?=[\\s/>])|<ol(?=[\\s/>])|<li(?=[\\s/>])|<p(?=[\\s/>])|<pre(?=[\\s/>])|<h[1-6](?=[\\s/>])|<center(?=[\\s/>])|<figure(?=[\\s/>])|<video(?=[\\s/>])|<audio(?=[\\s/>])|<button(?=[\\s/>])" +
+        "|</?section(?=[\\s/>])|</?header(?=[\\s/>])|</?footer(?=[\\s/>])|</?main(?=[\\s/>])|</?nav(?=[\\s/>])|</?aside(?=[\\s/>])|</?article(?=[\\s/>])|</?form(?=[\\s/>])|<input(?=[\\s/>])|<select(?=[\\s/>])|<textarea(?=[\\s/>])|<label(?=[\\s/>])|<details(?=[\\s/>])|<summary(?=[\\s/>])|<canvas(?=[\\s/>])|<svg(?=[\\s/>])|<math(?=[\\s/>])|<template(?=[\\s/>])|<mark(?=[\\s/>])|<progress(?=[\\s/>])|<meter(?=[\\s/>])|<output(?=[\\s/>])|<fieldset(?=[\\s/>])|<legend(?=[\\s/>])|<dialog(?=[\\s/>])|<menu(?=[\\s/>])|<picture(?=[\\s/>])|<source(?=[\\s/>])|<track(?=[\\s/>])|<map(?=[\\s/>])|<area(?=[\\s/>])|<iframe(?=[\\s/>])|<hgroup(?=[\\s/>])|<address(?=[\\s/>])|<figcaption(?=[\\s/>])|<data(?=[\\s/>])|<time(?=[\\s/>])|<var(?=[\\s/>])|<samp(?=[\\s/>])|<kbd(?=[\\s/>])|<abbr(?=[\\s/>])|<bdi(?=[\\s/>])|<bdo(?=[\\s/>])|<ruby(?=[\\s/>])|<rt(?=[\\s/>])|<rp(?=[\\s/>])" +
         // DOMPurify 默认白名单里文本级标签已由 preprocessOfficialHtml 原生转换（sub/sup/ins/small/big/
         // mark/kbd/samp/tt/code/var/dfn/cite/abbr/acronym）；这里保留它们作为转换失败时的 Web 兜底。
-        "|<sub(?=[\s/>])|<sup(?=[\s/>])|<ins(?=[\s/>])|<small(?=[\s/>])|<big(?=[\s/>])|<tt(?=[\s/>])|<acronym(?=[\s/>])|<dfn(?=[\s/>])|<cite(?=[\s/>])|<code(?=[\s/>])" +
+        "|<sub(?=[\\s/>])|<sup(?=[\\s/>])|<ins(?=[\\s/>])|<small(?=[\\s/>])|<big(?=[\\s/>])|<tt(?=[\\s/>])|<acronym(?=[\\s/>])|<dfn(?=[\\s/>])|<cite(?=[\\s/>])|<code(?=[\\s/>])" +
         // 布局/交互/媒体/完整网页标签：官方 DOMPurify 白名单放行，浏览器原生渲染，WebView 兜底。
-        "|<script(?=[\s/>])|</?html(?=[\s/>])|<head(?=[\s/>])|<body(?=[\s/>])|<title(?=[\s/>])|<meta(?=[\s/>])|<link(?=[\s/>])" +
-        "|<caption(?=[\s/>])|<col(?=[\s/>])|<colgroup(?=[\s/>])|<tbody(?=[\s/>])|<thead(?=[\s/>])|<tfoot(?=[\s/>])|<tr(?=[\s/>])|<td(?=[\s/>])|<th(?=[\s/>])" +
-        "|<dl(?=[\s/>])|<dt(?=[\s/>])|<dd(?=[\s/>])|<datalist(?=[\s/>])|<optgroup(?=[\s/>])|<option(?=[\s/>])" +
-        "|<marquee(?=[\s/>])|<blink(?=[\s/>])|<nobr(?=[\s/>])|<xmp(?=[\s/>])|<shadow(?=[\s/>])|<menuitem(?=[\s/>])|<slot(?=[\s/>])",
+        "|<script(?=[\\s/>])|</?html(?=[\\s/>])|<head(?=[\\s/>])|<body(?=[\\s/>])|<title(?=[\\s/>])|<meta(?=[\\s/>])|<link(?=[\\s/>])" +
+        "|<caption(?=[\\s/>])|<col(?=[\\s/>])|<colgroup(?=[\\s/>])|<tbody(?=[\\s/>])|<thead(?=[\\s/>])|<tfoot(?=[\\s/>])|<tr(?=[\\s/>])|<td(?=[\\s/>])|<th(?=[\\s/>])" +
+        "|<dl(?=[\\s/>])|<dt(?=[\\s/>])|<dd(?=[\\s/>])|<datalist(?=[\\s/>])|<optgroup(?=[\\s/>])|<option(?=[\\s/>])" +
+        "|<marquee(?=[\\s/>])|<blink(?=[\\s/>])|<nobr(?=[\\s/>])|<xmp(?=[\\s/>])|<shadow(?=[\\s/>])|<menuitem(?=[\\s/>])|<slot(?=[\\s/>])",
     RegexOption.IGNORE_CASE,
 )
 

@@ -4,7 +4,7 @@ package com.emberinn.app.data
  * 消息显示管线：对齐官方 script.js messageFormatting 的显示侧步骤
  * （正则显示位点由 ChatViewModel 调用 RegexPipelineEngine 完成，本对象只做纯文本步骤）。
  * - fixMarkdown：官方 power-user.js fixMarkdown(text, forDisplay=true) 1:1
- * - encodeTags：官方 power_user.encode_tags（负向断言不可用时走官方 fallback：< 和 > 全转义）
+ * - encodeTags：官方 power_user.encode_tags（< 全转义；行首/换行+空白后的 > 保留，引用块语法不失效）
  */
 object DisplayPipeline {
 
@@ -37,8 +37,22 @@ object DisplayPipeline {
         return lines.joinToString("\n")
     }
 
-    /** 官方 encode_tags fallback（无负向断言支持时）：先 < 后 > 全转义。 */
-    fun encodeTags(text: String): String = text.replace("<", "&lt;").replace(">", "&gt;")
+    /** 官方 script.js:1820-1826 encode_tags：< 全转义；> 仅在“行首或换行+空白之后”保留
+     *  （负向后顾 (?<!^|\n\s*)），其余 > 转义。Java/Kotlin 不支持变长 lookbehind，用等价字符扫描实现。 */
+    fun encodeTags(text: String): String {
+        val sb = StringBuilder(text.length)
+        // lineStart：从串首或最近一个换行之后，目前只见过空白字符（此时 > 是 Markdown 引用标记，不转义）
+        var lineStart = true
+        for (c in text) {
+            when {
+                c == '<' -> { sb.append("&lt;"); lineStart = false }
+                c == '>' -> { sb.append(if (lineStart) ">" else "&gt;"); lineStart = false }
+                c == '\n' -> { sb.append('\n'); lineStart = true }
+                else -> { sb.append(c); if (!c.isWhitespace()) lineStart = false }
+            }
+        }
+        return sb.toString()
+    }
 
     /**
      * 官方 onProgressStreaming 的流式定界符补齐：* / " / ``` / ~~~ 出现奇数次时，

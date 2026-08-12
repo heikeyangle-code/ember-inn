@@ -425,7 +425,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 characterOverride = el["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
             )
         }
-        out = DisplayPipeline.fixMarkdown(out)
+        // 官方 auto_fix_generated_markdown（默认开）：仅开时 fixMarkdown(forDisplay=true)
+        if (AppearancePrefs.fixMarkdown(getApplication())) out = DisplayPipeline.fixMarkdown(out)
         if (!isSystem && AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
         displayCache[index] = out
         return out
