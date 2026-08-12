@@ -24,6 +24,11 @@ object PresetLibrary {
     fun instructPresets(): List<InstructSettings> =
         presets("instruct").map { json.decodeFromJsonElement(InstructSettings.serializer(), it) }
 
+    /** 原始 JSON（应用时保留官方文件里的全局字段 always_force_name2/trim_sentences/single_line 等）。 */
+    fun contextPresetsRaw(): List<JsonObject> = presets("context")
+
+    fun instructPresetsRaw(): List<JsonObject> = presets("instruct")
+
     fun samplerPresets(api: String): List<SamplerPreset> =
         presets("sampler-$api").map { preset ->
             val name = preset["name"]?.jsonPrimitive?.let { if (it.isString) it.content else it.toString() }

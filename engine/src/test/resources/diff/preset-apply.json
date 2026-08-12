@@ -1,0 +1,3113 @@
+{
+  "source": "preset-manager/power-user/instruct/sysprompt/reasoning/openai 预设纯逻辑（release 8172dcd）",
+  "cases": [
+    {
+      "id": "detect-null",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "detect-empty",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {}
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "detect-instruct",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "name": "A",
+            "input_sequence": "<in>",
+            "output_sequence": "<out>"
+          }
+        }
+      },
+      "expected": "instruct"
+    },
+    {
+      "id": "detect-context",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "name": "A",
+            "story_string": "x"
+          }
+        }
+      },
+      "expected": "context"
+    },
+    {
+      "id": "detect-sysprompt",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "name": "A",
+            "content": "x"
+          }
+        }
+      },
+      "expected": "sysprompt"
+    },
+    {
+      "id": "detect-textgen",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "temp": 1,
+            "top_k": 0,
+            "top_p": 1,
+            "rep_pen": 1
+          }
+        }
+      },
+      "expected": "preset"
+    },
+    {
+      "id": "detect-reasoning",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "name": "A",
+            "prefix": "<t>",
+            "suffix": "</t>",
+            "separator": ""
+          }
+        }
+      },
+      "expected": "reasoning"
+    },
+    {
+      "id": "detect-master-multi",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "instruct": {
+              "name": "A",
+              "input_sequence": "x",
+              "output_sequence": "y"
+            },
+            "context": {
+              "name": "B",
+              "story_string": "z"
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "detect-order-instruct-wins",
+      "args": {
+        "body": {
+          "method": "detectLegacy",
+          "data": {
+            "name": "A",
+            "input_sequence": "x",
+            "output_sequence": "y",
+            "story_string": "z"
+          }
+        }
+      },
+      "expected": "instruct"
+    },
+    {
+      "id": "possible-instruct-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "instruct",
+          "data": {
+            "name": "A",
+            "input_sequence": "x",
+            "output_sequence": "y"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-instruct-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "instruct",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-instruct-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "instruct",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-context-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "context",
+          "data": {
+            "name": "A",
+            "story_string": "x"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-context-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "context",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-context-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "context",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-sysprompt-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "sysprompt",
+          "data": {
+            "name": "A",
+            "content": "x"
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-sysprompt-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "sysprompt",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-sysprompt-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "sysprompt",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-preset-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "preset",
+          "data": {
+            "temp": 1,
+            "top_k": 0,
+            "top_p": 1,
+            "rep_pen": 1
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-preset-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "preset",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-preset-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "preset",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-reasoning-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "reasoning",
+          "data": {
+            "name": "A",
+            "prefix": "p",
+            "suffix": "s",
+            "separator": ""
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-reasoning-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "reasoning",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-reasoning-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "reasoning",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-srw-ok",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "srw",
+          "data": {
+            "value": "x",
+            "show": true
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "possible-srw-bad",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "srw",
+          "data": {
+            "name": "A"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-srw-null",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "srw",
+          "data": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "possible-srw-missing-show",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "srw",
+          "data": {
+            "value": "x"
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "possible-srw-empty",
+      "args": {
+        "body": {
+          "method": "isPossibly",
+          "type": "srw",
+          "data": {}
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "master-sections-mixed",
+      "args": {
+        "body": {
+          "method": "masterSectionsValid",
+          "data": {
+            "instruct": {
+              "name": "A",
+              "input_sequence": "x",
+              "output_sequence": "y"
+            },
+            "context": {
+              "story_string": "x"
+            },
+            "sysprompt": {
+              "name": "B",
+              "content": "c"
+            },
+            "preset": {
+              "temp": 1,
+              "top_k": 0,
+              "top_p": 1,
+              "rep_pen": 1
+            },
+            "reasoning": {
+              "name": "C",
+              "prefix": "p",
+              "suffix": "s",
+              "separator": ""
+            },
+            "srw": {
+              "value": "v",
+              "show": false
+            }
+          }
+        }
+      },
+      "expected": {
+        "instruct": true,
+        "context": false,
+        "sysprompt": true,
+        "preset": true,
+        "reasoning": true,
+        "srw": true
+      }
+    },
+    {
+      "id": "master-sections-empty",
+      "args": {
+        "body": {
+          "method": "masterSectionsValid",
+          "data": {}
+        }
+      },
+      "expected": {}
+    },
+    {
+      "id": "master-sections-unknown",
+      "args": {
+        "body": {
+          "method": "masterSectionsValid",
+          "data": {
+            "other": {}
+          }
+        }
+      },
+      "expected": {}
+    },
+    {
+      "id": "apply-context-full",
+      "args": {
+        "body": {
+          "method": "applyContext",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "X",
+            "story_string": "{{system}}",
+            "example_separator": "---",
+            "chat_start": "---",
+            "use_stop_strings": false,
+            "names_as_stop_strings": false,
+            "story_string_position": 1,
+            "story_string_depth": 2,
+            "story_string_role": 1,
+            "always_force_name2": false,
+            "trim_sentences": true,
+            "single_line": true
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": false,
+        "trim_sentences": true,
+        "single_line": true,
+        "context": {
+          "preset": "X",
+          "story_string": "{{system}}",
+          "chat_start": "---",
+          "example_separator": "---",
+          "use_stop_strings": false,
+          "names_as_stop_strings": false,
+          "story_string_position": 1,
+          "story_string_role": 1,
+          "story_string_depth": 2
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-context-partial",
+      "args": {
+        "body": {
+          "method": "applyContext",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "Y",
+            "example_separator": "***",
+            "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Y",
+          "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": false,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-context-empty-preset",
+      "args": {
+        "body": {
+          "method": "applyContext",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "Z",
+            "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Z",
+          "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": false,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-context-autofix",
+      "args": {
+        "body": {
+          "method": "applyContext",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "A",
+            "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}plain text",
+            "example_separator": "***"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "A",
+          "story_string": "{{#if anchorBefore}}{{anchorBefore}}\n{{/if}}{{#if anchorAfter}}{{anchorAfter}}\n{{/if}}plain text",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": false,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "compile-context",
+      "args": {
+        "body": {
+          "method": "compileContext",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          }
+        }
+      },
+      "expected": {
+        "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+        "example_separator": "***",
+        "chat_start": "***",
+        "use_stop_strings": true,
+        "names_as_stop_strings": true,
+        "story_string_position": 0,
+        "story_string_depth": 1,
+        "story_string_role": 0,
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false
+      }
+    },
+    {
+      "id": "autofix-already-migrated",
+      "args": {
+        "body": {
+          "method": "autoFixStory",
+          "context": {
+            "story_string_position": 0,
+            "story_string": "x"
+          }
+        }
+      },
+      "expected": {
+        "story_string_position": 0,
+        "story_string": "x"
+      }
+    },
+    {
+      "id": "autofix-null",
+      "args": {
+        "body": {
+          "method": "autoFixStory",
+          "context": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "autofix-has-both",
+      "args": {
+        "body": {
+          "method": "autoFixStory",
+          "context": {
+            "story_string": "{{anchorBefore}}\n{{system}}{{trim}}{{anchorAfter}}"
+          }
+        }
+      },
+      "expected": {
+        "story_string": "{{anchorBefore}}\n{{system}}{{trim}}{{anchorAfter}}"
+      }
+    },
+    {
+      "id": "migrate-instruct-legacy-names",
+      "args": {
+        "body": {
+          "method": "migrateInstruct",
+          "settings": {
+            "names": true,
+            "names_force_groups": false,
+            "input_sequence": "<in>",
+            "output_sequence": "<out>"
+          }
+        }
+      },
+      "expected": {
+        "input_sequence": "<in>",
+        "output_sequence": "<out>",
+        "names_behavior": "always",
+        "input_suffix": "",
+        "system_sequence": "",
+        "system_suffix": "",
+        "user_alignment_message": "",
+        "last_system_sequence": "",
+        "first_input_sequence": "",
+        "last_input_sequence": "",
+        "skip_examples": false,
+        "system_same_as_user": false,
+        "sequences_as_stop_strings": true,
+        "story_string_prefix": "",
+        "story_string_suffix": ""
+      }
+    },
+    {
+      "id": "migrate-instruct-names-groups",
+      "args": {
+        "body": {
+          "method": "migrateInstruct",
+          "settings": {
+            "names": false,
+            "names_force_groups": true
+          }
+        }
+      },
+      "expected": {
+        "names_behavior": "force",
+        "input_suffix": "",
+        "system_sequence": "",
+        "system_suffix": "",
+        "user_alignment_message": "",
+        "last_system_sequence": "",
+        "first_input_sequence": "",
+        "last_input_sequence": "",
+        "skip_examples": false,
+        "system_same_as_user": false,
+        "sequences_as_stop_strings": true,
+        "story_string_prefix": "",
+        "story_string_suffix": ""
+      }
+    },
+    {
+      "id": "migrate-instruct-separator",
+      "args": {
+        "body": {
+          "method": "migrateInstruct",
+          "settings": {
+            "separator_sequence": "###"
+          }
+        }
+      },
+      "expected": {
+        "output_suffix": "###",
+        "input_suffix": "",
+        "system_sequence": "",
+        "system_suffix": "",
+        "user_alignment_message": "",
+        "last_system_sequence": "",
+        "first_input_sequence": "",
+        "last_input_sequence": "",
+        "skip_examples": false,
+        "system_same_as_user": false,
+        "names_behavior": "force",
+        "sequences_as_stop_strings": true,
+        "story_string_prefix": "",
+        "story_string_suffix": ""
+      }
+    },
+    {
+      "id": "migrate-instruct-obsolete",
+      "args": {
+        "body": {
+          "method": "migrateInstruct",
+          "settings": {
+            "system_sequence_prefix": "A",
+            "system_sequence_suffix": "B"
+          }
+        }
+      },
+      "expected": {
+        "input_suffix": "",
+        "system_sequence": "",
+        "system_suffix": "",
+        "user_alignment_message": "",
+        "last_system_sequence": "",
+        "first_input_sequence": "",
+        "last_input_sequence": "",
+        "skip_examples": false,
+        "system_same_as_user": false,
+        "names_behavior": "force",
+        "sequences_as_stop_strings": true,
+        "story_string_prefix": "",
+        "story_string_suffix": ""
+      }
+    },
+    {
+      "id": "migrate-instruct-empty",
+      "args": {
+        "body": {
+          "method": "migrateInstruct",
+          "settings": {}
+        }
+      },
+      "expected": {
+        "input_suffix": "",
+        "system_sequence": "",
+        "system_suffix": "",
+        "user_alignment_message": "",
+        "last_system_sequence": "",
+        "first_input_sequence": "",
+        "last_input_sequence": "",
+        "skip_examples": false,
+        "system_same_as_user": false,
+        "names_behavior": "force",
+        "sequences_as_stop_strings": true,
+        "story_string_prefix": "",
+        "story_string_suffix": ""
+      }
+    },
+    {
+      "id": "apply-instruct-full",
+      "args": {
+        "body": {
+          "method": "applyInstruct",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "I",
+            "input_sequence": "I:",
+            "output_sequence": "O:",
+            "input_suffix": "is",
+            "output_suffix": "os",
+            "wrap": false,
+            "macro": false,
+            "names_behavior": "always",
+            "system_sequence": "S:",
+            "system_suffix": "ss",
+            "stop_sequence": "<stop>",
+            "bind_to_context": true,
+            "skip_examples": true,
+            "system_same_as_user": true,
+            "sequences_as_stop_strings": false,
+            "activation_regex": "^x",
+            "first_input_sequence": "FI",
+            "user_alignment_message": "",
+            "last_system_sequence": "",
+            "last_input_sequence": "",
+            "story_string_prefix": "",
+            "story_string_suffix": ""
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "I",
+          "input_sequence": "I:",
+          "input_suffix": "is",
+          "output_sequence": "O:",
+          "output_suffix": "os",
+          "system_sequence": "S:",
+          "system_suffix": "ss",
+          "last_system_sequence": "",
+          "first_input_sequence": "FI",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "<stop>",
+          "wrap": false,
+          "macro": false,
+          "names_behavior": "always",
+          "activation_regex": "^x",
+          "bind_to_context": true,
+          "user_alignment_message": "",
+          "system_same_as_user": true,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": false,
+          "skip_examples": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-instruct-legacy",
+      "args": {
+        "body": {
+          "method": "applyInstruct",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "L",
+            "output_suffix": "###",
+            "names_behavior": "always",
+            "input_suffix": "",
+            "system_sequence": "",
+            "system_suffix": "",
+            "user_alignment_message": "",
+            "last_system_sequence": "",
+            "first_input_sequence": "",
+            "last_input_sequence": "",
+            "skip_examples": false,
+            "system_same_as_user": false,
+            "sequences_as_stop_strings": true,
+            "story_string_prefix": "",
+            "story_string_suffix": ""
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "L",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "###",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "always",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true,
+          "skip_examples": false
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-instruct-empty",
+      "args": {
+        "body": {
+          "method": "applyInstruct",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "E",
+            "input_suffix": "",
+            "system_sequence": "",
+            "system_suffix": "",
+            "user_alignment_message": "",
+            "last_system_sequence": "",
+            "first_input_sequence": "",
+            "last_input_sequence": "",
+            "skip_examples": false,
+            "system_same_as_user": false,
+            "names_behavior": "force",
+            "sequences_as_stop_strings": true,
+            "story_string_prefix": "",
+            "story_string_suffix": ""
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "E",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true,
+          "skip_examples": false
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-instruct-no-name",
+      "args": {
+        "body": {
+          "method": "applyInstruct",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "input_sequence": "X",
+            "input_suffix": "",
+            "system_sequence": "",
+            "system_suffix": "",
+            "user_alignment_message": "",
+            "last_system_sequence": "",
+            "first_input_sequence": "",
+            "last_input_sequence": "",
+            "skip_examples": false,
+            "system_same_as_user": false,
+            "names_behavior": "force",
+            "sequences_as_stop_strings": true,
+            "story_string_prefix": "",
+            "story_string_suffix": ""
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "undefined",
+          "input_sequence": "X",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true,
+          "skip_examples": false
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "compile-context-missing",
+      "args": {
+        "body": {
+          "method": "compileContext",
+          "powerUser": {
+            "context": {
+              "story_string": "s"
+            },
+            "always_force_name2": true
+          }
+        }
+      },
+      "expected": {
+        "story_string": "s",
+        "use_stop_strings": false,
+        "names_as_stop_strings": false,
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false
+      }
+    },
+    {
+      "id": "apply-sysprompt-full",
+      "args": {
+        "body": {
+          "method": "applySysprompt",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "S",
+            "content": "C",
+            "post_history": "P"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "S",
+          "content": "C",
+          "post_history": "P"
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-sysprompt-empty-content",
+      "args": {
+        "body": {
+          "method": "applySysprompt",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "S"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "S",
+          "content": "",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-sysprompt-null-content",
+      "args": {
+        "body": {
+          "method": "applySysprompt",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "S",
+            "content": null,
+            "post_history": null
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "S",
+          "content": "",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-sysprompt-numeric-content",
+      "args": {
+        "body": {
+          "method": "applySysprompt",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "preset": {
+            "name": "S",
+            "content": 0
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "S",
+          "content": "",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "Think XML",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-reasoning-full",
+      "args": {
+        "body": {
+          "method": "applyReasoning",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "template": {
+            "name": "R",
+            "prefix": "<r>",
+            "suffix": "</r>",
+            "separator": "\\n\\n"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "R",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "prefix": "<r>",
+          "suffix": "</r>",
+          "separator": "\\n\\n",
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "apply-reasoning-empty",
+      "args": {
+        "body": {
+          "method": "applyReasoning",
+          "powerUser": {
+            "always_force_name2": true,
+            "trim_sentences": false,
+            "single_line": false,
+            "context": {
+              "preset": "Default",
+              "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+              "chat_start": "***",
+              "example_separator": "***",
+              "use_stop_strings": true,
+              "names_as_stop_strings": true,
+              "story_string_position": 0,
+              "story_string_role": 0,
+              "story_string_depth": 1
+            },
+            "instruct": {
+              "enabled": false,
+              "preset": "Alpaca",
+              "input_sequence": "### Instruction:",
+              "input_suffix": "",
+              "output_sequence": "### Response:",
+              "output_suffix": "",
+              "system_sequence": "",
+              "system_suffix": "",
+              "last_system_sequence": "",
+              "first_input_sequence": "",
+              "first_output_sequence": "",
+              "last_input_sequence": "",
+              "last_output_sequence": "",
+              "story_string_prefix": "",
+              "story_string_suffix": "",
+              "stop_sequence": "",
+              "wrap": true,
+              "macro": true,
+              "names_behavior": "force",
+              "activation_regex": "",
+              "bind_to_context": false,
+              "user_alignment_message": "",
+              "system_same_as_user": false,
+              "separator_sequence": "",
+              "sequences_as_stop_strings": true
+            },
+            "sysprompt": {
+              "enabled": true,
+              "name": "Neutral - Chat",
+              "content": "Write {{char}}'s next reply",
+              "post_history": ""
+            },
+            "reasoning": {
+              "name": "Think XML",
+              "auto_parse": false,
+              "add_to_prompts": false,
+              "auto_expand": false,
+              "show_hidden": false,
+              "prefix": "<think>",
+              "suffix": "</think>",
+              "separator": "\\n",
+              "max_additions": 1
+            }
+          },
+          "template": {
+            "name": "R"
+          }
+        }
+      },
+      "expected": {
+        "always_force_name2": true,
+        "trim_sentences": false,
+        "single_line": false,
+        "context": {
+          "preset": "Default",
+          "story_string": "{{#if system}}{{system}}\n{{/if}}{{trim}}",
+          "chat_start": "***",
+          "example_separator": "***",
+          "use_stop_strings": true,
+          "names_as_stop_strings": true,
+          "story_string_position": 0,
+          "story_string_role": 0,
+          "story_string_depth": 1
+        },
+        "instruct": {
+          "enabled": false,
+          "preset": "Alpaca",
+          "input_sequence": "### Instruction:",
+          "input_suffix": "",
+          "output_sequence": "### Response:",
+          "output_suffix": "",
+          "system_sequence": "",
+          "system_suffix": "",
+          "last_system_sequence": "",
+          "first_input_sequence": "",
+          "first_output_sequence": "",
+          "last_input_sequence": "",
+          "last_output_sequence": "",
+          "story_string_prefix": "",
+          "story_string_suffix": "",
+          "stop_sequence": "",
+          "wrap": true,
+          "macro": true,
+          "names_behavior": "force",
+          "activation_regex": "",
+          "bind_to_context": false,
+          "user_alignment_message": "",
+          "system_same_as_user": false,
+          "separator_sequence": "",
+          "sequences_as_stop_strings": true
+        },
+        "sysprompt": {
+          "enabled": true,
+          "name": "Neutral - Chat",
+          "content": "Write {{char}}'s next reply",
+          "post_history": ""
+        },
+        "reasoning": {
+          "name": "R",
+          "auto_parse": false,
+          "add_to_prompts": false,
+          "auto_expand": false,
+          "show_hidden": false,
+          "max_additions": 1
+        }
+      }
+    },
+    {
+      "id": "migrate-cc-old-names",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "names_in_completion": true,
+            "temperature": 1
+          }
+        }
+      },
+      "expected": {
+        "temperature": 1,
+        "names_behavior": "completion"
+      }
+    },
+    {
+      "id": "migrate-cc-palm",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "chat_completion_source": "palm"
+          }
+        }
+      },
+      "expected": {
+        "chat_completion_source": "makersuite"
+      }
+    },
+    {
+      "id": "migrate-cc-image-inlining-off",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "image_inlining": false
+          }
+        }
+      },
+      "expected": {
+        "media_inlining": false
+      }
+    },
+    {
+      "id": "migrate-cc-ai21",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "ai21_model": "j2-light"
+          }
+        }
+      },
+      "expected": {
+        "ai21_model": "jamba-large"
+      }
+    },
+    {
+      "id": "migrate-cc-mistral-fn",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "mistralai_model": "mistral-small"
+          }
+        }
+      },
+      "expected": {
+        "mistralai_model": "mistral-small-latest"
+      }
+    },
+    {
+      "id": "migrate-cc-deepseek",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "deepseek_model": "deepseek-coder"
+          }
+        }
+      },
+      "expected": {
+        "deepseek_model": "deepseek-v4-flash"
+      }
+    },
+    {
+      "id": "migrate-cc-noop",
+      "args": {
+        "body": {
+          "method": "migrateChatCompletion",
+          "settings": {
+            "temperature": 1,
+            "openai_model": "gpt-4o"
+          }
+        }
+      },
+      "expected": {
+        "temperature": 1,
+        "openai_model": "gpt-4o"
+      }
+    },
+    {
+      "id": "apply-cc-bound",
+      "args": {
+        "body": {
+          "method": "applyChatCompletion",
+          "settings": {
+            "temperature": 0.5,
+            "openai_model": "old",
+            "claude_model": "old-c"
+          },
+          "preset": {
+            "temperature": 1,
+            "openai_model": "new",
+            "claude_model": "new-c",
+            "extensions": {
+              "x": 1
+            }
+          },
+          "bindPresetToConnection": true
+        }
+      },
+      "expected": {
+        "temperature": 0.5,
+        "openai_model": "new",
+        "claude_model": "new-c",
+        "temp_openai": 1,
+        "extensions": {
+          "x": 1
+        }
+      }
+    },
+    {
+      "id": "apply-cc-unbound",
+      "args": {
+        "body": {
+          "method": "applyChatCompletion",
+          "settings": {
+            "temperature": 0.5,
+            "openai_model": "old",
+            "claude_model": "old-c"
+          },
+          "preset": {
+            "temperature": 1,
+            "openai_model": "new",
+            "claude_model": "new-c"
+          },
+          "bindPresetToConnection": false
+        }
+      },
+      "expected": {
+        "temperature": 0.5,
+        "openai_model": "old",
+        "claude_model": "old-c",
+        "temp_openai": 1,
+        "extensions": {}
+      }
+    },
+    {
+      "id": "apply-cc-partial",
+      "args": {
+        "body": {
+          "method": "applyChatCompletion",
+          "settings": {
+            "temperature": 0.5
+          },
+          "preset": {
+            "temperature": 0.9,
+            "n": 2
+          },
+          "bindPresetToConnection": true
+        }
+      },
+      "expected": {
+        "temperature": 0.5,
+        "temp_openai": 0.9,
+        "n": 2,
+        "extensions": {}
+      }
+    },
+    {
+      "id": "apply-cc-extensions-undefined",
+      "args": {
+        "body": {
+          "method": "applyChatCompletion",
+          "settings": {},
+          "preset": {},
+          "bindPresetToConnection": true
+        }
+      },
+      "expected": {
+        "extensions": {}
+      }
+    },
+    {
+      "id": "cc-body",
+      "args": {
+        "body": {
+          "method": "chatCompletionBody",
+          "settings": {
+            "temperature": 1,
+            "openai_max_tokens": 300,
+            "openai_model": "m",
+            "claude_model": null,
+            "use_sysprompt": false
+          }
+        }
+      },
+      "expected": {
+        "openai_model": "m",
+        "claude_model": null,
+        "openai_max_tokens": 300,
+        "use_sysprompt": false
+      }
+    },
+    {
+      "id": "cc-body-empty",
+      "args": {
+        "body": {
+          "method": "chatCompletionBody",
+          "settings": {}
+        }
+      },
+      "expected": {}
+    },
+    {
+      "id": "filter-context",
+      "args": {
+        "body": {
+          "method": "filterPresetSettings",
+          "settings": {
+            "story_string": "s",
+            "example_separator": "***",
+            "name": "Old",
+            "preset": "Old",
+            "enabled": false,
+            "add_to_prompts": true,
+            "show_hidden": false,
+            "max_additions": 1
+          },
+          "apiId": "context",
+          "name": "New",
+          "currentName": "Old",
+          "isAdvancedFormatting": true,
+          "extraGen": {
+            "genamt": 80,
+            "max_length": 4000
+          }
+        }
+      },
+      "expected": {
+        "story_string": "s",
+        "example_separator": "***",
+        "name": "New"
+      }
+    },
+    {
+      "id": "filter-context-empty-name",
+      "args": {
+        "body": {
+          "method": "filterPresetSettings",
+          "settings": {
+            "story_string": "s",
+            "name": "Old"
+          },
+          "apiId": "context",
+          "name": "",
+          "currentName": "Old",
+          "isAdvancedFormatting": true,
+          "extraGen": {
+            "genamt": 80,
+            "max_length": 4000
+          }
+        }
+      },
+      "expected": {
+        "story_string": "s",
+        "name": "Old"
+      }
+    },
+    {
+      "id": "filter-sysprompt",
+      "args": {
+        "body": {
+          "method": "filterPresetSettings",
+          "settings": {
+            "name": "Old",
+            "content": "c",
+            "post_history": "p",
+            "enabled": true
+          },
+          "apiId": "sysprompt",
+          "name": "New",
+          "currentName": "Old",
+          "isAdvancedFormatting": true,
+          "extraGen": {
+            "genamt": 80,
+            "max_length": 4000
+          }
+        }
+      },
+      "expected": {
+        "name": "New",
+        "content": "c",
+        "post_history": "p"
+      }
+    },
+    {
+      "id": "filter-openai",
+      "args": {
+        "body": {
+          "method": "filterPresetSettings",
+          "settings": {},
+          "apiId": "openai",
+          "name": "New",
+          "currentName": "Old",
+          "isAdvancedFormatting": false,
+          "extraGen": {
+            "genamt": 80,
+            "max_length": 4000
+          }
+        }
+      },
+      "expected": {}
+    },
+    {
+      "id": "filter-textgen",
+      "args": {
+        "body": {
+          "method": "filterPresetSettings",
+          "settings": {
+            "temp": 1,
+            "n": 2,
+            "seed": 5,
+            "streaming": true
+          },
+          "apiId": "textgenerationwebui",
+          "name": "New",
+          "currentName": "Old",
+          "isAdvancedFormatting": false,
+          "extraGen": {
+            "genamt": 80,
+            "max_length": 4000
+          }
+        }
+      },
+      "expected": {
+        "temp": 1,
+        "genamt": 80,
+        "max_length": 4000
+      }
+    },
+    {
+      "id": "match-exact",
+      "args": {
+        "body": {
+          "method": "matchExact",
+          "names": [
+            "Default",
+            "Alpaca",
+            "  Space  "
+          ],
+          "name": "alpaca"
+        }
+      },
+      "expected": "Alpaca"
+    },
+    {
+      "id": "match-exact-space",
+      "args": {
+        "body": {
+          "method": "matchExact",
+          "names": [
+            "Default",
+            " Space "
+          ],
+          "name": " space "
+        }
+      },
+      "expected": " Space "
+    },
+    {
+      "id": "match-exact-none",
+      "args": {
+        "body": {
+          "method": "matchExact",
+          "names": [
+            "Default"
+          ],
+          "name": "Alpaca"
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "match-exact-empty-list",
+      "args": {
+        "body": {
+          "method": "matchExact",
+          "names": [],
+          "name": "Alpaca"
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "match-exact-empty-query",
+      "args": {
+        "body": {
+          "method": "matchExact",
+          "names": [
+            "Default"
+          ],
+          "name": ""
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "find-matching-hit",
+      "args": {
+        "body": {
+          "method": "findMatching",
+          "name": "Alpaca",
+          "candidateNames": [
+            "Default",
+            "Alpaca",
+            "ChatML"
+          ]
+        }
+      },
+      "expected": "Alpaca"
+    },
+    {
+      "id": "find-matching-miss",
+      "args": {
+        "body": {
+          "method": "findMatching",
+          "name": "Alpaca",
+          "candidateNames": [
+            "Default",
+            "ChatML"
+          ]
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "find-matching-empty",
+      "args": {
+        "body": {
+          "method": "findMatching",
+          "name": "Alpaca",
+          "candidateNames": []
+        }
+      },
+      "expected": null
+    }
+  ]
+}

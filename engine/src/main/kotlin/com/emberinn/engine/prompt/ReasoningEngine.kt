@@ -4,13 +4,17 @@ package com.emberinn.engine.prompt
  * 官方 reasoning.js parseReasoningFromString / removeReasoningFromString / formatReasoning
  * + utils.js trimSpaces 的引擎移植。
  */
+@kotlinx.serialization.Serializable
 data class ReasoningTemplate(
     val prefix: String = "",
     val suffix: String = "",
     val separator: String = "",
 )
 
+@kotlinx.serialization.Serializable
 data class ReasoningSettings(
+    /** 官方 power_user.reasoning.name 默认 "Think XML"（预设名，仅用于回显/保存）。 */
+    val name: String = "Think XML",
     val autoParse: Boolean = false,
     val trimSpaces: Boolean = false,
     val template: ReasoningTemplate = ReasoningTemplate(),
