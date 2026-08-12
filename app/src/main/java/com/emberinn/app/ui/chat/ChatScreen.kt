@@ -264,6 +264,7 @@ fun ChatScreen(
     var showClearConfirm by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
+    var showWorldPicker by remember { mutableStateOf(false) }
     var showAttachOptions by remember { mutableStateOf(false) }
     var showUrlAttachmentDialog by remember { mutableStateOf(false) }
     var urlAttachmentDraft by rememberSaveable { mutableStateOf("") }
@@ -1172,6 +1173,10 @@ fun ChatScreen(
                     showMore = false
                     vm.forceMemorySummary()
                 }
+                MenuRow(PhosphorIcons.Book, "外置世界（本会话）") {
+                    showMore = false
+                    showWorldPicker = true
+                }
                 MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
                     showMore = false
                     showClearConfirm = true
@@ -1667,6 +1672,37 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { vm.cancelCaptionFlow() }) { Text("取消") }
+            },
+        )
+    }
+    if (showWorldPicker) {
+        val worlds = remember { vm.externalWorlds() }
+        val current = remember { vm.chatWorld() }
+        AlertDialog(
+            onDismissRequest = { showWorldPicker = false },
+            title = { Text("本会话使用的外置世界") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    FilterChip(selected = current.isNullOrEmpty(), onClick = {
+                        vm.setChatWorld("")
+                        showWorldPicker = false
+                    }, label = { Text("（无，跟随角色/全局）") })
+                    worlds.forEach { w ->
+                        FilterChip(
+                            selected = current == w.name,
+                            onClick = {
+                                vm.setChatWorld(w.name)
+                                showWorldPicker = false
+                            },
+                            label = { Text("${w.displayName}（${w.entryCount} 条）") },
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showWorldPicker = false }) { Text("关闭") }
             },
         )
     }

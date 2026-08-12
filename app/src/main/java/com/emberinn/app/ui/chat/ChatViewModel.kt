@@ -1698,6 +1698,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 chat_metadata.world_info：本会话指定的外置世界（空=跟随角色关联/全局）。 */
+    fun externalWorlds(): List<com.emberinn.app.data.WorldStore.WorldFile> =
+        com.emberinn.app.data.WorldStore(getApplication()).list()
+
+    fun chatWorld(): String? =
+        chatStore.metadata(sessionId)["world_info"]?.jsonPrimitive?.contentOrNull
+
+    fun setChatWorld(name: String) {
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        if (name.isBlank()) meta.remove("world_info") else meta["world_info"] = JsonPrimitive(name)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+    }
+
     fun clearNotice() {
         _notice.value = null
     }

@@ -82,6 +82,7 @@ import com.emberinn.app.data.ModelOverride
 import com.emberinn.app.data.ThemeRecipe
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
+import com.emberinn.app.data.WorldStore
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.icons.PhosphorIcons
@@ -112,6 +113,8 @@ fun CharacterDetailScreen(
 
     var fields by remember(record.id) { mutableStateOf(vm.readCharacterFields(record)) }
     var entries by remember(record.id) { mutableStateOf(vm.readWorldEntries(record)) }
+    val worldStore = remember { WorldStore(context) }
+    var worldLink by remember(record.id) { mutableStateOf(CharacterCardEdit.readWorldLink(record.rawJson) ?: "") }
     var worldBookExpanded by remember { mutableStateOf(false) }
     var regexScripts by remember(record.id) { mutableStateOf(vm.readRegexScripts(record)) }
     // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效
@@ -687,6 +690,24 @@ fun CharacterDetailScreen(
                             )
                         }
                         if (worldBookExpanded) {
+                            Text("关联外置世界（data.extensions.world）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+                            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+                                FilterChip(selected = worldLink.isEmpty(), onClick = {
+                                    worldLink = ""
+                                    vm.saveWorldLink(record, "")
+                                }, label = { Text("（无）") }, modifier = Modifier.padding(end = 6.dp))
+                                worldStore.list().forEach { w ->
+                                    FilterChip(
+                                        selected = worldLink == w.name,
+                                        onClick = {
+                                            worldLink = w.name
+                                            vm.saveWorldLink(record, w.name)
+                                        },
+                                        label = { Text(w.displayName) },
+                                        modifier = Modifier.padding(end = 6.dp),
+                                    )
+                                }
+                            }
                             if (entries.isEmpty()) {
                                 Text(
                                     "没有世界书条目。新增关键词条目后，聊到关键词时内容会自动注入上下文。",

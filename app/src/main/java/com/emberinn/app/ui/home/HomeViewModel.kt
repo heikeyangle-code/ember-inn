@@ -282,6 +282,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         saveJson(record, root)
     }
 
+    /** 官方 data.extensions.world：保存角色关联的外置世界。 */
+    fun saveWorldLink(record: CharacterRecord, worldName: String) {
+        val root = json.parseToJsonElement(CharacterCardEdit.applyWorldLink(record.rawJson, worldName)).jsonObject
+        saveJson(record, root)
+    }
+
     /** 读取该卡正则脚本（官方 data.extensions.regex_scripts）。 */
     fun readRegexScripts(record: CharacterRecord): List<CharacterRegexScript> =
         CharacterCardEdit.readRegexScripts(record.rawJson)
