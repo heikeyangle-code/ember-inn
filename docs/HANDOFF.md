@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 324 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 325 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -79,7 +79,7 @@ gh run list --limit 3
 gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **324 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **325 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（81 组差分 fixture，共 1349 例对拍，全部通过；2026-08-12 全量复算）**：
+**已覆盖（82 组差分 fixture，共 1431 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1349 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1431 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -178,6 +178,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息） | tool-loop-official.mjs | ToolLoopDiffTest | 17 |
 | 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
 | StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
+| 预设应用全链（类型识别/multi-section 校验/context/instruct/sysprompt/reasoning/chat-completion 应用与迁移/保存过滤/名字匹配） | preset-apply-official.mjs | PresetApplyDiffTest | 82 |
 
 **分支级覆盖审计与打桩登记（防漏机制，2026-08-08 起强制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -237,24 +238,28 @@ PromptManagerCore（默认/用户顺序、enabled、injection_trigger、prepareP
 RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m/s、x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过、u 原生 flag 应用、重复 flags 回退整体正则——全部对照官方 regexFromString 1:1）；世界书 key 解析 parseRegexFromString 差分 9→15 例（扩：x/X/A/J/U 无效 → null、重复 flag → null，WorldRegexUtils 已补重复 flag 拒绝；u/y 原生 flag 仍为边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
 ✅ 该卡正则已接线（2026-08-10：CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；✅ preset 脚本存储/UI（命名预设集保存/恢复/编辑 + preset_allowed_regex[openai] 允许开关 + 存前/总装/编辑/开场白全位点接线；App 无采样预设管理器，命名集为官方 preset 扩展 regex_scripts 字段的结构等价，登记）。
 
-### 3.7 预设 🟡（选择层 ✅ / 应用层部分）
+### 3.7 预设 ✅（应用引擎差分 82 例 / App 全接；无 Prompt Manager 前置依赖）
 
-**已做**：
-- 官方 127 个预设打包（context 34 / instruct 38 / sampler-openai 1 / sampler-textgen 6 / sampler-novel 24 / sampler-kobold 6 / sysprompt 13 / reasoning 5）+ quick-replies；PresetLibrary 加载 + 完整性测试（PresetLibraryTest 锁数量与可解析）。
-- 设置 → 预设 管理器：上下文/指导/采样/系统提示/推理五类选择 + 保存（PresetPrefs）。
-- **预设 JSON 导入**（官方 preset 文件导入语义）：设置 → 预设 →“导入预设 JSON”，按字段自动识别类型
-  （context=story_string / instruct=input/output_sequence / sampler=temperature+openai_max_tokens /
-  sysprompt=content+post_history / reasoning=prefix+suffix），存 filesDir/presets/{type}/{name}.json；
-  列表 = 官方打包 + 用户导入，用户项可删除；采样预设应用同样支持用户导入的预设。
-- **采样预设（sampler-openai）已应用**：提供商详情页选择即覆盖 temperature/top_p/presence/frequency/top_k/min_p/top_a/repetition_penalty/seed/n/stream/上下文/最大回复（ProviderViewModel.applySamplerPreset）。
-- 快捷回复预设：QuickReplyStore 多文件（官方 data/default-user/quick-replies 语义）+ 设置页预设选择/新建/删除（3.8.17）。
+**官方定位（index.html 核实）**：预设全链在 Power User 的 Advanced Formatting 抽屉（context/instruct/sysprompt/reasoning 选择器 + af_master_import/af_master_export 多区段导入导出）+ 各 API 连接面板的采样预设管理器；与 Prompt Manager（提示词编辑面板，12.16 登记）无关，不存在“先做 Prompt Manager 才能做预设”的依赖。
 
-**未做（接手人继续）**：
-- context/instruct 预设应用：消费点是 textgen 协议后端（KoboldAI/TextGenWebUI/Mancer 等，见第 5 节）——选择已保存，后端接入时把 ContextSettings/InstructSettings 传进 InstructMode/PromptAssembler。
-- sysprompt/reasoning 预设应用：官方在 Prompt Manager 里选择；Prompt Manager UI（编辑 main/system/jailbreak/impersonation 等提示词 + 预设选择/保存/删除）未做（12.16 登记）。
-- 自定义预设保存/删除/设为默认：官方预设管理器可把当前设置存为新预设、删除预设；App 目前只能从官方打包预设中选择，不能保存/删除自己的预设。
-- sampler-textgen/novel/kobold 应用：对应后端未做，先不暴露。
-- 官方 master import/export（preset-manager.js 多区段 JSON 导入导出）未做——当前只支持单预设文件导入。
+**引擎（官方 1:1，82 例差分）**：
+- `PresetApplyEngine`（engine/prompt/PresetApplyEngine.kt，`preset-apply-official.mjs` → `PresetApplyDiffTest`）：
+  - 类型识别：isPossibly{Instruct,Context,SystemPrompt,TextCompletion,Reasoning,StartReplyWith}Data + performMasterImport legacy 顺序（instruct→context→sysprompt→preset→reasoning）；
+  - 应用：applyContextPreset（contextControls 循环 + autoFixStoryString）、applyInstructPreset（migrateInstructModeSettings + controls 循环）、applySyspromptPreset（enabled 自动置 true）、applyReasoningPreset、applyChatCompletionPreset（settingsToUpdate 全字段 + extensions 特例 + isConnection 绑定语义）、migrateChatCompletionSettings（含正则迁移）；
+  - 保存：getChatCompletionPresetBody / getContextSettingsCompiled / filterPresetSettings（getPresetSettings filteredKeys + genamt/max_length）；
+  - 名字匹配：matchPresetNameExact（/preset 精确匹配）+ findMatchingTemplateName（bind_to_context 同名绑定）。
+- 类型化包装（ContextApplyResult/InstructSettings/SyspromptSettings/ReasoningSettings）供 App 接线，经同一 JSON 级引擎单一路径。
+
+**App**：
+- 预设页（PresetsScreen）：五类选择即应用（context 写 trim_sentences/names_as_stop_strings→BehaviorPrefs、example_separator→RenderPrefs；sampler 选中即应用到当前活动连接；reasoning 进总装）；每类“保存当前为预设”（引擎过滤语义）；用户预设删除；单预设文件导入（官方 legacy 识别顺序，openai 采样按官方不校验字段）；**多区段 master 导入/导出**（instruct/context/sysprompt/reasoning/srw + textgen preset 区段，导入时按官方全部勾选默认）。
+- `/preset` 斜杠命令：精确匹配（引擎差分）；fuzzy 回退子串近似（Fuse 未移植，8.6 登记）。
+- 预设存储：官方打包（engine resources）+ 用户预设 filesDir/presets/{type}/{name}.json（官方 data/default-user/content/presets/{type} 语义）。
+- reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
+
+**仍登记（诚实边界）**：
+- context/instruct/sysprompt 预设已按官方语义持久化，但运行时消费点是 textgen 协议后端（KoboldAI/TextGenWebUI/Mancer 等，见第 5 节）——后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖）。
+- sampler-textgen/novel/kobold：预设已打包（6/24/6），对应后端未做，选择暂不暴露。
+- master 导入的 textgen preset 区段暂存为 sampler 用户预设（不应用）。
 - moving-ui（界面预设）：用户决策延期见 8.9。
 
 ### 3.8 聊天 🟡
@@ -354,7 +359,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 3.8.18 setOpenAIMessages 构造循环 ✅
 - `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
 - ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 324 测全绿。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 325 测全绿。
 
 ### 3.8.19 边界补齐
 - Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
@@ -417,7 +422,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 324 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 325 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（2026-08-10 ：GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
@@ -502,6 +507,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
 | 人设 | `public/scripts/personas.js` | ✅ PersonaStore 官方全字段（name/description/title/avatarPath/lorebook/position/depth/role/connections，depth 默认 2=官方 DEFAULT_DEPTH）+ 聊天页顶栏常驻人设按钮（官方右侧抽屉等价）+ ⋮ 菜单人设：搜索/选择/新建/编辑/删除/复制/备份/恢复/设为默认/锁定到本聊天（chat_metadata.persona）/同步名称到历史消息（syncUserNameToPersona）/头像选择/世界书选择；备份/恢复按官方 personas_YYYYMMDD.json 格式（{personas, persona_descriptions, default_persona}，恢复为合并语义：已存在跳过，default_persona 存在才应用）；发送时 effectivePersona = 引擎 PersonaEngine.resolve（聊天锁 > 角色/群聊连接 > 默认 > 当前选择）；注入按官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN（合并作者注释）/4=AT_DEPTH/9=NONE；lorebook = 人设关联世界书（官方 getPersonaLore：聊天/全局已激活跳过，否则并入扫描）已接；matchPersonaDescription 扫描已接 |
 | 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ 2026-08-10 ：VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
+| 预设 | `public/scripts/preset-manager.js` + power-user/instruct-mode/sysprompt/reasoning/openai.js | ✅ PresetApplyEngine 官方差分 82 例（识别/五类应用/迁移/保存过滤/名字匹配）；PresetsScreen 五类选择即应用 + 保存当前为预设 + 删除用户预设 + 单文件导入（legacy 顺序）+ 多区段 master 导入导出；/preset 命令（exact 差分，fuzzy 子串近似）；sampler 选中即应用到活动连接、reasoning 进总装 addToMessage；context/instruct/sysprompt 已按官方语义持久化，运行时消费点等 textgen 后端（登记） |
 | 作者注释 | `public/scripts/authors-note.js` | ✅ 三层：设置页全局默认（default/defaultPosition/defaultDepth/defaultInterval/defaultRole/allowWIScan）+ 角色备注（extension_settings.note.chara：useChara/before/after/replace，引擎 applyCharaNote 差分 6 例）+ 聊天级 note_*（内容/位置/深度/角色/间隔）；弹层显示官方 token 计数与下次插入计数；AuthorsNoteEngine.resolve 按用户消息数注入，ANWithWI 合并世界书 |
 | tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
 | 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
@@ -536,7 +542,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 324 测全绿、差分 81 组 / 1349 例）：
+**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 82 组 / 1431 例）：
+- 预设全链：引擎 PresetApplyEngine 官方差分 82 例（类型识别/五类应用/迁移/保存过滤/名字匹配）+ 预设页选择即应用/保存当前为预设/删除 + 单文件导入 + 多区段 master 导入导出 + /preset 命令 + reasoning 进总装
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -565,7 +572,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 81 组差分 fixture / 1349 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29、persona-engine 26、authors-note 20、authors-note-inject 14 等）
+- 82 组差分 fixture / 1431 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 17、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29、persona-engine 26、authors-note 20、authors-note-inject 14 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 
@@ -653,6 +660,8 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 | 人设搜索 | 官方 FilterHelper 用 Fuse.js 模糊搜索（name 权重 20 + description 权重 3，按相关度排序）；App 为名称/描述子串过滤，无相关度排序 | 🟡 UI 近似 |
 | 人设同步 force_avatar | 官方 syncUserNameToPersona 写 `getThumbnailUrl('persona', user_avatar)` 缩略图 URL；App 写本地头像路径（导出 jsonl 时该字段为本地路径，官方无法解析） | 🟡 App 边界 |
 | 人设备份头像 | 官方备份只含 avatar key（头像文件在服务端，缺失时上传默认头像）；App 备份同样只含 key，恢复时本地无该头像文件则回退默认头像 | 🟡 等价边界 |
+| /preset fuzzy | 官方 presetCommandCallback 精确匹配后回退 Fuse.js 模糊；App 精确匹配（引擎差分 82 例内锁定）后回退子串近似（Fuse 未移植） | 🟡 近似 |
+| 预设导入 | 官方 openai 采样预设导入不校验字段、textgen preset 进 textgenerationwebui 管理器；App 合并为单导入入口（legacy 顺序识别为引擎差分），textgen preset 暂存 sampler 目录且不应用（textgen 后端未接） | 🟡 等价边界 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
 | 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 已编辑 automationId/preventAutoExecute；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
 | 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |

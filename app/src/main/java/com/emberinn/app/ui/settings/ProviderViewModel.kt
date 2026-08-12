@@ -258,25 +258,46 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _editingSampler.value = _editingSampler.value.copy(useSysprompt = v)
     }
 
-    /** 应用官方 OpenAI 采样预设（sampler-openai preset → SamplerParams/上下文/最大回复）。 */
+    /** 应用官方 OpenAI 采样预设：引擎 onSettingsPresetChange 纯循环（bind_preset_to_connection=官方默认 true）。 */
     fun applySamplerPreset(name: String) {
         if (name.isBlank()) return
         val official = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }
-        val s = official?.settings ?: UserPresetStore.load(getApplication(), "sampler", name) ?: return
-        fun d(key: String): Double? = (s[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
-        fun i(key: String): Int? = (s[key] as? JsonPrimitive)?.content?.toIntOrNull()
-        fun b(key: String): Boolean = (s[key] as? JsonPrimitive)?.content == "true"
-        _editingSampler.value = _editingSampler.value.copy(
-            temperature = d("temperature") ?: _editingSampler.value.temperature,
-            topP = d("top_p") ?: _editingSampler.value.topP,
-            presencePenalty = d("presence_penalty") ?: _editingSampler.value.presencePenalty,
-            frequencyPenalty = d("frequency_penalty") ?: _editingSampler.value.frequencyPenalty,
-            topK = i("top_k") ?: _editingSampler.value.topK,
-            minP = d("min_p") ?: _editingSampler.value.minP,
-            topA = d("top_a") ?: _editingSampler.value.topA,
-            repetitionPenalty = d("repetition_penalty") ?: _editingSampler.value.repetitionPenalty,
-            seed = i("seed") ?: _editingSampler.value.seed,
-            n = i("n") ?: _editingSampler.value.n,
+        val preset = official?.settings ?: UserPresetStore.load(getApplication(), "sampler", name) ?: return
+        val sam = _editingSampler.value
+        val settings = kotlinx.serialization.json.buildJsonObject {
+            put("temp_openai", kotlinx.serialization.json.JsonPrimitive(sam.temperature))
+            put("top_p_openai", kotlinx.serialization.json.JsonPrimitive(sam.topP))
+            put("freq_pen_openai", kotlinx.serialization.json.JsonPrimitive(sam.frequencyPenalty))
+            put("pres_pen_openai", kotlinx.serialization.json.JsonPrimitive(sam.presencePenalty))
+            put("top_k_openai", kotlinx.serialization.json.JsonPrimitive(sam.topK))
+            put("top_a_openai", kotlinx.serialization.json.JsonPrimitive(sam.topA))
+            put("min_p_openai", kotlinx.serialization.json.JsonPrimitive(sam.minP))
+            put("repetition_penalty_openai", kotlinx.serialization.json.JsonPrimitive(sam.repetitionPenalty))
+            put("seed", kotlinx.serialization.json.JsonPrimitive(sam.seed))
+            put("n", kotlinx.serialization.json.JsonPrimitive(sam.n))
+            put("stream_openai", kotlinx.serialization.json.JsonPrimitive(sam.stream))
+            put("openai_max_context", kotlinx.serialization.json.JsonPrimitive(_contextWindow.value))
+            put("openai_max_tokens", kotlinx.serialization.json.JsonPrimitive(_maxTokens.value))
+        }
+        val applied = com.emberinn.engine.prompt.PresetApplyEngine.applyChatCompletionPresetJson(
+            settings = settings,
+            preset = preset,
+            bindPresetToConnection = true,
+        )
+        fun d(key: String): Double? = (applied[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
+        fun i(key: String): Int? = (applied[key] as? JsonPrimitive)?.content?.toIntOrNull()
+        fun b(key: String): Boolean = (applied[key] as? JsonPrimitive)?.content == "true"
+        _editingSampler.value = sam.copy(
+            temperature = d("temp_openai") ?: sam.temperature,
+            topP = d("top_p_openai") ?: sam.topP,
+            presencePenalty = d("pres_pen_openai") ?: sam.presencePenalty,
+            frequencyPenalty = d("freq_pen_openai") ?: sam.frequencyPenalty,
+            topK = i("top_k_openai") ?: sam.topK,
+            minP = d("min_p_openai") ?: sam.minP,
+            topA = d("top_a_openai") ?: sam.topA,
+            repetitionPenalty = d("repetition_penalty_openai") ?: sam.repetitionPenalty,
+            seed = i("seed") ?: sam.seed,
+            n = i("n") ?: sam.n,
             stream = b("stream_openai"),
         )
         _maxTokens.value = i("openai_max_tokens") ?: _maxTokens.value

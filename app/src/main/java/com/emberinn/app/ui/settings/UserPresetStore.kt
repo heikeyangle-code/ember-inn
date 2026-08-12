@@ -42,16 +42,17 @@ object UserPresetStore {
     }
 
     /**
-     * 按字段识别官方预设类型（与 default/content/presets 结构对应）：
-     * context=story_string / instruct=input_sequence+output_sequence /
-     * sampler=temperature+openai_max_tokens / sysprompt=content+post_history / reasoning=prefix+suffix。
+     * 官方导入类型识别：先用 preset-manager.js performMasterImport 的 legacy 顺序
+     * （instruct→context→sysprompt→preset(textgen)→reasoning，引擎差分锁定）；
+     * 官方 openai 采样预设导入不校验字段（按文件名存），App 兜底 temperature+openai_max_tokens → sampler。
+     * textgen（preset）暂按 sampler 存储，应用等 textgen 后端（HANDOFF 3.7 登记）。
      */
-    fun detectType(obj: JsonObject): String? = when {
-        obj["story_string"] != null -> "context"
-        obj["input_sequence"] != null && obj["output_sequence"] != null -> "instruct"
-        obj["temperature"] != null && obj["openai_max_tokens"] != null -> "sampler"
-        obj["content"] != null && obj["post_history"] != null -> "sysprompt"
-        obj["prefix"] != null && obj["suffix"] != null -> "reasoning"
-        else -> null
+    fun detectType(obj: JsonObject): String? = when (com.emberinn.engine.prompt.PresetApplyEngine.detectLegacyImportType(obj)) {
+        "instruct" -> "instruct"
+        "context" -> "context"
+        "sysprompt" -> "sysprompt"
+        "preset" -> "sampler"
+        "reasoning" -> "reasoning"
+        null -> if (obj["temperature"] != null && obj["openai_max_tokens"] != null) "sampler" else null
     }
 }

@@ -138,7 +138,7 @@ class ChatPromptFactory {
         personaInPrompt: Boolean = false,
         /** 官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN/4=AT_DEPTH/9=NONE。 */
         personaPosition: Int = 0,
-        personaDepth: Int = 4,
+        personaDepth: Int = 2,
         personaRole: Int = 0,
         anSettings: AuthorsNoteSettings = AuthorsNoteSettings(),
         charaNote: CharaNote? = null,
@@ -157,6 +157,8 @@ class ChatPromptFactory {
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
+        /** 官方 power_user.reasoning.prefix/suffix/separator（reasoning 预设应用后生效）。 */
+        reasoningTemplate: com.emberinn.engine.prompt.ReasoningTemplate = com.emberinn.engine.prompt.ReasoningTemplate(),
         scriptInjections: List<ScriptInject> = emptyList(),
         /** 官方 generate：群聊有 depth 提示时用群聊深度提示，否则用角色卡深度提示（DEPTH_PROMPT）。 */
         useCharacterDepthPrompt: Boolean = true,
@@ -429,7 +431,12 @@ class ChatPromptFactory {
                         reasoning = regexed,
                         isPrefix = isPrefix,
                         duration = duration,
-                        settings = ReasoningPromptSettings(addToPrompts = reasoningToPrompts),
+                        settings = ReasoningPromptSettings(
+                            addToPrompts = reasoningToPrompts,
+                            prefix = reasoningTemplate.prefix,
+                            suffix = reasoningTemplate.suffix,
+                            separator = reasoningTemplate.separator,
+                        ),
                     ),
                 )
             }

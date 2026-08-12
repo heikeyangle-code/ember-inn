@@ -27,6 +27,7 @@ class AppSlashExecutorTest {
         override fun setBackground(text: String): String { calls += "bg:$text"; return "bg.png" }
         override fun impersonate(prompt: String): String { calls += "impersonate:$prompt"; return "" }
         override fun selectPersona(name: String, mode: String): String { calls += "persona:$mode:$name"; return "" }
+        override fun applyPreset(name: String): String { calls += "preset:$name"; return "Default" }
         override suspend fun triggerGeneration(await: Boolean): String { calls += "trigger:$await"; return "" }
         override suspend fun generateText(prompt: String, length: Int?): String { calls += "gen:$prompt:$length"; return "生成文本" }
         override suspend fun generateRaw(prompt: String, system: String, prefill: String, length: Int?, instruct: Boolean, asRole: String, stop: String, trim: Boolean): String {

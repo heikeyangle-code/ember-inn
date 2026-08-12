@@ -49,6 +49,8 @@ interface SlashMessageActions {
     fun impersonate(prompt: String): String
     /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
     fun selectPersona(name: String, mode: String): String
+    /** /preset：精确匹配选择 OpenAI 采样预设（官方 presetCommandCallback exact；fuzzy 用子串近似登记）；无参返回当前名。 */
+    fun applyPreset(name: String): String
     /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
     suspend fun triggerGeneration(await: Boolean = false): String
     /** /inject：写/删 chat_metadata.script_injects 并注入本会话生成；返回注入 ID。 */
@@ -272,6 +274,14 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "切换人设（官方 persona-set：mode=lookup/temp/all，默认 all）",
             callback = { inv, _ ->
                 actions.selectPersona(inv.unnamedArgs.joinToString(" "), inv.namedArgs["mode"] ?: "all")
+            },
+        ),
+        SlashCommandDef(
+            "preset",
+            description = "选择采样预设（官方 presetCommandCallback：精确匹配，fuzzy 子串近似；无参返回当前预设名）",
+            rawQuotes = true,
+            callback = { inv, _ ->
+                actions.applyPreset(inv.unnamedArgs.joinToString(" ").trim())
             },
         ),
     )
