@@ -135,6 +135,10 @@ class ChatPromptFactory {
         chatCompletionSource: String = "openai",
         personaDescription: String = "",
         personaInPrompt: Boolean = false,
+        /** 官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN/4=AT_DEPTH/9=NONE。 */
+        personaPosition: Int = 0,
+        personaDepth: Int = 4,
+        personaRole: Int = 0,
         vectorStore: VectorStore? = null,
         vectorChatSettings: VectorChatSettings = VectorChatSettings(),
         vectorWorldSettings: VectorSettings = VectorSettings(),
@@ -569,7 +573,13 @@ class ChatPromptFactory {
         }
         val shouldInjectNote = AuthorsNoteEngine.shouldInjectNote(userMessageCount, note.interval)
         val noteContent = if (shouldInjectNote) note.content else ""
-        val anText = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
+        val anTextRaw = AuthorsNoteBuilder.compose(noteContent, wiResult.anBefore, wiResult.anAfter, note.allowWIScan)
+        // 官方 script.js：persona_description_position=TOP_AN(2)/BOTTOM_AN(3) 时把人设描述合并进作者注释
+        val anText = when (personaPosition) {
+            2 -> if (personaDescription.isNotBlank()) "$personaDescription\n$anTextRaw" else anTextRaw
+            3 -> if (personaDescription.isNotBlank()) "$anTextRaw\n$personaDescription" else anTextRaw
+            else -> anTextRaw
+        }
         // 官方 setExtensionPrompt：position=IN_CHAT(1) 走 getExtensionPrompt(IN_CHAT)（populationInjectionPrompts），
         // 其余（0=IN_PROMPT→end、2=BEFORE_PROMPT→start）走扩展提示注入
 
@@ -583,6 +593,17 @@ class ChatPromptFactory {
                 depth = parsed?.depthPromptDepth ?: DepthPromptEngine.DEFAULT_DEPTH,
                 role = parsed?.depthPromptRole ?: DepthPromptEngine.DEFAULT_ROLE,
             )?.let { effectiveInChat += it }
+        }
+        // 官方 script.js：persona_description_position=AT_DEPTH(4) → setExtensionPrompt(PERSONA_DESCRIPTION, IN_CHAT, depth, role)
+        if (personaPosition == 4 && personaDescription.isNotBlank()) {
+            effectiveInChat = effectiveInChat + PromptItem(
+                identifier = "PERSONA_DESCRIPTION",
+                name = "人设描述",
+                content = personaDescription,
+                role = ExtensionPromptEngine.roleName(personaRole),
+                injectionDepth = personaDepth,
+                injectionOrder = 100,
+            )
         }
         if (anText.isNotBlank()) {
             if (note.position == 1) {

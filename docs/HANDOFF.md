@@ -483,9 +483,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
 | 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
 | 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
-| 人设 | `public/scripts/personas.js` | ✅ 2026-08-10 ：PersonaStore（filesDir/personas.json，官方 Persona Management 语义）+ 聊天 ⋮ 人设选择/新建/编辑/删除；选中人设时 personaDescription 注入（personaInPrompt=true，官方 persona_in_prompt 语义；引擎 PromptPipeline 补同名透传参数，默认 false 行为不变） |
+| 人设 | `public/scripts/personas.js` | ✅ PersonaStore（官方字段：name/description/position/depth/role；lorebook/title 已入模型未接扫描/显示）+ 聊天 ⋮ 人设选择/新建/编辑/删除；注入按官方 persona_description_positions：0=IN_PROMPT（story string）、2/3=TOP/BOTTOM_AN（合并作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE；lorebook 参与世界书扫描未接（登记） |
 | 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ 2026-08-10 ：VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
-| 作者注释 | `public/scripts/authors-note.js` | AuthorsNoteEngine.resolve 每 N 条消息刷新，ANWithWI 合并世界书结果后注入 |
+| 作者注释 | `public/scripts/authors-note.js` | ✅ AuthorsNoteEngine.resolve 每 N 条消息刷新（note_interval 默认 1，按用户消息数），ANWithWI 合并世界书结果后注入；聊天 ⋮ 作者注释弹层 = 内容/位置（0 提示词内/1 对话内/2 提示词前，官方 extension_prompt_types）/深度/角色/间隔；默认 position=1 对齐官方 |
 | tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
 | 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
 

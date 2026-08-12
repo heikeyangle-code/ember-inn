@@ -273,6 +273,9 @@ fun ChatScreen(
     var showPersonaPicker by remember { mutableStateOf(false) }
     var personaDraftName by remember { mutableStateOf("") }
     var personaDraftDesc by remember { mutableStateOf("") }
+    var personaDraftPosition by remember { mutableStateOf(0) }
+    var personaDraftDepth by remember { mutableStateOf(4) }
+    var personaDraftRole by remember { mutableStateOf(0) }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkDraftName by remember { mutableStateOf("") }
@@ -286,6 +289,8 @@ fun ChatScreen(
     var anPrompt by remember { mutableStateOf("") }
     var anPosition by remember { mutableStateOf(1) }
     var anDepth by remember { mutableStateOf(4) }
+    var anRole by remember { mutableStateOf(0) }
+    var anInterval by remember { mutableStateOf(1) }
     var showGroupSettings by remember { mutableStateOf(false) }
     var pendingDisplay by remember { mutableStateOf<String?>(null) }
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
@@ -1145,6 +1150,8 @@ fun ChatScreen(
                     anPrompt = draft.prompt
                     anPosition = draft.position
                     anDepth = draft.depth
+                    anRole = draft.role
+                    anInterval = draft.interval
                     showAuthorsNote = true
                 }
                 if (vm.group != null) {
@@ -1218,11 +1225,30 @@ fun ChatScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
+                    Text(
+                        "角色（role）",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = anRole == 0, onClick = { anRole = 0 }, label = { Text("系统") })
+                        FilterChip(selected = anRole == 1, onClick = { anRole = 1 }, label = { Text("用户") })
+                        FilterChip(selected = anRole == 2, onClick = { anRole = 2 }, label = { Text("助手") })
+                    }
+                    EmberTextField(
+                        value = anInterval.toString(),
+                        onValueChange = { anInterval = it.toIntOrNull() ?: 1 },
+                        label = { Text("注入间隔（每 N 条用户消息，官方 note_interval 默认 1）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    vm.saveAuthorsNote(anPrompt.trim(), anPosition, anDepth, 0)
+                    vm.saveAuthorsNote(anPrompt.trim(), anPosition, anDepth, anRole, anInterval)
                     showAuthorsNote = false
                 }) { Text("保存") }
             },
@@ -1336,6 +1362,9 @@ fun ChatScreen(
                             editingPersona = p
                             personaDraftName = p.name
                             personaDraftDesc = p.description
+                            personaDraftPosition = p.position
+                            personaDraftDepth = p.depth
+                            personaDraftRole = p.role
                         }, modifier = Modifier.size(32.dp)) {
                             Icon(PhosphorIcons.Edit, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
                         }
@@ -1350,6 +1379,9 @@ fun ChatScreen(
                         editingPersona = Persona(id = "p-" + System.nanoTime().toString(36), name = "", description = "")
                         personaDraftName = ""
                         personaDraftDesc = ""
+                        personaDraftPosition = 0
+                        personaDraftDepth = 4
+                        personaDraftRole = 0
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 ) { Text("＋ 新建人设") }
@@ -1378,11 +1410,53 @@ fun ChatScreen(
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
+                    Text(
+                        "注入位置",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = personaDraftPosition == 0, onClick = { personaDraftPosition = 0 }, label = { Text("提示词内") })
+                        FilterChip(selected = personaDraftPosition == 2, onClick = { personaDraftPosition = 2 }, label = { Text("备注上") })
+                        FilterChip(selected = personaDraftPosition == 3, onClick = { personaDraftPosition = 3 }, label = { Text("备注下") })
+                        FilterChip(selected = personaDraftPosition == 4, onClick = { personaDraftPosition = 4 }, label = { Text("深度注入") })
+                        FilterChip(selected = personaDraftPosition == 9, onClick = { personaDraftPosition = 9 }, label = { Text("不注入") })
+                    }
+                    if (personaDraftPosition == 4) {
+                        EmberTextField(
+                            value = personaDraftDepth.toString(),
+                            onValueChange = { personaDraftDepth = it.toIntOrNull() ?: 4 },
+                            label = { Text("深度（AT_DEPTH 时生效）") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        )
+                    }
+                    Text(
+                        "角色（role）",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = personaDraftRole == 0, onClick = { personaDraftRole = 0 }, label = { Text("系统") })
+                        FilterChip(selected = personaDraftRole == 1, onClick = { personaDraftRole = 1 }, label = { Text("用户") })
+                        FilterChip(selected = personaDraftRole == 2, onClick = { personaDraftRole = 2 }, label = { Text("助手") })
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    vm.savePersona(target.copy(name = personaDraftName.trim(), description = personaDraftDesc))
+                    vm.savePersona(
+                        target.copy(
+                            name = personaDraftName.trim(),
+                            description = personaDraftDesc,
+                            position = personaDraftPosition,
+                            depth = personaDraftDepth,
+                            role = personaDraftRole,
+                        ),
+                    )
                     editingPersona = null
                 }) { Text("确定") }
             },

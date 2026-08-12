@@ -7,13 +7,20 @@ import kotlinx.serialization.json.Json
 
 /**
  * 人设存储（对齐官方 Persona Management：全局 personas.json + activePersona）。
- * 官方字段：name / description（含 {{char}}/{{user}} 宏，进提示词前由引擎替换）。
+ * 官方字段：name / description（含 {{char}}/{{user}} 宏，进提示词前由引擎替换）；
+ * persona_descriptions[avatar] = { description, position, depth, role, lorebook, title }。
  */
 @Serializable
 data class Persona(
     val id: String = "",
     val name: String = "",
     val description: String = "",
+    /** 官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN/4=AT_DEPTH/9=NONE。 */
+    val position: Int = 0,
+    val depth: Int = 4,
+    val role: Int = 0,
+    val lorebook: String = "",
+    val title: String = "",
 )
 
 class PersonaStore(context: Context) {

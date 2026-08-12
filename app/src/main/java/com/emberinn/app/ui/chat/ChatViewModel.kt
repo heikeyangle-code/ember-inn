@@ -834,25 +834,33 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     )
     val chatBackground: StateFlow<String?> = _chatBackground
 
-    /** 作者注释（官方 authors-note.js 元数据键：note_prompt/note_position/note_depth/note_role）。 */
-    data class AuthorsNoteDraft(val prompt: String, val position: Int, val depth: Int, val role: Int)
+    /** 作者注释（官方 authors-note.js 元数据键：note_prompt/note_position/note_depth/note_role/note_interval）。 */
+    data class AuthorsNoteDraft(
+        val prompt: String,
+        val position: Int,
+        val depth: Int,
+        val role: Int,
+        val interval: Int,
+    )
 
     fun authorsNoteDraft(): AuthorsNoteDraft {
         val meta = chatStore.metadata(sessionId)
         return AuthorsNoteDraft(
             prompt = meta["note_prompt"]?.jsonPrimitive?.contentOrNull ?: "",
-            position = meta["note_position"]?.jsonPrimitive?.content?.toIntOrNull() ?: 2,
+            position = meta["note_position"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1,
             depth = meta["note_depth"]?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
             role = meta["note_role"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+            interval = meta["note_interval"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1,
         )
     }
 
-    fun saveAuthorsNote(prompt: String, position: Int, depth: Int, role: Int) {
+    fun saveAuthorsNote(prompt: String, position: Int, depth: Int, role: Int, interval: Int) {
         val meta = chatStore.metadata(sessionId).toMutableMap()
         if (prompt.isBlank()) meta.remove("note_prompt") else meta["note_prompt"] = JsonPrimitive(prompt)
         meta["note_position"] = JsonPrimitive(position)
         meta["note_depth"] = JsonPrimitive(depth)
         meta["note_role"] = JsonPrimitive(role)
+        meta["note_interval"] = JsonPrimitive(interval)
         chatStore.saveMetadata(sessionId, JsonObject(meta))
         _notice.value = if (prompt.isBlank()) "（作者注释已清除）" else "（作者注释已保存，下次发送生效）"
     }
@@ -2139,7 +2147,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
                 personaDescription = _activePersona.value?.description.orEmpty(),
-                personaInPrompt = _activePersona.value != null,
+                // 官方 persona_description_positions：0=IN_PROMPT（story string 注入）、
+                // 2/3=TOP/BOTTOM_AN（合并进作者注释）、4=AT_DEPTH（IN_CHAT+深度+角色）、9=NONE 不注入
+                personaInPrompt = _activePersona.value?.position == 0 && _activePersona.value != null,
+                personaPosition = _activePersona.value?.position ?: 0,
+                personaDepth = _activePersona.value?.depth ?: 4,
+                personaRole = _activePersona.value?.role ?: 0,
                 vectorStore = vectorStore,
                 vectorChatSettings = vectorSettings,
                 vectorWorldSettings = vectorWorldSettings,
