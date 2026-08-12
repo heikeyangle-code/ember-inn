@@ -203,6 +203,8 @@ private data class ChatItemDerived(
     val time: String,
     val swipeCount: Int,
     val curSwipe: Int,
+    /** 按消息 extra.force_avatar/original_avatar 解析的头像（官方 sendas avatar= 渲染）。 */
+    val avatarPath: String?,
 )
 
 /** 消息附件列表的稳定包装：Compose 把 List 视为不稳定参数，包一层 @Immutable 让 MessageRow 可跳过重组。 */
@@ -691,6 +693,7 @@ fun ChatScreen(
                                     time = timeOf(el),
                                     swipeCount = vm.swipeCountOf(el),
                                     curSwipe = vm.currentSwipeOf(el),
+                                    avatarPath = if (user) null else vm.avatarPathOf(item.index),
                                 )
                             }
                             val isUserMsg = derived.isUser
@@ -727,7 +730,7 @@ fun ChatScreen(
                                 name = derived.name,
                                 time = derived.time,
                                 dateLabel = dateLabel,
-                                avatarPath = if (isUserMsg) null else vm.avatarPath,
+                                avatarPath = derived.avatarPath ?: if (isUserMsg) null else vm.avatarPath,
                                 spritePath = (item.element.jsonObject["extra"] as? JsonObject)
                                     ?.get("sprite")?.jsonPrimitive?.contentOrNull,
                                 tokenCount = (item.element.jsonObject["extra"] as? JsonObject)

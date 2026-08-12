@@ -10,11 +10,11 @@ class AppSlashExecutorTest {
     private class FakeActions : SlashMessageActions {
         val calls = mutableListOf<String>()
 
-        override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String {
-            calls += "sendas:$name:$text:$at:${avatar ?: ""}:$compact"; return ""
+        override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): ManualSendResult {
+            calls += "sendas:$name:$text:$at:${avatar ?: ""}:$compact"; return ManualSendResult(text, "{}")
         }
-        override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String {
-            calls += "send:$text:${name ?: ""}:$at:$compact"; return ""
+        override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): ManualSendResult {
+            calls += "send:$text:${name ?: ""}:$at:$compact"; return ManualSendResult(text, "{}")
         }
         override fun sendSystemMessage(text: String, name: String): String { calls += "sys:$name:$text"; return "" }
         override fun setNarratorName(name: String): String { calls += "sysname:$name"; return "" }

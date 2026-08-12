@@ -11,11 +11,14 @@ import com.emberinn.engine.slash.SlashState
  * 对齐官方 slash-commands.js：sendas/send/sys/sysname/comment/message-role/message-name/
  * hide/unhide/delname/addswipe/delswipe。UI 已有按钮的功能（继续/重生成/滑动/停止/人设/模型）不在此列。
  */
+/** /sendas、/send 的落盘结果：mes 供 return=pipe，json 供 return=object（官方 message 对象）。 */
+data class ManualSendResult(val mes: String, val json: String)
+
 interface SlashMessageActions {
     /** /sendas：以指定角色插入一条消息（不触发生成；at=插入位，avatar=头像覆盖，compact=紧凑布局）。 */
-    fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String
+    fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): ManualSendResult
     /** /send：以用户身份插入一条消息（不触发生成；name=显示名，at=插入位，compact=紧凑布局）。 */
-    fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String
+    fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): ManualSendResult
     /** /sys：插入旁白消息（name 空则用会话旁白名/System）。 */
     fun sendSystemMessage(text: String, name: String): String
     /** /sysname：设置会话旁白显示名（空=重置为 System）。 */
@@ -90,12 +93,16 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "以指定角色发送消息（官方 sendas：name 缺省用当前角色；at/avatar/compact/return）",
             rawQuotes = true,
             callback = { inv, _ ->
-                actions.sendAsCharacter(
-                    inv.namedArgs["name"]?.trim().orEmpty(),
-                    inv.unnamedArgs.joinToString(" "),
-                    atOf(inv.namedArgs["at"]),
-                    inv.namedArgs["avatar"]?.trim().orEmpty(),
-                    isTrue(inv.namedArgs["compact"]),
+                returnReturn(
+                    inv.namedArgs["return"],
+                    actions.sendAsCharacter(
+                        inv.namedArgs["name"]?.trim().orEmpty(),
+                        inv.unnamedArgs.joinToString(" "),
+                        atOf(inv.namedArgs["at"]),
+                        inv.namedArgs["avatar"]?.trim().orEmpty(),
+                        isTrue(inv.namedArgs["compact"]),
+                    ),
+                    actions,
                 )
             },
         ),
@@ -104,11 +111,15 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             description = "以用户身份发送消息（官方 send：不触发生成；name/at/compact/return）",
             rawQuotes = true,
             callback = { inv, _ ->
-                actions.sendAsUser(
-                    inv.unnamedArgs.joinToString(" "),
-                    inv.namedArgs["name"]?.trim(),
-                    atOf(inv.namedArgs["at"]),
-                    isTrue(inv.namedArgs["compact"]),
+                returnReturn(
+                    inv.namedArgs["return"],
+                    actions.sendAsUser(
+                        inv.unnamedArgs.joinToString(" "),
+                        inv.namedArgs["name"]?.trim(),
+                        atOf(inv.namedArgs["at"]),
+                        isTrue(inv.namedArgs["compact"]),
+                    ),
+                    actions,
                 )
             },
         ),
@@ -348,6 +359,20 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
 
     suspend fun executeAsync(text: String, state: SlashState = SlashState()): String =
         SlashEngine.executeAsync(text, state, this)
+
+    /** 官方 slashCommandReturnHelper.doReturn：sendas/send 支持 pipe/object/toast-html/toast-text/console/none。 */
+    private fun returnReturn(mode: String?, result: ManualSendResult, actions: SlashMessageActions): String =
+        when (mode ?: "none") {
+            "pipe" -> result.mes
+            "object" -> result.json
+            "toast-html", "toast-text" -> {
+                actions.notify(result.mes)
+                ""
+            }
+            "console" -> ""
+            "none" -> ""
+            else -> throw IllegalArgumentException("Unknown return type: $mode")
+        }
 
     /** 官方 Number(args.at)：负数=从末尾倒数；-0 等价“末尾追加”，因此映射为 null（追加）。 */
     private fun atOf(raw: String?): Int? = raw?.toIntOrNull()?.let { if (raw == "-0") null else it }

@@ -30,6 +30,7 @@ import com.emberinn.engine.persona.PersonaEngine
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.data.ThemeState
+import com.emberinn.app.data.ManualSendResult
 import com.emberinn.app.data.SlashMessageActions
 import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
@@ -562,7 +563,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val bias = BiasEngine.extractMessageBias(raw)
         val isSystem = bias.isNotBlank() && BiasEngine.removeMacros(raw).isEmpty()
         val substituted = MacroEngine.substitute(raw, MacroEnv(user = currentUserName, char = resolvedName))
-        chatStore.appendManualMessage(
+        val message = chatStore.appendManualMessage(
             sessionId = sessionId,
             isUser = false,
             content = substituted,
@@ -574,7 +575,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             avatar = avatar,
         )
         refreshMessages()
-        return ""
+        return ManualSendResult(
+            mes = substituted,
+            json = kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), message),
+        )
     }
 
     override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String {
@@ -584,7 +588,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val resolvedName = if (name != null) name else currentUserName
         val bias = BiasEngine.extractMessageBias(mesText)
         val substituted = MacroEngine.substitute(mesText, MacroEnv(user = resolvedName, char = currentCharName))
-        chatStore.appendManualMessage(
+        val message = chatStore.appendManualMessage(
             sessionId = sessionId,
             isUser = true,
             content = substituted,
@@ -595,7 +599,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             compact = compact,
         )
         refreshMessages()
-        return ""
+        return ManualSendResult(
+            mes = substituted,
+            json = kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), message),
+        )
+    }
+
+    /** 按消息 extra.force_avatar/original_avatar 解析头像文件（官方 sendas avatar= / force_avatar 渲染语义）。 */
+    fun avatarPathOf(index: Int): String? {
+        val el = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return null
+        val key = (el["extra"] as? JsonObject)?.get("force_avatar")?.jsonPrimitive?.contentOrNull
+            ?: el["original_avatar"]?.jsonPrimitive?.contentOrNull
+            ?: return null
+        if (key.isBlank()) return null
+        if (java.io.File(key).exists()) return key
+        val store = CharacterStore(getApplication())
+        store.get(key)?.avatarPath?.let { return it }
+        return store.list().firstOrNull { it.name == key }?.avatarPath
     }
 
     /** 当前会话正则脚本（全局 + 角色 + 预设），供 /sendas 等 SLASH_COMMAND 位点复用。 */
