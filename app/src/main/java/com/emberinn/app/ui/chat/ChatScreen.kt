@@ -286,6 +286,7 @@ fun ChatScreen(
     var personaDraftAvatar by remember { mutableStateOf("") }
     var personaShowLorePicker by remember { mutableStateOf(false) }
     var showSyncNameConfirm by remember { mutableStateOf(false) }
+    var personaQuery by remember { mutableStateOf("") }
     var editingPersona by remember { mutableStateOf<Persona?>(null) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkDraftName by remember { mutableStateOf("") }
@@ -386,6 +387,14 @@ fun ChatScreen(
             }
         }
     }
+
+    val personaBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let { vm.backupPersonas(it) } }
+
+    val personaRestoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { vm.restorePersonas(it) } }
 
     // 附件来源选择：本地文件 / URL（官方 Message.addImage 等支持 URL 来源）
     if (showAttachOptions) {
@@ -1254,6 +1263,14 @@ fun ChatScreen(
                         maxLines = 6,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    val anTokens = remember(anPrompt) { vm.tokenCount(anPrompt) }
+                    val anNext = remember(anInterval) { vm.nextAnInsertion(anInterval) }
+                    Text(
+                        "Tokens: $anTokens · 下次插入：${anNext ?: "禁用"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                     Text(
                         "注入位置",
                         style = MaterialTheme.typography.labelMedium,
@@ -1416,7 +1433,24 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                if (personas.isEmpty()) {
+                EmberTextField(
+                    value = personaQuery,
+                    onValueChange = { personaQuery = it },
+                    placeholder = { Text("搜索人设") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    TextButton(onClick = { personaBackupLauncher.launch("personas.json") }) { Text("备份") }
+                    TextButton(onClick = { personaRestoreLauncher.launch(arrayOf("application/json")) }) { Text("恢复") }
+                }
+                val filteredPersonas = remember(personas, personaQuery) {
+                    val q = personaQuery.trim()
+                    if (q.isBlank()) personas else personas.filter {
+                        it.name.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
+                    }
+                }
+                if (filteredPersonas.isEmpty()) {
                     Text(
                         "还没有人设。新建后，人设描述会注入提示词（官方 Persona Management 语义）。",
                         style = MaterialTheme.typography.bodySmall,
@@ -1424,7 +1458,7 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
                 }
-                personas.forEach { p ->
+                filteredPersonas.forEach { p ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable {

@@ -62,6 +62,16 @@ class PersonaStore(context: Context) {
         file.writeText(json.encodeToString(PersonaList.serializer(), data.copy(defaultId = id)))
     }
 
+    /** 官方 Backup Personas：导出 personas.json 结构（activeId/defaultId/personas）。 */
+    fun exportJson(): String = json.encodeToString(PersonaList.serializer(), load())
+
+    /** 官方 Restore Personas：导入并整体替换（恢复后 active/default 按文件）。 */
+    fun importJson(text: String): Boolean = runCatching {
+        val data = json.decodeFromString(PersonaList.serializer(), text)
+        file.writeText(json.encodeToString(PersonaList.serializer(), data))
+        true
+    }.getOrDefault(false)
+
     fun save(personas: List<Persona>, activeId: String? = null, defaultId: String? = null) {
         val data = load()
         val nextActive = activeId ?: data.activeId

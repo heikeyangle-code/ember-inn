@@ -885,6 +885,52 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _notice.value = "（已把本聊天用户消息名称同步为 $currentUserName）"
     }
 
+    /** 官方 Backup Personas：导出 personas.json。 */
+    fun backupPersonas(uri: android.net.Uri) {
+        runCatching {
+            getApplication<android.app.Application>().contentResolver.openOutputStream(uri)?.use {
+                it.write(personaStore.exportJson().toByteArray())
+            }
+            _notice.value = "（人设已备份）"
+        }.onFailure { _notice.value = "（人设备份失败：${it.message}）" }
+    }
+
+    /** 官方 Restore Personas：导入并整体替换。 */
+    fun restorePersonas(uri: android.net.Uri) {
+        val ok = runCatching {
+            val text = getApplication<android.app.Application>().contentResolver.openInputStream(uri)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            personaStore.importJson(text)
+        }.getOrDefault(false)
+        if (ok) {
+            _personas.value = personaStore.list()
+            _activePersona.value = personaStore.active()
+            _defaultPersona.value = personaStore.default()
+            _notice.value = "（人设已恢复）"
+        } else {
+            _notice.value = "（人设恢复失败：文件格式不正确）"
+        }
+    }
+
+    /** 官方 extension_token_counter：当前模型 tokenizer 计数。 */
+    fun tokenCount(text: String): Int {
+        val model = runCatching { chatRepository.profile()?.model }.getOrNull().orEmpty()
+        return com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model).count(text)
+    }
+
+    /** 官方 extension_floating_counter：距下次插入剩余用户消息数（interval 1 恒 0）。 */
+    fun nextAnInsertion(interval: Int): Int? {
+        val meta = chatStore.metadata(sessionId)
+        val effectiveInterval = meta["note_interval"]?.jsonPrimitive?.content?.toIntOrNull() ?: interval
+        if (effectiveInterval <= 0) return null
+        val userCount = chatStore.messages(sessionId).count { el ->
+            el.jsonObject["is_user"]?.jsonPrimitive
+                ?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        }
+        if (effectiveInterval == 1) return 0
+        return if (userCount >= effectiveInterval) userCount % effectiveInterval else effectiveInterval - userCount
+    }
+
     val characterId: String? = chatStore.get(sessionId)?.characterId
     val character: CharacterRecord?
         get() = characterId?.let { id -> charStore.list().firstOrNull { it.id == id } }
