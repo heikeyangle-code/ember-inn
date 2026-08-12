@@ -4483,50 +4483,70 @@ private fun ChatInputBar(
                 }
             }
             if (slashMatches.isNotEmpty()) {
-                // 补全弹层：主题表面色 + 角色 accent 前缀徽标，随角色主题/种子自动配色
-                LazyColumn(
+                // 补全弹层：Surface 投影 + 主题表面色，命令名匹配段用角色 accent 高亮
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
+                    shadowElevation = 6.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .heightIn(max = 220.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
-                    contentPadding = PaddingValues(vertical = 4.dp),
+                        .padding(horizontal = 12.dp),
                 ) {
-                    itemsIndexed(slashMatches, key = { _, pair -> pair.first }) { _, (name, desc) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onInputChange("/$name ") }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(26.dp)
-                                    .clip(CircleShape)
-                                    .background(accent.copy(alpha = 0.16f)),
-                            ) {
-                                Text("/", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(16.dp)),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                    ) {
+                        itemsIndexed(slashMatches, key = { _, pair -> pair.first }) { _, (name, desc) ->
+                            val query = input.substring(1).lowercase()
+                            val nameAnnotated = buildAnnotatedString {
+                                append("/")
+                                val full = "/$name"
+                                val idx = full.lowercase().indexOf(query)
+                                if (idx >= 0) {
+                                    pushStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold))
+                                    append(full.substring(idx, idx + query.length))
+                                    pop()
+                                    append(full.substring(idx + query.length))
+                                } else {
+                                    append(full.substring(1))
+                                }
                             }
-                            Spacer(Modifier.size(10.dp))
-                            Text(
-                                "/$name",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(Modifier.size(10.dp))
-                            Text(
-                                desc,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onInputChange("/$name ") }
+                                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(accent.copy(alpha = 0.16f)),
+                                ) {
+                                    Text("/", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.size(10.dp))
+                                Text(
+                                    nameAnnotated,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(Modifier.size(10.dp))
+                                Text(
+                                    desc,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
                 }

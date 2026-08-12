@@ -116,13 +116,14 @@ private fun EditMulti(label: String, value: String, onChange: (String) -> Unit) 
 
 @Composable
 private fun EditInt(label: String, value: Int, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+    // 标签上置、输入框全宽：避免长说明把输入框挤成窄条（“被说明文字压变形”）
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         EmberTextField(
             value = value.toString(),
             onValueChange = { it.toIntOrNull()?.let(onChange) },
             singleLine = true,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
         )
     }
 }
