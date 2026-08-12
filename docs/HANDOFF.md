@@ -16,16 +16,18 @@ flowchart LR
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
 - “差分”= 同一输入，官方 JS 与引擎 Kotlin 各跑一遍，输出必须逐字一致；fixture 由脚本生成、不许手改。
-- 官方基线：release `8172dcd`（SillyTavern **1.18.0**）；酒馆更新后重跑 `node scripts/diff/*.mjs`，红的就是要移植的差异。
+- 官方基线：release `8172dcd`（SillyTavern **1.18.0**），本文档全部结论以此版本为准（见 0.2 版本基线）；酒馆更新后重跑 `node scripts/diff/*.mjs`，红的就是要移植的差异。
 
 ### 0.1 工作准则（以后每轮都按这个做）
 
 1. **引擎层（engine/）改动 = 官方 1:1 + 差分，缺一不可**
-   - 先精读官方源码（~/sillytavern-ref，release 8172dcd），逐字提取对应纯函数。
+   - 先精读官方源码（~/sillytavern-ref，**release 8172dcd = SillyTavern 1.18.0**，见 0.2 版本基线），逐字提取对应纯函数。
    - 写 `scripts/diff/*-official.mjs`（函数体逐字摘自官方；任何打桩/未覆盖分支登记在脚本头部注释）。
    - 生成 fixture（`node scripts/diff/*.mjs`）→ Kotlin 移植 → `*DiffTest` 同输入对拍 → `./gradlew :engine:test` 全绿。
    - fixture 只能由脚本生成，不许手改；新功能先加 case 再实现。
+   - **穷举是硬性要求，不是抽样**：每个差分脚本的用例必须覆盖该函数所有可枚举分支，至少包含——空输入、单元素、多元素、极值（0/-1/上限/超上限）、非法/异常输入、所有布尔开关的开关组合、所有厂商/协议分支、嵌套与边界（递归深度、长度截断、空字符串/空白、特殊字符/正则元字符、大小写、Unicode）。禁止只测 happy path；新功能必须先穷举设计 case 再实现，否则视为未完成。
    - 没有差分验证，就不许声称该引擎能力“1:1 官方”。
+   - **任何引擎改动（包括改一行/加一个字段）**：必须重跑受影响脚本重新生成 fixture + 全量 `./gradlew :engine:test`；CI 全绿才算完成。
 2. **App/UI 层 = 对照官方功能与设置实现官方语义，样式用 Ember 风格**
    - 每个官方功能先看官方实现（settings.html / index.js / power-user.js / script.js 对应位点），把官方可调字段、默认值、交互行为一一列出。
    - 官方字段/默认值/行为必须一致；仅视觉样式（组件/图标/排版）用现有 Ember 风格。
@@ -40,11 +42,23 @@ flowchart LR
    - Custom CSS + Moving UI（用户决策延期，见 8.9；等价方案 A/B/C 待选）。
 5. **自主工作不停止**：对照官方逐项审计“还没做/写了没接/接了不对”，能做就做；涉及引擎的按第 1 条走，涉及 App/UI 的按第 2 条走。
 
+### 0.2 版本基线（文档全部内容基于哪个官方版本）
+
+- **官方基线：SillyTavern release `8172dcd`（版本 1.18.0）**，源码在 `/data/data/com.termux/files/home/sillytavern-ref`。
+- 本文档（HANDOFF）全部“已对齐/已差分/已实现”结论均以该版本为准；引擎差分 fixture 也是从该版本逐字提取生成的。
+- 每个差分脚本头部注释登记：提取的官方文件（如 `openai.js:561-640`）、函数名、打桩清单；升级官方版本时以脚本头部为准核对。
+- 官方更新后的标准流程（写进日常，不允许跳过）：
+  1. 更新 `/data/data/com.termux/files/home/sillytavern-ref` 到新 release，记录新 commit/版本号。
+  2. 重跑全部 `node scripts/diff/*.mjs` 重新生成 fixture；红/变化的 case 就是官方行为差异，逐个对照新源码移植到 Kotlin。
+  3. 新版本新增的功能：按第 1 条“先穷举 case → 差分脚本 → Kotlin 实现”流程新增差分，不许直接抄代码不差分。
+  4. 引擎改动后跑 `./gradlew :engine:test` 全量；App/UI 改动等 CI（assembleDebug + assembleRelease）。
+  5. 更新 0.2 版本基线（新 commit/版本号）、第 2 节差分组数/例数、第 5 节完成度，并把官方更新涉及的模块状态如实刷新（1:1 / 部分 / 未做）。
+
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端
 - 本地：`/data/data/com.termux/files/home/ember-inn`；远程：github.com/heikeyangle-code/ember-inn（main，公开）
-- 官方源码参照：`/data/data/com.termux/files/home/sillytavern-ref`（release 分支）
+- 官方源码参照：`/data/data/com.termux/files/home/sillytavern-ref`（release 分支；基线 = release `8172dcd` / SillyTavern 1.18.0，见 HANDOFF 0.2）
 
 常用命令：
 
@@ -79,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（81 组差分 fixture，共 1312 例对拍，全部通过；2026-08-12 全量复算）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1312 例（机器数）为准。
+**已覆盖（81 组差分 fixture，共 1319 例对拍，全部通过；2026-08-12 全量复算）**：
+> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1319 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1312 例。
+> 注：脚本数 68 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string 为决策类）；合计 1319 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 19 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -160,7 +174,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 扩展提示 set/get + /inject 参数映射 | extension-prompt-official.mjs | ExtensionPromptDiffTest | 19 |
 | 世界书 EM 示例（baseChatReplace+unshift/push） | em-examples-official.mjs | EmExamplesDiffTest | 9 |
 | 深度提示注入规格（角色/群聊/世界书） | depth-inject-official.mjs | DepthPromptDiffTest | 6 |
-| setOpenAIMessages 构造循环（names/isSameModel/narrator/工具过滤） | set-openai-messages-official.mjs | SetOpenAiMessagesDiffTest | 9 |
+| setOpenAIMessages 构造循环（names 各模式/isSameModel/narrator/工具过滤/forceAvatar/回车清理） | set-openai-messages-official.mjs | SetOpenAiMessagesDiffTest | 16 |
 | 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归） | tool-loop-official.mjs | ToolLoopDiffTest | 16 |
 | 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
 | StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
@@ -505,7 +519,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1312 例）：
+**新增完成**（全部 CI 绿、引擎 327 测全绿、差分 81 组 / 1319 例）：
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
 - 翻译 8 家 + 自动翻译模式 + 编辑重译、图像 6 来源 + Horde + ComfyUI
@@ -534,7 +548,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 
 **差分跟进（机制就绪，官方发版时执行）**
 - 官方发版 → `node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test`
-- 81 组差分 fixture / 1312 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 9、chat-request-body 28、tool-loop 16、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29 等）
+- 81 组差分 fixture / 1319 例对拍全绿（slash-parser 43、regex-scope 7、regex 27、regex-parse 15、json-import 13、json-export 10、extension-prompt 19、em-examples 9、depth-inject 6、set-openai-messages 16、chat-request-body 28、tool-loop 16、worldinfo-timed-effects 14、story-string 11、worldinfo-scan 26、prepare-messages 29 等）
 
 ## 8. App/UI 关键实现与登记（精简；逐轮流水账已删，历史见 git log --oneline）
 

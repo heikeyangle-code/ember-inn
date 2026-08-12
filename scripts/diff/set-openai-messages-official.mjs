@@ -175,6 +175,47 @@ await add('media-passthrough', {
     ]),
     currentApi: 'openai', currentModel: 'gpt-4o',
 });
+// ---- 2026-08-12 穷举复验补充：names_behavior 各模式 / forceAvatar / 群聊同成员 / 空 / 回车清理 ----
+await add('names-none', {
+    chat: chat([
+        { name: 'User', mes: '你好', isUser: true },
+        { name: 'Alice', mes: '我是 Alice', api: 'openai', model: 'gpt-4o' },
+    ]),
+    namesBehavior: -1, selectedGroup: true, currentApi: 'openai', currentModel: 'gpt-4o',
+});
+await add('names-content', {
+    chat: chat([
+        { name: 'User', mes: '你好', isUser: true },
+        { name: 'Alice', mes: '我是 Alice', api: 'openai', model: 'gpt-4o' },
+    ]),
+    namesBehavior: 2, currentApi: 'openai', currentModel: 'gpt-4o',
+});
+await add('default-no-group-no-avatar', {
+    chat: chat([
+        { name: 'User', mes: '你好', isUser: true },
+        { name: 'Alice', mes: '我是 Alice', api: 'openai', model: 'gpt-4o' },
+    ]),
+    namesBehavior: 0, currentApi: 'openai', currentModel: 'gpt-4o',
+});
+await add('force-avatar-adds-name', {
+    chat: chat([
+        { name: 'Alice', mes: '带头像', forceAvatar: true, api: 'openai', model: 'gpt-4o' },
+    ]),
+    namesBehavior: 0, currentApi: 'openai', currentModel: 'gpt-4o',
+});
+await add('group-same-member-keeps-signature', {
+    chat: chat([
+        { name: 'Bob', mes: '群聊回复', api: 'openai', model: 'gpt-4o', signature: 'sig-1', reasoning: '想法' },
+    ]),
+    currentApi: 'openai', currentModel: 'gpt-4o', selectedGroup: true, name2: 'Bob',
+});
+await add('empty-chat', { chat: chat([]), currentApi: 'openai', currentModel: 'gpt-4o' });
+await add('carriage-return-stripped', {
+    chat: chat([
+        { name: 'Char', mes: '第一行\r第二行\r\n第三行', api: 'openai', model: 'gpt-4o' },
+    ]),
+    namesBehavior: 1, currentApi: 'openai', currentModel: 'gpt-4o',
+});
 
 writeFileSync(outFile, JSON.stringify({ source: 'openai.js setOpenAIMessages', cases }, null, 2));
 console.log('set-openai-messages:', cases.length, 'cases ->', outFile);

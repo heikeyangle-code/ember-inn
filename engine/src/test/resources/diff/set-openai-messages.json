@@ -428,6 +428,263 @@
           "reasoning": ""
         }
       ]
+    },
+    {
+      "id": "names-none",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "你好",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {}
+            },
+            {
+              "is_user": false,
+              "mes": "我是 Alice",
+              "name": "Alice",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": -1,
+          "selectedGroup": true,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "我是 Alice",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "你好",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "names-content",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "你好",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {}
+            },
+            {
+              "is_user": false,
+              "mes": "我是 Alice",
+              "name": "Alice",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 2,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Alice: 我是 Alice",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "User: 你好",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "default-no-group-no-avatar",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": true,
+              "mes": "你好",
+              "name": "User",
+              "force_avatar": false,
+              "extra": {}
+            },
+            {
+              "is_user": false,
+              "mes": "我是 Alice",
+              "name": "Alice",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 0,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "我是 Alice",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        },
+        {
+          "role": "user",
+          "content": "你好",
+          "name": "User",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": null,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "force-avatar-adds-name",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "带头像",
+              "name": "Alice",
+              "force_avatar": true,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 0,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Alice: 带头像",
+          "name": "Alice",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        }
+      ]
+    },
+    {
+      "id": "group-same-member-keeps-signature",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "群聊回复",
+              "name": "Bob",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o",
+                "reasoning_signature": "sig-1",
+                "reasoning": "想法"
+              }
+            }
+          ],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o",
+          "selectedGroup": true,
+          "name2": "Bob"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "Bob: 群聊回复",
+          "name": "Bob",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "signature": "sig-1",
+          "reasoning": "想法"
+        }
+      ]
+    },
+    {
+      "id": "empty-chat",
+      "args": {
+        "body": {
+          "chat": [],
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "carriage-return-stripped",
+      "args": {
+        "body": {
+          "chat": [
+            {
+              "is_user": false,
+              "mes": "第一行\r第二行\r\n第三行",
+              "name": "Char",
+              "force_avatar": false,
+              "extra": {
+                "api": "openai",
+                "model": "gpt-4o"
+              }
+            }
+          ],
+          "namesBehavior": 1,
+          "currentApi": "openai",
+          "currentModel": "gpt-4o"
+        }
+      },
+      "expected": [
+        {
+          "role": "assistant",
+          "content": "第一行第二行\n第三行",
+          "name": "Char",
+          "mediaDisplay": "list",
+          "mediaIndex": 0,
+          "reasoning": ""
+        }
+      ]
     }
   ]
 }
