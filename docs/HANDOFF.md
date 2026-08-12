@@ -321,8 +321,9 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
   settings 全局选择 globalSelect 与插入策略；ChatPromptFactory 用 WorldLoreMerger 把内嵌卡书+关联+聊天+全局合并进扫描。
   角色详情页“关联外置世界”选择、聊天 ⋮“外置世界（本会话）”指定（chat_metadata.world_info）已接；
   世界书扫描设置补全官方字段：minActivationsDepthMax/budgetCap/useGroupScoring/include_names（扫描文本带名字前缀）已接线；
-  外置世界条目编辑器已接：复用内嵌同款 WorldEntryEditorSheet（官方全字段），保存进 worlds/*.json 官方格式；
-  登记：世界文件导入/导出 UI、overflow_alert（纯 toast 提示）尚未接。
+  外置世界条目编辑器已接：复用内嵌同款 WorldEntryEditorSheet（官方全字段），保存进 worlds/*.json 官方格式
+  （字段命名对齐官方 world 文件：key/keysecondary 数组 + case_sensitive/scan_depth 等进 extensions）；
+  世界文件导入/导出 UI（GetContent/CreateDocument）与 overflow_alert 开关已接。
 - `/trigger await`：await=true 等待生成结束（官方语义）；`/inject filter`：filter 参数持久化，生成前用 SlashEngine 求值（true/1/yes 才注入；解析失败/空=始终注入，与官方 filter 复活失败同语义；闭包上下文为 App 近似）。
 
 ### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）

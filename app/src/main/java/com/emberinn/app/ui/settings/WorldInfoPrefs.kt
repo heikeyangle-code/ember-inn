@@ -69,4 +69,14 @@ object WorldInfoPrefs {
             .putInt("insertion_strategy", strategy)
             .apply()
     }
+
+    /** 官方 world_info_overflow_alert：预算溢出时 toast 提示（App 侧登记为 UI 开关，引擎已静默跳过）。 */
+    fun overflowAlert(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("overflow_alert", false)
+
+    fun saveOverflowAlert(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("overflow_alert", enabled)
+            .apply()
+    }
 }

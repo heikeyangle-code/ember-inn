@@ -98,7 +98,11 @@ class WorldStore(context: Context) {
                 "entries",
                 JsonObject(
                     entriesArr.mapIndexed { index, el ->
-                        (index + 1).toString() to el
+                        val obj = (el as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+                        if (obj.containsKey("keys") && !obj.containsKey("key")) {
+                            obj["key"] = obj.remove("keys")!!
+                        }
+                        (index + 1).toString() to JsonObject(obj)
                     }.toMap(),
                 ),
             )
@@ -151,11 +155,27 @@ class WorldStore(context: Context) {
         return newName
     }
 
+    /** 导入官方世界文件（{name, entries:{uid:entry}}）；同名已存在则失败。 */
+    fun importWorld(fileName: String, content: String): Boolean = runCatching {
+        val root = json.parseToJsonElement(content).jsonObject
+        if (root["entries"] !is JsonObject) return@runCatching false
+        val name = fileName.removeSuffix(".json").trim().ifBlank {
+            root["name"]?.jsonPrimitive?.contentOrNull ?: "world"
+        }
+        if (fileOf(name) != null) return@runCatching false
+        File(dir, sanitize(name) + ".json").writeText(content)
+        true
+    }.getOrDefault(false)
+
+    /** 导出世界文件原始 JSON（官方格式）。 */
+    fun export(name: String): String? = fileOf(name)?.readText()
+
     private fun entryJson(e: WorldInfoEntry): JsonObject {
         val fields = mutableMapOf<String, kotlinx.serialization.json.JsonElement>()
         fun put(key: String, value: kotlinx.serialization.json.JsonElement) { fields[key] = value }
         put("id", JsonPrimitive(e.uid))
-        if (e.keys.isNotEmpty()) put("keys", JsonArray(e.keys.map(::JsonPrimitive)))
+        // 官方 world 文件字段：key / keysecondary（数组）
+        if (e.keys.isNotEmpty()) put("key", JsonArray(e.keys.map(::JsonPrimitive)))
         if (e.keySecondary.isNotEmpty()) put("keysecondary", JsonArray(e.keySecondary.map(::JsonPrimitive)))
         put("content", JsonPrimitive(e.content))
         put("comment", JsonPrimitive(e.name))
@@ -167,21 +187,14 @@ class WorldStore(context: Context) {
         put("position", JsonPrimitive(e.position))
         e.depth?.let { put("depth", JsonPrimitive(it)) }
         e.role?.let { put("role", JsonPrimitive(it)) }
-        e.caseSensitive?.let { put("caseSensitive", JsonPrimitive(it)) }
-        e.matchWholeWords?.let { put("matchWholeWords", JsonPrimitive(it)) }
-        e.scanDepth?.let { put("scanDepth", JsonPrimitive(it)) }
         put("matchPersonaDescription", JsonPrimitive(e.matchPersonaDescription))
         put("matchCharacterDescription", JsonPrimitive(e.matchCharacterDescription))
         put("matchCharacterPersonality", JsonPrimitive(e.matchCharacterPersonality))
         put("matchCharacterDepthPrompt", JsonPrimitive(e.matchCharacterDepthPrompt))
         put("matchScenario", JsonPrimitive(e.matchScenario))
         put("matchCreatorNotes", JsonPrimitive(e.matchCreatorNotes))
-        put("preventRecursion", JsonPrimitive(e.preventRecursion))
-        put("excludeRecursion", JsonPrimitive(e.excludeRecursion))
-        put("delayUntilRecursion", JsonPrimitive(e.delayUntilRecursion))
         put("useProbability", JsonPrimitive(e.useProbability))
         put("probability", JsonPrimitive(e.probability))
-        put("ignoreBudget", JsonPrimitive(e.ignoreBudget))
         if (e.triggers.isNotEmpty()) put("triggers", JsonArray(e.triggers.map(::JsonPrimitive)))
         e.outletName?.let { put("outletName", JsonPrimitive(it)) }
         e.sticky?.let { put("sticky", JsonPrimitive(it)) }
@@ -192,9 +205,19 @@ class WorldStore(context: Context) {
         e.groupOverride?.let { put("groupOverride", JsonPrimitive(it)) }
         e.useGroupScoring?.let { put("useGroupScoring", JsonPrimitive(it)) }
         e.automationId?.let { put("automationId", JsonPrimitive(it)) }
-        e.displayIndex?.let { put("displayIndex", JsonPrimitive(it)) }
-        put("vectorized", JsonPrimitive(e.vectorized))
         put("addMemo", JsonPrimitive(e.addMemo))
+        // 官方把这些字段放进 entry.extensions（world-info.js setWIOriginalDataValue 映射）
+        val ext = mutableMapOf<String, kotlinx.serialization.json.JsonElement>()
+        e.caseSensitive?.let { ext["case_sensitive"] = JsonPrimitive(it) }
+        e.matchWholeWords?.let { ext["match_whole_words"] = JsonPrimitive(it) }
+        e.scanDepth?.let { ext["scan_depth"] = JsonPrimitive(it) }
+        ext["prevent_recursion"] = JsonPrimitive(e.preventRecursion)
+        ext["exclude_recursion"] = JsonPrimitive(e.excludeRecursion)
+        ext["delay_until_recursion"] = JsonPrimitive(e.delayUntilRecursion)
+        ext["ignore_budget"] = JsonPrimitive(e.ignoreBudget)
+        ext["vectorized"] = JsonPrimitive(e.vectorized)
+        e.displayIndex?.let { ext["display_index"] = JsonPrimitive(it) }
+        put("extensions", JsonObject(ext))
         return JsonObject(fields)
     }
 

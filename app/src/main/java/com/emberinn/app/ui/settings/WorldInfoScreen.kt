@@ -2,6 +2,8 @@ package com.emberinn.app.ui.settings
 
 
 import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.data.WorldStore
@@ -54,6 +56,30 @@ fun WorldInfoScreen(onBack: () -> Unit) {
     var editingDrafts by remember { mutableStateOf<List<WorldEntryDraft>>(emptyList()) }
     var editingEntryIdx by remember { mutableStateOf<Int?>(null) }
     var addingEntry by remember { mutableStateOf(false) }
+    var overflowAlert by remember { mutableStateOf(WorldInfoPrefs.overflowAlert(context)) }
+    var exportTarget by remember { mutableStateOf<String?>(null) }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val displayName = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                    if (it.moveToFirst()) it.getString(0) else "world.json"
+                } ?: "world.json"
+                val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }?.toString(Charsets.UTF_8).orEmpty()
+                if (worldStore.importWorld(displayName, text)) worlds = worldStore.list()
+            }
+        }
+    }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val name = exportTarget
+        if (uri != null && name != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(worldStore.export(name)?.toByteArray(Charsets.UTF_8) ?: ByteArray(0))
+                }
+            }
+            exportTarget = null
+        }
+    }
     fun save() = WorldInfoPrefs.save(context, settings)
 
     SettingsGlassPage { settingsSky ->
@@ -95,6 +121,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             ToggleRow("整词匹配（matchWholeWords）", settings.matchWholeWords) { settings = settings.copy(matchWholeWords = it); save() }
             ToggleRow("分组评分（useGroupScoring）", settings.useGroupScoring) { settings = settings.copy(useGroupScoring = it); save() }
             ToggleRow("扫描带名字（include_names）", includeNames) { includeNames = it; WorldInfoPrefs.saveIncludeNames(context, it) }
+            ToggleRow("预算溢出提示（overflow_alert）", overflowAlert) { overflowAlert = it; WorldInfoPrefs.saveOverflowAlert(context, it) }
             Text(
                 "高级：分组评分、时间效果、角色过滤等字段由角色卡条目自身控制。",
                 style = MaterialTheme.typography.bodySmall,
@@ -131,6 +158,8 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         newWorldName = ""
                     }
                 }) { Text("新建") }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { importLauncher.launch("application/json") }) { Text("导入") }
             }
             val currentEditing = editingWorld
             if (currentEditing != null) {
@@ -190,6 +219,12 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                             editingDrafts = worldStore.drafts(w.name)
                         }) {
                             Icon(PhosphorIcons.Edit, contentDescription = "编辑世界条目")
+                        }
+                        IconButton(onClick = {
+                            exportTarget = w.name
+                            exportLauncher.launch("${w.name}.json")
+                        }) {
+                            Icon(PhosphorIcons.FileText, contentDescription = "导出世界")
                         }
                         IconButton(onClick = {
                             worldStore.delete(w.name)
