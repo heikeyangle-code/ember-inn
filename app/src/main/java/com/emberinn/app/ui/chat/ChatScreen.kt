@@ -3161,6 +3161,20 @@ private fun isInteractiveFence(raw: String): Boolean {
     return (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
 }
 
+/** 完整 HTML 文档判定：以 <!doctype html 开头，或以 <html> 开头且带结构标记。
+ *  这类内容（角色卡自带网页 / 模型直接输出的整页）不能外套一层 <html>：
+ *  html 套 html 时嵌套的 </head>/</body> 会被解析器提前处理 → 页面错乱/大片空白；
+ *  也不能交给 carveWebElementRanges 切块（<head>/<body> 会被拆散）。 */
+private fun isFullHtmlDocument(html: String): Boolean {
+    val t = html.trimStart { it == '\uFEFF' || it.isWhitespace() }
+    if (t.startsWith("<!doctype", ignoreCase = true)) return true
+    if (!Regex("(?i)^<html\\b[^>]*>").containsMatchIn(t)) return false
+    // 后面必须出现结构标记，避免把“讲 <html> 标签”的普通消息整段送进 WebView
+    return t.contains("</html>", ignoreCase = true) ||
+        t.contains("<head", ignoreCase = true) ||
+        t.contains("<body", ignoreCase = true)
+}
+
 private fun appendTextSegment(
     out: MutableList<ChatSegment>,
     text: String,
@@ -3244,6 +3258,11 @@ private fun buildMessageSegments(
     htmlEnabled: Boolean,
     interactiveCardsOn: Boolean,
 ): List<ChatSegment> {
+    // 完整网页整段走 WebView：交给下面的切分器会把 <head>/<style>/<body> 拆成多段，
+    // 每段再套独立页面 → 网页永远渲染不出来（用户报告的多轮“渲染空白”根因之一）。
+    if (htmlEnabled && isFullHtmlDocument(content)) {
+        return listOf(ChatSegment(SegmentKind.WebHtml, content))
+    }
     val out = mutableListOf<ChatSegment>()
     fun appendFenced(text: String) {
         var last = 0
@@ -3615,8 +3634,23 @@ private val WEBVIEW_MEASURE_SCRIPT = """<script>
 private val WEBVIEW_HEIGHT_JS =
     "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()"
 
+/** 返回 html 中所有“不在 <script>/<style> 内部”的结构标签匹配位置（如 </head>、</body>）。
+ *  角色卡/模型页面里的 JS 字符串经常包含 "</body>"、"</head>" 字面量，
+ *  直接 lastIndexOf 会把脚本注入到字符串中间、破坏整段 JS。 */
+private fun structuralTagPositions(html: String, tagRegex: Regex): List<Int> {
+    val protected = Regex("(?is)<script\\b[^>]*>.*?</script\\s*>|<style\\b[^>]*>.*?</style\\s*>")
+        .findAll(html)
+        .map { it.range }
+        .sortedBy { it.first }
+        .toList()
+    return tagRegex.findAll(html)
+        .map { it.range.first }
+        .filter { pos -> protected.none { pos in it } }
+        .toList()
+}
+
 private fun injectMeasureScript(html: String): String {
-    val idx = html.lastIndexOf("</body>")
+    val idx = structuralTagPositions(html, Regex("(?i)</body\\s*>")).lastOrNull() ?: -1
     return if (idx >= 0) {
         html.substring(0, idx) + WEBVIEW_MEASURE_SCRIPT + html.substring(idx)
     } else {
@@ -3713,11 +3747,23 @@ private fun configureWebView(
         ViewGroup.LayoutParams.WRAP_CONTENT,
     )
     session.html = page
-    // Android WebView 对非 base64 的 HTML 会按 URL 解析：#/% 等字符把内容截断成空白页
-    // （Android 11+ 已知问题，官方与社区一致解法是 base64 编码加载）。
-    // 保留 file:///android_asset/ 作 baseUrl，mermaid.min.js 与 file:// 字体仍可正常解析。
-    val encoded = android.util.Base64.encodeToString(page.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-    view.loadDataWithBaseURL("file:///android_asset/", encoded, "text/html", "base64", null)
+    // 2026-08-12 修复“开头显示 base64 原文（PCFET0NUWVBFIGh0bWw+... = <!DOCTYPE html><html><head>）+ 大片空白”：
+    // loadDataWithBaseURL 在“非 data: 的 baseUrl”（这里是 file:///android_asset/）下，data 会被当作
+    // 普通字符串直接灌进 WebView，**不做 base64 解码**（AOSP CTS 2b3744f：non-data base URL →
+    // treat the String to load as a raw string；Android 文档：URL 编码实体也不解码）。
+    // 旧代码传 Base64 文本 + encoding="base64" 正好踩中：WebView 把整段 base64 原文显示成页面文本，
+    // 开头即 PCFET0NUWVBFIGh0bWw+...，下面全空白 —— 多轮“网页渲染不出来”的根因。
+    // 修复：直接传原文 + encoding="UTF-8" + mime 带 charset（社区权威解法，SO 57198560）。
+    // 同时因为非 data: baseUrl 下不做 URL 解码，# / %（CSS 色值）不会被截断——截断只发生在
+    // baseUrl=null 的 data: URL 路径（即 loadData）。file:///android_asset/ 保留：
+    // mermaid.min.js 相对引用与 file:// 字体仍可正常解析。
+    view.loadDataWithBaseURL(
+        "file:///android_asset/",
+        page,
+        "text/html; charset=UTF-8",
+        "UTF-8",
+        null,
+    )
 }
 
 /** WebView 兜底渲染（HTML 消息 / Mermaid / 交互卡片）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
@@ -3896,29 +3942,58 @@ private fun officialStyledHtml(
         charUrl?.let { append(".char-avatar,.char_avatar{background-image:url('$it')}\n") }
         userUrl?.let { append(".user-avatar,.user_avatar{background-image:url('$it')}\n") }
     }
+    val cssBlock = buildString {
+        append(notoFace)
+        append(avatarCss)
+        append("body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}\n")
+        append("em,i{color:${css(em)}}\n")
+        append("q{color:${css(quote)}} q em,q i{color:inherit}\n")
+        append("u{color:${css(underline)}}\n")
+        append("a{color:${css(quote)};text-decoration:none}\n")
+        append("a:hover{filter:brightness(1.25)}\n")
+        append("img{max-width:100%;max-height:75vh}\n")
+        append("font[color] em,font[color] i,font[color] u,font[color] q{color:inherit}\n")
+        append("blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:0}\n")
+        append("p{margin-top:0;margin-bottom:10px}\n")
+        append("p:last-child{margin-bottom:0}\n")
+        append("table{border-spacing:0;border-collapse:collapse;margin-bottom:10px}\n")
+        append("td,th{border:1px solid;padding:.25em}\n")
+        append("ol,ul{margin-top:5px;margin-bottom:5px}\n")
+        append("li tt{display:inline-block}\n")
+        append("pre,pre code{white-space:pre-wrap;word-break:break-word}\n")
+        append("strong em,strong,h1,h2{font-weight:bold}\n")
+        append("code{font-family:monospace}\n")
+    }
+    // 完整网页消息（角色卡自带网页 / 模型直接输出整页）：保留原文档结构，
+    // 只把兜底 CSS 注入原 <head>，不再外套一层 <html>（html 套 html → 嵌套 </body>
+    // 提前关闭外层文档，页面错乱/大片空白）。测高脚本由 WebViewHtml 的 injectMeasureScript
+    // 注入原文档 </body> 前。
+    if (isFullHtmlDocument(bodyHtml)) {
+        return injectIntoFullDocument(bodyHtml, cssBlock)
+    }
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-$notoFace
-$avatarCss
-body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}
-em,i{color:${css(em)}}
-q{color:${css(quote)}} q em,q i{color:inherit}
-u{color:${css(underline)}}
-a{color:${css(quote)};text-decoration:none}
-a:hover{filter:brightness(1.25)}
-img{max-width:100%;max-height:75vh}
-font[color] em,font[color] i,font[color] u,font[color] q{color:inherit}
-blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:0}
-p{margin-top:0;margin-bottom:10px}
-p:last-child{margin-bottom:0}
-table{border-spacing:0;border-collapse:collapse;margin-bottom:10px}
-td,th{border:1px solid;padding:.25em}
-ol,ul{margin-top:5px;margin-bottom:5px}
-li tt{display:inline-block}
-pre,pre code{white-space:pre-wrap;word-break:break-word}
-strong em,strong,h1,h2{font-weight:bold}
-code{font-family:monospace}
+$cssBlock
 </style></head><body>$bodyHtml</body></html>"""
+}
+
+/** 完整网页消息的文档级注入：把兜底 CSS 插进原文档 <head>（无 </head> 时插在 <body> 前）。
+ *  保留原页面自己的 <head>/<body>/<script>/<style>，互不嵌套。 */
+private fun injectIntoFullDocument(html: String, cssBlock: String): String {
+    val styleTag = "<style>\n$cssBlock\n</style>"
+    val headClose = structuralTagPositions(html, Regex("(?i)</head\\s*>")).firstOrNull()
+    if (headClose != null) {
+        return html.substring(0, headClose) + styleTag + html.substring(headClose)
+    }
+    val bodyOpen = structuralTagPositions(html, Regex("(?i)<body\\b")).firstOrNull()
+    if (bodyOpen != null) {
+        return html.substring(0, bodyOpen) + styleTag + html.substring(bodyOpen)
+    }
+    val htmlOpen = structuralTagPositions(html, Regex("(?i)<html\\b")).firstOrNull()
+    if (htmlOpen != null) {
+        return html.substring(0, htmlOpen) + styleTag + html.substring(htmlOpen)
+    }
+    return styleTag + html
 }
 
 

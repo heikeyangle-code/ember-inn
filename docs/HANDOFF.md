@@ -680,7 +680,7 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
  - 交互代码块 → `<iframe srcdoc="...">`，内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
  - 非交互代码块 → `<pre><code>`（转义）；
  - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
-- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层高度上限仍 75% 屏高，超出后卡片内部滚动。
+- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层高度上限仍 75% 屏高，超出后卡片内部滚动；加载方式 = 原文 UTF-8 + file base（2026-08-12 修正，旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
 - 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
 
 ### 10.5 与 Tavern Helper 能力对照
@@ -888,12 +888,15 @@ Custom CSS + Moving UI（用户决策延期，见 8.9）、Claude/Gemini 官方 
 - 影响：纯 App/UI 层，引擎零改动；变量宏行为从“读不到”变为“可读”，属于修复。
 
 ### 12.14 WebView 空白根因修复 + HTML 判定收紧 + 代码块换行（2026-08-11 追加）
-- **空白根因（已修）**：`configureWebView` 原来 `loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)`。Android WebView 对非 base64 的 data 按 URL 解析：`#`/`%` 及范围外字节做 %xx 编码，`#` 会被当成 fragment 把页面截断（官方 WebView 文档 + 华为论坛 + StackOverflow 58181704 一致结论，API 29/30 可稳定复现）。我方拼接页 CSS 里全是 `#RRGGBB` 色值，等于每页必截断 → 网页/卡片/交互 HTML 白屏、高度上报脚本不执行 → 高度恒 0 不可见。
+- **空白根因（已修，2026-08-12 复核修正）**：`configureWebView` 曾用 `loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)`（baseUrl=null 路径，data 按 data: URL 处理，`#`/`%` 被 URL 解析截断），随后又改成 `Base64` + `encoding="base64"`。**后一方案仍错**：`loadDataWithBaseURL` 在“非 data: 的 baseUrl”（`file:///android_asset/`）下把 data 当作普通字符串直接灌入 WebView，**不做 base64 解码**（AOSP CTS 2b3744f 明确 non-data base URL → treat the String as a raw string；Android 文档：URL 编码实体也不解码）。实际表现：WebView 把整段 base64 原文当页面文本显示，开头即 `PCFET0NUWVBFIGh0bWw+...`（= `<!DOCTYPE html><html><head>`），下面大片空白——用户多轮报告“网页/交互卡片从来渲染不出来”的真根因。
+- **最终修复（2026-08-12）**：直接传原文 + `encoding="UTF-8"` + `mime="text/html; charset=UTF-8"`，baseUrl 仍保留 `file:///android_asset/`。非 data: baseUrl 下 data 按 HTTP 响应体加载、不做 URL 解码，`#`/`%` 不会截断（截断只发生在 baseUrl=null 的 data: URL 路径，即 `loadData`）；mermaid.min.js 相对引用与 file:// 字体不受影响。社区权威解法一致（SO 57198560 等）。
 - **渲染不出来的第二根因（本轮修复）**：Compose 初始把 WebView 高度给成 0 → 页面不布局 → `scrollHeight` 也量不到 → 高度永远 0。修复：测高未返回时先给 160dp 可见兜底高度，让页面先布局，再回缩/撑到真实高度。
 - **渲染不出来的第三根因（本轮修复）**：`scrollHeight` 是 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素换算，高密度屏上高度被除以 density，HTML/卡片被压成细条甚至不可见。现改为 `heightPx.toFloat().dp`。
 - **测高链路（本轮修复）**：`EmberInnBridge`（addJavascriptInterface，只回传高度/未加载图片数）→ ResizeObserver + load + 1s 兜底；`onPageFinished` 纯字符串 `高度:未加载图片数` 轮询 ≤15s 作为第二道；token 机制丢弃复用后的旧回调。
 - **渲染语义（本轮一并修）**：普通 `\n` 对齐官方 `simpleLineBreaks:true`（`eolAsNewLine=true`）；HTML 开关真正关闭 WebView；WebView 链接补 `text-decoration:none`；用户消息改走 Markdown/HTML 同一管线；Mermaid 不再 html 套 html；iframe 高度由父页观察同源 srcdoc 持续同步。
-- **修复方式（本轮）**：`Base64.encodeToString(page.toByteArray(UTF_8), NO_WRAP)` + `loadDataWithBaseURL("file:///android_asset/", encoded, "text/html", "base64", null)`。baseUrl 保留 `file:///android_asset/`，`mermaid.min.js` 相对引用与 file:// 字体不受影响；base64 数据不再被 URL 解析器截断。这是 Android 社区对同一问题的权威解法（非本 App 自创）。
+- **修复方式（2026-08-12 改为原文 UTF-8）**：`loadDataWithBaseURL("file:///android_asset/", page, "text/html; charset=UTF-8", "UTF-8", null)`（page 为完整拼接页/整页文档原文）。不再手动 base64：非 data: baseUrl 下 WebView 根本不解码 base64。
+- **整页文档处理（2026-08-12 新增）**：角色卡自带网页 / 模型直接输出 `<!DOCTYPE html>` 整页时，消息分段器整段走 WebView（不再被 carveWebElementRanges 拆散 head/body）；`officialStyledHtml` 检测完整文档后把兜底 CSS 注入原文档 `<head>`（`injectIntoFullDocument`），不再外套 `<html>`（html 套 html → 嵌套 `</head></body>` 提前关闭外层文档 → 页面错乱/大片空白）。
+- **注入健壮性（2026-08-12 新增）**：测高脚本与 CSS 注入点通过 `structuralTagPositions` 查找，跳过 `<script>/<style>` 文本内的伪 `</body>`/`</head>` 字面量（角色卡 JS 字符串里常见），避免脚本被插进字符串中间导致整段 JS 失效。
 - **本地资源访问补齐**：`allowFileAccessFromFileURLs=true` + `allowUniversalAccessFromFileURLs=true`（file:// 页面加载 file:// 字体/图片，WebView 默认禁止 file→file 跨源）；`MIXED_CONTENT_ALWAYS_ALLOW`（消息内 http 图片/资源在 data 页可加载）。与用户“网络/JS 全放开”要求一致，不加开关。
 - **HTML 误判收紧（本轮）**：`looksLikeHtml` 由“任意 `<tag>`”改为“带属性或自闭合标签”（`<[a-zA-Z][^>]*(?:=|/>)`，忽略 ``` / ~~~ 围栏）。原因：普通文字/JSON 里出现 `<tag>` 会被旧规则整条丢进 WebView，WebView 又因上面的截断 bug 白屏 → 表现为“文字被框死/正文消失”。裸标签（b/i/q/u/s/font color/hr/br）已由 `preprocessOfficialHtml` 原生转换，官方富标签仍由 `OFFICIAL_HTML_TAG` 接管，行为不回退。
 - **代码块“框死看不全”（fd95265）**：mikepenz 默认 `MarkdownCode` 对 code 挂 `horizontalScroll`（源码 MarkdownCode.kt），长 JSON 只能横向滚动、内容“被框住”。新增 `WrappingHighlightedCode`：snipme 高亮保留 + `Text(softWrap=true)` 自动换行，替换 codeFence/codeBlock 两个入口。官方 style.css 是 overflow-x:auto（横向滚动），此处为视觉可用性有意改成换行（功能级对齐，内容完整可见）。
