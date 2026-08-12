@@ -261,8 +261,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     /** 应用官方 OpenAI 采样预设（sampler-openai preset → SamplerParams/上下文/最大回复）。 */
     fun applySamplerPreset(name: String) {
         if (name.isBlank()) return
-        val preset = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name } ?: return
-        val s = preset.settings
+        val official = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }
+        val s = official?.settings ?: UserPresetStore.load(getApplication(), "sampler", name) ?: return
         fun d(key: String): Double? = (s[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
         fun i(key: String): Int? = (s[key] as? JsonPrimitive)?.content?.toIntOrNull()
         fun b(key: String): Boolean = (s[key] as? JsonPrimitive)?.content == "true"

@@ -16,6 +16,16 @@ function loadDir(rel) {
     return files.map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
 }
 
+// 官方 context/instruct 预设文件本身不含 name（文件名即预设名），打包时补上
+function loadNamedDir(rel) {
+    const dir = join(officialRef, 'default', 'content', 'presets', rel);
+    const files = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
+    return files.map((f) => ({
+        ...JSON.parse(readFileSync(join(dir, f), 'utf8')),
+        name: f.replace(/\.json$/, ''),
+    }));
+}
+
 function loadSamplerDir(rel) {
     const dir = join(officialRef, 'default', 'content', 'presets', rel);
     const files = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
@@ -32,8 +42,8 @@ function write(rel, data) {
     console.log(`wrote ${file} (${data.length} presets)`);
 }
 
-write('context', loadDir('context'));
-write('instruct', loadDir('instruct'));
+write('context', loadNamedDir('context'));
+write('instruct', loadNamedDir('instruct'));
 write('sampler-openai', loadSamplerDir('openai'));
 write('sampler-textgen', loadSamplerDir('textgen'));
 write('sampler-novel', loadSamplerDir('novel'));

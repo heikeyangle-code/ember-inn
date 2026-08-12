@@ -19,12 +19,14 @@ class PresetLibraryTest {
             assertFalse("context preset name blank", c.preset.isBlank())
             assertTrue("context preset story_string blank: ${c.preset}", c.storyString.isNotBlank())
         }
+        assertEquals(34, contexts.map { it.preset }.distinct().size)
 
         val instructs = PresetLibrary.instructPresets()
         assertEquals(38, instructs.size)
         instructs.forEach { i ->
             assertFalse("instruct preset name blank", i.preset.isBlank())
         }
+        assertEquals(38, instructs.map { it.preset }.distinct().size)
 
         assertEquals(1, PresetLibrary.samplerPresets("openai").size)
         assertEquals(6, PresetLibrary.samplerPresets("textgen").size)

@@ -450,12 +450,13 @@ fun ProviderDetailScreen(
                                 showSamplerPreset = false
                             },
                         )
-                        PresetLibrary.samplerPresets("openai").forEach { p ->
+                        (PresetLibrary.samplerPresets("openai").map { it.name } +
+                            com.emberinn.app.ui.settings.UserPresetStore.list(context, "sampler")).forEach { presetName ->
                             DropdownMenuItem(
-                                text = { Text(p.name) },
+                                text = { Text(presetName) },
                                 onClick = {
-                                    samplerPresetName = p.name
-                                    vm.applySamplerPreset(p.name)
+                                    samplerPresetName = presetName
+                                    vm.applySamplerPreset(presetName)
                                     showSamplerPreset = false
                                 },
                             )

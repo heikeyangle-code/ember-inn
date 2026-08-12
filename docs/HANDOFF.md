@@ -242,6 +242,10 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 **已做**：
 - 官方 127 个预设打包（context 34 / instruct 38 / sampler-openai 1 / sampler-textgen 6 / sampler-novel 24 / sampler-kobold 6 / sysprompt 13 / reasoning 5）+ quick-replies；PresetLibrary 加载 + 完整性测试（PresetLibraryTest 锁数量与可解析）。
 - 设置 → 预设 管理器：上下文/指导/采样/系统提示/推理五类选择 + 保存（PresetPrefs）。
+- **预设 JSON 导入**（官方 preset 文件导入语义）：设置 → 预设 →“导入预设 JSON”，按字段自动识别类型
+  （context=story_string / instruct=input/output_sequence / sampler=temperature+openai_max_tokens /
+  sysprompt=content+post_history / reasoning=prefix+suffix），存 filesDir/presets/{type}/{name}.json；
+  列表 = 官方打包 + 用户导入，用户项可删除；采样预设应用同样支持用户导入的预设。
 - **采样预设（sampler-openai）已应用**：提供商详情页选择即覆盖 temperature/top_p/presence/frequency/top_k/min_p/top_a/repetition_penalty/seed/n/stream/上下文/最大回复（ProviderViewModel.applySamplerPreset）。
 - 快捷回复预设：QuickReplyStore 多文件（官方 data/default-user/quick-replies 语义）+ 设置页预设选择/新建/删除（3.8.17）。
 
@@ -250,6 +254,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 - sysprompt/reasoning 预设应用：官方在 Prompt Manager 里选择；Prompt Manager UI（编辑 main/system/jailbreak/impersonation 等提示词 + 预设选择/保存/删除）未做（12.16 登记）。
 - 自定义预设保存/删除/设为默认：官方预设管理器可把当前设置存为新预设、删除预设；App 目前只能从官方打包预设中选择，不能保存/删除自己的预设。
 - sampler-textgen/novel/kobold 应用：对应后端未做，先不暴露。
+- 官方 master import/export（preset-manager.js 多区段 JSON 导入导出）未做——当前只支持单预设文件导入。
 - moving-ui（界面预设）：用户决策延期见 8.9。
 
 ### 3.8 聊天 🟡
