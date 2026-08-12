@@ -78,6 +78,46 @@ class WorldInfoTimedEffects(
         return buffer.any { it.hash == entry.hash }
     }
 
+    /** 官方 isValidEffectType：字符串且属于 sticky/cooldown/delay（trim + 小写）。 */
+    fun isValidEffectType(type: String?): Boolean =
+        type != null && type.trim().lowercase() in setOf("sticky", "cooldown", "delay")
+
+    /** 官方 getEffectMetadata：读取聊天元数据里的 timedWorldInfo[type][key]，无效类型返回 null。 */
+    fun getEffectMetadata(type: String, entry: WorldInfoEntry): TimedEffect? {
+        if (!isValidEffectType(type)) return null
+        return when (type) {
+            "sticky" -> metadata.sticky[key(entry)]
+            "cooldown" -> metadata.cooldown[key(entry)]
+            else -> null
+        }
+    }
+
+    /** 官方 setTimedEffect：force 设置/清除；dryRun 且非 delay 时跳过。delay 不写入持久化结构（官方 timedWorldInfo 仅维护 sticky/cooldown）。 */
+    fun setTimedEffect(type: String, entry: WorldInfoEntry, newState: Boolean) {
+        if (!isValidEffectType(type)) return
+        if (isDryRun && type != "delay") return
+        val k = key(entry)
+        when (type) {
+            "sticky" -> {
+                metadata.sticky.remove(k)
+                if (newState) metadata.sticky[k] = effect("sticky", entry, false)
+            }
+            "cooldown" -> {
+                metadata.cooldown.remove(k)
+                if (newState) metadata.cooldown[k] = effect("cooldown", entry, false)
+            }
+            "delay" -> Unit
+        }
+    }
+
+    /** 差分/测试读取：当前各类型缓冲里的条目（官方 #buffer 快照语义）。 */
+    fun bufferedEntries(type: String): List<WorldInfoEntry> = when (type) {
+        "sticky" -> stickyBuffer.toList()
+        "cooldown" -> cooldownBuffer.toList()
+        "delay" -> delayBuffer.toList()
+        else -> emptyList()
+    }
+
     fun setTimedEffects(activated: List<WorldInfoEntry>) {
         if (isDryRun) return
         for (entry in activated) {

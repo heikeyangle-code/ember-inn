@@ -9,6 +9,64 @@ object ToolLoopPlanner {
     /** 官方 oai_settings.tool_call_recurse_limit 默认值。 */
     const val DEFAULT_RECURSE_LIMIT = 5
 
+    /** 官方 ToolManager.canPerformToolCalls 禁用的生成类型。 */
+    private val NO_TOOL_CALL_TYPES = setOf("impersonate", "quiet", "continue")
+
+    /** 官方 script.js 工具循环决策快照（流式/非流式两分支）。 */
+    data class ToolLoopDecision(
+        val canPerformToolCalls: Boolean,
+        val shouldDeleteMessage: Boolean,
+        val shouldStopGeneration: Boolean,
+        val shouldRecurse: Boolean,
+        val nextDepth: Int,
+    )
+
+    /**
+     * 对齐官方 script.js 4436/5351-5378/5482-5500：
+     * canPerformToolCalls = !dryRun && 工具可用 && type 不在禁用集 && depth < RECURSE_LIMIT；
+     * 流式分支额外要求 isStreamFinished && isStreamWithToolCalls；
+     * shouldDeleteMessage（流式：mes 空 + 无 reasoning + result 空；非流式：getMessage 空 + 无 reasoning）；
+     * shouldStopGeneration = (无调用结果 && shouldDeleteMessage) || stealthCalls；
+     * 递归条件 = 有 tool_calls && !shouldStopGeneration，递归前 depth+1。
+     */
+    fun decide(
+        dryRun: Boolean,
+        type: String,
+        depth: Int,
+        recurseLimit: Int = DEFAULT_RECURSE_LIMIT,
+        toolCallingSupported: Boolean = true,
+        isStreaming: Boolean = false,
+        isStreamFinished: Boolean = true,
+        isStreamWithToolCalls: Boolean = false,
+        hasToolCalls: Boolean = false,
+        lastMessageMes: String = "",
+        hasReasoning: Boolean = false,
+        streamingResult: String = "",
+        invocationCount: Int = 0,
+        stealthCalls: Boolean = false,
+    ): ToolLoopDecision {
+        val canPerform = !dryRun && toolCallingSupported && type !in NO_TOOL_CALL_TYPES && depth < recurseLimit
+        val loopActive = canPerform && if (isStreaming) isStreamFinished && isStreamWithToolCalls else true
+        val shouldDelete = loopActive && if (isStreaming) {
+            type != "swipe" && lastMessageMes in setOf("", "...") && !hasReasoning && streamingResult in setOf("", "...")
+        } else {
+            type != "swipe" && lastMessageMes in setOf("", "...") && !hasReasoning
+        }
+        val shouldStop = if (loopActive) {
+            (invocationCount == 0 && shouldDelete) || stealthCalls
+        } else {
+            false
+        }
+        val shouldRecurse = loopActive && hasToolCalls && !shouldStop
+        return ToolLoopDecision(
+            canPerformToolCalls = canPerform,
+            shouldDeleteMessage = shouldDelete,
+            shouldStopGeneration = shouldStop,
+            shouldRecurse = shouldRecurse,
+            nextDepth = if (shouldRecurse) depth + 1 else depth,
+        )
+    }
+
     /**
      * 判断是否要继续工具循环：
      * 官方在响应含 tool_calls 且未超过递归上限时继续；达到上限则停止并把结果当普通回复。

@@ -1,0 +1,680 @@
+{
+  "source": "world-info.js WorldInfoTimedEffects 类",
+  "cases": [
+    {
+      "id": "empty",
+      "args": {
+        "op": "check",
+        "chat": [],
+        "entries": [],
+        "metadata": {},
+        "isDryRun": false
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "sticky-active",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [
+            11
+          ],
+          "cooldown": [],
+          "delay": [
+            11
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "sticky-expired-to-cooldown",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [
+            11
+          ],
+          "delay": [
+            11
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {
+              "w.1": {
+                "hash": 11,
+                "start": 4,
+                "end": 6,
+                "protected": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sticky-expired-no-cooldown",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "entries": [
+          {
+            "uid": 3,
+            "world": "w",
+            "hash": 33,
+            "sticky": 2,
+            "cooldown": 0
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.3": {
+                "hash": 33,
+                "start": 0,
+                "end": 2,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "chat-not-advanced-removes",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 1,
+                "end": 4,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": [
+            11
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "entry-missing-kept-until-end",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b"
+        ],
+        "entries": [],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "entry-missing-expired-removed",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "entries": [],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "cooldown-active",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a",
+          "b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {
+              "w.1": {
+                "hash": 11,
+                "start": 1,
+                "end": 3,
+                "protected": true
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [
+            11
+          ],
+          "delay": [
+            11
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {
+              "w.1": {
+                "hash": 11,
+                "start": 1,
+                "end": 3,
+                "protected": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "delay-applies",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "hash": 22,
+            "sticky": 0,
+            "cooldown": 0,
+            "delay": 2
+          }
+        ],
+        "metadata": {}
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": [
+            11,
+            22
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "set-timed-effects-new",
+      "args": {
+        "op": "setTimedEffects",
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          },
+          {
+            "uid": 3,
+            "world": "w",
+            "hash": 33,
+            "sticky": 2,
+            "cooldown": 0
+          }
+        ],
+        "metadata": {}
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 1,
+                "end": 4,
+                "protected": false
+              },
+              "w.3": {
+                "hash": 33,
+                "start": 1,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {
+              "w.1": {
+                "hash": 11,
+                "start": 1,
+                "end": 3,
+                "protected": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "set-timed-effect-force",
+      "args": {
+        "op": "setTimedEffect",
+        "chat": [
+          "a",
+          "b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "type": "sticky",
+        "entry": {
+          "uid": 1,
+          "world": "w",
+          "hash": 11,
+          "sticky": 3,
+          "cooldown": 2,
+          "delay": 5
+        },
+        "newState": true,
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 2,
+                "end": 5,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "set-timed-effect-clear",
+      "args": {
+        "op": "setTimedEffect",
+        "chat": [
+          "a",
+          "b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "type": "cooldown",
+        "entry": {
+          "uid": 1,
+          "world": "w",
+          "hash": 11,
+          "sticky": 3,
+          "cooldown": 2,
+          "delay": 5
+        },
+        "newState": false,
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 2,
+                "protected": false
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "dry-run-check",
+      "args": {
+        "op": "check",
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        },
+        "isDryRun": true
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": [
+            11
+          ]
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {
+              "w.1": {
+                "hash": 11,
+                "start": 0,
+                "end": 3,
+                "protected": false
+              }
+            },
+            "cooldown": {}
+          }
+        }
+      }
+    },
+    {
+      "id": "clean-up",
+      "args": {
+        "op": "cleanUp",
+        "chat": [],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "hash": 11,
+            "sticky": 3,
+            "cooldown": 2,
+            "delay": 5
+          }
+        ],
+        "metadata": {}
+      },
+      "expected": {
+        "buffers": {
+          "sticky": [],
+          "cooldown": [],
+          "delay": []
+        },
+        "metadata": {
+          "timedWorldInfo": {
+            "sticky": {},
+            "cooldown": {}
+          }
+        }
+      }
+    }
+  ]
+}

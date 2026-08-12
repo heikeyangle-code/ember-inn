@@ -3,7 +3,8 @@ package com.emberinn.engine.prompt
 /**
  * Handlebars 子集渲染器（对齐官方 renderStoryString 使用的模板语法）：
  * {{var}}、{{#if var}}…{{/if}}（嵌套 + {{else}}）。
- * truthy：非 null 且非空字符串（对齐 Handlebars if）。
+ * truthy：非 null 且非空字符串（对齐 Handlebars if）；未知字段还原为 {{name}} 字面量
+ * （官方 macros.js 注册 trim/helperMissing：未定义宏先还原再交给 substituteParams 宏引擎）。
  */
 object StoryStringRenderer {
 
@@ -48,9 +49,8 @@ object StoryStringRenderer {
                 }
                 close -> { sb.append(next.value); i = next.range.last + 1 }
                 plain -> {
-                    // 官方 Handlebars：已知字段渲染；未知走 helperMissing → 保留 {{name}} 交给宏引擎
-                    // {{trim}} 同样保留字面量，由 MacroEngine 的 legacy-trim 后处理删除
                     val key = next.groupValues[1]
+                    // 官方 helperMissing：未知宏还原为 {{name}} 字面量，由后续宏引擎处理
                     sb.append(params[key] ?: next.value)
                     i = next.range.last + 1
                 }
