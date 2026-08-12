@@ -191,6 +191,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         runSlash(slot.mes)
     }
 
+    /** 全部可执行斜杠命令清单（App 命令 + 引擎命令），供输入框补全弹层使用。 */
+    fun slashCommandList(): List<Pair<String, String>> = slashExecutor.commandList()
+
     /** 输入框以 / 开头：走斜杠命令（官方 ST 输入即执行；未知命令给提示，不当作普通消息发送）。 */
     fun runSlash(line: String) {
         if (_isStreaming.value) return

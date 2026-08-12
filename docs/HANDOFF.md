@@ -228,6 +228,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两
 
 ### 3.4 斜杠 🟡
 SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol）官方差分 27 例；参数解析核心 43 例差分。
+输入框斜杠补全（App/UI）：聊天输入框输入 `/` 弹出补全面板，按已输入字母前缀优先过滤、最多 12 条、220dp 高可滚动（约 5 条可见），点击填入 `/命令 `；配色用主题 surfaceContainerHigh + 角色 accent 徽标。EmberTextField 聚焦仅保留主题描边光条，外层 emberShadow 炫光已按用户要求全局移除。
 斜杠数学/布尔命令已 1:1（SlashMathEngine + slash-math-official.mjs 288 例差分）：add/mul/min/max/sub/div/mod/pow/round/abs/sqrt/sin/cos/log（官方 parseNumericSeries 变量解析 + performOperation：空值/空数组/NaN→"0"、div/mod/pow 只取前两个操作数、单目只取第一个、JS Number 字符串化），evalBoolean（大小写不敏感、数字/字符串分支、truthy 检查、无右操作数/非法 rule 抛错、a/first/x、b/second/y 别名），len（JSON 数组/对象/字符串/数字/布尔），sort（列表按值、字典 keysort 键/值、混合类型按 typeof）；/if 已切到该实现。
 已接：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器。
 消息类命令本轮对齐官方：/sendas（name 缺省当前角色、SLASH_COMMAND 正则 characterOverride、{{bias}} 只偏置→系统消息 is_system、{{user}}/{{char}} 宏替换、at= 插入/负数倒数/-0 追加、avatar/compact 落 extra/force_avatar/isSmallSys、swipes 初始化）；/send（name 缺省 {{user}}、at/compact/bias）；/impersonate 的 prompt 参数改走 quietPrompt（官方 quiet_prompt+quietToLoud），不再覆盖冒充系统指令。登记：sendas/send 的 return= 返回模式与按角色头像渲染未接（数据已落 force_avatar）；/tokens 用 cl100k 近似。/inject 支持 chat_metadata.script_injects 持久化、before/after/chat/none/scan/ephemeral；2026-08-12 起参数归一按官方 injectCallback（数字枚举持久化，旧字符串兼容读取），scan 已真正传入元数据。

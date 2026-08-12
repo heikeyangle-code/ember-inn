@@ -96,18 +96,12 @@ fun EmberTextField(
         modifier = modifier
             .then(
                 if (focusGlow != null) {
+                    // 只保留贴合主题的聚焦描边光条；外圈 emberShadow 炫光已按用户要求移除
                     Modifier
                         .border(
                             width = if (glowAlpha > 0f) 1.5.dp else 0.dp,
                             color = focusGlow.copy(alpha = 0.9f * glowAlpha),
                             shape = ringShape,
-                        )
-                        .emberShadow(
-                            color = focusGlow.copy(alpha = 0.42f),
-                            radius = 10.dp,
-                            spread = 1.dp,
-                            offset = DpOffset.Zero,
-                            alpha = 0.9f * glowAlpha,
                         )
                 } else {
                     Modifier

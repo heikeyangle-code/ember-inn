@@ -319,6 +319,8 @@ fun ChatScreen(
     var deleteSwipeTargetIndex by remember { mutableStateOf<Int?>(null) }
     var swipePickerIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
+    // 输入框斜杠补全用的命令清单（App 消息类 + 引擎纯函数，含中文描述）
+    val slashCommands = remember { vm.slashCommandList() }
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
@@ -832,6 +834,7 @@ fun ChatScreen(
                 onVoice = {
                     Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
                 },
+                slashCommands = slashCommands,
                 modifier = Modifier
                     .fillMaxWidth()
                     .glassEdgeHighlight(dark = glassDark, atTop = true)
@@ -4411,8 +4414,22 @@ private fun ChatInputBar(
     onStop: () -> Unit,
     onAttach: () -> Unit,
     onVoice: () -> Unit,
+    slashCommands: List<Pair<String, String>> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
+    // 斜杠补全：输入以 / 开头且第一个词未完成时，按已输入字母过滤（前缀优先，其次包含），最多 12 条
+    val slashMatches = remember(input, slashCommands) {
+        val show = input.startsWith("/") && input.length > 1 && !input.substring(1).contains(' ')
+        if (!show) {
+            emptyList()
+        } else {
+            val query = input.substring(1).lowercase()
+            slashCommands
+                .filter { (name, _) -> name.lowercase().startsWith(query) || name.lowercase().contains(query) }
+                .sortedWith(compareBy({ !it.first.lowercase().startsWith(query) }, { it.first }))
+                .take(12)
+        }
+    }
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
         shadowElevation = 1.dp,
@@ -4464,6 +4481,56 @@ private fun ChatInputBar(
                         PendingMediaChip(media = media, onRemove = { onRemoveMedia(index) })
                     }
                 }
+            }
+            if (slashMatches.isNotEmpty()) {
+                // 补全弹层：主题表面色 + 角色 accent 前缀徽标，随角色主题/种子自动配色
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .heightIn(max = 220.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    itemsIndexed(slashMatches, key = { _, pair -> pair.first }) { _, (name, desc) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onInputChange("/$name ") }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(accent.copy(alpha = 0.16f)),
+                            ) {
+                                Text("/", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.size(10.dp))
+                            Text(
+                                "/$name",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(Modifier.size(10.dp))
+                            Text(
+                                desc,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.size(6.dp))
             }
             Row(
                 verticalAlignment = Alignment.Bottom,

@@ -308,6 +308,14 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
     override fun resolve(name: String): SlashCommandDef? =
         byName[name.lowercase()] ?: SlashRegistry.resolve(name)
 
+    /** 全部可执行命令清单（App 消息类优先，引擎命令兜底），供输入框斜杠补全 UI 使用。 */
+    fun commandList(): List<Pair<String, String>> {
+        val map = linkedMapOf<String, String>()
+        byName.forEach { (_, def) -> map.putIfAbsent(def.name, def.description) }
+        SlashRegistry.all().forEach { def -> map.putIfAbsent(def.name, def.description) }
+        return map.toList()
+    }
+
     fun execute(text: String, state: SlashState = SlashState()): String =
         SlashEngine.execute(text, state, this)
 
