@@ -10,8 +10,12 @@ class AppSlashExecutorTest {
     private class FakeActions : SlashMessageActions {
         val calls = mutableListOf<String>()
 
-        override fun sendAsCharacter(name: String, text: String): String { calls += "sendas:$name:$text"; return "" }
-        override fun sendAsUser(text: String): String { calls += "send:$text"; return "" }
+        override fun sendAsCharacter(name: String, text: String, at: Int?, avatar: String?, compact: Boolean): String {
+            calls += "sendas:$name:$text:$at:${avatar ?: ""}:$compact"; return ""
+        }
+        override fun sendAsUser(text: String, name: String?, at: Int?, compact: Boolean): String {
+            calls += "send:$text:${name ?: ""}:$at:$compact"; return ""
+        }
         override fun sendSystemMessage(text: String, name: String): String { calls += "sys:$name:$text"; return "" }
         override fun setNarratorName(name: String): String { calls += "sysname:$name"; return "" }
         override fun sendComment(text: String): String { calls += "comment:$text"; return "" }
@@ -49,7 +53,7 @@ class AppSlashExecutorTest {
     fun `sendas requires name and forwards text`() {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/sendas name=小炭 你好 世界")
-        assertEquals(listOf("sendas:小炭:你好 世界"), a.calls)
+        assertEquals(listOf("sendas:小炭:你好 世界:null::false"), a.calls)
     }
 
     @Test
@@ -57,7 +61,7 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/sendas 你好")
         // 官方 sendas 缺省 name 不报错，由 ChatViewModel 兜底当前角色名
-        assertEquals(listOf("sendas::你好"), a.calls)
+        assertEquals(listOf("sendas::你好:null::false"), a.calls)
     }
 
     @Test
