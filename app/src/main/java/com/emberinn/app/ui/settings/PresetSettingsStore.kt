@@ -49,6 +49,20 @@ object PresetSettingsStore {
         file(context).writeText(json.encodeToString(PresetSettingsState.serializer(), state))
     }
 
+    /** 生效设置表单直接编辑（官方 Advanced Formatting 表单语义）：落盘 + 写真实消费位点。 */
+    fun update(context: Context, state: PresetSettingsState) {
+        save(context, state)
+        val behavior = BehaviorPrefs.load(context)
+        BehaviorPrefs.save(
+            context,
+            behavior.copy(
+                trimSentences = state.contextGlobals.trimSentences,
+                namesAsStopStrings = state.context.namesAsStopStrings,
+            ),
+        )
+        RenderPrefs.setExampleSeparator(context, state.context.exampleSeparator)
+    }
+
     /** 官方 context_presets change：应用 + 写全局消费位点 + 记录选中预设名。 */
     fun applyContext(context: Context, preset: JsonObject): ContextSettings {
         val state = load(context)

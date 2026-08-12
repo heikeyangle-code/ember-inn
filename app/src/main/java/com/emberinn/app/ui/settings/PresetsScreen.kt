@@ -77,6 +77,9 @@ fun PresetsScreen(onBack: () -> Unit) {
     var saveAsName by remember { mutableStateOf("") }
     var masterImportSections by remember { mutableStateOf<JsonObject?>(null) }
     var masterImportChecked by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var pendingSensitive by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
+    var pendingOverwrite by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
+    var expandedEditor by remember { mutableStateOf<String?>(null) }
 
     fun refresh() {
         prefs = PresetPrefsStore.load(context)
@@ -178,10 +181,39 @@ fun PresetsScreen(onBack: () -> Unit) {
             return@rememberLauncherForActivityResult
         }
         val fileName = uri.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".json").orEmpty().ifBlank { "preset" }
-        val name = parsed["name"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: fileName
+        // 官方：openai 采样预设导入用文件名（onPresetImportFileChange）；
+        // 通用 per-API 导入与 master legacy 用 data.name ?? 文件名。
+        val name = if (type == "sampler") fileName
+            else parsed["name"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: fileName
+        if (type == "sampler") {
+            // 官方 onPresetImportFileChange：敏感字段确认剥离 → 同名覆盖确认
+            val sensitive = PresetApplyEngine.detectSensitivePresetFields(parsed)
+            if (sensitive.isNotEmpty()) {
+                pendingSensitive = name to parsed
+                return@rememberLauncherForActivityResult
+            }
+            proceedSamplerImport(name, parsed)
+            return@rememberLauncherForActivityResult
+        }
         val ok = UserPresetStore.save(context, type, name, text)
         importMessage = if (ok) "已导入：$type / $name" else "导入失败：文件名无效"
         userPresets = userPresets + (type to UserPresetStore.list(context, type))
+    }
+
+    fun proceedSamplerImport(name: String, content: JsonObject) {
+        val exists = UserPresetStore.list(context, "sampler").contains(name) ||
+            PresetLibrary.samplerPresets("openai").any { it.name == name }
+        if (exists) {
+            pendingOverwrite = name to content
+        } else {
+            saveSamplerImport(name, content)
+        }
+    }
+
+    fun saveSamplerImport(name: String, content: JsonObject) {
+        val ok = UserPresetStore.save(context, "sampler", name, content.toString())
+        importMessage = if (ok) "已导入：sampler / $name" else "导入失败：文件名无效"
+        userPresets = userPresets + ("sampler" to UserPresetStore.list(context, "sampler"))
     }
 
     // 多区段主导出（官方 af_master_export：instruct/context/sysprompt/reasoning/srw）
@@ -245,6 +277,18 @@ fun PresetsScreen(onBack: () -> Unit) {
                     masterExporter.launch("presets_$stamp.json")
                 }) { Text("导出全部") }
                 TextButton(onClick = { masterImporter.launch(arrayOf("application/json")) }) { Text("导入全部") }
+                EmberSwitch(
+                    checked = prefs.bindPresetToConnection,
+                    onCheckedChange = {
+                        prefs = prefs.copy(bindPresetToConnection = it)
+                        PresetPrefsStore.save(context, prefs)
+                    },
+                )
+                Text(
+                    "绑定到连接",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
                 importMessage?.let {
                     Text(
                         it,
@@ -266,6 +310,13 @@ fun PresetsScreen(onBack: () -> Unit) {
                     userPresets = userPresets + ("context" to UserPresetStore.list(context, "context"))
                 },
             )
+            AppliedEditorToggle("context", expandedEditor) { expandedEditor = it }
+            if (expandedEditor == "context") {
+                AppliedPresetEditor("context", applied) { updated ->
+                    PresetSettingsStore.update(context, updated)
+                    applied = updated
+                }
+            }
             PresetSection(
                 title = "指导模板（instruct）",
                 items = (PresetLibrary.instructPresets().map { it.preset } - userPresets["instruct"].orEmpty().toSet()).map { it to false } +
@@ -278,6 +329,13 @@ fun PresetsScreen(onBack: () -> Unit) {
                     userPresets = userPresets + ("instruct" to UserPresetStore.list(context, "instruct"))
                 },
             )
+            AppliedEditorToggle("instruct", expandedEditor) { expandedEditor = it }
+            if (expandedEditor == "instruct") {
+                AppliedPresetEditor("instruct", applied) { updated ->
+                    PresetSettingsStore.update(context, updated)
+                    applied = updated
+                }
+            }
             PresetSection(
                 title = "采样预设（OpenAI）",
                 items = listOf("" to false) +
@@ -306,6 +364,13 @@ fun PresetsScreen(onBack: () -> Unit) {
                     userPresets = userPresets + ("sysprompt" to UserPresetStore.list(context, "sysprompt"))
                 },
             )
+            AppliedEditorToggle("sysprompt", expandedEditor) { expandedEditor = it }
+            if (expandedEditor == "sysprompt") {
+                AppliedPresetEditor("sysprompt", applied) { updated ->
+                    PresetSettingsStore.update(context, updated)
+                    applied = updated
+                }
+            }
             PresetSection(
                 title = "推理预设（reasoning）",
                 items = listOf("" to false) +
@@ -320,6 +385,13 @@ fun PresetsScreen(onBack: () -> Unit) {
                     userPresets = userPresets + ("reasoning" to UserPresetStore.list(context, "reasoning"))
                 },
             )
+            AppliedEditorToggle("reasoning", expandedEditor) { expandedEditor = it }
+            if (expandedEditor == "reasoning") {
+                AppliedPresetEditor("reasoning", applied) { updated ->
+                    PresetSettingsStore.update(context, updated)
+                    applied = updated
+                }
+            }
             Text(
                 "采样预设应用到“提供商与模型”详情页；reasoning 预设的 prefix/suffix/separator 进总装与显示；" +
                     "context/instruct/sysprompt 已按官方语义保存，运行时消费点等 textgen 协议后端接入（登记）。",
@@ -500,6 +572,16 @@ private fun masterExportBody(context: android.content.Context): JsonObject {
             put("value", JsonPrimitive(behavior.userPromptBias))
             put("show", JsonPrimitive(behavior.showUserPromptBias))
         })
+    }
+}
+
+@Composable
+private fun AppliedEditorToggle(type: String, expanded: String?, onToggle: (String?) -> Unit) {
+    TextButton(
+        onClick = { onToggle(if (expanded == type) null else type) },
+        modifier = Modifier.padding(start = 8.dp, top = 2.dp),
+    ) {
+        Text(if (expanded == type) "收起生效设置" else "查看/编辑生效设置")
     }
 }
 
