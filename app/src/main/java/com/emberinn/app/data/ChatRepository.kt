@@ -26,6 +26,7 @@ import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.app.ui.settings.PresetSettingsStore
+import com.emberinn.app.ui.settings.TextgenSettingsStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -407,7 +408,11 @@ class ChatRepository(context: Context) {
                 onError = onError,
                 options = finalOptions.copy(
                     textGenPrompt = finalPrompt,
-                    textGenSettings = TextgenSettingsDefaults.forProfile(provider, effectiveProfile),
+                    textGenSettings = TextgenSettingsDefaults.forProfile(
+                        provider,
+                        effectiveProfile,
+                        TextgenSettingsStore.load(context),
+                    ),
                 ),
                 onReasoning = onReasoning,
                 onToolCalls = onToolCalls,

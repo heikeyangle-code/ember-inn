@@ -15,6 +15,12 @@ object TextgenSettingsDefaults {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** 官方 APHRODITE_DEFAULT_ORDER（textgen-settings.js:102）。 */
+    private val APHRODITE_DEFAULT_ORDER = listOf(
+        "dry", "penalties", "no_repeat_ngram", "temperature", "top_nsigma", "top_p_top_k",
+        "top_a", "min_p", "tfs", "eta_cutoff", "epsilon_cutoff", "typical_p", "quadratic", "xtc",
+    )
+
     /** 官方默认对象（textgen-settings.js:150-230，逐字段）。 */
     fun defaults(): JsonObject = buildJsonObject {
         put("temp", 0.7)
@@ -84,6 +90,16 @@ object TextgenSettingsDefaults {
         put("tabby_model", "")
         put("llamacpp_model", "")
         put("sampler_order", kotlinx.serialization.json.JsonArray(listOf(6, 0, 1, 3, 4, 2, 5).map { JsonPrimitive(it) }))
+        put("sampler_priority", kotlinx.serialization.json.JsonArray(listOf(
+            "repetition_penalty", "presence_penalty", "frequency_penalty", "dry", "temperature",
+            "dynamic_temperature", "quadratic_sampling", "top_n_sigma", "top_k", "top_p", "typical_p",
+            "epsilon_cutoff", "eta_cutoff", "tfs", "top_a", "min_p", "adaptive_p", "mirostat", "xtc",
+            "encoder_repetition_penalty", "no_repeat_ngram",
+        ).map { JsonPrimitive(it) }))
+        put("samplers", kotlinx.serialization.json.JsonArray(listOf(
+            "penalties", "dry", "top_n_sigma", "top_k", "typ_p", "top_p", "min_p", "xtc", "temperature", "adaptive_p",
+        ).map { JsonPrimitive(it) }))
+        put("samplers_priorities", kotlinx.serialization.json.JsonArray(APHRODITE_DEFAULT_ORDER.map { JsonPrimitive(it) }))
         put("logit_bias", kotlinx.serialization.json.JsonArray(emptyList()))
         put("n", 1)
         put("server_urls", buildJsonObject {})
@@ -99,10 +115,10 @@ object TextgenSettingsDefaults {
         put("adaptive_decay", 0.9)
     }
 
-    /** 按连接档案合并：type、server_urls[type]、模型字段、常用采样、温度等。 */
-    fun forProfile(provider: ProviderSpec, profile: ConnectionProfile): JsonObject {
+    /** 按连接档案合并：type、server_urls[type]、模型字段、常用采样、温度等；stored 为 textgen 预设应用后的设置（优先）。 */
+    fun forProfile(provider: ProviderSpec, profile: ConnectionProfile, stored: JsonObject? = null): JsonObject {
         val type = provider.id.removePrefix("textgen-").let { if (it == "textgenerationwebui") "ooba" else it }
-        val merged = defaults().toMutableMap()
+        val merged = (stored?.takeIf { it.isNotEmpty() } ?: defaults()).toMutableMap()
         merged["type"] = JsonPrimitive(type)
         val serverUrls = (merged["server_urls"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
         serverUrls[type] = JsonPrimitive(profile.baseUrlOverride.ifBlank { provider.baseUrl })

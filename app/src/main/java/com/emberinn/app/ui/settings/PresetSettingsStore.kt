@@ -8,13 +8,16 @@ import com.emberinn.engine.prompt.PresetApplyEngine
 import com.emberinn.engine.prompt.PresetLibrary
 import com.emberinn.engine.prompt.ReasoningSettings
 import com.emberinn.engine.prompt.SyspromptSettings
+import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.SamplerParams
+import com.emberinn.engine.provider.TextgenSettingsDefaults
 import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 
 /**
@@ -108,12 +111,31 @@ object PresetSettingsStore {
         return result
     }
 
-    /** 官方 OpenAI 预设 onSettingsPresetChange：选中即应用到当前活动连接（bind_preset_to_connection 默认 true）。 */
+    /** 官方预设 onSettingsPresetChange：选中即应用到当前活动连接（bind_preset_to_connection 默认 true）。
+     *  按活动协议分发：textgenerationwebui → textgen 预设；其余 → openai 采样预设（全字段回写）。 */
     fun applySampler(context: Context, name: String): Boolean {
-        val preset = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }?.settings
-            ?: UserPresetStore.load(context, "sampler", name) ?: return false
         val repo = ChatRepository(context)
         val profile = repo.profile() ?: return false
+        val provider = ProviderRegistry.get(profile.providerId)
+        if (provider?.protocol == "textgenerationwebui") {
+            val preset = PresetLibrary.samplerPresets("textgen").firstOrNull { it.name == name }?.settings
+                ?: UserPresetStore.load(context, "sampler", name) ?: return false
+            val defaults = TextgenSettingsDefaults.defaults()
+            val stored = TextgenSettingsStore.load(context)
+            val base = JsonObject(defaults.toMutableMap().apply { putAll(stored) })
+            val orders = buildJsonObject {
+                put("sampler_order", defaults["sampler_order"] ?: JsonPrimitive(""))
+                put("sampler_priority", defaults["sampler_priority"] ?: JsonPrimitive(""))
+                put("samplers_priorities", defaults["samplers_priorities"] ?: JsonPrimitive(""))
+                put("samplers", defaults["samplers"] ?: JsonPrimitive(""))
+            }
+            val applied = PresetApplyEngine.applyTextgenPreset(base, preset, orders)
+            TextgenSettingsStore.save(context, applied)
+            PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = name))
+            return true
+        }
+        val preset = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }?.settings
+            ?: UserPresetStore.load(context, "sampler", name) ?: return false
         val appliedJson = PresetApplyEngine.applyChatCompletionPresetJson(
             settings = samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens),
             preset = preset,
@@ -122,7 +144,14 @@ object PresetSettingsStore {
         fun d(key: String): Double? = (appliedJson[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
         fun i(key: String): Int? = (appliedJson[key] as? JsonPrimitive)?.content?.toIntOrNull()
         fun b(key: String): Boolean = (appliedJson[key] as? JsonPrimitive)?.content == "true"
+        fun s(key: String): String? = (appliedJson[key] as? JsonPrimitive)?.content
+        fun l(key: String): List<String>? =
+            (appliedJson[key] as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+        // 连接类：当前 provider 对应模型键生效（openai_model/claude_model/openrouter_model/google_model/...）
+        val modelKey = providerModelKey(profile.providerId)
         val updated = profile.copy(
+            model = modelKey?.let { s(it)?.takeIf { v -> v.isNotBlank() } } ?: profile.model,
             sampler = profile.sampler.copy(
                 temperature = d("temp_openai") ?: profile.sampler.temperature,
                 topP = d("top_p_openai") ?: profile.sampler.topP,
@@ -136,6 +165,14 @@ object PresetSettingsStore {
                 n = i("n") ?: profile.sampler.n,
                 stream = b("stream_openai"),
                 maxTokens = i("openai_max_tokens") ?: profile.sampler.maxTokens,
+                reasoningEffort = s("reasoning_effort") ?: profile.sampler.reasoningEffort,
+                verbosity = s("verbosity") ?: profile.sampler.verbosity,
+                useSysprompt = b("use_sysprompt"),
+                useFallback = b("openrouter_use_fallback"),
+                allowFallbacks = b("openrouter_allow_fallbacks"),
+                middleout = s("openrouter_middleout") ?: profile.sampler.middleout,
+                openRouterProviders = l("openrouter_providers") ?: profile.sampler.openRouterProviders,
+                openRouterQuantizations = l("openrouter_quantizations") ?: profile.sampler.openRouterQuantizations,
             ),
             contextWindow = i("openai_max_context") ?: profile.contextWindow,
         )
@@ -144,7 +181,31 @@ object PresetSettingsStore {
         return true
     }
 
-    /** 官方 openai.js getChatCompletionPreset 的输入：App 支持字段 → 官方 oai_settings 键。 */
+    /** 官方 settingsToUpdate 的连接模型键（openai_model/claude_model/...）。 */
+    private fun providerModelKey(providerId: String): String? = when (providerId) {
+        "openai" -> "openai_model"
+        "anthropic" -> "claude_model"
+        "openrouter" -> "openrouter_model"
+        "google" -> "google_model"
+        "mistral" -> "mistralai_model"
+        "xai" -> "xai_model"
+        "cohere" -> "cohere_model"
+        "deepseek" -> "deepseek_model"
+        "groq" -> "groq_model"
+        "moonshot" -> "moonshot_model"
+        "zhipu" -> "glm_model"
+        "dashscope" -> "dashscope_model"
+        "siliconflow" -> "siliconflow_model"
+        "minimax" -> "minimax_model"
+        "perplexity" -> "perplexity_model"
+        "workers-ai" -> "workers_ai_model"
+        "azure" -> "azure_openai_model"
+        "zai" -> "zai_model"
+        "custom" -> "custom_model"
+        else -> null
+    }
+
+    /** 官方 openai.js getChatCompletionPreset 的输入：App 支持字段 → 官方 oai_settings 键（全字段，预设应用后回写不丢）。 */
     fun samplerSettingsJson(sampler: SamplerParams, contextWindow: Int, maxTokens: Int): JsonObject = buildJsonObject {
         put("temp_openai", JsonPrimitive(sampler.temperature))
         put("top_p_openai", JsonPrimitive(sampler.topP))
@@ -159,5 +220,13 @@ object PresetSettingsStore {
         put("stream_openai", JsonPrimitive(sampler.stream))
         put("openai_max_context", JsonPrimitive(contextWindow))
         put("openai_max_tokens", JsonPrimitive(maxTokens))
+        put("reasoning_effort", JsonPrimitive(sampler.reasoningEffort))
+        sampler.verbosity?.let { put("verbosity", JsonPrimitive(it)) }
+        put("use_sysprompt", JsonPrimitive(sampler.useSysprompt))
+        put("openrouter_use_fallback", JsonPrimitive(sampler.useFallback))
+        put("openrouter_allow_fallbacks", JsonPrimitive(sampler.allowFallbacks))
+        put("openrouter_middleout", JsonPrimitive(sampler.middleout))
+        put("openrouter_providers", kotlinx.serialization.json.JsonArray(sampler.openRouterProviders.map { JsonPrimitive(it) }))
+        put("openrouter_quantizations", kotlinx.serialization.json.JsonArray(sampler.openRouterQuantizations.map { JsonPrimitive(it) }))
     }
 }
