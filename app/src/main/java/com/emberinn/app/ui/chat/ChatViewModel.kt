@@ -436,10 +436,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
                 else -> ChatPromptFactory.REGEX_AI_OUTPUT
             }
-            // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）
-            val usable = _messages.value.filterNot { isSystemMsg(it) }
-            val pos = usable.indexOfFirst { it == el }
-            val depth = if (pos >= 0) usable.size - pos - 1 else null
+            // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）；
+            // 按原始下标定位，避免结构相等消息（内容重复）误匹配
+            val usableIndices = _messages.value.indices.filter { !isSystemMsg(_messages.value[it]) }
+            val pos = usableIndices.indexOf(index)
+            val depth = if (pos >= 0) usableIndices.size - pos - 1 else null
             out = RegexPipelineEngine.apply(
                 raw = base,
                 placement = placement,
