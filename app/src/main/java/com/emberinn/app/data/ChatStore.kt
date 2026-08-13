@@ -119,6 +119,13 @@ class ChatStore(private val context: Context) {
         ioExecutor.execute { file.writeText(content) }
     }
 
+    /** 消息列表写盘：内存缓存先更新，序列化+写盘在后台队列执行（调用线程不再整表导出）。 */
+    private fun writeMessages(sessionId: String, list: List<JsonElement>) {
+        cacheMessages(sessionId, list)
+        val file = File(chatsDir, "$sessionId.jsonl")
+        ioExecutor.execute { file.writeText(ChatJsonl.export(list)) }
+    }
+
     /** 等待所有排队写盘完成（导出/书签等直接读文件前调用，保证拿到最新内容）。 */
     fun flush() {
         runCatching { ioExecutor.submit {}.get() }
@@ -229,8 +236,7 @@ class ChatStore(private val context: Context) {
             put("mes", JsonPrimitive(content))
             put("extra", extra)
         }
-        writeMessages(sessionId, ChatJsonl.export(list))
-        cacheMessages(sessionId, list)
+        writeMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -648,8 +654,7 @@ class ChatStore(private val context: Context) {
         } else {
             list += message
         }
-        writeMessages(sessionId, ChatJsonl.export(list))
-        cacheMessages(sessionId, list)
+        writeMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -753,8 +758,7 @@ class ChatStore(private val context: Context) {
         val removedMessages = list.filter { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull == name }
         if (removedMessages.isEmpty()) return 0
         list.removeAll(removedMessages.toSet())
-        writeMessages(sessionId, ChatJsonl.export(list))
-        cacheMessages(sessionId, list)
+        writeMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
         deleteMediaFiles(removedMessages)
         return removedMessages.size
@@ -854,8 +858,7 @@ class ChatStore(private val context: Context) {
     }
 
     private fun save(sessionId: String, list: List<JsonElement>) {
-        writeMessages(sessionId, ChatJsonl.export(list))
-        cacheMessages(sessionId, list)
+        writeMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -908,8 +911,7 @@ class ChatStore(private val context: Context) {
     /** 整体替换某会话消息（重新生成/继续/清空会话用）。 */
     fun replace(sessionId: String, elements: List<JsonElement>) {
         val removed = messages(sessionId).filter { old -> elements.none { it == old } }
-        writeMessages(sessionId, ChatJsonl.export(elements))
-        cacheMessages(sessionId, elements)
+        writeMessages(sessionId, elements)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
         deleteMediaFiles(removed)
     }
@@ -918,8 +920,7 @@ class ChatStore(private val context: Context) {
         val list = messages(sessionId).toMutableList()
         if (index in list.indices) {
             val removed = list.removeAt(index)
-            writeMessages(sessionId, ChatJsonl.export(list))
-            cacheMessages(sessionId, list)
+            writeMessages(sessionId, list)
             get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
             deleteMediaFiles(listOf(removed))
         }
@@ -991,8 +992,7 @@ class ChatStore(private val context: Context) {
             val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
             extra["bookmark_link"] = JsonPrimitive(safeName)
             list[aiIdx] = JsonObject(el + ("extra" to JsonObject(extra)))
-            writeMessages(sessionId, ChatJsonl.export(list))
-            cacheMessages(sessionId, list)
+            writeMessages(sessionId, list)
         }
         return true
     }
