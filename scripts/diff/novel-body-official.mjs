@@ -124,7 +124,8 @@ function getNovelGenerationData(finalPrompt, settings, maxLength, isImpersonate,
 let nai_settings = {};
 let power_user = { console_log_prompts: false, request_token_probabilities: false };
 let maximum_output_length = 600;
-const getStoppingStrings = () => nai_settings._stoppingStrings || [];
+// 返回副本：官方函数会 push 扩充该数组，避免污染 fixture 里注入的原始列表
+const getStoppingStrings = () => [...(nai_settings._stoppingStrings || [])];
 const getBadWordIds = () => [];
 const getTextTokens = () => [];
 const calculateLogitBias = () => [{ bias: 1, sequence: [] }];
@@ -137,7 +138,7 @@ function add(id, settings, extra = {}) {
     maximum_output_length = extra.maximumOutputLength ?? 600;
     const result = getNovelGenerationData(extra.finalPrompt ?? 'hello', { order: extra.order || null }, extra.maxLength ?? 200, extra.isImpersonate ?? false, extra.isContinue ?? false, null, extra.type ?? 'normal');
     // 复现官方 JSON.stringify 行为：undefined 字段省略
-    cases.push({ id, settings, extra: { ...extra, stoppingStrings: undefined, order: undefined }, expected: JSON.stringify(result) });
+    cases.push({ id, settings, extra: { ...extra, order: undefined }, expected: JSON.stringify(result) });
 }
 
 // Kayra / Clio / Erato / 旧模型；prefix 选择；erato 停用词扩充；token 字段存在性

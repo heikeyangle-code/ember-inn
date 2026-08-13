@@ -101,6 +101,10 @@
    "prefix": "vanilla"
   },
   "extra": {
+   "stoppingStrings": [
+    "\nChar:",
+    "x"
+   ],
    "finalPrompt": "..."
   },
   "expected": "{\"input\":\"<|startoftext|><|reserved_special_token81|>...\",\"model\":\"erato-v1\",\"use_string\":true,\"temperature\":1,\"max_length\":200,\"min_length\":0,\"tail_free_sampling\":1,\"repetition_penalty\":1,\"repetition_penalty_range\":1024,\"repetition_penalty_slope\":0.9,\"repetition_penalty_frequency\":0,\"repetition_penalty_presence\":0,\"top_a\":0,\"top_p\":1,\"top_k\":0,\"min_p\":0,\"math1_temp\":1,\"math1_quad\":0,\"math1_quad_entropy_scale\":0,\"typical_p\":1,\"mirostat_lr\":0.1,\"mirostat_tau\":5,\"phrase_rep_pen\":\"off\",\"stop_sequences\":[[],[],[],[],[],[],[],[],[],[],[],[],[],[]],\"bad_words_ids\":[],\"logit_bias_exp\":[],\"generate_until_sentence\":true,\"use_cache\":false,\"return_full_text\":false,\"prefix\":\"vanilla\",\"order\":[\"temperature\",\"tail_free_sampling\",\"repetition_penalty\",\"top_p\",\"top_k\"]}"
