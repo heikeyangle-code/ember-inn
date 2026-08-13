@@ -322,8 +322,7 @@ class ChatRepository(context: Context) {
         if (previewOnly) {
             // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 文本 + token 合计
             onPreview?.invoke(
-                prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
-                prepared.counts.values.sum(),
+                prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" } to prepared.counts.values.sum(),
             )
             return null
         }

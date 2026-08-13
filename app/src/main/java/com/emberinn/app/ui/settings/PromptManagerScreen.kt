@@ -117,24 +117,24 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                     checked = entry.enabled,
                                     onCheckedChange = { on ->
                                         order = order.mapIndexed { j, e -> if (j == i) e.copy(enabled = on) else e }
-                                        PromptManagerPrefs.saveOrder(context, order)
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                     },
                                 )
                                 IconButton(onClick = {
                                     if (i > 0) {
                                         order = order.toMutableList().apply { add(i - 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, order)
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                     }
                                 }, modifier = Modifier.size(30.dp)) { Text("↑", style = MaterialTheme.typography.labelMedium) }
                                 IconButton(onClick = {
                                     if (i < order.lastIndex) {
                                         order = order.toMutableList().apply { add(i + 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, order)
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                     }
                                 }, modifier = Modifier.size(30.dp)) { Text("↓", style = MaterialTheme.typography.labelMedium) }
                                 IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
-                                    PromptManagerPrefs.saveOrder(context, order)
+                                    PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                 }, modifier = Modifier.size(30.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
@@ -154,7 +154,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             val id = newOrderId.trim()
                             if (id.isNotEmpty()) {
                                 order = order + PromptOrderEntry(id)
-                                PromptManagerPrefs.saveOrder(context, order)
+                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                 newOrderId = ""
                             }
                         }) { Text("追加") }
@@ -202,7 +202,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 } else {
                                     order + PromptOrderEntry(item.identifier, enabled = on)
                                 }
-                                PromptManagerPrefs.saveOrder(context, order)
+                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
                             },
                             onEdit = { editTarget = item; showEdit = true },
                             onDelete = {

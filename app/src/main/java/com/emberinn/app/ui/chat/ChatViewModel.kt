@@ -2563,7 +2563,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 },
             )
-            if (previewOnly) return
+            if (previewOnly) return@launch
             if (streamActive) {
                 streamSession = session
                 if (session == null) {
