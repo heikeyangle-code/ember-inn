@@ -11,7 +11,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 327 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 328 测全绿]
 ```
 
 - 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
@@ -79,7 +79,7 @@ gh run list --limit 3
 gh workflow run 328789880 --ref main
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **327 测全绿**。
+CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **328 测全绿**。
 
 ## 2. 什么是差分验证（新会话必读）
 
@@ -93,11 +93,11 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
 4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
 
-**已覆盖（84 组差分 fixture，共 1957 例对拍，全部通过；2026-08-13 全量复算）**：
+**已覆盖（85 组差分 fixture，共 1969 例对拍，全部通过；2026-08-13 全量复算）**：
 > 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 81 组 / 1349 例（机器数）为准。
 
 | 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1957 例。
+> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1969 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 40 |
 | 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
@@ -196,12 +196,12 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 WorldLoreMerger（官方世界书→提示词拼接段由 prepare-messages 覆盖；App 的多书合并顺序/插槽为自有封装，边界登记）。
 
 **官方有而引擎/App 还没有（审计 2026-08-12）**：
-- textgen 协议后端（KoboldAI/TextGenWebUI/Mancer/Featherless/Infermatic/Ooba 等）——instruct 模式引擎与预设已备，协议路由未做（见第 5 节）。实现路径：官方 textgenerationwebui.js/koboldai_settings.js 请求体逐字差分（文本补全/llamacpp 两分支，ResponseDataExtractor 已备 kobold/textgenerationwebui 解析分支）→ 引擎 NovelRequestBuilder/TextgenRequestBuilder → LlmClient 路由 → providers.json 增 kobold/textgenerationwebui/novel 条目与档案 UI 字段。
-- NovelAI/Kayra 聊天协议——仅 getKayraMaxContextTokens 预算差分，请求体/响应解析未做。
+- textgen 协议后端（KoboldAI/TextGenWebUI/Mancer/Featherless/Infermatic/Ooba 等）——instruct 模式引擎与预设已备，协议路由未做（见第 5 节）。差分目标已锁定：官方 `textgen-settings.js:1587 createTextGenGenerationData`（256 行，settings/model/finalPrompt/maxTokens/isImpersonate/isContinue/cfgValues/type 八参数，llamacpp/经典/Mancer 等多分支）+ `getTextGenModel`（1465）；尚未提取/移植。接法：请求体逐字差分 → 引擎 TextgenRequestBodyEngine → LlmClient 路由 → providers.json 增 kobold/textgenerationwebui/novel 条目与档案 UI 字段；ResponseDataExtractor 已备 kobold/textgenerationwebui 解析分支。
+- NovelAI/Kayra 聊天协议——请求体已 1:1（`novel-body` 差分 12 例，`NovelRequestBodyEngine`：getNovelGenerationData/selectPrefix/getTokenizerTypeForModel 逐字移植，Kayra/Clio/Erato/旧模型、Erato 停用词扩充、1024 截断、order 覆盖、logit_bias、num_logprobs）；getKayraMaxContextTokens 预算差分已有；响应解析分支已备。剩余：LlmClient 路由、providers.json 条目、档案设置 UI、响应解析接线（textgen 块一并做）。
 - ChromaDB 远程向量后端（官方 vectors 默认）——本地 FileVectorStore/InMemory + OpenAI 兼容嵌入替代，未做 ChromaDB 客户端。
 - summarize 聊天摘要（vectors 扩展）——未做。
 - 第三方扩展市场（third-party）与官方插件体系——未做（HANDOFF 11.2 登记）。
-- Prompt Manager：引擎已 1:1（prompt-manager 差分 29 例）；UI 已接（设置→提示词管理器：官方字段 identifier/name/content/role/injection_position/depth/order/trigger/forbid_overrides + 顺序编辑/上下移/删除，全局存储 PromptManagerPrefs，已接入总装 userPrompts/userOrder）。登记：每角色顺序、dryRun 提示词预览、默认项内容编辑（当前以用户覆盖项代替）下一步。
+- Prompt Manager：引擎已 1:1（prompt-manager 差分 29 例，含 getPromptCollection/preparePrompt/shouldTrigger/getPromptOrderForCharacter/Prompt 构造；getCollection 空 order 不自动补默认、null prompt 触发恒 true 等官方语义已修）；App 已完整（设置→提示词管理器：官方字段 identifier/name/content/role/injection_position/depth/order/trigger/forbid_overrides + 每角色顺序选择器 + 默认项编辑（存为同名用户覆盖项）+ dryRun 提示词预览（聊天 ⋮ 菜单，只总装不发送，展示 role:content + token 合计）+ 顺序上下移/删除 + PromptManagerPrefs 存储已接入总装 userPrompts/userOrder）。
 - 官方部分 slash 命令（命令数少于官方，见 3.4）。
 - connection-manager 扩展（官方连接管理）——App 以 ProviderScreen 多档案等价替代，未做官方扩展本体。
 - Claude/Gemini 官方 web tokenizer——用户豁免（cl100k 回退）。
@@ -273,7 +273,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 - reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
 
 **仍登记（诚实边界）**：
-- context/instruct/sysprompt 预设已按官方语义持久化，但运行时消费点是 textgen 协议后端（KoboldAI/TextGenWebUI/Mancer 等，见第 5 节）——后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖）。
+- context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
 - sampler-textgen/novel/kobold：预设已打包（6/24/6），对应后端未做，选择暂不暴露。
 - master 导入的 textgen preset 区段暂存为 sampler 用户预设（不应用）。
 - moving-ui（界面预设）：用户决策延期见 8.9。
@@ -375,7 +375,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 ### 3.8.18 setOpenAIMessages 构造循环 ✅
 - `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
 - ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 326 测全绿。
+- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 328 测全绿。
 
 ### 3.8.19 边界补齐
 - Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
@@ -558,7 +558,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 84 组 / 1957 例）：
+**新增完成**（全部 CI 绿、引擎 325 测全绿、差分 85 组 / 1969 例）：
 - 预设全链：引擎 PresetApplyEngine 官方差分 82 例（类型识别/五类应用/迁移/保存过滤/名字匹配）+ 预设页选择即应用/保存当前为预设/删除 + 单文件导入 + 多区段 master 导入导出 + /preset 命令 + reasoning 进总装
 - 正则全链路（允许列表/存前/总装/编辑/世界书/全局开关/preset 命名集）
 - 群聊 gen_id 整批共享、备用开场白 swipes、书签/URL 导入/设置快照复验
