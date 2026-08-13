@@ -2828,12 +2828,38 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 val aiIdx = after.indexOfLast { !isUser(it) }
                 if (aiIdx >= 0) {
                     val profile = chatRepository.profile()
+                    // 官方：generation_started 时长守恒（now - (prevFinished - prevStarted)）
+                    val aiEl = after[aiIdx].jsonObject
+                    val prevStarted = aiEl["gen_started"]?.jsonPrimitive?.contentOrNull
+                        ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+                    val prevFinished = aiEl["gen_finished"]?.jsonPrimitive?.contentOrNull
+                        ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+                    val nowMs = System.currentTimeMillis()
+                    val adjustedStart = if (prevStarted != null && prevFinished != null) {
+                        java.time.Instant.ofEpochMilli(nowMs - (prevFinished - prevStarted)).toString()
+                    } else {
+                        java.time.Instant.ofEpochMilli(nowMs).toString()
+                    }
                     chatStore.appendToCurrentSwipe(
                         sessionId, aiIdx, reply,
                         api = profile?.providerId,
                         model = profile?.model,
                         reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                        genStarted = adjustedStart,
                     )
+                    // 官方 saveReply('continue')：message_token_count_enabled 时刷新合并后 token_count
+                    if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
+                        val msgs = chatStore.messages(sessionId)
+                        val idx = msgs.indexOfLast { !isUser(it) }
+                        if (idx >= 0) {
+                            val text = msgs[idx].jsonObject["mes"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                            val count = runCatching {
+                                com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(profile?.model.orEmpty())
+                                    .count(_streamingReasoning.value + text)
+                            }.getOrDefault(text.length / 4)
+                            chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
+                        }
+                    }
                     refreshMessages()
                 }
             }
@@ -2905,7 +2931,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 genStarted = streamStartedAt,
                 genFinished = java.time.Instant.now().toString(),
                 reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                groupGenId = if (group != null) pendingGroupGenId else null,
             )
+            // 官方 swipe saveReply：message_token_count_enabled 时刷新新变体 token_count
+            if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
+                val count = runCatching {
+                    com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(profile?.model.orEmpty())
+                        .count(_streamingReasoning.value + reply)
+                }.getOrDefault(reply.length / 4)
+                chatStore.setExtraValue(sessionId, aiIdx, "token_count", count.toString())
+            }
             refreshMessagesAppendOnly()
         }
     }

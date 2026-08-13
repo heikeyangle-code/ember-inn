@@ -425,6 +425,8 @@ class ChatStore(private val context: Context) {
         genStarted: String? = null,
         genFinished: String? = null,
         reasoning: String? = null,
+        reasoningSignature: String? = null,
+        groupGenId: Long? = null,
     ): Boolean {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return false
@@ -445,7 +447,10 @@ class ChatStore(private val context: Context) {
         if (!api.isNullOrBlank()) oldExtra["api"] = JsonPrimitive(api)
         if (!model.isNullOrBlank()) oldExtra["model"] = JsonPrimitive(model)
         if (!reasoning.isNullOrBlank()) oldExtra["reasoning"] = JsonPrimitive(reasoning)
-        oldExtra["gen_id"] = JsonPrimitive(System.currentTimeMillis())
+        // 官方 swipe saveReply：reasoning_duration=null、reasoning_signature 原样；gen_id 仅群聊
+        oldExtra["reasoning_duration"] = JsonNull
+        oldExtra["reasoning_signature"] = reasoningSignature?.let { JsonPrimitive(it) } ?: JsonNull
+        if (groupGenId != null) oldExtra["gen_id"] = JsonPrimitive(groupGenId)
         val extra = JsonObject(oldExtra)
         val now = genStarted ?: java.time.Instant.now().toString()
         swipes += content
@@ -886,6 +891,8 @@ class ChatStore(private val context: Context) {
         api: String? = null,
         model: String? = null,
         reasoning: String? = null,
+        /** 官方 saveReply('continue')：gen_started 重设为时长守恒后的开始时刻。 */
+        genStarted: String? = null,
     ): Boolean {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return false
@@ -903,10 +910,11 @@ class ChatStore(private val context: Context) {
         if (!reasoning.isNullOrBlank()) oldExtra["reasoning"] = JsonPrimitive(reasoning)
         val extra = JsonObject(oldExtra)
         val now = java.time.Instant.now().toString()
+        val effectiveGenStarted = genStarted ?: el["gen_started"]?.jsonPrimitive?.contentOrNull ?: now
         while (swipeInfo.size <= cur) swipeInfo += buildJsonObject { put("extra", buildJsonObject {}) }
         swipeInfo[cur] = buildJsonObject {
             put("send_date", JsonPrimitive(now))
-            put("gen_started", el["gen_started"]?.jsonPrimitive ?: JsonPrimitive(now))
+            put("gen_started", JsonPrimitive(effectiveGenStarted))
             put("gen_finished", JsonPrimitive(now))
             put("extra", extra)
         }
@@ -914,6 +922,9 @@ class ChatStore(private val context: Context) {
             el +
                 mapOf(
                     "mes" to JsonPrimitive(combined),
+                    "send_date" to JsonPrimitive(now),
+                    "gen_started" to JsonPrimitive(effectiveGenStarted),
+                    "gen_finished" to JsonPrimitive(now),
                     "swipes" to JsonArray(swipes.map { JsonPrimitive(it) }),
                     "swipe_info" to JsonArray(swipeInfo.map { it }),
                     "extra" to extra,
