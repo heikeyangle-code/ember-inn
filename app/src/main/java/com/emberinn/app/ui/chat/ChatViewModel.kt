@@ -1269,13 +1269,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 val regexOn = GlobalRegexPrefs.enabled(getApplication())
                 val greetings = (listOfNotNull(firstMes) + alternates)
                     .map { if (regexOn) RegexPipelineEngine.apply(it, ChatPromptFactory.REGEX_AI_OUTPUT, scripts) else it }
-                val content = greetings.firstOrNull { it.isNotBlank() } ?: greetings.firstOrNull().orEmpty()
+                    .toMutableList()
+                // 官方 getFirstMessage：first_mes 正则后为空 → swipes.shift()，改用第一条 alternate
+                if (greetings.firstOrNull()?.isBlank() == true && greetings.size > 1) {
+                    greetings.removeAt(0)
+                }
+                val content = greetings.firstOrNull().orEmpty()
                 chatStore.append(
                     sessionId,
                     isUser = false,
                     content = content,
                     name = charName,
                     greetingSwipes = greetings,
+                    isGreeting = true,
                 )
                 refreshMessages()
             }

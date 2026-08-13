@@ -161,6 +161,8 @@ class ChatStore(private val context: Context) {
         /** 官方流式 handler 写入 extra.time_to_first_token（毫秒）。 */
         timeToFirstToken: Long? = null,
         greetingSwipes: List<String> = emptyList(),
+        /** 官方 getFirstMessage 开场白：extra 为空 {}、无 title/gen_started/gen_finished（与 saveReply 消息不同）。 */
+        isGreeting: Boolean = false,
         bias: String? = null,
         /** 官方 caption 扩展：媒体 source=captioned + captioned=true。 */
         captioned: Boolean = false,
@@ -193,7 +195,7 @@ class ChatStore(private val context: Context) {
             }
             // 官方 saveReply：AI 消息 extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature；
             // 群聊额外带 gen_id（group_generation_id）
-            if (!isUser) {
+            if (!isUser && !isGreeting) {
                 groupGenId?.let { put("gen_id", JsonPrimitive(it)) }
                 put("api", JsonPrimitive(api ?: "manual"))
                 put("model", JsonPrimitive(model ?: ""))
@@ -214,10 +216,13 @@ class ChatStore(private val context: Context) {
             put("is_system", JsonPrimitive(false))
             put("send_date", JsonPrimitive(now))
             if (!isUser) {
-                // 官方 AI 消息：title（默认空）+ gen_started / gen_finished + swipes 结构（官方 Message 构造即带）
-                put("title", JsonPrimitive(""))
-                put("gen_started", JsonPrimitive(genStarted ?: now))
-                put("gen_finished", JsonPrimitive(genFinished ?: now))
+                // 官方 AI 消息：title（默认空）+ gen_started / gen_finished + swipes 结构（官方 Message 构造即带）；
+                // 开场白（getFirstMessage）除外：无 title/gen_*，extra 为空 {}
+                if (!isGreeting) {
+                    put("title", JsonPrimitive(""))
+                    put("gen_started", JsonPrimitive(genStarted ?: now))
+                    put("gen_finished", JsonPrimitive(genFinished ?: now))
+                }
                 put("swipe_id", JsonPrimitive(0))
                 // 官方 getFirstMessage：开场白 = [first_mes, ...alternate_greetings]，全部进 swipes
                 val swipesList = if (greetingSwipes.isNotEmpty()) greetingSwipes else listOf(content)
@@ -226,11 +231,18 @@ class ChatStore(private val context: Context) {
                     "swipe_info",
                     JsonArray(
                         swipesList.indices.map { idx ->
-                            buildJsonObject {
-                                put("send_date", JsonPrimitive(now))
-                                put("gen_started", JsonPrimitive(genStarted ?: now))
-                                put("gen_finished", JsonPrimitive(genFinished ?: now))
-                                put("extra", if (idx == 0) extra else JsonObject(emptyMap()))
+                            if (isGreeting) {
+                                buildJsonObject {
+                                    put("send_date", JsonPrimitive(now))
+                                    put("extra", JsonObject(emptyMap()))
+                                }
+                            } else {
+                                buildJsonObject {
+                                    put("send_date", JsonPrimitive(now))
+                                    put("gen_started", JsonPrimitive(genStarted ?: now))
+                                    put("gen_finished", JsonPrimitive(genFinished ?: now))
+                                    put("extra", if (idx == 0) extra else JsonObject(emptyMap()))
+                                }
                             }
                         },
                     ),
