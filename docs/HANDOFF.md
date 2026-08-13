@@ -687,6 +687,9 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
  slash-parser（43 例）；向量工具（14 例）等 57 组差分
 
 **审计修复（bug/偏差已修）**
+- 用户消息保存顺序对齐官方 sendMessageAsUser（regex→substituteParams→removeMacros）；message_token_count_enabled 时用户消息写 extra.token_count
+- AI 消息补 extra.time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪之后注入（官方顺序）
+- 开场白（getFirstMessage）数据格式：extra={}、无 title/gen_*、空首条 swipes.shift()；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊、补 reasoning_duration/signature、token_count
 - 历史索引错位（media 挂错）、bias 提取最后用户消息 + 编辑存 extra.bias 回溯、
  /hide 语义、comment 不进提示词、系统消息防误操作（继续/重生成/变体/滑动）、
  continue swipe_info 同步、发送失败不丢输入、重生成先查配置、群聊配置实时、书签路径消毒、
