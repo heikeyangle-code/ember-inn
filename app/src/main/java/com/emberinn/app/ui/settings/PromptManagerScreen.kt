@@ -44,6 +44,7 @@ import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.engine.prompt.PromptCollection
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.PromptManagerCore
 import com.emberinn.engine.prompt.PromptOrderEntry
 
 /** Prompt Manager（官方 PromptManager 面板字段）：顺序 + 提示项，全局存储；dryRun 预览登记下一步。 */
@@ -175,7 +176,9 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         PromptRow(
                             item = def,
                             userDefined = false,
-                            enabledInOrder = order.firstOrNull { it.identifier == def.identifier }?.enabled ?: true,
+                            enabledInOrder = order.firstOrNull { it.identifier == def.identifier }?.enabled
+                                ?: PromptManagerCore.DEFAULT_ORDER_ENTRIES.firstOrNull { it.identifier == def.identifier }?.enabled
+                                ?: true,
                             onToggleOrder = { on ->
                                 order = if (order.any { it.identifier == def.identifier }) {
                                     order.map { if (it.identifier == def.identifier) it.copy(enabled = on) else it }
