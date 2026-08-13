@@ -272,14 +272,14 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 - 预设存储：官方打包（engine resources）+ 用户预设 filesDir/presets/{type}/{name}.json（官方 data/default-user/content/presets/{type} 语义）。
 - reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
 
-**预设缺口清单（用户确认共 3 项，第 3 项已完成）**：
-1. 采样预设逐字段勾选（官方 `settings_checked`）：引擎过滤逻辑可差分，App 接勾选 UI + 存储（待做）。
-2. textgen/NovelAI 后端 → context/instruct/sysprompt 运行时消费 + textgen/novel/kobold 采样预设（6/24/6）暴露：最大项；Novel 请求体 1:1 已完成，textgen 差分待做。
+**预设缺口清单（用户确认共 3 项，第 1 项经官方 1.18 源码核实不存在，第 2 项部分完成，第 3 项已完成）**：
+1. 采样预设逐字段勾选（`settings_checked`）：**官方 1.18 源码无此字段**（openai.js/preset-manager.js/预设 json 全仓搜索无），按 1:1 基线不实现、不发明新功能。
+2. textgen 后端：✅ TextgenRequestBodyEngine 差分 27 例（官方 createTextGenGenerationData 全分支）；✅ LlmClient textgenerationwebui 路由（/api/v1/generate + /api/v1/stream SSE + 响应解析）；✅ providers.json 新增 textgenerationwebui 条目；✅ 故事串消费（createRawPrompt：context/instruct/sysprompt + 历史 + 输出序列）；✅ PresetsScreen 按活动协议暴露 textgen/novel/kobold 采样预设。仍剩：textgen 全字段设置 UI（当前用官方默认+连接档案映射）、novel/kobold 的 LlmClient 路由（Novel 请求体已差分）、mancer/featherless/infermaticai 等 provider 条目。
 3. `/preset` fuzzy 回退：✅ 已完成（Fuse.js 7.1 移植 + 27 例差分）。
 
 **仍登记（诚实边界）**：
 - context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
-- sampler-textgen/novel/kobold：预设已打包（6/24/6），对应后端未做，选择暂不暴露。
+- sampler-textgen/novel/kobold：预设已打包（6/24/6）；textgen 已按活动协议在预设页暴露并应用，novel/kobold 待对应 LlmClient 路由。
 - master 导入的 textgen preset 区段暂存为 sampler 用户预设（不应用）。
 - moving-ui（界面预设）：用户决策延期见 8.9。
 

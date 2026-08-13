@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
@@ -227,6 +228,24 @@ class LlmClient(
                     onDone()
                     continue
                 }
+                // Text Completion SSE：data: {"event":"text_stream","text":...} / stream_end
+                if (protocol == "textgenerationwebui") {
+                    try {
+                        val obj = json.parseToJsonElement(dataText).jsonObject
+                        when (obj["event"]?.jsonPrimitive?.contentOrNull) {
+                            "text_stream" -> obj["text"]?.jsonPrimitive?.contentOrNull?.let {
+                                if (it.isNotEmpty()) onDelta(it)
+                            }
+                            "stream_end" -> {
+                                finished = true
+                                onDone()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // 对齐官方 SmoothEventSourceStream：坏事件跳过不中断
+                    }
+                    continue
+                }
                 try {
                     if (onToolCalls != null) {
                         val parsed = json.parseToJsonElement(dataText)
@@ -350,6 +369,23 @@ class LlmClient(
                     useSystemPrompt = profile.sampler.useSysprompt,
                 )
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
+            }
+            "textgenerationwebui" -> {
+                val settings = options.textGenSettings ?: TextgenSettingsDefaults.forProfile(provider, profile)
+                val body = TextgenRequestBodyEngine.build(
+                    TextgenRequestBodyEngine.BuildInput(
+                        settings = settings,
+                        finalPrompt = options.textGenPrompt ?: "",
+                        maxTokens = profile.sampler.maxTokens.takeIf { it > 0 },
+                        type = if (effectiveStream) "normal" else "quiet",
+                        stoppingStrings = options.stopSequences,
+                        maxContext = profile.contextWindow.takeIf { it > 0 } ?: 4096,
+                        dynatempTypes = "ooba vllm mancer aphrodite tabby",
+                    )
+                )
+                val url = base.trimEnd('/') + (if (effectiveStream) "/api/v1/stream" else "/api/v1/generate")
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, profile, anthropicVersion = false)
             }
             "mistral" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
@@ -619,6 +655,7 @@ class LlmClient(
                 ?.get("content")?.jsonObject?.get("parts")?.jsonArray
                 ?.mapNotNull { it.jsonObject["text"]?.asText() }
                 ?.joinToString("").orEmpty()
+            "textgenerationwebui" -> ResponseDataExtractor.extractMessageFromData(root, "textgenerationwebui")
             "cohere" -> {
                 val message = root["message"]?.jsonObject ?: return ""
                 when (val content = message["content"]) {

@@ -38,6 +38,9 @@ import com.emberinn.engine.prompt.PresetApplyEngine
 import com.emberinn.engine.prompt.PresetLibrary
 import com.emberinn.engine.prompt.ReasoningSettings
 import com.emberinn.engine.prompt.SyspromptSettings
+import com.emberinn.engine.provider.ProviderRegistry
+import com.emberinn.engine.provider.ProviderStore
+import java.io.File
 import com.emberinn.engine.provider.SamplerParams
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -80,6 +83,8 @@ fun PresetsScreen(onBack: () -> Unit) {
     var pendingSensitive by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
     var pendingOverwrite by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
     var expandedEditor by remember { mutableStateOf<String?>(null) }
+    // 采样预设按当前活动连接协议选择（openai/textgen/novel/kobold）
+    val samplerType = remember { activeSamplerPresetType(context) }
 
     fun refresh() {
         prefs = PresetPrefsStore.load(context)
@@ -94,7 +99,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             "instruct" -> PresetLibrary.instructPresetsRaw().firstOrNull {
                 it["name"]?.jsonPrimitive?.contentOrNull == name
             } ?: UserPresetStore.load(context, "instruct", name)
-            "sampler" -> PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }?.settings
+            "sampler" -> PresetLibrary.samplerPresets(samplerType).firstOrNull { it.name == name }?.settings
                 ?: UserPresetStore.load(context, "sampler", name)
             "sysprompt" -> PresetLibrary.systemPromptPresets().firstOrNull { it.name == name }?.settings
                 ?: UserPresetStore.load(context, "sysprompt", name)
@@ -172,7 +177,7 @@ fun PresetsScreen(onBack: () -> Unit) {
 
     fun proceedSamplerImport(name: String, content: JsonObject) {
         val exists = UserPresetStore.list(context, "sampler").contains(name) ||
-            PresetLibrary.samplerPresets("openai").any { it.name == name }
+            PresetLibrary.samplerPresets(samplerType).any { it.name == name }
         if (exists) {
             pendingOverwrite = name to content
         } else {
@@ -340,7 +345,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             PresetSection(
                 title = "采样预设（OpenAI）",
                 items = listOf("" to false) +
-                    (PresetLibrary.samplerPresets("openai").map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
+                    (PresetLibrary.samplerPresets(samplerType).map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
                     userPresets["sampler"].orEmpty().map { it to true },
                 selected = prefs.samplerPreset,
                 onSelect = { apply("sampler", it) },
@@ -529,6 +534,18 @@ fun PresetsScreen(onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { masterImportSections = null }) { Text("取消") } },
         )
+    }
+}
+
+/** 活动连接协议 → 采样预设目录（官方 sampler presets：openai/textgen/novel/kobold）。 */
+private fun activeSamplerPresetType(context: android.content.Context): String {
+    val profile = ProviderStore(File(context.filesDir, "provider")).load() ?: return "openai"
+    val provider = ProviderRegistry.get(profile.providerId) ?: return "openai"
+    return when (provider.protocol) {
+        "novel" -> "novel"
+        "kobold" -> "kobold"
+        "textgenerationwebui" -> "textgen"
+        else -> "openai"
     }
 }
 

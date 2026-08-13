@@ -903,6 +903,28 @@
       "docs_url": "https://lmstudio.ai/docs/local-server",
       "default_max_tokens": 4096,
       "default_context_window": 32768
+    },
+    {
+      "id": "textgenerationwebui",
+      "display_name": "Text Generation WebUI（Oobabooga）",
+      "description": "本地/远程 text-generation-webui（/api/v1/generate），也兼容 KoboldCPP 等 Text Completion 服务",
+      "icon": "",
+      "protocol": "textgenerationwebui",
+      "auth_type": "none",
+      "base_url": "http://127.0.0.1:5000",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [],
+      "default_max_tokens": 300,
+      "default_context_window": 4095,
+      "model_contexts": {},
+      "requires_key": false,
+      "docs_url": "https://github.com/oobabooga/text-generation-webui"
     }
   ]
 }

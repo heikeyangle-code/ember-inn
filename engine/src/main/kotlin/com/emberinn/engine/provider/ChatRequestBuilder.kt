@@ -103,6 +103,10 @@ data class ProviderRequestOptions(
     val safetySettings: JsonArray = JsonArray(emptyList()),
     /** 官方 createGenerationParameters.stop / 后端 request.body.stop。 */
     val stopSequences: List<String> = emptyList(),
+    /** Text Completion（textgen）专用：最终提示词（story string 组装由调用方完成）。 */
+    val textGenPrompt: String? = null,
+    /** Text Completion（textgen）专用：textgenerationwebui_settings（默认见 TextgenSettingsDefaults）。 */
+    val textGenSettings: JsonObject? = null,
 ) {
     val hasTools: Boolean get() = tools.isNotEmpty()
 

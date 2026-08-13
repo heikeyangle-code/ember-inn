@@ -16,13 +16,16 @@ import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
+import com.emberinn.engine.provider.TextgenSettingsDefaults
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.ExtensionPromptEngine
+import com.emberinn.engine.prompt.InstructMode
 import com.emberinn.engine.prompt.CustomStoppingConfig
 import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
+import com.emberinn.app.ui.settings.PresetSettingsStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -367,6 +370,38 @@ class ChatRepository(context: Context) {
             sampler = sampler.copy(maxTokens = effectiveMaxTokens),
             contextWindow = effectiveContextWindow,
         )
+        // Text Completion（textgen）：官方 getTextGenGenerationData(finalPrompt,...) 路径。
+        // 提示词 = 官方 createRawPrompt（story string/instruct/历史/输出序列，引擎差分）→ 请求体由 TextgenRequestBodyEngine 差分。
+        if (provider.protocol == "textgenerationwebui") {
+            val presetState = PresetSettingsStore.load(context)
+            val env = MacroEnv(user = userName, char = charName)
+            val raw = InstructMode.createRawPrompt(
+                prompt = prepared.messages,
+                api = "textgenerationwebui",
+                instructOverride = false,
+                quietToLoud = false,
+                systemPrompt = "",
+                prefill = "",
+                instruct = presetState.instruct,
+                context = presetState.context,
+                env = env,
+            )
+            val finalPrompt = (raw as InstructMode.RawPrompt.Text).text
+            return client.streamChatCompletionsAsync(
+                provider = provider,
+                profile = effectiveProfile,
+                messages = prepared.messages,
+                onDelta = onDelta,
+                onDone = onDone,
+                onError = onError,
+                options = finalOptions.copy(
+                    textGenPrompt = finalPrompt,
+                    textGenSettings = TextgenSettingsDefaults.forProfile(provider, effectiveProfile),
+                ),
+                onReasoning = onReasoning,
+                onToolCalls = onToolCalls,
+            )
+        }
         // 官方 createGenerationParameters：isO1（openai/azure_openai + o1-2024-12-17/o1）强制非流式
         if (provider.id in setOf("openai", "azure") && effectiveModel in setOf("o1-2024-12-17", "o1")) {
             return try {
