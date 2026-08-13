@@ -254,6 +254,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setRequestTokenProbabilities(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(requestTokenProbabilities = v)
     }
+    fun setReasoningEffort(v: String) { _editingSampler.value = _editingSampler.value.copy(reasoningEffort = v) }
+    fun setVerbosity(v: String) { _editingSampler.value = _editingSampler.value.copy(verbosity = v) }
     fun setUseSysprompt(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(useSysprompt = v)
     }

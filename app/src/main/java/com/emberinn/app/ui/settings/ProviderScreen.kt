@@ -513,6 +513,26 @@ fun ProviderDetailScreen(
                 sampler.requestTokenProbabilities,
                 vm::setRequestTokenProbabilities,
             )
+            Text("reasoning_effort（推理强度）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("auto", "min", "low", "medium", "high", "max").forEach { value ->
+                    FilterChip(
+                        selected = sampler.reasoningEffort == value,
+                        onClick = { vm.setReasoningEffort(value) },
+                        label = { Text(value) },
+                    )
+                }
+            }
+            Text("verbosity（详细程度，gpt-5 系）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("auto", "low", "medium", "high").forEach { value ->
+                    FilterChip(
+                        selected = (sampler.verbosity ?: "auto") == value,
+                        onClick = { vm.setVerbosity(if (value == "auto") "auto" else value) },
+                        label = { Text(value) },
+                    )
+                }
+            }
             SwitchRow(
                 "use_sysprompt（Claude/Gemini system 独立角色，官方默认关）",
                 sampler.useSysprompt,
@@ -529,6 +549,13 @@ fun ProviderDetailScreen(
             }
             DecimalRow("频率惩罚（frequencyPenalty）", sampler.frequencyPenalty.toString()) { v ->
                 vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
+            }
+            // 协议专属采样参数（对照官方 textgen/novel/kobold 面板）
+            when (provider.protocol) {
+                "textgenerationwebui" -> ProtocolSamplerEditors.TextGenEditor(context)
+                "novel" -> ProtocolSamplerEditors.NovelEditor(context)
+                "kobold" -> ProtocolSamplerEditors.KoboldEditor(context)
+                else -> Unit
             }
             EmberTextField(
                 value = contextWindow.toString(),
