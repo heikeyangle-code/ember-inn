@@ -13,6 +13,7 @@ import com.emberinn.engine.media.MediaEngine
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.ExtensionPrompt
 import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.PromptOrderEntry
 import com.emberinn.engine.prompt.AuthorsNoteBuilder
 import com.emberinn.engine.prompt.AuthorsNoteEngine
 import com.emberinn.engine.prompt.AuthorsNoteMetadata
@@ -149,6 +150,10 @@ class ChatPromptFactory {
         vectorFileText: (String) -> String? = { null },
         extensionPrompts: Map<String, ExtensionPrompt> = emptyMap(),
         inChatExtensions: List<PromptItem> = emptyList(),
+        /** Prompt Manager 用户提示项（官方 serviceSettings.prompts；空=默认集）。 */
+        userPrompts: List<PromptItem> = emptyList(),
+        /** Prompt Manager 用户顺序（官方 prompt_order；空=调用方注入默认顺序）。 */
+        userOrder: List<PromptOrderEntry> = emptyList(),
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
         regexScopedAllowed: Boolean = false,
@@ -674,6 +679,8 @@ class ChatPromptFactory {
                 personaInPrompt = personaInPrompt,
                 extensionPrompts = effectiveExtensions + vectorTransform?.extensionPrompts.orEmpty(),
                 inChatExtensions = effectiveInChat + worldInfoDepthPrompts,
+                userPrompts = userPrompts,
+                userOrder = userOrder,
                 maxContextTokens = maxContextTokens,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,

@@ -31,6 +31,7 @@ import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.data.ManualSendResult
+import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.data.SlashMessageActions
 import com.emberinn.app.data.TranslateClient
 import com.emberinn.app.data.TtsReader
@@ -2487,6 +2488,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorDataBank = vectorDataBank,
                 vectorFileText = { path -> rag.readDataBankText(path) },
                 inChatExtensions = inChatExtensions,
+                userPrompts = PromptManagerPrefs.prompts(getApplication()),
+                userOrder = PromptManagerPrefs.order(getApplication()),
                 worldInfoSettings = worldInfoSettings,
                 globalRegexScripts = globalRegexScripts,
                 regexScopedAllowed = regexScopedAllowed,
