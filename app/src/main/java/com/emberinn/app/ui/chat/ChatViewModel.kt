@@ -199,6 +199,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** dryRun 提示词预览：只总装不发送（官方 Generate dryRun），结果供 UI 展示。 */
     fun previewPrompt() {
         if (_isStreaming.value) return
+        if (!isProviderConfigured()) {
+            refreshProviderConfigured()
+            _notice.value = "（未配置模型，无法预览提示词。）"
+            return
+        }
         _promptPreview.value = null
         startStream(
             history = chatStore.messages(sessionId),
@@ -2584,12 +2589,22 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
                             _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
                         }
-                        // 官方 WORLD_INFO_ACTIVATED → 自动执行 automationId 匹配的快捷回复
-                        runAutoExecutions(info.activatedWorldInfo, type)
+                        // 官方 WORLD_INFO_ACTIVATED → 自动执行 automationId 匹配的快捷回复（dryRun 不执行）
+                        if (!previewOnly) runAutoExecutions(info.activatedWorldInfo, type)
                     }
                 },
             )
-            if (previewOnly) return@launch
+            if (previewOnly) {
+                // dryRun 不进入生成态：任何路径（含无 profile 提前返回）都要复位，否则卡“生成中”
+                streamActive = false
+                _isStreaming.value = false
+                _isImpersonating.value = false
+                _streamingReasoning.value = ""
+                streamContinueMode = false
+                generatingSwipe = false
+                pendingGroupGenId = null
+                return@launch
+            }
             if (streamActive) {
                 streamSession = session
                 if (session == null) {
