@@ -1386,7 +1386,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val substitutedText = MacroEngine.substitute(storedText, MacroEnv(user = userName, char = charName))
         chatStore.append(sessionId, true, substitutedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
         _pendingMedia.value = emptyList()
-        refreshMessages()
+        refreshMessagesAppendOnly()
         // 官方 translate 扩展：auto_mode=inputs/both 时用户消息自动翻译（mes 换译文、原文进 extra.display_text）
         translateOutgoing(chatStore.messages(sessionId).lastIndex)
         val voice = VoicePrefs.read(getApplication())
@@ -1440,7 +1440,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
                 else -> {
                     appendAiReply(partial)
-                    refreshMessages()
                 }
             }
         }
@@ -2818,14 +2817,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 _lastReasoning.value = _streamingReasoning.value
                 if (reply.isNotBlank()) {
                     appendAiReply(reply)
-                    refreshMessages()
                 } else {
                     _notice.value = "（模型只返回了思考过程，没有生成正文——多半是“最大回复 tokens”太小被思考占满。去 设置→提供商→最大回复 tokens 调大（如 8192），或关闭思考模式。）"
                 }
             }
             reply.isNotBlank() -> {
                 appendAiReply(reply)
-                refreshMessages()
                 // 官方 power_user.auto_swipe：过滤命中（最短长度/黑名单阈值）→ 自动生成新变体
                 if (behavior.autoSwipe && com.emberinn.engine.prompt.SwipeEngine.generatedTextFiltered(
                         text = reply,
@@ -2884,7 +2881,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 genFinished = java.time.Instant.now().toString(),
                 reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
             )
-            refreshMessages()
+            refreshMessagesAppendOnly()
         }
     }
 
@@ -2946,6 +2943,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)
         displayCache.clear()
+    }
+
+    /** 仅“末尾追加”后的轻量刷新：旧消息索引不变，显示缓存仍有效，不全表失效。 */
+    private fun refreshMessagesAppendOnly() {
+        _messages.value = chatStore.messages(sessionId)
     }
 
     /** 世界书命中面板行（README 状态面板：名字/关键词/常驻/位置/token）。 */
