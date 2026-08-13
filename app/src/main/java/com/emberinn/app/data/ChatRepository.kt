@@ -25,6 +25,7 @@ import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
+import com.emberinn.app.ui.settings.NovelSettingsStore
 import com.emberinn.app.ui.settings.PresetSettingsStore
 import com.emberinn.app.ui.settings.TextgenSettingsStore
 import java.io.File
@@ -382,14 +383,15 @@ class ChatRepository(context: Context) {
             sampler = sampler.copy(maxTokens = effectiveMaxTokens),
             contextWindow = effectiveContextWindow,
         )
-        // Text Completion（textgen）：官方 getTextGenGenerationData(finalPrompt,...) 路径。
-        // 提示词 = 官方 createRawPrompt（story string/instruct/历史/输出序列，引擎差分）→ 请求体由 TextgenRequestBodyEngine 差分。
-        if (provider.protocol == "textgenerationwebui") {
+        // Text Completion（textgen/novel）：官方 getTextGenGenerationData / getNovelGenerationData 路径。
+        // 提示词 = 官方 createRawPrompt（story string/instruct/历史/输出序列，引擎差分）；
+        // textgen 请求体由 TextgenRequestBodyEngine 差分，novel 请求体由 NovelRequestBodyEngine 差分。
+        if (provider.protocol == "textgenerationwebui" || provider.protocol == "novel") {
             val presetState = PresetSettingsStore.load(context)
             val env = MacroEnv(user = userName, char = charName)
             val raw = InstructMode.createRawPrompt(
                 prompt = prepared.messages,
-                api = "textgenerationwebui",
+                api = provider.protocol,
                 instructOverride = false,
                 quietToLoud = false,
                 systemPrompt = "",
@@ -399,6 +401,23 @@ class ChatRepository(context: Context) {
                 env = env,
             )
             val finalPrompt = (raw as InstructMode.RawPrompt.Text).text
+            val opts = if (provider.protocol == "novel") {
+                finalOptions.copy(
+                    textGenPrompt = finalPrompt,
+                    textGenIsContinue = isContinue,
+                    novelSettings = NovelSettingsStore.load(context),
+                )
+            } else {
+                finalOptions.copy(
+                    textGenPrompt = finalPrompt,
+                    textGenIsContinue = isContinue,
+                    textGenSettings = TextgenSettingsDefaults.forProfile(
+                        provider,
+                        effectiveProfile,
+                        TextgenSettingsStore.load(context),
+                    ),
+                )
+            }
             return client.streamChatCompletionsAsync(
                 provider = provider,
                 profile = effectiveProfile,
@@ -406,14 +425,7 @@ class ChatRepository(context: Context) {
                 onDelta = onDelta,
                 onDone = onDone,
                 onError = onError,
-                options = finalOptions.copy(
-                    textGenPrompt = finalPrompt,
-                    textGenSettings = TextgenSettingsDefaults.forProfile(
-                        provider,
-                        effectiveProfile,
-                        TextgenSettingsStore.load(context),
-                    ),
-                ),
+                options = opts,
                 onReasoning = onReasoning,
                 onToolCalls = onToolCalls,
             )

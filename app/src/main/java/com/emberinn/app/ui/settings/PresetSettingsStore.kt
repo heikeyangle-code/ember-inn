@@ -117,6 +117,34 @@ object PresetSettingsStore {
         val repo = ChatRepository(context)
         val profile = repo.profile() ?: return false
         val provider = ProviderRegistry.get(profile.providerId)
+        if (provider?.protocol == "novel") {
+            val preset = PresetLibrary.samplerPresets("novel").firstOrNull { it.name == name }?.settings
+                ?: UserPresetStore.load(context, "sampler", name) ?: return false
+            val base = NovelSettingsStore.load(context)
+            val defaults = buildJsonObject {
+                put("default_order", kotlinx.serialization.json.JsonArray(listOf(
+                    "temperature", "tail_free_sampling", "repetition_penalty", "top_p", "top_k",
+                ).map { JsonPrimitive(it) }))
+                put("default_preamble", JsonPrimitive(""))
+            }
+            val applied = PresetApplyEngine.applyNovelPreset(base, preset, defaults)
+            NovelSettingsStore.save(context, applied)
+            // 官方 setGenerationParamsFromPreset：max_length/genamt → 连接上下文/最大回复
+            val genParams = PresetApplyEngine.applyGenerationParamsFromPreset(
+                preset, profile.sampler.maxTokens, profile.contextWindow,
+            )
+            if (genParams.maxContext != profile.contextWindow || genParams.amountGen != profile.sampler.maxTokens) {
+                repo.saveProfile(
+                    profile.copy(
+                        contextWindow = genParams.maxContext,
+                        sampler = profile.sampler.copy(maxTokens = genParams.amountGen),
+                    ),
+                    active = true,
+                )
+            }
+            PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = name))
+            return true
+        }
         if (provider?.protocol == "textgenerationwebui") {
             val preset = PresetLibrary.samplerPresets("textgen").firstOrNull { it.name == name }?.settings
                 ?: UserPresetStore.load(context, "sampler", name) ?: return false

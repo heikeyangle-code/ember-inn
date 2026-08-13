@@ -107,6 +107,12 @@ data class ProviderRequestOptions(
     val textGenPrompt: String? = null,
     /** Text Completion（textgen）专用：textgenerationwebui_settings（默认见 TextgenSettingsDefaults）。 */
     val textGenSettings: JsonObject? = null,
+    /** Text Completion 专用：生成类型语义（impersonate/continue 影响请求体分支）。 */
+    val textGenIsImpersonate: Boolean = false,
+    val textGenIsContinue: Boolean = false,
+    val textGenType: String = "normal",
+    /** NovelAI 专用：应用 novel 预设后的设置（字段见 NovelGenerationInput）。 */
+    val novelSettings: JsonObject? = null,
 ) {
     val hasTools: Boolean get() = tools.isNotEmpty()
 

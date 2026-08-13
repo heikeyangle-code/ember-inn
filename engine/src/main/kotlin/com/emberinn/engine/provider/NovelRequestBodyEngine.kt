@@ -58,6 +58,52 @@ object NovelRequestBodyEngine {
     private const val TOKENIZER_LLAMA3 = 3
     private val DEFAULT_ORDER = listOf("temperature", "tail_free_sampling", "repetition_penalty", "top_p", "top_k")
 
+    /** 由“应用 novel 预设后的设置 JSON + 连接档案”组装请求输入（App 传输映射；字段名沿用官方 nai_settings）。 */
+    fun fromSettingsJson(
+        model: String,
+        finalPrompt: String,
+        maxLength: Int,
+        isImpersonate: Boolean,
+        isContinue: Boolean,
+        stoppingStrings: List<String>,
+        requestTokenProbabilities: Boolean,
+        settings: kotlinx.serialization.json.JsonObject?,
+        defaults: NovelGenerationInput = NovelGenerationInput(model = model),
+    ): NovelGenerationInput {
+        fun d(key: String): Double? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
+        fun i(key: String): Int? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
+        fun s(key: String): String? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content
+        return defaults.copy(
+            model = model,
+            temperature = d("temperature") ?: defaults.temperature,
+            minLength = i("min_length") ?: defaults.minLength,
+            tailFreeSampling = d("tail_free_sampling") ?: defaults.tailFreeSampling,
+            repetitionPenalty = d("repetition_penalty") ?: defaults.repetitionPenalty,
+            repetitionPenaltyRange = i("repetition_penalty_range") ?: defaults.repetitionPenaltyRange,
+            repetitionPenaltySlope = d("repetition_penalty_slope") ?: defaults.repetitionPenaltySlope,
+            repetitionPenaltyFrequency = d("repetition_penalty_frequency") ?: defaults.repetitionPenaltyFrequency,
+            repetitionPenaltyPresence = d("repetition_penalty_presence") ?: defaults.repetitionPenaltyPresence,
+            topA = d("top_a") ?: defaults.topA,
+            topP = d("top_p") ?: defaults.topP,
+            topK = i("top_k") ?: defaults.topK,
+            minP = d("min_p") ?: defaults.minP,
+            math1Temp = d("math1_temp") ?: defaults.math1Temp,
+            math1Quad = d("math1_quad") ?: defaults.math1Quad,
+            math1QuadEntropyScale = d("math1_quad_entropy_scale") ?: defaults.math1QuadEntropyScale,
+            typicalP = d("typical_p") ?: defaults.typicalP,
+            mirostatLr = d("mirostat_lr") ?: defaults.mirostatLr,
+            mirostatTau = d("mirostat_tau") ?: defaults.mirostatTau,
+            phraseRepPen = s("phrase_rep_pen") ?: defaults.phraseRepPen,
+            prefix = s("prefix") ?: defaults.prefix,
+            finalPrompt = finalPrompt,
+            maxLength = maxLength,
+            isImpersonate = isImpersonate,
+            isContinue = isContinue,
+            stoppingStrings = stoppingStrings,
+            requestTokenProbabilities = requestTokenProbabilities,
+        )
+    }
+
     fun getTokenizerTypeForModel(model: String): Int = when {
         model.contains("clio") -> TOKENIZER_NERD
         model.contains("kayra") -> TOKENIZER_NERD2

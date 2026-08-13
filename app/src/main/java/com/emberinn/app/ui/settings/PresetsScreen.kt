@@ -537,11 +537,15 @@ fun PresetsScreen(onBack: () -> Unit) {
     }
 }
 
-/** 活动连接协议 → 采样预设目录（官方 sampler presets：openai/textgen；novel/kobold 后端未路由前不暴露）。 */
+/** 活动连接协议 → 采样预设目录（官方 sampler presets：openai/textgen/novel；kobold 后端未路由前不暴露）。 */
 private fun activeSamplerPresetType(context: android.content.Context): String {
     val profile = ProviderStore(File(context.filesDir, "provider")).load() ?: return "openai"
     val provider = ProviderRegistry.get(profile.providerId) ?: return "openai"
-    return if (provider.protocol == "textgenerationwebui") "textgen" else "openai"
+    return when (provider.protocol) {
+        "textgenerationwebui" -> "textgen"
+        "novel" -> "novel"
+        else -> "openai"
+    }
 }
 
 private fun sectionLabel(key: String): String = when (key) {

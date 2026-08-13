@@ -925,6 +925,33 @@
       "model_contexts": {},
       "requires_key": false,
       "docs_url": "https://github.com/oobabooga/text-generation-webui"
+    },
+    {
+      "id": "novel",
+      "display_name": "NovelAI",
+      "description": "NovelAI（Kayra/Clio/Erato），官方 src/endpoints/novelai.js",
+      "icon": "",
+      "protocol": "novel",
+      "auth_type": "bearer",
+      "base_url": "https://api.novelai.net",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [
+        "euterpe-v2",
+        "kayra-v1",
+        "clio-v1",
+        "erato-v1"
+      ],
+      "default_max_tokens": 512,
+      "default_context_window": 8192,
+      "model_contexts": {},
+      "requires_key": true,
+      "docs_url": "https://novelai.net"
     }
   ]
 }

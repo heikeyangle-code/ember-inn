@@ -228,6 +228,18 @@ class LlmClient(
                     onDone()
                     continue
                 }
+                // NovelAI SSE：data: {"token":"...","logprobs":...}，无结束事件，流关闭收尾
+                if (protocol == "novel") {
+                    try {
+                        val obj = json.parseToJsonElement(dataText).jsonObject
+                        (obj["token"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.let {
+                            if (it.isNotEmpty()) onDelta(it)
+                        }
+                    } catch (e: Exception) {
+                        // 对齐官方 SmoothEventSourceStream：坏事件跳过不中断
+                    }
+                    continue
+                }
                 // Text Completion SSE：data: {"event":"text_stream","text":...} / stream_end
                 if (protocol == "textgenerationwebui") {
                     try {
@@ -386,6 +398,36 @@ class LlmClient(
                 val url = base.trimEnd('/') + (if (effectiveStream) "/api/v1/stream" else "/api/v1/generate")
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
                 applyAuth(builder, provider, profile, anthropicVersion = false)
+            }
+            "novel" -> {
+                // 官方 src/endpoints/novelai.js：kayra/erato 走 text.novelai.net，其余 api.novelai.net
+                val apiBase = if (profile.model.contains("kayra") || profile.model.contains("erato")) {
+                    "https://text.novelai.net"
+                } else {
+                    base.trimEnd('/')
+                }
+                val url = apiBase.trimEnd('/') + (if (effectiveStream) "/ai/generate-stream" else "/ai/generate")
+                val input = NovelRequestBodyEngine.fromSettingsJson(
+                    model = profile.model,
+                    finalPrompt = options.textGenPrompt ?: "",
+                    maxLength = profile.sampler.maxTokens,
+                    isImpersonate = options.textGenIsImpersonate,
+                    isContinue = options.textGenIsContinue,
+                    stoppingStrings = options.stopSequences,
+                    requestTokenProbabilities = profile.sampler.requestTokenProbabilities,
+                    settings = options.novelSettings,
+                    defaults = NovelGenerationInput(
+                        model = profile.model,
+                        temperature = profile.sampler.temperature,
+                        topP = profile.sampler.topP,
+                        topK = profile.sampler.topK,
+                        minP = profile.sampler.minP,
+                        repetitionPenalty = profile.sampler.repetitionPenalty,
+                    ),
+                )
+                val body = NovelRequestBodyEngine.build(input)
+                builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
+                builder.header("Authorization", "Bearer ${profile.apiKey}")
             }
             "mistral" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
@@ -656,6 +698,7 @@ class LlmClient(
                 ?.mapNotNull { it.jsonObject["text"]?.asText() }
                 ?.joinToString("").orEmpty()
             "textgenerationwebui" -> ResponseDataExtractor.extractMessageFromData(root, "textgenerationwebui")
+            "novel" -> ResponseDataExtractor.extractMessageFromData(root, "novel")
             "cohere" -> {
                 val message = root["message"]?.jsonObject ?: return ""
                 when (val content = message["content"]) {
