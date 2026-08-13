@@ -138,7 +138,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
 | 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 444 |
 | Prompt Manager 纯逻辑 | prompt-manager-official.mjs | PromptManagerDiffTest | 29 |
-| NovelAI 请求体 | novel-body-official.mjs | NovelBodyDiffTest | 6 |
+| NovelAI 请求体 | novel-body-official.mjs | NovelBodyDiffTest | 12 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
 | SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
