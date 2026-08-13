@@ -232,10 +232,6 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             behavior = behavior.copy(namesAsStopStrings = it)
                             BehaviorPrefs.save(context, behavior)
                         }
-                        BehaviorToggle("新消息自动滚到底部（auto_scroll_chat_to_bottom）", behavior.autoScrollChatToBottom) {
-                            behavior = behavior.copy(autoScrollChatToBottom = it)
-                            BehaviorPrefs.save(context, behavior)
-                        }
                         BehaviorToggle("消息显示 token 数（message_token_count）", behavior.messageTokenCount) {
                             behavior = behavior.copy(messageTokenCount = it)
                             BehaviorPrefs.save(context, behavior)

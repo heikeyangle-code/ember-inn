@@ -15,7 +15,6 @@ import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.icons.PhosphorIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
-import com.emberinn.app.ui.settings.BehaviorPrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
@@ -522,10 +521,8 @@ fun ChatScreen(
             }
     }
     // 用户上滑看历史期间新消息到了不拽走；发送/快捷回复重新打开跟随时才回到最新。
-    // 官方 auto_scroll_chat_to_bottom：关闭时新消息不自动滚底（默认开）。
-    val autoScrollToBottom = remember { BehaviorPrefs.load(context).autoScrollChatToBottom }
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && followBottom && autoScrollToBottom) {
+        if (messages.isNotEmpty() && followBottom) {
             // 首帧尚未测量时 animateScrollToItem 会被吞甚至越界：先等列表布局出条目再滚。
             snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
             listState.animateScrollToItem(0)

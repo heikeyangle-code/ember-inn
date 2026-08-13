@@ -590,7 +590,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
  MessageRow 派生字段 remember(el) 一次缓存
 - 自动触底：`reverseLayout=true`，`firstVisibleItemIndex==0` 即贴底（官方 LazyColumn 语义）；上滑暂停、回底恢复；新消息/流式增长底部天然钉住，不再 scrollToItem/layoutInfo 采样
-- 登记未做：LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器（auto_scroll_chat_to_bottom 已做，见 8.5）
+- 登记未做：LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器（auto_scroll_chat_to_bottom 开关未做，见 8.5）
 
 ### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
 - CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
@@ -638,7 +638,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
   show_external_models、Prompt Manager 面板/dryRun 预览（引擎字段部分已有，见 12.12/12.16）。
 - 预设：保存/删除/应用已接（见 3.7）；“设为默认”官方无此概念；context/instruct/sysprompt 运行时消费已接 textgen 路径。
 - 发送链路未接清单见 12.16。
-- ✅ auto_scroll_chat_to_bottom 开关已做（设置→消息渲染→行为，默认开，官方 power-user 默认 true）。
+- auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项，见 8.2 登记）。
 
 ### 8.6 与官方不一致登记（防漏机制）
 

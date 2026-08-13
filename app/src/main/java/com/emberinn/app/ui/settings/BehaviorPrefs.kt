@@ -11,8 +11,6 @@ data class BehaviorSettings(
     val pinExamples: Boolean = false,
     val stripExamples: Boolean = false,
     val namesAsStopStrings: Boolean = true,
-    /** 官方 power_user.auto_scroll_chat_to_bottom（默认 true）。 */
-    val autoScrollChatToBottom: Boolean = true,
     val messageTokenCount: Boolean = false,
     val autoSwipe: Boolean = false,
     val autoSwipeMinimumLength: Int = 0,
@@ -34,7 +32,6 @@ object BehaviorPrefs {
             pinExamples = p.getBoolean("pin_examples", false),
             stripExamples = p.getBoolean("strip_examples", false),
             namesAsStopStrings = p.getBoolean("names_as_stop_strings", true),
-            autoScrollChatToBottom = p.getBoolean("auto_scroll_chat_to_bottom", true),
             messageTokenCount = p.getBoolean("message_token_count_enabled", false),
             autoSwipe = p.getBoolean("auto_swipe", false),
             autoSwipeMinimumLength = p.getInt("auto_swipe_minimum_length", 0),
@@ -52,7 +49,6 @@ object BehaviorPrefs {
             .putBoolean("pin_examples", s.pinExamples)
             .putBoolean("strip_examples", s.stripExamples)
             .putBoolean("names_as_stop_strings", s.namesAsStopStrings)
-            .putBoolean("auto_scroll_chat_to_bottom", s.autoScrollChatToBottom)
             .putBoolean("message_token_count_enabled", s.messageTokenCount)
             .putBoolean("auto_swipe", s.autoSwipe)
             .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
