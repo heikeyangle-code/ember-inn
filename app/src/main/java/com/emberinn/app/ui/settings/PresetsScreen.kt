@@ -596,39 +596,76 @@ private fun PresetSection(
     onDeleteUser: (String) -> Unit,
     emptyLabel: String? = null,
 ) {
-    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+    // 系统预设按类型默认折叠：展开才查看，避免一屏全铺开
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = selected.ifEmpty { emptyLabel ?: "默认" }
+    Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+            .padding(top = 14.dp, bottom = 2.dp),
+    ) {
+        Text(
+            if (expanded) "▼" else "▶",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline,
+        )
+        Spacer(Modifier.width(6.dp))
         Text(
             title,
             style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f).padding(top = 14.dp, bottom = 4.dp),
+            modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onSaveCurrent, modifier = Modifier.padding(top = 8.dp)) {
-            Text("保存当前为预设")
-        }
+        Text(
+            "当前：$selectedName",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            "（${items.size}）",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+        )
     }
-    items.forEach { (name, isUser) ->
+    if (expanded) {
         Row(
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onSelect(name) }
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
+            Spacer(Modifier.width(16.dp))
             Text(
-                if (name.isEmpty()) (emptyLabel ?: "默认") else name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (selected == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
+                "点击预设即应用；系统预设 ${items.count { !it.second }} 个，我的预设 ${items.count { it.second }} 个",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
             )
-            if (selected == name) {
-                Text("✓", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
-            if (isUser) {
-                IconButton(onClick = { onDeleteUser(name) }, modifier = Modifier.size(28.dp)) {
-                    Icon(PhosphorIcons.Delete, contentDescription = "删除用户预设", modifier = Modifier.size(14.dp))
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onSaveCurrent) { Text("保存当前为预设") }
+        }
+        items.forEach { (name, isUser) ->
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(name) }
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    if (name.isEmpty()) (emptyLabel ?: "默认") else name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (selected == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (selected == name) {
+                    Text("✓", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+                if (isUser) {
+                    IconButton(onClick = { onDeleteUser(name) }, modifier = Modifier.size(28.dp)) {
+                        Icon(PhosphorIcons.Delete, contentDescription = "删除用户预设", modifier = Modifier.size(14.dp))
+                    }
                 }
             }
+            HorizontalDivider(modifier = Modifier.padding(start = 4.dp))
         }
-        HorizontalDivider(modifier = Modifier.padding(start = 4.dp))
     }
 }
