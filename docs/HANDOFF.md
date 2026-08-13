@@ -274,7 +274,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 
 **预设缺口清单（用户确认共 3 项，第 1 项经官方 1.18 源码核实不存在，第 2 项部分完成，第 3 项已完成）**：
 1. 采样预设逐字段勾选（`settings_checked`）：**官方 1.18 源码无此字段**（openai.js/preset-manager.js/预设 json 全仓搜索无），按 1:1 基线不实现、不发明新功能。
-2. textgen 后端：✅ TextgenRequestBodyEngine 差分 27 例（官方 createTextGenGenerationData 全分支）；✅ LlmClient textgenerationwebui 路由（/api/v1/generate + /api/v1/stream SSE + 响应解析）；✅ providers.json 新增 textgenerationwebui 条目；✅ 故事串消费（createRawPrompt：context/instruct/sysprompt + 历史 + 输出序列）；✅ PresetsScreen 按活动协议暴露 textgen/novel/kobold 采样预设。仍剩：textgen 全字段设置 UI（当前用官方默认+连接档案映射）、novel/kobold 的 LlmClient 路由（Novel 请求体已差分）、mancer/featherless/infermaticai 等 provider 条目。
+2. textgen/Novel/Kobold 后端：✅ 全部路由完成——TextgenRequestBodyEngine 差分 27 例 + NovelRequestBodyEngine 差分 12 例 + KoboldRequestBodyEngine 差分 12 例；LlmClient 三条协议分支（非流式 + SSE）；providers.json 新增 textgenerationwebui/novel/kobold 条目；createRawPrompt 故事串消费；PresetsScreen 按协议暴露三套采样预设并真正应用（各 SettingsStore）；ProviderScreen 协议采样编辑器对照官方面板。仍剩：mancer/featherless/infermaticai 等 textgen provider 条目（协议已通，仅缺条目与对应 model 字段映射）。
 3. `/preset` fuzzy 回退：✅ 已完成（Fuse.js 7.1 移植 + 27 例差分）。
 
 **仍登记（诚实边界）**：
@@ -629,13 +629,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 斜杠异步命令 | ✅ executeAsync + /gen /genraw（官方无 /while） |
 
 **剩余已知半成品（继续治理中）**：
-- Captions：refine_mode 确认弹层未接、prompt_ask 未接；source 仅 multimodal（extras/local/horde 未接）。
+- Captions：✅ refine_mode 确认弹层 + prompt_ask 每次询问已接（ChatScreen/VM）；source 仅 multimodal（extras/local/horde 未接）。
 - 表情精灵：LLM 分类未接（官方 expressions LLM 模式）；extra.sprite 不持久化（渲染期按正文确定性分类，同消息结果稳定）。
 - 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
 - TTS：✅ 朗读前 substituteParams 宏替换已接（官方 tts/index.js:674）；多语音/对话专属/引号专属未实现。
 - 主题配方：字体文件下载、风格档位映射未做。
-- 设置项 UI 未接：reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、
-  show_external_models、Prompt Manager 面板/dryRun 预览（引擎字段部分已有，见 12.12/12.16）。
+- 设置项 UI 未接：reverse_proxy/custom_headers/assistant_prefill、max_context_unlocked、show_external_models（引擎字段部分已有，见 12.12/12.16）；dryRun 预览已做完整；continue_prefill 引擎参数已有、App 未接默认 false；reasoning_effort/verbosity/use_sysprompt/request_token_probabilities 已接 UI。
 - 预设：保存/删除/应用已接（见 3.7）；“设为默认”官方无此概念；context/instruct/sysprompt 运行时消费已接 textgen 路径。
 - 发送链路未接清单见 12.16。
 - auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项，见 8.2 登记）。
