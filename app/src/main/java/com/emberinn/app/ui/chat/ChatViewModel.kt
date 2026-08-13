@@ -1396,11 +1396,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val storedText = if (messageBias.isNotBlank()) BiasEngine.removeMacros(substitutedText) else substitutedText
         chatStore.append(sessionId, true, storedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
         // 官方 sendMessageAsUser：message_token_count_enabled 时用户消息也写 extra.token_count
+        // （官方在 removeMacros 之前按 substituteParams 后的文本计数）
         if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
             val model = chatRepository.profile()?.model.orEmpty()
             val count = runCatching {
-                com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model).count(storedText)
-            }.getOrDefault(storedText.length / 4)
+                com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model).count(substitutedText)
+            }.getOrDefault(substitutedText.length / 4)
             val idx = chatStore.messages(sessionId).lastIndex
             if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
         }
