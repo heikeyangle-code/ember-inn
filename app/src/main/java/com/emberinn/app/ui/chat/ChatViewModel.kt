@@ -2745,12 +2745,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
         val wasImpersonating = _isImpersonating.value
         val wasSwipe = generatingSwipe
-        val rawReply = if (GlobalRegexPrefs.enabled(getApplication())) {
-            RegexPipelineEngine.apply(_streamingText.value, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
-        } else {
-            _streamingText.value
-        }
-        // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）
+        // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）；
+        // AI_OUTPUT 正则按官方位置在停用词裁剪之后注入（引擎 regexTransform）
         val behavior = BehaviorPrefs.load(getApplication())
         val profileForClean = chatRepository.profile()
         val apiForClean = profileForClean?.let {
@@ -2771,7 +2767,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             ),
         )
         val reply = CleanUpMessageEngine.clean(
-            getMessage = rawReply,
+            getMessage = _streamingText.value,
             config = CleanUpConfig(
                 isImpersonate = wasImpersonating,
                 isContinue = continueMode,
@@ -2787,6 +2783,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 userPromptBias = behavior.userPromptBias.takeIf { it.isNotBlank() },
                 includeUserPromptBias = behavior.showUserPromptBias,
             ),
+            regexTransform = { text ->
+                if (GlobalRegexPrefs.enabled(getApplication())) {
+                    RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
+                } else {
+                    text
+                }
+            },
         )
         when {
             wasImpersonating -> {
