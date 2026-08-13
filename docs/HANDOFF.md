@@ -263,7 +263,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 
 **App**：
 - 预设页（PresetsScreen）：五类选择即应用（context 写 trim_sentences/names_as_stop_strings→BehaviorPrefs、example_separator→RenderPrefs；sampler 选中即应用到当前活动连接；reasoning 进总装）；每类“保存当前为预设”（引擎过滤语义）；用户预设删除；单预设文件导入（官方 legacy 识别顺序，openai 采样按官方不校验字段）；**多区段 master 导入/导出**（instruct/context/sysprompt/reasoning/srw + textgen preset 区段，导入时按官方全部勾选默认）。
-- `/preset` 斜杠命令：精确匹配（引擎差分）；fuzzy 回退子串近似（Fuse 未移植，8.6 登记）。
+- `/preset` 斜杠命令：exact + Fuse.js 7.1 模糊回退（`preset-fuzzy-official.mjs` 差分 27 例，真实 fuse.js@7.1.0 对拍）。
 - 官方 openai 预设导入确认已接：敏感字段（reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/
   include_headers/vertexai_region/express_project_id/azure_base_url/deployment_name/workers_ai_account_id）确认剥离 + 同名覆盖确认。
 - bind_preset_to_connection 开关已接（官方默认 true；关闭时应用采样预设跳过连接类字段）。
@@ -271,6 +271,11 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 - 用户预设同名覆盖官方打包预设（官方服务端同名覆盖语义），列表去重显示。
 - 预设存储：官方打包（engine resources）+ 用户预设 filesDir/presets/{type}/{name}.json（官方 data/default-user/content/presets/{type} 语义）。
 - reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
+
+**预设缺口清单（用户确认共 3 项，第 3 项已完成）**：
+1. 采样预设逐字段勾选（官方 `settings_checked`）：引擎过滤逻辑可差分，App 接勾选 UI + 存储（待做）。
+2. textgen/NovelAI 后端 → context/instruct/sysprompt 运行时消费 + textgen/novel/kobold 采样预设（6/24/6）暴露：最大项；Novel 请求体 1:1 已完成，textgen 差分待做。
+3. `/preset` fuzzy 回退：✅ 已完成（Fuse.js 7.1 移植 + 27 例差分）。
 
 **仍登记（诚实边界）**：
 - context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
@@ -647,7 +652,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 人设搜索 | 官方 FilterHelper 用 Fuse.js 模糊搜索（name 权重 20 + description 权重 3，按相关度排序）；App 为名称/描述子串过滤，无相关度排序 | 🟡 UI 近似 |
 | 人设同步 force_avatar | 官方 syncUserNameToPersona 写 `getThumbnailUrl('persona', user_avatar)` 缩略图 URL；App 写本地头像路径（导出 jsonl 时该字段为本地路径，官方无法解析） | 🟡 App 边界 |
 | 人设备份头像 | 官方备份只含 avatar key（头像文件在服务端，缺失时上传默认头像）；App 备份同样只含 key，恢复时本地无该头像文件则回退默认头像 | 🟡 等价边界 |
-| /preset fuzzy | 官方 presetCommandCallback 精确匹配后回退 Fuse.js 模糊；App 精确匹配（引擎差分 82 例内锁定）后回退子串近似（Fuse 未移植） | 🟡 近似 |
+| /preset fuzzy | 官方 presetCommandCallback 精确匹配后回退 Fuse.js 模糊；App exact + Fuse.js 7.1 移植（preset-fuzzy 差分 27 例） | ✅ 差分 |
 | 预设导入 | 官方 openai 采样预设导入不校验字段（敏感字段确认剥离 + 同名覆盖确认已接，引擎差分敏感字段 11 项）、textgen preset 进 textgenerationwebui 管理器；App 合并为单导入入口（legacy 顺序识别为引擎差分），textgen preset 暂存 sampler 目录且不应用（textgen 后端未接） | 🟡 等价边界 |
 | textgen 采样器应用 | 官方 setSettingByName 有 DOM checkbox/text/parseFloat 归约；引擎纯赋值（设置对象落原始值），归约登记剥除（99 例差分内打桩登记） | 🟡 打桩登记 |
 | 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |

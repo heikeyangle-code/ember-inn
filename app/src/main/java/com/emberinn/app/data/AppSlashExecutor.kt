@@ -58,7 +58,7 @@ interface SlashMessageActions {
     suspend fun swipeChat(direction: String): String
     /** /persona-set：mode=lookup/temp/all（官方 setNameCallback；默认 all）。 */
     fun selectPersona(name: String, mode: String): String
-    /** /preset：精确匹配选择 OpenAI 采样预设（官方 presetCommandCallback exact；fuzzy 用子串近似登记）；无参返回当前名。 */
+    /** /preset：选择 OpenAI 采样预设（官方 presetCommandCallback：exact + Fuse.js 7.1 模糊，引擎差分）；无参返回当前名。 */
     fun applyPreset(name: String): String
     /** /trigger：触发一次生成（官方 Generate('normal')；最后用户消息→generate，最后 AI→continue）。 */
     suspend fun triggerGeneration(await: Boolean = false): String
@@ -328,7 +328,7 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
         ),
         SlashCommandDef(
             "preset",
-            description = "选择采样预设（官方 presetCommandCallback：精确匹配，fuzzy 子串近似；无参返回当前预设名）",
+            description = "选择采样预设（官方 presetCommandCallback：exact + Fuse.js 模糊；无参返回当前预设名）",
             rawQuotes = true,
             callback = { inv, _ ->
                 actions.applyPreset(inv.unnamedArgs.joinToString(" ").trim())

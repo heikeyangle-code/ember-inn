@@ -779,9 +779,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val names = com.emberinn.engine.prompt.PresetLibrary.samplerPresets("openai").map { it.name } +
             com.emberinn.app.ui.settings.UserPresetStore.list(getApplication(), "sampler")
         if (name.isBlank()) return prefs.samplerPreset.ifBlank { names.firstOrNull().orEmpty() }
-        // 官方 presetCommandCallback：先精确匹配；fuzzy 回退 App 子串近似（Fuse 未移植，HANDOFF 8.6 登记）
-        val exact = com.emberinn.engine.prompt.PresetApplyEngine.matchPresetNameExact(names, name)
-        val target = exact ?: names.firstOrNull { it.contains(name.trim(), ignoreCase = true) }
+        // 官方 presetCommandCallback：exact + Fuse.js 7.1 模糊回退（引擎差分，见 FusePresetSearch）
+        val target = com.emberinn.engine.prompt.FusePresetSearch.selectPresetName(names, name)
         if (target != null) {
             com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(getApplication(), target)
             _notice.value = "（采样预设已切换：$target）"
