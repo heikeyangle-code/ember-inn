@@ -1215,14 +1215,51 @@ fun ChatScreen(
             title = { Text("提示词预览（dryRun）") },
             text = {
                 Column {
-                    Text(
-                        promptPreview?.first ?: "（正在总装…）",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 420.dp),
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    promptPreview?.let { (_, tokens) ->
-                        Text("Token 合计：$tokens", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    promptPreview?.let { preview ->
+                        if (preview.counts.isNotEmpty()) {
+                            preview.counts.entries
+                                .filter { it.value > 0 }
+                                .sortedBy { it.key }
+                                .forEach { (key, value) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            promptSectionLabel(key),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Text(
+                                            "$value t",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        Text(
+                            "Token 合计：${preview.tokens}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.size(8.dp))
+                    }
+                    // 固定高度 + 外层滚动：内容超过 360dp 可滑动（对话框内嵌滚动失效的根治）
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        Text(
+                            promptPreview?.text ?: "（正在总装…）",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
             },
@@ -4761,6 +4798,19 @@ private fun WorldHitLight(color: Color, label: String) {
         Spacer(Modifier.size(4.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+/** dryRun 分节计数标签（官方 TokenHandler 类型）。 */
+private fun promptSectionLabel(key: String): String = when (key) {
+    "start_chat" -> "起始预留"
+    "prompt" -> "主提示（系统）"
+    "bias" -> "偏置 bias"
+    "nudge" -> "续写引导 nudge"
+    "jailbreak" -> "剧情后指令 jailbreak"
+    "impersonate" -> "冒充 impersonate"
+    "examples" -> "示例对话"
+    "conversation" -> "聊天历史"
+    else -> key
 }
 
 private fun isUser(el: JsonElement): Boolean {

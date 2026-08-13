@@ -43,6 +43,13 @@ import kotlinx.serialization.json.jsonPrimitive
 /** 上下文预算不足、必选提示词放不下（对齐官方 TokenBudgetExceededError 的用户提示）。 */
 class ContextBudgetException(message: String) : Exception(message)
 
+/** dryRun 预览结果：全文 + 总 token + 官方 TokenHandler 分节计数。 */
+data class PromptPreview(
+    val text: String,
+    val tokens: Int,
+    val counts: Map<String, Int> = emptyMap(),
+)
+
 class ChatRepository(context: Context) {
 
     private val store = ProviderStore(File(context.filesDir, "provider"))
@@ -198,7 +205,7 @@ class ChatRepository(context: Context) {
         userPrompts: List<PromptItem> = emptyList(),
         userOrder: List<com.emberinn.engine.prompt.PromptOrderEntry> = emptyList(),
         previewOnly: Boolean = false,
-        onPreview: ((Pair<String, Int>) -> Unit)? = null,
+        onPreview: ((PromptPreview) -> Unit)? = null,
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
         regexScopedAllowed: Boolean = false,
@@ -335,9 +342,13 @@ class ChatRepository(context: Context) {
         )
         onPrepared?.invoke(prepared)
         if (previewOnly) {
-            // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 文本 + token 合计
+            // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 全文 + 分节 token（含 start_chat 预留 3）
             onPreview?.invoke(
-                prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" } to prepared.counts.values.sum(),
+                PromptPreview(
+                    text = prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
+                    tokens = prepared.counts.values.sum() + 3,
+                    counts = prepared.counts,
+                )
             )
             return null
         }

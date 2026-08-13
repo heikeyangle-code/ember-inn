@@ -193,8 +193,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         runSlash(slot.mes)
     }
 
-    private val _promptPreview = MutableStateFlow<Pair<String, Int>?>(null)
-    val promptPreview: StateFlow<Pair<String, Int>?> = _promptPreview
+    private val _promptPreview = MutableStateFlow<com.emberinn.app.data.PromptPreview?>(null)
+    val promptPreview: StateFlow<com.emberinn.app.data.PromptPreview?> = _promptPreview
 
     /** dryRun 提示词预览：只总装不发送（官方 Generate dryRun），结果供 UI 展示。 */
     fun previewPrompt() {
