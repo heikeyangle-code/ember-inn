@@ -47,6 +47,11 @@ class ChatRepository(context: Context) {
     private val promptFactory = ChatPromptFactory()
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** 连接档案缓存：按 profiles.json 修改时间失效，避免每次发送都重读重解析。 */
+    private val profileFile = File(context.filesDir, "provider/profiles.json")
+    private var profileCacheStamp = -1L
+    private var profileCacheValue: ConnectionProfile? = null
+
     /** 会话级变量存储（官方聊天级 local variables）：预置本卡变量，setvar 跨消息保留。 */
     private var localVariables: VariableStore = MemoryVariableStore()
     private var seededCardRaw: String? = null
@@ -67,11 +72,18 @@ class ChatRepository(context: Context) {
         const val DEFAULT_MAX_TOKENS = 300
     }
 
-    fun profile(): ConnectionProfile? = store.load()
+    fun profile(): ConnectionProfile? {
+        val stamp = profileFile.lastModified()
+        if (stamp != profileCacheStamp) {
+            profileCacheValue = store.load()
+            profileCacheStamp = stamp
+        }
+        return profileCacheValue
+    }
 
     fun profiles(): List<ConnectionProfile> = store.profiles()
 
-    fun activeProfile(): ConnectionProfile? = store.load()
+    fun activeProfile(): ConnectionProfile? = profile()
 
     fun saveProfile(profile: ConnectionProfile, active: Boolean = true) = store.save(profile, active)
 
@@ -83,7 +95,7 @@ class ChatRepository(context: Context) {
         history: List<JsonElement>,
         maxTokensOverride: Int? = null,
     ): String? = withContext(Dispatchers.IO) {
-        val profile = store.load() ?: return@withContext null
+        val profile = profile() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
         val messages = history.mapNotNull { el ->
             val obj = el.jsonObject
@@ -107,7 +119,7 @@ class ChatRepository(context: Context) {
         maxTokensOverride: Int? = null,
         stopSequences: List<String> = emptyList(),
     ): String? = withContext(Dispatchers.IO) {
-        val profile = store.load() ?: return@withContext null
+        val profile = profile() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
         val messages = buildList {
             if (system.isNotBlank()) add(CompletionMessage(role = "system", content = system))
@@ -129,7 +141,7 @@ class ChatRepository(context: Context) {
 
     /** 官方 caption 扩展 multimodal：用当前提供商发视觉请求生成图片描述。 */
     suspend fun captionImage(dataUrl: String, prompt: String): String? = withContext(Dispatchers.IO) {
-        val profile = store.load() ?: return@withContext null
+        val profile = profile() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
         val messages = listOf(
             CompletionMessage(role = "system", content = "You are an image captioning assistant."),
@@ -219,7 +231,7 @@ class ChatRepository(context: Context) {
         wiIncludeNames: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
     ): LlmClient.StreamSession? {
-        val profile = store.load() ?: return null
+        val profile = profile() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
         // 官方 1.18：未设置时用 openai_max_context / openai_max_tokens 默认；用户存值原样保留。
         // 角色级模型覆盖（README：模型/上下文/最大回复/采样，本角色覆盖全局；存卡内扩展字段）
@@ -390,7 +402,7 @@ class ChatRepository(context: Context) {
         onResult: (String) -> Unit,
         onError: (Throwable) -> Unit,
     ) {
-        val profile = store.load() ?: return onError(IllegalStateException("未配置模型"))
+        val profile = profile() ?: return onError(IllegalStateException("未配置模型"))
         val provider = ProviderRegistry.get(profile.providerId) ?: return onError(IllegalStateException("未配置模型"))
         val sampler = if (responseLength > 0) profile.sampler.copy(maxTokens = responseLength) else profile.sampler
         val sb = StringBuilder()
@@ -416,7 +428,7 @@ class ChatRepository(context: Context) {
         onResult: (String) -> Unit,
         onError: (Throwable) -> Unit,
     ): LlmClient.StreamSession? {
-        val profile = store.load() ?: return null
+        val profile = profile() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
         val prepared = promptFactory.prepare(
             characterRawJson = null,

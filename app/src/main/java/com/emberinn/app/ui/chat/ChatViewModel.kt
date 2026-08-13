@@ -2544,20 +2544,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 wiIncludeNames = WorldInfoPrefs.includeNames(getApplication()),
                 onPrepared = { info ->
                     if (streamActive) {
-                        _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
-                            val name = entry.name.ifBlank { entry.keys.firstOrNull().orEmpty() }
-                            if (name.isBlank()) null else WorldHitView(
-                                name = name,
-                                key = entry.keys.firstOrNull().orEmpty(),
-                                constant = entry.constant,
-                                vectorized = entry.vectorized,
-                                useProbability = entry.useProbability && entry.probability < 100,
-                                positionLabel = positionLabel(entry.position),
-                                tokens = entryTokens(entry.content),
-                            )
+                        // 命中面板/上下文胶囊只影响 UI：丢后台算，不挡请求发出（发送内容不变）
+                        viewModelScope.launch(Dispatchers.Default) {
+                            _worldHits.value = info.activatedWorldInfo.mapNotNull { entry ->
+                                val name = entry.name.ifBlank { entry.keys.firstOrNull().orEmpty() }
+                                if (name.isBlank()) null else WorldHitView(
+                                    name = name,
+                                    key = entry.keys.firstOrNull().orEmpty(),
+                                    constant = entry.constant,
+                                    vectorized = entry.vectorized,
+                                    useProbability = entry.useProbability && entry.probability < 100,
+                                    positionLabel = positionLabel(entry.position),
+                                    tokens = entryTokens(entry.content),
+                                )
+                            }
+                            // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
+                            _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
                         }
-                        // 官方 ChatCompletion 初始 reserveBudget(3)（start_chat）不入 counts，补上更接近实际
-                        _contextUsage.value = Pair(info.counts.values.sum() + 3, info.maxContextTokens)
                         // 官方 WORLD_INFO_ACTIVATED → 自动执行 automationId 匹配的快捷回复
                         runAutoExecutions(info.activatedWorldInfo, type)
                     }

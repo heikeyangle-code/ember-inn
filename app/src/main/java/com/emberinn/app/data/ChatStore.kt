@@ -37,6 +37,24 @@ class ChatStore(private val context: Context) {
     companion object {
         private var sessionsCache: List<SessionRecord>? = null
         private val messagesCache = mutableMapOf<String, List<JsonElement>>()
+        private val metadataCache = mutableMapOf<String, JsonObject>()
+
+        /** 文件写盘统一走单线程后台队列，调用线程（含 UI）不再整文件同步重写。 */
+        private val ioExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "chat-store-io").apply { isDaemon = true }
+        }
+
+        private fun cacheMessages(sessionId: String, list: List<JsonElement>) {
+            synchronized(messagesCache) { messagesCache[sessionId] = list }
+        }
+
+        private fun clearMessagesCache(sessionId: String) {
+            synchronized(messagesCache) { messagesCache.remove(sessionId) }
+        }
+
+        private fun clearMessagesCacheAll() {
+            synchronized(messagesCache) { messagesCache.clear() }
+        }
     }
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
@@ -70,35 +88,46 @@ class ChatStore(private val context: Context) {
      * 官方字段：custom_background（背景）/ chat_backgrounds（列表）/ system_prompt / scenario / mes_example 等。
      */
     fun metadata(sessionId: String): JsonObject {
+        synchronized(metadataCache) { metadataCache[sessionId]?.let { return it } }
         val file = File(chatsDir, "$sessionId.json")
-        if (!file.exists()) return JsonObject(emptyMap())
-        return runCatching {
-            val root = json.parseToJsonElement(file.readText()).jsonObject
-            root["chat_metadata"]?.jsonObject ?: JsonObject(emptyMap())
-        }.getOrDefault(JsonObject(emptyMap()))
+        val result = if (!file.exists()) {
+            JsonObject(emptyMap())
+        } else {
+            runCatching {
+                val root = json.parseToJsonElement(file.readText()).jsonObject
+                root["chat_metadata"]?.jsonObject ?: JsonObject(emptyMap())
+            }.getOrDefault(JsonObject(emptyMap()))
+        }
+        synchronized(metadataCache) { metadataCache[sessionId] = result }
+        return result
     }
 
     fun saveMetadata(sessionId: String, metadata: JsonObject) {
+        synchronized(metadataCache) { metadataCache[sessionId] = metadata }
         val header = buildJsonObject {
             put("chat_metadata", metadata)
             put("user_name", JsonPrimitive("unused"))
             put("character_name", JsonPrimitive("unused"))
         }
-        File(chatsDir, "$sessionId.json").writeText(json.encodeToString(JsonObject.serializer(), header))
+        val file = File(chatsDir, "$sessionId.json")
+        ioExecutor.execute { file.writeText(json.encodeToString(JsonObject.serializer(), header)) }
     }
 
     private fun writeMessages(sessionId: String, content: String) {
-        File(chatsDir, "$sessionId.jsonl").writeText(content)
-        messagesCache.remove(sessionId)
+        clearMessagesCache(sessionId)
+        val file = File(chatsDir, "$sessionId.jsonl")
+        ioExecutor.execute { file.writeText(content) }
     }
 
     fun messages(sessionId: String): List<JsonElement> {
-        messagesCache[sessionId]?.let { return it }
+        synchronized(messagesCache) { messagesCache[sessionId]?.let { return it } }
         val file = File(chatsDir, "$sessionId.jsonl")
         if (!file.exists()) return emptyList()
         val list = ChatJsonl.import(file.readText())
-        if (messagesCache.size > 32) messagesCache.clear()
-        messagesCache[sessionId] = list
+        synchronized(messagesCache) {
+            if (messagesCache.size > 32) messagesCache.clear()
+            cacheMessages(sessionId, list)
+        }
         return list
     }
 
@@ -196,7 +225,7 @@ class ChatStore(private val context: Context) {
             put("extra", extra)
         }
         writeMessages(sessionId, ChatJsonl.export(list))
-        messagesCache[sessionId] = list
+        cacheMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -819,7 +848,7 @@ class ChatStore(private val context: Context) {
 
     private fun save(sessionId: String, list: List<JsonElement>) {
         writeMessages(sessionId, ChatJsonl.export(list))
-        messagesCache[sessionId] = list
+        cacheMessages(sessionId, list)
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
@@ -905,9 +934,11 @@ class ChatStore(private val context: Context) {
     fun delete(sessionId: String) {
         deleteMediaFiles(messages(sessionId))
         File(sessionsDir, "$sessionId.json").delete()
-        File(chatsDir, "$sessionId.jsonl").delete()
-        File(chatsDir, "$sessionId.json").delete()
-        messagesCache.remove(sessionId)
+        // jsonl/元数据删除与排队中的写盘走同一队列，避免写盘把已删文件“复活”
+        ioExecutor.execute { File(chatsDir, "$sessionId.jsonl").delete() }
+        ioExecutor.execute { File(chatsDir, "$sessionId.json").delete() }
+        synchronized(metadataCache) { metadataCache.remove(sessionId) }
+        clearMessagesCache(sessionId)
         sessionsCache = null
     }
 
@@ -915,10 +946,11 @@ class ChatStore(private val context: Context) {
         list().filter { it.characterId == characterId }.forEach { s ->
             deleteMediaFiles(messages(s.id))
             File(sessionsDir, "${s.id}.json").delete()
-            File(chatsDir, "${s.id}.jsonl").delete()
-            File(chatsDir, "${s.id}.json").delete()
+            ioExecutor.execute { File(chatsDir, "${s.id}.jsonl").delete() }
+            ioExecutor.execute { File(chatsDir, "${s.id}.json").delete() }
         }
-        messagesCache.clear()
+        synchronized(metadataCache) { metadataCache.clear() }
+        clearMessagesCacheAll()
         sessionsCache = null
     }
 

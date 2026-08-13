@@ -79,6 +79,10 @@ class ChatPromptFactory {
 
         const val DEFAULT_IMPERSONATION_PROMPT =
             "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
+
+        /** 角色卡解析缓存：同一张卡只解析一次（卡 JSON 大时是发送前的主要开销）。 */
+        private const val CARD_CACHE_MAX = 8
+        private val cardCache = java.util.concurrent.ConcurrentHashMap<String, ParsedCard>()
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -741,6 +745,7 @@ class ChatPromptFactory {
     )
 
     private fun parseCard(raw: String): ParsedCard {
+        cardCache[raw]?.let { return it }
         val root = json.parseToJsonElement(raw).jsonObject
         val data = root["data"]?.jsonObject ?: root
         val source = CharacterCardSource(
@@ -786,7 +791,7 @@ class ChatPromptFactory {
                     )
                 }.getOrNull()
             } ?: emptyList()
-        return ParsedCard(
+        val result = ParsedCard(
             source = source,
             worldEntries = entries,
             regexScripts = regexScripts,
@@ -795,6 +800,9 @@ class ChatPromptFactory {
             depthPromptRole = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
                 ?.get("role")?.jsonPrimitive?.contentOrNull?.ifBlank { "system" } ?: "system",
         )
+        if (cardCache.size > CARD_CACHE_MAX) cardCache.clear()
+        cardCache[raw] = result
+        return result
     }
 
     /** 官方 extractMessageBias + removeMacros（引擎 1:1，Handlebars 语义）。 */

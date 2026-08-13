@@ -21,6 +21,11 @@ class WorldStore(context: Context) {
     private val dir = File(context.filesDir, "worlds").apply { mkdirs() }
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
+    companion object {
+        /** 外置世界书条目缓存：按文件修改时间失效，避免每次发送都重读重解析。 */
+        private val entriesCache = mutableMapOf<String, Pair<Long, List<WorldInfoEntry>>>()
+    }
+
     data class WorldFile(
         val name: String,
         val displayName: String,
@@ -44,7 +49,11 @@ class WorldStore(context: Context) {
 
     fun entries(name: String): List<WorldInfoEntry> {
         val file = fileOf(name) ?: return emptyList()
-        return runCatching {
+        val stamp = file.lastModified()
+        synchronized(entriesCache) {
+            entriesCache[name]?.let { (t, list) -> if (t == stamp) return list }
+        }
+        val parsed = runCatching {
             val root = json.parseToJsonElement(file.readText()).jsonObject
             (root["entries"] as? JsonObject)?.let { entriesObj ->
                 entriesObj.entries.mapIndexed { index, (_, el) ->
@@ -52,6 +61,11 @@ class WorldStore(context: Context) {
                 }
             } ?: emptyList()
         }.getOrDefault(emptyList())
+        synchronized(entriesCache) {
+            if (entriesCache.size > 64) entriesCache.clear()
+            entriesCache[name] = stamp to parsed
+        }
+        return parsed
     }
 
     /** 读取外置世界条目为全字段草稿（复用 CharacterCardEdit 的 v2 归一解析）。 */
