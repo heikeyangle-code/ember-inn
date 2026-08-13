@@ -113,6 +113,8 @@ data class ProviderRequestOptions(
     val textGenType: String = "normal",
     /** NovelAI 专用：应用 novel 预设后的设置（字段见 NovelGenerationInput）。 */
     val novelSettings: JsonObject? = null,
+    /** Kobold 专用：应用 kobold 预设后的设置（字段见 KoboldRequestBodyEngine）。 */
+    val koboldSettings: JsonObject? = null,
 ) {
     val hasTools: Boolean get() = tools.isNotEmpty()
 

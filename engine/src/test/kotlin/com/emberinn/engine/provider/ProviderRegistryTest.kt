@@ -33,7 +33,7 @@ class ProviderRegistryTest {
         assertEquals("https://qianfan.baidubce.com/v2", ProviderRegistry.get("qianfan")!!.baseUrl)
         assertEquals("https://spark-api-open.xf-yun.com/v1", ProviderRegistry.get("iflytek")!!.baseUrl)
         assertEquals("http://localhost:1234/v1", ProviderRegistry.get("lmstudio")!!.baseUrl)
-        assertEquals(setOf("openai-compatible", "anthropic", "google", "mistral", "xai", "cohere", "ai21", "textgenerationwebui", "novel"), providers.map { it.protocol }.toSet())
+        assertEquals(setOf("openai-compatible", "anthropic", "google", "mistral", "xai", "cohere", "ai21", "textgenerationwebui", "novel", "kobold"), providers.map { it.protocol }.toSet())
     }
 
     @Test

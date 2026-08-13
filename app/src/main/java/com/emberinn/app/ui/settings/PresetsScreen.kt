@@ -544,6 +544,7 @@ private fun activeSamplerPresetType(context: android.content.Context): String {
     return when (provider.protocol) {
         "textgenerationwebui" -> "textgen"
         "novel" -> "novel"
+        "kobold" -> "kobold"
         else -> "openai"
     }
 }

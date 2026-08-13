@@ -117,6 +117,57 @@ object PresetSettingsStore {
         val repo = ChatRepository(context)
         val profile = repo.profile() ?: return false
         val provider = ProviderRegistry.get(profile.providerId)
+        if (provider?.protocol == "kobold") {
+            val preset = PresetLibrary.samplerPresets("kobold").firstOrNull { it.name == name }?.settings
+                ?: UserPresetStore.load(context, "sampler", name) ?: return false
+            val sliderKeys = listOf(
+                "temp", "rep_pen", "rep_pen_range", "top_p", "min_p", "top_a", "top_k",
+                "typical", "tfs", "rep_pen_slope", "sampler_order", "mirostat",
+                "mirostat_tau", "mirostat_eta", "grammar", "seed",
+            )
+            val defaults = buildJsonObject {
+                put("temp", JsonPrimitive(1))
+                put("rep_pen", JsonPrimitive(1))
+                put("rep_pen_range", JsonPrimitive(0))
+                put("top_p", JsonPrimitive(1))
+                put("min_p", JsonPrimitive(0))
+                put("top_a", JsonPrimitive(1))
+                put("top_k", JsonPrimitive(0))
+                put("typical", JsonPrimitive(1))
+                put("tfs", JsonPrimitive(1))
+                put("rep_pen_slope", JsonPrimitive(0.9))
+                put("sampler_order", kotlinx.serialization.json.JsonArray(listOf(0, 1, 2, 3, 4, 5, 6).map { JsonPrimitive(it) }))
+                put("mirostat", JsonPrimitive(0))
+                put("mirostat_tau", JsonPrimitive(5.0))
+                put("mirostat_eta", JsonPrimitive(0.1))
+                put("use_default_badwordsids", JsonPrimitive(false))
+                put("grammar", JsonPrimitive(""))
+                put("seed", JsonPrimitive(-1))
+            }
+            val base = KoboldSettingsStore.load(context)
+            val applied = PresetApplyEngine.applyKoboldPreset(
+                settings = base,
+                preset = preset,
+                keys = sliderKeys + listOf("extensions", "streaming_kobold", "use_default_badwordsids"),
+                defaults = defaults,
+                sliderKeys = sliderKeys,
+            )
+            KoboldSettingsStore.save(context, applied)
+            val genParams = PresetApplyEngine.applyGenerationParamsFromPreset(
+                preset, profile.sampler.maxTokens, profile.contextWindow,
+            )
+            if (genParams.maxContext != profile.contextWindow || genParams.amountGen != profile.sampler.maxTokens) {
+                repo.saveProfile(
+                    profile.copy(
+                        contextWindow = genParams.maxContext,
+                        sampler = profile.sampler.copy(maxTokens = genParams.amountGen),
+                    ),
+                    active = true,
+                )
+            }
+            PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = name))
+            return true
+        }
         if (provider?.protocol == "novel") {
             val preset = PresetLibrary.samplerPresets("novel").firstOrNull { it.name == name }?.settings
                 ?: UserPresetStore.load(context, "sampler", name) ?: return false

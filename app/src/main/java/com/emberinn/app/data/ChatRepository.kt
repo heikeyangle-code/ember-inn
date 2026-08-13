@@ -25,6 +25,7 @@ import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
+import com.emberinn.app.ui.settings.KoboldSettingsStore
 import com.emberinn.app.ui.settings.NovelSettingsStore
 import com.emberinn.app.ui.settings.PresetSettingsStore
 import com.emberinn.app.ui.settings.TextgenSettingsStore
@@ -386,7 +387,7 @@ class ChatRepository(context: Context) {
         // Text Completion（textgen/novel）：官方 getTextGenGenerationData / getNovelGenerationData 路径。
         // 提示词 = 官方 createRawPrompt（story string/instruct/历史/输出序列，引擎差分）；
         // textgen 请求体由 TextgenRequestBodyEngine 差分，novel 请求体由 NovelRequestBodyEngine 差分。
-        if (provider.protocol == "textgenerationwebui" || provider.protocol == "novel") {
+        if (provider.protocol == "textgenerationwebui" || provider.protocol == "novel" || provider.protocol == "kobold") {
             val presetState = PresetSettingsStore.load(context)
             val env = MacroEnv(user = userName, char = charName)
             val raw = InstructMode.createRawPrompt(
@@ -401,14 +402,18 @@ class ChatRepository(context: Context) {
                 env = env,
             )
             val finalPrompt = (raw as InstructMode.RawPrompt.Text).text
-            val opts = if (provider.protocol == "novel") {
-                finalOptions.copy(
+            val opts = when (provider.protocol) {
+                "novel" -> finalOptions.copy(
                     textGenPrompt = finalPrompt,
                     textGenIsContinue = isContinue,
                     novelSettings = NovelSettingsStore.load(context),
                 )
-            } else {
-                finalOptions.copy(
+                "kobold" -> finalOptions.copy(
+                    textGenPrompt = finalPrompt,
+                    textGenIsContinue = isContinue,
+                    koboldSettings = KoboldSettingsStore.load(context),
+                )
+                else -> finalOptions.copy(
                     textGenPrompt = finalPrompt,
                     textGenIsContinue = isContinue,
                     textGenSettings = TextgenSettingsDefaults.forProfile(

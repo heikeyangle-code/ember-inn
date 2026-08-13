@@ -952,6 +952,28 @@
       "model_contexts": {},
       "requires_key": true,
       "docs_url": "https://novelai.net"
+    },
+    {
+      "id": "kobold",
+      "display_name": "KoboldAI / KoboldCPP",
+      "description": "KoboldAI / KoboldCPP（官方 src/endpoints/backends/kobold.js）",
+      "icon": "",
+      "protocol": "kobold",
+      "auth_type": "none",
+      "base_url": "http://127.0.0.1:5001",
+      "region_variants": [],
+      "region_bases": {},
+      "extra_headers": {},
+      "api_version": "",
+      "models_endpoint": "",
+      "models_format": "openai",
+      "models_query": {},
+      "default_models": [],
+      "default_max_tokens": 128,
+      "default_context_window": 2048,
+      "model_contexts": {},
+      "requires_key": false,
+      "docs_url": "https://github.com/KoboldAI/KoboldAI-Client"
     }
   ]
 }
