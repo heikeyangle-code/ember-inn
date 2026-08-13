@@ -3,9 +3,12 @@ package com.emberinn.engine.worldinfo
 import kotlin.math.roundToInt
 
 /**
- * 世界书扫描器，对齐官方 checkWorldInfo 核心（Stage 1）：
- * 常量/关键词（主+次+逻辑）、概率、预算、递归、min activations、delay 层、位置组装。
- * Stage 2 待接：sticky/cooldown/delay 时间效果、分组互斥、向量化、角色过滤、regex 内容处理、多世界合并策略。
+ * 世界书扫描器，对齐官方 checkWorldInfo：
+ * 常量/关键词（主+次+逻辑）、概率、预算、递归、min activations、delay 层级、
+ * 分组互斥/评分、时间效果（sticky/cooldown/delay）、角色/标签过滤、外部强制激活（RAG）、
+ * 装饰器、正则内容处理、位置组装。
+ * 条目内容在激活时按官方 substituteParams 替换一次，替换后文本进入递归缓冲/预算/最终输出
+ * （官方 checkWorldInfo 的 entry.content = substituteParams(entry.content) 语义）。
  */
 class WorldInfoScanner(
     private val tokenCounter: TokenCounter = TokenCounter { it.length },
@@ -52,13 +55,14 @@ class WorldInfoScanner(
         val timedEffects = WorldInfoTimedEffects(chat.size, sortedEntries, timedMetadata, isDryRun)
         timedEffects.checkTimedEffects()
 
+        // 官方：availableRecursionDelayLevels.shift() ?? 0 —— 首个层级在扫描前移出列表
         val delayLevels = sortedEntries
             .filter { it.delayUntilRecursion > 0 }
             .map { it.delayUntilRecursion }
             .distinct()
             .sorted()
             .toMutableList()
-        var currentDelayLevel = delayLevels.firstOrNull() ?: 0
+        var currentDelayLevel = if (delayLevels.isNotEmpty()) delayLevels.removeAt(0) else 0
 
         while (scanState != WorldInfoConstants.STATE_NONE) {
             if (settings.maxRecursionSteps > 0 && settings.maxRecursionSteps <= count) break
@@ -174,19 +178,21 @@ class WorldInfoScanner(
                 }
                 if (!success) continue
 
-            // 官方预算按 substitute 后内容计数；正则（getRegexedString）在 BUILD 阶段应用
+            // 官方：entry.content = substituteParams(entry.content) 后用于预算/递归/最终输出
             val content = substitute.substitute(entry.content)
-                newContent += "$content\n"
+            newContent += "$content\n"
 
-                if (!entry.ignoreBudget && (textToScanTokens + tokenCounter.count(newContent)) >= budget) {
-                    tokenBudgetOverflowed = true
-                    continue
-                }
-                allActivated["${entry.world}.${entry.uid}"] = entry
+            if (!entry.ignoreBudget && (textToScanTokens + tokenCounter.count(newContent)) >= budget) {
+                tokenBudgetOverflowed = true
+                continue
+            }
+            allActivated["${entry.world}.${entry.uid}"] = entry.copy(content = content)
             }
 
             val successfulNew = newEntries.filter { !failedProbability.contains(it) }
             val recursionCandidates = successfulNew.filter { !it.preventRecursion }
+            fun substitutedOf(entry: WorldInfoEntry): String =
+                allActivated["${entry.world}.${entry.uid}"]?.content ?: entry.content
 
             if (settings.recursive && !tokenBudgetOverflowed && recursionCandidates.isNotEmpty()) {
                 nextScanState = WorldInfoConstants.STATE_RECURSION
@@ -214,7 +220,7 @@ class WorldInfoScanner(
 
             scanState = nextScanState
             if (scanState != WorldInfoConstants.STATE_NONE) {
-                val text = recursionCandidates.joinToString("\n") { it.content }
+                val text = recursionCandidates.joinToString("\n") { substitutedOf(it) }
                 if (text.isNotEmpty()) {
                     buffer.addRecurse(text)
                     allActivatedText = text + "\n" + allActivatedText
@@ -271,7 +277,6 @@ class WorldInfoScanner(
             if (hasStickyMap[key] == true) continue
             val scores = group.map { buffer.getScore(it, scanState) }.toMutableList()
             val maxScore = scores.maxOrNull() ?: 0
-            println("DBG group=$key scores=$scores max=$maxScore size=${group.size}")
             var i = 0
             while (i < group.size) {
                 val isScored = group[i].useGroupScoring ?: settings.useGroupScoring

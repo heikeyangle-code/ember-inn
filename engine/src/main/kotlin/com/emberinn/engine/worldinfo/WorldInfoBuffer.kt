@@ -10,6 +10,8 @@ class WorldInfoBuffer(
     private val global: GlobalScanData,
     private val settings: WorldInfoSettings,
 ) {
+    // 官方 #initDepthBuffer：空消息留空洞，但 Array.join 把空洞当空串、分隔符照插，
+    // 与稠密 take+trim 等价；保持稠密实现并留注释锁语义。
     private val depthBuffer: List<String> = messages
         .take(WorldInfoConstants.MAX_SCAN_DEPTH)
         .map { it.trim() }

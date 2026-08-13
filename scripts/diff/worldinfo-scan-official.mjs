@@ -340,6 +340,36 @@ const cases = [
         random: [99.0],
     },
     {
+        id: 'empty_chat_message_hole',
+        // 官方 WorldInfoBuffer：falsy 空消息留空洞，join 跳过空洞；含 \x01 的跨消息 key 不能命中
+        settings: { depth: 3, budget: 100 },
+        chat: ['钥匙', '', '门'],
+        maxContext: 100,
+        entries: [{ uid: 1, world: 'w', order: 1, key: ['\u0001\n\u0001门'], content: 'X' }],
+    },
+    {
+        id: 'tag_filter_include_with_tag',
+        settings: { depth: 2, budget: 100 },
+        chat: ['门'],
+        maxContext: 100,
+        tagKey: 'c1',
+        tagMap: { c1: ['nsfw'] },
+        entries: [
+            { uid: 1, world: 'w', order: 1, key: ['门'], content: 'X', characterFilter: { tags: ['nsfw'], isExclude: false } },
+        ],
+    },
+    {
+        id: 'tag_filter_include_empty_tags',
+        settings: { depth: 2, budget: 100 },
+        chat: ['门'],
+        maxContext: 100,
+        tagKey: 'c1',
+        tagMap: { c1: [] },
+        entries: [
+            { uid: 1, world: 'w', order: 1, key: ['门'], content: 'X', characterFilter: { tags: ['nsfw'], isExclude: false } },
+        ],
+    },
+    {
         id: 'probability_sticky_second',
         settings: { depth: 2, budget: 100 },
         chat: ['a'],

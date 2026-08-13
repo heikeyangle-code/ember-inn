@@ -501,6 +501,9 @@ class ChatPromptFactory {
         // 世界书扫描（角色卡内嵌 character_book）
         val scanner = WorldInfoScanner(
             tokenCounter = tokenCounter,
+            // 官方 checkWorldInfo：关键词与条目内容先 substituteParams 再匹配/预算/输出
+            // （内容激活时替换一次，总装 preparePrompt 再替换一次 = 官方两次替换语义）
+            substitute = { MacroEngine.substitute(it, env) },
             // 官方 world-info.js BUILDING PROMPT：getRegexedString(entry.content, WORLD_INFO,
             // { depth: regexDepth, isMarkdown: false, isPrompt: true })
             contentTransformer = { content, regexDepth, _ ->
@@ -538,7 +541,12 @@ class ChatPromptFactory {
                 strategy = worldInsertStrategy,
             ),
             settings = worldInfoSettings,
-            global = GlobalScanData(characterName = charName, personaDescription = personaDescription),
+            global = GlobalScanData(
+                characterName = charName,
+                personaDescription = personaDescription,
+                // 官方 getTagKeyForEntity 恒返回 tagMap 项（无标签=[]）；角色卡标签直接进过滤
+                characterTags = parsed?.tags ?: emptyList(),
+            ),
             // 官方 WorldInfoBuffer.externalActivations：向量检索命中的条目强制激活（跳过关键词/概率）
             externalActivations = vectorTransform?.worldInfoActivations.orEmpty()
                 .associateBy { "${it.world}.${it.uid}" },
@@ -742,6 +750,8 @@ class ChatPromptFactory {
         val depthPromptDepth: Int = 4,
         /** 官方 data.extensions.depth_prompt.role ?? 'system'。 */
         val depthPromptRole: String = "system",
+        /** 官方 tag_map 的角色标签（无标签=空数组，官方 getTagKeyForEntity 恒有 tagMap 项）。 */
+        val tags: List<String> = emptyList(),
     )
 
     private fun parseCard(raw: String): ParsedCard {
@@ -791,10 +801,15 @@ class ChatPromptFactory {
                     )
                 }.getOrNull()
             } ?: emptyList()
+        // 官方 tag_map：角色卡 tags 数组（无标签=[]，官方 getTagKeyForEntity 恒有 tagMap 项）
+        val tags = (data["tags"] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            ?.filter { it.isNotBlank() } ?: emptyList()
         val result = ParsedCard(
             source = source,
             worldEntries = entries,
             regexScripts = regexScripts,
+            tags = tags,
             depthPromptDepth = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
                 ?.get("depth")?.jsonPrimitive?.content?.toIntOrNull() ?: 4,
             depthPromptRole = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject

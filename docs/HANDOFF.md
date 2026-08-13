@@ -100,7 +100,7 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 > 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1969 例。
 | instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
 | 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 40 |
-| 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 26 |
+| 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 29 |
 | 世界书正则深度（regexDepth） | worldinfo-regex-depth-official.mjs | WorldInfoRegexDepthDiffTest | 40 |
 | outlet 宏（{{outlet::key}}） | outlet-macro-official.mjs | OutletMacroDiffTest | 5 |
 | 世界书文件 | worldinfo-file-official.mjs | WorldInfoFileDiffTest | 2 |
@@ -395,6 +395,12 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
   settings 全局选择 globalSelect 与插入策略；ChatPromptFactory 用 WorldLoreMerger 把内嵌卡书+关联+聊天+全局合并进扫描。
   角色详情页“关联外置世界”选择、聊天 ⋮“外置世界（本会话）”指定（chat_metadata.world_info）已接；
   世界书扫描设置补全官方字段：minActivationsDepthMax/budgetCap/useGroupScoring/include_names（扫描文本带名字前缀）已接线；
+  2026-08-14 审查修复：世界书条目内容在激活时先宏替换（官方 checkWorldInfo 的 substituteParams），
+  替换后文本进递归缓冲/预算/最终输出，总装 preparePrompt 再替换一次（官方 openai.js 两次替换语义）；
+  世界书关键词也过宏替换（此前 App 未传 substituter，{{user}} 等 key 不生效）；delayUntilRecursion
+  首级按官方 shift() 在扫描前移出（原实现多扫一轮同级）；角色卡 tags 接进 characterFilter 标签过滤
+  （官方 getTagKeyForEntity 恒有 tagMap 项，无标签=[]）；差分新增 3 例（空消息空洞 join 语义、带标签/空标签过滤），
+  WorldInfoScannerMacroTest 锁宏替换（harness 打桩恒等无法差分）；移除遗留调试 println。
   外置世界条目编辑器已接：复用内嵌同款 WorldEntryEditorSheet（官方全字段），保存进 worlds/*.json 官方格式
   （字段命名对齐官方 world 文件：key/keysecondary 数组 + case_sensitive/scan_depth 等进 extensions）；
   世界文件导入/导出 UI（GetContent/CreateDocument）与 overflow_alert 开关已接。
@@ -443,7 +449,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 326 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 333 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）

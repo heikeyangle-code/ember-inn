@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-12T13:49:47.659Z",
+  "generated": "2026-08-13T20:26:59.692Z",
   "source": "sillytavern-ref release",
   "cases": [
     {
@@ -1231,6 +1231,234 @@
             "content": "X",
             "useProbability": true,
             "probability": 1
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "empty_chat_message_hole",
+      "settings": {
+        "depth": 3,
+        "budget": 100
+      },
+      "chat": [
+        "钥匙",
+        "",
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "\u0001\n\u0001门"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "钥匙",
+          "",
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "\u0001\n\u0001门"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "tag_filter_include_with_tag",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "tags": [
+              "nsfw"
+            ],
+            "isExclude": false
+          }
+        }
+      ],
+      "charaName": "",
+      "tagKey": "c1",
+      "tagMap": {
+        "c1": [
+          "nsfw"
+        ]
+      },
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "tags": [
+                "nsfw"
+              ],
+              "isExclude": false
+            }
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "tag_filter_include_empty_tags",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "tags": [
+              "nsfw"
+            ],
+            "isExclude": false
+          }
+        }
+      ],
+      "charaName": "",
+      "tagKey": "c1",
+      "tagMap": {
+        "c1": []
+      },
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "tags": [
+                "nsfw"
+              ],
+              "isExclude": false
+            }
           }
         ],
         "expected": {
