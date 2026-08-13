@@ -7,7 +7,7 @@ package com.emberinn.app.data
  * - pass_asterisks=false（官方默认）：移除 * 字符
  * - apply_regex：按用户正则移除并折叠空白（/pat/flags 形式）
  * - 移除内嵌图片 ![alt](url)
- * 近似登记：官方先 substituteParams 宏替换，本实现不替换；多语音/对话专属/引号专属未实现。
+ * 宏替换已在调用方完成（对齐官方 tts/index.js:674 substituteParams）；多语音/对话专属/引号专属未实现。
  */
 object TtsTextProcessor {
 

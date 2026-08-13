@@ -590,7 +590,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
  MessageRow 派生字段 remember(el) 一次缓存
 - 自动触底：`reverseLayout=true`，`firstVisibleItemIndex==0` 即贴底（官方 LazyColumn 语义）；上滑暂停、回底恢复；新消息/流式增长底部天然钉住，不再 scrollToItem/layoutInfo 采样
-- 登记未做：LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器（auto_scroll_chat_to_bottom 开关未做，见 8.5）
+- 登记未做：LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器（auto_scroll_chat_to_bottom 已做，见 8.5）
 
 ### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
 - CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
@@ -632,13 +632,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - Captions：refine_mode 确认弹层未接、prompt_ask 未接；source 仅 multimodal（extras/local/horde 未接）。
 - 表情精灵：LLM 分类未接（官方 expressions LLM 模式）；extra.sprite 不持久化（渲染期按正文确定性分类，同消息结果稳定）。
 - 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
-- TTS：朗读文本未过 substituteParams 宏替换；多语音/对话专属/引号专属未实现。
+- TTS：✅ 朗读前 substituteParams 宏替换已接（官方 tts/index.js:674）；多语音/对话专属/引号专属未实现。
 - 主题配方：字体文件下载、风格档位映射未做。
 - 设置项 UI 未接：reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、
   show_external_models、Prompt Manager 面板/dryRun 预览（引擎字段部分已有，见 12.12/12.16）。
-- 预设未做：自定义预设保存/删除/设为默认、sysprompt/reasoning 应用、context/instruct 应用（等 textgen），见 3.7。
+- 预设：保存/删除/应用已接（见 3.7）；“设为默认”官方无此概念；context/instruct/sysprompt 运行时消费已接 textgen 路径。
 - 发送链路未接清单见 12.16。
-- auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项，见 8.2 登记）。
+- ✅ auto_scroll_chat_to_bottom 开关已做（设置→消息渲染→行为，默认开，官方 power-user 默认 true）。
 
 ### 8.6 与官方不一致登记（防漏机制）
 
@@ -968,7 +968,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 对照官方 `sendTextareaMessage → Generate → prepareOpenAIMessages/populateChatCompletion → createGenerationParameters → sendOpenAIRequest → saveReply`：
 - ✅ 已对齐：continue_on_send、send_if_empty（仅 OpenAI 系）、用户消息 `extra.bias` + removeMacros + substituteParams、append_title/媒体标题、请求 stop/seed/n/top_k/logit_bias/reasoning_effort/verbosity（官方源白名单）、默认上下文 4095 / 最大回复 300、getMaxPromptTokens=context-response（不再扣非官方安全余量）、流式 tool_calls 回调管线。
 - 默认值：官方 `oai_settings` 默认 = `openai_max_context: max_4k(4095)`、`openai_max_tokens: 300`（openai.js default_settings）。App UI 常量已 4095/300；**引擎 `ConnectionProfile.contextWindow` 与 `SamplerParams.maxTokens` 的旧默认 8192/512 已修正为 4095/300**（旧注释误标“官方 8192”），ChatPromptFactory/MemoryService 兜底同步。必选提示词超限：官方 `TokenBudgetExceededError` → toast “Mandatory prompts exceed the context size.” + Prompt Manager 提示调大限额，随后仍带残缺消息请求（空数组会 API 400）；我方引擎管线同语义（抛错→返回已装下部分），App 层在空消息时直接给友好错误、不请求 API（有意收敛）。聊天历史超限：官方与引擎都是**静默丢弃最老消息**直到能装下，不报错。
-- 🟡 仍未接：quiet/quietImage/quietToLoud、dryRun 提示词预览、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取、token_count 落盘。
+- 🟡 仍未接：quiet/quietImage/quietToLoud、dryRun 提示词预览、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取。
+- token_count 落盘：官方 1.18 不落盘（token 计数只用于预算/计数器，openai.js countTokenAsyncFn），按 1:1 标记 N/A，删除该项。
 - 规则：这些缺口不会伪造“已对齐”；HANDOFF 只在真正接完并 CI 绿后改成 ✅。
 
 ### 12.8 性能治理权威依据（调研结论）

@@ -866,8 +866,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun narrateText(text: String) {
         val voice = VoicePrefs.read(getApplication())
         if (!voice.enabled) return
+        // 官方 tts/index.js:674：朗读前先 substituteParams 宏替换
+        val substituted = MacroEngine.substitute(text, MacroEnv(user = currentUserName, char = currentCharName))
         val cleaned = TtsTextProcessor.prepare(
-            text = text,
+            text = substituted,
             skipCodeblocks = voice.skipCodeblocks,
             skipTags = voice.skipTags,
             applyRegex = voice.applyRegex,
