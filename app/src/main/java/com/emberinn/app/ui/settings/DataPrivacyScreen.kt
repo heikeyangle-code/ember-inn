@@ -200,13 +200,19 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
             title = { Text("清除全部数据？") },
-            text = { Text("会删除所有角色卡、聊天记录、会话和提供商配置，此操作不可撤销。建议先导出备份。") },
+            text = { Text("会删除所有角色卡、聊天、会话、世界书、群聊、快照、媒体、提供商配置和本地文件，此操作不可撤销。建议先导出备份。") },
             confirmButton = {
                 TextButton(onClick = {
                     runCatching {
-                        listOf("characters", "chats", "sessions", "avatars", "provider", "media").forEach { name ->
+                        listOf(
+                            "characters", "chats", "sessions", "avatars", "provider", "media",
+                            "worlds", "groups", "snapshots", "expressions", "fonts", "vector",
+                        ).forEach { name ->
                             File(context.filesDir, name).deleteRecursively()
                         }
+                        // 快捷回复：目录 + legacy 单文件
+                        File(context.filesDir, "quick-replies").deleteRecursively()
+                        File(context.filesDir, "quick-replies.json").delete()
                     }
                     showClearConfirm = false
                     ProviderState.refresh(null)
