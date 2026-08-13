@@ -238,6 +238,7 @@ fun ChatScreen(
     val pendingMedia by vm.pendingMedia.collectAsState()
     val worldHits by vm.worldHits.collectAsState()
     val contextUsage by vm.contextUsage.collectAsState()
+    val promptPreview by vm.promptPreview.collectAsState()
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
     val captionDraft by vm.captionDraft.collectAsState()
@@ -259,6 +260,7 @@ fun ChatScreen(
     var showClearConfirm by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
+    var showPromptPreview by remember { mutableStateOf(false) }
     var showWorldPicker by remember { mutableStateOf(false) }
     var showAttachOptions by remember { mutableStateOf(false) }
     var showUrlAttachmentDialog by remember { mutableStateOf(false) }
@@ -1150,6 +1152,11 @@ fun ChatScreen(
                     showMore = false
                     showDataBank = true
                 }
+                MenuRow(PhosphorIcons.ChartBar, "提示词预览（dryRun）") {
+                    showMore = false
+                    showPromptPreview = true
+                    vm.previewPrompt()
+                }
                 MenuRow(PhosphorIcons.Edit, "作者注释") {
                     showMore = false
                     val draft = vm.authorsNoteDraft()
@@ -1200,6 +1207,32 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showPromptPreview) {
+        AlertDialog(
+            onDismissRequest = { showPromptPreview = false; vm.consumePromptPreview() },
+            title = { Text("提示词预览（dryRun）") },
+            text = {
+                Column {
+                    Text(
+                        promptPreview?.first ?: "（正在总装…）",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 420.dp),
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    promptPreview?.let { (_, tokens) ->
+                        Text("Token 合计：$tokens", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.previewPrompt() }) { Text("刷新") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPromptPreview = false; vm.consumePromptPreview() }) { Text("关闭") }
+            },
+        )
     }
 
     if (showAuthorsNote) {

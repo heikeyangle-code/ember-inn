@@ -28,16 +28,33 @@ object PromptManagerPrefs {
             .apply()
     }
 
-    fun order(context: Context): List<PromptOrderEntry> {
-        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("order", null)
-            ?: return emptyList()
-        return runCatching { json.decodeFromString(ListSerializer(PromptOrderEntry.serializer()), raw) }
-            .getOrDefault(emptyList())
+    /** 官方 prompt_order 按角色 id 存储（"null" 键 = 全局）。 */
+    fun orders(context: Context): Map<String, List<PromptOrderEntry>> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("orders", null)
+            ?: return emptyMap()
+        return runCatching {
+            json.decodeFromString(
+                kotlinx.serialization.builtins.MapSerializer(String.serializer(), ListSerializer(PromptOrderEntry.serializer())),
+                raw,
+            )
+        }.getOrDefault(emptyMap())
     }
 
-    fun saveOrder(context: Context, order: List<PromptOrderEntry>) {
+    fun order(context: Context, characterId: String? = null): List<PromptOrderEntry> =
+        orders(context)[characterId ?: "null"] ?: emptyList()
+
+    fun saveOrder(context: Context, characterId: String?, order: List<PromptOrderEntry>) {
+        val key = characterId ?: "null"
+        val all = orders(context).toMutableMap()
+        if (order.isEmpty()) all.remove(key) else all[key] = order
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putString("order", json.encodeToString(ListSerializer(PromptOrderEntry.serializer()), order))
+            .putString(
+                "orders",
+                json.encodeToString(
+                    kotlinx.serialization.builtins.MapSerializer(String.serializer(), ListSerializer(PromptOrderEntry.serializer())),
+                    all,
+                ),
+            )
             .apply()
     }
 }

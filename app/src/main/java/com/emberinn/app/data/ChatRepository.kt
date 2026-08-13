@@ -182,6 +182,8 @@ class ChatRepository(context: Context) {
         inChatExtensions: List<PromptItem> = emptyList(),
         userPrompts: List<PromptItem> = emptyList(),
         userOrder: List<com.emberinn.engine.prompt.PromptOrderEntry> = emptyList(),
+        previewOnly: Boolean = false,
+        onPreview: ((Pair<String, Int>) -> Unit)? = null,
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
         regexScopedAllowed: Boolean = false,
@@ -317,6 +319,14 @@ class ChatRepository(context: Context) {
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
+        if (previewOnly) {
+            // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 文本 + token 合计
+            onPreview?.invoke(
+                prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
+                prepared.counts.values.sum(),
+            )
+            return null
+        }
         // 对齐官方 TokenBudgetExceededError：必选提示词都放不下时明确报错，绝不发送空提示词。
         if (prepared.messages.isEmpty()) {
             onError(

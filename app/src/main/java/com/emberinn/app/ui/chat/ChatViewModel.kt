@@ -193,6 +193,25 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         runSlash(slot.mes)
     }
 
+    private val _promptPreview = MutableStateFlow<Pair<String, Int>?>(null)
+    val promptPreview: StateFlow<Pair<String, Int>?> = _promptPreview
+
+    /** dryRun 提示词预览：只总装不发送（官方 Generate dryRun），结果供 UI 展示。 */
+    fun previewPrompt() {
+        if (_isStreaming.value) return
+        _promptPreview.value = null
+        startStream(
+            history = chatStore.messages(sessionId),
+            type = "generate",
+            previewOnly = true,
+            onPreview = { _promptPreview.value = it },
+        )
+    }
+
+    fun consumePromptPreview() {
+        _promptPreview.value = null
+    }
+
     /** 全部可执行斜杠命令清单（App 命令 + 引擎命令），供输入框补全弹层使用。 */
     fun slashCommandList(): List<Pair<String, String>> = slashExecutor.commandList()
 
@@ -2305,6 +2324,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         swipeMode: Boolean = false,
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
         quietPrompt: String = "",
+        previewOnly: Boolean = false,
+        onPreview: ((Pair<String, Int>) -> Unit)? = null,
         mediaInlining: Boolean = true,
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),
@@ -2422,6 +2443,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 history = history,
                 userName = currentUserName,
                 charName = currentCharName,
+                previewOnly = previewOnly,
+                onPreview = onPreview,
                 onDelta = { delta ->
                     if (streamActive) _streamingText.value += delta
                 },
@@ -2489,7 +2512,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorFileText = { path -> rag.readDataBankText(path) },
                 inChatExtensions = inChatExtensions,
                 userPrompts = PromptManagerPrefs.prompts(getApplication()),
-                userOrder = PromptManagerPrefs.order(getApplication()),
+                userOrder = PromptManagerPrefs.order(getApplication(), character?.id),
                 worldInfoSettings = worldInfoSettings,
                 globalRegexScripts = globalRegexScripts,
                 regexScopedAllowed = regexScopedAllowed,
@@ -2540,6 +2563,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 },
             )
+            if (previewOnly) return
             if (streamActive) {
                 streamSession = session
                 if (session == null) {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
@@ -49,7 +51,9 @@ import com.emberinn.engine.prompt.PromptOrderEntry
 fun PromptManagerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var prompts by remember { mutableStateOf(PromptManagerPrefs.prompts(context)) }
-    var order by remember { mutableStateOf(PromptManagerPrefs.order(context)) }
+    val characters = remember { CharacterStore(context).list() }
+    var selectedChar by remember { mutableStateOf<String?>(null) }
+    var order by remember(selectedChar) { mutableStateOf(PromptManagerPrefs.order(context, selectedChar)) }
     var editTarget by remember { mutableStateOf<PromptItem?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     var newOrderId by remember { mutableStateOf("") }
@@ -58,7 +62,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         prompts = p
         order = o
         PromptManagerPrefs.savePrompts(context, p)
-        PromptManagerPrefs.saveOrder(context, o)
+        PromptManagerPrefs.saveOrder(context, selectedChar, o)
     }
 
     SettingsGlassPage { settingsSky ->
@@ -79,6 +83,19 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
+                        }
+                    }
+                }
+                item {
+                    Text("顺序作用对象（官方 prompt_order 按角色 id）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                }
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item(key = "global") {
+                            FilterChip(selected = selectedChar == null, onClick = { selectedChar = null }, label = { Text("全局") })
+                        }
+                        items(characters.size, key = { i -> characters[i].id }) { i ->
+                            FilterChip(selected = selectedChar == characters[i].id, onClick = { selectedChar = characters[i].id }, label = { Text(characters[i].name) })
                         }
                     }
                 }
@@ -165,9 +182,10 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 } else {
                                     order + PromptOrderEntry(def.identifier, enabled = on)
                                 }
-                                PromptManagerPrefs.saveOrder(context, order)
+                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
                             },
-                            onEdit = null,
+                            // 官方默认项可编辑：保存为用户覆盖项（同名 identifier 优先于默认）
+                            onEdit = { editTarget = def; showEdit = true },
                             onDelete = null,
                         )
                     }
@@ -261,7 +279,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             injectionTrigger = trigger.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                             forbidOverrides = forbid,
                         )
-                        prompts = if (target.identifier.isEmpty()) prompts + updated
+                        val existing = prompts.indexOfFirst { it.identifier == target.identifier }
+                        prompts = if (target.identifier.isEmpty() || existing < 0) prompts + updated
                         else prompts.map { if (it.identifier == target.identifier) updated else it }
                         PromptManagerPrefs.savePrompts(context, prompts)
                         showEdit = false
