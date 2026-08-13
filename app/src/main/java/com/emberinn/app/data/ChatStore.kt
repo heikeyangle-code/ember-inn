@@ -158,6 +158,8 @@ class ChatStore(private val context: Context) {
         mediaDisplay: String? = null,
         mediaIndex: Int? = null,
         groupGenId: Long? = null,
+        /** 官方流式 handler 写入 extra.time_to_first_token（毫秒）。 */
+        timeToFirstToken: Long? = null,
         greetingSwipes: List<String> = emptyList(),
         bias: String? = null,
         /** 官方 caption 扩展：媒体 source=captioned + captioned=true。 */
@@ -198,6 +200,7 @@ class ChatStore(private val context: Context) {
                 put("reasoning", JsonPrimitive(reasoning ?: ""))
                 put("reasoning_duration", JsonNull)
                 put("reasoning_signature", JsonNull)
+                timeToFirstToken?.let { put("time_to_first_token", JsonPrimitive(it)) }
             } else {
                 if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))
                 if (!model.isNullOrBlank()) put("model", JsonPrimitive(model))

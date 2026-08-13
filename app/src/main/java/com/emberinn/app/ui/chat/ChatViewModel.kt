@@ -1206,6 +1206,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 当前流的生成参数：工具循环递归时按官方 Generate('normal') 重启 startStream。 */
     private var currentStreamParams: StreamParams? = null
     private var streamStartedAt: String = java.time.Instant.now().toString()
+    /** 官方 time_to_first_token：首个流式 delta 到达时刻（毫秒）。 */
+    private var firstDeltaAt: Long? = null
     private var streamContinueMode = false
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
     @Volatile
@@ -1382,10 +1384,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else {
             effectiveText
         }
-        val storedText = if (messageBias.isNotBlank()) BiasEngine.removeMacros(regexedText) else regexedText
-        // 官方 sendMessageAsUser：regex USER_INPUT → bias 剥离 → substituteParams
-        val substitutedText = MacroEngine.substitute(storedText, MacroEnv(user = userName, char = charName))
-        chatStore.append(sessionId, true, substitutedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
+        // 官方 sendMessageAsUser：regex USER_INPUT → substituteParams →（有 bias 时）removeMacros
+        val substitutedText = MacroEngine.substitute(regexedText, MacroEnv(user = userName, char = charName))
+        val storedText = if (messageBias.isNotBlank()) BiasEngine.removeMacros(substitutedText) else substitutedText
+        chatStore.append(sessionId, true, storedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
+        // 官方 sendMessageAsUser：message_token_count_enabled 时用户消息也写 extra.token_count
+        if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
+            val model = chatRepository.profile()?.model.orEmpty()
+            val count = runCatching {
+                com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model).count(storedText)
+            }.getOrDefault(storedText.length / 4)
+            val idx = chatStore.messages(sessionId).lastIndex
+            if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
+        }
         _pendingMedia.value = emptyList()
         refreshMessagesAppendOnly()
         // 官方 translate 扩展：auto_mode=inputs/both 时用户消息自动翻译（mes 换译文、原文进 extra.display_text）
@@ -2360,6 +2371,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         generatingSwipe = swipeMode
         pendingGroupGenId = groupGenId
         streamActive = true
+        firstDeltaAt = null
         singleAutoContinueRuns = 0
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
@@ -2446,7 +2458,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 previewOnly = previewOnly,
                 onPreview = onPreview,
                 onDelta = { delta ->
-                    if (streamActive) _streamingText.value += delta
+                    if (streamActive) {
+                        if (firstDeltaAt == null) firstDeltaAt = System.currentTimeMillis()
+                        _streamingText.value += delta
+                    }
                 },
                 onReasoning = { text ->
                     if (streamActive) _streamingReasoning.value += text
@@ -2886,9 +2901,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning）。 */
+    /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning/time_to_first_token）。 */
     private fun appendAiReply(reply: String) {
         val profile = chatRepository.profile()
+        val startedAt = runCatching { java.time.Instant.parse(streamStartedAt).toEpochMilli() }.getOrNull()
+        val ttf = firstDeltaAt?.let { first -> startedAt?.let { (first - it).coerceAtLeast(0) } }
         chatStore.append(
             sessionId = sessionId,
             isUser = false,
@@ -2896,6 +2913,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             name = currentCharName,
             api = profile?.providerId,
             model = profile?.model,
+            timeToFirstToken = ttf,
             genStarted = streamStartedAt,
             genFinished = java.time.Instant.now().toString(),
             reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
