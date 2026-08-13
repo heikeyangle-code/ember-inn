@@ -169,7 +169,8 @@ object PromptManagerCore {
             val item = out.get(id)
             val merged = PromptItem(
                 identifier = id,
-                name = item?.name ?: id,
+                // 官方 new Prompt(prompt) 不复制 name（undefined）；系统提示条目不携带 name
+                name = prompt.name ?: "",
                 content = prompt.content,
                 role = item?.role ?: prompt.role,
                 systemPrompt = true,
