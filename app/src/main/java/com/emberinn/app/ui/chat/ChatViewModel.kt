@@ -2986,10 +2986,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         customLabels = prefs.customLabels,
                     ),
                 )?.imageSrc
-                if (chosen != null) {
-                    val idx = chatStore.messages(sessionId).lastIndex
-                    if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "sprite", chosen)
-                }
+                // 官方 expressions 扩展不持久化 extra.sprite（渲染期按正文确定性分类）；
+                // 不写 extra，避免 jsonl 混入非官方字段
             }
         }
         // 官方 power_user.message_token_count_enabled：extra.token_count 落盘
