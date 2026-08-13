@@ -200,7 +200,7 @@ WorldLoreMerger（官方世界书→提示词拼接段由 prepare-messages 覆�
 - ChromaDB 远程向量后端（官方 vectors 默认）——本地 FileVectorStore/InMemory + OpenAI 兼容嵌入替代，未做 ChromaDB 客户端。
 - summarize 聊天摘要（vectors 扩展）——未做。
 - 第三方扩展市场（third-party）与官方插件体系——未做（HANDOFF 11.2 登记）。
-- Prompt Manager 面板/dryRun 提示词预览（官方 prompt-manager UI + Generate dryRun）——引擎 PromptManagerCore 有，UI 未接（12.16 登记）。
+- Prompt Manager：引擎已 1:1（prompt-manager 差分 29 例）；UI 已接（设置→提示词管理器：官方字段 identifier/name/content/role/injection_position/depth/order/trigger/forbid_overrides + 顺序编辑/上下移/删除，全局存储 PromptManagerPrefs，已接入总装 userPrompts/userOrder）。登记：每角色顺序、dryRun 提示词预览、默认项内容编辑（当前以用户覆盖项代替）下一步。
 - 官方部分 slash 命令（命令数少于官方，见 3.4）。
 - connection-manager 扩展（官方连接管理）——App 以 ProviderScreen 多档案等价替代，未做官方扩展本体。
 - Claude/Gemini 官方 web tokenizer——用户豁免（cl100k 回退）。
