@@ -741,7 +741,6 @@ fun ChatScreen(
                             val lastUserIndex = remember(messages) { messages.indexOfLast { !isSystem(it) && isUser(it) } }
                             val showActions = !isStreaming && !isSystemMsg && !immersiveActions &&
                                 ((!isUserMsg && item.index == lastAiIndex) || (isUserMsg && item.index == lastUserIndex))
-                            val showGenerationActions = !isUserMsg && !isSystemMsg && item.index == lastAiIndex
                             val isPrevSameSender =
                                 item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
                             val prevEl = if (item.index == 0) null else messages[item.index - 1]
@@ -778,21 +777,17 @@ fun ChatScreen(
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
-                                showGenerationActions = showGenerationActions,
                                 swipeCount = derived.swipeCount,
                                 curSwipe = derived.curSwipe,
                                 isPrevSameSender = isPrevSameSender,
                                 onSwipeLeft = { vm.swipeLeft(item.index) },
                                 onSwipeRight = { vm.swipeRight(item.index) },
-                                onCopy = {
-                                    clipboard.setText(AnnotatedString(text))
-                                    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
-                                },
                                 onEdit = { editIndex = item.index; editDraft = text },
                                 onMore = { menuMessageIndex = item.index },
-                                onRegenerate = { vm.regenerate() },
-                                onContinue = { vm.continueGeneration() },
-                                onDelete = { deleteTargetIndex = item.index },
+                                onBookmark = {
+                                    bookmarkDraftName = vm.defaultBookmarkName()
+                                    showBookmarkDialog = true
+                                },
                                 onLongPress = { menuMessageIndex = item.index },
                             )
                         }
@@ -1022,19 +1017,32 @@ fun ChatScreen(
                     MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
                         editIndex = index; editDraft = text; menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.SpeakerHigh, "朗读这条消息") {
+                    MenuRow(PhosphorIcons.Megaphone, "朗读这条消息") {
                         vm.narrateMessage(index)
                         menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.FileText, "翻译这条消息") {
+                    MenuRow(PhosphorIcons.Translate, "翻译这条消息") {
                         vm.translateMessage(index)
                         menuMessageIndex = null
+                    }
+                    if (text.isNotBlank()) {
+                        MenuRow(PhosphorIcons.PaintBrush, "生成图片（用这条消息作提示）") {
+                            menuMessageIndex = null
+                            vm.generateImage(text)
+                        }
+                    }
+                    val mediaOfMsg = mediaOf(el)
+                    if (mediaOfMsg.isNotEmpty()) {
+                        MenuRow(PhosphorIcons.ImageSquare, "切换媒体显示样式（列表/图库）") {
+                            vm.setMediaDisplay(index)
+                            menuMessageIndex = null
+                        }
                     }
                     MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
                         tokenStatsIndex = index
                         menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.BookmarkSimple, "创建书签（存档到此）") {
+                    MenuRow(PhosphorIcons.Flag, "创建书签（存档到此）") {
                         menuMessageIndex = null
                         bookmarkDraftName = vm.defaultBookmarkName()
                         showBookmarkDialog = true
@@ -1058,14 +1066,14 @@ fun ChatScreen(
                     val swipeCount = vm.swipeCountOf(el)
                     val isSystemMsg = isSystem(el)
                     if (!isUserMsg && !isSystemMsg) {
-                        MenuRow(PhosphorIcons.MaskHappy, "冒充（让模型替你说）") {
+                        MenuRow(PhosphorIcons.User, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
                         if (index == lastAiIndex) {
                             MenuRow(PhosphorIcons.Refresh, "重新生成") {
                                 vm.regenerate(); menuMessageIndex = null
                             }
-                            MenuRow(PhosphorIcons.Continue, "继续生成") {
+                            MenuRow(PhosphorIcons.ArrowRight, "继续生成") {
                                 vm.continueGeneration(); menuMessageIndex = null
                             }
                             // 官方 swipe：任何 AI 消息都能生成变体（AI 消息落盘即带 swipes，恒显示入口）
@@ -1273,6 +1281,18 @@ fun ChatScreen(
                 MenuRow(PhosphorIcons.Book, "外置世界（本会话）") {
                     showMore = false
                     showWorldPicker = true
+                }
+                MenuRow(PhosphorIcons.Refresh, "重新生成（最后一条 AI 回复）") {
+                    showMore = false
+                    vm.regenerate()
+                }
+                MenuRow(PhosphorIcons.User, "冒充（让模型替你说）") {
+                    showMore = false
+                    vm.impersonate()
+                }
+                MenuRow(PhosphorIcons.ArrowRight, "继续生成") {
+                    showMore = false
+                    vm.continueGeneration()
                 }
                 MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
                     showMore = false
@@ -2566,7 +2586,6 @@ private fun MessageRow(
     accent: Color,
     dateLabel: String?,
     showActions: Boolean,
-    showGenerationActions: Boolean = true,
     swipeCount: Int = 0,
     curSwipe: Int = 0,
     isPrevSameSender: Boolean = true,
@@ -2574,12 +2593,9 @@ private fun MessageRow(
     onImageToggle: () -> Unit = {},
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
-    onCopy: () -> Unit,
     onEdit: () -> Unit = {},
     onMore: () -> Unit = {},
-    onRegenerate: () -> Unit,
-    onContinue: () -> Unit,
-    onDelete: () -> Unit,
+    onBookmark: () -> Unit = {},
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -2818,15 +2834,10 @@ private fun MessageRow(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Spacer(Modifier.weight(1f))
-                    // 官方 mes_button 风格：小图标按钮、无文字、低对比容器
-                    MessageActionIcon(PhosphorIcons.Copy, "复制", onCopy)
-                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
-                    if (showGenerationActions) {
-                        MessageActionIcon(PhosphorIcons.Refresh, "重新生成", onRegenerate)
-                        MessageActionIcon(PhosphorIcons.Continue, "继续", onContinue)
-                    }
-                    MessageActionIcon(PhosphorIcons.Delete, "删除", onDelete, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.72f))
+                    // 官方 mes_buttons 常驻三项：⋯ 更多 / flag 书签 / pencil 编辑；复制/删除/变体等进 ⋯ 菜单
                     MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
+                    MessageActionIcon(PhosphorIcons.Flag, "创建书签（存档到此）", onBookmark)
+                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
                 }
             }
         }
@@ -5048,23 +5059,23 @@ private fun ChatInputBar(
                     .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                if (canQuickContinue) {
-                    EmberInputIcon(
-                        onClick = onQuickContinue,
-                        icon = PhosphorIcons.Continue,
-                        contentDescription = "继续生成",
-                    )
-                }
-                EmberInputIcon(
-                    onClick = onQuickImpersonate,
-                    icon = PhosphorIcons.User,
-                    contentDescription = "冒充用户发言",
-                )
                 EmberInputIcon(
                     onClick = onVoice,
                     icon = PhosphorIcons.Mic,
                     contentDescription = "语音输入",
                 )
+                EmberInputIcon(
+                    onClick = onQuickImpersonate,
+                    icon = PhosphorIcons.User,
+                    contentDescription = "冒充用户发言",
+                )
+                if (canQuickContinue) {
+                    EmberInputIcon(
+                        onClick = onQuickContinue,
+                        icon = PhosphorIcons.ArrowRight,
+                        contentDescription = "继续生成",
+                    )
+                }
                 val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
                 ChatSendButton(accent = accent, canSend = canSend, onSend = onSend)
             } else {
