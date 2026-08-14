@@ -243,6 +243,7 @@ object PresetSettingsStore {
                 seed = i("seed") ?: profile.sampler.seed,
                 n = i("n") ?: profile.sampler.n,
                 stream = b("stream_openai"),
+                squashSystemMessages = b("squash_system_messages"),
                 maxTokens = i("openai_max_tokens") ?: profile.sampler.maxTokens,
                 reasoningEffort = s("reasoning_effort") ?: profile.sampler.reasoningEffort,
                 verbosity = s("verbosity") ?: profile.sampler.verbosity,
@@ -302,6 +303,7 @@ object PresetSettingsStore {
         put("reasoning_effort", JsonPrimitive(sampler.reasoningEffort))
         sampler.verbosity?.let { put("verbosity", JsonPrimitive(it)) }
         put("use_sysprompt", JsonPrimitive(sampler.useSysprompt))
+        put("squash_system_messages", JsonPrimitive(sampler.squashSystemMessages))
         put("openrouter_use_fallback", JsonPrimitive(sampler.useFallback))
         put("openrouter_allow_fallbacks", JsonPrimitive(sampler.allowFallbacks))
         put("openrouter_middleout", JsonPrimitive(sampler.middleout))

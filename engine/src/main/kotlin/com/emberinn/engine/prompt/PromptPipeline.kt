@@ -422,7 +422,7 @@ object PromptPipeline {
         val selectedGroup: Boolean = false,
         val namesBehavior: Int = PromptAssembler.NAMES_DEFAULT,
         val sendIfEmpty: String = "",
-        val squashSystemMessages: Boolean = true,
+        val squashSystemMessages: Boolean = false,
         val inChatExtensions: List<PromptItem> = emptyList(),
     )
 

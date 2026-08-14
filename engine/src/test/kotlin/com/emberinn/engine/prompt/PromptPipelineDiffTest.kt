@@ -133,7 +133,7 @@ class PromptPipelineDiffTest {
             selectedGroup = selectedGroup,
             namesBehavior = body["namesBehavior"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
             sendIfEmpty = body["sendIfEmpty"]?.jsonPrimitive?.content ?: "",
-            squashSystemMessages = body["squashSystemMessages"]?.jsonPrimitive?.content != "false",
+            squashSystemMessages = body["squashSystemMessages"]?.jsonPrimitive?.content == "true",
             newChatPrompt = if (selectedGroup) {
                 body["newGroupChatPrompt"]?.jsonPrimitive?.content ?: "undefined"
             } else {

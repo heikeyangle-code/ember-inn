@@ -109,7 +109,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -276,7 +291,37 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n作者注释\n作者注释\n描述\n性格\n场景\n人设描述",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "人设描述",
           "name": null
         },
         {
@@ -442,7 +487,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -611,7 +671,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -755,7 +830,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -891,7 +981,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -1059,7 +1164,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -1226,7 +1346,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -1377,7 +1512,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -1513,7 +1663,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -1941,7 +2106,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2121,7 +2301,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2314,7 +2509,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2492,7 +2702,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2627,7 +2852,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2788,7 +3028,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -2929,7 +3184,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3076,7 +3346,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3205,7 +3490,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3347,7 +3647,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3492,7 +3807,8 @@
               "system_prompt": true,
               "injection_position": 0
             }
-          ]
+          ],
+          "squashSystemMessages": true
         }
       },
       "expected": [
@@ -3664,7 +3980,32 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n作者注释\n作者注释\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3832,7 +4173,32 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n作者注释\n作者注释\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "作者注释",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -3985,7 +4351,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -4133,7 +4514,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {
@@ -4373,7 +4769,22 @@
       "expected": [
         {
           "role": "system",
-          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.\n描述\n性格\n场景",
+          "content": "Write {{char}}'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "描述",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "性格",
+          "name": null
+        },
+        {
+          "role": "system",
+          "content": "场景",
           "name": null
         },
         {

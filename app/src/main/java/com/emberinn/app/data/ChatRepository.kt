@@ -320,6 +320,10 @@ class ChatRepository(context: Context) {
             reasoningTemplate = reasoningTemplate,
             scriptInjections = scriptInjections,
             useCharacterDepthPrompt = useCharacterDepthPrompt,
+            // 官方 prepareOpenAIMessages：squash 仅 chat completion 且 dryRun=false；textgen/novel/kobold 不执行
+            squashSystemMessages = profile.sampler.squashSystemMessages &&
+                !previewOnly &&
+                provider.protocol !in setOf("textgenerationwebui", "novel", "kobold"),
             canUseTools = options.hasTools,
             quietPrompt = quietPrompt,
             memorySummary = memorySummary,

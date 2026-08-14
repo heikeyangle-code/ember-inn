@@ -212,7 +212,7 @@ const stub = [
     "    chat_completion_source: request.body.chatCompletionSource ?? 'openai',",
     "    assistant_prefill: request.body.assistantPrefill ?? '',",
     '    names_behavior: request.body.namesBehavior ?? 0,',
-    '    squash_system_messages: request.body.squashSystemMessages ?? true,',
+    '    squash_system_messages: request.body.squashSystemMessages ?? false,',,
     "    new_chat_prompt: request.body.newChatPrompt ?? 'New chat:',",
     "    new_example_chat_prompt: request.body.newExampleChatPrompt ?? 'New chat:',",
     "    send_if_empty: request.body.sendIfEmpty ?? '',",
@@ -524,6 +524,7 @@ await add('budget-truncates-oldest', {
 });
 await add('squash-multiple-systems', {
     ...base,
+    squashSystemMessages: true,
     promptCollection: [
         ...base.promptCollection,
         { identifier: 'extraSystem', role: 'system', content: '额外系统', name: null, system_prompt: true, injection_position: 0 },

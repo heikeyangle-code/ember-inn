@@ -171,6 +171,8 @@ class ChatPromptFactory {
         scriptInjections: List<ScriptInject> = emptyList(),
         /** 官方 generate：群聊有 depth 提示时用群聊深度提示，否则用角色卡深度提示（DEPTH_PROMPT）。 */
         useCharacterDepthPrompt: Boolean = true,
+        /** 官方 oai_settings.squash_system_messages：总装后合并连续 system 消息；dryRun/textgen 不生效。 */
+        squashSystemMessages: Boolean = false,
         /** 官方 ToolManager.isToolCallingSupported：本轮是否允许工具调用（App 按注册工具/能力填充）。 */
         canUseTools: Boolean = false,
         /** 官方 generateQuietPrompt 的 quietPrompt（记忆扩展 DEFAULT 总结器等场景）。 */
@@ -706,6 +708,7 @@ class ChatPromptFactory {
                 continuePrefill = continuePrefill,
                 impersonationPrompt = impersonationPrompt,
                 cyclePrompt = cyclePrompt,
+                squashSystemMessages = squashSystemMessages,
                 imageInlining = imageInlining,
                 videoInlining = videoInlining,
                 audioInlining = audioInlining,

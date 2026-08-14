@@ -259,6 +259,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setUseSysprompt(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(useSysprompt = v)
     }
+    fun setSquashSystemMessages(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(squashSystemMessages = v)
+    }
 
     /** 应用官方 OpenAI 采样预设：引擎 onSettingsPresetChange 纯循环（bind_preset_to_connection=官方默认 true）。 */
     fun applySamplerPreset(name: String) {
@@ -278,6 +281,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             put("seed", kotlinx.serialization.json.JsonPrimitive(sam.seed))
             put("n", kotlinx.serialization.json.JsonPrimitive(sam.n))
             put("stream_openai", kotlinx.serialization.json.JsonPrimitive(sam.stream))
+            put("squash_system_messages", kotlinx.serialization.json.JsonPrimitive(sam.squashSystemMessages))
             put("openai_max_context", kotlinx.serialization.json.JsonPrimitive(_contextWindow.value))
             put("openai_max_tokens", kotlinx.serialization.json.JsonPrimitive(_maxTokens.value))
         }
@@ -301,6 +305,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             seed = i("seed") ?: sam.seed,
             n = i("n") ?: sam.n,
             stream = b("stream_openai"),
+            squashSystemMessages = b("squash_system_messages"),
         )
         _maxTokens.value = i("openai_max_tokens") ?: _maxTokens.value
         _contextWindow.value = i("openai_max_context") ?: _contextWindow.value

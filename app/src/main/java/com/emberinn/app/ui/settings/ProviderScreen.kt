@@ -538,6 +538,11 @@ fun ProviderDetailScreen(
                 sampler.useSysprompt,
                 vm::setUseSysprompt,
             )
+            SwitchRow(
+                "合并 system 消息（squash_system_messages，官方默认关）",
+                sampler.squashSystemMessages,
+                vm::setSquashSystemMessages,
+            )
             DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
                 vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
             }

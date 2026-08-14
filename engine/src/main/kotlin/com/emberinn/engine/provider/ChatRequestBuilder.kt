@@ -59,6 +59,8 @@ data class SamplerParams(
     val requestTokenProbabilities: Boolean = false,
     /** 官方 use_sysprompt（Claude/Gemini 是否把 system 消息作独立 system 角色；官方默认 false）。 */
     val useSysprompt: Boolean = false,
+    /** 官方 oai_settings.squash_system_messages：总装后合并连续无名 system 消息（官方默认 false）。 */
+    val squashSystemMessages: Boolean = false,
     /** 官方 settings.logit_bias（仅支持源发送）。 */
     val logitBias: Map<String, Double> = emptyMap(),
     /** 官方 settings.verbosity（gpt-5 系）。 */
