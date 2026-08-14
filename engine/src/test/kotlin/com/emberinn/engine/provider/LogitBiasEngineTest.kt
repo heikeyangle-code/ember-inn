@@ -33,8 +33,8 @@ class LogitBiasEngineTest {
     }
 
     @Test
-    fun `sentencepiece returns empty and missing web models return empty`() {
-        assertTrue(LogitBiasEngine.compute("gemini-2.5-pro", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
+    fun `sentencepiece computes real bias and missing web models return empty`() {
+        assertTrue(LogitBiasEngine.compute("gemini-2.5-pro", listOf(BiasEntry(text = " hello", value = 5.0))).isNotEmpty())
         // command-r 无模型文件（官方下载源），按不可用返回 {}
         assertTrue(LogitBiasEngine.compute("command-r-plus", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
     }

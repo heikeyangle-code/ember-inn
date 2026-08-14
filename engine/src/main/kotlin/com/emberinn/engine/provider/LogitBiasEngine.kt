@@ -33,11 +33,14 @@ object LogitBiasEngine {
     fun compute(model: String, entries: List<BiasEntry>): Map<String, Double> {
         val key = TokenizerModel.map(model)
         if (TokenizerModel.isClaude(key)) return emptyMap()
-        if (TokenizerModel.isSentencepiece(key)) return emptyMap()
         // web 族：Claude/Llama3 模型文件已打包（HfBpeTokenizer）；其余无模型文件 → 官方不可用返回 {}
+        // sentencepiece 族：Gemini/llama/mistral/yi/jamba/nerdstash 模型已打包（SentencePieceTokenizer）
         val encodeFn: (String) -> List<Int>
         if (TokenizerModel.isWeb(key)) {
             val tok = com.emberinn.engine.tokenizer.HfBpeTokenizer.forModel(model) ?: return emptyMap()
+            encodeFn = { text -> tok.encode(text) }
+        } else if (TokenizerModel.isSentencepiece(key)) {
+            val tok = com.emberinn.engine.tokenizer.SentencePieceTokenizer.forModel(model) ?: return emptyMap()
             encodeFn = { text -> tok.encode(text) }
         } else {
             val encoding = encodingFor(key) ?: return emptyMap()
