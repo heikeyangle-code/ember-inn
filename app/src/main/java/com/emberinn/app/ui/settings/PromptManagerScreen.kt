@@ -1,7 +1,9 @@
 package com.emberinn.app.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -30,18 +35,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.CharacterStore
+import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
+import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberEmptyState
@@ -62,7 +74,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
     var editTarget by remember { mutableStateOf<PromptItem?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<PromptItem?>(null) }
-    var newOrderId by remember { mutableStateOf("") }
+    var inspectTarget by remember { mutableStateOf<PromptItem?>(null) }
 
     fun save(p: List<PromptItem>, o: List<PromptOrderEntry>) {
         prompts = p
@@ -111,10 +123,60 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 if (order.isEmpty()) {
                     item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
+                // 触屏拖动排序：长按整行上下拖动（官方 sortable 拖拽的移动端等价），无 ↑↓ 按钮。
+                // draggingOrderId 跟踪当前拖拽项，graphicsLayer 让行跟随手指，跨越半行高即换位。
+                var draggingOrderId by remember { mutableStateOf<String?>(null) }
+                var dragOrderOffset by remember { mutableFloatStateOf(0f) }
+                val orderHeights = remember { mutableMapOf<String, Int>() }
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
-                        Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                        val isDragging = draggingOrderId == entry.identifier
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .zIndex(if (isDragging) 1f else 0f)
+                                .graphicsLayer { translationY = if (isDragging) dragOrderOffset else 0f }
+                                .onSizeChanged { orderHeights[entry.identifier] = it.height }
+                                .pointerInput(entry.identifier) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = {
+                                            draggingOrderId = entry.identifier
+                                            dragOrderOffset = 0f
+                                        },
+                                        onDrag = { change, amount ->
+                                            change.consume()
+                                            if (draggingOrderId == entry.identifier) {
+                                                dragOrderOffset += amount.y
+                                                val h = (orderHeights[entry.identifier] ?: 0).coerceAtLeast(1)
+                                                var crossed = (dragOrderOffset / h).toInt()
+                                                while (crossed != 0) {
+                                                    val idx = order.indexOfFirst { it.identifier == entry.identifier }
+                                                    val target = idx + crossed
+                                                    if (target !in order.indices || target == idx) break
+                                                    val list = order.toMutableList()
+                                                    list.add(target, list.removeAt(idx))
+                                                    order = list
+                                                    PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                                    dragOrderOffset -= crossed * h
+                                                    crossed = (dragOrderOffset / h).toInt()
+                                                }
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            draggingOrderId = null
+                                            dragOrderOffset = 0f
+                                        },
+                                        onDragCancel = {
+                                            draggingOrderId = null
+                                            dragOrderOffset = 0f
+                                        },
+                                    )
+                                },
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
+                                Text("≡", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline, modifier = Modifier.width(24.dp))
                                 Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline, modifier = Modifier.width(24.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(entry.identifier, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
@@ -127,43 +189,39 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                     },
                                 )
                                 IconButton(onClick = {
-                                    if (i > 0) {
-                                        order = order.toMutableList().apply { add(i - 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
-                                    }
-                                }, modifier = Modifier.size(30.dp)) { Text("↑", style = MaterialTheme.typography.labelMedium) }
-                                IconButton(onClick = {
-                                    if (i < order.lastIndex) {
-                                        order = order.toMutableList().apply { add(i + 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
-                                    }
-                                }, modifier = Modifier.size(30.dp)) { Text("↓", style = MaterialTheme.typography.labelMedium) }
-                                IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
                                     PromptManagerPrefs.saveOrder(context, selectedChar, order)
-                                }, modifier = Modifier.size(30.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
+                                }, modifier = Modifier.size(36.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
                     }
                 }
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        EmberTextField(
-                            value = newOrderId,
-                            onValueChange = { newOrderId = it },
-                            label = { Text("追加顺序项 identifier") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
-                            val id = newOrderId.trim()
-                            if (id.isNotEmpty()) {
-                                order = order + PromptOrderEntry(id)
-                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
-                                newOrderId = ""
+                    // 官方 handleAppendPrompt：从现有提示项下拉追加到当前角色/全局顺序
+                    val appendCandidates = remember(prompts, order) {
+                        (PromptCollection.DEFAULT_PROMPTS.map { it.identifier } + prompts.map { it.identifier })
+                            .distinct()
+                            .filter { id -> order.none { it.identifier == id } }
+                    }
+                    var appendOpen by remember { mutableStateOf(false) }
+                    Box {
+                        TextButton(
+                            onClick = { appendOpen = true },
+                            enabled = appendCandidates.isNotEmpty(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("追加提示项到顺序（官方 Append prompt）") }
+                        DropdownMenu(expanded = appendOpen, onDismissRequest = { appendOpen = false }) {
+                            appendCandidates.forEach { id ->
+                                DropdownMenuItem(
+                                    text = { Text(id) },
+                                    onClick = {
+                                        order = order + PromptOrderEntry(id)
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                        appendOpen = false
+                                    },
+                                )
                             }
-                        }) { Text("追加") }
+                        }
                     }
                 }
                 item {
@@ -194,6 +252,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             },
                             // 官方默认项可编辑：保存为用户覆盖项（同名 identifier 优先于默认）
                             onEdit = { editTarget = def; showEdit = true },
+                            onInspect = { inspectTarget = def },
                             onDelete = null,
                         )
                     }
@@ -213,6 +272,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 PromptManagerPrefs.saveOrder(context, selectedChar, order)
                             },
                             onEdit = { editTarget = item; showEdit = true },
+                            onInspect = { inspectTarget = item },
                             onDelete = { deleteTarget = item },
                         )
                     }
@@ -256,11 +316,21 @@ fun PromptManagerScreen(onBack: () -> Unit) {
             "swipe" to "Swipe", "regenerate" to "Regenerate", "quiet" to "Quiet",
         )
         val resettable = promptId in setOf("main", "nsfw", "jailbreak", "enhanceDefinitions")
-        AlertDialog(
-            onDismissRequest = { showEdit = false },
-            title = { Text(if (isNew) "新增提示项" else "编辑提示项") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState()).height(520.dp)) {
+        EmberBottomSheet(onDismissRequest = { showEdit = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    if (isNew) "新增提示项" else "编辑提示项",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
                     Text(
                         "identifier（自动生成，只读）：$promptId",
                         style = MaterialTheme.typography.labelSmall,
@@ -340,31 +410,81 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val updated = PromptItem(
-                        identifier = promptId,
-                        name = name.ifBlank { promptId },
-                        content = content,
-                        role = role,
-                        enabled = true,
-                        marker = target.marker,
-                        systemPrompt = if (isNew) false else target.systemPrompt,
-                        injectionPosition = position.toIntOrNull(),
-                        injectionDepth = depth.toIntOrNull(),
-                        injectionOrder = injectionOrder.toIntOrNull() ?: 100,
-                        injectionTrigger = trigger.toList(),
-                        forbidOverrides = forbid,
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        val updated = PromptItem(
+                            identifier = promptId,
+                            name = name.ifBlank { promptId },
+                            content = content,
+                            role = role,
+                            enabled = true,
+                            marker = target.marker,
+                            systemPrompt = if (isNew) false else target.systemPrompt,
+                            injectionPosition = position.toIntOrNull(),
+                            injectionDepth = depth.toIntOrNull(),
+                            injectionOrder = injectionOrder.toIntOrNull() ?: 100,
+                            injectionTrigger = trigger.toList(),
+                            forbidOverrides = forbid,
+                        )
+                        val existing = prompts.indexOfFirst { it.identifier == promptId }
+                        prompts = if (isNew || existing < 0) prompts + updated
+                        else prompts.map { if (it.identifier == promptId) updated else it }
+                        PromptManagerPrefs.savePrompts(context, prompts)
+                        showEdit = false
+                    }) { Text("保存") }
+                    TextButton(onClick = { showEdit = false }) { Text("取消") }
+                }
+            }
+        }
+    }
+
+    // 官方 handleInspect：显示最近一次总装中该 identifier 的消息集合（role/content/tokens）。
+    inspectTarget?.let { inspected ->
+        val msgs = remember(inspected) {
+            PromptAssemblyCache.lastMessages?.filter { it.identifier == inspected.identifier } ?: emptyList()
+        }
+        EmberBottomSheet(onDismissRequest = { inspectTarget = null }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+            ) {
+                Text(
+                    "检查：${inspected.name.ifBlank { inspected.identifier }}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.size(6.dp))
+                if (msgs.isEmpty()) {
+                    Text(
+                        "该提示项在最近一次总装中没有消息。先发送一条消息或使用聊天菜单的“提示词预览（dryRun）”后，这里才会列出内容（官方 PromptManager.messages 同语义）。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val existing = prompts.indexOfFirst { it.identifier == promptId }
-                    prompts = if (isNew || existing < 0) prompts + updated
-                    else prompts.map { if (it.identifier == promptId) updated else it }
-                    PromptManagerPrefs.savePrompts(context, prompts)
-                    showEdit = false
-                }) { Text("保存") }
-            },
-            dismissButton = { TextButton(onClick = { showEdit = false }) { Text("取消") } },
-        )
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+                        items(msgs) { m ->
+                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                Text(
+                                    "${m.role} · ${m.tokens}t",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    m.content.ifBlank { "（无内容）" },
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
+                TextButton(onClick = { inspectTarget = null }) { Text("关闭") }
+            }
+        }
     }
 }
 
@@ -375,6 +495,7 @@ private fun PromptRow(
     enabledInOrder: Boolean,
     onToggleOrder: (Boolean) -> Unit,
     onEdit: (() -> Unit)?,
+    onInspect: (() -> Unit)?,
     onDelete: (() -> Unit)?,
 ) {
     // 官方 isPromptEditAllowed / isPromptToggleAllowed：marker 项默认不可编辑/开关，
@@ -414,6 +535,11 @@ private fun PromptRow(
                 )
             }
             EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onCheckedChange = onToggleOrder)
+            if (onInspect != null) {
+                IconButton(onClick = onInspect, modifier = Modifier.size(38.dp)) {
+                    Text("查", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+            }
             if (userDefined && onDelete != null) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
                     Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)

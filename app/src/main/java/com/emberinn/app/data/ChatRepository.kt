@@ -388,6 +388,8 @@ class ChatRepository(private val context: Context) {
             localVariables = this.localVariables,
         )
         onPrepared?.invoke(prepared)
+        // 官方 PromptManager.messages：总装后保留，供 Prompt Manager 检查弹窗按 identifier 查看。
+        PromptAssemblyCache.lastMessages = prepared.messages
         if (previewOnly) {
             // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 全文 + 分节 token（含 start_chat 预留 3）
             onPreview?.invoke(
