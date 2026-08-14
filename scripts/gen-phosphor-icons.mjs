@@ -48,6 +48,8 @@ const ICONS = {
   DotsThree: 'dots-three',
   DotsThreeVertical: 'dots-three-vertical',
   Edit: 'pencil-simple',
+  Eye: 'eye',
+  EyeSlash: 'eye-slash',
   FileText: 'file-text',
   Folder: 'folder',
   ImageSquare: 'image-square',

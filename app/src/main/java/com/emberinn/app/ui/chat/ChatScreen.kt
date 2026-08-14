@@ -729,7 +729,11 @@ fun ChatScreen(
                             // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
                             val mediaList = remember(derived.media) { ChatMedia(derived.media) }
                             val immersiveActions = rowImmersiveActions
-                            val showActions = !isStreaming && item.index == lastAiIndex && !isUserMsg && !isSystemMsg && !immersiveActions
+                            // 官方：用户消息与 AI 消息都有 mes_buttons；移动端取“双方各自最后一条”显示，避免每条都铺按钮
+                            val lastUserIndex = remember(messages) { messages.indexOfLast { !isSystem(it) && isUser(it) } }
+                            val showActions = !isStreaming && !isSystemMsg && !immersiveActions &&
+                                ((!isUserMsg && item.index == lastAiIndex) || (isUserMsg && item.index == lastUserIndex))
+                            val showGenerationActions = !isUserMsg && !isSystemMsg && item.index == lastAiIndex
                             val isPrevSameSender =
                                 item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
                             val prevEl = if (item.index == 0) null else messages[item.index - 1]
@@ -766,6 +770,7 @@ fun ChatScreen(
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
+                                showGenerationActions = showGenerationActions,
                                 swipeCount = derived.swipeCount,
                                 curSwipe = derived.curSwipe,
                                 isPrevSameSender = isPrevSameSender,
@@ -1025,6 +1030,18 @@ fun ChatScreen(
                         menuMessageIndex = null
                         bookmarkDraftName = vm.defaultBookmarkName()
                         showBookmarkDialog = true
+                    }
+                    val msgName = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: ""
+                    val isRealSystem = isSystem(el) && msgName == SYSTEM_USER_NAME
+                    if (!isRealSystem) {
+                        val hidden = isSystem(el)
+                        MenuRow(
+                            if (hidden) PhosphorIcons.EyeSlash else PhosphorIcons.Eye,
+                            if (hidden) "取消隐藏（恢复参与提示词）" else "隐藏（不进提示词）",
+                        ) {
+                            vm.hideMessage(index, !hidden)
+                            menuMessageIndex = null
+                        }
                     }
                     val swipeCount = vm.swipeCountOf(el)
                     val isSystemMsg = isSystem(el)
@@ -2497,6 +2514,7 @@ private fun MessageRow(
     accent: Color,
     dateLabel: String?,
     showActions: Boolean,
+    showGenerationActions: Boolean = true,
     swipeCount: Int = 0,
     curSwipe: Int = 0,
     isPrevSameSender: Boolean = true,
@@ -2751,8 +2769,10 @@ private fun MessageRow(
                     // 官方 mes_button 风格：小图标按钮、无文字、低对比容器
                     MessageActionIcon(PhosphorIcons.Copy, "复制", onCopy)
                     MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
-                    MessageActionIcon(PhosphorIcons.Refresh, "重新生成", onRegenerate)
-                    MessageActionIcon(PhosphorIcons.Continue, "继续", onContinue)
+                    if (showGenerationActions) {
+                        MessageActionIcon(PhosphorIcons.Refresh, "重新生成", onRegenerate)
+                        MessageActionIcon(PhosphorIcons.Continue, "继续", onContinue)
+                    }
                     MessageActionIcon(PhosphorIcons.Delete, "删除", onDelete, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.72f))
                     MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
                 }
