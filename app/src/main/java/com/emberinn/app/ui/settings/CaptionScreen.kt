@@ -49,13 +49,13 @@ fun CaptionScreen(onBack: () -> Unit) {
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.enabled, onCheckedChange = { s = s.copy(enabled = it); save() })
                 }
                 Text("来源", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                Row(modifier = Modifier.padding(vertical = 8.dp)) {
                     FilterChip(selected = s.source == "multimodal", onClick = { s = s.copy(source = "multimodal"); save() }, label = { Text("Multimodal") })
                 }
                 EmberTextField(
@@ -63,25 +63,25 @@ fun CaptionScreen(onBack: () -> Unit) {
                     onValueChange = { s = s.copy(prompt = it); save() },
                     label = { Text("描述提示词（prompt）") },
                     minLines = 2,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
                 EmberTextField(
                     value = s.template,
                     onValueChange = { s = s.copy(template = it); save() },
                     label = { Text("消息模板（template；缺 {{caption}} 自动补）") },
                     minLines = 2,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("聊天内显示图片（show_in_chat）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.showInChat, onCheckedChange = { s = s.copy(showInChat = it); save() })
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("发送前人工确认（refine_mode）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.refineMode, onCheckedChange = { s = s.copy(refineMode = it); save() })

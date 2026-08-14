@@ -2,13 +2,16 @@ package com.emberinn.app.ui.settings
 
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberSecondaryButton
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -94,7 +96,11 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            FlowRow(
+                verticalArrangement = Arrangement.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
                 Box {
                     FilterChip(
                         selected = false,
@@ -113,12 +119,10 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = {
+                EmberSecondaryButton(label = "新建预设", onClick = {
                     draftPresetName = ""
                     showPresetDialog = true
-                }) { Text("＋ 新建预设") }
-                Spacer(Modifier.width(8.dp))
+                }, minHeight = 40.dp)
                 if (store.presets().size > 1) {
                     TextButton(onClick = {
                         store.delete(presetName)
@@ -201,7 +205,8 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            Button(
+            EmberPrimaryButton(
+                label = "新增快捷回复",
                 onClick = {
                     adding = true
                     draftLabel = ""
@@ -210,8 +215,10 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                     draftAutomationId = ""
                     draftPreventAutoExecute = false
                 },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) { Text("＋ 新增快捷回复") }
+                icon = PhosphorIcons.Plus,
+                expandWidth = true,
+                modifier = Modifier.padding(top = 8.dp),
+            )
             Spacer(Modifier.height(12.dp))
         }
     }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.icons.PhosphorIcons
 import java.io.File
@@ -120,15 +120,18 @@ fun ExpressionScreen(onBack: () -> Unit) {
                 }
                 if (selectedName.isNotBlank()) {
                     item {
-                        Button(onClick = { picker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                            Text("＋ 导入精灵图片（PNG/JPG/WebP）")
-                        }
+                        EmberPrimaryButton(
+                            label = "导入精灵图片（PNG/JPG/WebP）",
+                            onClick = { picker.launch("image/*") },
+                            icon = PhosphorIcons.Plus,
+                            expandWidth = true,
+                        )
                     }
                 }
                 items(sprites, key = { it.path }) { sprite ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     ) {
                         Text(sprite.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         IconButton(onClick = {

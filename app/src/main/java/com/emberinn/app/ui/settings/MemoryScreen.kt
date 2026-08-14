@@ -58,7 +58,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                     onValueChange = { s = s.copy(prompt = it); save() },
                     label = { Text("总结提示词（{{words}} 会被词数替换）") },
                     minLines = 4,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
                 Row(modifier = Modifier.padding(bottom = 6.dp)) {
                     TextButton(onClick = { s = s.copy(prompt = MemoryEngine.DEFAULT_PROMPT); save() }) {
@@ -70,7 +70,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                     onValueChange = { s = s.copy(template = it); save() },
                     label = { Text("注入模板（{{summary}} 替换为摘要；留空=Summary: 文本）") },
                     minLines = 2,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
 
                 Text("注入位置", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
@@ -123,7 +123,7 @@ fun MemoryScreen(onBack: () -> Unit) {
 
 @Composable
 private fun ChipRow(options: List<Pair<String, Int>>, selected: Int, onSelect: (Int) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         options.forEach { (label, value) ->
             FilterChip(
                 selected = selected == value,
@@ -143,7 +143,7 @@ private fun NumberRow(label: String, value: String, onChange: (String) -> Unit) 
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
     )
 }
 
@@ -151,7 +151,7 @@ private fun NumberRow(label: String, value: String, onChange: (String) -> Unit) 
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         EmberSwitch(checked = checked, onCheckedChange = onChange)
