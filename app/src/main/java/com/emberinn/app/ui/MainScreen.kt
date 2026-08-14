@@ -191,6 +191,10 @@ fun MainScreen(
                             settingsDeepLink = "providers"
                             selectedTab = 2
                         },
+                        onSwitchSession = { session ->
+                            openSession(session.id)
+                            openName = session.name
+                        },
                     )
                 }
             }
@@ -205,6 +209,10 @@ fun MainScreen(
                 openSessionId = null
                 settingsDeepLink = "providers"
                 selectedTab = 2
+            },
+            onSwitchSession = { session ->
+                openSession(session.id)
+                openName = session.name
             },
         )
         return

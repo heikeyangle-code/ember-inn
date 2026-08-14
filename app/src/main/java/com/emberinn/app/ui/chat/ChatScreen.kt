@@ -229,6 +229,7 @@ fun ChatScreen(
     name: String,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
+    onSwitchSession: (com.emberinn.app.data.SessionRecord) -> Unit = {},
 ) {
     val vm: ChatViewModel = viewModel(
         key = sessionId,
@@ -270,6 +271,7 @@ fun ChatScreen(
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showConvertGroupConfirm by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
     var showCfgSheet by remember { mutableStateOf(false) }
@@ -1037,6 +1039,10 @@ fun ChatScreen(
                         bookmarkDraftName = vm.defaultBookmarkName()
                         showBookmarkDialog = true
                     }
+                    MenuRow(PhosphorIcons.GitBranch, "创建分支（Branch）") {
+                        menuMessageIndex = null
+                        vm.createBranch(index)?.let { onSwitchSession(it) }
+                    }
                     val msgName = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: ""
                     val isRealSystem = isSystem(el) && msgName == SYSTEM_USER_NAME
                     if (!isRealSystem) {
@@ -1090,6 +1096,23 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showConvertGroupConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConvertGroupConfirm = false },
+            title = { Text("转换为群聊？") },
+            text = { Text("将当前聊天转换为群聊（成员=当前角色），此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConvertGroupConfirm = false
+                    vm.convertToGroup()?.let { onSwitchSession(it) }
+                }) { Text("转换", color = MaterialTheme.colorScheme.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConvertGroupConfirm = false }) { Text("取消") }
+            },
+        )
     }
 
     deleteTargetIndex?.let { index ->
@@ -1231,6 +1254,12 @@ fun ChatScreen(
                     MenuRow(PhosphorIcons.Person, "角色详情") {
                         showMore = false
                         showCharacterInfo = true
+                    }
+                    if (vm.group == null) {
+                        MenuRow(PhosphorIcons.MaskHappy, "转换为群聊") {
+                            showMore = false
+                            showConvertGroupConfirm = true
+                        }
                     }
                 }
                 MenuRow(PhosphorIcons.Share, "导出聊天（JSONL）") {

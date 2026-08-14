@@ -780,6 +780,80 @@ class ChatStore(private val context: Context) {
         save(sessionId, list)
     }
 
+    /** 创建分支会话（官方 bookmarks.js createBranch）：复制 [0..at] 消息快照，metadata.main_chat=源会话名。 */
+    fun createBranchSession(sourceId: String, at: Int, branchName: String): SessionRecord? {
+        val src = get(sourceId) ?: return null
+        val list = messages(sourceId)
+        if (list.isEmpty()) return null
+        val idx = at.coerceIn(0, list.lastIndex)
+        // 官方 structuredClone：整棵 JSON 深拷贝
+        val prefix = list.take(idx + 1).map { json.parseToJsonElement(it.toString()) }
+        val id = java.util.UUID.randomUUID().toString()
+        val record = SessionRecord(id = id, characterId = src.characterId, name = branchName, groupId = src.groupId)
+        upsert(record)
+        writeMessages(id, prefix)
+        val meta = metadata(sourceId).toMutableMap()
+        meta["main_chat"] = JsonPrimitive(src.name)
+        saveMetadata(id, JsonObject(meta))
+        return record
+    }
+
+    /** 官方 createBranch 尾部：原会话末条 extra.branches.push(分支名)。 */
+    fun addBranchName(sessionId: String, at: Int, branchName: String) {
+        val list = messages(sessionId).toMutableList()
+        if (list.isEmpty()) return
+        val idx = at.coerceIn(0, list.lastIndex)
+        val obj = list[idx].jsonObject.toMutableMap()
+        val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val branches = (extra["branches"] as? JsonArray)?.toMutableList() ?: mutableListOf()
+        branches.add(JsonPrimitive(branchName))
+        extra["branches"] = JsonArray(branches)
+        obj["extra"] = JsonObject(extra)
+        list[idx] = JsonObject(obj)
+        save(sessionId, list)
+    }
+
+    /** 官方 bookmarks.js convertSoloToGroupChat：单聊转群聊——新建群会话，AI 消息补 name/original_avatar/force_avatar/gen_id。 */
+    fun createConvertedGroupSession(
+        sourceId: String,
+        groupId: String,
+        characterName: String,
+        avatar: String?,
+        chatName: String,
+    ): SessionRecord? {
+        val src = get(sourceId) ?: return null
+        val list = messages(sourceId)
+        val base = System.currentTimeMillis()
+        val converted = list.mapIndexed { index, el ->
+            val obj = el.jsonObject.toMutableMap()
+            val isUser = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+            val isSystem = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+            val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+            val narrator = extra["type"]?.jsonPrimitive?.contentOrNull == "narrator"
+            // 官方：跳过 user/system/narrator/已有 force_avatar 的消息
+            if (!isUser && !isSystem && !narrator && obj["force_avatar"] == null) {
+                obj["name"] = JsonPrimitive(characterName)
+                if (avatar.isNullOrBlank()) {
+                    obj.remove("force_avatar")
+                    obj.remove("original_avatar")
+                } else {
+                    obj["force_avatar"] = JsonPrimitive(avatar)
+                    obj["original_avatar"] = JsonPrimitive(avatar)
+                }
+                extra["gen_id"] = JsonPrimitive(base + index)
+            }
+            obj["extra"] = JsonObject(extra)
+            JsonObject(obj)
+        }
+        val id = java.util.UUID.randomUUID().toString()
+        val record = SessionRecord(id = id, characterId = null, name = chatName, groupId = groupId)
+        upsert(record)
+        writeMessages(id, converted)
+        val meta = metadata(sourceId).toMutableMap().apply { remove("main_chat") }
+        saveMetadata(id, JsonObject(meta))
+        return record
+    }
+
     /** /delname：删除指定名字的全部消息；返回删除条数。 */
     fun deleteMessagesByName(sessionId: String, name: String): Int {
         if (name.isBlank()) return 0

@@ -802,6 +802,56 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return ""
     }
 
+    /** 官方 bookmarks.js createBranch：以 [0..at] 为快照新建分支会话并切换（名称 `<源> - Branch #N`）。 */
+    fun createBranch(at: Int): SessionRecord? {
+        val src = chatStore.get(sessionId) ?: return null
+        val list = chatStore.messages(sessionId)
+        if (list.isEmpty()) return null
+        val idx = at.coerceIn(0, list.lastIndex)
+        val existing = chatStore.list().map { it.name }.toSet()
+        val suffix = Regex(" - Branch #\\d+$")
+        val legacy = Regex("^Branch #\\d+ - ")
+        val clean = legacy.replace(suffix.replace(src.name, ""), "")
+        var i = 1
+        var name = "$clean - Branch #$i"
+        while (name in existing) {
+            i++
+            name = "$clean - Branch #$i"
+        }
+        val branch = chatStore.createBranchSession(sessionId, idx, name) ?: return null
+        chatStore.addBranchName(sessionId, idx, name)
+        refreshMessages()
+        _notice.value = "（已创建分支：$name）"
+        return branch
+    }
+
+    /** 官方 bookmarks.js convertSoloToGroupChat：确认后建群（成员=当前角色，SWAP 模式）并转换当前会话消息。 */
+    fun convertToGroup(): SessionRecord? {
+        val src = chatStore.get(sessionId) ?: return null
+        val char = character ?: return null
+        val groups = groupStore.list().map { it.name }.toSet()
+        var i = 1
+        var name = "Group: ${char.name}"
+        while (name in groups) {
+            i++
+            name = "Group: ${char.name} ($i)"
+        }
+        val groupId = java.util.UUID.randomUUID().toString()
+        groupStore.save(
+            GroupRecord(
+                id = groupId,
+                name = name,
+                members = listOf(char.id),
+                generationMode = com.emberinn.engine.group.GroupGenerationMode.SWAP,
+                activationStrategy = "natural",
+            ),
+        )
+        val chatName = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())
+        val record = chatStore.createConvertedGroupSession(sessionId, groupId, char.name, char.avatarPath, chatName)
+        if (record != null) _notice.value = "（已转换为群聊：$name）"
+        return record
+    }
+
     override fun deleteMessagesByName(name: String): Int {
         val count = chatStore.deleteMessagesByName(sessionId, name)
         refreshMessages()

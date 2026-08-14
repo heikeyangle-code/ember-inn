@@ -52,6 +52,7 @@ const ICONS = {
   EyeSlash: 'eye-slash',
   FileText: 'file-text',
   Folder: 'folder',
+  GitBranch: 'git-branch',
   ImageSquare: 'image-square',
   Lightning: 'lightning',
   Link: 'link',
