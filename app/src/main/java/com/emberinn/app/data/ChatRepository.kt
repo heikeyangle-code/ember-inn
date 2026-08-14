@@ -418,6 +418,16 @@ class ChatRepository(context: Context) {
                 env = MacroEnv(user = userName, char = charName),
             ),
         )
+        // 官方 createGenerationParameters：bias_preset_selected 在 logitBiasSources 且预设非空时计算 logit_bias
+        val bias = if (
+            profile.sampler.biasPresetSelected.isNotBlank() &&
+            provider.id in setOf("openai", "azure", "openrouter", "electronhub", "chutes", "custom")
+        ) {
+            val entries = profile.sampler.biasPresets[profile.sampler.biasPresetSelected].orEmpty()
+            if (entries.isNotEmpty()) com.emberinn.engine.provider.LogitBiasEngine.compute(effectiveModel, entries) else emptyMap()
+        } else {
+            emptyMap()
+        }
         val finalOptions = options.copy(
             stopSequences = stopSequences,
             enableWebSearch = profile.sampler.enableWebSearch,
@@ -430,7 +440,7 @@ class ChatRepository(context: Context) {
         )
         val effectiveProfile = profile.copy(
             model = effectiveModel,
-            sampler = sampler.copy(maxTokens = effectiveMaxTokens),
+            sampler = sampler.copy(maxTokens = effectiveMaxTokens, logitBias = bias),
             contextWindow = effectiveContextWindow,
         )
         // 官方后端 chat-completions.js /generate：custom_prompt_post_processing 对所有 chat completion

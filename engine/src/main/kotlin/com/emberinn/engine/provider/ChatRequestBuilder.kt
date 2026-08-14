@@ -75,8 +75,10 @@ data class SamplerParams(
     val newExampleChatPrompt: String = "[Example Chat]",
     /** 官方 oai_settings.continue_nudge_prompt（default_continue_nudge_prompt）。 */
     val continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
-    /** 官方 oai_settings.bias_preset_selected（logit_bias 预设名；bias_presets 表 App 未接 UI，登记）。 */
+    /** 官方 oai_settings.bias_preset_selected（logit_bias 预设名）。 */
     val biasPresetSelected: String = "Default (none)",
+    /** 官方 oai_settings.bias_presets（预设名 → 条目表）。 */
+    val biasPresets: Map<String, List<BiasEntry>> = DEFAULT_BIAS_PRESETS,
     /** 官方 oai_settings.wi_format（世界书 {0} 占位）。 */
     val wiFormat: String = "{0}",
     /** 官方 oai_settings.scenario_format。 */
@@ -119,6 +121,25 @@ data class SamplerParams(
     val logitBias: Map<String, Double> = emptyMap(),
     /** 官方 settings.verbosity（gpt-5 系）。 */
     val verbosity: String? = null,
+)
+
+/** 官方 bias_presets 条目（id/text/value）。 */
+@Serializable
+data class BiasEntry(
+    val id: String = "",
+    val text: String,
+    val value: Double,
+)
+
+/** 官方 openai.js default_bias_presets（bias 预设表默认值）。 */
+val DEFAULT_BIAS_PRESETS: Map<String, List<BiasEntry>> = mapOf(
+    "Default (none)" to emptyList(),
+    "Anti-bond" to listOf(
+        BiasEntry(id = "22154f79-dd98-41bc-8e34-87015d6a0eaf", text = " bond", value = -50.0),
+        BiasEntry(id = "8ad2d5c4-d8ef-49e4-bc5e-13e7f4690e0f", text = " future", value = -50.0),
+        BiasEntry(id = "52a4b280-0956-4940-ac52-4111f83e4046", text = " bonding", value = -50.0),
+        BiasEntry(id = "e63037c7-c9d1-4724-ab2d-7756008b433b", text = " connection", value = -25.0),
+    ),
 )
 
 private val OPENAI_REASONING_EFFORT_MODELS = setOf(

@@ -286,10 +286,15 @@ request_images/aspect/resolution/max_context_unlocked）已接总装/请求体/U
 runGenerate 追加 cyclePrompt（仅 chat completion）；show_thoughts 驱动 include_reasoning 与显示门控；
 reverse_proxy/proxy_password 按官方 proxySupportedSources 替换 base/API Key；custom_include_body/
 exclude_body/include_headers 用 YamlMerge 标量子集（嵌套 YAML 边界登记）；custom_url 已接。
-仍登记：bias_presets 表/UI（需 cl100k tokenizer 对拍）、show_external_models 视觉差（App 模型列表
-恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响官方在线状态文案
-（App 无该概念，已存储+UI）、YAML 嵌套/多文档（YamlMerge 支持标量+顶层列表）、vertexai 服务账号认证
-（LlmClient 拒绝）、extensions 键已持久化（官方无 App 侧扩展消费，登记）。
+分词器三族现状：getTokenizerModel 映射已 1:1 差分（tokenizer-model-official.mjs 37 例）；
+LogitBiasEngine 走 tiktoken（JTokkit，O200K/CL100K 按官方 /bias 分支）真算 token id，原始 id 数组透传、
+后写覆盖与官方一致；sentencepiece（llama/mistral/yi/gemma/jamba/nerdstash）与 web
+（llama3/command-r/command-a/qwen2/nemo/deepseek）族按官方“分词器不可用→返回 {}”语义兜底——
+参考仓库有 7 个 .model 文件但无 @agnai/sentencepiece-js / web-tokenizers 库，离线无法实现与差分，登记边界。
+仍登记：bias_presets 官方编辑弹窗 UI（表存储+选择已接，logit_bias 已进请求体）、show_external_models
+视觉差（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响
+官方在线状态文案（App 无该概念，已存储+UI）、YAML 嵌套/多文档（YamlMerge 支持标量+顶层列表）、
+vertexai 服务账号认证（LlmClient 拒绝）、extensions 键已持久化（官方无 App 侧扩展消费，登记）。
 
 **仍登记（诚实边界）**：
 - context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
@@ -463,7 +468,7 @@ jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 
 - 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
 - ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
 - 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 337 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
+- 引擎测试 342 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
 
 ### 3.10 其它
 - ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）

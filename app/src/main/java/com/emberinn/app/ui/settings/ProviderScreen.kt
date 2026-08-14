@@ -562,6 +562,16 @@ fun ProviderDetailScreen(
             )
             // ---- 官方 oai_settings 其余预设联动字段 ----
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
+            Text("bias_preset_selected（logit_bias 预设；官方弹窗编辑表为边界）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                sampler.biasPresets.keys.forEach { name ->
+                    FilterChip(
+                        selected = sampler.biasPresetSelected == name,
+                        onClick = { vm.setBiasPresetSelected(name) },
+                        label = { Text(name) },
+                    )
+                }
+            }
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->

@@ -317,6 +317,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _editingSampler.value = _editingSampler.value.copy(squashSystemMessages = v)
     }
     fun setNamesBehavior(v: Int) { _editingSampler.value = _editingSampler.value.copy(namesBehavior = v) }
+    fun setBiasPresetSelected(v: String) { _editingSampler.value = _editingSampler.value.copy(biasPresetSelected = v) }
     fun setSendIfEmpty(v: String) { _editingSampler.value = _editingSampler.value.copy(sendIfEmpty = v) }
     fun setNewChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newChatPrompt = v) }
     fun setNewGroupChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newGroupChatPrompt = v) }
