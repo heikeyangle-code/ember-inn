@@ -697,9 +697,15 @@ class LlmClient(
                 }
             }
             "api-key" -> builder.header("api-key", key)
+            // 官方 additional-headers.js getMancerHeaders：X-API-KEY 与 Authorization 同值
             // google-key 走 URL 查询参数；none 无认证
             "google-key", "none" -> Unit
-            else -> builder.header("Authorization", "Bearer $key")
+            else -> {
+                builder.header("Authorization", "Bearer $key")
+                if (provider.id == "textgen-mancer") {
+                    builder.header("X-API-KEY", key)
+                }
+            }
         }
     }
 

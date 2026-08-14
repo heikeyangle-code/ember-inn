@@ -9,8 +9,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * 官方 util.js mergeObjectWithYaml / excludeKeysByYaml 的标量子集单测。
- * 完整 yaml 库（嵌套对象/列表/多文档）登记边界；harness 无法对拍（node_modules/yaml 不在参考仓库）。
+ * 官方 util.js mergeObjectWithYaml / excludeKeysByYaml 的 SnakeYAML 移植单测。
+ * SnakeYAML 2.6 行为已实测对齐 js-yaml：锚点/别名/合并键（<<）原生解析；
+ * 多文档抛异常 → 官方 try/catch 静默忽略（不合并）。
  */
 class YamlMergeTest {
 
@@ -55,4 +56,42 @@ class YamlMergeTest {
         assertEquals("secret", h["X-Api-Key"])
         assertEquals("application/json", h["Accept"])
     }
+
+    @Test
+    fun `anchors aliases and merge keys resolve like js-yaml`() {
+        val body = buildJsonObject { put("model", JsonPrimitive("m")) }
+        val out = YamlMerge.merge(
+            body,
+            "base: &b\n  x: 1\n  y: 2\nchild:\n  <<: *b\n  y: 3\n",
+        )
+        val child = out["child"] as? JsonObject
+        assertEquals("1", child?.get("x")?.toString())
+        assertEquals("3", child?.get("y")?.toString())
+        // 顶层对象整体 Object.assign：base/child 都是顶层键，全部进 body
+        assertEquals("1", (out["base"] as? JsonObject)?.get("x")?.toString())
+        assertEquals("2", (out["base"] as? JsonObject)?.get("y")?.toString())
+    }
+
+    @Test
+    fun `multi document yaml is ignored like official try catch`() {
+        val body = buildJsonObject { put("model", JsonPrimitive("m")) }
+        val out = YamlMerge.merge(body, "a: 1\n---\nb: 2\n")
+        assertEquals(listOf("model"), out.keys.toList())
+    }
+
+    @Test
+    fun `top level array merges each object item sequentially`() {
+        val body = buildJsonObject { put("model", JsonPrimitive("m")) }
+        val out = YamlMerge.merge(body, "- {a: 1}\n- {b: 2, a: 9}\n")
+        assertEquals("9", out["a"]?.toString())
+        assertEquals("2", out["b"]?.toString())
+    }
+
+    @Test
+    fun `inline list and quoted scalars`() {
+        val out = YamlMerge.parse("stop: [x, y]\nname: \"a: b\"") as? JsonObject
+        assertEquals(2, (out?.get("stop") as? JsonArray)?.size)
+        assertEquals("a: b", (out?.get("name") as? JsonPrimitive)?.content)
+    }
+
 }

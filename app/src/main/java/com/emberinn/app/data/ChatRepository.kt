@@ -469,17 +469,29 @@ class ChatRepository(private val context: Context) {
         if (isTextCompletion) {
             val presetState = PresetSettingsStore.load(context)
             val env = MacroEnv(user = userName, char = charName)
+            // 官方 sysprompt（script.js 4629-4633）：非 openai 路径 enabled 才消费 content；
+            // post_history（jailbreak）按官方 4689-4701 作为 user 消息注入（continue 插到末条前，否则追加）。
+            val sys = presetState.sysprompt
+            val systemPrompt = if (sys.enabled) sys.content else ""
             // InstructMode.createRawPrompt 走 PromptMessage（官方 createRawPrompt 入参）；
             // prepared.messages 是 CompletionMessage，textgen 链只取 role/content/name。
             val textPrompt = prepared.messages.map { m ->
                 PromptMessage(role = m.role, content = m.content, name = m.name, identifier = m.identifier)
+            }.toMutableList()
+            if (sys.enabled && sys.postHistory.isNotBlank()) {
+                val jailbreak = PromptMessage(role = "user", content = sys.postHistory)
+                if (isContinue && textPrompt.isNotEmpty()) {
+                    textPrompt.add(textPrompt.size - 1, jailbreak)
+                } else {
+                    textPrompt.add(jailbreak)
+                }
             }
             val raw = InstructMode.createRawPrompt(
                 prompt = textPrompt,
                 api = provider.protocol,
                 instructOverride = false,
                 quietToLoud = false,
-                systemPrompt = "",
+                systemPrompt = systemPrompt,
                 prefill = "",
                 instruct = presetState.instruct,
                 context = presetState.context,

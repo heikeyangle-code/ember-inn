@@ -6,17 +6,28 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import org.yaml.snakeyaml.Yaml
+import java.time.format.DateTimeFormatter
+import java.util.Date
 
 /**
  * 官方 util.js mergeObjectWithYaml / excludeKeysByYaml 的 App 移植。
- * 支持：顶层/嵌套映射（缩进递归）、标量（引号/数字/布尔/null）、列表（- 项 / 内联 [a, b]）。
- * 多文档（---）、锚点/别名等复杂 YAML 登记边界（官方用完整 yaml 库）。
+ *
+ * 解析用 SnakeYAML（与官方 js-yaml `yaml.parse` 语义对齐）：
+ * - 锚点/别名/合并键（<<）由 SnakeYAML 原生解析（已用 2.6 实测）；
+ * - 多文档（---）抛 ComposerException → 与官方 try/catch 一样整体忽略、不合并；
+ * - 时间戳 → ISO-8601 字符串（官方 yaml 库解析为 Date，JSON.stringify 时输出 ISO）。
+ *
+ * 合并/删除语义逐字对齐官方 util.js：顶层对象 → Object.assign；顶层数组 → 逐项 Object.assign；
+ * exclude 数组 → 删每个键；对象 → 删每个顶层键；字符串 → 删该键。
  */
 object YamlMerge {
 
+    private val yaml = Yaml()
+
     /** 官方 mergeObjectWithYaml：顶层对象 → Object.assign 进目标；顶层数组 → 逐项 Object.assign。 */
-    fun merge(obj: JsonObject, yaml: String): JsonObject {
-        val parsed = parse(yaml) ?: return obj
+    fun merge(obj: JsonObject, yamlString: String): JsonObject {
+        val parsed = parse(yamlString) ?: return obj
         val out = obj.toMutableMap()
         val entries = if (parsed is JsonArray) {
             parsed.mapNotNull { it as? JsonObject }.flatMap { it.entries }
@@ -28,12 +39,12 @@ object YamlMerge {
     }
 
     /** 官方 excludeKeysByYaml：数组 → 删每个元素；对象 → 删每个顶层键；字符串 → 删该键。 */
-    fun excludeKeys(obj: JsonObject, yaml: String): JsonObject {
-        val parsed = parse(yaml) ?: return obj
+    fun excludeKeys(obj: JsonObject, yamlString: String): JsonObject {
+        val parsed = parse(yamlString) ?: return obj
         val keys = when (parsed) {
-            is JsonArray -> parsed.mapNotNull { (it as? JsonPrimitive)?.contentOrNullSafe() }
+            is JsonArray -> parsed.map { it.toJsKeyString() }
             is JsonObject -> parsed.keys
-            is JsonPrimitive -> listOfNotNull(parsed.contentOrNullSafe())
+            is JsonPrimitive -> listOfNotNull(parsed.toJsKeyString())
             else -> emptyList()
         }
         val out = obj.toMutableMap()
@@ -42,133 +53,46 @@ object YamlMerge {
     }
 
     /** 顶层标量映射 → 请求头。 */
-    fun headers(yaml: String): Map<String, String> {
-        val parsed = parse(yaml) as? JsonObject ?: return emptyMap()
+    fun headers(yamlString: String): Map<String, String> {
+        val parsed = parse(yamlString) as? JsonObject ?: return emptyMap()
         return parsed.mapNotNull { (k, v) ->
             val s = (v as? JsonPrimitive)?.contentOrNullSafe() ?: return@mapNotNull null
             k to s
         }.toMap()
     }
 
+    /** SnakeYAML 解析：失败（含多文档）返回 null，与官方 try/catch 静默一致。 */
+    fun parse(yamlString: String): JsonElement? = try {
+        toJsonElement(yaml.load<Any?>(yamlString))
+    } catch (_: Throwable) {
+        null
+    }
+
+    private fun toJsonElement(v: Any?): JsonElement? = when (v) {
+        null -> JsonNull
+        is Map<*, *> -> buildJsonObject {
+            v.forEach { (k, value) -> toJsonElement(value)?.let { put(k.toString(), it) } }
+        }
+        is List<*> -> JsonArray(v.mapNotNull { toJsonElement(it) })
+        is Boolean -> JsonPrimitive(v)
+        is Int -> JsonPrimitive(v)
+        is Long -> JsonPrimitive(v)
+        is Double -> JsonPrimitive(v)
+        is Float -> JsonPrimitive(v.toDouble())
+        is Byte -> JsonPrimitive(v.toInt())
+        is Short -> JsonPrimitive(v.toInt())
+        is Date -> JsonPrimitive(DateTimeFormatter.ISO_INSTANT.format(v.toInstant()))
+        else -> JsonPrimitive(v.toString())
+    }
+
+    /** JS delete obj[key] 的键字符串化：对象在 JS 里是 "[object Object]"；JsonNull 也是 JsonPrimitive，先判空。 */
+    private fun JsonElement.toJsKeyString(): String = when (this) {
+        JsonNull -> "null"
+        is JsonObject -> "[object Object]"
+        is JsonArray -> "[object Object]"
+        is JsonPrimitive -> contentOrNullSafe() ?: "null"
+    }
+
     private fun JsonPrimitive.contentOrNullSafe(): String? =
         if (this == JsonNull) null else content
-
-    // ---------- 缩进递归 YAML 子集 ----------
-
-    fun parse(yaml: String): JsonElement? {
-        val lines = yaml.lines()
-            .mapIndexedNotNull { i, l ->
-                if (l.isBlank() || l.trimStart().startsWith("#")) null else i to l
-            }
-        if (lines.isEmpty()) return null
-        var pos = 0
-
-        fun indentOf(raw: String): Int = raw.indexOfFirst { it != ' ' }.let { if (it < 0) 0 else it }
-
-        fun parseScalar(raw: String): JsonElement {
-            val v = unquote(raw)
-            return when {
-                v == "null" || v.isEmpty() -> JsonNull
-                v == "true" -> JsonPrimitive(true)
-                v == "false" -> JsonPrimitive(false)
-                v.toIntOrNull() != null -> JsonPrimitive(v.toInt())
-                v.toDoubleOrNull() != null -> JsonPrimitive(v.toDouble())
-                v.startsWith("[") && v.endsWith("]") -> parseInlineList(v) ?: JsonPrimitive(v)
-                else -> JsonPrimitive(v)
-            }
-        }
-
-        fun splitKV(line: String): Pair<String, String>? {
-            val idx = line.indexOf(':')
-            if (idx <= 0) return null
-            val key = line.substring(0, idx).trim().trim('"', '\'', ' ')
-            if (key.isEmpty()) return null
-            return key to line.substring(idx + 1).trim()
-        }
-
-        /** 解析一个缩进块：isList=true 时按列表项解析，否则按 key: value 映射解析。 */
-        fun parseBlock(indent: Int, isList: Boolean): JsonElement {
-            val map = LinkedHashMap<String, JsonElement>()
-            val list = mutableListOf<JsonElement>()
-            while (pos < lines.size) {
-                val (_, raw) = lines[pos]
-                val cur = indentOf(raw)
-                if (cur < indent) break
-                if (cur > indent) {
-                    pos++
-                    continue
-                }
-                val line = raw.trim()
-                if (line.startsWith("- ")) {
-                    val item = line.removePrefix("- ").trim()
-                    val kv = splitKV(item)
-                    if (kv != null && kv.second.isEmpty()) {
-                        // 列表项为嵌套块
-                        val childIndent = lines.getOrNull(pos + 1)?.let { indentOf(it.second) } ?: -1
-                        if (childIndent > cur) {
-                            pos++
-                            val child = parseBlock(childIndent, false)
-                            list += buildJsonObject { put(kv.first, child) }
-                            continue
-                        }
-                        list += parseScalar(kv.first)
-                    } else if (kv != null) {
-                        list += buildJsonObject { put(kv.first, parseScalar(kv.second)) }
-                    } else {
-                        list += parseScalar(item)
-                    }
-                    pos++
-                } else {
-                    val kv = splitKV(line)
-                    if (kv == null) {
-                        pos++
-                        continue
-                    }
-                    val (key, value) = kv
-                    if (value.isEmpty()) {
-                        val childIndent = lines.getOrNull(pos + 1)?.let { indentOf(it.second) } ?: -1
-                        if (childIndent > cur) {
-                            pos++
-                            map[key] = parseBlock(childIndent, lines[pos].second.trimStart().startsWith("- "))
-                            continue
-                        }
-                        map[key] = JsonNull
-                    } else {
-                        map[key] = parseScalar(value)
-                    }
-                    pos++
-                }
-            }
-            return if (isList) JsonArray(list) else buildJsonObject { map.forEach { (k, v) -> put(k, v) } }
-        }
-
-        val firstIndent = indentOf(lines[0].second)
-        val firstIsList = lines[0].second.trimStart().startsWith("- ")
-        return parseBlock(firstIndent, firstIsList)
-    }
-
-    private fun parseInlineList(v: String): JsonArray? = runCatching {
-        val inner = v.substring(1, v.length - 1)
-        if (inner.isBlank()) return JsonArray(emptyList())
-        JsonArray(inner.split(",").map { it.trim() }.map { parseScalarForInline(it) })
-    }.getOrNull()
-
-    private fun parseScalarForInline(raw: String): JsonElement {
-        val v = unquote(raw)
-        return when {
-            v == "null" || v.isEmpty() -> JsonNull
-            v == "true" -> JsonPrimitive(true)
-            v == "false" -> JsonPrimitive(false)
-            v.toIntOrNull() != null -> JsonPrimitive(v.toInt())
-            v.toDoubleOrNull() != null -> JsonPrimitive(v.toDouble())
-            else -> JsonPrimitive(v)
-        }
-    }
-
-    private fun unquote(raw: String): String {
-        if (raw.length >= 2 && ((raw.startsWith("\"") && raw.endsWith("\"")) || (raw.startsWith("'") && raw.endsWith("'")))) {
-            return raw.substring(1, raw.length - 1)
-        }
-        return raw
-    }
 }

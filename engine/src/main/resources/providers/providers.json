@@ -1002,7 +1002,10 @@
       "auth_type": "bearer",
       "region_variants": [],
       "region_bases": {},
-      "extra_headers": {},
+      "extra_headers": {
+        "HTTP-Referer": "https://sillytavern.app",
+        "X-Title": "SillyTavern"
+      },
       "api_version": "",
       "models_endpoint": "",
       "models_format": "openai",
