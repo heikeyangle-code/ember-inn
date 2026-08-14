@@ -777,7 +777,12 @@ fun ChatScreen(
                                 name = derived.name,
                                 time = derived.time,
                                 dateLabel = dateLabel,
-                                avatarPath = derived.avatarPath ?: if (isUserMsg) null else vm.avatarPath,
+                                // 官方：用户消息头像 = 人设头像（user_avatar，无则默认占位）；AI = 角色/force_avatar
+                                avatarPath = if (isUserMsg) {
+                                    activePersona?.avatarPath?.takeIf { java.io.File(it).exists() }
+                                } else {
+                                    derived.avatarPath ?: vm.avatarPath
+                                },
                                 spritePath = (item.element.jsonObject["extra"] as? JsonObject)
                                     ?.get("sprite")?.jsonPrimitive?.contentOrNull,
                                 tokenCount = (item.element.jsonObject["extra"] as? JsonObject)
