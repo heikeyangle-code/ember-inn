@@ -12,7 +12,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 362 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 365 测全绿]
 ```
 
 - 一句话：**引擎与官方 SillyTavern 1:1（必须差分）；App/UI 对照官方功能与设置实现官方语义，样式用 Ember 风格。**
@@ -35,7 +35,7 @@ flowchart LR
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `~/ember-inn`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `~/sillytavern-ref`（release 8172dcd / 1.18.0）。
-- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **362 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
+- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **365 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
 
 ```sh
 cd ~/ember-inn && ./gradlew :engine:test
@@ -54,7 +54,7 @@ gh workflow run 328789880 --ref main   # 需要手工跑一次
 
 **用法**：①`scripts/diff/*-official.mjs` 从 `~/sillytavern-ref` 逐字提取官方函数、桩掉 DOM/全局依赖 → 生成 `engine/src/test/resources/diff/*.json`；②`*DiffTest.kt` 读 fixture 调 Kotlin 引擎逐例对比；③官方发版/改代码后重生成 fixture → `:engine:test`；④fixture 只能脚本生成，不许手改，新功能先加 case 再实现。
 
-**差分分组清单（91 行，表内合计 2856 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例。**
+**差分分组清单（94 行，表内合计 2911 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例、cfg-prompt 25 例、logprobs 20 例、imagegen 10 例。**
 
 **打桩/未差分登记与“官方有而引擎/App 还没有”清单见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。**
 
@@ -162,10 +162,10 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 ### 3.13 群聊 / 其它 ✅
 群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
 
-### 3.11 向量扩展（RAG 全量）✅（引擎层）
+### 3.14 向量扩展（RAG 全量）✅（引擎层）
 世界书 RAG（vectorized 同步/检索/强制激活）；聊天历史向量重排（enabled_chats/rearrangeChat）；文件/Data Bank 向量化（enabled_files：分块/overlap/检索注入）；FileVectorStore（磁盘持久化对齐 vectra 目录）+ InMemoryVectorStore；EmbeddingProvider（OpenAI 兼容 + BagOfGramsEmbedding）；查询语义对齐官方（multiQueryCollection 全局 topK/queryCollection 单集合，hashes 不过滤阈值）；扩展提示经 ExtensionPrompt（3_vectors/4_vectors_data_bank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）。未做：summarize（P3，官方默认关）、本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）、translate_files（P3）。
 
-### 3.12 表情精灵 ✅（引擎层纯逻辑）
+### 3.15 表情精灵 ✅（引擎层纯逻辑）
 ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseSpriteForExpression fallback/多立绘随机/rerollIfSame/overrideSpriteFile）；sampleClassifyText（去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim；8 例差分）；官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage（spritesPath 子目录/sanitize + importRisuSprites）；DOM 显示/动画/LLM 分类 API 属 App/服务层；差分顺带修 VectorTextUtils.trimToStartSentence（Kotlin 需 coerceAtMost）。
 
 ## 4. App / UI 进度
@@ -248,8 +248,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-- 引擎测试 **362 例全绿**；差分分组表 91 行（表内例数合计 2856；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
-- 剩余未做：Captions extras/local/horde 来源；表情精灵 LLM 分类；instruct 模式（textgen 协议提供商）；惰性闭包即时求值（SlashEngine）；发送链路未接项（见 6.2 登记）；设置项 UI 缺口（reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/headers 已接网络层+UI 见 4.4；assistant_prefill/continue_prefill/max_context_unlocked/show_external_models 已接 SamplerParams+UI——原登记缺口大部分已补，见 3.7/4.4）；自定义预设保存/删除/设为默认（保存/删除已接；“设为默认”官方无此概念）。
+- 引擎测试 **365 例全绿**；差分分组表 94 行（表内例数合计 2911；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
+- 剩余未做：图像生成其余 23 个后端请求体 / ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；Captions extras/local/horde 来源；表情精灵 LLM 分类；instruct 模式（textgen 协议提供商）；惰性闭包即时求值（SlashEngine）；发送链路未接项（见 6.2 登记）；设置项 UI 缺口（reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/headers 已接网络层+UI 见 4.4；assistant_prefill/continue_prefill/max_context_unlocked/show_external_models 已接 SamplerParams+UI——原登记缺口大部分已补，见 3.7/4.4）；自定义预设保存/删除/设为默认（保存/删除已接；“设为默认”官方无此概念）。
 - Prompt Itemization 分节明细面板已做（聊天消息菜单；布局对齐官方 itemizationText.html；官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化 rawPrompt + TokenHandler 八分桶 + 分节消息；五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias；World Info；Chat History；Extensions；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 词级 LCS，超大输入回退行级）。
 - Prompt Manager 面板已做（设置→提示词管理器：identifier 自动 uuid 只读/name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 只读）/main·nsfw·jailbreak·enhanceDefinitions 官方 Reset/新提示项 system_prompt=false/删除二次确认/编辑底部弹层/长按拖动排序/官方 Append 下拉/“查”检查弹窗（PromptAssemblyCache 最近一次总装，官方 PromptManager.messages/handleInspect））+ dryRun 提示词预览（聊天会话菜单，全文+token）。
 - 用户决策延期：Custom CSS + Moving UI（6.4）；Claude/Gemini 官方 web tokenizer。
