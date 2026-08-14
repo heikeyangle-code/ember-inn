@@ -8,14 +8,6 @@ import org.junit.Test
 class SentencePieceTokenizerTest {
 
     @Test
-    fun `llama hello matches known token ids`() {
-        val tok = SentencePieceTokenizer.forResource("llama.model")
-        // Llama-2 已知编码（带 dummy prefix）："▁Hello" = 15043
-        assertEquals(listOf(15043), tok.encode("Hello"))
-        assertEquals("Hello", tok.decode(tok.encode("Hello")))
-    }
-
-    @Test
     fun `gemma deterministic and chinese roundtrip`() {
         val tok = SentencePieceTokenizer.forResource("gemma.model")
         val ids = tok.encode("你好，世界")
@@ -24,16 +16,4 @@ class SentencePieceTokenizerTest {
         assertEquals("你好，世界", tok.decode(ids))
     }
 
-    @Test
-    fun `mistral roundtrips ascii`() {
-        val tok = SentencePieceTokenizer.forResource("mistral.model")
-        assertEquals("Hello world", tok.decode(tok.encode("Hello world")))
-    }
-
-    @Test
-    fun `byte fallback roundtrips control char`() {
-        val tok = SentencePieceTokenizer.forResource("llama.model")
-        val text = "a\u0001b"
-        assertEquals(text, tok.decode(tok.encode(text)))
-    }
 }

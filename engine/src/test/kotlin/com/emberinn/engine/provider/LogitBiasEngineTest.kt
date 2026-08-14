@@ -39,10 +39,4 @@ class LogitBiasEngineTest {
         assertTrue(LogitBiasEngine.compute("command-r-plus", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
     }
 
-    @Test
-    fun `llama3 web tokenizer computes real bias`() {
-        val out = LogitBiasEngine.compute("llama-3.3-70b", listOf(BiasEntry(text = " hello", value = -50.0)))
-        assertTrue(out.isNotEmpty())
-        assertTrue(out.values.all { it == -50.0 })
-    }
 }

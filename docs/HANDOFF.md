@@ -287,10 +287,12 @@ runGenerate 追加 cyclePrompt（仅 chat completion）；show_thoughts 驱动 i
 reverse_proxy/proxy_password 按官方 proxySupportedSources 替换 base/API Key；custom_include_body/
 exclude_body/include_headers 用 YamlMerge 标量子集（嵌套 YAML 边界登记）；custom_url 已接。
 分词器三族现状：getTokenizerModel 映射已 1:1 差分（tokenizer-model-official.mjs 37 例）；
-web 族 Claude/Llama3 已实现（HfBpeTokenizer，官方 claude.json/llama3.json 打包进 engine resources，
-HF tokenizer.json v3 BPE：ByteLevel/Split 预分词、merges、added tokens、NFKC/NFD、字节编解码）；
-sentencepiece 族 7 个模型已实现（SentencePieceTokenizer：proto 解析 + BPE 按 score 合并 + byte pieces
-<0xXX> fallback + dummy prefix/空格转义；Gemini/llama/mistral/yi/jamba/nerdstash 全部接入计数与 bias）；
+web 族 Claude 已实现（HfBpeTokenizer，官方 claude.json 打包进 engine resources，HF tokenizer.json v3 BPE：
+ByteLevel 预分词、merges、added tokens、NFKC 归一、字节编解码）；sentencepiece 族已实现
+（SentencePieceTokenizer：proto 解析 + BPE 按 score 合并 + byte pieces <0xXX> fallback + dummy prefix/空格转义），
+打包保留 Google Gemini（gemma.model）；按用户要求仅保留 OpenAI(JTokkit)/Google/Claude 三族，
+llama3/mistral/llama1/yi/jamba/nerdstash/command-r/qwen2/nemo/deepseek 未打包
+（计数回退 cl100k、bias 按官方不可用返回 {}，登记）；
 tiktoken（JTokkit，O200K/CL100K）按官方 /bias 分支真算。原始 id 数组透传、后写覆盖与官方一致。
 仍登记：官方依赖 @agnai/sentencepiece-js / web-tokenizers，本环境无库无法官方差分（编码按规范移植，
 Llama "Hello"=15043 等已知值 sanity 锁定）；web 族 command-r/command-a/qwen2/nemo/deepseek 参考仓库

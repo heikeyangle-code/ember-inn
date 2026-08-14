@@ -166,8 +166,9 @@ class HfBpeTokenizer private constructor(
         private val cache = ConcurrentHashMap<String, HfBpeTokenizer>()
 
         fun forModel(model: String): HfBpeTokenizer? = when {
+            // 只保留 App 提供商可达模型：Claude(anthropic)；llama3/command-r/qwen2/nemo/deepseek
+            // 未打包（llama3 曾打包 5.9MB，按用户要求删除，登记边界）
             model.contains("claude") -> forResource("claude.json")
-            model.contains("llama3") || model.contains("llama-3") -> forResource("llama3.json")
             else -> null
         }
 

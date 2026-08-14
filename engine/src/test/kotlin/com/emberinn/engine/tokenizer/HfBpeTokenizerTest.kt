@@ -28,12 +28,4 @@ class HfBpeTokenizerTest {
         assertTrue(tok.count("你好，世界") > 0)
     }
 
-    @Test
-    fun `llama3 begin of text maps to 128000 and roundtrips`() {
-        val tok = HfBpeTokenizer.forResource("llama3.json")
-        assertEquals(listOf(128000), tok.encode("<|begin_of_text|>"))
-        val ids = tok.encode("Hello world")
-        assertTrue(ids.isNotEmpty())
-        assertEquals("Hello world", tok.decode(ids))
-    }
 }

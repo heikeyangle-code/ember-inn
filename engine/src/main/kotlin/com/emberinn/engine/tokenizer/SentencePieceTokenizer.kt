@@ -112,13 +112,8 @@ class SentencePieceTokenizer private constructor(
         fun forModel(model: String): SentencePieceTokenizer? {
             val key = com.emberinn.engine.provider.TokenizerModel.map(model)
             val resource = when (key) {
-                "llama" -> "llama.model"
-                "nerdstash" -> "nerdstash.model"
-                "nerdstash_v2" -> "nerdstash_v2.model"
-                "mistral" -> "mistral.model"
-                "yi" -> "yi.model"
+                // 只保留 Google Gemini（gemma.model）；llama/mistral/yi/jamba/nerdstash 未打包（登记边界）
                 "gemma" -> "gemma.model"
-                "jamba" -> "jamba.model"
                 else -> return null
             }
             return forResource(resource)
