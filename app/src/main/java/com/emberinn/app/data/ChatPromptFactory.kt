@@ -80,9 +80,11 @@ class ChatPromptFactory {
         const val DEFAULT_IMPERSONATION_PROMPT =
             "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]"
 
-        /** 角色卡解析缓存：同一张卡只解析一次（卡 JSON 大时是发送前的主要开销）。 */
+        /** 角色卡解析缓存上限（同一张卡只解析一次；卡 JSON 大时是发送前的主要开销）。 */
         private const val CARD_CACHE_MAX = 8
-        private val cardCache = java.util.concurrent.ConcurrentHashMap<String, ParsedCard>()
+        /** 角色卡解析缓存：访问序 LRU（accessOrder=true），超限淘汰最久未用的一张；纯 App 层提速。 */
+        private val cardCache: MutableMap<String, ParsedCard> =
+            java.util.Collections.synchronizedMap(LinkedHashMap<String, ParsedCard>(16, 0.75f, true))
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -789,7 +791,9 @@ class ChatPromptFactory {
     )
 
     private fun parseCard(raw: String): ParsedCard {
-        cardCache[raw]?.let { return it }
+        synchronized(cardCache) {
+            cardCache[raw]?.let { return it }
+        }
         val root = json.parseToJsonElement(raw).jsonObject
         val data = root["data"]?.jsonObject ?: root
         val source = CharacterCardSource(
@@ -849,8 +853,18 @@ class ChatPromptFactory {
             depthPromptRole = data["extensions"]?.jsonObject?.get("depth_prompt")?.jsonObject
                 ?.get("role")?.jsonPrimitive?.contentOrNull?.ifBlank { "system" } ?: "system",
         )
-        if (cardCache.size > CARD_CACHE_MAX) cardCache.clear()
-        cardCache[raw] = result
+        synchronized(cardCache) {
+            // 并发下可能已被其它线程解析：命中直接复用
+            cardCache[raw]?.let { return it }
+            cardCache[raw] = result
+            // LRU 淘汰：超限时移除最久未访问的一张（accessOrder 首元素）
+            while (cardCache.size > CARD_CACHE_MAX) {
+                val eldest = cardCache.entries.iterator()
+                if (!eldest.hasNext()) break
+                eldest.next()
+                eldest.remove()
+            }
+        }
         return result
     }
 
