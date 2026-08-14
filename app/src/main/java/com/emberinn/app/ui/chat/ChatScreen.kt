@@ -46,6 +46,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -149,6 +150,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.slash.QuickReplySlot
+import com.emberinn.engine.prompt.CfgPromptEngine
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
@@ -171,6 +173,9 @@ import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.emberinn.app.ui.components.parseHexColor
 import com.emberinn.app.ui.components.EmberInputIcon
+import com.emberinn.app.ui.components.EmberPrimaryButton
+import com.emberinn.app.ui.components.EmberSlider
+import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberTextFieldDefaults
 import com.emberinn.app.ui.components.emberShadow
@@ -267,6 +272,7 @@ fun ChatScreen(
     var showClearConfirm by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
+    var showCfgSheet by remember { mutableStateOf(false) }
     var showPromptPreview by remember { mutableStateOf(false) }
     var showWorldPicker by remember { mutableStateOf(false) }
     var showAttachOptions by remember { mutableStateOf(false) }
@@ -1205,6 +1211,10 @@ fun ChatScreen(
                     charaNotePosition = charaDraft?.position ?: 0
                     showAuthorsNote = true
                 }
+                MenuRow(PhosphorIcons.ChartBar, "CFG Scale（引导缩放）") {
+                    showMore = false
+                    showCfgSheet = true
+                }
                 if (vm.group != null) {
                     MenuRow(PhosphorIcons.Person, "群聊设置") {
                         showMore = false
@@ -1241,6 +1251,19 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    if (showCfgSheet) {
+        CfgScaleSheet(
+            initial = vm.cfgSnapshot(),
+            onDismiss = { showCfgSheet = false },
+            onSave = { g, c, ch ->
+                vm.saveCfgGlobal(g)
+                vm.saveCfgChara(c)
+                vm.saveCfgChat(ch)
+                showCfgSheet = false
+            },
+        )
     }
 
     if (showPromptPreview) {
@@ -5387,3 +5410,143 @@ private fun timeOf(el: JsonElement): String {
 /** 是否系统消息（/hide 隐藏、/comment 注释等；官方 coreChat 过滤 is_system）。 */
 private fun isSystem(el: JsonElement): Boolean =
     el.jsonObject["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+
+
+/** CFG Scale 设置弹层（官方 scripts/cfg-scale.js 三档：会话/角色/全局 + 合并来源/深度/分隔符）。 */
+@Composable
+private fun CfgScaleSheet(
+    initial: Triple<CfgPromptEngine.CfgGlobal, CfgPromptEngine.CfgChara?, CfgPromptEngine.CfgChat>,
+    onDismiss: () -> Unit,
+    onSave: (CfgPromptEngine.CfgGlobal, CfgPromptEngine.CfgChara, CfgPromptEngine.CfgChat) -> Unit,
+) {
+    val (global0, chara0, chat0) = initial
+    var globalScale by remember { mutableStateOf(global0.guidanceScale.toFloat()) }
+    var globalNeg by remember { mutableStateOf(global0.negativePrompt) }
+    var globalPos by remember { mutableStateOf(global0.positivePrompt) }
+    var charaScale by remember { mutableStateOf(chara0?.guidanceScale?.toFloat() ?: 1f) }
+    var charaNeg by remember { mutableStateOf(chara0?.negativePrompt.orEmpty()) }
+    var charaPos by remember { mutableStateOf(chara0?.positivePrompt.orEmpty()) }
+    var chatScale by remember { mutableStateOf(chat0.guidanceScale?.toFloat() ?: 1f) }
+    var chatNeg by remember { mutableStateOf(chat0.negativePrompt) }
+    var chatPos by remember { mutableStateOf(chat0.positivePrompt) }
+    var combine by remember { mutableStateOf(chat0.promptCombine.toMutableSet()) }
+    var depth by remember { mutableStateOf(chat0.promptInsertionDepth.toString()) }
+    var separator by remember { mutableStateOf(chat0.promptSeparator.orEmpty()) }
+    var groupCharOverride by remember { mutableStateOf(chat0.groupchatIndividualChars) }
+
+    EmberBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        ) {
+            Text("CFG Scale（引导缩放）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "强度 >1 时生效：负向提示不进消息，正向提示按深度注入；openai 不发送 guidance。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Spacer(Modifier.height(14.dp))
+
+            CfgSectionTitle("会话 CFG（本聊天）")
+            CfgScaleRow("强度", chatScale, 1f..4f) { chatScale = it }
+            EmberTextField(value = chatNeg, onValueChange = { chatNeg = it }, label = { Text("负向提示（不进提示词）") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            EmberTextField(value = chatPos, onValueChange = { chatPos = it }, label = { Text("正向提示（按深度注入）") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+
+            Spacer(Modifier.height(16.dp))
+            CfgSectionTitle("角色 CFG（本角色）")
+            CfgScaleRow("强度", charaScale, 1f..4f) { charaScale = it }
+            EmberTextField(value = charaNeg, onValueChange = { charaNeg = it }, label = { Text("负向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            EmberTextField(value = charaPos, onValueChange = { charaPos = it }, label = { Text("正向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+
+            Spacer(Modifier.height(16.dp))
+            CfgSectionTitle("全局 CFG")
+            CfgScaleRow("强度", globalScale, 1f..4f) { globalScale = it }
+            EmberTextField(value = globalNeg, onValueChange = { globalNeg = it }, label = { Text("负向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            EmberTextField(value = globalPos, onValueChange = { globalPos = it }, label = { Text("正向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+
+            Spacer(Modifier.height(16.dp))
+            Text("合并来源（cfg_prompt_combine）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                listOf(0 to "会话", 1 to "角色", 2 to "全局").forEach { (v, label) ->
+                    FilterChip(
+                        selected = v in combine,
+                        onClick = { combine = if (v in combine) combine - v else combine + v },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("插入深度", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                EmberTextField(value = depth, onValueChange = { depth = it.filter { c -> c.isDigit() } }, label = { Text("0=追加末条") }, singleLine = true, modifier = Modifier.width(150.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("分隔符（JSON 字符串）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                EmberTextField(value = separator, onValueChange = { separator = it }, label = { Text("例：\"\\n\"") }, singleLine = true, modifier = Modifier.width(150.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("群聊使用角色 CFG", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                EmberSwitch(checked = groupCharOverride, onCheckedChange = { groupCharOverride = it })
+            }
+            Spacer(Modifier.height(16.dp))
+            EmberPrimaryButton(
+                label = "保存并生效",
+                onClick = {
+                    onSave(
+                        CfgPromptEngine.CfgGlobal(globalScale.toDouble(), globalNeg, globalPos),
+                        CfgPromptEngine.CfgChara(
+                            name = chara0?.name ?: "",
+                            guidanceScale = if (charaScale > 1f) charaScale.toDouble() else null,
+                            negativePrompt = charaNeg,
+                            positivePrompt = charaPos,
+                        ),
+                        CfgPromptEngine.CfgChat(
+                            guidanceScale = if (chatScale > 1f) chatScale.toDouble() else null,
+                            negativePrompt = chatNeg,
+                            positivePrompt = chatPos,
+                            promptCombine = combine.toList().sorted(),
+                            groupchatIndividualChars = groupCharOverride,
+                            promptInsertionDepth = depth.toIntOrNull() ?: 1,
+                            promptSeparator = separator.ifBlank { null },
+                        ),
+                    )
+                },
+                expandWidth = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CfgSectionTitle(title: String) {
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    Spacer(Modifier.height(6.dp))
+}
+
+@Composable
+private fun CfgScaleRow(label: String, value: Float, range: kotlin.ranges.ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(
+            "%.2f".format(value),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(48.dp),
+        )
+    }
+    EmberSlider(value = value, onValueChange = onChange, valueRange = range, modifier = Modifier.fillMaxWidth())
+    Spacer(Modifier.height(8.dp))
+}

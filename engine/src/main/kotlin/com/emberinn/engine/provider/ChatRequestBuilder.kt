@@ -186,6 +186,8 @@ data class ProviderRequestOptions(
     val customIncludeHeaders: String = "",
     /** Text Completion（textgen）专用：最终提示词（story string 组装由调用方完成）。 */
     val textGenPrompt: String? = null,
+    /** Text Completion（textgen/novel）专用：官方 CFG Scale cfgValues（guidanceScale + textgen 负向提示）。 */
+    val textGenCfgValues: JsonObject? = null,
     /** Text Completion（textgen）专用：textgenerationwebui_settings（默认见 TextgenSettingsDefaults）。 */
     val textGenSettings: JsonObject? = null,
     /** Text Completion 专用：生成类型语义（impersonate/continue 影响请求体分支）。 */

@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.AppSlashExecutor
 import com.emberinn.app.data.CharacterCardEdit
+import com.emberinn.app.data.CfgPrefs
 import com.emberinn.app.data.ChatPromptFactory
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
@@ -72,6 +73,7 @@ import com.emberinn.engine.prompt.AutoContinueConfig
 import com.emberinn.engine.prompt.AutoContinueEngine
 import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.CleanUpConfig
+import com.emberinn.engine.prompt.CfgPromptEngine
 import com.emberinn.engine.prompt.CleanUpMessageEngine
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.CustomStoppingConfig
@@ -1222,6 +1224,51 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         meta["note_interval"] = JsonPrimitive(interval)
         chatStore.saveMetadata(sessionId, JsonObject(meta))
         _notice.value = if (prompt.isBlank()) "（作者注释已清除）" else "（作者注释已保存，下次发送生效）"
+    }
+
+    // ---- CFG Scale（官方 scripts/cfg-scale.js；全局/角色/会话三级）----
+
+    /** 当前会话 CFG 快照：全局 + 角色 + 会话（chat_metadata.cfg_*）。 */
+    fun cfgSnapshot(): Triple<CfgPromptEngine.CfgGlobal, CfgPromptEngine.CfgChara?, CfgPromptEngine.CfgChat> {
+        val ctx = getApplication<Application>()
+        val meta = chatStore.metadata(sessionId)
+        fun d(key: String): Double? = meta[key]?.jsonPrimitive?.content?.toDoubleOrNull()
+        fun s(key: String): String = meta[key]?.jsonPrimitive?.contentOrNull ?: ""
+        fun i(key: String): Int? = meta[key]?.jsonPrimitive?.content?.toIntOrNull()
+        val chat = CfgPromptEngine.CfgChat(
+            guidanceScale = d("cfg_guidance_scale"),
+            negativePrompt = s("cfg_negative_prompt"),
+            positivePrompt = s("cfg_positive_prompt"),
+            promptCombine = meta["cfg_prompt_combine"]?.jsonArray?.mapNotNull { it.jsonPrimitive.content.toIntOrNull() } ?: emptyList(),
+            groupchatIndividualChars = meta["cfg_groupchat_individual_chars"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+            promptInsertionDepth = i("cfg_prompt_insertion_depth") ?: 1,
+            promptSeparator = meta["cfg_prompt_separator"]?.jsonPrimitive?.contentOrNull,
+        )
+        return Triple(CfgPrefs.global(ctx), CfgPrefs.chara(ctx, character?.id), chat)
+    }
+
+    fun saveCfgGlobal(g: CfgPromptEngine.CfgGlobal) {
+        CfgPrefs.saveGlobal(getApplication(), g)
+        _notice.value = "（CFG 全局设置已保存，下次发送生效）"
+    }
+
+    fun saveCfgChara(c: CfgPromptEngine.CfgChara) {
+        val id = character?.id ?: return
+        CfgPrefs.saveChara(getApplication(), c.copy(name = id))
+        _notice.value = "（角色 CFG 已保存，下次发送生效）"
+    }
+
+    fun saveCfgChat(c: CfgPromptEngine.CfgChat) {
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        if (c.guidanceScale == null) meta.remove("cfg_guidance_scale") else meta["cfg_guidance_scale"] = JsonPrimitive(c.guidanceScale)
+        if (c.negativePrompt.isBlank()) meta.remove("cfg_negative_prompt") else meta["cfg_negative_prompt"] = JsonPrimitive(c.negativePrompt)
+        if (c.positivePrompt.isBlank()) meta.remove("cfg_positive_prompt") else meta["cfg_positive_prompt"] = JsonPrimitive(c.positivePrompt)
+        if (c.promptCombine.isEmpty()) meta.remove("cfg_prompt_combine") else meta["cfg_prompt_combine"] = kotlinx.serialization.json.JsonArray(c.promptCombine.map { JsonPrimitive(it) })
+        if (!c.groupchatIndividualChars) meta.remove("cfg_groupchat_individual_chars") else meta["cfg_groupchat_individual_chars"] = JsonPrimitive(true)
+        if (c.promptInsertionDepth == 1) meta.remove("cfg_prompt_insertion_depth") else meta["cfg_prompt_insertion_depth"] = JsonPrimitive(c.promptInsertionDepth)
+        if (c.promptSeparator.isNullOrBlank()) meta.remove("cfg_prompt_separator") else meta["cfg_prompt_separator"] = JsonPrimitive(c.promptSeparator)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+        _notice.value = "（会话 CFG 已保存，下次发送生效）"
     }
 
     /** 当前角色的角色备注（官方 extension_settings.note.chara[charName]）。 */
@@ -2637,6 +2684,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 quietPrompt = quietPrompt,
                 mediaInlining = mediaInlining,
                 chatMetadata = chatStore.metadata(sessionId),
+                cfgCharacterId = character?.id,
+                cfgSelectedGroup = group != null,
                 personaDescription = effectivePersona()?.description.orEmpty(),
                 anSettings = AuthorsNotePrefsStore.load(getApplication<android.app.Application>()).let {
                     com.emberinn.engine.prompt.AuthorsNoteSettings(

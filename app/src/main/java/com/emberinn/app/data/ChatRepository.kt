@@ -1,6 +1,7 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.engine.prompt.CfgPromptEngine
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.prompt.PromptMessage
 import com.emberinn.engine.provider.ConnectionProfile
@@ -39,9 +40,12 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -95,6 +99,23 @@ class ChatRepository(private val context: Context) {
         const val DEFAULT_CONTEXT_WINDOW = 4095
         /** 官方 oai_settings.openai_max_tokens 默认。 */
         const val DEFAULT_MAX_TOKENS = 300
+    }
+
+    /** 官方 chat_metadata.cfg_* → CfgChat（键名对齐 cfg-scale.js metadataKeys）。 */
+    private fun cfgChatFromMetadata(meta: JsonObject?): CfgPromptEngine.CfgChat {
+        if (meta == null) return CfgPromptEngine.CfgChat()
+        fun d(key: String): Double? = meta[key]?.jsonPrimitive?.content?.toDoubleOrNull()
+        fun s(key: String): String = meta[key]?.jsonPrimitive?.contentOrNull ?: ""
+        fun i(key: String): Int? = meta[key]?.jsonPrimitive?.content?.toIntOrNull()
+        return CfgPromptEngine.CfgChat(
+            guidanceScale = d("cfg_guidance_scale"),
+            negativePrompt = s("cfg_negative_prompt"),
+            positivePrompt = s("cfg_positive_prompt"),
+            promptCombine = meta["cfg_prompt_combine"]?.jsonArray?.mapNotNull { it.jsonPrimitive.content.toIntOrNull() } ?: emptyList(),
+            groupchatIndividualChars = meta["cfg_groupchat_individual_chars"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
+            promptInsertionDepth = i("cfg_prompt_insertion_depth") ?: 1,
+            promptSeparator = meta["cfg_prompt_separator"]?.jsonPrimitive?.contentOrNull,
+        )
     }
 
     fun profile(): ConnectionProfile? {
@@ -256,6 +277,10 @@ class ChatRepository(private val context: Context) {
         worldInsertStrategy: Int = com.emberinn.engine.worldinfo.WorldLoreMerger.CHARACTER_FIRST,
         wiIncludeNames: Boolean = true,
         onPrepared: ((ChatPromptFactory.Prepared) -> Unit)? = null,
+        /** CFG Scale 角色配置 key（官方按角色文件名；App 用角色 id）。 */
+        cfgCharacterId: String? = null,
+        /** CFG Scale 群聊标志（官方 selected_group；群聊覆盖角色档需为 true）。 */
+        cfgSelectedGroup: Boolean = false,
     ): LlmClient.StreamSession? {
         val profile = profile() ?: return null
         val provider = ProviderRegistry.get(profile.providerId) ?: return null
@@ -342,6 +367,10 @@ class ChatRepository(private val context: Context) {
             toolReasoningMode = profile.sampler.toolReasoningMode,
             chatMetadata = chatMetadata,
             chatCompletionSource = chatCompletionSource,
+            cfgGlobal = CfgPrefs.global(context),
+            cfgChara = CfgPrefs.chara(context, cfgCharacterId),
+            cfgChat = cfgChatFromMetadata(chatMetadata),
+            cfgSelectedGroup = cfgSelectedGroup,
             personaDescription = personaDescription,
             personaInPrompt = personaInPrompt,
             personaPosition = personaPosition,
@@ -494,6 +523,13 @@ class ChatRepository(private val context: Context) {
             customExcludeBody = profile.customExcludeBody,
             customIncludeHeaders = profile.customIncludeHeaders,
         )
+        // 官方 CFG Scale cfgValues：textgen 带 guidanceScale+negativePrompt；novel 只带 guidanceScale（官方 getCombinedPrompt(true) 仅 textgen 分支）
+        val cfgValues = prepared.cfgGuidanceScale?.let { g ->
+            buildJsonObject {
+                put("guidanceScale", g)
+                if (provider.protocol == "textgenerationwebui") put("negativePrompt", JsonPrimitive(prepared.cfgNegativePrompt))
+            }
+        }
         val effectiveProfile = profile.copy(
             model = effectiveModel,
             sampler = sampler.copy(maxTokens = effectiveMaxTokens, logitBias = bias),
@@ -554,6 +590,7 @@ class ChatRepository(private val context: Context) {
                 "novel" -> finalOptions.copy(
                     textGenPrompt = finalPrompt,
                     textGenIsContinue = isContinue,
+                    textGenCfgValues = cfgValues,
                     novelSettings = NovelSettingsStore.load(context),
                 )
                 "kobold" -> finalOptions.copy(
@@ -564,6 +601,7 @@ class ChatRepository(private val context: Context) {
                 else -> finalOptions.copy(
                     textGenPrompt = finalPrompt,
                     textGenIsContinue = isContinue,
+                    textGenCfgValues = cfgValues,
                     textGenSettings = TextgenSettingsDefaults.forProfile(
                         provider,
                         effectiveProfile,

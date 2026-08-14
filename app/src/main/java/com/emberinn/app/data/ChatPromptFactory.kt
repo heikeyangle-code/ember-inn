@@ -10,6 +10,7 @@ import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.macros.SystemFields
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
+import com.emberinn.engine.prompt.CfgPromptEngine
 import com.emberinn.engine.prompt.CharacterCardFieldsEngine
 import com.emberinn.engine.prompt.ExtensionPrompt
 import com.emberinn.engine.prompt.PromptItem
@@ -56,6 +57,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -94,6 +96,9 @@ class ChatPromptFactory {
         val activatedWorldInfo: List<WorldInfoEntry>,
         val counts: Map<String, Int> = emptyMap(),
         val maxContextTokens: Int = 4095,
+        /** CFG Scale 命中档（官方 cfgGuidanceScale；null=未启用）与负向提示，供 textgen/novel 请求体消费。 */
+        val cfgGuidanceScale: JsonElement? = null,
+        val cfgNegativePrompt: String = "",
     )
 
     /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects），引擎 1:1 模型。 */
@@ -173,6 +178,11 @@ class ChatPromptFactory {
         audioInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
         chatCompletionSource: String = "openai",
+        /** 官方 CFG Scale（cfg-scale.js）：全局/角色/会话配置；仅 textgen/novel 请求体消费 guidance。 */
+        cfgGlobal: CfgPromptEngine.CfgGlobal = CfgPromptEngine.CfgGlobal(),
+        cfgChara: CfgPromptEngine.CfgChara? = null,
+        cfgChat: CfgPromptEngine.CfgChat = CfgPromptEngine.CfgChat(),
+        cfgSelectedGroup: Boolean = false,
         personaDescription: String = "",
         personaInPrompt: Boolean = false,
         /** 官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN/4=AT_DEPTH/9=NONE。 */
@@ -734,6 +744,35 @@ class ChatPromptFactory {
             }
         }
 
+        // 官方 CFG Scale：getGuidanceScale 优先级 + 正/负提示 + 上下文扣减 + 正向注入（getCombinedPrompt 语义）
+        var cfgEffectiveMaxContext = maxContextTokens
+        var cfgPositiveInjection: PromptItem? = null
+        var cfgNegativePrompt = ""
+        val cfgGuidance = CfgPromptEngine.getGuidanceScale(cfgGlobal, cfgChara, cfgChat, cfgSelectedGroup)
+        if (cfgGuidance != null && cfgGuidance.value != 1.0) {
+            val g = cfgGuidance
+            val cfgSubstitute: (String) -> String = { MacroEngine.substitute(it, env) }
+            val neg = CfgPromptEngine.getCfgPrompt(g, true, cfgChat, cfgChara, cfgGlobal, cfgSubstitute).value
+            val pos = CfgPromptEngine.getCfgPrompt(g, false, cfgChat, cfgChara, cfgGlobal, cfgSubstitute).value
+            cfgNegativePrompt = neg
+            // 官方：useCfgPrompt 时 maxContext 扣减 max(neg,pos) token（对全部后端生效）
+            cfgEffectiveMaxContext = (maxContextTokens - maxOf(tokenCounter.count(neg), tokenCounter.count(pos))).coerceAtLeast(0)
+            // 官方 getCombinedPrompt(false)：openai 跳过；其余把正向提示注入 finalMesSend
+            if (chatCompletionSource != "openai" && pos.isNotEmpty()) {
+                val depth = cfgChat.promptInsertionDepth
+                // 官方：depth==0 直接追加末条（空格规则）；否则 extensionPrompts 插到 max(len-depth,0) 位
+                val promptDepth = if (depth == 0) 0 else (historyMessages.size - depth).coerceAtLeast(0)
+                cfgPositiveInjection = PromptItem(
+                    identifier = "cfg_prompt",
+                    name = "CFG",
+                    content = pos,
+                    role = "system",
+                    injectionDepth = promptDepth,
+                    injectionOrder = 100,
+                )
+            }
+        }
+
         val result = PromptPipeline.prepare(
             PromptPipeline.PrepareInput(
                 name2 = charName,
@@ -748,10 +787,10 @@ class ChatPromptFactory {
                 personaDescription = personaDescription,
                 personaInPrompt = personaInPrompt,
                 extensionPrompts = effectiveExtensions + vectorTransform?.extensionPrompts.orEmpty(),
-                inChatExtensions = effectiveInChat + worldInfoDepthPrompts,
+                inChatExtensions = effectiveInChat + worldInfoDepthPrompts + listOfNotNull(cfgPositiveInjection),
                 userPrompts = userPrompts,
                 userOrder = userOrder,
-                maxContextTokens = maxContextTokens,
+                maxContextTokens = cfgEffectiveMaxContext,
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,
                 type = type,
@@ -788,7 +827,14 @@ class ChatPromptFactory {
             messages = result.messages,
             activatedWorldInfo = wiResult.activated,
             counts = result.counts,
-            maxContextTokens = maxContextTokens,
+            maxContextTokens = cfgEffectiveMaxContext,
+            cfgGuidanceScale = cfgGuidance?.let { g ->
+                buildJsonObject {
+                    put("type", JsonPrimitive(g.type))
+                    put("value", g.value?.let(::JsonPrimitive) ?: JsonNull)
+                }
+            },
+            cfgNegativePrompt = cfgNegativePrompt,
         )
     }
 

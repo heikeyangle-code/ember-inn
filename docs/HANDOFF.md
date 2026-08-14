@@ -147,7 +147,11 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 
 其余：providers.json 数据驱动 **36 家**（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 api.cohere.com/v2；DeepSeek 默认 /v1），端点按官方 chat-completions.js 核对 + 联网核实最新模型；LlmClient 七协议路由（openai-compatible/Anthropic/Gemini/Mistral/xAI/AI21/Cohere）+ SSE 四格式（OpenAI delta 覆盖 Mistral/xAI/AI21、Anthropic content_block_delta、Gemini candidates.parts、Cohere content-delta），流结束兜底 onDone；能力管道全通（tools/tool_choice/json_schema/Anthropic·Gemini web_search/Gemini requestImages+safety）；响应解析按协议取纯文本；ProviderStore 多档案（profiles.json + activeId，旧 connection.json 自动迁移）。边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参；convertClaudePrompt 遗留旧函数（仅 token 计数用）未移植；Claude/Gemini tokenizer 回退 cl100k。
 
-### 3.10 群聊 / 其它 ✅
+### 3.10 CFG Scale ✅
+官方 scripts/cfg-scale.js 纯逻辑 1:1 差分移植（getGuidanceScale chat>chara>global 优先级、getCfgPrompt prompt_combine unshift 合并、getCustomSeparator JSON.parse 回退、插入深度；25 例差分）。App 三层接线：全局（CfgPrefs）/角色（按角色 id）/会话（chat_metadata.cfg_*），聊天菜单 → CFG Scale 弹层编辑；发送时 maxContext 扣减 max(neg,pos) token，正向提示按深度注入（textgen/novel 非 openai 路径），textgen 请求体 cfgValues.guidanceScale+negativePrompt、novel 只 guidanceScale（官方 switch 分支）。
+登记（非 1:1 边界）：depth==0 官方直接追加末条（空格规则），App 用 injectionDepth=0 的 in-chat PromptItem 近似；charaCfg 缺失+群聊覆盖官方抛 TypeError，Kotlin 空安全返回 null 档。
+
+### 3.11 群聊 / 其它 ✅
 群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
 
 ### 3.11 向量扩展（RAG 全量）✅（引擎层）

@@ -495,6 +495,7 @@ class LlmClient(
                 val body = TextgenRequestBodyEngine.build(
                     TextgenRequestBodyEngine.BuildInput(
                         settings = settings,
+                        cfgValues = options.textGenCfgValues,
                         finalPrompt = options.textGenPrompt ?: "",
                         maxTokens = profile.sampler.maxTokens.takeIf { it > 0 },
                         type = if (effectiveStream) "normal" else "quiet",
