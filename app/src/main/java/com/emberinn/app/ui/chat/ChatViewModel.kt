@@ -2040,6 +2040,32 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 mes_embed：给已有消息嵌入本地附件（落盘 → extra.media 追加 → 刷新）。 */
+    fun addMediaToMessage(index: Int, uri: Uri, mime: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val app = getApplication<Application>()
+                val resolver = app.contentResolver
+                val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
+                val type = mime?.ifBlank { null } ?: resolver.getType(uri) ?: "application/octet-stream"
+                val mediaType = com.emberinn.engine.media.MediaEngine.typeFromMime(type) ?: return@launch
+                val displayName = runCatching {
+                    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                        if (c.moveToFirst()) c.getString(0) else null
+                    }
+                }.getOrNull() ?: "attachment"
+                val safeMime = type == "image/jpeg" || type == "image/png" || type == "image/webp"
+                val processed = if (mediaType == "image" && !safeMime) compressToJpeg(bytes) else bytes
+                val extension = if (processed !== bytes) "jpg" else extensionFor(type, displayName)
+                val dir = java.io.File(app.filesDir, "media").apply { mkdirs() }
+                val file = java.io.File(dir, "${System.currentTimeMillis()}_${displayName.hashCode().toUInt().toString(16)}.$extension")
+                file.writeBytes(processed)
+                chatStore.addMediaToMessage(sessionId, index, mediaType, file.absolutePath, displayName)
+                refreshMessages()
+            }
+        }
+    }
+
     /** 从 URL 导入附件（官方 Message.addImage/addVideo/addAudio 的 URL 来源）：下载 → 落盘 → 本地附件链。 */
     fun addMediaFromUrl(url: String) {
         val trimmed = url.trim()

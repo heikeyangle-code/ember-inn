@@ -854,6 +854,27 @@ class ChatStore(private val context: Context) {
         return record
     }
 
+    /** 官方 appendMediaToMessage（mes_embed）：给已有消息 extra.media 追加一条附件。 */
+    fun addMediaToMessage(sessionId: String, at: Int, type: String, url: String, title: String) {
+        val list = messages(sessionId).toMutableList()
+        val idx = at.coerceIn(0, list.lastIndex)
+        val obj = list[idx].jsonObject.toMutableMap()
+        val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val media = (extra["media"] as? JsonArray)?.toMutableList() ?: mutableListOf()
+        media.add(
+            buildJsonObject {
+                put("type", JsonPrimitive(type))
+                put("url", JsonPrimitive(url))
+                put("title", JsonPrimitive(title))
+                put("inline_image", JsonPrimitive(true))
+            },
+        )
+        extra["media"] = JsonArray(media)
+        obj["extra"] = JsonObject(extra)
+        list[idx] = JsonObject(obj)
+        save(sessionId, list)
+    }
+
     /** /delname：删除指定名字的全部消息；返回删除条数。 */
     fun deleteMessagesByName(sessionId: String, name: String): Int {
         if (name.isBlank()) return 0

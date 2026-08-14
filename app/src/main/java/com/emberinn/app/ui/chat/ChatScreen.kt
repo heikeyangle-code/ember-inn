@@ -369,6 +369,13 @@ fun ChatScreen(
         uri?.let { vm.setChatBackground(it) }
     }
 
+    var embedTargetIndex by remember { mutableStateOf<Int?>(null) }
+    val embedPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val idx = embedTargetIndex
+        embedTargetIndex = null
+        if (uri != null && idx != null) vm.addMediaToMessage(idx, uri, null)
+    }
+
     val mediaPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
@@ -1032,6 +1039,11 @@ fun ChatScreen(
                             menuMessageIndex = null
                             vm.generateImage(text)
                         }
+                    }
+                    MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {
+                        menuMessageIndex = null
+                        embedTargetIndex = index
+                        embedPicker.launch(arrayOf("*/*"))
                     }
                     val mediaOfMsg = mediaOf(el)
                     if (mediaOfMsg.isNotEmpty()) {
