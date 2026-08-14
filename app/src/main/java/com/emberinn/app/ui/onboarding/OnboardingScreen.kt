@@ -214,7 +214,10 @@ private fun OnboardingActionCard(
                 alpha = if (primary) 0.6f else 0.4f,
             )
             .clip(shape)
-            .background(if (primary) bgBrush else theme.surfaceContainerHigh.copy(alpha = 0.88f))
+            .then(
+                if (primary) Modifier.background(bgBrush)
+                else Modifier.background(theme.surfaceContainerHigh.copy(alpha = 0.88f)),
+            )
             .glassEdgeHighlight(dark = dark, atTop = true)
             .clickable(onClick = onClick),
     ) {

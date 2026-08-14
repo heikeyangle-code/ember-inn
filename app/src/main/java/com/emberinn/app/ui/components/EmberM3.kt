@@ -338,7 +338,10 @@ fun EmberPrimaryButton(
                 alpha = 0.55f,
             )
             .clip(shape)
-            .background(if (enabled) gradient else MaterialTheme.colorScheme.surfaceContainerHighest)
+            .then(
+                if (enabled) Modifier.background(gradient)
+                else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            )
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

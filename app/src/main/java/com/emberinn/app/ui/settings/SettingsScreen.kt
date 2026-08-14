@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -302,14 +303,14 @@ private fun SettingsHome(
             icon = PhosphorIcons.Book,
             rows = listOf(
                 SettingRow("版本", "0.1.0", Color.Unspecified, icon = PhosphorIcons.Star),
-                SettingRow("开源仓库", "GitHub", Color.Unspecified, icon = PhosphorIcons.Share) {
+                SettingRow("开源仓库", "GitHub", Color.Unspecified, onClick = {
                     runCatching {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
                         )
                     }
-                },
-                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified, icon = PhosphorIcons.FileText) { showLicense = true },
+                }, icon = PhosphorIcons.Share),
+                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified, onClick = { showLicense = true }, icon = PhosphorIcons.FileText),
             ),
         ),
     )
@@ -578,8 +579,9 @@ private fun AboutScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
             Card(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
