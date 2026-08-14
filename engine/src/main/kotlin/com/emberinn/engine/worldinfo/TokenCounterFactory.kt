@@ -5,5 +5,11 @@ package com.emberinn.engine.worldinfo
  * 未知模型回退 cl100k_base。Claude/Gemini 等官方 web tokenizer 属于边界。
  */
 object TokenCounterFactory {
-    fun forModel(model: String): TokenCounter = OpenAiTokenCounter(model)
+    /** Claude/Llama3 走 HF BPE（模型文件打包）；其余 OpenAI 系走 tiktoken；sentencepiece 族登记边界。 */
+    fun forModel(model: String): TokenCounter {
+        com.emberinn.engine.tokenizer.HfBpeTokenizer.forModel(model)?.let { tok ->
+            return TokenCounter { tok.count(it) }
+        }
+        return OpenAiTokenCounter(model)
+    }
 }

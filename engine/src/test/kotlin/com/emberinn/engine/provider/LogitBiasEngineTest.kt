@@ -33,8 +33,16 @@ class LogitBiasEngineTest {
     }
 
     @Test
-    fun `sentencepiece and web families return empty like unavailable tokenizer`() {
+    fun `sentencepiece returns empty and missing web models return empty`() {
         assertTrue(LogitBiasEngine.compute("gemini-2.5-pro", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
-        assertTrue(LogitBiasEngine.compute("llama-3.3-70b", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
+        // command-r 无模型文件（官方下载源），按不可用返回 {}
+        assertTrue(LogitBiasEngine.compute("command-r-plus", listOf(BiasEntry(text = "x", value = 1.0))).isEmpty())
+    }
+
+    @Test
+    fun `llama3 web tokenizer computes real bias`() {
+        val out = LogitBiasEngine.compute("llama-3.3-70b", listOf(BiasEntry(text = " hello", value = -50.0)))
+        assertTrue(out.isNotEmpty())
+        assertTrue(out.values.all { it == -50.0 })
     }
 }

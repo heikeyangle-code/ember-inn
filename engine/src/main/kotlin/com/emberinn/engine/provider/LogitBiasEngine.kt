@@ -33,17 +33,25 @@ object LogitBiasEngine {
     fun compute(model: String, entries: List<BiasEntry>): Map<String, Double> {
         val key = TokenizerModel.map(model)
         if (TokenizerModel.isClaude(key)) return emptyMap()
-        if (TokenizerModel.isSentencepiece(key) || TokenizerModel.isWeb(key)) return emptyMap()
-        val encoding = encodingFor(key) ?: return emptyMap()
+        if (TokenizerModel.isSentencepiece(key)) return emptyMap()
+        // web 族：Claude/Llama3 模型文件已打包（HfBpeTokenizer）；其余无模型文件 → 官方不可用返回 {}
+        val encodeFn: (String) -> List<Int>
+        if (TokenizerModel.isWeb(key)) {
+            val tok = com.emberinn.engine.tokenizer.HfBpeTokenizer.forModel(model) ?: return emptyMap()
+            encodeFn = { text -> tok.encode(text) }
+        } else {
+            val encoding = encodingFor(key) ?: return emptyMap()
+            encodeFn = { text -> encoding.encode(text).toArray().toList() }
+        }
         val out = linkedMapOf<String, Double>()
         for (entry in entries) {
             if (entry.text.isBlank()) continue
             val tokens: List<Int>? = try {
                 val trimmed = entry.text.trim()
                 if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                    rawIds(trimmed) ?: encoding.encode(entry.text).toArray().toList()
+                    rawIds(trimmed) ?: encodeFn(entry.text)
                 } else {
-                    encoding.encode(entry.text).toArray().toList()
+                    encodeFn(entry.text)
                 }
             } catch (e: Exception) {
                 null
