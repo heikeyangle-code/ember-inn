@@ -1037,7 +1037,7 @@ fun ChatScreen(
                     if (text.isNotBlank()) {
                         MenuRow(PhosphorIcons.PaintBrush, "生成图片（用这条消息作提示）") {
                             menuMessageIndex = null
-                            vm.generateImage(text)
+                            vm.generateImageForMessage(index)
                         }
                     }
                     MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {

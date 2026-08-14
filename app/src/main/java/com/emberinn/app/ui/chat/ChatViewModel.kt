@@ -370,6 +370,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 sd_message_gen：用消息文本生成图片并挂到该消息 extra.media（非待发送附件）。 */
+    fun generateImageForMessage(index: Int) {
+        val list = chatStore.messages(sessionId)
+        val text = list.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val path = imageGenClient.generate(getApplication(), text)
+            withContext(Dispatchers.Main) {
+                if (path != null) {
+                    chatStore.addMediaToMessage(sessionId, index, "image", path, "生成的图片")
+                    refreshMessages()
+                } else {
+                    _notice.value = "（图像生成失败：请检查 设置→服务→图像 的接口地址与来源。）"
+                }
+            }
+        }
+    }
+
     /** 当前激活的预设正则集 + 允许标记（官方 preset_allowed_regex[api]，App 固定 openai）。 */
     private fun presetRegex(): Pair<List<RegexPipelineScript>, Boolean> {
         val sets = GlobalRegexPrefs.presetSets(getApplication())
