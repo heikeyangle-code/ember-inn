@@ -1,6 +1,9 @@
 package com.emberinn.app.ui.settings
 
 import android.content.Context
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * 服务偏好：翻译 / 图像生成 / 向量检索，字段对齐官方扩展设置：

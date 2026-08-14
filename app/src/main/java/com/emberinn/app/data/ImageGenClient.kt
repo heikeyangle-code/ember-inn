@@ -257,7 +257,7 @@ class ImageGenClient {
      * 轮询 /history 至 prompt_id 出现，取 outputs 第一张图，GET /view 下载。
      * workflow 由用户在设置里提供（官方默认 Default_Comfy_Workflow.json 不在仓库，登记）。
      */
-    private fun comfy(context: Context, url: String, prompt: String, model: String, steps: Int): String? {
+    private fun comfy(context: Context, url: String, prompt: String, negativePrompt: String, model: String, steps: Int): String? {
         if (url.isBlank()) return null
         val workflow = ServicesPrefs.comfyWorkflow(context)
         if (workflow.isBlank()) return null
@@ -265,7 +265,7 @@ class ImageGenClient {
         var replaced = workflow
         val replacements = mapOf(
             "%prompt%" to JSONObject().put("v", prompt).toString().removePrefix("{\"v\":").removeSuffix("}"),
-            "%negative_prompt%" to "\"\"",
+            "%negative_prompt%" to JSONObject().put("v", negativePrompt).toString().removePrefix("{\"v\":").removeSuffix("}"),
             "%seed%" to "\"$seed\"",
             "%denoise%" to "1.0",
             "%clip_skip%" to "-1",
