@@ -5,6 +5,8 @@ import com.emberinn.engine.prompt.ToolCall
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -973,6 +975,79 @@ data: [DONE]
         val toolParams = body["tools"]?.jsonArray?.get(0)?.jsonObject?.get("function")?.jsonObject?.get("parameters")?.jsonObject
         assertEquals(null, toolParams?.get("\$schema"))
         assertEquals(0, toolParams?.get("required")?.jsonArray?.size)
+        server.close()
+    }
+
+    @Test
+    fun `kobold routes to v1 generate with official body`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"results":[{"text":"hi"}]}""")
+                .build(),
+        )
+        val spec = ProviderRegistry.all().first { it.id == "kobold" }
+        val profile = ConnectionProfile(
+            providerId = "kobold",
+            model = "koboldcpp",
+            baseUrlOverride = server.url("/").toString().trimEnd('/'),
+            sampler = com.emberinn.engine.provider.SamplerParams(maxTokens = 64),
+        )
+        val out = LlmClient().chatCompletions(
+            spec,
+            profile,
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(
+                textGenPrompt = "Hello",
+                koboldSettings = JsonObject(mapOf("rep_pen" to JsonPrimitive(1.2))),
+            ),
+        )
+        val request = server.takeRequest()
+        assertEquals("/v1/generate", request.url.encodedPath)
+        val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
+        assertEquals("Hello", body["prompt"]?.toString()?.trim('"'))
+        assertEquals(64, body["max_length"]?.toString()?.toIntOrNull())
+        assertEquals("1.2", body["rep_pen"]?.toString())
+        assertTrue(out.contains("hi"))
+        server.close()
+    }
+
+    @Test
+    fun `kobold stream parses token deltas like official`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .setHeader("Content-Type", "text/event-stream")
+                .body(
+                    "data: {\"token\":\"你\"}\n\n" +
+                        "data: {\"token\":\"好\"}\n\n",
+                )
+                .build(),
+        )
+        val spec = ProviderRegistry.all().first { it.id == "kobold" }
+        val deltas = mutableListOf<String>()
+        var done = false
+        LlmClient().streamChatCompletions(
+            spec,
+            ConnectionProfile(
+                providerId = "kobold",
+                model = "koboldcpp",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = com.emberinn.engine.provider.SamplerParams(maxTokens = 64),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+            options = ProviderRequestOptions(textGenPrompt = "Hello"),
+            onDelta = { deltas += it },
+            onDone = { done = true },
+        )
+        assertEquals(listOf("你", "好"), deltas)
+        assertTrue(done)
+        val request = server.takeRequest()
+        assertEquals("/extra/generate/stream", request.url.encodedPath)
         server.close()
     }
 }

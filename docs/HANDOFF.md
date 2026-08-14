@@ -182,6 +182,9 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 | 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
 | StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
 | 预设应用全链（类型识别/multi-section 校验/context/instruct/sysprompt/reasoning/chat-completion 应用与迁移/保存过滤/名字匹配/textgen·novel·kobold 采样器应用/生成参数/autoSelect/敏感字段） | preset-apply-official.mjs | PresetApplyDiffTest | 99 |
+| YAML 合并/剔除（util.js mergeObjectWithYaml/excludeKeysByYaml，官方 'yaml' 包：锚点/别名解析、<< 保留字面键、多文档静默） | yaml-merge-official.mjs | YamlMergeDiffTest | 11 |
+| Vertex AI 认证（google.js generateJWTToken/getProjectIdFromServiceAccount/getVertexAIAuth/getGoogleApiConfig，Date.now 冻结 + access_token 打桩） | vertex-auth-official.mjs | VertexAuthDiffTest | 6 |
+| textgen 请求头（additional-headers.js getMancerHeaders/getInfermaticAIHeaders/getFeatherlessHeaders） | textgen-headers-official.mjs | TextgenHeadersDiffTest | 6 |
 
 **分支级覆盖审计与打桩登记（防漏机制）**
 - 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
@@ -196,8 +199,8 @@ CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test�
 WorldLoreMerger（官方世界书→提示词拼接段由 prepare-messages 覆盖；App 的多书合并顺序/插槽为自有封装，边界登记）。
 
 **官方有而引擎/App 还没有**：
-- textgen 协议后端（KoboldAI/TextGenWebUI/Mancer/Featherless/Infermatic/Ooba 等）——instruct 模式引擎与预设已备，协议路由未做（见第 5 节）。差分目标已锁定：官方 `textgen-settings.js:1587 createTextGenGenerationData`（256 行，settings/model/finalPrompt/maxTokens/isImpersonate/isContinue/cfgValues/type 八参数，llamacpp/经典/Mancer 等多分支）+ `getTextGenModel`（1465）；尚未提取/移植。接法：请求体逐字差分 → 引擎 TextgenRequestBodyEngine → LlmClient 路由 → providers.json 增 kobold/textgenerationwebui/novel 条目与档案 UI 字段；ResponseDataExtractor 已备 kobold/textgenerationwebui 解析分支。
-- NovelAI/Kayra 聊天协议——请求体已 1:1（`novel-body` 差分 12 例，`NovelRequestBodyEngine`：getNovelGenerationData/selectPrefix/getTokenizerTypeForModel 逐字移植，Kayra/Clio/Erato/旧模型、Erato 停用词扩充、1024 截断、order 覆盖、logit_bias、num_logprobs）；getKayraMaxContextTokens 预算差分已有；响应解析分支已备。剩余：LlmClient 路由、providers.json 条目、档案设置 UI、响应解析接线（textgen 块一并做）。
+- textgen 协议后端（KoboldAI/TextGenWebUI/Mancer/Featherless/Infermatic/Ooba 等）——✅ 已通：TextgenRequestBodyEngine（textgen-body 27 例）/NovelRequestBodyEngine（novel-body 12 例）/KoboldRequestBodyEngine（kobold-body 12 例）逐字差分；LlmClient textgenerationwebui/novel/kobold 三条路由 + 流式（kobold 与 novel 同形 data.token，官方 generateKoboldWithStreaming）；providers.json 条目 + mancer/featherless/infermaticai 请求头（textgen-headers 差分 6 例）；Kobold 非流式响应 results[0].text（MockWebServer 锁 URL/body/流）。
+- NovelAI/Kayra 聊天协议——✅ 请求体 1:1（`novel-body` 差分 12 例，`NovelRequestBodyEngine`：getNovelGenerationData/selectPrefix/getTokenizerTypeForModel 逐字移植，Kayra/Clio/Erato/旧模型、Erato 停用词扩充、1024 截断、order 覆盖、logit_bias、num_logprobs）；getKayraMaxContextTokens 预算差分已有；LlmClient novel 路由 + 流式 data.token + 响应解析已接；providers.json/档案设置 UI 已做。
 - ChromaDB 远程向量后端（官方 vectors 默认）——本地 FileVectorStore/InMemory + OpenAI 兼容嵌入替代，未做 ChromaDB 客户端。
 - summarize 聊天摘要（vectors 扩展）——未做。
 - 第三方扩展市场（third-party）与官方插件体系——未做（HANDOFF 11.2 登记）。

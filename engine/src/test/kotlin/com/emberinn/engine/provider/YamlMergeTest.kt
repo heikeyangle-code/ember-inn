@@ -65,7 +65,10 @@ class YamlMergeTest {
             "base: &b\n  x: 1\n  y: 2\nchild:\n  <<: *b\n  y: 3\n",
         )
         val child = out["child"] as? JsonObject
-        assertEquals("1", child?.get("x")?.toString())
+        // 官方 'yaml' 包不合并 <<：child 保留字面键 "<<": {x:1,y:2}，y 覆盖为 3
+        val merged = child?.get("<<") as? JsonObject
+        assertEquals("1", merged?.get("x")?.toString())
+        assertEquals("2", merged?.get("y")?.toString())
         assertEquals("3", child?.get("y")?.toString())
         // 顶层对象整体 Object.assign：base/child 都是顶层键，全部进 body
         assertEquals("1", (out["base"] as? JsonObject)?.get("x")?.toString())

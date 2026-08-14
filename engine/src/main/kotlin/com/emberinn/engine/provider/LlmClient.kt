@@ -264,8 +264,9 @@ class LlmClient(
                     onDone()
                     continue
                 }
-                // NovelAI SSE：data: {"token":"...","logprobs":...}，无结束事件，流关闭收尾
-                if (protocol == "novel") {
+                // NovelAI / Kobold SSE：data: {"token":"...",...}，无结束事件，流关闭收尾
+                // （官方 generateKoboldWithStreaming：JSON.parse(value.data)，data.token 追加）
+                if (protocol == "novel" || protocol == "kobold") {
                     try {
                         val obj = json.parseToJsonElement(dataText).jsonObject
                         (obj["token"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.let {
@@ -435,22 +436,29 @@ class LlmClient(
                 val model = URLEncoder.encode(profile.model, "UTF-8")
                 val endpoint = if (effectiveStream) "streamGenerateContent" else "generateContent"
                 val reverseProxy = profile.reverseProxy.trim()
-                val url: String
-                if (reverseProxy.isNotEmpty()) {
-                    url = reverseProxy.trimEnd('/') + "/v1/publishers/google/models/" + model + ":" + endpoint +
-                        (if (effectiveStream) "?alt=sse" else "")
-                    builder.header("Authorization", "Bearer ${profile.proxyPassword}")
-                } else if (profile.vertexaiAuthMode.ifBlank { "express" } == "full") {
+                val fullMode = profile.vertexaiAuthMode.ifBlank { "express" } == "full"
+                var accessToken: String? = null
+                var projectId: String? = profile.vertexaiExpressProjectId.ifBlank { null }
+                if (fullMode && reverseProxy.isEmpty()) {
                     val saText = profile.vertexaiServiceAccountJson
                     if (saText.isBlank()) error("Vertex AI Full mode requires Service Account JSON")
                     val sa = VertexAuth.serviceAccount(saText) ?: error("Invalid Service Account JSON")
-                    url = VertexAuth.url(region, model, VertexAuth.projectId(sa), endpoint) +
-                        (if (effectiveStream) "?alt=sse" else "")
-                    builder.header("Authorization", "Bearer ${VertexAuth.accessToken(sa)}")
-                } else {
-                    url = VertexAuth.url(region, model, profile.vertexaiExpressProjectId.ifBlank { null }, endpoint)
-                    if (profile.apiKey.isNotBlank()) builder.header("x-goog-api-key", profile.apiKey)
+                    projectId = VertexAuth.projectId(sa)
+                    accessToken = VertexAuth.accessToken(sa)
                 }
+                val req = VertexAuth.requestUrlAndHeaders(
+                    authMode = if (fullMode) "full" else "express",
+                    region = region,
+                    model = model,
+                    projectId = projectId,
+                    reverseProxy = reverseProxy,
+                    proxyPassword = profile.proxyPassword,
+                    apiKey = profile.apiKey,
+                    endpoint = endpoint,
+                    accessToken = accessToken,
+                )
+                val url = req.url + (if (effectiveStream) "?alt=sse" else "")
+                req.headers.forEach { (k, v) -> builder.header(k, v) }
                 val effort = profile.sampler.reasoningEffort
                 val reasoningBudget = ProviderConverters.calculateGoogleBudgetTokens(
                     profile.sampler.maxTokens, effort, profile.model,
@@ -528,6 +536,23 @@ class LlmClient(
                 val body = NovelRequestBodyEngine.build(input)
                 builder.url(url).post(body.toString().toRequestBody("application/json".toMediaType()))
                 builder.header("Authorization", "Bearer ${profile.apiKey}")
+            }
+            "kobold" -> {
+                // 官方 src/endpoints/backends/kobold.js /generate：
+                // localhost→127.0.0.1、非 gui_settings 全字段 + stop_sequence 条件、
+                // 流式 URL=/extra/generate/stream、非流式=/v1/generate（请求体 KoboldRequestBodyEngine 差分 12 例）。
+                val apiServer = base.trimEnd('/')
+                val input = KoboldRequestBodyEngine.fromSettingsJson(
+                    apiServer = apiServer,
+                    prompt = options.textGenPrompt ?: "",
+                    maxContextLength = profile.contextWindow.takeIf { it > 0 } ?: 4096,
+                    maxLength = profile.sampler.maxTokens.takeIf { it > 0 } ?: 0,
+                    streaming = effectiveStream,
+                    settings = options.koboldSettings,
+                )
+                val result = KoboldRequestBodyEngine.build(input)
+                builder.url(result.url).post(result.body.toRequestBody("application/json".toMediaType()))
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             "mistral" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
@@ -754,13 +779,15 @@ class LlmClient(
                 }
             }
             "api-key" -> builder.header("api-key", key)
-            // 官方 additional-headers.js getMancerHeaders：X-API-KEY 与 Authorization 同值
+            // 官方 additional-headers.js getMancerHeaders / getInfermaticAIHeaders / getFeatherlessHeaders
             // google-key 走 URL 查询参数；none 无认证
             "google-key", "none" -> Unit
             else -> {
-                builder.header("Authorization", "Bearer $key")
-                if (provider.id == "textgen-mancer") {
-                    builder.header("X-API-KEY", key)
+                val textgenHeaders = TextgenHeaders.forProvider(provider.id, key)
+                if (textgenHeaders.isNotEmpty()) {
+                    textgenHeaders.forEach { (k, v) -> builder.header(k, v) }
+                } else {
+                    builder.header("Authorization", "Bearer $key")
                 }
             }
         }
@@ -810,6 +837,8 @@ class LlmClient(
                 ?.joinToString("").orEmpty()
             "textgenerationwebui" -> ResponseDataExtractor.extractMessageFromData(root, "textgenerationwebui")
             "novel" -> ResponseDataExtractor.extractMessageFromData(root, "novel")
+            "kobold", "koboldhorde" -> root["results"]?.jsonArray?.firstOrNull()?.jsonObject
+                ?.get("text")?.asText().orEmpty()
             "cohere" -> {
                 val message = root["message"]?.jsonObject ?: return ""
                 when (val content = message["content"]) {

@@ -40,8 +40,11 @@ object VertexAuth {
     }
 
     /** 官方 generateJWTToken：RS256，scope cloud-platform，aud oauth2 token，1 小时过期。 */
-    fun jwt(sa: JsonObject): String {
-        val now = System.currentTimeMillis() / 1000
+    fun jwt(sa: JsonObject): String = jwt(sa, System.currentTimeMillis() / 1000)
+
+    /** 差分用：注入固定时间戳（官方 Date.now() 冻结后逐字对拍）。 */
+    fun jwt(sa: JsonObject, nowEpochSec: Long): String {
+        val now = nowEpochSec
         val header = b64("{\"alg\":\"RS256\",\"typ\":\"JWT\"}")
         val payload = b64(
             "{\"iss\":\"${sa["client_email"]?.jsonPrimitive?.content.orEmpty()}\"," +
@@ -91,6 +94,36 @@ object VertexAuth {
             "$base/publishers/google/models/${model}:$endpoint"
         } else {
             "$base/projects/$projectId/locations/$region/publishers/google/models/${model}:$endpoint"
+        }
+    }
+
+    /** 官方 getVertexAIAuth + getGoogleApiConfig / chat-completions.js 的 URL+请求头（差分对拍用）。 */
+    data class VertexRequest(val url: String, val headers: Map<String, String>)
+
+    fun requestUrlAndHeaders(
+        authMode: String,
+        region: String,
+        model: String,
+        projectId: String?,
+        reverseProxy: String,
+        proxyPassword: String,
+        apiKey: String,
+        endpoint: String,
+        accessToken: String? = null,
+    ): VertexRequest {
+        val encoded = model // 调用方已 URLEncoder.encode；这里保持原样便于对拍
+        val proxy = reverseProxy.trim()
+        return if (proxy.isNotEmpty()) {
+            val url = proxy.trimEnd('/') + "/v1/publishers/google/models/" + encoded + ":" + endpoint
+            VertexRequest(url, mapOf("Authorization" to "Bearer $proxyPassword"))
+        } else if (authMode == "full") {
+            val url = url(region, encoded, projectId, endpoint)
+            val headers = if (accessToken != null) mapOf("Authorization" to "Bearer $accessToken") else emptyMap()
+            VertexRequest(url, headers)
+        } else {
+            val url = url(region, encoded, projectId, endpoint)
+            val headers = if (apiKey.isNotBlank()) mapOf("x-goog-api-key" to apiKey) else emptyMap()
+            VertexRequest(url, headers)
         }
     }
 

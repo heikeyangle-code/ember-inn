@@ -1,0 +1,96 @@
+{
+  "generated": "2026-08-14T15:53:42.089Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "service_account",
+      "serviceAccount": {
+        "type": "service_account",
+        "project_id": "demo-project",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC31p5VMhNSuR7R\nmHe8OZqeZDXlPPxshXHmMOpvCClZVBiSzLNfEr9TNp8ORI/HGx5rTVKJ6Qhy0UQt\n3w4ge5ix2Z5BMpB62ketHfGEd4TUurn7yUVXqGtD3WnjWVsVXfKiNeuglF2grWDs\n7YZ8XNKVlM0DXMqMuQvymzbuleJXzQdW4dbuw0vIAHfkDo6N1GRnq8pXJzGbUUqR\nMYDlZgYB4EOtDQqQ+RVL7RPL3clFEpHBh0tDghJdYlYGGuKhQx+iPVKLovUWN77R\nEbe6VskzupVDzLH7KUV0+JBc5CP+665wOjBkrAPFDsoH9VejxsA7ep8AOEwRaI27\nU+opOhJnAgMBAAECggEAHI+IRl4i6GLVlI8maE9euSWCcLHahEBFzhMNaOCQuU26\nX5wpGyfTd5RwfjaioQvn3EMarqL4lWCeQgN5s2GK+x5/BUwGFuqwi1xajaTv4F4o\nz3hD1fbWwKgLxQQN2tz0pBonwukp6UY7sl4YhbD6D75wDLSuzHwMjM1rvwH5idWO\n57ywLGT5zZPsRWXpgEk8Ief0LathYpM40EovUteXJ898MTUFbFqF2fvYphR/tAu9\nQjh4cRDIQndileDDCa9nX77z7BqtYPA3HVRE2wwQBBySFPpb8eDmbrvAWozik7PO\n38/T2RNquwJr3OtH3IcjyfXUEQjaHmFlEB+RWYG8KQKBgQD4R2pjpjYYmSpnexUs\nphgapIMXibJpt0YQD4lH0ftoMoioNvN3Iu39UP70v+7Cx1WQccF/GLpSmcURpNb4\nQEc5rxM6kumE20BER/yF1R8qaXfCV42XYFxLEae9df0N+JGRsU2SxzdpXzc5WMSz\nJllDxcG5QhYFIOuiZj8x1W9DHQKBgQC9ji6UQKLVvJ4MfO7qwT1N5if74vtDIJT2\nNoVTUx+J78td3BnC3Z85W5Atu2vd8C3djPHOgjsujkLM6vdOZVB0FK42gJ3pQ0QL\n/f06j9U5jx4m3uSKOe1/SZs4cIOTBa4ihYNVMC9JwLSz/l7tqVx7O9O3WTgqJQH1\nLOtytlOQUwKBgAdK6bgVmL8uOI2jkuKl2k1mCae2VrQ+OuOb4Tdn1o+f9F2kh5A3\nSXBIYcTEonm8Kyo7/SgDjO2CMMSs59eQ48aw+sqcqBlL615WEvfHY8v2HxtpQPJy\nVSOrWBb7kTxI0dXKtHGcQmdo8ZFQpy5v8O1JsMAFTepGpkU15aNMFqGNAoGAW2Xj\nL7i6yzRXQM48pRTn6le/j8SyQnvDV7SSNMsvueLVvDwUb9FMpOtxaZulNy5H7zu2\nnExPHPObYhMpi7NuR4pxNfZuLbsxZFbjcwlHVqmbcEKpD70+ttFW9q/JwWpLvHmE\nCd9h7b3tY5yTSSUQYptGSnHKkwelGgK+xGEFieECgYAFrTzm8fFQjfcnh19IKJDh\npW+9Ayzp0ZQN309lWXfSkvct4o0z1yybzRymePmKd/ZlnCyahpabiZanUFSVaNQ/\npmRYLSbTY6cQXIAN/WTL8Tfs7C1fyV/h8w5RjTLqNkjqKVdDuhs3ZheWUFZ0ETFL\nWyIe2DUrreULD1dyfx31Mg==\n-----END PRIVATE KEY-----\n",
+        "client_email": "demo@demo.iam.gserviceaccount.com",
+        "client_id": "12345"
+      }
+    },
+    {
+      "id": "jwt",
+      "jwt": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZW1vQGRlbW8uaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJzY29wZSI6Imh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL2F1dGgvY2xvdWQtcGxhdGZvcm0iLCJhdWQiOiJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsImlhdCI6MTc1MDAwMDAwMCwiZXhwIjoxNzUwMDAzNjAwfQ.OZZaTDJesM-WgAwQXDCmnM4ucvpJMDNrVbv0-WmD14B5kg21rwAI4_hmb-P8_apM6HWI_IF8hQhx-tD9FiRMScAM0oDwtJhUk1xvEmFuyjyCP4XmkbLNR7lfa-4MijzI1EQ6-lcBMo4BGBHHJlOxy6WbbakiFLR6yxShTMSOFzbdo081qzEAIWne54sBhZTOXU5JOB6-mQ-dFbDoapSwB2PLB6dpaFU--tFgPUSou6XtPFo5K84CKtBZkTa02p3QfFciA5NMb233aKXOH1HxGaMZPz2cMJbJb6Jloqd6U2Xh9xbAm5U52qHmlpSI6Gp9K6n6f0TVoO1PKljwGJvTkA",
+      "nowEpochSec": 1750000000
+    },
+    {
+      "id": "project_id",
+      "projectId": "demo-project"
+    },
+    {
+      "id": "express_region_project",
+      "input": {
+        "api": "vertexai",
+        "vertexai_auth_mode": "express",
+        "vertexai_region": "us-central1",
+        "vertexai_express_project_id": "p",
+        "model": "gemini-2.5-pro",
+        "endpoint": "generateContent",
+        "apiKey": "vertex-key",
+        "accessToken": "FAKE_ACCESS_TOKEN"
+      },
+      "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1/publishers/google/models/gemini-2.5-pro:generateContent",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "vertex-key"
+      }
+    },
+    {
+      "id": "express_global_noproject",
+      "input": {
+        "api": "vertexai",
+        "vertexai_auth_mode": "express",
+        "vertexai_region": "global",
+        "vertexai_express_project_id": "",
+        "model": "gemini-2.5-pro",
+        "endpoint": "generateContent",
+        "apiKey": "vertex-key",
+        "accessToken": "FAKE_ACCESS_TOKEN"
+      },
+      "url": "https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-pro:generateContent",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "vertex-key"
+      }
+    },
+    {
+      "id": "full_service_account",
+      "input": {
+        "api": "vertexai",
+        "vertexai_auth_mode": "full",
+        "vertexai_region": "us-central1",
+        "model": "gemini-2.5-pro",
+        "endpoint": "streamGenerateContent",
+        "apiKey": "vertex-key",
+        "accessToken": "FAKE_ACCESS_TOKEN"
+      },
+      "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/demo-project/locations/us-central1/publishers/google/models/gemini-2.5-pro:streamGenerateContent",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer FAKE_ACCESS_TOKEN"
+      }
+    },
+    {
+      "id": "proxy",
+      "input": {
+        "api": "vertexai",
+        "vertexai_auth_mode": "express",
+        "reverse_proxy": "https://proxy.example/",
+        "proxy_password": "pp",
+        "model": "gemini-2.5-pro",
+        "endpoint": "generateContent",
+        "apiKey": "vertex-key",
+        "accessToken": "FAKE_ACCESS_TOKEN"
+      },
+      "url": "https://proxy.example/v1/publishers/google/models/gemini-2.5-pro:generateContent",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer pp"
+      }
+    }
+  ]
+}

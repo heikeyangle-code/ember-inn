@@ -13,8 +13,10 @@ import java.util.Date
 /**
  * 官方 util.js mergeObjectWithYaml / excludeKeysByYaml 的 App 移植。
  *
- * 解析用 SnakeYAML（与官方 js-yaml `yaml.parse` 语义对齐）：
- * - 锚点/别名/合并键（<<）由 SnakeYAML 原生解析（已用 2.6 实测）；
+ * 解析用 SnakeYAML（与官方 util.js 依赖的 `yaml` npm 包语义对齐）：
+ * - 锚点/别名由 SnakeYAML 原生解析；
+ * - 合并键（<<）**不合并**——官方 `yaml` 包 v2 保留为字面键（fixture 已锁），
+ *   解析前把行首 `<<:` 改写为 `"<<":`（引号键即普通字符串键，SnakeYAML 不再触发 merge）；
  * - 多文档（---）抛 ComposerException → 与官方 try/catch 一样整体忽略、不合并；
  * - 时间戳 → ISO-8601 字符串（官方 yaml 库解析为 Date，JSON.stringify 时输出 ISO）。
  *
@@ -61,9 +63,15 @@ object YamlMerge {
         }.toMap()
     }
 
-    /** SnakeYAML 解析：失败（含多文档）返回 null，与官方 try/catch 静默一致。 */
+    /** SnakeYAML 解析：失败（含多文档）返回 null，与官方 try/catch 静默一致。
+     *  行首 `<<:` 改写为 `"<<":`，使合并键保留为字面键（官方 'yaml' 包 v2 行为）。 */
     fun parse(yamlString: String): JsonElement? = try {
-        toJsonElement(yaml.load<Any?>(yamlString))
+        val prepared = yamlString.lines().joinToString("\n") { line ->
+            line.replace(Regex("""^(\s*)<<(\s*:)""")) { m ->
+                m.groupValues[1] + "\"<<\"" + m.groupValues[2]
+            }
+        }
+        toJsonElement(yaml.load<Any?>(prepared))
     } catch (_: Throwable) {
         null
     }

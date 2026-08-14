@@ -188,10 +188,27 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                         PromptManagerPrefs.saveOrder(context, selectedChar, order)
                                     },
                                 )
+                                // 小的 ↑↓ 提示按钮：与长按拖动并存（官方 sortable 的移动端补充入口）
+                                IconButton(onClick = {
+                                    if (i > 0) {
+                                        order = order.toMutableList().apply { add(i - 1, removeAt(i)) }
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                    }
+                                }, modifier = Modifier.size(26.dp)) {
+                                    Text("↑", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                }
+                                IconButton(onClick = {
+                                    if (i < order.lastIndex) {
+                                        order = order.toMutableList().apply { add(i + 1, removeAt(i)) }
+                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                    }
+                                }, modifier = Modifier.size(26.dp)) {
+                                    Text("↓", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                }
                                 IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
                                     PromptManagerPrefs.saveOrder(context, selectedChar, order)
-                                }, modifier = Modifier.size(36.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
+                                }, modifier = Modifier.size(30.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
                     }

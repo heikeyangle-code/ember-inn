@@ -1,0 +1,170 @@
+{
+  "generated": "2026-08-14T16:03:19.416Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "merge_flat",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "temperature: 0.7\nstream: true\nstop: [x]\nname: \"a: b\"\n"
+      },
+      "output": {
+        "model": "m",
+        "temperature": 0.7,
+        "stream": true,
+        "stop": [
+          "x"
+        ],
+        "name": "a: b"
+      }
+    },
+    {
+      "id": "merge_nested",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "provider:\n  order:\n    - a\n    - b\n  allow: true\n"
+      },
+      "output": {
+        "model": "m",
+        "provider": {
+          "order": [
+            "a",
+            "b"
+          ],
+          "allow": true
+        }
+      }
+    },
+    {
+      "id": "merge_anchors_mergekey",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "base: &b\n  x: 1\n  y: 2\nchild:\n  <<: *b\n  y: 3\n"
+      },
+      "output": {
+        "model": "m",
+        "base": {
+          "x": 1,
+          "y": 2
+        },
+        "child": {
+          "<<": {
+            "x": 1,
+            "y": 2
+          },
+          "y": 3
+        }
+      }
+    },
+    {
+      "id": "merge_top_level_array",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "- {a: 1}\n- {b: 2, a: 9}\n"
+      },
+      "output": {
+        "model": "m",
+        "a": 9,
+        "b": 2
+      }
+    },
+    {
+      "id": "merge_multidoc_ignored",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "a: 1\n---\nb: 2\n"
+      },
+      "output": {
+        "model": "m"
+      }
+    },
+    {
+      "id": "merge_invalid_ignored",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": "a: [unclosed\n"
+      },
+      "output": {
+        "model": "m"
+      }
+    },
+    {
+      "id": "merge_empty",
+      "input": {
+        "obj": {
+          "model": "m"
+        },
+        "yaml": ""
+      },
+      "output": {
+        "model": "m"
+      }
+    },
+    {
+      "id": "exclude_array",
+      "input": {
+        "obj": {
+          "a": 1,
+          "b": 2,
+          "c": 3
+        },
+        "yaml": "- a\n- c\n"
+      },
+      "output": {
+        "b": 2
+      }
+    },
+    {
+      "id": "exclude_object",
+      "input": {
+        "obj": {
+          "a": 1,
+          "b": 2
+        },
+        "yaml": "b: whatever\n"
+      },
+      "output": {
+        "a": 1
+      }
+    },
+    {
+      "id": "exclude_string",
+      "input": {
+        "obj": {
+          "a": 1,
+          "b": 2
+        },
+        "yaml": "a\n"
+      },
+      "output": {
+        "b": 2
+      }
+    },
+    {
+      "id": "exclude_multidoc_ignored",
+      "input": {
+        "obj": {
+          "a": 1,
+          "b": 2
+        },
+        "yaml": "a: 1\n---\nb: 2\n"
+      },
+      "output": {
+        "a": 1,
+        "b": 2
+      }
+    }
+  ]
+}
