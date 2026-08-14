@@ -97,7 +97,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
             FlowRow(
-                verticalArrangement = Arrangement.CenterVertically,
+                verticalArrangement = Arrangement.Center,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {

@@ -775,6 +775,8 @@ fun ChatScreen(
                                     clipboard.setText(AnnotatedString(text))
                                     Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                                 },
+                                onEdit = { editIndex = item.index; editDraft = text },
+                                onMore = { menuMessageIndex = item.index },
                                 onRegenerate = { vm.regenerate() },
                                 onContinue = { vm.continueGeneration() },
                                 onDelete = { deleteTargetIndex = item.index },
@@ -2503,6 +2505,8 @@ private fun MessageRow(
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     onCopy: () -> Unit,
+    onEdit: () -> Unit = {},
+    onMore: () -> Unit = {},
     onRegenerate: () -> Unit,
     onContinue: () -> Unit,
     onDelete: () -> Unit,
@@ -2738,12 +2742,19 @@ private fun MessageRow(
                 MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
             }
             if (showActions) {
-                Spacer(Modifier.size(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SmallAction(PhosphorIcons.Copy, "复制", onCopy)
-                    SmallAction(PhosphorIcons.Refresh, "重新生成", onRegenerate)
-                    SmallAction(PhosphorIcons.Continue, "继续", onContinue)
-                    SmallAction(PhosphorIcons.Delete, "删除", onDelete)
+                Spacer(Modifier.size(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Spacer(Modifier.weight(1f))
+                    // 官方 mes_button 风格：小图标按钮、无文字、低对比容器
+                    MessageActionIcon(PhosphorIcons.Copy, "复制", onCopy)
+                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
+                    MessageActionIcon(PhosphorIcons.Refresh, "重新生成", onRegenerate)
+                    MessageActionIcon(PhosphorIcons.Continue, "继续", onContinue)
+                    MessageActionIcon(PhosphorIcons.Delete, "删除", onDelete, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.72f))
+                    MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
                 }
             }
         }
@@ -4723,24 +4734,23 @@ private fun injectIntoFullDocument(html: String, cssBlock: String): String {
 
 
 @Composable
-private fun SmallAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    // 幽灵按钮：低对比、小尺寸，功能保留但不抢戏
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+private fun MessageActionIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+) {
+    // 官方 mes_button 移动端等价：30dp 小图标钮，低对比 tonal 容器，无文字标签
+    Box(
+        modifier = modifier
+            .size(30.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-        )
-        Spacer(Modifier.size(4.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-        )
+        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(15.dp))
     }
 }
 
