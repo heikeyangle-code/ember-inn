@@ -44,6 +44,7 @@ object BehaviorPrefs {
     }
 
     fun save(context: Context, s: BehaviorSettings) {
+        com.emberinn.app.data.DisplayCacheVersion.bump()
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("user_prompt_bias", s.userPromptBias)
             .putBoolean("show_user_prompt_bias", s.showUserPromptBias)
@@ -54,7 +55,6 @@ object BehaviorPrefs {
             .putBoolean("strip_examples", s.stripExamples)
             .putBoolean("names_as_stop_strings", s.namesAsStopStrings)
             .putBoolean("message_token_count_enabled", s.messageTokenCount)
-        com.emberinn.app.data.DisplayCacheVersion.bump()
             .putBoolean("auto_swipe", s.autoSwipe)
             .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
             .putStringSet("auto_swipe_blacklist", s.autoSwipeBlacklist)

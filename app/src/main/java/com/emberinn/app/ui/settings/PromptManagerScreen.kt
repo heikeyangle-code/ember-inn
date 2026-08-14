@@ -1,6 +1,6 @@
-package com.emberinn.app.ui.settings
-
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+package com.emberinn.app.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -78,6 +78,11 @@ fun PromptManagerScreen(onBack: () -> Unit) {
     var showEdit by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<PromptItem?>(null) }
     var inspectTarget by remember { mutableStateOf<PromptItem?>(null) }
+    // 触屏拖动排序：长按整行上下拖动（官方 sortable 拖拽的移动端等价），无 ↑↓ 按钮。
+    // draggingOrderId 跟踪当前拖拽项，graphicsLayer 让行跟随手指，跨越半行高即换位。
+    var draggingOrderId by remember { mutableStateOf<String?>(null) }
+    var dragOrderOffset by remember { mutableFloatStateOf(0f) }
+    val orderHeights = remember { mutableMapOf<String, Int>() }
 
     fun save(p: List<PromptItem>, o: List<PromptOrderEntry>) {
         prompts = p
@@ -126,11 +131,6 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 if (order.isEmpty()) {
                     item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
-                // 触屏拖动排序：长按整行上下拖动（官方 sortable 拖拽的移动端等价），无 ↑↓ 按钮。
-                // draggingOrderId 跟踪当前拖拽项，graphicsLayer 让行跟随手指，跨越半行高即换位。
-                var draggingOrderId by remember { mutableStateOf<String?>(null) }
-                var dragOrderOffset by remember { mutableFloatStateOf(0f) }
-                val orderHeights = remember { mutableMapOf<String, Int>() }
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
                         val isDragging = draggingOrderId == entry.identifier
@@ -456,7 +456,6 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
             }
         }
-    }
 
     // 官方 handleInspect：显示最近一次总装中该 identifier 的消息集合（role/content/tokens）。
     inspectTarget?.let { inspected ->

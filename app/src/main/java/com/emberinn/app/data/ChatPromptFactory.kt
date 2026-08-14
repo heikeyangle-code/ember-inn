@@ -132,7 +132,26 @@ class ChatPromptFactory {
     ): MacroEnv {
         val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
         val fields = CharacterCardFieldsEngine.fields(character = parsed?.source)
-        return MacroEnv(user = userName, char = charName, character = fields, local = localVariables)
+        // 与 prepare 相同的官方 MacroEnvBuilder 映射：getCharacterCardFields 结果 → MacroEnv.character
+        return MacroEnv(
+            user = userName,
+            char = charName,
+            character = CharacterFields(
+                charPrompt = fields.system,
+                charInstruction = fields.jailbreak,
+                description = fields.description,
+                personality = fields.personality,
+                scenario = fields.scenario,
+                persona = fields.persona,
+                mesExamplesRaw = fields.mesExamples,
+                charDepthPrompt = fields.charDepthPrompt,
+                creatorNotes = fields.creatorNotes,
+                firstMessage = fields.firstMessage,
+                alternateGreetings = fields.alternateGreetings,
+                version = fields.version,
+            ),
+            local = localVariables,
+        )
     }
 
     fun prepare(
