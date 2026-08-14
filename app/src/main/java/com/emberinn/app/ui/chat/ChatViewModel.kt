@@ -175,8 +175,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 上次发送的上下文占用（已用 token, 上限），聊天页显示占比胶囊。 */
     private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
     private val _logprobs = MutableStateFlow<List<LogprobsEngine.TokenLogprobs>?>(null)
-    private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
-    private val _logprobs = MutableStateFlow<List<LogprobsEngine.TokenLogprobs>?>(null)
+    val contextUsage: StateFlow<Pair<Int, Int>?> = _contextUsage
     val logprobs: StateFlow<List<LogprobsEngine.TokenLogprobs>?> = _logprobs
 
     private val _isStreaming = MutableStateFlow(false)
