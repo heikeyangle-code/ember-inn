@@ -109,6 +109,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
@@ -271,7 +272,6 @@ fun ChatScreen(
     var showAttachOptions by remember { mutableStateOf(false) }
     var showUrlAttachmentDialog by remember { mutableStateOf(false) }
     var urlAttachmentDraft by rememberSaveable { mutableStateOf("") }
-    var showQuickBar by remember { mutableStateOf(false) }
     var showCharacterInfo by remember { mutableStateOf(false) }
     var showPersonaPicker by remember { mutableStateOf(false) }
     var personaDraftName by remember { mutableStateOf("") }
@@ -398,28 +398,47 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { vm.restorePersonas(it) } }
 
-    // 附件来源选择：本地文件 / URL（官方 Message.addImage 等支持 URL 来源）
+    // 附件与输入工具：官方输入区没有独立“快捷工具盘”，统一由附件面板提供来源 + 图像生成/图片描述
     if (showAttachOptions) {
-        AlertDialog(
-            onDismissRequest = { showAttachOptions = false },
-            title = { Text("添加附件") },
-            text = {
-                Column {
-                    TextButton(onClick = {
-                        showAttachOptions = false
-                        mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
-                    }) { Text("从文件选择…") }
-                    TextButton(onClick = {
-                        showAttachOptions = false
-                        showUrlAttachmentDialog = true
-                    }) { Text("从 URL 添加…") }
+        EmberBottomSheet(onDismissRequest = { showAttachOptions = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+            ) {
+                Text("添加附件与工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "图片 / 视频 / 音频、URL，或直接生成图片",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                AttachSheetRow(PhosphorIcons.Folder, "从文件选择…", "图片 / 视频 / 音频", enabled = true) {
+                    showAttachOptions = false
+                    mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showAttachOptions = false }) { Text("取消") }
-            },
-        )
+                AttachSheetRow(PhosphorIcons.Link, "从 URL 添加…", "粘贴图片 / 媒体链接", enabled = true) {
+                    showAttachOptions = false
+                    showUrlAttachmentDialog = true
+                }
+                AttachSheetRow(PhosphorIcons.ImageSquare, "AI 图像生成", "用当前模型生成图片", enabled = true) {
+                    showAttachOptions = false
+                    showImageDialog = true
+                }
+                AttachSheetRow(
+                    PhosphorIcons.Sparkle,
+                    "图片描述",
+                    if (pendingMedia.any { it.type == "image" }) "为已选图片生成描述并发送" else "先添加图片后可用",
+                    enabled = pendingMedia.any { it.type == "image" },
+                ) {
+                    showAttachOptions = false
+                    vm.startCaptionFlow()
+                }
+                AttachSheetRow(PhosphorIcons.Mic, "语音输入", "开发中", enabled = false) {}
+            }
+        }
     }
     if (showUrlAttachmentDialog) {
         AlertDialog(
@@ -807,24 +826,14 @@ fun ChatScreen(
                 onRemoveMedia = { index -> vm.removePendingMedia(index) },
                 isStreaming = isStreaming,
                 canQuickContinue = !isStreaming && vm.canContinueGeneration(),
-                quickBarOpen = showQuickBar,
                 worldHitsCount = worldHits.size,
                 contextUsage = contextUsage,
                 onOpenWorldPanel = { worldPanel = true },
                 onOpenContextDetail = { contextDetail = true },
-                onToggleQuickBar = { showQuickBar = !showQuickBar },
                 quickReplies = quickReplies,
                 onQuickReply = { label -> vm.runQuickReply(label) },
-                onQuickImage = { showImageDialog = true; showQuickBar = false },
-                onQuickCaption = { vm.startCaptionFlow() },
-                onQuickContinue = {
-                    showQuickBar = false
-                    vm.continueGeneration()
-                },
-                onQuickImpersonate = {
-                    showQuickBar = false
-                    vm.impersonate()
-                },
+                onQuickContinue = { vm.continueGeneration() },
+                onQuickImpersonate = { vm.impersonate() },
                 onSend = {
                     val text = input.trim()
                     if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
@@ -4761,16 +4770,12 @@ private fun ChatInputBar(
     onRemoveMedia: (Int) -> Unit,
     isStreaming: Boolean,
     canQuickContinue: Boolean,
-    quickBarOpen: Boolean,
     worldHitsCount: Int,
     contextUsage: Pair<Int, Int>?,
     onOpenWorldPanel: () -> Unit,
     onOpenContextDetail: () -> Unit,
-    onToggleQuickBar: () -> Unit,
     quickReplies: List<QuickReplySlot>,
     onQuickReply: (String) -> Unit,
-    onQuickImage: () -> Unit,
-    onQuickCaption: () -> Unit,
     onQuickContinue: () -> Unit,
     onQuickImpersonate: () -> Unit,
     onSend: () -> Unit,
@@ -4915,49 +4920,28 @@ private fun ChatInputBar(
                 }
                 Spacer(Modifier.size(6.dp))
             }
+            val enabledReplies = quickReplies.filter { it.enabled }
+            if (enabledReplies.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    items(enabledReplies, key = { it.label }) { slot ->
+                        QuickReplyChip(slot.label.ifBlank { "（未命名）" }, onClick = { onQuickReply(slot.label) })
+                    }
+                }
+            }
             Row(
                 verticalAlignment = Alignment.Bottom,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
-            if (quickBarOpen) {
-                val enabledReplies = quickReplies.filter { it.enabled }
-                // 快捷工具 + 快捷回复统一成一条横向胶囊流（图像/继续/冒充 + 角色预设），
-                // 比原来的“竖排文字按钮”更轻、更整齐
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                ) {
-                    item(key = "quick-image") {
-                        EmberQuickPill("图像", onClick = onQuickImage, enabled = true)
-                    }
-                    if (pendingMedia.any { it.type == "image" }) {
-                        item(key = "quick-caption") {
-                            EmberQuickPill("图片描述", onClick = onQuickCaption, enabled = true)
-                        }
-                    }
-                    item(key = "quick-continue") {
-                        EmberQuickPill("继续", onClick = onQuickContinue, enabled = canQuickContinue)
-                    }
-                    item(key = "quick-impersonate") {
-                        EmberQuickPill("冒充", onClick = onQuickImpersonate, enabled = true)
-                    }
-                    items(enabledReplies, key = { it.label }) { slot ->
-                        EmberQuickPill(slot.label.ifBlank { "（未命名）" }, onClick = { onQuickReply(slot.label) }, enabled = true)
-                    }
-                }
-            }
-            EmberInputIcon(
-                onClick = onToggleQuickBar,
-                icon = PhosphorIcons.Book,
-                contentDescription = "快捷工具盘",
-            )
             EmberInputIcon(
                 onClick = onAttach,
                 icon = PhosphorIcons.Plus,
-                contentDescription = "附件 / 语音",
+                contentDescription = "附件与工具",
             )
             EmberTextField(
                 value = input,
@@ -4982,6 +4966,18 @@ private fun ChatInputBar(
                     .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
+                if (canQuickContinue) {
+                    EmberInputIcon(
+                        onClick = onQuickContinue,
+                        icon = PhosphorIcons.Continue,
+                        contentDescription = "继续生成",
+                    )
+                }
+                EmberInputIcon(
+                    onClick = onQuickImpersonate,
+                    icon = PhosphorIcons.User,
+                    contentDescription = "冒充用户发言",
+                )
                 EmberInputIcon(
                     onClick = onVoice,
                     icon = PhosphorIcons.Mic,
@@ -5006,26 +5002,93 @@ private fun ChatInputBar(
             }
         }
     }
+
 }
 
-/** 输入区快捷胶囊（快捷工具/快捷回复共用）：999 圆角 tonal 小胶囊，禁用态自动降级。 */
+/** 快捷回复胶囊（官方 Quick Reply 的 menu_button 移动端等价）：tonal 圆角小胶囊，横滑容器内使用。 */
 @Composable
-private fun EmberQuickPill(label: String, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+private fun QuickReplyChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = if (enabled) {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.3f)
-        },
-        modifier = modifier.clip(RoundedCornerShape(999.dp)).clickable(enabled = enabled, onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f),
+        modifier = modifier.clip(RoundedCornerShape(999.dp)).clickable(onClick = onClick),
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outlineVariant,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-        )
+        ) {
+            Icon(
+                PhosphorIcons.Send,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(13.dp),
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** 附件与工具面板行：图标圆角块 + 标题/说明 + 右箭头，整行可点；禁用态自动降级。 */
+@Composable
+private fun AttachSheetRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))
+                .background(
+                    if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (enabled) {
+            Icon(
+                PhosphorIcons.CaretRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 
