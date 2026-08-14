@@ -158,8 +158,8 @@ fun PresetsScreen(onBack: () -> Unit) {
                 }
                 // 官方 getChatCompletionPreset：settingsToUpdate 全键（含连接字段）+ prompts/prompt_order
                 val base = kotlinx.serialization.json.buildJsonObject {
-                    putAll(PresetSettingsStore.samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens))
-                    putAll(PresetSettingsStore.connectionSettingsJson(profile))
+                    PresetSettingsStore.samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens).forEach { (k, v) -> put(k, v) }
+                    PresetSettingsStore.connectionSettingsJson(profile).forEach { (k, v) -> put(k, v) }
                 }
                 val body = PresetApplyEngine.getChatCompletionPresetBody(base).toMutableMap()
                 body["prompts"] = json.encodeToJsonElement(
@@ -169,8 +169,13 @@ fun PresetsScreen(onBack: () -> Unit) {
                 body["prompt_order"] = kotlinx.serialization.json.JsonArray(
                     com.emberinn.app.data.PromptManagerPrefs.orders(context).map { (cid, order) ->
                         kotlinx.serialization.json.buildJsonObject {
-                            if (cid != "null") {
-                                put("character_id", kotlinx.serialization.json.JsonPrimitive(cid.toIntOrNull() ?: cid))
+                            if (cid != "null" && cid != null) {
+                                val cidNum = cid.toIntOrNull()
+                                put(
+                                    "character_id",
+                                    if (cidNum != null) kotlinx.serialization.json.JsonPrimitive(cidNum)
+                                    else kotlinx.serialization.json.JsonPrimitive(cid),
+                                )
                             }
                             put(
                                 "order",

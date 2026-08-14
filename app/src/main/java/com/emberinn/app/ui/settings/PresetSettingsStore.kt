@@ -27,6 +27,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * 预设应用后的生效设置（官方 power_user.context / instruct / sysprompt / reasoning + context 全局字段）。
@@ -211,7 +214,7 @@ object PresetSettingsStore {
                 ?: UserPresetStore.load(context, "sampler", name) ?: return false
             val defaults = TextgenSettingsDefaults.defaults()
             val stored = TextgenSettingsStore.load(context)
-            val base = JsonObject(defaults.toMutableMap().apply { putAll(stored) })
+            val base = JsonObject(defaults.toMutableMap().apply { stored.forEach { (k, v) -> put(k, v) } })
             val orders = buildJsonObject {
                 put("sampler_order", defaults["sampler_order"] ?: JsonPrimitive(""))
                 put("sampler_priority", defaults["sampler_priority"] ?: JsonPrimitive(""))
@@ -227,8 +230,8 @@ object PresetSettingsStore {
             ?: UserPresetStore.load(context, "sampler", name) ?: return false
         val appliedJson = PresetApplyEngine.applyChatCompletionPresetJson(
             settings = buildJsonObject {
-                putAll(samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens))
-                putAll(connectionSettingsJson(profile))
+                samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens).forEach { (k, v) -> put(k, v) }
+                connectionSettingsJson(profile).forEach { (k, v) -> put(k, v) }
             },
             preset = preset,
             bindPresetToConnection = PresetPrefsStore.load(context).bindPresetToConnection,
@@ -349,7 +352,7 @@ object PresetSettingsStore {
             runCatching {
                 val orders = arr.mapNotNull { el ->
                     val obj = el.jsonObject
-                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull
+                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                     val order = obj["order"]?.jsonArray ?: return@mapNotNull null
                     cid to json.decodeFromJsonElement(ListSerializer(PromptOrderEntry.serializer()), order)
                 }.toMap()

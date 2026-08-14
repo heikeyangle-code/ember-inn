@@ -2356,7 +2356,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         impersonationPrompt: String = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
         quietPrompt: String = "",
         previewOnly: Boolean = false,
-        onPreview: ((Pair<String, Int>) -> Unit)? = null,
+        onPreview: ((com.emberinn.app.data.PromptPreview) -> Unit)? = null,
         mediaInlining: Boolean = true,
         characterRawJsonOverride: String? = null,
         inChatExtensions: List<PromptItem> = emptyList(),

@@ -2,6 +2,7 @@ package com.emberinn.app.data
 
 import android.content.Context
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.PromptMessage
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRequestOptions
@@ -55,7 +56,7 @@ data class PromptPreview(
     val counts: Map<String, Int> = emptyMap(),
 )
 
-class ChatRepository(context: Context) {
+class ChatRepository(private val context: Context) {
 
     private val store = ProviderStore(File(context.filesDir, "provider"))
     private val client = LlmClient()
@@ -468,8 +469,13 @@ class ChatRepository(context: Context) {
         if (isTextCompletion) {
             val presetState = PresetSettingsStore.load(context)
             val env = MacroEnv(user = userName, char = charName)
+            // InstructMode.createRawPrompt 走 PromptMessage（官方 createRawPrompt 入参）；
+            // prepared.messages 是 CompletionMessage，textgen 链只取 role/content/name。
+            val textPrompt = prepared.messages.map { m ->
+                PromptMessage(role = m.role, content = m.content, name = m.name, identifier = m.identifier)
+            }
             val raw = InstructMode.createRawPrompt(
-                prompt = prepared.messages,
+                prompt = textPrompt,
                 api = provider.protocol,
                 instructOverride = false,
                 quietToLoud = false,

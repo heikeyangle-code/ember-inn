@@ -7,6 +7,8 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.PromptOrderEntry
 import com.emberinn.engine.provider.BiasEntry
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.SamplerParams
@@ -18,6 +20,9 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException

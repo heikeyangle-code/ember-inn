@@ -729,7 +729,9 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            IntRow("tool_call_recurse_limit（工具递归上限，官方默认 5）", sampler.toolCallRecurseLimit.toString(), vm::setToolCallRecurseLimit)
+            IntRow("tool_call_recurse_limit（工具递归上限，官方默认 5）", sampler.toolCallRecurseLimit.toString()) { v ->
+                vm.setToolCallRecurseLimit(v.toIntOrNull() ?: 5)
+            }
             EmberTextField(
                 value = reverseProxy,
                 onValueChange = vm::setReverseProxy,
@@ -846,7 +848,7 @@ fun ProviderDetailScreen(
                 vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
             }
             // 协议专属采样参数（对照官方 textgen/novel/kobold 面板）
-            when (provider.protocol) {
+            when (spec.protocol) {
                 "textgenerationwebui" -> ProtocolSamplerEditors.TextGenEditor(context)
                 "novel" -> ProtocolSamplerEditors.NovelEditor(context)
                 "kobold" -> ProtocolSamplerEditors.KoboldEditor(context)
