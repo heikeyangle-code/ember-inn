@@ -20,6 +20,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -492,7 +493,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             runCatching {
                 val orders = arr.mapNotNull { el ->
                     val obj = el.jsonObject
-                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull
+                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                     val order = obj["order"]?.jsonArray ?: return@mapNotNull null
                     cid to presetJson.decodeFromJsonElement(ListSerializer(PromptOrderEntry.serializer()), order)
                 }.toMap()
