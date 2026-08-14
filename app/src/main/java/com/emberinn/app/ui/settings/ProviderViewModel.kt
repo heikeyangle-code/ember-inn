@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emberinn.app.data.ChatRepository
+import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.prompt.CompletionMessage
 import com.emberinn.engine.provider.ConnectionProfile
@@ -12,6 +13,7 @@ import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.ProviderSpec
 import com.emberinn.engine.prompt.PresetLibrary
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonPrimitive
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -262,6 +264,26 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setSquashSystemMessages(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(squashSystemMessages = v)
     }
+    fun setNamesBehavior(v: Int) { _editingSampler.value = _editingSampler.value.copy(namesBehavior = v) }
+    fun setSendIfEmpty(v: String) { _editingSampler.value = _editingSampler.value.copy(sendIfEmpty = v) }
+    fun setNewChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newChatPrompt = v) }
+    fun setNewGroupChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newGroupChatPrompt = v) }
+    fun setNewExampleChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newExampleChatPrompt = v) }
+    fun setContinueNudgePrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(continueNudgePrompt = v) }
+    fun setWiFormat(v: String) { _editingSampler.value = _editingSampler.value.copy(wiFormat = v) }
+    fun setScenarioFormat(v: String) { _editingSampler.value = _editingSampler.value.copy(scenarioFormat = v) }
+    fun setPersonalityFormat(v: String) { _editingSampler.value = _editingSampler.value.copy(personalityFormat = v) }
+    fun setGroupNudgePrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(groupNudgePrompt = v) }
+    fun setAssistantPrefill(v: String) { _editingSampler.value = _editingSampler.value.copy(assistantPrefill = v) }
+    fun setContinuePrefill(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(continuePrefill = v) }
+    fun setContinuePostfix(v: String) { _editingSampler.value = _editingSampler.value.copy(continuePostfix = v) }
+    fun setFunctionCalling(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(functionCalling = v) }
+    fun setShowThoughts(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(showThoughts = v) }
+    fun setMediaInlining(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(mediaInlining = v) }
+    fun setInlineImageQuality(v: String) { _editingSampler.value = _editingSampler.value.copy(inlineImageQuality = v) }
+    fun setEnableWebSearch(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(enableWebSearch = v) }
+    fun setToolReasoningMode(v: String) { _editingSampler.value = _editingSampler.value.copy(toolReasoningMode = v) }
+    fun setMaxContextUnlocked(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(maxContextUnlocked = v) }
 
     /** 应用官方 OpenAI 采样预设：引擎 onSettingsPresetChange 纯循环（bind_preset_to_connection=官方默认 true）。 */
     fun applySamplerPreset(name: String) {
@@ -282,6 +304,33 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             put("n", kotlinx.serialization.json.JsonPrimitive(sam.n))
             put("stream_openai", kotlinx.serialization.json.JsonPrimitive(sam.stream))
             put("squash_system_messages", kotlinx.serialization.json.JsonPrimitive(sam.squashSystemMessages))
+            put("names_behavior", kotlinx.serialization.json.JsonPrimitive(sam.namesBehavior))
+            put("send_if_empty", kotlinx.serialization.json.JsonPrimitive(sam.sendIfEmpty))
+            put("impersonation_prompt", kotlinx.serialization.json.JsonPrimitive(sam.impersonationPrompt))
+            put("new_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newChatPrompt))
+            put("new_group_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newGroupChatPrompt))
+            put("new_example_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newExampleChatPrompt))
+            put("continue_nudge_prompt", kotlinx.serialization.json.JsonPrimitive(sam.continueNudgePrompt))
+            put("bias_preset_selected", kotlinx.serialization.json.JsonPrimitive(sam.biasPresetSelected))
+            put("wi_format", kotlinx.serialization.json.JsonPrimitive(sam.wiFormat))
+            put("scenario_format", kotlinx.serialization.json.JsonPrimitive(sam.scenarioFormat))
+            put("personality_format", kotlinx.serialization.json.JsonPrimitive(sam.personalityFormat))
+            put("group_nudge_prompt", kotlinx.serialization.json.JsonPrimitive(sam.groupNudgePrompt))
+            put("assistant_prefill", kotlinx.serialization.json.JsonPrimitive(sam.assistantPrefill))
+            put("assistant_impersonation", kotlinx.serialization.json.JsonPrimitive(sam.assistantImpersonation))
+            put("continue_prefill", kotlinx.serialization.json.JsonPrimitive(sam.continuePrefill))
+            put("continue_postfix", kotlinx.serialization.json.JsonPrimitive(sam.continuePostfix))
+            put("function_calling", kotlinx.serialization.json.JsonPrimitive(sam.functionCalling))
+            put("show_thoughts", kotlinx.serialization.json.JsonPrimitive(sam.showThoughts))
+            put("media_inlining", kotlinx.serialization.json.JsonPrimitive(sam.mediaInlining))
+            put("inline_image_quality", kotlinx.serialization.json.JsonPrimitive(sam.inlineImageQuality))
+            put("enable_web_search", kotlinx.serialization.json.JsonPrimitive(sam.enableWebSearch))
+            put("tool_reasoning_mode", kotlinx.serialization.json.JsonPrimitive(sam.toolReasoningMode))
+            put("tool_call_recurse_limit", kotlinx.serialization.json.JsonPrimitive(sam.toolCallRecurseLimit))
+            put("request_images", kotlinx.serialization.json.JsonPrimitive(sam.requestImages))
+            put("request_image_aspect_ratio", kotlinx.serialization.json.JsonPrimitive(sam.requestImageAspectRatio))
+            put("request_image_resolution", kotlinx.serialization.json.JsonPrimitive(sam.requestImageResolution))
+            put("max_context_unlocked", kotlinx.serialization.json.JsonPrimitive(sam.maxContextUnlocked))
             put("openai_max_context", kotlinx.serialization.json.JsonPrimitive(_contextWindow.value))
             put("openai_max_tokens", kotlinx.serialization.json.JsonPrimitive(_maxTokens.value))
         }
@@ -293,6 +342,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         fun d(key: String): Double? = (applied[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
         fun i(key: String): Int? = (applied[key] as? JsonPrimitive)?.content?.toIntOrNull()
         fun b(key: String): Boolean = (applied[key] as? JsonPrimitive)?.content == "true"
+        fun s(key: String): String? = (applied[key] as? JsonPrimitive)?.content
         _editingSampler.value = sam.copy(
             temperature = d("temp_openai") ?: sam.temperature,
             topP = d("top_p_openai") ?: sam.topP,
@@ -306,7 +356,55 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             n = i("n") ?: sam.n,
             stream = b("stream_openai"),
             squashSystemMessages = b("squash_system_messages"),
+            namesBehavior = i("names_behavior") ?: sam.namesBehavior,
+            sendIfEmpty = s("send_if_empty") ?: sam.sendIfEmpty,
+            impersonationPrompt = s("impersonation_prompt") ?: sam.impersonationPrompt,
+            newChatPrompt = s("new_chat_prompt") ?: sam.newChatPrompt,
+            newGroupChatPrompt = s("new_group_chat_prompt") ?: sam.newGroupChatPrompt,
+            newExampleChatPrompt = s("new_example_chat_prompt") ?: sam.newExampleChatPrompt,
+            continueNudgePrompt = s("continue_nudge_prompt") ?: sam.continueNudgePrompt,
+            biasPresetSelected = s("bias_preset_selected") ?: sam.biasPresetSelected,
+            wiFormat = s("wi_format") ?: sam.wiFormat,
+            scenarioFormat = s("scenario_format") ?: sam.scenarioFormat,
+            personalityFormat = s("personality_format") ?: sam.personalityFormat,
+            groupNudgePrompt = s("group_nudge_prompt") ?: sam.groupNudgePrompt,
+            assistantPrefill = s("assistant_prefill") ?: sam.assistantPrefill,
+            assistantImpersonation = s("assistant_impersonation") ?: sam.assistantImpersonation,
+            continuePrefill = b("continue_prefill"),
+            continuePostfix = s("continue_postfix") ?: sam.continuePostfix,
+            functionCalling = b("function_calling"),
+            showThoughts = b("show_thoughts"),
+            mediaInlining = b("media_inlining"),
+            inlineImageQuality = s("inline_image_quality") ?: sam.inlineImageQuality,
+            enableWebSearch = b("enable_web_search"),
+            toolReasoningMode = s("tool_reasoning_mode") ?: sam.toolReasoningMode,
+            toolCallRecurseLimit = i("tool_call_recurse_limit") ?: sam.toolCallRecurseLimit,
+            requestImages = b("request_images"),
+            requestImageAspectRatio = s("request_image_aspect_ratio") ?: sam.requestImageAspectRatio,
+            requestImageResolution = s("request_image_resolution") ?: sam.requestImageResolution,
+            maxContextUnlocked = b("max_context_unlocked"),
         )
+        // 官方 onSettingsPresetChange：prompts/prompt_order 直接写 PromptManager
+        val presetJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        (preset["prompts"] as? kotlinx.serialization.json.JsonArray)?.let { arr ->
+            runCatching {
+                PromptManagerPrefs.savePrompts(
+                    getApplication(),
+                    presetJson.decodeFromJsonElement(ListSerializer(PromptItem.serializer()), arr),
+                )
+            }
+        }
+        (preset["prompt_order"] as? kotlinx.serialization.json.JsonArray)?.let { arr ->
+            runCatching {
+                val orders = arr.mapNotNull { el ->
+                    val obj = el.jsonObject
+                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull
+                    val order = obj["order"]?.jsonArray ?: return@mapNotNull null
+                    cid to presetJson.decodeFromJsonElement(ListSerializer(PromptOrderEntry.serializer()), order)
+                }.toMap()
+                PromptManagerPrefs.saveOrders(getApplication(), orders)
+            }
+        }
         _maxTokens.value = i("openai_max_tokens") ?: _maxTokens.value
         _contextWindow.value = i("openai_max_context") ?: _contextWindow.value
         _message.value = "已应用采样预设：$name"

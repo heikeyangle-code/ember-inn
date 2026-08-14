@@ -48,6 +48,11 @@ object PromptManagerPrefs {
         val key = characterId ?: "null"
         val all = orders(context).toMutableMap()
         if (order.isEmpty()) all.remove(key) else all[key] = order
+        saveOrders(context, all)
+    }
+
+    /** 官方 oai_settings.prompt_order = preset.prompt_order：整表替换（按角色 id，null=全局）。 */
+    fun saveOrders(context: Context, all: Map<String, List<PromptOrderEntry>>) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString(
                 "orders",

@@ -2477,7 +2477,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     }
                 },
                 onReasoning = { text ->
-                    if (streamActive) _streamingReasoning.value += text
+                    // 官方 oai_settings.show_thoughts：false 时不请求/不展示推理（include_reasoning=show_thoughts）
+                    if (streamActive && chatRepository.profile()?.sampler?.showThoughts != false) {
+                        _streamingReasoning.value += text
+                    }
                 },
                 onToolCalls = { calls ->
                     if (streamActive) pendingToolCalls = calls

@@ -2,22 +2,30 @@ package com.emberinn.app.ui.settings
 
 import android.content.Context
 import com.emberinn.app.data.ChatRepository
+import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.prompt.PresetApplyEngine
 import com.emberinn.engine.prompt.PresetLibrary
+import com.emberinn.engine.prompt.PromptItem
+import com.emberinn.engine.prompt.PromptOrderEntry
 import com.emberinn.engine.prompt.ReasoningSettings
 import com.emberinn.engine.prompt.SyspromptSettings
+import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.TextgenSettingsDefaults
 import java.io.File
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
 
 /**
@@ -216,7 +224,10 @@ object PresetSettingsStore {
         val preset = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }?.settings
             ?: UserPresetStore.load(context, "sampler", name) ?: return false
         val appliedJson = PresetApplyEngine.applyChatCompletionPresetJson(
-            settings = samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens),
+            settings = buildJsonObject {
+                putAll(samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens))
+                putAll(connectionSettingsJson(profile))
+            },
             preset = preset,
             bindPresetToConnection = PresetPrefsStore.load(context).bindPresetToConnection,
         )
@@ -253,9 +264,95 @@ object PresetSettingsStore {
                 middleout = s("openrouter_middleout") ?: profile.sampler.middleout,
                 openRouterProviders = l("openrouter_providers") ?: profile.sampler.openRouterProviders,
                 openRouterQuantizations = l("openrouter_quantizations") ?: profile.sampler.openRouterQuantizations,
+                // 官方 oai_settings 其余生成字段（全字段回写）
+                namesBehavior = i("names_behavior") ?: profile.sampler.namesBehavior,
+                sendIfEmpty = s("send_if_empty") ?: profile.sampler.sendIfEmpty,
+                impersonationPrompt = s("impersonation_prompt") ?: profile.sampler.impersonationPrompt,
+                newChatPrompt = s("new_chat_prompt") ?: profile.sampler.newChatPrompt,
+                newGroupChatPrompt = s("new_group_chat_prompt") ?: profile.sampler.newGroupChatPrompt,
+                newExampleChatPrompt = s("new_example_chat_prompt") ?: profile.sampler.newExampleChatPrompt,
+                continueNudgePrompt = s("continue_nudge_prompt") ?: profile.sampler.continueNudgePrompt,
+                biasPresetSelected = s("bias_preset_selected") ?: profile.sampler.biasPresetSelected,
+                wiFormat = s("wi_format") ?: profile.sampler.wiFormat,
+                scenarioFormat = s("scenario_format") ?: profile.sampler.scenarioFormat,
+                personalityFormat = s("personality_format") ?: profile.sampler.personalityFormat,
+                groupNudgePrompt = s("group_nudge_prompt") ?: profile.sampler.groupNudgePrompt,
+                assistantPrefill = s("assistant_prefill") ?: profile.sampler.assistantPrefill,
+                assistantImpersonation = s("assistant_impersonation") ?: profile.sampler.assistantImpersonation,
+                continuePrefill = b("continue_prefill"),
+                continuePostfix = s("continue_postfix") ?: profile.sampler.continuePostfix,
+                functionCalling = b("function_calling"),
+                showThoughts = b("show_thoughts"),
+                mediaInlining = b("media_inlining"),
+                inlineImageQuality = s("inline_image_quality") ?: profile.sampler.inlineImageQuality,
+                enableWebSearch = b("enable_web_search"),
+                toolReasoningMode = s("tool_reasoning_mode") ?: profile.sampler.toolReasoningMode,
+                toolCallRecurseLimit = i("tool_call_recurse_limit") ?: profile.sampler.toolCallRecurseLimit,
+                requestImages = b("request_images"),
+                requestImageAspectRatio = s("request_image_aspect_ratio") ?: profile.sampler.requestImageAspectRatio,
+                requestImageResolution = s("request_image_resolution") ?: profile.sampler.requestImageResolution,
+                maxContextUnlocked = b("max_context_unlocked"),
             ),
             contextWindow = i("openai_max_context") ?: profile.contextWindow,
+            reverseProxy = s("reverse_proxy") ?: profile.reverseProxy,
+            proxyPassword = s("proxy_password") ?: profile.proxyPassword,
+            customUrl = s("custom_url") ?: profile.customUrl,
+            customIncludeBody = s("custom_include_body") ?: profile.customIncludeBody,
+            customExcludeBody = s("custom_exclude_body") ?: profile.customExcludeBody,
+            customIncludeHeaders = s("custom_include_headers") ?: profile.customIncludeHeaders,
+            customPromptPostProcessing = s("custom_prompt_post_processing") ?: profile.customPromptPostProcessing,
+            bypassStatusCheck = b("bypass_status_check"),
+            showExternalModels = b("show_external_models"),
+            groupModels = b("group_models"),
+            sortModels = s("sort_models") ?: profile.sortModels,
+            azureDeploymentName = s("azure_deployment_name") ?: profile.azureDeploymentName,
+            azureOpenaiModel = s("azure_openai_model") ?: profile.azureOpenaiModel,
+            vertexaiAuthMode = s("vertexai_auth_mode") ?: profile.vertexaiAuthMode,
+            vertexaiExpressProjectId = s("vertexai_express_project_id") ?: profile.vertexaiExpressProjectId,
+            nanogptProvider = s("nanogpt_provider") ?: profile.nanogptProvider,
+            nanogptPaygOverride = b("nanogpt_payg_override"),
+            baseUrlOverride = if (provider.id == "azure" && appliedJson["azure_base_url"] != null) {
+                s("azure_base_url") ?: profile.baseUrlOverride
+            } else {
+                profile.baseUrlOverride
+            },
+            apiVersionOverride = if (provider.id == "azure" && appliedJson["azure_api_version"] != null) {
+                s("azure_api_version") ?: profile.apiVersionOverride
+            } else {
+                profile.apiVersionOverride
+            },
+            region = if (appliedJson["vertexai_region"] != null) {
+                s("vertexai_region") ?: profile.region
+            } else {
+                profile.region
+            },
+            accountId = if (appliedJson["workers_ai_account_id"] != null) {
+                s("workers_ai_account_id") ?: profile.accountId
+            } else {
+                profile.accountId
+            },
         )
+        // 官方 onSettingsPresetChange：prompts / prompt_order 直接写 oai_settings
+        // （= PromptManager serviceSettings），App 落 PromptManagerPrefs（全局条目 + 按角色顺序表）。
+        (preset["prompts"] as? JsonArray)?.let { arr ->
+            runCatching {
+                PromptManagerPrefs.savePrompts(
+                    context,
+                    json.decodeFromJsonElement(ListSerializer(PromptItem.serializer()), arr),
+                )
+            }
+        }
+        (preset["prompt_order"] as? JsonArray)?.let { arr ->
+            runCatching {
+                val orders = arr.mapNotNull { el ->
+                    val obj = el.jsonObject
+                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull
+                    val order = obj["order"]?.jsonArray ?: return@mapNotNull null
+                    cid to json.decodeFromJsonElement(ListSerializer(PromptOrderEntry.serializer()), order)
+                }.toMap()
+                PromptManagerPrefs.saveOrders(context, orders)
+            }
+        }
         repo.saveProfile(updated, active = true)
         PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = name))
         return true
@@ -304,10 +401,62 @@ object PresetSettingsStore {
         sampler.verbosity?.let { put("verbosity", JsonPrimitive(it)) }
         put("use_sysprompt", JsonPrimitive(sampler.useSysprompt))
         put("squash_system_messages", JsonPrimitive(sampler.squashSystemMessages))
+        put("names_behavior", JsonPrimitive(sampler.namesBehavior))
+        put("send_if_empty", JsonPrimitive(sampler.sendIfEmpty))
+        put("impersonation_prompt", JsonPrimitive(sampler.impersonationPrompt))
+        put("new_chat_prompt", JsonPrimitive(sampler.newChatPrompt))
+        put("new_group_chat_prompt", JsonPrimitive(sampler.newGroupChatPrompt))
+        put("new_example_chat_prompt", JsonPrimitive(sampler.newExampleChatPrompt))
+        put("continue_nudge_prompt", JsonPrimitive(sampler.continueNudgePrompt))
+        put("bias_preset_selected", JsonPrimitive(sampler.biasPresetSelected))
+        put("wi_format", JsonPrimitive(sampler.wiFormat))
+        put("scenario_format", JsonPrimitive(sampler.scenarioFormat))
+        put("personality_format", JsonPrimitive(sampler.personalityFormat))
+        put("group_nudge_prompt", JsonPrimitive(sampler.groupNudgePrompt))
+        put("assistant_prefill", JsonPrimitive(sampler.assistantPrefill))
+        put("assistant_impersonation", JsonPrimitive(sampler.assistantImpersonation))
+        put("continue_prefill", JsonPrimitive(sampler.continuePrefill))
+        put("continue_postfix", JsonPrimitive(sampler.continuePostfix))
+        put("function_calling", JsonPrimitive(sampler.functionCalling))
+        put("show_thoughts", JsonPrimitive(sampler.showThoughts))
+        put("media_inlining", JsonPrimitive(sampler.mediaInlining))
+        put("inline_image_quality", JsonPrimitive(sampler.inlineImageQuality))
+        put("enable_web_search", JsonPrimitive(sampler.enableWebSearch))
+        put("tool_reasoning_mode", JsonPrimitive(sampler.toolReasoningMode))
+        put("tool_call_recurse_limit", JsonPrimitive(sampler.toolCallRecurseLimit))
+        put("request_images", JsonPrimitive(sampler.requestImages))
+        put("request_image_aspect_ratio", JsonPrimitive(sampler.requestImageAspectRatio))
+        put("request_image_resolution", JsonPrimitive(sampler.requestImageResolution))
+        put("max_context_unlocked", JsonPrimitive(sampler.maxContextUnlocked))
         put("openrouter_use_fallback", JsonPrimitive(sampler.useFallback))
         put("openrouter_allow_fallbacks", JsonPrimitive(sampler.allowFallbacks))
         put("openrouter_middleout", JsonPrimitive(sampler.middleout))
         put("openrouter_providers", kotlinx.serialization.json.JsonArray(sampler.openRouterProviders.map { JsonPrimitive(it) }))
         put("openrouter_quantizations", kotlinx.serialization.json.JsonArray(sampler.openRouterQuantizations.map { JsonPrimitive(it) }))
+    }
+
+    /** 官方 settingsToUpdate 的连接类字段（bind_preset_to_connection 由引擎键表 gating）。 */
+    fun connectionSettingsJson(profile: ConnectionProfile): JsonObject = buildJsonObject {
+        put("reverse_proxy", JsonPrimitive(profile.reverseProxy))
+        put("proxy_password", JsonPrimitive(profile.proxyPassword))
+        put("custom_url", JsonPrimitive(profile.customUrl))
+        put("custom_include_body", JsonPrimitive(profile.customIncludeBody))
+        put("custom_exclude_body", JsonPrimitive(profile.customExcludeBody))
+        put("custom_include_headers", JsonPrimitive(profile.customIncludeHeaders))
+        put("custom_prompt_post_processing", JsonPrimitive(profile.customPromptPostProcessing))
+        put("bypass_status_check", JsonPrimitive(profile.bypassStatusCheck))
+        put("show_external_models", JsonPrimitive(profile.showExternalModels))
+        put("group_models", JsonPrimitive(profile.groupModels))
+        put("sort_models", JsonPrimitive(profile.sortModels))
+        put("azure_base_url", JsonPrimitive(profile.baseUrlOverride))
+        put("azure_deployment_name", JsonPrimitive(profile.azureDeploymentName))
+        put("azure_api_version", JsonPrimitive(profile.apiVersionOverride))
+        put("azure_openai_model", JsonPrimitive(profile.azureOpenaiModel))
+        put("vertexai_auth_mode", JsonPrimitive(profile.vertexaiAuthMode))
+        put("vertexai_region", JsonPrimitive(profile.region))
+        put("vertexai_express_project_id", JsonPrimitive(profile.vertexaiExpressProjectId))
+        put("workers_ai_account_id", JsonPrimitive(profile.accountId))
+        put("nanogpt_provider", JsonPrimitive(profile.nanogptProvider))
+        put("nanogpt_payg_override", JsonPrimitive(profile.nanogptPaygOverride))
     }
 }

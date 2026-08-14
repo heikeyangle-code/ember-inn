@@ -135,10 +135,14 @@ class PromptPipelineDiffTest {
             sendIfEmpty = body["sendIfEmpty"]?.jsonPrimitive?.content ?: "",
             squashSystemMessages = body["squashSystemMessages"]?.jsonPrimitive?.content == "true",
             newChatPrompt = if (selectedGroup) {
-                body["newGroupChatPrompt"]?.jsonPrimitive?.content ?: "undefined"
+                body["newGroupChatPrompt"]?.jsonPrimitive?.content ?: "[Start a new group chat. Group members: {{group}}]"
             } else {
-                body["newChatPrompt"]?.jsonPrimitive?.content ?: "New chat:"
+                body["newChatPrompt"]?.jsonPrimitive?.content ?: "[Start a new Chat]"
             },
+            newGroupChatPrompt = body["newGroupChatPrompt"]?.jsonPrimitive?.content
+                ?: "[Start a new group chat. Group members: {{group}}]",
+            continueNudgePrompt = body["continueNudgePrompt"]?.jsonPrimitive?.content
+                ?: "[Continue your last message without repeating its original content.]",
         )
     }
 

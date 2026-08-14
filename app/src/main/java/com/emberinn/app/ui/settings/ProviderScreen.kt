@@ -543,6 +543,124 @@ fun ProviderDetailScreen(
                 sampler.squashSystemMessages,
                 vm::setSquashSystemMessages,
             )
+            // ---- 官方 oai_settings 其余预设联动字段 ----
+            Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
+            Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
+                    FilterChip(
+                        selected = sampler.namesBehavior == v,
+                        onClick = { vm.setNamesBehavior(v) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            Text("continue_postfix（继续生成后缀）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("" to "无", " " to "空格", "\n" to "换行", "\n\n" to "双换行").forEach { (v, label) ->
+                    FilterChip(
+                        selected = sampler.continuePostfix == v,
+                        onClick = { vm.setContinuePostfix(v) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            Text("inline_image_quality（内联图片质量）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("auto", "low", "high").forEach { value ->
+                    FilterChip(
+                        selected = sampler.inlineImageQuality == value,
+                        onClick = { vm.setInlineImageQuality(value) },
+                        label = { Text(value) },
+                    )
+                }
+            }
+            Text("tool_reasoning_mode（工具推理链）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("disabled", "since_last_user", "active_chain").forEach { value ->
+                    FilterChip(
+                        selected = sampler.toolReasoningMode == value,
+                        onClick = { vm.setToolReasoningMode(value) },
+                        label = { Text(value) },
+                    )
+                }
+            }
+            SwitchRow("media_inlining（媒体 data URL 内联，官方默认开）", sampler.mediaInlining, vm::setMediaInlining)
+            SwitchRow("function_calling（工具调用总开关，官方默认关）", sampler.functionCalling, vm::setFunctionCalling)
+            SwitchRow("show_thoughts（显示推理内容，官方默认开）", sampler.showThoughts, vm::setShowThoughts)
+            SwitchRow("enable_web_search（联网搜索，官方默认关）", sampler.enableWebSearch, vm::setEnableWebSearch)
+            SwitchRow("continue_prefill（继续生成预填，官方默认关）", sampler.continuePrefill, vm::setContinuePrefill)
+            SwitchRow("max_context_unlocked（解锁上下文上限，官方默认关）", sampler.maxContextUnlocked, vm::setMaxContextUnlocked)
+            EmberTextField(
+                value = sampler.sendIfEmpty,
+                onValueChange = vm::setSendIfEmpty,
+                label = { Text("send_if_empty（末条 assistant 时补发）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.assistantPrefill,
+                onValueChange = vm::setAssistantPrefill,
+                label = { Text("assistant_prefill（Claude 继续预填）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.newChatPrompt,
+                onValueChange = vm::setNewChatPrompt,
+                label = { Text("new_chat_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.newGroupChatPrompt,
+                onValueChange = vm::setNewGroupChatPrompt,
+                label = { Text("new_group_chat_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.newExampleChatPrompt,
+                onValueChange = vm::setNewExampleChatPrompt,
+                label = { Text("new_example_chat_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.continueNudgePrompt,
+                onValueChange = vm::setContinueNudgePrompt,
+                label = { Text("continue_nudge_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.wiFormat,
+                onValueChange = vm::setWiFormat,
+                label = { Text("wi_format（世界书 {0} 占位）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.scenarioFormat,
+                onValueChange = vm::setScenarioFormat,
+                label = { Text("scenario_format") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.personalityFormat,
+                onValueChange = vm::setPersonalityFormat,
+                label = { Text("personality_format") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.groupNudgePrompt,
+                onValueChange = vm::setGroupNudgePrompt,
+                label = { Text("group_nudge_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
                 vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
             }

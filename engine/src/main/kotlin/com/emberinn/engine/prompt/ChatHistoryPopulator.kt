@@ -32,6 +32,7 @@ object ChatHistoryPopulator {
         handler: TokenHandler,
         type: String,
         newChatPrompt: String,
+        newGroupChatPrompt: String = newChatPrompt,
         env: MacroEnv,
         selectedGroup: Boolean = false,
         sendIfEmpty: String = "",
@@ -89,7 +90,8 @@ object ChatHistoryPopulator {
             continueCollection = collection
         }
 
-        val newChatText = MacroEngine.substitute(newChatPrompt, env)
+        // 官方 openai.js:884：selected_group ? new_group_chat_prompt : new_chat_prompt
+        val newChatText = MacroEngine.substitute(if (selectedGroup) newGroupChatPrompt else newChatPrompt, env)
         val newChatMessage = CompletionMessage(
             role = "system",
             content = newChatText,

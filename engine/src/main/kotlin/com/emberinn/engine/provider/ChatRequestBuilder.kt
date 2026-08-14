@@ -61,6 +61,60 @@ data class SamplerParams(
     val useSysprompt: Boolean = false,
     /** 官方 oai_settings.squash_system_messages：总装后合并连续无名 system 消息（官方默认 false）。 */
     val squashSystemMessages: Boolean = false,
+    /** 官方 oai_settings.names_behavior：character_names_behavior.DEFAULT=0。 */
+    val namesBehavior: Int = 0,
+    /** 官方 oai_settings.send_if_empty：末条是 assistant 时补的 user 消息。 */
+    val sendIfEmpty: String = "",
+    /** 官方 oai_settings.impersonation_prompt（openai.js default_impersonation_prompt）。 */
+    val impersonationPrompt: String = "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]",
+    /** 官方 oai_settings.new_chat_prompt（default_new_chat_prompt）。 */
+    val newChatPrompt: String = "[Start a new Chat]",
+    /** 官方 oai_settings.new_group_chat_prompt（default_new_group_chat_prompt）。 */
+    val newGroupChatPrompt: String = "[Start a new group chat. Group members: {{group}}]",
+    /** 官方 oai_settings.new_example_chat_prompt（default_new_example_chat_prompt）。 */
+    val newExampleChatPrompt: String = "[Example Chat]",
+    /** 官方 oai_settings.continue_nudge_prompt（default_continue_nudge_prompt）。 */
+    val continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
+    /** 官方 oai_settings.bias_preset_selected（logit_bias 预设名；bias_presets 表 App 未接 UI，登记）。 */
+    val biasPresetSelected: String = "Default (none)",
+    /** 官方 oai_settings.wi_format（世界书 {0} 占位）。 */
+    val wiFormat: String = "{0}",
+    /** 官方 oai_settings.scenario_format。 */
+    val scenarioFormat: String = "{{scenario}}",
+    /** 官方 oai_settings.personality_format。 */
+    val personalityFormat: String = "{{personality}}",
+    /** 官方 oai_settings.group_nudge_prompt。 */
+    val groupNudgePrompt: String = "[Write the next reply only as {{char}}.]",
+    /** 官方 oai_settings.assistant_prefill（Claude 继续生成预填）。 */
+    val assistantPrefill: String = "",
+    /** 官方 oai_settings.assistant_impersonation（冒充模式 assistant 预填）。 */
+    val assistantImpersonation: String = "",
+    /** 官方 oai_settings.continue_prefill（continue 时给最后 assistant 加预填，默认 false）。 */
+    val continuePrefill: Boolean = false,
+    /** 官方 oai_settings.continue_postfix：NONE=''/SPACE=' '/NEWLINE='\n'/DOUBLE_NEWLINE='\n\n'，默认 SPACE。 */
+    val continuePostfix: String = " ",
+    /** 官方 oai_settings.function_calling（工具调用总开关，默认 false）。 */
+    val functionCalling: Boolean = false,
+    /** 官方 oai_settings.show_thoughts（是否展示推理/思考，默认 true）。 */
+    val showThoughts: Boolean = true,
+    /** 官方 oai_settings.media_inlining（图片/视频/音频 data URL 内联，默认 true）。 */
+    val mediaInlining: Boolean = true,
+    /** 官方 oai_settings.inline_image_quality：auto/low/high。 */
+    val inlineImageQuality: String = "auto",
+    /** 官方 oai_settings.enable_web_search（联网搜索，默认 false）。 */
+    val enableWebSearch: Boolean = false,
+    /** 官方 oai_settings.tool_reasoning_mode（tool_reasoning_modes.DISABLED）。 */
+    val toolReasoningMode: String = "disabled",
+    /** 官方 oai_settings.tool_call_recurse_limit（默认 5）。 */
+    val toolCallRecurseLimit: Int = 5,
+    /** 官方 oai_settings.request_images（图片生成模型请求图像，默认 false）。 */
+    val requestImages: Boolean = false,
+    /** 官方 oai_settings.request_image_aspect_ratio。 */
+    val requestImageAspectRatio: String = "",
+    /** 官方 oai_settings.request_image_resolution。 */
+    val requestImageResolution: String = "",
+    /** 官方 oai_settings.max_context_unlocked（解锁上下文上限输入，默认 false）。 */
+    val maxContextUnlocked: Boolean = false,
     /** 官方 settings.logit_bias（仅支持源发送）。 */
     val logitBias: Map<String, Double> = emptyMap(),
     /** 官方 settings.verbosity（gpt-5 系）。 */
@@ -105,6 +159,10 @@ data class ProviderRequestOptions(
     val safetySettings: JsonArray = JsonArray(emptyList()),
     /** 官方 createGenerationParameters.stop / 后端 request.body.stop。 */
     val stopSequences: List<String> = emptyList(),
+    /** 官方 oai_settings.custom_include_body / custom_exclude_body / custom_include_headers（YAML 字符串）。 */
+    val customIncludeBody: String = "",
+    val customExcludeBody: String = "",
+    val customIncludeHeaders: String = "",
     /** Text Completion（textgen）专用：最终提示词（story string 组装由调用方完成）。 */
     val textGenPrompt: String? = null,
     /** Text Completion（textgen）专用：textgenerationwebui_settings（默认见 TextgenSettingsDefaults）。 */

@@ -6,6 +6,9 @@
 // tokenHandler、ToolManager、populationInjectionPrompts（原样透传，absolute 分支边界）、
 // preparePromptsForChatCompletion（用 fixture 注入的 promptCollection，该函数本身另有 7 例差分）。
 // dryRun=false + squash_system_messages=true，输出官方 getChat 展平结果。
+// 注意：substituteParams 为恒等打桩（宏语义由 MacroEngine 差分单独覆盖），
+// 因此 newChatPrompt/newGroupChatPrompt/newExampleChatPrompt/continueNudgePrompt 等
+// 输入避免使用宏文本，仅锁官方“选择哪个模板 + 拼接位置”的结构。
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -213,10 +216,11 @@ const stub = [
     "    assistant_prefill: request.body.assistantPrefill ?? '',",
     '    names_behavior: request.body.namesBehavior ?? 0,',
     '    squash_system_messages: request.body.squashSystemMessages ?? false,',,
-    "    new_chat_prompt: request.body.newChatPrompt ?? 'New chat:',",
-    "    new_example_chat_prompt: request.body.newExampleChatPrompt ?? 'New chat:',",
+    "    new_chat_prompt: request.body.newChatPrompt ?? '[Start a new Chat]',",
+    "    new_group_chat_prompt: request.body.newGroupChatPrompt ?? '[Start a new group chat. Group members: {{group}}]',",
+    "    new_example_chat_prompt: request.body.newExampleChatPrompt ?? '[Example Chat]',",
     "    send_if_empty: request.body.sendIfEmpty ?? '',",
-    "    continue_nudge_prompt: '[Continue your last message without repeating its original content.]',",
+    "    continue_nudge_prompt: request.body.continueNudgePrompt ?? '[Continue your last message without repeating its original content.]',",
     '};',
     'const character_names_behavior = { NONE: -1, DEFAULT: 0, COMPLETION: 1, CONTENT: 2 };',
     'const INJECTION_POSITION = { RELATIVE: 0, ABSOLUTE: 1 };',
@@ -378,6 +382,7 @@ await add('absolute-in-chat', {
 await add('group-nudge', {
     ...base,
     selectedGroup: true,
+    newGroupChatPrompt: '[Start a new group chat]',
     promptCollection: [...base.promptCollection,
         { identifier: 'groupNudge', role: 'system', content: '[Write the next reply only as {{char}}.]', name: null, system_prompt: true, injection_position: 0 }],
 });

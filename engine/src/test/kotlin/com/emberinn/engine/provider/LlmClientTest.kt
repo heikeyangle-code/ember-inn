@@ -711,10 +711,40 @@ data: [DONE]
         assertEquals("https://github.com/heikeyangle-code/ember-inn", request.headers["HTTP-Referer"])
         assertEquals("EmberInn", request.headers["X-Title"])
         val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
-        assertEquals(true, body["reasoning"]?.jsonObject?.get("exclude")?.toString()?.toBoolean())
+        // 官方 openai.js:2759 include_reasoning = Boolean(show_thoughts)（默认 true）→ exclude=false
+        assertEquals(false, body["reasoning"]?.jsonObject?.get("exclude")?.toString()?.toBoolean())
         // 官方 openrouter_middleout 默认 ON → transforms: ['middle-out']
         assertEquals(1, body["transforms"]?.jsonArray?.size)
         assertEquals("middle-out", body["transforms"]?.jsonArray?.first()?.toString()?.trim('"'))
+        server.close()
+    }
+
+    @Test
+    fun `openrouter reasoning excluded when show thoughts off`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"choices":[{"message":{"role":"assistant","content":"ok"}}]}""")
+                .build(),
+        )
+        val openrouter = ProviderRegistry.get("openrouter")!!
+        LlmClient().chatCompletions(
+            openrouter,
+            ConnectionProfile(
+                providerId = "openrouter",
+                apiKey = "sk-or",
+                model = "anthropic/claude-sonnet-5",
+                baseUrlOverride = server.url("/").toString().trimEnd('/'),
+                sampler = SamplerParams(showThoughts = false),
+            ),
+            listOf(CompletionMessage("user", "hi")),
+        )
+        val request = server.takeRequest()
+        val body = Json.parseToJsonElement(request.body!!.utf8()).jsonObject
+        // 官方：show_thoughts=false → include_reasoning=false → reasoning.exclude=true
+        assertEquals(true, body["reasoning"]?.jsonObject?.get("exclude")?.toString()?.toBoolean())
         server.close()
     }
 

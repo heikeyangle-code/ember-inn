@@ -173,6 +173,25 @@ class ChatPromptFactory {
         useCharacterDepthPrompt: Boolean = true,
         /** 官方 oai_settings.squash_system_messages：总装后合并连续 system 消息；dryRun/textgen 不生效。 */
         squashSystemMessages: Boolean = false,
+        /** 官方 oai_settings.names_behavior（消息名字处理模式）。 */
+        namesBehavior: Int = 0,
+        /** 官方 oai_settings.send_if_empty（末条 assistant 时补发文本）。 */
+        sendIfEmpty: String = "",
+        /** 官方 oai_settings.new_chat_prompt / new_group_chat_prompt / new_example_chat_prompt。 */
+        newChatPrompt: String = "[Start a new Chat]",
+        newGroupChatPrompt: String = "[Start a new group chat. Group members: {{group}}]",
+        newExampleChatPrompt: String = "[Example Chat]",
+        /** 官方 oai_settings.continue_nudge_prompt（continue nudge 模板）。 */
+        continueNudgePrompt: String = "[Continue your last message without repeating its original content.]",
+        /** 官方 oai_settings.wi_format / scenario_format / personality_format / group_nudge_prompt。 */
+        wiFormat: String = "{0}",
+        scenarioFormat: String = "{{scenario}}",
+        personalityFormat: String = "{{personality}}",
+        groupNudgePrompt: String = "[Write the next reply only as {{char}}.]",
+        /** 官方 oai_settings.assistant_prefill（Claude continue 预填）。 */
+        assistantPrefill: String = "",
+        /** 官方 oai_settings.tool_reasoning_mode（工具推理链注入模式）。 */
+        toolReasoningMode: String = com.emberinn.engine.prompt.ChatHistoryPopulator.TOOL_REASONING_DISABLED,
         /** 官方 ToolManager.isToolCallingSupported：本轮是否允许工具调用（App 按注册工具/能力填充）。 */
         canUseTools: Boolean = false,
         /** 官方 generateQuietPrompt 的 quietPrompt（记忆扩展 DEFAULT 总结器等场景）。 */
@@ -709,6 +728,18 @@ class ChatPromptFactory {
                 impersonationPrompt = impersonationPrompt,
                 cyclePrompt = cyclePrompt,
                 squashSystemMessages = squashSystemMessages,
+                namesBehavior = namesBehavior,
+                sendIfEmpty = sendIfEmpty,
+                newChatPrompt = newChatPrompt,
+                newGroupChatPrompt = newGroupChatPrompt,
+                newExampleChatPrompt = newExampleChatPrompt,
+                continueNudgePrompt = continueNudgePrompt,
+                wiFormat = wiFormat,
+                scenarioFormat = scenarioFormat,
+                personalityFormat = personalityFormat,
+                groupNudge = groupNudgePrompt,
+                assistantPrefill = assistantPrefill,
+                toolReasoningMode = toolReasoningMode,
                 imageInlining = imageInlining,
                 videoInlining = videoInlining,
                 audioInlining = audioInlining,

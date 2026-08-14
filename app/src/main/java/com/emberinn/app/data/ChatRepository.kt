@@ -276,6 +276,18 @@ class ChatRepository(context: Context) {
         // 变量存储：调用方可注入（测试/特殊场景）；默认会话级一份，卡变化时重预置
         if (localVariables != null) this.localVariables = localVariables
         syncLocalVariables(characterRawJson)
+        // 官方 script.js runGenerate：isContinue 且 main_api=openai（chat completion）时给 cyclePrompt
+        // 追加 continue_postfix（除非已以空格结尾）；textgen/novel/kobold 不走该路径。
+        val effectiveCyclePrompt = if (
+            isContinue &&
+            provider.protocol !in setOf("textgenerationwebui", "novel", "kobold") &&
+            !cyclePrompt.endsWith(" ")
+        ) {
+            cyclePrompt + profile.sampler.continuePostfix
+        } else {
+            cyclePrompt
+        }
+        val effectiveMediaInlining = mediaInlining && profile.sampler.mediaInlining
         val prepared = promptFactory.prepare(
             characterRawJson = characterRawJson,
             history = history,
@@ -288,12 +300,28 @@ class ChatRepository(context: Context) {
             userPrompts = userPrompts,
             userOrder = userOrder,
             textareaText = textareaText,
-            continuePrefill = continuePrefill,
-            impersonationPrompt = impersonationPrompt,
-            cyclePrompt = cyclePrompt,
-            imageInlining = mediaInlining && imageOk,
-            videoInlining = mediaInlining && videoOk,
-            audioInlining = mediaInlining && audioOk,
+            continuePrefill = continuePrefill || profile.sampler.continuePrefill,
+            impersonationPrompt = if (impersonationPrompt == ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT) {
+                profile.sampler.impersonationPrompt
+            } else {
+                impersonationPrompt
+            },
+            cyclePrompt = effectiveCyclePrompt,
+            imageInlining = effectiveMediaInlining && imageOk,
+            videoInlining = effectiveMediaInlining && videoOk,
+            audioInlining = effectiveMediaInlining && audioOk,
+            namesBehavior = profile.sampler.namesBehavior,
+            sendIfEmpty = profile.sampler.sendIfEmpty,
+            newChatPrompt = profile.sampler.newChatPrompt,
+            newGroupChatPrompt = profile.sampler.newGroupChatPrompt,
+            newExampleChatPrompt = profile.sampler.newExampleChatPrompt,
+            continueNudgePrompt = profile.sampler.continueNudgePrompt,
+            wiFormat = profile.sampler.wiFormat,
+            scenarioFormat = profile.sampler.scenarioFormat,
+            personalityFormat = profile.sampler.personalityFormat,
+            groupNudgePrompt = profile.sampler.groupNudgePrompt,
+            assistantPrefill = profile.sampler.assistantPrefill,
+            toolReasoningMode = profile.sampler.toolReasoningMode,
             chatMetadata = chatMetadata,
             chatCompletionSource = chatCompletionSource,
             personaDescription = personaDescription,
@@ -324,7 +352,8 @@ class ChatRepository(context: Context) {
             squashSystemMessages = profile.sampler.squashSystemMessages &&
                 !previewOnly &&
                 provider.protocol !in setOf("textgenerationwebui", "novel", "kobold"),
-            canUseTools = options.hasTools,
+            // 官方 oai_settings.function_calling 总开关：false 时即使有工具注册也不启用
+            canUseTools = options.hasTools && profile.sampler.functionCalling,
             quietPrompt = quietPrompt,
             memorySummary = memorySummary,
             memoryTemplate = memoryTemplate,
@@ -382,7 +411,16 @@ class ChatRepository(context: Context) {
                 env = MacroEnv(user = userName, char = charName),
             ),
         )
-        val finalOptions = options.copy(stopSequences = stopSequences)
+        val finalOptions = options.copy(
+            stopSequences = stopSequences,
+            enableWebSearch = profile.sampler.enableWebSearch,
+            requestImages = profile.sampler.requestImages,
+            aspectRatio = profile.sampler.requestImageAspectRatio,
+            imageSize = profile.sampler.requestImageResolution,
+            customIncludeBody = profile.customIncludeBody,
+            customExcludeBody = profile.customExcludeBody,
+            customIncludeHeaders = profile.customIncludeHeaders,
+        )
         val effectiveProfile = profile.copy(
             model = effectiveModel,
             sampler = sampler.copy(maxTokens = effectiveMaxTokens),

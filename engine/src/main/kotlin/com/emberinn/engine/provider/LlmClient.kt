@@ -36,6 +36,40 @@ data class ConnectionProfile(
     val apiVersionOverride: String = "",
     /** 上下文上限（tokens），对齐官方 openai_max_context 默认 max_4k=4095；App 配置后作为占比胶囊分母。 */
     val contextWindow: Int = 4095,
+    /** 官方 oai_settings.reverse_proxy：非空时替换厂商 API base URL。 */
+    val reverseProxy: String = "",
+    /** 官方 oai_settings.proxy_password：reverse_proxy 时的 API Key（server 端语义）。 */
+    val proxyPassword: String = "",
+    /** 官方 oai_settings.custom_url（custom 源 API 地址）。 */
+    val customUrl: String = "",
+    /** 官方 oai_settings.custom_include_body（YAML 字符串，合并进请求体）。 */
+    val customIncludeBody: String = "",
+    /** 官方 oai_settings.custom_exclude_body（YAML 字符串，从请求体剔除字段）。 */
+    val customExcludeBody: String = "",
+    /** 官方 oai_settings.custom_include_headers（YAML 字符串，合并进请求头）。 */
+    val customIncludeHeaders: String = "",
+    /** 官方 oai_settings.custom_prompt_post_processing（NONE/MERGE/DISABLED；App 未接消费点，登记）。 */
+    val customPromptPostProcessing: String = "",
+    /** 官方 oai_settings.bypass_status_check（测试连接跳过状态检查）。 */
+    val bypassStatusCheck: Boolean = false,
+    /** 官方 oai_settings.show_external_models（模型列表显示外部模型）。 */
+    val showExternalModels: Boolean = false,
+    /** 官方 oai_settings.group_models（按提供商分组模型）。 */
+    val groupModels: Boolean = false,
+    /** 官方 oai_settings.sort_models：alphabetically/reverse/group-alphabetically/... */
+    val sortModels: String = "alphabetically",
+    /** 官方 oai_settings.azure_deployment_name。 */
+    val azureDeploymentName: String = "",
+    /** 官方 oai_settings.azure_openai_model。 */
+    val azureOpenaiModel: String = "",
+    /** 官方 oai_settings.vertexai_auth_mode（默认 express）。 */
+    val vertexaiAuthMode: String = "express",
+    /** 官方 oai_settings.vertexai_express_project_id。 */
+    val vertexaiExpressProjectId: String = "",
+    /** 官方 oai_settings.nanogpt_provider。 */
+    val nanogptProvider: String = "",
+    /** 官方 oai_settings.nanogpt_payg_override。 */
+    val nanogptPaygOverride: Boolean = false,
 )
 
 /** 提供商连接存储（JSON 文件，多档案：profiles.json，旧单档案 connection.json 自动迁移）。 */
@@ -293,6 +327,9 @@ class LlmClient(
         return if (lines.isEmpty()) null else lines.joinToString("\n")
     }
 
+    /** 官方 openai.js proxySupportedSources（CLAUDE/OPENAI/MISTRALAI/MAKERSUITE/VERTEXAI/DEEPSEEK/XAI/ZAI/MOONSHOT）。 */
+    private val proxySupportedIds = setOf("openai", "anthropic", "google", "mistral", "deepseek", "xai", "zai", "moonshot")
+
     private fun buildRequest(
         provider: ProviderSpec,
         profile: ConnectionProfile,
@@ -300,7 +337,11 @@ class LlmClient(
         stream: Boolean,
         options: ProviderRequestOptions = ProviderRequestOptions(),
     ): Request {
-        val base = requireHttpScheme(resolveBase(provider, profile))
+        // 官方：reverse_proxy 非空且源在支持列表时，API 地址用代理、API Key 用 proxy_password
+        val resolvedBase = requireHttpScheme(resolveBase(provider, profile))
+        val proxyActive = profile.reverseProxy.isNotBlank() && provider.id in proxySupportedIds
+        val base = if (proxyActive) requireHttpScheme(profile.reverseProxy) else resolvedBase
+        val authProfile = if (proxyActive) profile.copy(apiKey = profile.proxyPassword) else profile
         val builder = Request.Builder()
         // 官方 createGenerationParameters：isO1（openai/azure_openai + o1-2024-12-17/o1）强制非流式
         val effectiveStream = stream &&
@@ -322,7 +363,7 @@ class LlmClient(
                     stream = effectiveStream,
                     topP = profile.sampler.topP,
                     reasoningEffort = effort,
-                    includeReasoning = profile.sampler.includeReasoning,
+                    includeReasoning = profile.sampler.showThoughts || profile.sampler.includeReasoning,
                     reasoningBudget = reasoningBudget,
                     enableAdaptiveThinking = profile.sampler.enableAdaptiveThinking,
                     useSystemPrompt = profile.sampler.useSysprompt,
@@ -331,12 +372,13 @@ class LlmClient(
                     stop = options.stopSequences,
                     jsonSchema = options.jsonSchema,
                     enableWebSearch = options.enableWebSearch,
+                    mediaQuality = profile.sampler.inlineImageQuality,
                     enableSystemPromptCache = profile.sampler.enableSystemPromptCache,
                     cachingAtDepth = profile.sampler.cachingAtDepth,
                     cacheTTL = profile.sampler.cacheTTL,
                 )
                 builder.url(url).post(request.body.toRequestBody("application/json".toMediaType()))
-                builder.header("x-api-key", profile.apiKey)
+                builder.header("x-api-key", authProfile.apiKey)
                 builder.header("anthropic-version", "2023-06-01")
                 if (request.betaHeaders.isNotEmpty()) {
                     builder.header("anthropic-beta", request.betaHeaders.joinToString(","))
@@ -346,8 +388,8 @@ class LlmClient(
                 val apiVersion = provider.apiVersion.ifBlank { "v1beta" }
                 val model = URLEncoder.encode(profile.model, "UTF-8")
                 val params = mutableListOf<String>()
-                if (provider.authType == "google-key" && profile.apiKey.isNotEmpty()) {
-                    params += "key=" + URLEncoder.encode(profile.apiKey, "UTF-8")
+                if (provider.authType == "google-key" && authProfile.apiKey.isNotEmpty()) {
+                    params += "key=" + URLEncoder.encode(authProfile.apiKey, "UTF-8")
                 }
                 if (effectiveStream) params += "alt=sse"
                 val url = base.trimEnd('/') + "/" + apiVersion + "/models/" + model + ":generateContent" +
@@ -363,7 +405,8 @@ class LlmClient(
                     temperature = profile.sampler.temperature,
                     topP = profile.sampler.topP,
                     reasoningEffort = effort,
-                    includeReasoning = profile.sampler.includeReasoning,
+                    includeReasoning = profile.sampler.showThoughts || profile.sampler.includeReasoning,
+                    mediaQuality = profile.sampler.inlineImageQuality,
                     reasoningBudget = reasoningBudget,
                     tools = options.tools.map { GeminiFunctionTool(it.name, it.description, it.parameters) },
                     toolChoice = options.toolChoice?.let { JsonPrimitive(it) },
@@ -397,7 +440,7 @@ class LlmClient(
                 )
                 val url = base.trimEnd('/') + (if (effectiveStream) "/api/v1/stream" else "/api/v1/generate")
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             "novel" -> {
                 // 官方 src/endpoints/novelai.js：kayra/erato 走 text.novelai.net，其余 api.novelai.net
@@ -433,25 +476,25 @@ class LlmClient(
                 val url = base.trimEnd('/') + "/chat/completions"
                 val body = MistralRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             "xai" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
                 val body = XaiRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             "ai21" -> {
                 val url = base.trimEnd('/') + "/chat/completions"
                 val body = Ai21RequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             "cohere" -> {
                 val url = base.trimEnd('/') + "/chat"
                 val body = CohereRequestBuilder.build(profile.model, chatML(messages), profile.sampler, options)
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
             }
             else -> {
                 if (provider.id == "vertexai") {
@@ -496,7 +539,7 @@ class LlmClient(
                     val extra = OpenRouterParams.extra(
                         middleout = profile.sampler.middleout,
                         enableWebSearch = options.enableWebSearch,
-                        includeReasoning = profile.sampler.includeReasoning,
+                        includeReasoning = profile.sampler.showThoughts || profile.sampler.includeReasoning,
                         reasoningEffort = effort,
                     )
                     ChatRequestBuilder.buildOpenAiCompatibleFromChatML(
@@ -606,7 +649,7 @@ class LlmClient(
                     )
                 }
                 builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
-                applyAuth(builder, provider, profile, anthropicVersion = false)
+                applyAuth(builder, provider, authProfile, anthropicVersion = false)
                 if (provider.id == "zai") {
                     builder.header("Accept-Language", "en-US,en")
                 }
@@ -614,10 +657,15 @@ class LlmClient(
         }
         // OpenRouter 的 HTTP-Referer / X-Title 由 providers.json extra_headers 提供（项目身份）
         provider.extraHeaders.forEach { (k, v) -> builder.header(k, v) }
+        // 官方 custom_include_headers：YAML 字符串合并进请求头（chat-completions.js custom 分支）
+        if (provider.id == "custom" && options.customIncludeHeaders.isNotBlank()) {
+            YamlMerge.headers(options.customIncludeHeaders).forEach { (k, v) -> builder.header(k, v) }
+        }
         return builder.build()
     }
 
     private fun resolveBase(provider: ProviderSpec, profile: ConnectionProfile): String {
+        if (provider.id == "custom" && profile.customUrl.isNotBlank()) return profile.customUrl.trimEnd('/')
         if (profile.baseUrlOverride.isNotBlank()) return profile.baseUrlOverride.trimEnd('/')
         if (profile.region.isNotBlank()) {
             provider.regionBases[profile.region]?.let { return it.trimEnd('/') }
