@@ -97,6 +97,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -116,6 +118,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.viewinterop.AndroidView
@@ -155,8 +158,10 @@ import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
 import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
 import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
+import com.mikepenz.markdown.model.State
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
+import com.mikepenz.markdown.model.parseMarkdown
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
@@ -3905,16 +3910,33 @@ private fun NativeMarkdown(
     val mdAnnotator = remember {
         markdownAnnotator(config = markdownAnnotatorConfig(eolAsNewLine = true))
     }
-    Markdown(
-        content = content,
-        modifier = modifier.fillMaxWidth(),
-        imageTransformer = Coil3ImageTransformerImpl,
-        components = components,
-        colors = colors,
-        typography = typography,
-        padding = padding,
-        annotator = mdAnnotator,
-    )
+    // 解析结果按内容缓存：滚动回来的行首帧直出完整 Markdown，不再异步重解析/闪空；
+    // 首次未命中时先用轻量流式着色占位（保持非零行高），后台解析完再无缝切换。
+    var mdState by remember(content) { mutableStateOf<State?>(MarkdownCache.get(content)) }
+    LaunchedEffect(content) {
+        if (mdState !is State.Success) {
+            val parsed = withContext(Dispatchers.Default) { parseMarkdown(content) }
+            if (parsed is State.Success) {
+                MarkdownCache.put(content, parsed)
+                mdState = parsed
+            }
+        }
+    }
+    val md = mdState
+    if (md is State.Success) {
+        Markdown(
+            state = md,
+            modifier = modifier.fillMaxWidth(),
+            imageTransformer = Coil3ImageTransformerImpl,
+            components = components,
+            colors = colors,
+            typography = typography,
+            padding = padding,
+            annotator = mdAnnotator,
+        )
+    } else {
+        StreamingMarkdown(content = content)
+    }
 }
 
 /** 分段渲染：围栏外 Markdown 走原生，交互卡/Mermaid/富 HTML 段各自进独立 WebView。 */
@@ -4034,30 +4056,56 @@ private fun looksLikeHtml(content: String): Boolean {
 private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
 
-/** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时 1s 低速兜底。
+/** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时低频兜底。
  *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；
- *  onPageFinished 轮询作为页面脚本/桥接失效时的第二道兜底。 */
+ *  onPageFinished 轮询作为页面脚本/桥接失效时的第二道兜底。
+ *  测高公式取 html/body scrollHeight + 各自的 getBoundingClientRect（含 body 外边距、
+ *  绝对定位/浮动溢出内容），并做一次全元素 max(bottom) 扫描兜底，最后 +2px 防亚像素截断；
+ *  字体就绪（document.fonts.ready）后再补测一次。 */
 private val WEBVIEW_MEASURE_SCRIPT = """<script>
 (function(){
   var last='';
+  var scanned=false;
+  function fullHeight(){
+    var de=document.documentElement, body=document.body, h=0;
+    if(de){h=Math.max(h,de.scrollHeight||0,de.getBoundingClientRect().height||0);}
+    if(body){
+      var br=body.getBoundingClientRect();
+      h=Math.max(h,body.scrollHeight||0,(br.bottom-Math.min(br.top,0))||0);
+    }
+    if(!scanned){
+      scanned=true;
+      var maxB=0;
+      var all=document.querySelectorAll('body *');
+      if(all.length<=8000){
+        for(var i=0;i<all.length;i++){var r=all[i].getBoundingClientRect();if(r&&r.bottom>maxB)maxB=r.bottom;}
+        if(maxB>h)h=maxB;
+      }
+    }
+    return Math.ceil(h)+2;
+  }
   function report(){
     var imgs=document.images,p=0;
     for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}
-    var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
+    var h=fullHeight();
     var sig=h+':'+p;
     if(sig!==last){last=sig;if(window.EmberInnBridge){window.EmberInnBridge.onMeasure(h,p);}}
     return p===0;
   }
-  if(window.ResizeObserver){new ResizeObserver(report).observe(document.documentElement);}
+  if(window.ResizeObserver){
+    try{new ResizeObserver(report).observe(document.documentElement);}catch(e){}
+    try{new ResizeObserver(report).observe(document.body);}catch(e){}
+  }
   window.addEventListener('load',report);
-  var t=setInterval(function(){if(report())clearInterval(t);},1000);
-  setTimeout(function(){clearInterval(t);report();},15000);
+  if(document.fonts&&document.fonts.ready){try{document.fonts.ready.then(report);}catch(e){}}
+  var t=setInterval(function(){if(report())clearInterval(t);},800);
+  setTimeout(function(){clearInterval(t);report();},20000);
 })();
 </script>"""
 
-/** onPageFinished 兜底轮询用的纯字符串高度表达式：返回 "高度:未加载图片数"。 */
+/** onPageFinished 兜底轮询用的纯字符串高度表达式：返回 "高度:未加载图片数"（公式与注入脚本一致）。 */
 private val WEBVIEW_HEIGHT_JS =
-    "(function(){var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+':'+p;})()"
+    "(function(){function full(){var de=document.documentElement,body=document.body,h=0;if(de){h=Math.max(h,de.scrollHeight||0,de.getBoundingClientRect().height||0);}if(body){var br=body.getBoundingClientRect();h=Math.max(h,body.scrollHeight||0,(br.bottom-Math.min(br.top,0))||0);}return Math.ceil(h)+2;}var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return full()+':'+p;})()"
 
 /** 返回 html 中所有“不在 <script>/<style> 内部”的结构标签匹配位置（如 </head>、</body>）。
  *  角色卡/模型页面里的 JS 字符串经常包含 "</body>"、"</head>" 字面量，
@@ -4085,10 +4133,18 @@ private fun injectMeasureScript(html: String): String {
     }
 }
 
-/** 一次 WebView 加载会话：token 用于丢弃旧页面回调，html 用于判断是否需要重载。 */
-private class WebViewSession {
+/** 一次 WebView 加载会话：token 用于丢弃旧页面回调，html 用于判断是否需要重载。
+ *  loaded/loadToken/heightPx 跨滚动保留：滚回来同内容不重载、高度直接复用。
+ *  internal：WebViewPool（同包另一文件）需要读写 loadToken。 */
+internal class WebViewSession {
     var token: Any = Any()
     var html: String? = null
+    /** 页面是否已完成加载（release 中断加载时置 false，回来需要重载）。 */
+    var loaded: Boolean = false
+    /** 正在进行的 load 所属 token；null 表示没有在途加载（release 会清掉）。 */
+    var loadToken: Any? = null
+    /** 最近一次实测到的内容高度（CSS px），跨滚动复用。 */
+    var heightPx: Int = 0
 }
 
 /** JS → Kotlin 测高桥：只回传高度/未加载图片数，不暴露任何其它能力。 */
@@ -4105,9 +4161,13 @@ private fun configureWebView(
     session: WebViewSession,
     page: String,
     onMeasure: (Int, Int) -> Unit,
+    reload: Boolean,
 ) {
-    val token = session.token
+    // 每次进入都换新 token：旧的轮询/桥接回调全部作废，避免已滚走的行再更新状态
+    val token = Any()
+    session.token = token
     view.tag = session
+    view.onResume()
     view.setBackgroundColor(0x00000000)
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
@@ -4142,55 +4202,83 @@ private fun configureWebView(
 
         override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
             super.onPageFinished(view, url)
+            session.loaded = true
+            session.loadToken = null
+            val wv = view ?: return
+            if (wv.tag !== session || session.token !== token) return
             // 页面脚本正常时 ResizeObserver 已上报；这里再轮询兜底。
             // 轮询不能省：Compose 初始给 WebView 的高度是 0 时页面可能根本不做内容布局，
             // 只有先给一个可见高度、再读 scrollHeight，WebView 才会真正“长出来”。
-            var stable = 0
-            var lastPx = 0
-            var ticks = 0
-            fun measure() {
-                if (view?.tag !== session || session.token !== token) return
-                ticks++
-                if (ticks > 60) return
-                view?.evaluateJavascript(WEBVIEW_HEIGHT_JS) { value ->
-                    if (view?.tag === session && session.token === token) {
-                        val parts = value.trim('"').split(':')
-                        val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                        val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                        if (px > 0) {
-                            if (px == lastPx && pending == 0) stable++ else stable = 0
-                            lastPx = px
-                            onMeasure(px, pending)
-                        }
-                        if (stable < 3) view?.postDelayed({ measure() }, 250)
-                    }
-                }
-            }
-            measure()
+            measureLoop(wv, session, token, onMeasure, maxTicks = 60, intervalMs = 250L)
         }
     }
     view.layoutParams = ViewGroup.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT,
         ViewGroup.LayoutParams.WRAP_CONTENT,
     )
-    session.html = page
-    // 2026-08-12 修复“开头显示 base64 原文（PCFET0NUWVBFIGh0bWw+... = <!DOCTYPE html><html><head>）+ 大片空白”：
-    // loadDataWithBaseURL 在“非 data: 的 baseUrl”（这里是 file:///android_asset/）下，data 会被当作
-    // 普通字符串直接灌进 WebView，**不做 base64 解码**（AOSP CTS 2b3744f：non-data base URL →
-    // treat the String to load as a raw string；Android 文档：URL 编码实体也不解码）。
-    // 旧代码传 Base64 文本 + encoding="base64" 正好踩中：WebView 把整段 base64 原文显示成页面文本，
-    // 开头即 PCFET0NUWVBFIGh0bWw+...，下面全空白 —— 多轮“网页渲染不出来”的根因。
-    // 修复：直接传原文 + encoding="UTF-8" + mime 带 charset（社区权威解法，SO 57198560）。
-    // 同时因为非 data: baseUrl 下不做 URL 解码，# / %（CSS 色值）不会被截断——截断只发生在
-    // baseUrl=null 的 data: URL 路径（即 loadData）。file:///android_asset/ 保留：
-    // mermaid.min.js 相对引用与 file:// 字体仍可正常解析。
-    view.loadDataWithBaseURL(
-        "file:///android_asset/",
-        page,
-        "text/html; charset=UTF-8",
-        "UTF-8",
-        null,
-    )
+    if (reload) {
+        session.html = page
+        session.loaded = false
+        session.loadToken = token
+        session.heightPx = 0
+        // 2026-08-12 修复“开头显示 base64 原文（PCFET0NUWVBFIGh0bWw+... = <!DOCTYPE html><html><head>）+ 大片空白”：
+        // loadDataWithBaseURL 在“非 data: 的 baseUrl”（这里是 file:///android_asset/）下，data 会被当作
+        // 普通字符串直接灌进 WebView，**不做 base64 解码**（AOSP CTS 2b3744f：non-data base URL →
+        // treat the String to load as a raw string；Android 文档：URL 编码实体也不解码）。
+        // 旧代码传 Base64 文本 + encoding="base64" 正好踩中：WebView 把整段 base64 原文显示成页面文本，
+        // 开头即 PCFET0NUWVBFIGh0bWw+...，下面全空白 —— 多轮“网页渲染不出来”的根因。
+        // 修复：直接传原文 + encoding="UTF-8" + mime 带 charset（社区权威解法，SO 57198560）。
+        // 同时因为非 data: baseUrl 下不做 URL 解码，# / %（CSS 色值）不会被截断——截断只发生在
+        // baseUrl=null 的 data: URL 路径（即 loadData）。file:///android_asset/ 保留：
+        // mermaid.min.js 相对引用与 file:// 字体仍可正常解析。
+        view.loadDataWithBaseURL(
+            "file:///android_asset/",
+            page,
+            "text/html; charset=UTF-8",
+            "UTF-8",
+            null,
+        )
+    } else {
+        // 复用已加载页面：不重载、不白屏；布局落定后快速复核高度（旧回调已被新 token 作废）。
+        view.post {
+            if (view.tag === session && session.token === token) {
+                measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)
+            }
+        }
+    }
+}
+
+/** 测高轮询：evaluateJavascript 读 "高度:未加载图片数"，三次稳定后停止。 */
+private fun measureLoop(
+    view: WebView,
+    session: WebViewSession,
+    token: Any,
+    onMeasure: (Int, Int) -> Unit,
+    maxTicks: Int,
+    intervalMs: Long,
+) {
+    var stable = 0
+    var lastPx = 0
+    var ticks = 0
+    fun measure() {
+        if (view.tag !== session || session.token !== token) return
+        ticks++
+        if (ticks > maxTicks) return
+        view.evaluateJavascript(WEBVIEW_HEIGHT_JS) { value ->
+            if (view.tag === session && session.token === token) {
+                val parts = value.trim('"').split(':')
+                val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                if (px > 0) {
+                    if (px == lastPx && pending == 0) stable++ else stable = 0
+                    lastPx = px
+                    onMeasure(px, pending)
+                }
+                if (stable < 3) view.postDelayed({ measure() }, intervalMs)
+            }
+        }
+    }
+    measure()
 }
 
 /** WebView 兜底渲染（HTML 消息 / Mermaid / 交互卡片）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
@@ -4219,46 +4307,65 @@ private fun WebViewHtml(
         )
     }
     val webView = remember { WebViewPool.acquire(context) }
+    // 内容高度上限：≤上限的网页全高展开；超上限的 WebView 内部可滚动，长页面不会被截断、也够得着。
+    val maxWebHeight = maxOf((LocalConfiguration.current.screenHeightDp * 0.90f).dp, 280.dp)
     fun onMeasure(px: Int, pending: Int) {
         // pending > 0 表示还有图片在加载：只允许继续长高，不允许提前缩矮；
         // pending == 0 时允许回缩，修复折叠/切 tab 后高度卡在旧值的问题。
-        if (px > 0 && (pending == 0 || px > heightPx)) heightPx = px
+        if (px > 0 && (pending == 0 || px > heightPx)) {
+            heightPx = px
+            val s = webView.tag as? WebViewSession
+            if (s != null) s.heightPx = px
+        }
     }
     AndroidView(
         factory = { ctx ->
-            val session = WebViewSession()
+            val session = (webView.tag as? WebViewSession) ?: WebViewSession().also { webView.tag = it }
+            val reload = session.html != styled || (!session.loaded && session.loadToken == null)
             configureWebView(
                 view = webView,
                 ctx = ctx,
                 session = session,
                 page = styled,
                 onMeasure = { px, pending -> onMeasure(px, pending) },
+                reload = reload,
             )
             webView
         },
         update = { view ->
             val session = view.tag as? WebViewSession
-            if (session?.html != styled) {
-                session?.let {
-                    it.token = Any()
-                    heightPx = 0
-                    configureWebView(
-                        view = view,
-                        ctx = context,
-                        session = it,
-                        page = styled,
-                        onMeasure = { px, pending -> onMeasure(px, pending) },
-                    )
-                }
+            if (session == null || session.html != styled || (!session.loaded && session.loadToken == null)) {
+                heightPx = 0
+                configureWebView(
+                    view = view,
+                    ctx = context,
+                    session = session ?: WebViewSession().also { view.tag = it },
+                    page = styled,
+                    onMeasure = { px, pending -> onMeasure(px, pending) },
+                    reload = true,
+                )
+            } else {
+                // 同页面复用：只换桥/回调 + 恢复记忆高度，不重载
+                configureWebView(
+                    view = view,
+                    ctx = context,
+                    session = session,
+                    page = styled,
+                    onMeasure = { px, pending -> onMeasure(px, pending) },
+                    reload = false,
+                )
+                if (heightPx <= 0 && session.heightPx > 0) heightPx = session.heightPx
             }
         },
         onRelease = { view -> WebViewPool.release(view) },
         modifier = modifier
             .fillMaxWidth()
-            // 官方 HTML 消息在页面流里全高渲染（无内部滚动框）。WebView 不是普通 Compose 子组件，
-            // 高度只能靠 JS 读 scrollHeight 回报；测高未回来时先给 160dp 可见兜底，测到后按实测全高展开。
-            // 不再封顶 75% 屏高：旧封顶把长网页裁进内部滚动小盒子（“被框住/显示不全”根因）。
-            .height(if (heightPx > 0) heightPx.toFloat().dp else 160.dp)
+            // 官方 HTML 消息在页面流里全高渲染；测高未回来时先给 160dp 可见兜底，
+            // 测到后按实测全高展开（超上限时内部滚动，不再裁掉内容）。
+            .height(
+                if (heightPx > 0) minOf(heightPx.toFloat().dp, maxWebHeight)
+                else 160.dp,
+            )
             .clip(RoundedCornerShape(12.dp)),
     )
 }
@@ -4372,6 +4479,9 @@ private fun officialStyledHtml(
         append(notoFace)
         append(avatarCss)
         append("body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}\n")
+        // 长网页“被截断”根因之一：页面自带 html/body{height:100%;overflow:hidden}（或 vh 布局），
+        // 测高只能量到视口高度、WebView 内部也无滚动余地。强制还原为 auto/visible，让内容全部可测可滚。
+        append("html,body{height:auto!important;min-height:0!important;overflow:visible!important}\n")
         append("em,i{color:${css(em)}}\n")
         append("q{color:${css(quote)}} q em,q i{color:inherit}\n")
         append("u{color:${css(underline)}}\n")

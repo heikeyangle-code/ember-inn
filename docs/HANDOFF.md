@@ -627,7 +627,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
  displayCache 按消息索引缓存显示文本，组合期不再读盘/跑正则
 - 进聊天首帧即钉底（reverseLayout 初始偏移=0）；流式不再每 tick 整段 Markdown 解析/正则、也不再每 tick 滚动
-- 角色卡去掉逐卡 dropShadow；WebView 兜底项高度突变登记为潜在滚动跳变源（测高机制见第 12 章）
+- 角色卡去掉逐卡 dropShadow；**Markdown 解析 LRU 缓存**（MarkdownCache.kt，按内容键、上限 32，滚回来的行首帧直出缓存解析结果，不再异步重解析/闪空）；**WebView 池保留已渲染页面+实测高度**（滚回同内容不重载、不白屏、不重新“长高”）；WebView 高度上限=90% 屏高，超上限内部滚动兜底（不再截断也不撑爆列表，详见第 12 章）
 - ✅ 发送链路提速（App 层，引擎零改动、发送内容不变）：角色卡解析缓存（按 rawJson，访问序 LRU 上限 8，淘汰最久未用）、外置世界书条目缓存（按文件 mtime）、连接档案缓存（按 profiles.json mtime）、聊天元数据缓存；JSONL/元数据落盘走单线程后台队列（内存缓存先更新；删除与排队写盘同队列串行，避免文件“复活”）；命中面板/上下文胶囊计算移出请求关键路径（UI 稍后更新，不影响生成语义）
 
 ### 8.4 主题系统现状
@@ -782,7 +782,7 @@ sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dr
  - HTML 围栏 → `<iframe srcdoc="...">` 始终渲染；扩展开时无 sandbox（脚本可跑），关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用、保留同源供父页测高）；内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
  - 非 HTML 围栏 → `<pre><code>`（转义）；
  - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
-- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用，测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层按实测全高展开、随消息列表滚动（不再封顶 75% 屏高——旧封顶把长网页裁进内部滚动小盒子，是“被框住/显示不全”根因）；加载方式 = 原文 UTF-8 + file base（旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
+- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用（release 不再 about:blank，保留已渲染页面 + `WebViewSession` 的 loaded/loadToken/heightPx，滚回同内容不重载、直接恢复记忆高度）；测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 800ms 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层按实测全高展开（公式含 html/body scrollHeight + getBoundingClientRect + 全元素 max(bottom) + 2px 防亚像素，字体就绪再补测），**上限 90% 屏高，超上限 WebView 内部可滚动**（长页面不会截断、不会撑爆列表）；加载方式 = 原文 UTF-8 + file base（旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
 - 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
 
 ### 10.5 与 Tavern Helper 能力对照
@@ -803,7 +803,7 @@ sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dr
 2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
 3. 纯 HTML 消息（无代码围栏）：行为同（透明底、图片加载、外链跳系统浏览器）
 4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
-5. 长网页：外层按实测全高展开，随消息列表滚动（无内部滚动框、不再裁切）
+5. 长网页：≤90% 屏高按实测全高展开；超上限时 WebView 内部可上下滚动（不截断、不撑爆列表）；带 `html/body{height:100%;overflow:hidden}` 的整页文档会被注入 `height:auto!important;overflow:visible!important` 还原，内容全部可测可滚
 
 ### 10.7 安全与许可证
 - 交互代码块（开关开时）= 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；开关关时 iframe 带 `sandbox="allow-same-origin"`，脚本/表单不执行。唯一的 JS 桥 `EmberInnBridge` 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。
@@ -920,17 +920,20 @@ sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dr
 - 保留：`officialStyledHtml` / `embedInteractiveBlocks` / `embedPlainText`（iframe 转换与 CSS 样式仍按原机制），`sanitizeHtmlForWebView`（只拦 javascript:）。
 
 ### 12.3 WebView 复用池（WebViewPool.kt）
-- `object WebViewPool`：ArrayDeque 闲置池；`acquire` 从池取（空则新建 applicationContext WebView），`release` 停 loading、about:blank、清历史 / 子 View、换空 WebViewClient 后回池；闲置超过 6 个销毁。
+- `object WebViewPool`：ArrayDeque 闲置池；`acquire` 从池取（空则新建 applicationContext WebView），`release` 摘除父容器、中断在途加载、`onPause()` 暂停 JS/动画后回池；闲置超过 6 个销毁。**release 不再 `loadUrl("about:blank")`/清空 tag**——已渲染页面与 `WebViewSession`（含实测高度）随实例保留。
 - `WebViewHtml` 通过 `remember { WebViewPool.acquire(context) }` 取实例，`AndroidView(onRelease = { WebViewPool.release(it) })` 回池。
-- 每个加载会话一个 `WebViewSession`（token + html）：token 变化丢弃旧页面回调，html 变化才重载，避免主题 / 设置刷新时反复 reload。
-- 效果：HTML 消息滚动出屏不再销毁重建，发送 / 滚动卡顿消除；官方无此机制，属 App/UI 性能层，不改变渲染语义。
+- 每个加载会话一个 `WebViewSession`（token + html + loaded/loadToken/heightPx）：token 每次进入都换新（旧轮询/桥接回调作废，避免死行写状态）；html 变化才重载；**同页面复用时不重载、只换桥/回调，并把记忆高度直接恢复**（不再 0→160dp→实测重走一遍）；release 中断的在途加载（loaded=false && loadToken=null）回来会自动重载。
+- 效果：HTML 消息滚动出屏不再销毁重建、滚回来不整页重载，发送 / 滚动卡顿消除；官方无此机制，属 App/UI 性能层，不改变渲染语义。
 
 ### 12.4 ResizeObserver 测高（ChatScreen.kt：WEBVIEW_MEASURE_SCRIPT）
-- 兜底页 `</body>` 前注入脚本：`ResizeObserver(document.documentElement)` + load 事件 + 1s 低频轮询（图片未加载完继续，`p==0` 停，15s 上限）。
+- 兜底页 `</body>` 前注入脚本：`ResizeObserver(document.documentElement)` + `ResizeObserver(document.body)` + load 事件 + `document.fonts.ready` 补测 + 图片未就绪 800ms 低频轮询（`p==0` 停，20s 上限）。
 - 高度经 `window.EmberInnBridge.onMeasure(h,p)` 直接回调 Kotlin（`addJavascriptInterface`，仅回传高度/未加载图片数，不暴露其它能力）；`onPageFinished` 轮询作为第二道兜底。
-- `onPageFinished` 改为 ≤15s 轮询兜底（纯字符串 `高度:未加载图片数`，避免 JSON 转义问题）；初始测高未返回时给 160dp 可见兜底，打破“高度 0 → 不布局 → 量不到高度”的死循环。
+- **测高公式（修“下面截断”根因）**：取 html/body `scrollHeight` 与各自 `getBoundingClientRect()` 的最大值（含 body 外边距、绝对定位/浮动溢出），再对 ≤8000 个元素做一次 `max(bottom)` 扫描兜底，最后 `ceil+2px` 防亚像素截断；字体就绪后再补测（字体晚到导致的行高变化也能撑满）。
+- **页面样式还原（修“vh/overflow:hidden 截断且无法滚动”根因）**：注入 `html,body{height:auto!important;min-height:0!important;overflow:visible!important}`——页面自带 `html/body{height:100%;overflow:hidden}` 时 scrollHeight 只等于视口高度、WebView 内部也无滚动余地，强制还原后内容全部可测可滚。
+- `onPageFinished` ≤15s 轮询兜底（纯字符串 `高度:未加载图片数`，公式与注入脚本一致，避免 JSON 转义问题）；初始测高未返回时给 160dp 可见兜底，打破“高度 0 → 不布局 → 量不到高度”的死循环。
 - **CSS 像素换算**：`scrollHeight` 是 WebView 的 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素除以 density，高密度屏上 HTML/卡片被压成细条甚至不可见；现改为 `heightPx.toFloat().dp`。
-- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）；外层按实测全高展开（不再 75% 封顶）。
+- **高度上限**：`maxOf(90% 屏高, 280dp)`——≤上限的网页全高展开；超上限时 WebView 内部可滚动（不再裁掉内容，也不会把列表撑成万 px 巨项）；实测高度全量存回 `WebViewSession.heightPx`，滚动复用直接恢复。
+- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）。
 - token 机制保证复用后旧页面的上报不会写进新消息的高度状态。
 
 ### 12.7 滚动 / 键盘卡顿治理
@@ -996,7 +999,7 @@ sort_models/group_models/show_external_models/bypass_status_check/azure/vertex/n
 - **最终修复**：直接传原文 + `encoding="UTF-8"` + `mime="text/html; charset=UTF-8"`，baseUrl 仍保留 `file:///android_asset/`。非 data: baseUrl 下 data 按 HTTP 响应体加载、不做 URL 解码，`#`/`%` 不会截断（截断只发生在 baseUrl=null 的 data: URL 路径，即 `loadData`）；mermaid.min.js 相对引用与 file:// 字体不受影响。社区权威解法一致（SO 57198560 等）。
 - **渲染不出来的第二根因**：Compose 初始把 WebView 高度给成 0 → 页面不布局 → `scrollHeight` 也量不到 → 高度永远 0。修复：测高未返回时先给 160dp 可见兜底高度，让页面先布局，再回缩/撑到真实高度。
 - **渲染不出来的第三根因**：`scrollHeight` 是 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素换算，高密度屏上高度被除以 density，HTML/卡片被压成细条甚至不可见。现改为 `heightPx.toFloat().dp`。
-- **测高链路**：`EmberInnBridge`（addJavascriptInterface，只回传高度/未加载图片数）→ ResizeObserver + load + 1s 兜底；`onPageFinished` 纯字符串 `高度:未加载图片数` 轮询 ≤15s 作为第二道；token 机制丢弃复用后的旧回调。
+- **测高链路**：`EmberInnBridge`（addJavascriptInterface，只回传高度/未加载图片数）→ ResizeObserver(html+body) + load + fonts.ready + 800ms 兜底；`onPageFinished` 纯字符串 `高度:未加载图片数` 轮询 ≤15s 作为第二道；token 每次进入都换新，丢弃复用后的旧回调。
 - **渲染语义**：普通 `\n` 对齐官方 `simpleLineBreaks:true`（`eolAsNewLine=true`）；HTML 开关真正关闭 WebView；WebView 链接补 `text-decoration:none`；用户消息改走 Markdown/HTML 同一管线；Mermaid 不再 html 套 html；iframe 高度由父页观察同源 srcdoc 持续同步。
 - **整页文档处理**：角色卡自带网页 / 模型直接输出 `<!DOCTYPE html>` 整页时，消息分段器整段走 WebView（不再被 carveWebElementRanges 拆散 head/body）；`officialStyledHtml` 检测完整文档后把兜底 CSS 注入原文档 `<head>`（`injectIntoFullDocument`），不再外套 `<html>`（html 套 html → 嵌套 `</head></body>` 提前关闭外层文档 → 页面错乱/大片空白）。
 - **注入健壮性**：测高脚本与 CSS 注入点通过 `structuralTagPositions` 查找，跳过 `<script>/<style>` 文本内的伪 `</body>`/`</head>` 字面量（角色卡 JS 字符串里常见），避免脚本被插进字符串中间导致整段 JS 失效。
