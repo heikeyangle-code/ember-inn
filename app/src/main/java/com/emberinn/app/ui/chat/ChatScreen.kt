@@ -5115,7 +5115,7 @@ private fun itemizationCategories(entry: com.emberinn.app.data.ItemizationEntry)
     val exm = tokensOf(setOf("dialogueExamples"))
     val exmCount = countOf(setOf("dialogueExamples"))
     val persona = tokensOf(setOf("personaDescription"))
-    val system = tokensOf(setOf("main"))
+    val system = tokensOf(setOf("instruction"))
     // 官方 storyStringTokens = finalPrompt - worldInfo - chatHistory - extensions - bias（余量即角色定义/主提示/示例等）
     val charDefs = (entry.totalTokens - worldInfo - chatHistory - extensions - bias).coerceAtLeast(0)
     return listOf(

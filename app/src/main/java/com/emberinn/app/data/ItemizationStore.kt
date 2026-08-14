@@ -28,6 +28,8 @@ data class ItemizationEntry(
     val tokenizer: String = "",
     val maxContext: Int = 0,
     val maxTokens: Int = 0,
+    /** 官方 itemized-prompts instruction：非 openai 源启用 sysprompt 时的系统提示（宏已替换）。 */
+    val instruction: String = "",
 )
 
 /**

@@ -7,6 +7,7 @@ import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRequestOptions
 import com.emberinn.engine.provider.ProviderRegistry
+import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.VectorChatSettings
 import com.emberinn.engine.worldinfo.VectorFileRef
 import com.emberinn.engine.worldinfo.VectorSettings
@@ -14,6 +15,7 @@ import com.emberinn.engine.worldinfo.VectorStore
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 import com.emberinn.engine.media.MediaCapability
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
@@ -393,21 +395,46 @@ class ChatRepository(private val context: Context) {
         // 官方 PromptManager.messages：总装后保留，供 Prompt Manager 检查弹窗按 identifier 查看。
         PromptAssemblyCache.lastMessages = prepared.messages
         // 官方 itemized-prompts.js：每条生成消息的总装明细（rawPrompt + TokenHandler 分桶 + 分节消息）。
+        // instruction（官方 System Prompt (Instruct)）= 非 openai 源启用 sysprompt 时的系统提示（宏替换后）。
+        // 注意 textgen/novel/kobold 的 sysprompt 在 createRawPrompt 阶段才插入，必须在此单独补算，
+        // 否则明细和总 token 都会漏掉这条系统提示。
+        val presetSettingsForItemization = PresetSettingsStore.load(context)
+        val isTextCompletionForItemization =
+            provider.protocol == "textgenerationwebui" || provider.protocol == "novel" || provider.protocol == "kobold"
+        val sys = presetSettingsForItemization.sysprompt
+        val instruction = if (isTextCompletionForItemization && sys.enabled) {
+            MacroEngine.substitute(sys.content, MacroEnv(user = userName, char = charName))
+        } else {
+            ""
+        }
+        val instructionTokens = if (instruction.isNotBlank()) {
+            TokenCounterFactory.forModel(effectiveModel).count(instruction)
+        } else {
+            0
+        }
+        val baseSections = prepared.messages.map { m ->
+            ItemizationSection(identifier = m.identifier.orEmpty(), role = m.role, content = m.content, tokens = m.tokens)
+        }
+        val sectionsWithInstruction = if (instruction.isNotBlank()) {
+            baseSections + ItemizationSection(identifier = "instruction", role = "system", content = instruction, tokens = instructionTokens)
+        } else {
+            baseSections
+        }
         onItemization?.invoke(
             ItemizationEntry(
                 messageIndex = 0,
-                rawPrompt = prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
-                totalTokens = prepared.counts.values.sum() + 3,
+                rawPrompt = (if (instruction.isNotBlank()) "system: $instruction\n\n" else "") +
+                    prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
+                totalTokens = prepared.counts.values.sum() + 3 + instructionTokens,
                 counts = prepared.counts,
-                sections = prepared.messages.map { m ->
-                    ItemizationSection(identifier = m.identifier.orEmpty(), role = m.role, content = m.content, tokens = m.tokens)
-                },
+                sections = sectionsWithInstruction,
                 providerName = provider.displayName,
                 model = effectiveModel,
                 presetName = PresetPrefsStore.load(context).samplerPreset,
                 tokenizer = "按当前模型分词器",
                 maxContext = effectiveContextWindow,
                 maxTokens = effectiveMaxTokens,
+                instruction = instruction,
             ),
         )
         if (previewOnly) {
