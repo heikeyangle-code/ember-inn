@@ -156,9 +156,33 @@ fun PresetsScreen(onBack: () -> Unit) {
                     importMessage = "保存失败：未配置提供商"
                     return
                 }
-                PresetApplyEngine.getChatCompletionPresetBody(
-                    PresetSettingsStore.samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens),
+                // 官方 getChatCompletionPreset：settingsToUpdate 全键（含连接字段）+ prompts/prompt_order
+                val base = kotlinx.serialization.json.buildJsonObject {
+                    putAll(PresetSettingsStore.samplerSettingsJson(profile.sampler, profile.contextWindow, profile.sampler.maxTokens))
+                    putAll(PresetSettingsStore.connectionSettingsJson(profile))
+                }
+                val body = PresetApplyEngine.getChatCompletionPresetBody(base).toMutableMap()
+                body["prompts"] = json.encodeToJsonElement(
+                    kotlinx.serialization.builtins.ListSerializer(com.emberinn.engine.prompt.PromptItem.serializer()),
+                    com.emberinn.app.data.PromptManagerPrefs.prompts(context),
                 )
+                body["prompt_order"] = kotlinx.serialization.json.JsonArray(
+                    com.emberinn.app.data.PromptManagerPrefs.orders(context).map { (cid, order) ->
+                        kotlinx.serialization.json.buildJsonObject {
+                            if (cid != "null") {
+                                put("character_id", kotlinx.serialization.json.JsonPrimitive(cid.toIntOrNull() ?: cid))
+                            }
+                            put(
+                                "order",
+                                json.encodeToJsonElement(
+                                    kotlinx.serialization.builtins.ListSerializer(com.emberinn.engine.prompt.PromptOrderEntry.serializer()),
+                                    order,
+                                ),
+                            )
+                        }
+                    },
+                )
+                kotlinx.serialization.json.JsonObject(body)
             }
             else -> null
         }
