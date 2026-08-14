@@ -5,6 +5,7 @@ import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -276,7 +277,7 @@ private fun VectorCard() {
 @Composable
 private fun ServiceCard(title: String, content: @Composable () -> Unit) {
     Card(
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
     ) {

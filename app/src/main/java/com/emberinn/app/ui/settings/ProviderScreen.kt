@@ -165,7 +165,7 @@ private fun ProfileChip(
     onDelete: () -> Unit,
 ) {
     Surface(
-        shape = MaterialTheme.shapes.large,
+        shape = RoundedCornerShape(24.dp),
         color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.clickable(onClick = onSwitch),
     ) {
@@ -210,7 +210,7 @@ private fun ProviderCard(
                 offset = DpOffset(0.dp, 4.dp),
                 alpha = 0.08f,
             ),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Row(

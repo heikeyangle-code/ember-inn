@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -1538,12 +1539,12 @@ fun WorldEntryEditorSheet(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             Text("位置（官方 world_info_position）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("角色前(0)" to 0, "角色后(1)" to 1, "AN上(2)" to 2, "AN下(3)" to 3).forEach { (label, v) ->
                     FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("深度(4)" to 4, "EM上(5)" to 5, "EM下(6)" to 6, "出口(7)" to 7).forEach { (label, v) ->
                     FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
                 }

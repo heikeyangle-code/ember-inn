@@ -91,7 +91,7 @@ fun AppearanceScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -136,7 +136,7 @@ fun AppearanceScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val vibeContext = LocalContext.current
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -206,7 +206,7 @@ fun AppearanceScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -293,7 +293,7 @@ fun AppearanceScreen(
                 var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(fxContext)) }
                 var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(fxContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -344,7 +344,7 @@ fun AppearanceScreen(
                 val optContext = LocalContext.current
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -370,7 +370,7 @@ fun AppearanceScreen(
                 var scrimDark by remember { mutableStateOf(AppearancePrefs.chatBgScrimDark(glassContext)) }
                 var scrimLight by remember { mutableStateOf(AppearancePrefs.chatBgScrimLight(glassContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -463,7 +463,7 @@ fun AppearanceScreen(
                 var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
                 var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -501,7 +501,7 @@ fun AppearanceScreen(
                 var lineHeight by remember { mutableStateOf(AppearancePrefs.lineHeight(typeContext)) }
                 var headingStyle by remember { mutableStateOf(AppearancePrefs.headingStyle(typeContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -549,7 +549,7 @@ fun AppearanceScreen(
                 val immersiveContext = LocalContext.current
                 var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(immersiveContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -578,7 +578,7 @@ fun AppearanceScreen(
                 var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
                 var fixMarkdown by remember { mutableStateOf(AppearancePrefs.fixMarkdown(optContext)) }
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {

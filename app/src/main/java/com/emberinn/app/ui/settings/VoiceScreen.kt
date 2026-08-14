@@ -7,6 +7,7 @@ import com.emberinn.app.ui.components.EmberSlider
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -110,7 +111,7 @@ fun VoiceScreen(onBack: () -> Unit) {
             )
 
             Card(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
@@ -131,7 +132,7 @@ fun VoiceScreen(onBack: () -> Unit) {
             }
 
             Card(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
@@ -211,7 +212,7 @@ fun VoiceScreen(onBack: () -> Unit) {
             }
 
             Card(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
