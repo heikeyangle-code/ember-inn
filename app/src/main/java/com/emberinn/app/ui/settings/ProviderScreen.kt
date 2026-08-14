@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -1085,11 +1086,23 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
     val testing by vm.testing.collectAsState()
     val sort by vm.sortModels.collectAsState()
     val group by vm.groupModels.collectAsState()
+    val providerId by vm.providerId.collectAsState()
+    val showExternal by vm.showExternalModels.collectAsState()
+    val spec = remember(providerId) { vm.providers.firstOrNull { it.id == providerId } }
     var query by remember { mutableStateOf("") }
+    // 官方 openai.js：#openai_external_category 只在 show_external_models 开启时显示状态检查拉到的模型；
+    // 关闭时 openai 源只显示内置默认模型列表。App 等价：openai 且关闭 → 过滤到 defaultModels。
+    val visible = remember(models, providerId, showExternal, spec) {
+        if (providerId == "openai" && !showExternal) {
+            models.filter { it in (spec?.defaultModels ?: emptyList()) }
+        } else {
+            models
+        }
+    }
     // 官方 openai.js：sortModelsBy(sort_models) + group_models 分组（App 列表无 pricing/context 元数据，
     // 支持 alphabetical/reverse；pricing/context 排序登记边界）
-    val items: List<Pair<String, Boolean>> = remember(models, query, sort, group) {
-        val base = models.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
+    val items: List<Pair<String, Boolean>> = remember(visible, query, sort, group) {
+        val base = visible.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
         val sorted = when (sort) {
             "reverse" -> base.sortedDescending()
             else -> base.sorted()

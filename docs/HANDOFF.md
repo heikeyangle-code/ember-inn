@@ -298,7 +298,7 @@ tiktoken（JTokkit，O200K/CL100K）按官方 /bias 分支真算。原始 id 数
 Llama "Hello"=15043 等已知值 sanity 锁定）；web 族 command-r/command-a/qwen2/nemo/deepseek 参考仓库
 无模型文件（官方运行时下载），不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全为空）。
 ✅ bias_presets 官方弹窗已做（ProviderScreen：预设新建/导入/导出/删除 + 条目 text/value(-100~100)/上下移/删除，对齐 openai.js createLogitBias* / onLogitBiasPreset*）；✅ YamlMerge 已用 SnakeYAML 对齐 js-yaml（锚点/别名/合并键<<原生解析、多文档→官方 try/catch 静默忽略、时间戳→ISO，单测覆盖）；✅ vertexai 服务账号认证已做（VertexAuth.kt：官方 google.js getVertexAIAuth/generateJWTToken/getAccessToken/getProjectIdFromServiceAccount 移植 + LlmClient vertexai 协议分支 express/full/proxy + ProviderScreen 服务账号 JSON 校验/保存）；✅ bypass_status_check 已接（openai/custom 测试连接失败时跳过状态检查，官方 canBypass 语义）。
-仍登记：show_external_models 视觉差（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）；extensions 键已持久化（官方 core 也只存不消费，与官方一致）。
+✅ show_external_models 已接（官方 #openai_external_category 语义）：openai 源关闭时模型选择器过滤到内置 default_models，开启时显示状态检查拉到的全部模型。仍登记：extensions 键已持久化（官方 core 也只存不消费，与官方一致）。
 
 **仍登记（诚实边界）**：
 - context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。✅ textgen/novel/kobold 路径已把 context/instruct/sysprompt 传进引擎：`InstructMode.createRawPrompt` 消费 context/instruct，sysprompt.content 作 systemPrompt、post_history 按官方作为 user 消息注入（continue 插末条前，否则追加）；三套采样预设（6/24/6）按协议暴露并应用。
@@ -593,7 +593,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 5. 完成度总览
 
 - 引擎/差分基线：引擎测试 328 例全绿；差分 85 组 / 1969 例对拍全绿（基线定义与细分见第 2 节，功能明细见第 3/4 节，完成项不在此重复）。
-- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除/marker/system_prompt）与 dryRun 预览（聊天会话菜单→提示词预览）已做。
+- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除）与 dryRun 预览（聊天会话菜单→提示词预览）已做；编辑表单已对齐官方 PromptManager popup：identifier 自动 uuid 只读、name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 项只读）、main/nsfw/jailbreak/enhanceDefinitions 支持官方 Reset 恢复默认。
 - 用户决策延期：Custom CSS + Moving UI（见 8.9）；Claude/Gemini 官方 web tokenizer（cl100k 回退，用户豁免，只影响估算精度）。
 - 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 节更新基线。
 

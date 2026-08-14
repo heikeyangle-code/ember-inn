@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.CharacterStore
@@ -222,85 +225,128 @@ fun PromptManagerScreen(onBack: () -> Unit) {
 
     if (showEdit) {
         val target = editTarget ?: return
+        // 官方 PromptManager handleNewPrompt：identifier 自动 uuid，编辑表单不暴露 identifier；
+        // 编辑表单字段 = name/role/injection_trigger/position/depth/order/forbid_overrides/content。
+        val isNew = target.identifier.isBlank()
+        val promptId = target.identifier.ifBlank { java.util.UUID.randomUUID().toString() }
         var name by remember(target) { mutableStateOf(target.name) }
-        var identifier by remember(target) { mutableStateOf(target.identifier) }
         var content by remember(target) { mutableStateOf(target.content) }
         var role by remember(target) { mutableStateOf(target.role) }
-        var enabled by remember(target) { mutableStateOf(target.enabled) }
         var position by remember(target) { mutableStateOf(target.injectionPosition?.toString() ?: "0") }
-        var depth by remember(target) { mutableStateOf(target.injectionDepth?.toString() ?: "") }
+        var depth by remember(target) { mutableStateOf(target.injectionDepth?.toString() ?: "4") }
         var injectionOrder by remember(target) { mutableStateOf(target.injectionOrder?.toString() ?: "100") }
-        var trigger by remember(target) { mutableStateOf(target.injectionTrigger.joinToString(",")) }
+        var trigger by remember(target) { mutableStateOf(target.injectionTrigger.toSet()) }
         var forbid by remember(target) { mutableStateOf(target.forbidOverrides) }
-        var marker by remember(target) { mutableStateOf(target.marker) }
-        var systemPrompt by remember(target) { mutableStateOf(target.systemPrompt) }
+        val triggerOptions = listOf(
+            "normal" to "Normal", "continue" to "Continue", "impersonate" to "Impersonate",
+            "swipe" to "Swipe", "regenerate" to "Regenerate", "quiet" to "Quiet",
+        )
+        val resettable = promptId in setOf("main", "nsfw", "jailbreak", "enhanceDefinitions")
         AlertDialog(
             onDismissRequest = { showEdit = false },
-            title = { Text(if (target.identifier.isEmpty()) "新增提示项" else "编辑提示项") },
+            title = { Text(if (isNew) "新增提示项" else "编辑提示项") },
             text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState()).height(480.dp)) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()).height(520.dp)) {
+                    Text(
+                        "identifier（自动生成，只读）：$promptId",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                    Spacer(Modifier.height(8.dp))
                     EmberTextField(value = name, onValueChange = { name = it }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = identifier, onValueChange = { identifier = it }, label = { Text("identifier（唯一键，官方字段）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    EmberTextField(
+                        value = content,
+                        onValueChange = { if (!target.marker) content = it },
+                        label = { Text(if (target.marker) "内容（marker：由外部注入，不可编辑）" else "内容（支持 {{user}}/{{char}} 宏）") },
+                        readOnly = target.marker,
+                        minLines = 3,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = content, onValueChange = { content = it }, label = { Text("内容（支持 {{user}}/{{char}} 宏）") }, minLines = 3, maxLines = 6, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
+                    Text("角色（官方 role）", style = MaterialTheme.typography.labelMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("system" to "system", "user" to "user", "assistant" to "assistant").forEach { (v, label) ->
                             FilterChip(selected = role == v, onClick = { role = v }, label = { Text(label) })
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = position, onValueChange = { position = it }, label = { Text("injection_position（0=相对，1=对话内）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = depth, onValueChange = { depth = it }, label = { Text("injection_depth（对话内深度，留空=默认4）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = injectionOrder, onValueChange = { injectionOrder = it }, label = { Text("injection_order（默认100）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = trigger, onValueChange = { trigger = it }, label = { Text("injection_trigger（逗号分隔，留空=全部）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = enabled, onCheckedChange = { enabled = it })
+                    Text("注入位置（官方 injection_position）", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("0" to "Relative（相对顺序）", "1" to "In-chat（对话内）").forEach { (v, label) ->
+                            FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
+                        }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("系统提示（system_prompt）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = systemPrompt, onCheckedChange = { systemPrompt = it })
+                    Spacer(Modifier.height(8.dp))
+                    EmberTextField(
+                        value = depth,
+                        onValueChange = { depth = it.filter { c -> c.isDigit() } },
+                        label = { Text("注入深度 injection_depth（默认4，0=末条之后）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    EmberTextField(
+                        value = injectionOrder,
+                        onValueChange = { injectionOrder = it.filter { c -> c.isDigit() } },
+                        label = { Text("注入顺序 injection_order（默认100）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("注入触发（官方 injection_trigger，多选；空=全部）", style = MaterialTheme.typography.labelMedium)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(triggerOptions) { (v, label) ->
+                            FilterChip(
+                                selected = v in trigger,
+                                onClick = {
+                                    trigger = if (v in trigger) trigger - v else trigger + v
+                                },
+                                label = { Text(label) },
+                            )
+                        }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("标记（marker，内容由注入器填充）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = marker, onCheckedChange = { marker = it })
-                    }
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("禁止覆盖（forbid_overrides）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = forbid, onCheckedChange = { forbid = it })
+                    }
+                    if (resettable) {
+                        TextButton(onClick = {
+                            val def = PromptCollection.DEFAULT_PROMPTS.firstOrNull { it.identifier == promptId }
+                            if (def != null) {
+                                name = def.name
+                                content = def.content
+                                forbid = false
+                            }
+                        }) { Text("恢复默认（官方 Reset）") }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val id = identifier.trim()
-                    if (id.isNotEmpty()) {
-                        val updated = PromptItem(
-                            identifier = id,
-                            name = name.ifBlank { id },
-                            content = content,
-                            role = role,
-                            enabled = enabled,
-                            marker = marker,
-                            systemPrompt = systemPrompt,
-                            injectionPosition = position.toIntOrNull(),
-                            injectionDepth = depth.toIntOrNull(),
-                            injectionOrder = injectionOrder.toIntOrNull() ?: 100,
-                            injectionTrigger = trigger.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                            forbidOverrides = forbid,
-                        )
-                        val existing = prompts.indexOfFirst { it.identifier == target.identifier }
-                        prompts = if (target.identifier.isEmpty() || existing < 0) prompts + updated
-                        else prompts.map { if (it.identifier == target.identifier) updated else it }
-                        PromptManagerPrefs.savePrompts(context, prompts)
-                        showEdit = false
-                    }
+                    val updated = PromptItem(
+                        identifier = promptId,
+                        name = name.ifBlank { promptId },
+                        content = content,
+                        role = role,
+                        enabled = true,
+                        marker = target.marker,
+                        systemPrompt = target.systemPrompt,
+                        injectionPosition = position.toIntOrNull(),
+                        injectionDepth = depth.toIntOrNull(),
+                        injectionOrder = injectionOrder.toIntOrNull() ?: 100,
+                        injectionTrigger = trigger.toList(),
+                        forbidOverrides = forbid,
+                    )
+                    val existing = prompts.indexOfFirst { it.identifier == promptId }
+                    prompts = if (isNew || existing < 0) prompts + updated
+                    else prompts.map { if (it.identifier == promptId) updated else it }
+                    PromptManagerPrefs.savePrompts(context, prompts)
+                    showEdit = false
                 }) { Text("保存") }
             },
             dismissButton = { TextButton(onClick = { showEdit = false }) { Text("取消") } },
