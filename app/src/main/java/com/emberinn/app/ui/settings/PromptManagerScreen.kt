@@ -47,7 +47,8 @@ import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.PromptManagerCore
 import com.emberinn.engine.prompt.PromptOrderEntry
 
-/** Prompt Manager（官方 PromptManager 面板字段）：顺序 + 提示项，全局存储；dryRun 预览登记下一步。 */
+/** Prompt Manager（官方 PromptManager 面板字段）：顺序 + 提示项 + marker/system_prompt，全局存储；
+ *  dryRun 提示词预览在聊天顶栏菜单（会话菜单 → 提示词预览）。 */
 @Composable
 fun PromptManagerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -231,6 +232,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         var injectionOrder by remember(target) { mutableStateOf(target.injectionOrder?.toString() ?: "100") }
         var trigger by remember(target) { mutableStateOf(target.injectionTrigger.joinToString(",")) }
         var forbid by remember(target) { mutableStateOf(target.forbidOverrides) }
+        var marker by remember(target) { mutableStateOf(target.marker) }
+        var systemPrompt by remember(target) { mutableStateOf(target.systemPrompt) }
         AlertDialog(
             onDismissRequest = { showEdit = false },
             title = { Text(if (target.identifier.isEmpty()) "新增提示项" else "编辑提示项") },
@@ -261,6 +264,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         EmberSwitch(checked = enabled, onCheckedChange = { enabled = it })
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("系统提示（system_prompt）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        EmberSwitch(checked = systemPrompt, onCheckedChange = { systemPrompt = it })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("标记（marker，内容由注入器填充）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        EmberSwitch(checked = marker, onCheckedChange = { marker = it })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("禁止覆盖（forbid_overrides）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = forbid, onCheckedChange = { forbid = it })
                     }
@@ -276,6 +287,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             content = content,
                             role = role,
                             enabled = enabled,
+                            marker = marker,
+                            systemPrompt = systemPrompt,
                             injectionPosition = position.toIntOrNull(),
                             injectionDepth = depth.toIntOrNull(),
                             injectionOrder = injectionOrder.toIntOrNull() ?: 100,

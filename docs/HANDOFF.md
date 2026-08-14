@@ -274,7 +274,7 @@ RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m
 
 **预设缺口清单（用户确认共 3 项，第 1 项经官方 1.18 源码核实不存在，第 2 项部分完成，第 3 项已完成）**：
 1. 采样预设逐字段勾选（`settings_checked`）：**官方 1.18 源码无此字段**（openai.js/preset-manager.js/预设 json 全仓搜索无），按 1:1 基线不实现、不发明新功能。
-2. textgen/Novel/Kobold 后端：✅ 全部路由完成——TextgenRequestBodyEngine 差分 27 例 + NovelRequestBodyEngine 差分 12 例 + KoboldRequestBodyEngine 差分 12 例；LlmClient 三条协议分支（非流式 + SSE）；providers.json 新增 textgenerationwebui/novel/kobold 条目；createRawPrompt 故事串消费；PresetsScreen 按协议暴露三套采样预设并真正应用（各 SettingsStore）；ProviderScreen 协议采样编辑器对照官方面板。仍剩：mancer/featherless/infermaticai 等 textgen provider 条目（协议已通，仅缺条目与对应 model 字段映射）。
+2. textgen/Novel/Kobold 后端：✅ 全部路由完成——TextgenRequestBodyEngine 差分 27 例 + NovelRequestBodyEngine 差分 12 例 + KoboldRequestBodyEngine 差分 12 例；LlmClient 三条协议分支（非流式 + SSE）；providers.json 新增 textgenerationwebui/novel/kobold 条目；createRawPrompt 故事串消费；PresetsScreen 按协议暴露三套采样预设并真正应用（各 SettingsStore）；ProviderScreen 协议采样编辑器对照官方面板。✅ mancer/featherless/infermaticai 条目已入库（textgen-mancer/textgen-featherless/textgen-infermaticai，base_url 对齐官方 MANCER_SERVER/INFERMATICAI_SERVER/FEATHERLESS_SERVER）；请求头对齐 additional-headers.js：mancer X-API-KEY+Bearer、featherless HTTP-Referer/X-Title+Bearer、infermaticai Bearer；master 导入 textgen 区段按官方 savePreset 语义保存为协议目录用户预设（不应用）。
 3. `/preset` fuzzy 回退：✅ 已完成（Fuse.js 7.1 移植 + 27 例差分）。
 
 **OpenAI 采样预设全字段（现状）**：settingsToUpdate 102 键已按官方默认值全量入档案/采样器；
@@ -297,14 +297,12 @@ tiktoken（JTokkit，O200K/CL100K）按官方 /bias 分支真算。原始 id 数
 仍登记：官方依赖 @agnai/sentencepiece-js / web-tokenizers，本环境无库无法官方差分（编码按规范移植，
 Llama "Hello"=15043 等已知值 sanity 锁定）；web 族 command-r/command-a/qwen2/nemo/deepseek 参考仓库
 无模型文件（官方运行时下载），不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全为空）。
-仍登记：bias_presets 官方弹窗 UX（App 用 JSON 编辑表，结构等价）、show_external_models 视觉差
-（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响
-官方在线状态文案（App 无该概念，已存储+UI）、YAML 多文档/锚点（嵌套映射与列表已支持，YamlMerge 缩进递归）、
-vertexai 服务账号认证（LlmClient 拒绝）、extensions 键已持久化（官方无 App 侧扩展消费，登记）。
+✅ bias_presets 官方弹窗已做（ProviderScreen：预设新建/导入/导出/删除 + 条目 text/value(-100~100)/上下移/删除，对齐 openai.js createLogitBias* / onLogitBiasPreset*）；✅ YamlMerge 已用 SnakeYAML 对齐 js-yaml（锚点/别名/合并键<<原生解析、多文档→官方 try/catch 静默忽略、时间戳→ISO，单测覆盖）；✅ vertexai 服务账号认证已做（VertexAuth.kt：官方 google.js getVertexAIAuth/generateJWTToken/getAccessToken/getProjectIdFromServiceAccount 移植 + LlmClient vertexai 协议分支 express/full/proxy + ProviderScreen 服务账号 JSON 校验/保存）；✅ bypass_status_check 已接（openai/custom 测试连接失败时跳过状态检查，官方 canBypass 语义）。
+仍登记：show_external_models 视觉差（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）；extensions 键已持久化（官方 core 也只存不消费，与官方一致）。
 
 **仍登记（诚实边界）**：
-- context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
-- sampler-textgen/novel/kobold：预设已打包（6/24/6）；textgen 已按活动协议在预设页暴露并应用，novel/kobold 待对应 LlmClient 路由。
+- context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。✅ textgen/novel/kobold 路径已把 context/instruct/sysprompt 传进引擎：`InstructMode.createRawPrompt` 消费 context/instruct，sysprompt.content 作 systemPrompt、post_history 按官方作为 user 消息注入（continue 插末条前，否则追加）；三套采样预设（6/24/6）按协议暴露并应用。
+- sampler-textgen/novel/kobold：预设已打包（6/24/6）；三套均按活动协议在预设页暴露并应用（LlmClient 三条协议分支已路由）。
 - master 导入的 textgen preset 区段暂存为 sampler 用户预设（不应用）。
 - moving-ui（界面预设）：用户决策延期见 8.9。
 
@@ -595,7 +593,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 5. 完成度总览
 
 - 引擎/差分基线：引擎测试 328 例全绿；差分 85 组 / 1969 例对拍全绿（基线定义与细分见第 2 节，功能明细见第 3/4 节，完成项不在此重复）。
-- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models、Prompt Manager 面板/dryRun 预览）、自定义预设保存/删除/设为默认（见 8.5/8.6）。
+- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除/marker/system_prompt）与 dryRun 预览（聊天会话菜单→提示词预览）已做。
 - 用户决策延期：Custom CSS + Moving UI（见 8.9）；Claude/Gemini 官方 web tokenizer（cl100k 回退，用户豁免，只影响估算精度）。
 - 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 节更新基线。
 
@@ -976,7 +974,7 @@ sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dr
 continue_prefill、continue_postfix、function_calling、media_inlining、inline_image_quality、request_images、
 web_search、show_thoughts、tool_reasoning_mode、squash_system_messages 已接 SamplerParams+UI；
 sort_models/group_models/show_external_models/bypass_status_check/azure/vertex/nanogpt 连接 UI 已补
-（vertex 认证、bias_presets tokenizer、YAML 嵌套仍登记，不伪造 ✅）。
+（✅ vertex 认证已做：Express API Key / Full 服务账号 JWT（VertexAuth.kt，官方 google.js 移植）+ ProviderScreen 服务账号 JSON 校验/保存；✅ YamlMerge 已用 SnakeYAML 对齐 js-yaml 锚点/合并键/多文档静默；bias_presets tokenizer 差分仍登记）。
 - **官方字段审计（对照 SillyTavern V2 spec + char-data.js）**：角色详情页已 1:1 覆盖 V2 核心字段——name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings；extensions 已接线：talkativeness（话痨滑杆）、depth_prompt（深度提示）、regex_scripts（卡正则）、fav（置顶）、world（内嵌世界书，导入端处理 `embeded://`/`__asset:` 资源）。明确不做的两项（避免“无效接线”）：group_only（引擎无消费点，只加 UI 不生效）、官方“linked world name”字符串引用（本 App 用卡内嵌世界书，不依赖官方世界书文件体系）。
 - 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
 - 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。
@@ -1018,7 +1016,7 @@ sort_models/group_models/show_external_models/bypass_status_check/azure/vertex/n
 对照官方 `sendTextareaMessage → Generate → prepareOpenAIMessages/populateChatCompletion → createGenerationParameters → sendOpenAIRequest → saveReply`：
 - ✅ 已对齐：continue_on_send、send_if_empty（仅 OpenAI 系）、用户消息 `extra.bias` + removeMacros + substituteParams、append_title/媒体标题、请求 stop/seed/n/top_k/logit_bias/reasoning_effort/verbosity（官方源白名单）、默认上下文 4095 / 最大回复 300、getMaxPromptTokens=context-response（不再扣非官方安全余量）、流式 tool_calls 回调管线。
 - 默认值：官方 `oai_settings` 默认 = `openai_max_context: max_4k(4095)`、`openai_max_tokens: 300`（openai.js default_settings）。App UI 常量已 4095/300；**引擎 `ConnectionProfile.contextWindow` 与 `SamplerParams.maxTokens` 的旧默认 8192/512 已修正为 4095/300**（旧注释误标“官方 8192”），ChatPromptFactory/MemoryService 兜底同步。必选提示词超限：官方 `TokenBudgetExceededError` → toast “Mandatory prompts exceed the context size.” + Prompt Manager 提示调大限额，随后仍带残缺消息请求（空数组会 API 400）；我方引擎管线同语义（抛错→返回已装下部分），App 层在空消息时直接给友好错误、不请求 API（有意收敛）。聊天历史超限：官方与引擎都是**静默丢弃最老消息**直到能装下，不报错。
-- 🟡 仍未接：quiet/quietImage/quietToLoud、dryRun 提示词预览、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取。
+- 🟡 仍未接：quiet/quietImage/quietToLoud、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取。✅ dryRun 提示词预览已做（聊天会话菜单→提示词预览，PromptPreview 全文+token）。
 - token_count 落盘：官方 1.18 不落盘（token 计数只用于预算/计数器，openai.js countTokenAsyncFn），按 1:1 标记 N/A，删除该项。
 - 规则：这些缺口不会伪造“已对齐”；HANDOFF 只在真正接完并 CI 绿后改成 ✅。
 

@@ -2,6 +2,8 @@
 
 package com.emberinn.app.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
@@ -302,6 +304,7 @@ fun ProviderDetailScreen(
     val azureOpenaiModel by vm.azureOpenaiModel.collectAsState()
     val vertexaiAuthMode by vm.vertexaiAuthMode.collectAsState()
     val vertexaiExpressProjectId by vm.vertexaiExpressProjectId.collectAsState()
+    val vertexaiServiceAccountJson by vm.vertexaiServiceAccountJson.collectAsState()
     val nanogptProvider by vm.nanogptProvider.collectAsState()
     val nanogptPaygOverride by vm.nanogptPaygOverride.collectAsState()
 
@@ -562,6 +565,8 @@ fun ProviderDetailScreen(
             )
             // ---- 官方 oai_settings 其余预设联动字段 ----
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
+            // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
+            //      onLogitBiasPresetImportFileChange / onLogitBiasPresetExportClick / createLogitBiasListItem）----
             Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
@@ -572,31 +577,131 @@ fun ProviderDetailScreen(
                     )
                 }
             }
+            var showBiasNew by remember { mutableStateOf(false) }
+            var biasNewName by remember { mutableStateOf("") }
+            var showBiasDelete by remember { mutableStateOf(false) }
             var biasEditor by remember { mutableStateOf(false) }
-            var biasJson by remember { mutableStateOf("") }
-            TextButton(onClick = {
-                biasJson = vm.biasPresetsJson()
-                biasEditor = true
-            }) { Text("编辑 bias 预设（JSON）") }
-            if (biasEditor) {
+            var biasExportName by remember { mutableStateOf("") }
+            val biasImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) {
+                    val name = (uri.lastPathSegment ?: "bias").substringBeforeLast('.').ifBlank { "bias" }
+                    val text = runCatching {
+                        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    }.getOrNull()
+                    if (!text.isNullOrBlank()) vm.importBiasPreset(name, text)
+                }
+            }
+            val biasExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                if (uri != null) {
+                    val json = vm.biasPresetExportJson(biasExportName)
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = { biasNewName = ""; showBiasNew = true }) { Text("新建预设") }
+                TextButton(onClick = { biasImportLauncher.launch(arrayOf("application/json")) }) { Text("导入预设") }
+                TextButton(
+                    enabled = sampler.biasPresetSelected.isNotBlank(),
+                    onClick = {
+                        biasExportName = sampler.biasPresetSelected
+                        biasExportLauncher.launch("${sampler.biasPresetSelected}.json")
+                    },
+                ) { Text("导出预设") }
+                TextButton(
+                    enabled = sampler.biasPresetSelected.isNotBlank(),
+                    onClick = { showBiasDelete = true },
+                ) { Text("删除预设") }
+            }
+            TextButton(
+                enabled = sampler.biasPresetSelected.isNotBlank(),
+                onClick = { biasEditor = true },
+            ) { Text("编辑条目（${sampler.biasPresetSelected.ifBlank { "未选择" }}）") }
+            if (showBiasNew) {
                 AlertDialog(
-                    onDismissRequest = { biasEditor = false },
-                    title = { Text("编辑 bias 预设") },
+                    onDismissRequest = { showBiasNew = false },
+                    title = { Text("新建 bias 预设") },
                     text = {
                         EmberTextField(
-                            value = biasJson,
-                            onValueChange = { biasJson = it },
-                            label = { Text("{\"预设名\": [{\"text\": \"词\", \"value\": -50}]}") },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                            value = biasNewName,
+                            onValueChange = { biasNewName = it },
+                            label = { Text("预设名（必须唯一）") },
+                            singleLine = true,
                         )
                     },
                     confirmButton = {
                         TextButton(onClick = {
-                            if (vm.setBiasPresetsJson(biasJson)) biasEditor = false
-                        }) { Text("保存") }
+                            if (vm.addBiasPreset(biasNewName)) showBiasNew = false
+                        }) { Text("创建") }
                     },
-                    dismissButton = { TextButton(onClick = { biasEditor = false }) { Text("取消") } },
+                    dismissButton = { TextButton(onClick = { showBiasNew = false }) { Text("取消") } },
                 )
+            }
+            if (showBiasDelete) {
+                AlertDialog(
+                    onDismissRequest = { showBiasDelete = false },
+                    title = { Text("删除预设？") },
+                    text = { Text("将删除「${sampler.biasPresetSelected}」，不可恢复。") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            vm.deleteBiasPreset(sampler.biasPresetSelected)
+                            showBiasDelete = false
+                        }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = { TextButton(onClick = { showBiasDelete = false }) { Text("取消") } },
+                )
+            }
+            if (biasEditor) {
+                val presetName = sampler.biasPresetSelected
+                val entries = sampler.biasPresets[presetName] ?: emptyList()
+                EmberBottomSheet(onDismissRequest = { biasEditor = false }) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+                        Text(
+                            "编辑 bias 预设：$presetName",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            "文本或 [token ids]；数值 -100 ~ 100（官方 openai_logit_bias 模板）",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                            itemsIndexed(entries, key = { _, e -> e.id }) { index, entry ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                ) {
+                                    EmberTextField(
+                                        value = entry.text,
+                                        onValueChange = { vm.updateBiasEntry(presetName, entry.id, text = it) },
+                                        placeholder = { Text("Text or [token ids]") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    EmberTextField(
+                                        value = entry.value.toString(),
+                                        onValueChange = { v ->
+                                            v.toDoubleOrNull()?.coerceIn(-100.0, 100.0)
+                                                ?.let { vm.updateBiasEntry(presetName, entry.id, value = it) }
+                                        },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        modifier = Modifier.width(84.dp),
+                                    )
+                                    TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = true) }, enabled = index > 0) { Text("↑") }
+                                    TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = false) }, enabled = index < entries.lastIndex) { Text("↓") }
+                                    TextButton(onClick = { vm.removeBiasEntry(presetName, entry.id) }) { Text("删", color = MaterialTheme.colorScheme.error) }
+                                }
+                            }
+                        }
+                        TextButton(onClick = { vm.addBiasEntry(presetName) }) { Text("添加条目") }
+                    }
+                }
             }
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -802,21 +907,59 @@ fun ProviderDetailScreen(
             if (spec.id == "vertexai") {
                 Text("vertexai_auth_mode（认证方式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("express", "oauth").forEach { value ->
+                    listOf("express" to "Express（API Key）", "full" to "Full（服务账号）").forEach { (value, label) ->
                         FilterChip(
                             selected = vertexaiAuthMode == value,
                             onClick = { vm.setVertexaiAuthMode(value) },
-                            label = { Text(value) },
+                            label = { Text(label) },
                         )
                     }
                 }
-                EmberTextField(
-                    value = vertexaiExpressProjectId,
-                    onValueChange = vm::setVertexaiExpressProjectId,
-                    label = { Text("vertexai_express_project_id") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
+                if (vertexaiAuthMode == "express") {
+                    EmberTextField(
+                        value = vertexaiExpressProjectId,
+                        onValueChange = vm::setVertexaiExpressProjectId,
+                        label = { Text("vertexai_express_project_id（非 us-central1 时必填）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                } else {
+                    var saDraft by remember(vertexaiServiceAccountJson) { mutableStateOf(vertexaiServiceAccountJson) }
+                    var saStatus by remember { mutableStateOf<String?>(null) }
+                    Text(
+                        "服务账号 JSON（官方要求 type/project_id/private_key/client_email/client_id，type=service_account）",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    EmberTextField(
+                        value = saDraft,
+                        onValueChange = { saDraft = it; saStatus = null },
+                        label = { Text("Service Account JSON") },
+                        minLines = 4,
+                        maxLines = 8,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = {
+                            saStatus = vm.setVertexaiServiceAccountJson(saDraft)
+                        }) { Text("校验并保存") }
+                        TextButton(onClick = {
+                            saDraft = ""
+                            vm.clearVertexaiServiceAccount()
+                            saStatus = null
+                        }) { Text("清除") }
+                    }
+                    if (vertexaiServiceAccountJson.isNotBlank() && saStatus == null) {
+                        Text(
+                            "已保存服务账号",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    saStatus?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
             if (spec.id == "nanogpt") {
                 EmberTextField(

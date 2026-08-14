@@ -82,9 +82,9 @@
     {
       "id": "vertexai",
       "display_name": "Gemini (Vertex)",
-      "description": "Google Cloud Vertex AI（需服务账号，暂走高级自定义）",
+      "description": "Google Cloud Vertex AI（Express=API Key / Full=服务账号 JWT）",
       "icon": "google-color.svg",
-      "protocol": "google",
+      "protocol": "vertexai",
       "auth_type": "bearer",
       "base_url": "https://us-central1-aiplatform.googleapis.com",
       "region_variants": [

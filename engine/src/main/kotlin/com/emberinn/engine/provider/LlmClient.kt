@@ -66,6 +66,8 @@ data class ConnectionProfile(
     val vertexaiAuthMode: String = "express",
     /** 官方 oai_settings.vertexai_express_project_id。 */
     val vertexaiExpressProjectId: String = "",
+    /** 官方 Vertex AI Full 模式服务账号 JSON（secrets.vertexai_service_account_json 的 App 侧存储）。 */
+    val vertexaiServiceAccountJson: String = "",
     /** 官方 oai_settings.nanogpt_provider。 */
     val nanogptProvider: String = "",
     /** 官方 oai_settings.nanogpt_payg_override。 */
@@ -328,7 +330,7 @@ class LlmClient(
     }
 
     /** 官方 openai.js proxySupportedSources（CLAUDE/OPENAI/MISTRALAI/MAKERSUITE/VERTEXAI/DEEPSEEK/XAI/ZAI/MOONSHOT）。 */
-    private val proxySupportedIds = setOf("openai", "anthropic", "google", "mistral", "deepseek", "xai", "zai", "moonshot")
+    private val proxySupportedIds = setOf("openai", "anthropic", "google", "vertexai", "mistral", "deepseek", "xai", "zai", "moonshot")
 
     private fun buildRequest(
         provider: ProviderSpec,
@@ -394,6 +396,61 @@ class LlmClient(
                 if (effectiveStream) params += "alt=sse"
                 val url = base.trimEnd('/') + "/" + apiVersion + "/models/" + model + ":generateContent" +
                     (if (params.isNotEmpty()) "?" + params.joinToString("&") else "")
+                val effort = profile.sampler.reasoningEffort
+                val reasoningBudget = ProviderConverters.calculateGoogleBudgetTokens(
+                    profile.sampler.maxTokens, effort, profile.model,
+                )
+                val body = GoogleRequestBuilder.build(
+                    model = profile.model,
+                    messages = messages,
+                    maxOutputTokens = profile.sampler.maxTokens,
+                    temperature = profile.sampler.temperature,
+                    topP = profile.sampler.topP,
+                    reasoningEffort = effort,
+                    includeReasoning = profile.sampler.showThoughts || profile.sampler.includeReasoning,
+                    mediaQuality = profile.sampler.inlineImageQuality,
+                    reasoningBudget = reasoningBudget,
+                    tools = options.tools.map { GeminiFunctionTool(it.name, it.description, it.parameters) },
+                    toolChoice = options.toolChoice?.let { JsonPrimitive(it) },
+                    enableWebSearch = options.enableWebSearch,
+                    requestImages = options.requestImages,
+                    aspectRatio = options.aspectRatio,
+                    imageSize = options.imageSize,
+                    safetySettings = options.safetySettings,
+                    stop = options.stopSequences,
+                    responseMimeType = if (options.jsonSchema != null) "application/json" else null,
+                    responseSchema = options.jsonSchema?.let { schema ->
+                        schema["value"] as? JsonObject ?: schema
+                    },
+                    topK = profile.sampler.topK.takeIf { it > 0 },
+                    useSystemPrompt = profile.sampler.useSysprompt,
+                )
+                builder.url(url).post(body.toRequestBody("application/json".toMediaType()))
+            }
+            "vertexai" -> {
+                // 官方 src/endpoints/google.js getVertexAIAuth + getGoogleApiConfig：
+                // proxy → Bearer proxy_password；full → 服务账号 JWT→access_token + 项目 URL；
+                // express → x-goog-api-key +（可选）项目 URL。
+                val region = profile.region.ifBlank { "us-central1" }
+                val model = URLEncoder.encode(profile.model, "UTF-8")
+                val endpoint = if (effectiveStream) "streamGenerateContent" else "generateContent"
+                val reverseProxy = profile.reverseProxy.trim()
+                val url: String
+                if (reverseProxy.isNotEmpty()) {
+                    url = reverseProxy.trimEnd('/') + "/v1/publishers/google/models/" + model + ":" + endpoint +
+                        (if (effectiveStream) "?alt=sse" else "")
+                    builder.header("Authorization", "Bearer ${profile.proxyPassword}")
+                } else if (profile.vertexaiAuthMode.ifBlank { "express" } == "full") {
+                    val saText = profile.vertexaiServiceAccountJson
+                    if (saText.isBlank()) error("Vertex AI Full mode requires Service Account JSON")
+                    val sa = VertexAuth.serviceAccount(saText) ?: error("Invalid Service Account JSON")
+                    url = VertexAuth.url(region, model, VertexAuth.projectId(sa), endpoint) +
+                        (if (effectiveStream) "?alt=sse" else "")
+                    builder.header("Authorization", "Bearer ${VertexAuth.accessToken(sa)}")
+                } else {
+                    url = VertexAuth.url(region, model, profile.vertexaiExpressProjectId.ifBlank { null }, endpoint)
+                    if (profile.apiKey.isNotBlank()) builder.header("x-goog-api-key", profile.apiKey)
+                }
                 val effort = profile.sampler.reasoningEffort
                 val reasoningBudget = ProviderConverters.calculateGoogleBudgetTokens(
                     profile.sampler.maxTokens, effort, profile.model,
@@ -747,7 +804,7 @@ class LlmClient(
             "anthropic" -> root["content"]?.jsonArray
                 ?.mapNotNull { it.jsonObject["text"]?.asText() }
                 ?.joinToString("").orEmpty()
-            "google" -> root["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
+            "google", "vertexai" -> root["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
                 ?.get("content")?.jsonObject?.get("parts")?.jsonArray
                 ?.mapNotNull { it.jsonObject["text"]?.asText() }
                 ?.joinToString("").orEmpty()

@@ -14,6 +14,7 @@ import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.LlmClient
 import com.emberinn.engine.provider.ProviderRegistry
+import com.emberinn.engine.provider.VertexAuth
 import com.emberinn.engine.provider.ProviderSpec
 import com.emberinn.engine.prompt.PresetLibrary
 import kotlinx.serialization.builtins.ListSerializer
@@ -25,6 +26,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.ConnectException
+import java.util.UUID
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +107,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     val vertexaiAuthMode: StateFlow<String> = _vertexaiAuthMode
     private val _vertexaiExpressProjectId = MutableStateFlow("")
     val vertexaiExpressProjectId: StateFlow<String> = _vertexaiExpressProjectId
+    private val _vertexaiServiceAccountJson = MutableStateFlow("")
+    val vertexaiServiceAccountJson: StateFlow<String> = _vertexaiServiceAccountJson
     private val _nanogptProvider = MutableStateFlow("")
     val nanogptProvider: StateFlow<String> = _nanogptProvider
     private val _nanogptPaygOverride = MutableStateFlow(false)
@@ -166,6 +170,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _azureOpenaiModel.value = existing?.azureOpenaiModel.orEmpty()
         _vertexaiAuthMode.value = existing?.vertexaiAuthMode?.takeIf { it.isNotBlank() } ?: "express"
         _vertexaiExpressProjectId.value = existing?.vertexaiExpressProjectId.orEmpty()
+        _vertexaiServiceAccountJson.value = existing?.vertexaiServiceAccountJson.orEmpty()
         _nanogptProvider.value = existing?.nanogptProvider.orEmpty()
         _nanogptPaygOverride.value = existing?.nanogptPaygOverride ?: false
         val model = existing?.model?.takeIf { it.isNotBlank() }
@@ -260,7 +265,14 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
                 }
                 _message.value = if (models.isNotEmpty()) "连接成功，共 ${models.size} 个模型" else "连接成功"
             }.onFailure { e ->
-                _message.value = humanError(e)
+                // 官方 openai.js canBypass：openai/custom 源开启 bypass_status_check 时跳过状态检查，
+                // 直接按默认模型继续（不阻断保存/使用）。
+                if (_bypassStatusCheck.value && (spec.id == "openai" || spec.id == "custom")) {
+                    _models.value = spec.defaultModels
+                    _message.value = "已跳过状态检查（bypass_status_check）"
+                } else {
+                    _message.value = humanError(e)
+                }
             }
         }
     }
@@ -341,6 +353,94 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     }
     fun biasPresetsJson(): String = kotlinx.serialization.json.Json { prettyPrint = true }
         .encodeToString(MapSerializer(String.serializer(), ListSerializer(BiasEntry.serializer())), _editingSampler.value.biasPresets)
+
+    /** 官方 createNewLogitBiasPreset：名字唯一，新建空列表并选中。 */
+    fun addBiasPreset(name: String): Boolean {
+        val n = name.trim()
+        if (n.isEmpty() || _editingSampler.value.biasPresets.containsKey(n)) return false
+        _editingSampler.value = _editingSampler.value.copy(
+            biasPresets = _editingSampler.value.biasPresets + (n to emptyList()),
+            biasPresetSelected = n,
+        )
+        return true
+    }
+
+    /** 官方 onLogitBiasPresetDeleteClick：删除后选第一个剩余预设。 */
+    fun deleteBiasPreset(name: String) {
+        val presets = _editingSampler.value.biasPresets - name
+        val selected = if (_editingSampler.value.biasPresetSelected == name) {
+            presets.keys.firstOrNull() ?: ""
+        } else {
+            _editingSampler.value.biasPresetSelected
+        }
+        _editingSampler.value = _editingSampler.value.copy(biasPresets = presets, biasPresetSelected = selected)
+    }
+
+    /** 官方 createNewLogitBiasEntry：追加 {id, text:'', value:0}。 */
+    fun addBiasEntry(preset: String) {
+        val list = _editingSampler.value.biasPresets[preset]?.toMutableList() ?: return
+        list += BiasEntry(id = UUID.randomUUID().toString(), text = "", value = 0.0)
+        _editingSampler.value = _editingSampler.value.copy(biasPresets = _editingSampler.value.biasPresets + (preset to list))
+    }
+
+    /** 官方 createLogitBiasListItem 的 text/value input 保存。 */
+    fun updateBiasEntry(preset: String, id: String, text: String? = null, value: Double? = null) {
+        val list = _editingSampler.value.biasPresets[preset] ?: return
+        val updated = list.map { e ->
+            if (e.id == id) e.copy(text = text ?: e.text, value = value ?: e.value) else e
+        }
+        _editingSampler.value = _editingSampler.value.copy(biasPresets = _editingSampler.value.biasPresets + (preset to updated))
+    }
+
+    /** 官方 createLogitBiasListItem remove 按钮。 */
+    fun removeBiasEntry(preset: String, id: String) {
+        val list = _editingSampler.value.biasPresets[preset] ?: return
+        _editingSampler.value = _editingSampler.value.copy(
+            biasPresets = _editingSampler.value.biasPresets + (preset to list.filterNot { it.id == id }),
+        )
+    }
+
+    /** 官方 sortable 排序（App 移动端用上下移等价；官方 prepend+unshift 为最新在前，这里按列表顺序）。 */
+    fun moveBiasEntry(preset: String, id: String, up: Boolean) {
+        val list = _editingSampler.value.biasPresets[preset]?.toMutableList() ?: return
+        val idx = list.indexOfFirst { it.id == id }
+        val target = if (up) idx - 1 else idx + 1
+        if (idx < 0 || target !in list.indices) return
+        val entry = list.removeAt(idx)
+        list.add(target, entry)
+        _editingSampler.value = _editingSampler.value.copy(biasPresets = _editingSampler.value.biasPresets + (preset to list))
+    }
+
+    /** 官方 onLogitBiasPresetImportFileChange：数组 + text/value 条目；缺 id 补；导入即选中。 */
+    fun importBiasPreset(name: String, jsonText: String): Boolean {
+        val n = name.trim()
+        if (n.isEmpty() || _editingSampler.value.biasPresets.containsKey(n)) return false
+        val arr = runCatching {
+            kotlinx.serialization.json.Json.parseToJsonElement(jsonText) as? kotlinx.serialization.json.JsonArray
+        }.getOrNull() ?: return false
+        val entries = arr.mapNotNull { el ->
+            val obj = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            if (!obj.containsKey("text") || !obj.containsKey("value")) return@mapNotNull null
+            val text = obj["text"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            val value = obj["value"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null
+            val id = obj["id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                ?: UUID.randomUUID().toString()
+            BiasEntry(id = id, text = text, value = value)
+        }
+        _editingSampler.value = _editingSampler.value.copy(
+            biasPresets = _editingSampler.value.biasPresets + (n to entries),
+            biasPresetSelected = n,
+        )
+        return true
+    }
+
+    /** 官方 onLogitBiasPresetExportClick：当前预设条目数组 JSON。 */
+    fun biasPresetExportJson(preset: String): String =
+        kotlinx.serialization.json.Json { prettyPrint = true }
+            .encodeToString(
+                ListSerializer(BiasEntry.serializer()),
+                _editingSampler.value.biasPresets[preset] ?: emptyList(),
+            )
     fun setSendIfEmpty(v: String) { _editingSampler.value = _editingSampler.value.copy(sendIfEmpty = v) }
     fun setNewChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newChatPrompt = v) }
     fun setNewGroupChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newGroupChatPrompt = v) }
@@ -377,6 +477,17 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setAzureOpenaiModel(v: String) { _azureOpenaiModel.value = v }
     fun setVertexaiAuthMode(v: String) { _vertexaiAuthMode.value = v }
     fun setVertexaiExpressProjectId(v: String) { _vertexaiExpressProjectId.value = v }
+    /** 官方 onVertexAIValidateServiceAccount：校验通过才保存；返回错误文案（null=成功）。 */
+    fun setVertexaiServiceAccountJson(v: String): String? {
+        val err = VertexAuth.validate(v)
+        if (err == null) _vertexaiServiceAccountJson.value = v.trim()
+        return err
+    }
+
+    fun clearVertexaiServiceAccount() {
+        _vertexaiServiceAccountJson.value = ""
+    }
+
     fun setNanogptProvider(v: String) { _nanogptProvider.value = v }
     fun setNanogptPaygOverride(v: Boolean) { _nanogptPaygOverride.value = v }
 
@@ -566,6 +677,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             azureOpenaiModel = _azureOpenaiModel.value,
             vertexaiAuthMode = _vertexaiAuthMode.value,
             vertexaiExpressProjectId = _vertexaiExpressProjectId.value,
+            vertexaiServiceAccountJson = _vertexaiServiceAccountJson.value,
             nanogptProvider = _nanogptProvider.value,
             nanogptPaygOverride = _nanogptPaygOverride.value,
             sampler = _editingSampler.value.copy(maxTokens = _maxTokens.value),
