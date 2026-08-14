@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
@@ -302,35 +305,44 @@ fun PresetsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             SettingsTopBar(title = "预设", onBack = onBack, sky = sky)
-            Row(
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            ) {
-                TextButton(onClick = { presetImporter.launch(arrayOf("application/json")) }) { Text("导入预设") }
-                TextButton(onClick = {
-                    val stamp = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
-                    masterExporter.launch("presets_$stamp.json")
-                }) { Text("导出全部") }
-                TextButton(onClick = { masterImporter.launch(arrayOf("application/json")) }) { Text("导入全部") }
-                EmberSwitch(
-                    checked = prefs.bindPresetToConnection,
-                    onCheckedChange = {
-                        prefs = prefs.copy(bindPresetToConnection = it)
-                        PresetPrefsStore.save(context, prefs)
-                    },
-                )
-                Text(
-                    "绑定到连接",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                importMessage?.let {
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TextButton(onClick = { presetImporter.launch(arrayOf("application/json")) }) { Text("导入预设") }
+                    TextButton(onClick = {
+                        val stamp = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+                        masterExporter.launch("presets_$stamp.json")
+                    }) { Text("导出全部") }
+                    TextButton(onClick = { masterImporter.launch(arrayOf("application/json")) }) { Text("导入全部") }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                ) {
+                    EmberSwitch(
+                        checked = prefs.bindPresetToConnection,
+                        onCheckedChange = {
+                            prefs = prefs.copy(bindPresetToConnection = it)
+                            PresetPrefsStore.save(context, prefs)
+                        },
+                    )
                     Text(
-                        it,
+                        "绑定到连接",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(start = 8.dp),
                     )
+                    importMessage?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
             PresetSection(

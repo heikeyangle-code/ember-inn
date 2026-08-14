@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,7 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
+import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderSpec
@@ -536,7 +537,7 @@ fun ProviderDetailScreen(
                 vm::setRequestTokenProbabilities,
             )
             Text("reasoning_effort（推理强度）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("auto", "min", "low", "medium", "high", "max").forEach { value ->
                     FilterChip(
                         selected = sampler.reasoningEffort == value,
@@ -570,7 +571,7 @@ fun ProviderDetailScreen(
             // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
             //      onLogitBiasPresetImportFileChange / onLogitBiasPresetExportClick / createLogitBiasListItem）----
             Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
                     FilterChip(
                         selected = sampler.biasPresetSelected == name,
@@ -601,7 +602,7 @@ fun ProviderDetailScreen(
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { biasNewName = ""; showBiasNew = true }) { Text("新建预设") }
                 TextButton(onClick = { biasImportLauncher.launch(arrayOf("application/json")) }) { Text("导入预设") }
                 TextButton(
@@ -881,7 +882,7 @@ fun ProviderDetailScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             Text("custom_prompt_post_processing（消息合并模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("", "merge", "merge_tools", "semi", "semi_tools", "strict", "strict_tools", "single").forEach { value ->
                     FilterChip(
                         selected = customPromptPostProcessing == value,
@@ -1262,6 +1263,6 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
