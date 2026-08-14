@@ -60,6 +60,7 @@
 - `regex-pipeline-official.mjs`：官方正则整体管线 getRegexedString。
 - `message-formatting-official.mjs`：官方 messageFormatting 纯文本子集（首条宏替换/Note-system 归一/bias 剥离/显示正则位点与 depth/fixMarkdown/encode_tags/reasoning 转义/名字前缀剥离），打桩 substituteParams={{user}}→Alice、getRegexedString=可观测位点标记（脚本头部登记）；805 例。
 - `cfg-prompt-official.mjs`：官方 CFG Scale 纯逻辑（getGuidanceScale 优先级/getCfgPrompt unshift 合并/getCustomSeparator JSON 回退/插入深度），打桩 substituteParams={{user}}→Alice；25 例。
+- `logprobs-official.mjs`：官方 Token 概率解析（parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs），20 例。
 - `authors-note-official.mjs`：官方导演备注默认值 + ANWithWI。
 - `persona-engine-official.mjs`：官方人设纯逻辑（状态/临时锁/连接/解析）。
 - `group-loop-official.mjs`：官方群聊完整循环纯逻辑（自动续写/生成计划）。

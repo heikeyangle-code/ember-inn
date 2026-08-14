@@ -149,6 +149,7 @@ import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.emberinn.engine.media.MediaAttachment
+import com.emberinn.engine.prompt.LogprobsEngine
 import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.prompt.CfgPromptEngine
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -272,6 +273,7 @@ fun ChatScreen(
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showConvertGroupConfirm by remember { mutableStateOf(false) }
+    var showLogprobsSheet by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
     var showMore by remember { mutableStateOf(false) }
     var showCfgSheet by remember { mutableStateOf(false) }
@@ -1246,6 +1248,10 @@ fun ChatScreen(
                     showMore = false
                     showCfgSheet = true
                 }
+                MenuRow(PhosphorIcons.List, "Token 概率（logprobs）") {
+                    showMore = false
+                    showLogprobsSheet = true
+                }
                 if (vm.group != null) {
                     MenuRow(PhosphorIcons.Person, "群聊设置") {
                         showMore = false
@@ -1312,6 +1318,13 @@ fun ChatScreen(
                 vm.saveCfgChat(ch)
                 showCfgSheet = false
             },
+        )
+    }
+
+    if (showLogprobsSheet) {
+        LogprobsSheet(
+            logprobs = vm.logprobs.collectAsState().value,
+            onDismiss = { showLogprobsSheet = false },
         )
     }
 
@@ -5589,4 +5602,94 @@ private fun CfgScaleRow(label: String, value: Float, range: kotlin.ranges.Closed
     }
     EmberSlider(value = value, onValueChange = onChange, valueRange = range, modifier = Modifier.fillMaxWidth())
     Spacer(Modifier.height(8.dp))
+}
+
+
+/** Token 概率查看器（官方 logprobsViewer 的移动端等价）：点击 token 显示备选；数据仅内存保留最近一条。 */
+@Composable
+private fun LogprobsSheet(
+    logprobs: List<LogprobsEngine.TokenLogprobs>?,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember(logprobs) { mutableStateOf<Int?>(null) }
+    EmberBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        ) {
+            Text("Token 概率（logprobs）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "点击 token 查看备选；数据来自本条 AI 回复的流式响应（内存保留最近一条）。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            if (logprobs.isNullOrEmpty()) {
+                Text(
+                    "没有数据：需在 提供商与模型 → 请求 token 概率 开启后重新生成。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text("${logprobs.size} 个 token", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    logprobs.forEachIndexed { i, lp ->
+                        val sel = selected == i
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (sel) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { selected = if (sel) null else i },
+                        ) {
+                            Text(
+                                lp.token.ifBlank { "␣" },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                            )
+                        }
+                    }
+                }
+                selected?.let { idx ->
+                    Spacer(Modifier.height(16.dp))
+                    val lp = logprobs[idx]
+                    Text(
+                        "备选（${lp.token.ifBlank { "␣" }}）",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    lp.topLogprobs.sortedBy { it.second }.forEach { (tok, prob) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        ) {
+                            Text(
+                                tok.ifBlank { "␣" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "%.2f".format(prob),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(56.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

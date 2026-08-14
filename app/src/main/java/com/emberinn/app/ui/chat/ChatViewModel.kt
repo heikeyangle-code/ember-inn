@@ -54,6 +54,7 @@ import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
 import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.prompt.LogprobsEngine
 import com.emberinn.engine.prompt.MessageFormattingEngine
 import com.emberinn.engine.prompt.MessageFormattingSettings
 import com.emberinn.engine.macros.MacroEnv
@@ -173,7 +174,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 上次发送的上下文占用（已用 token, 上限），聊天页显示占比胶囊。 */
     private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
-    val contextUsage: StateFlow<Pair<Int, Int>?> = _contextUsage
+    private val _logprobs = MutableStateFlow<List<LogprobsEngine.TokenLogprobs>?>(null)
+    private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
+    private val _logprobs = MutableStateFlow<List<LogprobsEngine.TokenLogprobs>?>(null)
+    val logprobs: StateFlow<List<LogprobsEngine.TokenLogprobs>?> = _logprobs
 
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
@@ -2592,6 +2596,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _lastReasoning.value = null
         _worldHits.value = emptyList()
         _contextUsage.value = null
+        _logprobs.value = null
         _isStreaming.value = true
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
@@ -2701,6 +2706,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 },
                 onToolCalls = { calls ->
                     if (streamActive) pendingToolCalls = calls
+                },
+                onLogprobs = { chunk ->
+                    if (streamActive) _logprobs.value = (_logprobs.value.orEmpty() + chunk)
                 },
                 stopGroupMemberNames = groupMembers.map { it.name },
                 onDone = { handleStreamDone(streamContinueMode, onFinished) },

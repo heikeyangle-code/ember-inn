@@ -1,6 +1,7 @@
 package com.emberinn.engine.provider
 
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.prompt.LogprobsEngine
 import java.io.File
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
@@ -214,6 +215,7 @@ class LlmClient(
         options: ProviderRequestOptions = ProviderRequestOptions(),
         onReasoning: ((String) -> Unit)? = null,
         onToolCalls: ((JsonElement) -> Unit)? = null,
+        onLogprobs: ((List<LogprobsEngine.TokenLogprobs>) -> Unit)? = null,
     ): StreamSession {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         val call = http.newCall(request)
@@ -223,7 +225,7 @@ class LlmClient(
                     if (!response.isSuccessful) {
                         error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
                     }
-                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning, onToolCalls)
+                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning, onToolCalls, onLogprobs)
                 }
             } catch (e: Exception) {
                 if (!call.isCanceled()) onError?.invoke(e)
@@ -239,6 +241,7 @@ class LlmClient(
         onDone: () -> Unit,
         onReasoning: ((String) -> Unit)? = null,
         onToolCalls: ((JsonElement) -> Unit)? = null,
+        onLogprobs: ((List<LogprobsEngine.TokenLogprobs>) -> Unit)? = null,
     ) {
         val source = response.body?.source() ?: return
         val sb = StringBuilder()
@@ -296,6 +299,15 @@ class LlmClient(
                     continue
                 }
                 try {
+                    // 官方 StreamingProcessor：每个 SSE 块解析 logprobs（OpenAI chat 流式 choices[0].logprobs）
+                    if (onLogprobs != null && protocol == "openai") {
+                        runCatching {
+                            val obj = json.parseToJsonElement(dataText).jsonObject
+                            LogprobsEngine.parseChatCompletionLogprobs(obj, "openai", false)
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.let(onLogprobs)
+                        }
+                    }
                     if (onToolCalls != null) {
                         val parsed = json.parseToJsonElement(dataText)
                         toolAccumulator.parse(parsed)

@@ -223,6 +223,8 @@ class ChatRepository(private val context: Context) {
         cyclePrompt: String = "",
         onReasoning: ((String) -> Unit)? = null,
         onToolCalls: ((JsonElement) -> Unit)? = null,
+        /** 官方 StreamingProcessor：流式每块 logprobs（仅 OpenAI chat 流）。 */
+        onLogprobs: ((List<com.emberinn.engine.prompt.LogprobsEngine.TokenLogprobs>) -> Unit)? = null,
         stopGroupMemberNames: List<String> = emptyList(),
         mediaInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
@@ -645,6 +647,7 @@ class ChatRepository(private val context: Context) {
             options = finalOptions,
             onReasoning = onReasoning,
             onToolCalls = onToolCalls,
+            onLogprobs = onLogprobs,
         )
     }
 

@@ -151,7 +151,11 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 官方 scripts/cfg-scale.js 纯逻辑 1:1 差分移植（getGuidanceScale chat>chara>global 优先级、getCfgPrompt prompt_combine unshift 合并、getCustomSeparator JSON.parse 回退、插入深度；25 例差分）。App 三层接线：全局（CfgPrefs）/角色（按角色 id）/会话（chat_metadata.cfg_*），聊天菜单 → CFG Scale 弹层编辑；发送时 maxContext 扣减 max(neg,pos) token，正向提示按深度注入（textgen/novel 非 openai 路径），textgen 请求体 cfgValues.guidanceScale+negativePrompt、novel 只 guidanceScale（官方 switch 分支）。
 登记（非 1:1 边界）：depth==0 官方直接追加末条（空格规则），App 用 injectionDepth=0 的 in-chat PromptItem 近似；charaCfg 缺失+群聊覆盖官方抛 TypeError，Kotlin 空安全返回 null 档。
 
-### 3.11 群聊 / 其它 ✅
+### 3.11 Token 概率（logprobs） ✅
+官方 openai.js parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs 1:1 差分移植（20 例）；流式 OpenAI chat 每块 choices[0].logprobs 经 LogprobsEngine 解析 → ChatViewModel 内存保留最近一条 → 会话菜单 “Token 概率（logprobs）” 底部面板点击 token 查看备选。
+登记（非 1:1 边界）：官方 viewer 的“从备选重roll/从词前缀重roll”未移植（需 swipe 预填链路）；textgen/novel 非流式 logprobs 未解析（官方 parseAndSaveLogprobs 路径）；text 解析 top_logprobs 整体缺失官方抛 TypeError（响应契约恒带）。
+
+### 3.12 群聊 / 其它 ✅
 群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
 
 ### 3.11 向量扩展（RAG 全量）✅（引擎层）
