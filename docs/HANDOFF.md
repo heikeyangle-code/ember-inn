@@ -297,9 +297,9 @@ tiktoken（JTokkit，O200K/CL100K）按官方 /bias 分支真算。原始 id 数
 仍登记：官方依赖 @agnai/sentencepiece-js / web-tokenizers，本环境无库无法官方差分（编码按规范移植，
 Llama "Hello"=15043 等已知值 sanity 锁定）；web 族 command-r/command-a/qwen2/nemo/deepseek 参考仓库
 无模型文件（官方运行时下载），不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全为空）。
-仍登记：bias_presets 官方编辑弹窗 UI（表存储+选择已接，logit_bias 已进请求体）、show_external_models
-视觉差（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响
-官方在线状态文案（App 无该概念，已存储+UI）、YAML 嵌套/多文档（YamlMerge 支持标量+顶层列表）、
+仍登记：bias_presets 官方弹窗 UX（App 用 JSON 编辑表，结构等价）、show_external_models 视觉差
+（App 模型列表恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响
+官方在线状态文案（App 无该概念，已存储+UI）、YAML 多文档/锚点（嵌套映射与列表已支持，YamlMerge 缩进递归）、
 vertexai 服务账号认证（LlmClient 拒绝）、extensions 键已持久化（官方无 App 侧扩展消费，登记）。
 
 **仍登记（诚实边界）**：
@@ -665,7 +665,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
 - TTS：✅ 朗读前 substituteParams 宏替换已接（官方 tts/index.js:674）；多语音/对话专属/引号专属未实现。
 - 主题配方：字体文件下载、风格档位映射未做。
-- 设置项 UI：reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/headers/
+- 设置项 UI：reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/headers（YAML 嵌套已支持）/bias JSON 编辑/
 custom_prompt_post_processing/sort_models/group_models/show_external_models/bypass_status_check/
 tool_call_recurse_limit/azure_deployment_name/azure_openai_model/vertexai_auth_mode/
 vertexai_express_project_id/nanogpt_provider/nanogpt_payg_override/assistant_impersonation 已接

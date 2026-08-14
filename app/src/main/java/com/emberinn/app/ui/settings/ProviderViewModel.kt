@@ -7,6 +7,7 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.data.ProviderState
 import com.emberinn.engine.prompt.CompletionMessage
+import com.emberinn.engine.provider.BiasEntry
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.LlmClient
@@ -14,6 +15,8 @@ import com.emberinn.engine.provider.ProviderRegistry
 import com.emberinn.engine.provider.ProviderSpec
 import com.emberinn.engine.prompt.PresetLibrary
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonPrimitive
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -318,6 +321,20 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     }
     fun setNamesBehavior(v: Int) { _editingSampler.value = _editingSampler.value.copy(namesBehavior = v) }
     fun setBiasPresetSelected(v: String) { _editingSampler.value = _editingSampler.value.copy(biasPresetSelected = v) }
+    /** bias 预设表整体 JSON 编辑（官方弹窗 UX 登记；结构 = {预设名: [{text, value, id?}]}）。 */
+    fun setBiasPresetsJson(jsonText: String): Boolean {
+        val parsed = runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                .decodeFromJsonElement(
+                    MapSerializer(String.serializer(), ListSerializer(BiasEntry.serializer())),
+                    kotlinx.serialization.json.Json.parseToJsonElement(jsonText),
+                )
+        }.getOrNull() ?: return false
+        _editingSampler.value = _editingSampler.value.copy(biasPresets = parsed)
+        return true
+    }
+    fun biasPresetsJson(): String = kotlinx.serialization.json.Json { prettyPrint = true }
+        .encodeToString(MapSerializer(String.serializer(), ListSerializer(BiasEntry.serializer())), _editingSampler.value.biasPresets)
     fun setSendIfEmpty(v: String) { _editingSampler.value = _editingSampler.value.copy(sendIfEmpty = v) }
     fun setNewChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newChatPrompt = v) }
     fun setNewGroupChatPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(newGroupChatPrompt = v) }

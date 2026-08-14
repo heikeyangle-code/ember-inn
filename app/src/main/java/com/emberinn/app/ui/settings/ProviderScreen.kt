@@ -562,7 +562,7 @@ fun ProviderDetailScreen(
             )
             // ---- 官方 oai_settings 其余预设联动字段 ----
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
-            Text("bias_preset_selected（logit_bias 预设；官方弹窗编辑表为边界）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
                     FilterChip(
@@ -571,6 +571,32 @@ fun ProviderDetailScreen(
                         label = { Text(name) },
                     )
                 }
+            }
+            var biasEditor by remember { mutableStateOf(false) }
+            var biasJson by remember { mutableStateOf("") }
+            TextButton(onClick = {
+                biasJson = vm.biasPresetsJson()
+                biasEditor = true
+            }) { Text("编辑 bias 预设（JSON）") }
+            if (biasEditor) {
+                AlertDialog(
+                    onDismissRequest = { biasEditor = false },
+                    title = { Text("编辑 bias 预设") },
+                    text = {
+                        EmberTextField(
+                            value = biasJson,
+                            onValueChange = { biasJson = it },
+                            label = { Text("{\"预设名\": [{\"text\": \"词\", \"value\": -50}]}") },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            if (vm.setBiasPresetsJson(biasJson)) biasEditor = false
+                        }) { Text("保存") }
+                    },
+                    dismissButton = { TextButton(onClick = { biasEditor = false }) { Text("取消") } },
+                )
             }
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

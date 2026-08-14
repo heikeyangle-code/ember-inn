@@ -1,6 +1,8 @@
 package com.emberinn.engine.provider
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert.assertEquals
@@ -35,6 +37,16 @@ class YamlMergeTest {
         assertEquals(listOf("b"), out.keys.toList())
         val out2 = YamlMerge.excludeKeys(body, "b: whatever")
         assertEquals(listOf("a", "c"), out2.keys.toList())
+    }
+
+    @Test
+    fun `nested maps and lists merge`() {
+        val body = buildJsonObject { put("model", JsonPrimitive("m")) }
+        val out = YamlMerge.merge(body, "provider:\n  order:\n    - a\n    - b\n  allow: true\n")
+        val provider = out["provider"] as? JsonObject
+        assertEquals(true, provider?.get("allow")?.toString()?.toBoolean())
+        assertEquals(2, (provider?.get("order") as? JsonArray)?.size)
+        assertEquals("a", (provider?.get("order") as? JsonArray)?.get(0)?.toString()?.trim('"'))
     }
 
     @Test
