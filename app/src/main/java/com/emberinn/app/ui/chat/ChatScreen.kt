@@ -126,6 +126,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
@@ -2015,14 +2016,62 @@ fun ChatScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.size(8.dp))
-                    Text("TokenHandler 分桶（官方八类）", style = MaterialTheme.typography.labelMedium)
-                    val total = entry.totalTokens.coerceAtLeast(1)
-                    entry.counts.filterValues { it > 0 }.toList().sortedBy { it.first }.forEach { (key, value) ->
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Text(promptSectionLabel(key), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                            Text("$value t（${value * 100 / total}%）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    // 官方 itemizationText.html：五分类 + 百分比图（角色定义/世界书/聊天历史/扩展/bias）
+                    val cats = itemizationCategories(entry)
+                    val catTotal = entry.totalTokens.coerceAtLeast(1)
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                        ) {
+                            cats.forEach { c ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(if (c.tokens > 0) c.tokens.toFloat() / catTotal else 0f)
+                                        .background(c.color),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            cats.forEach { c ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                                    Text(
+                                        c.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = c.color,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        "${c.tokens} t（${c.tokens * 100 / catTotal}%）",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                                c.subRows.forEach { (sub, tokens) ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp)) {
+                                        Text(
+                                            "-- $sub",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Text(
+                                            "$tokens",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
+                    Spacer(Modifier.size(8.dp))
+                    HorizontalDivider()
                     Spacer(Modifier.size(6.dp))
                     Text(
                         "总 Token：${entry.totalTokens}",
@@ -2034,6 +2083,16 @@ fun ChatScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Text(
+                        "Padding：0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "Actual Max Context Allowed：${entry.maxContext - entry.maxTokens}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(Modifier.size(8.dp))
                     HorizontalDivider()
                     Spacer(Modifier.size(6.dp))
@@ -2041,7 +2100,7 @@ fun ChatScreen(
                         "分节消息（identifier / role / tokens，点击展开内容）",
                         style = MaterialTheme.typography.labelMedium,
                     )
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp)) {
                         itemsIndexed(entry.sections) { _, sec ->
                             var expanded by remember(sec) { mutableStateOf(false) }
                             Column(
@@ -2090,22 +2149,27 @@ fun ChatScreen(
                         HorizontalDivider()
                         Spacer(Modifier.size(6.dp))
                         Text("与上一条（${prev.messageIndex}）的差异：", style = MaterialTheme.typography.labelMedium)
+                        val wordDiff = wordDiffAnnotated(prev.rawPrompt, entry.rawPrompt)
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 240.dp)
                                 .verticalScroll(rememberScrollState()),
                         ) {
-                            simpleLineDiff(prev.rawPrompt, entry.rawPrompt).forEach { (tag, line) ->
-                                Text(
-                                    line,
-                                    color = when (tag) {
-                                        '+' -> Color(0xFF7CB342)
-                                        '-' -> Color(0xFFE57373)
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
+                            if (wordDiff != null) {
+                                Text(wordDiff, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                simpleLineDiff(prev.rawPrompt, entry.rawPrompt).forEach { (tag, line) ->
+                                    Text(
+                                        line,
+                                        color = when (tag) {
+                                            '+' -> Color(0xFF7CB342)
+                                            '-' -> Color(0xFFE57373)
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                             }
                         }
                     }
@@ -5027,7 +5091,106 @@ private fun WorldHitLight(color: Color, label: String) {
 }
 
 /** dryRun 分节计数标签（官方 TokenHandler 类型）。 */
-/** 简单 LCS 行级 diff（官方 DiffMatchPatch diff_main 的 App 等价，只标 +/-/空格）。 */
+/** 官方 itemizationText.html 的分组：Character Definitions / World Info / Chat History / Extensions / Bias。 */
+private data class ItemizationCategory(
+    val label: String,
+    val color: Color,
+    val tokens: Int,
+    val subRows: List<Pair<String, Int>> = emptyList(),
+)
+
+private fun itemizationCategories(entry: com.emberinn.app.data.ItemizationEntry): List<ItemizationCategory> {
+    val sec = entry.sections
+    fun tokensOf(ids: Set<String>): Int = sec.filter { it.identifier in ids }.sumOf { it.tokens }
+    fun countOf(ids: Set<String>): Int = sec.count { it.identifier in ids }
+    val worldInfo = tokensOf(setOf("worldInfoBefore", "worldInfoAfter"))
+    val chatHistory = sec.filter { it.identifier.isBlank() || it.identifier == "chatHistory" }.sumOf { it.tokens }
+    val chatCount = sec.count { it.identifier.isBlank() || it.identifier == "chatHistory" }
+    val extIds = setOf("1_memory", "2_floating_prompt", "chromadb", "3_vectors", "4_vectors_data_bank")
+    val extensions = sec.filter { it.identifier in extIds }.sumOf { it.tokens }
+    val bias = entry.counts["bias"] ?: 0
+    val desc = tokensOf(setOf("charDescription"))
+    val pers = tokensOf(setOf("charPersonality"))
+    val scen = tokensOf(setOf("scenario"))
+    val exm = tokensOf(setOf("dialogueExamples"))
+    val exmCount = countOf(setOf("dialogueExamples"))
+    val persona = tokensOf(setOf("personaDescription"))
+    val system = tokensOf(setOf("main"))
+    // 官方 storyStringTokens = finalPrompt - worldInfo - chatHistory - extensions - bias（余量即角色定义/主提示/示例等）
+    val charDefs = (entry.totalTokens - worldInfo - chatHistory - extensions - bias).coerceAtLeast(0)
+    return listOf(
+        ItemizationCategory(
+            "Character Definitions",
+            Color(0xFFCD5C5C),
+            charDefs,
+            listOf(
+                "Description" to desc,
+                "Personality" to pers,
+                "Scenario" to scen,
+                "Examples${if (exmCount > 0) " ($exmCount)" else ""}" to exm,
+                "User Persona" to persona,
+                "System Prompt (Instruct)" to system,
+            ),
+        ),
+        ItemizationCategory("World Info", Color(0xFFFFD700), worldInfo),
+        ItemizationCategory(
+            "Chat History${if (chatCount > 0) " ($chatCount)" else ""}",
+            Color(0xFF98FB98),
+            chatHistory,
+        ),
+        ItemizationCategory(
+            "Extensions",
+            Color(0xFF6495ED),
+            extensions,
+            listOf(
+                "Summarize" to tokensOf(setOf("1_memory")),
+                "Author's Note" to tokensOf(setOf("2_floating_prompt")),
+                "Smart Context" to tokensOf(setOf("chromadb")),
+                "Vector Chats" to tokensOf(setOf("3_vectors")),
+                "Vector Data Bank" to tokensOf(setOf("4_vectors_data_bank")),
+            ),
+        ),
+        ItemizationCategory("{{}} Bias", Color(0xFF9370DB), bias),
+    )
+}
+
+/** 官方 DiffMatchPatch diff_main 的词级 App 等价：LCS 词对齐，删除红底、新增绿底；超大输入回退行级。 */
+private fun wordDiffAnnotated(a: String, b: String): AnnotatedString? {
+    val wa = Regex("""\s+|\S+""").findAll(a).map { it.value }.toList()
+    val wb = Regex("""\s+|\S+""").findAll(b).map { it.value }.toList()
+    if (wa.size.toLong() * wb.size.toLong() > 4_000_000L) return null
+    val n = wa.size
+    val m = wb.size
+    val dp = Array(n + 1) { IntArray(m + 1) }
+    for (i in n - 1 downTo 0) {
+        for (j in m - 1 downTo 0) {
+            dp[i][j] = if (wa[i] == wb[j]) dp[i + 1][j + 1] + 1 else maxOf(dp[i + 1][j], dp[i][j + 1])
+        }
+    }
+    val out = AnnotatedString.Builder()
+    val del = SpanStyle(color = Color(0xFFE57373), background = Color(0x33E57373))
+    val ins = SpanStyle(color = Color(0xFF7CB342), background = Color(0x337CB342))
+    var i = 0
+    var j = 0
+    while (i < n && j < m) {
+        if (wa[i] == wb[j]) {
+            out.append(wa[i])
+            i++
+            j++
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+            out.withStyle(del) { append(wa[i]) }
+            i++
+        } else {
+            out.withStyle(ins) { append(wb[j]) }
+            j++
+        }
+    }
+    while (i < n) { out.withStyle(del) { append(wa[i]) }; i++ }
+    while (j < m) { out.withStyle(ins) { append(wb[j]) }; j++ }
+    return out.toAnnotatedString()
+}
+
+/** 简单 LCS 行级 diff（词级超限时的回退；官方 DiffMatchPatch diff_main 的 App 等价，只标 +/-/空格）。 */
 private fun simpleLineDiff(a: String, b: String): List<Pair<Char, String>> {
     val aa = a.lines()
     val bb = b.lines()
