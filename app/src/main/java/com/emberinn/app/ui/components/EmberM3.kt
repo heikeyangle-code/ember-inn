@@ -9,6 +9,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.TextFieldColors
@@ -38,12 +41,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.theme.LocalVibe
@@ -301,4 +308,100 @@ fun EmberBottomSheet(
         },
         content = content,
     )
+}
+
+/**
+ * 高级主按钮（全局替换 M3 Button）：主色渐变 + 彩色投影 + 大圆角胶囊，
+ * 比默认 M3 按钮更接近商业 App 的主行动按钮。禁用态自动降为中性容器。
+ */
+@Composable
+fun EmberPrimaryButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    expandWidth: Boolean = false,
+    minHeight: Dp = 52.dp,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val shape = RoundedCornerShape(18.dp)
+    val gradient = Brush.linearGradient(listOf(primary, lerp(primary, Color.Black, 0.16f)))
+    Box(
+        modifier = modifier
+            .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
+            .height(minHeight)
+            .emberShadow(
+                color = primary.copy(alpha = 0.30f),
+                radius = 14.dp,
+                offset = DpOffset(0.dp, 5.dp),
+                alpha = 0.55f,
+            )
+            .clip(shape)
+            .background(if (enabled) gradient else MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * 高级次级按钮（全局替换 M3 TextButton 的主要场景）：tonal 容器 + 主色文字，
+ * 与 EmberPrimaryButton 配套使用，弱化“开源默认按钮”观感。
+ */
+@Composable
+fun EmberSecondaryButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    expandWidth: Boolean = false,
+    minHeight: Dp = 50.dp,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = modifier
+            .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
+            .height(minHeight)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

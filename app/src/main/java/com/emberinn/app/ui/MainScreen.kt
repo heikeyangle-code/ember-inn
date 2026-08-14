@@ -8,13 +8,17 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
@@ -30,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
 import com.emberinn.app.ui.settings.AppearancePrefs
@@ -207,14 +212,30 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                Tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
-                    )
+            Column {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    thickness = 0.5.dp,
+                )
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                    tonalElevation = 0.dp,
+                ) {
+                    Tabs.forEachIndexed { index, tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
                 }
             }
         },

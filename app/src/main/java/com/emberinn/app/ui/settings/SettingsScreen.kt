@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -238,69 +239,77 @@ private fun SettingsHome(
     val groups = listOf(
         SettingsGroup(
             "外观与主题",
-            listOf(
-                SettingRow("主题与视觉", "预设主题 · 视觉氛围 · 圆角 · 字体", Color.Unspecified, onOpenAppearance),
-                SettingRow("文字排版", "字号 · 行高 · 标题 · 引用 · 代码 · 间距", Color.Unspecified, onOpenTypography),
-                SettingRow("消息渲染（官方字段）", "正文/引用/下划线/气泡/边框/阴影/模糊强度", Color.Unspecified, onOpenRender),
+            icon = PhosphorIcons.Star,
+            rows = listOf(
+                SettingRow("主题与视觉", "预设主题 · 视觉氛围 · 圆角 · 字体", Color.Unspecified, onOpenAppearance, icon = PhosphorIcons.Star),
+                SettingRow("文字排版", "字号 · 行高 · 标题 · 引用 · 代码 · 间距", Color.Unspecified, onOpenTypography, icon = PhosphorIcons.Edit),
+                SettingRow("消息渲染（官方字段）", "正文/引用/下划线/气泡/边框/阴影/模糊强度", Color.Unspecified, onOpenRender, icon = PhosphorIcons.FileText),
             ),
         ),
         SettingsGroup(
             "提供商与模型",
-            listOf(
-                SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders),
+            icon = PhosphorIcons.Settings,
+            rows = listOf(
+                SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders, icon = PhosphorIcons.Settings),
             ),
         ),
         SettingsGroup(
             "语音",
-            listOf(
+            icon = PhosphorIcons.SpeakerHigh,
+            rows = listOf(
                 SettingRow(
                     "语音朗读（TTS）",
                     if (VoicePrefs.enabled(context)) "已启用 · 本机引擎可试听" else "未启用 · 可在语音页开启自动朗读",
                     Color.Unspecified,
                     onOpenVoice,
+                    icon = PhosphorIcons.SpeakerHigh,
                 ),
             ),
         ),
         SettingsGroup(
             "扩展插件",
-            listOf(
-                SettingRow("扩展插件（交互 HTML 卡片）", "iframe 渲染器 · 头像类 · 原代码折叠", Color.Unspecified, onOpenExtensions),
-                SettingRow("表情精灵", "角色立绘 · 正文表情分类 · 导入/删除", Color.Unspecified, onOpenExpression),
+            icon = PhosphorIcons.MaskHappy,
+            rows = listOf(
+                SettingRow("扩展插件（交互 HTML 卡片）", "iframe 渲染器 · 头像类 · 原代码折叠", Color.Unspecified, onOpenExtensions, icon = PhosphorIcons.BookmarkSimple),
+                SettingRow("表情精灵", "角色立绘 · 正文表情分类 · 导入/删除", Color.Unspecified, onOpenExpression, icon = PhosphorIcons.MaskHappy),
             ),
         ),
         SettingsGroup(
             "服务",
-            listOf(
-                SettingRow("翻译 · 图像 · 向量", "执行层已接入（Libre/DeepL/A1111/gpt-image/RAG）", Color.Unspecified, onOpenServices),
-                SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies),
-                SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo),
-                SettingRow("记忆扩展", "自动摘要 · {{summary}} 注入 · 立即总结", Color.Unspecified, onOpenMemory),
-                SettingRow("作者注释", "全局默认 · 间隔 · 角色备注", Color.Unspecified, onOpenAuthorsNote),
-                SettingRow("预设", "上下文 · 指导 · 采样 · 系统提示 · 推理", Color.Unspecified, onOpenPresets),
-                SettingRow("提示词管理器（Prompt Manager）", "顺序 · 提示项 · 内容/角色/位置/深度/触发", Color.Unspecified, onOpenPromptManager),
-                SettingRow("图片描述（Caption）", "图片生成描述并发送（multimodal）", Color.Unspecified, onOpenCaption),
-                SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex),
+            icon = PhosphorIcons.List,
+            rows = listOf(
+                SettingRow("翻译 · 图像 · 向量", "执行层已接入（Libre/DeepL/A1111/gpt-image/RAG）", Color.Unspecified, onOpenServices, icon = PhosphorIcons.Share),
+                SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies, icon = PhosphorIcons.Send),
+                SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo, icon = PhosphorIcons.Book),
+                SettingRow("记忆扩展", "自动摘要 · {{summary}} 注入 · 立即总结", Color.Unspecified, onOpenMemory, icon = PhosphorIcons.Refresh),
+                SettingRow("作者注释", "全局默认 · 间隔 · 角色备注", Color.Unspecified, onOpenAuthorsNote, icon = PhosphorIcons.Edit),
+                SettingRow("预设", "上下文 · 指导 · 采样 · 系统提示 · 推理", Color.Unspecified, onOpenPresets, icon = PhosphorIcons.Settings),
+                SettingRow("提示词管理器（Prompt Manager）", "顺序 · 提示项 · 内容/角色/位置/深度/触发", Color.Unspecified, onOpenPromptManager, icon = PhosphorIcons.List),
+                SettingRow("图片描述（Caption）", "图片生成描述并发送（multimodal）", Color.Unspecified, onOpenCaption, icon = PhosphorIcons.FileText),
+                SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex, icon = PhosphorIcons.Search),
             ),
         ),
         SettingsGroup(
             "数据与隐私",
-            listOf(
-                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified, onOpenData),
-                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified, onOpenData),
+            icon = PhosphorIcons.User,
+            rows = listOf(
+                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified, onOpenData, icon = PhosphorIcons.User),
+                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified, onOpenData, icon = PhosphorIcons.Share),
             ),
         ),
         SettingsGroup(
             "关于",
-            listOf(
-                SettingRow("版本", "0.1.0", Color.Unspecified),
-                SettingRow("开源仓库", "GitHub", Color.Unspecified) {
+            icon = PhosphorIcons.Book,
+            rows = listOf(
+                SettingRow("版本", "0.1.0", Color.Unspecified, icon = PhosphorIcons.Star),
+                SettingRow("开源仓库", "GitHub", Color.Unspecified, icon = PhosphorIcons.Share) {
                     runCatching {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
                         )
                     }
                 },
-                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified) { showLicense = true },
+                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified, icon = PhosphorIcons.FileText) { showLicense = true },
             ),
         ),
     )
@@ -322,12 +331,28 @@ private fun SettingsHome(
     ) {
         item {
             Column {
-                Text("设置", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "外观、模型、语音与数据都在这里",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("设置", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "外观、模型、语音与数据都在这里",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            "v0.1.0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
                 EmberTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -336,13 +361,13 @@ private fun SettingsHome(
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(PhosphorIcons.Search, contentDescription = "清除")
+                                Icon(PhosphorIcons.Close, contentDescription = "清除")
                             }
                         }
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 )
             }
         }
@@ -373,22 +398,21 @@ private fun SettingsHome(
 private fun QuickActionsCard(actions: List<QuickAction>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(vertical = 14.dp)) {
             Text(
                 "常用",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
             )
-            actions.chunked(2).forEach { row ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { action ->
-                        QuickActionCell(action, modifier = Modifier.weight(1f))
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(6.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+                actions.forEach { action ->
+                    QuickActionCell(action, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -397,27 +421,27 @@ private fun QuickActionsCard(actions: List<QuickAction>) {
 
 @Composable
 private fun QuickActionCell(action: QuickAction, modifier: Modifier = Modifier) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clip(MaterialTheme.shapes.large)
+            .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = action.onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(vertical = 8.dp),
     ) {
         Box(
-            modifier = Modifier.size(34.dp).clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+            modifier = Modifier.size(46.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 action.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(21.dp),
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(action.title, style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(7.dp))
+        Text(action.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -426,29 +450,52 @@ private data class SettingRow(
     val subtitle: String,
     val dot: Color,
     val onClick: (() -> Unit)? = null,
+    val icon: ImageVector? = null,
 )
 
 private data class SettingsGroup(
     val title: String,
     val rows: List<SettingRow>,
+    val icon: ImageVector? = null,
 )
 
 @Composable
 private fun SettingsGroupCard(group: SettingsGroup) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column {
-            Text(
-                group.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp),
+            ) {
+                if (group.icon != null) {
+                    Box(
+                        modifier = Modifier.size(30.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            group.icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(group.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
             group.rows.forEachIndexed { index, row ->
-                if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                if (index > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                    )
+                }
                 SettingRowView(row)
             }
         }
@@ -462,9 +509,23 @@ private fun SettingRowView(row: SettingRow) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = row.onClick != null, onClick = { row.onClick?.invoke() })
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        if (row.dot != Color.Unspecified) {
+        if (row.icon != null) {
+            Box(
+                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    row.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(19.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+        } else if (row.dot != Color.Unspecified) {
             Box(
                 modifier = Modifier.size(10.dp).clip(CircleShape).background(row.dot),
             )
@@ -483,12 +544,18 @@ private fun SettingRowView(row: SettingRow) {
             }
         }
         if (row.onClick != null) {
-            Text(
-                "›",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp),
-            )
+            Box(
+                modifier = Modifier.size(24.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    PhosphorIcons.CaretRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }
