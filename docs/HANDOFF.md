@@ -593,7 +593,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 ## 5. 完成度总览
 
 - 引擎/差分基线：引擎测试 328 例全绿；差分 85 组 / 1969 例对拍全绿（基线定义与细分见第 2 节，功能明细见第 3/4 节，完成项不在此重复）。
-- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除）与 dryRun 预览（聊天会话菜单→提示词预览）已做；编辑表单已对齐官方 PromptManager popup：identifier 自动 uuid 只读、name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 项只读）、main/nsfw/jailbreak/enhanceDefinitions 支持官方 Reset 恢复默认。
+- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除）与 dryRun 预览（聊天会话菜单→提示词预览）已做；编辑表单已对齐官方 PromptManager popup：identifier 自动 uuid 只读、name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 项只读）、main/nsfw/jailbreak/enhanceDefinitions 支持官方 Reset 恢复默认；新提示项 system_prompt=false（官方 handleNewPrompt 语义）、删除二次确认、marker 项编辑/开关按官方 isPromptEditAllowed/isPromptToggleAllowed 强制名单限制。
 - 用户决策延期：Custom CSS + Moving UI（见 8.9）；Claude/Gemini 官方 web tokenizer（cl100k 回退，用户豁免，只影响估算精度）。
 - 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 节更新基线。
 

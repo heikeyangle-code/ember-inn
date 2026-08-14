@@ -61,6 +61,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
     var order by remember(selectedChar) { mutableStateOf(PromptManagerPrefs.order(context, selectedChar)) }
     var editTarget by remember { mutableStateOf<PromptItem?>(null) }
     var showEdit by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<PromptItem?>(null) }
     var newOrderId by remember { mutableStateOf("") }
 
     fun save(p: List<PromptItem>, o: List<PromptOrderEntry>) {
@@ -212,15 +213,28 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 PromptManagerPrefs.saveOrder(context, selectedChar, order)
                             },
                             onEdit = { editTarget = item; showEdit = true },
-                            onDelete = {
-                                prompts = prompts.filterIndexed { j, _ -> j != i }
-                                PromptManagerPrefs.savePrompts(context, prompts)
-                            },
+                            onDelete = { deleteTarget = item },
                         )
                     }
                 }
             }
         }
+    }
+
+    deleteTarget?.let { doomed ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("删除提示项？") },
+            text = { Text("将删除「${doomed.name.ifBlank { doomed.identifier }}」，不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    prompts = prompts.filterNot { it.identifier == doomed.identifier }
+                    PromptManagerPrefs.savePrompts(context, prompts)
+                    deleteTarget = null
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("取消") } },
+        )
     }
 
     if (showEdit) {
@@ -335,7 +349,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         role = role,
                         enabled = true,
                         marker = target.marker,
-                        systemPrompt = target.systemPrompt,
+                        systemPrompt = if (isNew) false else target.systemPrompt,
                         injectionPosition = position.toIntOrNull(),
                         injectionDepth = depth.toIntOrNull(),
                         injectionOrder = injectionOrder.toIntOrNull() ?: 100,
@@ -363,12 +377,22 @@ private fun PromptRow(
     onEdit: (() -> Unit)?,
     onDelete: (() -> Unit)?,
 ) {
+    // 官方 isPromptEditAllowed / isPromptToggleAllowed：marker 项默认不可编辑/开关，
+    // 强制名单（charDescription/charPersonality/scenario/personaDescription/worldInfoBefore/After，
+    // toggle 另含 main/chatHistory/dialogueExamples）除外。
+    val forceEdit = setOf(
+        "charDescription", "charPersonality", "scenario", "personaDescription",
+        "worldInfoBefore", "worldInfoAfter",
+    )
+    val forceToggle = forceEdit + setOf("main", "chatHistory", "dialogueExamples")
+    val editAllowed = item.identifier in forceEdit || !item.marker
+    val toggleAllowed = !(item.marker && item.identifier !in forceToggle)
     Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = onEdit != null) { onEdit?.invoke() }
+                .clickable(enabled = onEdit != null && editAllowed) { onEdit?.invoke() }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -389,7 +413,7 @@ private fun PromptRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            EmberSwitch(checked = enabledInOrder, onCheckedChange = onToggleOrder)
+            EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onCheckedChange = onToggleOrder)
             if (userDefined && onDelete != null) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
                     Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
