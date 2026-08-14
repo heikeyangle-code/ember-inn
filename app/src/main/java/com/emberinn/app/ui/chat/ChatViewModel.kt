@@ -16,6 +16,7 @@ import com.emberinn.app.data.ChatPromptFactory
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ChatRepository
+import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.DisplayCacheVersion

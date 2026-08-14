@@ -5510,7 +5510,7 @@ private fun CfgScaleSheet(
                 listOf(0 to "会话", 1 to "角色", 2 to "全局").forEach { (v, label) ->
                     FilterChip(
                         selected = v in combine,
-                        onClick = { combine = if (v in combine) combine - v else combine + v },
+                        onClick = { combine = (if (v in combine) combine - v else combine + v).toMutableSet() },
                         label = { Text(label) },
                     )
                 }
