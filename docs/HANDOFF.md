@@ -1,8 +1,9 @@
 # 交接清单（会话上下文耗尽时使用）
 
-> 接手顺序：第 0 节一眼看懂（含 0.1 工作准则）→ 1 常用命令 → 2 差分怎么用 → 3/4 现状 → 5 完成度总览。
+> 接手顺序：0 一眼看懂/准则 → 1 命令 → 2 差分 → 3 引擎现状 → 4 App/UI 现状 → 5 完成度 → 6 不一致/边界登记 → 7 渲染/HTML 卡片 → 8 维护速记。
+> 本文件只写现状与结论；过程日志、时间戳、“本轮修复/此前漏传”一律不写。官方基线见 0.2。
 
-## 0. 一眼看懂：这是什么、怎么保证 1:1
+## 0. 一眼看懂：架构与 1:1 保证
 
 ```mermaid
 flowchart LR
@@ -11,1065 +12,332 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 328 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 362 测全绿]
 ```
 
-- 一句话：**引擎和官方 SillyTavern 1:1（必须差分），App/UI 层对照官方功能与设置实现官方语义（样式用 Ember 风格）**。
-- “差分”= 同一输入，官方 JS 与引擎 Kotlin 各跑一遍，输出必须逐字一致；fixture 由脚本生成、不许手改。
-- 官方基线：release `8172dcd`（SillyTavern **1.18.0**），本文档全部结论以此版本为准（见 0.2 版本基线）；酒馆更新后重跑 `node scripts/diff/*.mjs`，红的就是要移植的差异。
+- 一句话：**引擎与官方 SillyTavern 1:1（必须差分）；App/UI 对照官方功能与设置实现官方语义，样式用 Ember 风格。**
+- “差分”= 同一输入，官方 JS 与引擎 Kotlin 各跑一遍，输出逐字一致；fixture 由脚本生成、禁止手改。
+- 官方基线：release `8172dcd`（SillyTavern **1.18.0**）；酒馆更新后重跑 `node scripts/diff/*.mjs`，红的就是要移植的差异。
 
-### 0.1 工作准则（以后每轮都按这个做）
+### 0.1 工作准则
 
-1. **引擎层（engine/）改动 = 官方 1:1 + 差分，缺一不可**
-   - 先精读官方源码（~/sillytavern-ref，**release 8172dcd = SillyTavern 1.18.0**，见 0.2 版本基线），逐字提取对应纯函数。
-   - 写 `scripts/diff/*-official.mjs`（函数体逐字摘自官方；任何打桩/未覆盖分支登记在脚本头部注释）。
-   - 生成 fixture（`node scripts/diff/*.mjs`）→ Kotlin 移植 → `*DiffTest` 同输入对拍 → `./gradlew :engine:test` 全绿。
-   - fixture 只能由脚本生成，不许手改；新功能先加 case 再实现。
-   - **穷举是硬性要求，不是抽样**：每个差分脚本的用例必须覆盖该函数所有可枚举分支，至少包含——空输入、单元素、多元素、极值（0/-1/上限/超上限）、非法/异常输入、所有布尔开关的开关组合、所有厂商/协议分支、嵌套与边界（递归深度、长度截断、空字符串/空白、特殊字符/正则元字符、大小写、Unicode）。禁止只测 happy path；新功能必须先穷举设计 case 再实现，否则视为未完成。
-   - 没有差分验证，就不许声称该引擎能力“1:1 官方”。
-   - **任何引擎改动（包括改一行/加一个字段）**：必须重跑受影响脚本重新生成 fixture + 全量 `./gradlew :engine:test`；CI 全绿才算完成。
-2. **App/UI 层 = 对照官方功能与设置实现官方语义，样式用 Ember 风格**
-   - 每个官方功能先看官方实现（settings.html / index.js / power-user.js / script.js 对应位点），把官方可调字段、默认值、交互行为一一列出。
-   - 官方字段/默认值/行为必须一致；仅视觉样式（组件/图标/排版）用现有 Ember 风格。
-   - 数据模型与官方存储格式一致（JSONL/角色卡扩展字段/extra.*），能直接互导。
-   - **能引擎干的活尽量引擎干，App 只做接线**：官方逻辑（判定/组装/转换/预算/状态机）一律下沉 engine 并差分；App 层不得重复实现官方逻辑，只读引擎结果并驱动 UI。
-3. **交接文档同步更新，如实写状态**
-   - 完成一项就更新对应章节：差分组数/例数、引擎测试数、功能做到什么地步（1:1 / 部分 / 未做）。
-   - **只写“现状”**：文档面向从零接手的人，读完后要能直接接着干；写清楚“现在是什么状态、能做什么、缺口是什么、怎么验证”，不要写“前几轮出了什么 bug、怎么修的、哪一天做的”。
-   - 更新时只改相应章节的现状描述，不新增“补充/追加/更新记录”式日志节；不写时间戳、commit 号、“本轮修复”“此前漏传”这类过程措辞。技术结论（根因、边界、登记缺口）保留，但表述为现状。
-4. **用户豁免项（仅这两项，其余必须做）**
-   - Claude/Gemini 官方 web tokenizer（当前用 cl100k 回退，只影响估算精度）。
-   - Custom CSS + Moving UI（用户决策延期，见 8.9；等价方案 A/B/C 待选）。
-5. **自主工作不停止**：对照官方逐项审计“还没做/写了没接/接了不对”，能做就做；涉及引擎的按第 1 条走，涉及 App/UI 的按第 2 条走。
+1. **引擎层改动 = 官方 1:1 + 差分，缺一不可**：精读官方源码 → 写 `scripts/diff/*-official.mjs`（函数体逐字摘自官方；打桩/未覆盖分支登记脚本头部）→ `node scripts/diff/*.mjs` 生成 fixture（禁止手改）→ Kotlin 移植 → `*DiffTest` 同输入对拍 → `./gradlew :engine:test` 全绿。穷举分支（空/单/多/极值/非法/布尔组合/厂商分支/嵌套/边界/Unicode）是硬性要求；**无差分不声称 1:1**；任何引擎改动（含改一行）必须重生成受影响 fixture + 全量测试。
+2. **App/UI 层 = 官方字段/默认值/行为一致，样式 Ember**：先看官方对应位点（settings.html/index.js/power-user.js/script.js），数据模型与官方存储格式互导；**能引擎干的尽量引擎干，App 只做接线与渲染**，不得重复实现官方逻辑。
+3. **交接文档只写现状**：完成即更新对应章节状态（1:1/部分/未做）与差分组/例数；不新增“补充/追加/更新记录”式日志。
+4. **用户豁免项（仅两项）**：Claude/Gemini 官方 web tokenizer（cl100k 回退，只影响估算精度）；Custom CSS + Moving UI（延期，见 6.4）。
+5. **自主工作不停止**：对照官方逐项审计“没做/写了没接/接了不对”，能做就做；引擎按 1、App 按 2。
 
-### 0.2 版本基线（文档全部内容基于哪个官方版本）
+### 0.2 版本基线
 
-- **官方基线：SillyTavern release `8172dcd`（版本 1.18.0）**，源码在 `/data/data/com.termux/files/home/sillytavern-ref`。
-- 本文档（HANDOFF）全部“已对齐/已差分/已实现”结论均以该版本为准；引擎差分 fixture 也是从该版本逐字提取生成的。
-- 每个差分脚本头部注释登记：提取的官方文件（如 `openai.js:561-640`）、函数名、打桩清单；升级官方版本时以脚本头部为准核对。
-- 官方更新后的标准流程（写进日常，不允许跳过）：
-  1. 更新 `/data/data/com.termux/files/home/sillytavern-ref` 到新 release，记录新 commit/版本号。
-  2. 重跑全部 `node scripts/diff/*.mjs` 重新生成 fixture；红/变化的 case 就是官方行为差异，逐个对照新源码移植到 Kotlin。
-  3. 新版本新增的功能：按第 1 条“先穷举 case → 差分脚本 → Kotlin 实现”流程新增差分，不许直接抄代码不差分。
-  4. 引擎改动后跑 `./gradlew :engine:test` 全量；App/UI 改动等 CI（assembleDebug + assembleRelease）。
-  5. 更新 0.2 版本基线（新 commit/版本号）、第 2 节差分组数/例数、第 5 节完成度，并把官方更新涉及的模块状态如实刷新（1:1 / 部分 / 未做）。
+- 基线 = SillyTavern release `8172dcd`（1.18.0），源码 `/data/data/com.termux/files/home/sillytavern-ref`；全部“已对齐/已差分/已实现”结论与 fixture 均以此为准。
+- 官方更新流程（不可跳过）：①更新 ref 到新 release 并记录 commit；②重跑全部 `scripts/diff/*.mjs` 重新生成 fixture，红/变的就是差异，逐个对照移植；③新功能按“先穷举 case → 差分 → 实现”流程；④`./gradlew :engine:test` 全量 + App 等 CI；⑤更新 0.2 基线、第 2 节组/例数、第 5 节完成度与相关模块状态。
 
 ## 1. 项目与常用命令
 
-- 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端
-- 本地：`/data/data/com.termux/files/home/ember-inn`；远程：github.com/heikeyangle-code/ember-inn（main，公开）
-- 官方源码参照：`/data/data/com.termux/files/home/sillytavern-ref`（release 分支；基线 = release `8172dcd` / SillyTavern 1.18.0，见 HANDOFF 0.2）
-
-常用命令：
+- 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `~/ember-inn`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `~/sillytavern-ref`（release 8172dcd / 1.18.0）。
+- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **362 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
 
 ```sh
-# 引擎测试（本机可跑：Java 21 + Gradle 9.7；App 编译只能靠 CI）
 cd ~/ember-inn && ./gradlew :engine:test
-
-# 改引擎/官方发版后：重新生成差分 fixture + 打包官方预设
-node scripts/diff/*.mjs
-node scripts/build-presets.mjs
-
-# 推送（本机已 gh auth setup-git；网络不稳失败就重试）
-git push origin main
-
-# 看 CI：只有改 app/engine/gradle/工作流才自动触发；纯文档改动不会跑 CI
-gh run list --limit 3
-# 需要手工跑（比如只想验证一次）：
-gh workflow run 328789880 --ref main
+node scripts/diff/*.mjs          # 改引擎/官方发版后重新生成 fixture
+node scripts/build-presets.mjs   # 打包官方预设
+git push origin main             # 本机已 gh auth setup-git；网络不稳重试
+gh run list --limit 3            # 看 CI（改 app/engine/gradle/工作流才自动触发；纯文档不触发）
+gh workflow run 328789880 --ref main   # 需要手工跑一次
 ```
 
-CI：`.github/workflows/build.yml`，两个 job：`engine-test`（:engine:test）与 `build`（单测 + assembleDebug + assembleRelease + 出 APK）。push 自动触发条件见工作流 `on.push.paths`；纯文档改动不触发。当前以 `gh run list` 为准。引擎本地 **328 测全绿**。
+- CI：`.github/workflows/build.yml`，job `engine-test`（:engine:test）+ `build`（单测 + assembleDebug/Release + 出 APK）；push 自动触发条件见 `on.push.paths`。
 
-## 2. 什么是差分验证（新会话必读）
+## 2. 差分验证（新会话必读）
 
-**目标**：EmberInn 是酒馆兼容软件，引擎逻辑必须和官方 SillyTavern 1:1。
-“差分验证” = 同一输入，官方 JS 跑一遍、我们 Kotlin 跑一遍，输出必须一致。
-手写期望值的单测只是自证；差分才是“官方说对才算对”的机器验证。
+**目标/机制**：EmberInn 引擎逻辑必须与官方 1:1；“差分”= 同输入官方 JS 与 Kotlin 各跑一遍、输出逐字一致。手写期望值的单测只是自证，差分才是机器验证。
 
-**怎么用**：
-1. `scripts/diff/*-official.mjs` 从 `~/sillytavern-ref` 逐字提取官方函数，桩掉 DOM/全局依赖，生成 fixture：`engine/src/test/resources/diff/*.json`
-2. `engine/src/test/.../*DiffTest.kt` 读 fixture，调 Kotlin 引擎逐例对比
-3. 官方发版 / 我们改代码后：`node scripts/diff/*.mjs` 重新生成 fixture → `./gradlew :engine:test`
-4. fixture 只能由脚本生成，不许手改；新功能先加 case 再实现
+**用法**：①`scripts/diff/*-official.mjs` 从 `~/sillytavern-ref` 逐字提取官方函数、桩掉 DOM/全局依赖 → 生成 `engine/src/test/resources/diff/*.json`；②`*DiffTest.kt` 读 fixture 调 Kotlin 引擎逐例对比；③官方发版/改代码后重生成 fixture → `:engine:test`；④fixture 只能脚本生成，不许手改，新功能先加 case 再实现。
 
-**已覆盖（85 组差分 fixture，共 1969 例对拍，全部通过）**：
-> 说明：历史日志里的“官方基准 8xx”是当时的累计口径，不等于 fixture 用例数；当前以 85 组 / 1969 例（机器数）为准。
+**差分分组清单（91 行，表内合计 2856 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例。**
 
-| 组 | 脚本 | 测试 | 例数 |
-> 注：脚本数 69 个（prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类）；合计 1969 例。
-| instruct 提示词 | instruct-official.mjs | InstructModeDiffTest | 36 |
-| 世界书纯逻辑 | worldinfo-official.mjs | WorldInfoDiffTest | 40 |
-| 世界书整体扫描 | worldinfo-scan-official.mjs | WorldInfoScanDiffTest | 29 |
-| 世界书正则深度（regexDepth） | worldinfo-regex-depth-official.mjs | WorldInfoRegexDepthDiffTest | 40 |
-| outlet 宏（{{outlet::key}}） | outlet-macro-official.mjs | OutletMacroDiffTest | 5 |
-| 世界书文件 | worldinfo-file-official.mjs | WorldInfoFileDiffTest | 2 |
-| 正则 | regex-official.mjs | RegexDiffTest | 20 |
-| PNG 角色卡 | card-png-official.mjs | CardPngDiffTest | 6 |
-| 宏 e2e | macros-official.mjs | MacroDiffTest | 158 |
-| {{pick}} 确定性 | pick-official.mjs | PickDiffTest | 5 |
-| 编辑器排序 | editor-sort-official.mjs | EditorSortDiffTest | 6 |
-| 快捷回复自动执行选择 | auto-execute-official.mjs | AutoExecuteDiffTest | 4 |
-| 向量工具函数 | vector-utils-official.mjs | VectorUtilsDiffTest | 14 |
-| 角色卡 V2 归一 | char-v2-official.mjs | CharV2DiffTest | 5 |
-| 世界书正则解析 | regex-parse-official.mjs | RegexParseDiffTest | 9 |
-| 作用域宏内容裁剪 | macro-trim-official.mjs | MacroTrimDiffTest | 7 |
-| Anthropic 请求体 | anthropic-body-official.mjs | AnthropicBodyDiffTest | 17 |
-| Gemini 请求体 | gemini-body-official.mjs | GeminiBodyDiffTest | 16 |
-| 聊天历史填充 | chat-history-pop-official.mjs | ChatHistoryPopDiffTest | 5 |
-| 示例对话填充 | dialogue-examples-pop-official.mjs | DialogueExamplesPopDiffTest | 4 |
-| YAML 角色卡导入 | yaml-import-official.mjs | YamlImportDiffTest | 5 |
-| 提示词组装合并 | prepare-prompts-official.mjs | PreparePromptsDiffTest | 7 |
-| CharX 角色卡导入 | charx-import-official.mjs | CharXImportDiffTest | 9 |
-| BYAF 纯逻辑 | byaf-macros-official.mjs | ByafMacrosDiffTest | 14 |
-| BYAF 聊天导入 | byaf-chat-official.mjs | ByafChatDiffTest | 5 |
-| BYAF 角色卡组装 | byaf-card-official.mjs | ByafCardDiffTest | 4 |
-| PromptManager 名字规则 | prompt-name-official.mjs | PromptNameDiffTest | 28 |
-| 表情精灵引擎 | expression-engine-official.mjs | ExpressionEngineDiffTest | 19 |
-| 表情分类文本预处理 | expression-classify-official.mjs | ExpressionClassifyDiffTest | 8 |
-| 群聊成员激活 | group-activation-official.mjs | GroupActivationDiffTest | 15 |
-| 群聊角色卡合并 | group-cards-official.mjs | GroupCardsDiffTest | 8 |
-| 群聊深度提示 | group-depth-official.mjs | GroupDepthDiffTest | 7 |
-| 精灵存储/Risu 导入 | sprites-storage-official.mjs | SpriteStorageDiffTest | 9 |
-| 角色卡字段聚合 | character-fields-official.mjs | CharacterFieldsDiffTest | 8 |
-| JSON 角色卡导入 | json-import-official.mjs | JsonImportDiffTest | 10 |
-| BYAF 完整导入 | byaf-import-official.mjs | ByafImportDiffTest | 8 |
-| 斜杠转义判定 | slash-escape-official.mjs | SlashEscapeDiffTest | 27 |
-| 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
-| 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 444 |
-| Prompt Manager 纯逻辑 | prompt-manager-official.mjs | PromptManagerDiffTest | 29 |
-| NovelAI 请求体 | novel-body-official.mjs | NovelBodyDiffTest | 12 |
-| 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
-| JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
-| SSE 流解析 | sse-stream-official.mjs | SseStreamDiffTest | 16 |
-| 正则整体管线 | regex-pipeline-official.mjs | RegexPipelineDiffTest | 10 |
-| 导演备注 | authors-note-official.mjs | AuthorsNoteDiffTest | 20 |
-| 人设引擎 | persona-engine-official.mjs | PersonaEngineDiffTest | 26 |
-| 群聊完整循环 | group-loop-official.mjs | GroupLoopDiffTest | 11 |
-| OpenAI 请求体（全厂商） | openai-params-official.mjs | OpenAiParamsDiffTest | 27 |
-| 工具 token 预分配 | tool-budget-official.mjs | ToolBudgetDiffTest | 4 |
-| ChatCompletionPipeline 计划 | chat-pipeline-official.mjs | ChatPipelineDiffTest | 5 |
-| 媒体附件纯逻辑 | media-engine-official.mjs | MediaEngineDiffTest | 17 |
-| 媒体内联（OpenAI） | media-inline-official.mjs | MediaInlineDiffTest | 7 |
-| 媒体 token 成本 | media-cost-official.mjs | MediaCostDiffTest | 18 |
-| 特殊协议请求体（Mistral/xAI/AI21/Cohere） | special-bodies-official.mjs | SpecialBodiesDiffTest | 23 |
-| OpenAI 文本补全请求体 | text-completion-body-official.mjs | TextCompletionBodyDiffTest | 6 |
-| BYAF 资源提取 | byaf-assets-official.mjs | ByafAssetsDiffTest | 6 |
-| 提示词总装整链（prepareOpenAIMessages+populateChatCompletion，含工具/媒体/推理签名/continue-nudge/空历史/预算裁剪/AN 位置/多 system 分支） | prepare-messages-official.mjs | PromptPipelineDiffTest | 29 |
-| 媒体内容块转换（Claude/Gemini） | media-convert-official.mjs | MediaConvertDiffTest | 25 |
-| 消息转换整链（Claude/Gemini） | prompt-converters-official.mjs | PromptConvertersDiffTest | 41 |
-| 思考入提示词（PromptReasoning.addToMessage） | prompt-reasoning-official.mjs | PromptReasoningDiffTest | 7 |
-| 消息缓存深度（Claude/OpenRouter） | prompt-converters-official.mjs | PromptConvertersDiffTest | 4+3 |
-| 其余提供商转换器+合并+预算+OpenRouter | prompt-converters-official.mjs | PromptConvertersDiffTest | 61 |
-| 消息清理（cleanUpMessage/cleanGroupMessage/fixMarkdown） | cleanup-official.mjs | CleanUpDiffTest | 49 |
-| 响应数据提取（extractMessageFromData/extractJsonFromData） | response-data-official.mjs | ResponseDataDiffTest | 31 |
-| 自动续写判定（shouldAutoContinue） | auto-continue-official.mjs | AutoContinueDiffTest | 11 |
-| 停用词全链（getStoppingStrings/getCustomStoppingStrings） | stopping-strings-official.mjs | StoppingStringsDiffTest | 14 |
-| 偏置全链（getBiasStrings/extractMessageBias/removeMacros） | bias-official.mjs | BiasDiffTest | 17 |
-| 流式响应/错误解析（getStreamingReply/tryParseStreamingError） | streaming-response-official.mjs | StreamingResponseDiffTest | 20 |
-| Reasoning 解析（parse/remove/formatReasoning） | reasoning-official.mjs | ReasoningDiffTest | 13 |
-| Token 预算（getMaxContext/Response/PromptTokens） | token-budget-official.mjs | TokenBudgetDiffTest | 17 |
-| 滑动/自动过滤（swipe/generatedTextFiltered/extractMultiSwipes） | swipe-official.mjs | SwipeDiffTest | 29 |
-| 工具调用增量解析（ToolManager.parseToolCalls） | tool-calls-official.mjs | ToolCallDiffTest | 8 |
-| 记忆扩展纯逻辑（memory） | memory-official.mjs | MemoryDiffTest | 14 |
-| append_title 标题追加（coreChat.map） | append-title-official.mjs | AppendTitleDiffTest | 5 |
-| 作者注释注入判定（authors-note.shouldInject） | authors-note-inject-official.mjs | AuthorsNoteInjectDiffTest | 14 |
-| 扩展提示 set/get + /inject 参数映射 | extension-prompt-official.mjs | ExtensionPromptDiffTest | 19 |
-| 世界书 EM 示例（baseChatReplace+unshift/push） | em-examples-official.mjs | EmExamplesDiffTest | 9 |
-| 深度提示注入规格（角色/群聊/世界书） | depth-inject-official.mjs | DepthPromptDiffTest | 6 |
-| setOpenAIMessages 构造循环（names 各模式/isSameModel/narrator/工具过滤/forceAvatar/回车清理） | set-openai-messages-official.mjs | SetOpenAiMessagesDiffTest | 16 |
-| 工具调用循环决策（canPerformToolCalls/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息） | tool-loop-official.mjs | ToolLoopDiffTest | 17 |
-| 世界书计时效果类（checkTimedEffects/setTimedEffects/setTimedEffect/isEffectActive/cleanUp） | worldinfo-timed-effects-official.mjs | WorldInfoTimedEffectsDiffTest | 14 |
-| StoryString 模板渲染（renderStoryString，Handlebars trim/helperMissing 语义） | story-string-official.mjs | StoryStringDiffTest | 11 |
-| 预设应用全链（类型识别/multi-section 校验/context/instruct/sysprompt/reasoning/chat-completion 应用与迁移/保存过滤/名字匹配/textgen·novel·kobold 采样器应用/生成参数/autoSelect/敏感字段） | preset-apply-official.mjs | PresetApplyDiffTest | 99 |
-| YAML 合并/剔除（util.js mergeObjectWithYaml/excludeKeysByYaml，官方 'yaml' 包：锚点/别名解析、<< 保留字面键、多文档静默） | yaml-merge-official.mjs | YamlMergeDiffTest | 11 |
-| Vertex AI 认证（google.js generateJWTToken/getProjectIdFromServiceAccount/getVertexAIAuth/getGoogleApiConfig，Date.now 冻结 + access_token 打桩） | vertex-auth-official.mjs | VertexAuthDiffTest | 6 |
-| textgen 请求头（additional-headers.js getMancerHeaders/getInfermaticAIHeaders/getFeatherlessHeaders） | textgen-headers-official.mjs | TextgenHeadersDiffTest | 6 |
-
-**分支级覆盖审计与打桩登记（防漏机制）**
-- 规则：差分脚本内任何打桩/未覆盖分支，必须登记在本节 + 脚本头部注释；未登记即视为未完成，不许声称该分支 1:1。
-- prepare-messages（总装整链，29 例）：populationInjectionPrompts 已用官方真函数；getExtensionPrompt(IN_CHAT) 的过滤/拼接/wrap/substituteParams 已由 extension-prompt 差分 19 例覆盖，populationInjectionPrompts 同步补宏替换 + key 升序（官方 getExtensionPrompt 语义）；preparePromptsForChatCompletion 用 fixture 注入的同一提示集合（该函数自身 7 例差分）；**工具调用历史 / 推理链（active_chain/since_last_user）/ 推理签名 / 媒体内联（list/gallery/data URL）已补端到端 8 例**；空历史/预算裁剪最老/多 system squash/AN before 与 chat+depth/世界书空/无示例/超长单条/impersonate 无 quiet 均已覆盖。打桩登记见脚本头部：registerFunctionToolsOpenAI 空对象 → 工具预算预分配恒 1 token；setToolCalls tokens = JSON.stringify 长度/4（官方 tokenHandler 对象整体计数，两端同一近似）；getChat content 归一 `?? ''`；媒体仅 data: URL 内联且只记账，content 数组表示由 MediaInliner/MediaConvert 差分单独覆盖；群聊 selected_group、names_behavior、send_if_empty、预算溢出、squash 开关均已覆盖。in-chat 扩展合并的 order==100 规则由引擎单测锁。
-- SSE：运行时只有官方对拍的 SseChunkParser 一条路（逐字符、事件级 catch 跳过 = 官方平滑流语义、[DONE]/message_stop 收尾、reasoning 独立通道）；旧 SseParser 已删除（曾把 content:null 拼成字面 "null"）。
-- **仍绕过 fixture 的部分**：prepareOpenAIMessages 的 chat→messages 构造循环（names_behavior 内容前缀、isSameModel 签名/推理过滤、media/invocations 从 extra 提取）由 fixture 直接注入消息对象绕过；Kotlin 侧由 App 的 ChatPromptFactory（JSONL → PromptMessage）按官方同名逻辑实现，接线点见 4.7/4.9。`extra.tool_invocations` 已由 App 解析进 PromptMessage.toolInvocations（工具系统消息按官方 coreChat 例外保留），工具调用历史端到端可进提示词。
-- 其它脚本的历史打桩（Message/PromptManager/tokenHandler 等）均为“与 Kotlin 移植同语义”的显式桩，fixture 生成即对拍，登记在各自脚本头部。
-
-**尚未做差分的**：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 请求体与响应解析用 MockWebServer 单测锁行为，转换器本身已逐字差分）；斜杠完整 parser（SlashCommandParser 依赖数十个模块与 DOM，无法逐字提取；转义判定 testSymbol 已差分 10 例，其余手写单测 + 源码对照）。
-聊天重排/文件向量化主体（官方函数与 DOM/服务端焊死，无法逐字提取；其中纯函数 splitRecursive/trim 系列已差分 14 例）。
-作用域宏配对逻辑（官方 MacroCstWalker 依赖 chevrotain CST 与 MacroRegistry，无法逐字提取；其中 trimScopedContent 纯函数已差分 7 例）。
-WorldLoreMerger（官方世界书→提示词拼接段由 prepare-messages 覆盖；App 的多书合并顺序/插槽为自有封装，边界登记）。
+**打桩/未差分登记与“官方有而引擎/App 还没有”清单见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。**
 
 **官方有而引擎/App 还没有**：
-- textgen 协议后端（KoboldAI/TextGenWebUI/Mancer/Featherless/Infermatic/Ooba 等）——✅ 已通：TextgenRequestBodyEngine（textgen-body 27 例）/NovelRequestBodyEngine（novel-body 12 例）/KoboldRequestBodyEngine（kobold-body 12 例）逐字差分；LlmClient textgenerationwebui/novel/kobold 三条路由 + 流式（kobold 与 novel 同形 data.token，官方 generateKoboldWithStreaming）；providers.json 条目 + mancer/featherless/infermaticai 请求头（textgen-headers 差分 6 例）；Kobold 非流式响应 results[0].text（MockWebServer 锁 URL/body/流）。
-- NovelAI/Kayra 聊天协议——✅ 请求体 1:1（`novel-body` 差分 12 例，`NovelRequestBodyEngine`：getNovelGenerationData/selectPrefix/getTokenizerTypeForModel 逐字移植，Kayra/Clio/Erato/旧模型、Erato 停用词扩充、1024 截断、order 覆盖、logit_bias、num_logprobs）；getKayraMaxContextTokens 预算差分已有；LlmClient novel 路由 + 流式 data.token + 响应解析已接；providers.json/档案设置 UI 已做。
-- ChromaDB 远程向量后端（官方 vectors 默认）——本地 FileVectorStore/InMemory + OpenAI 兼容嵌入替代，未做 ChromaDB 客户端。
-- summarize 聊天摘要（vectors 扩展）——未做。
-- 第三方扩展市场（third-party）与官方插件体系——未做（HANDOFF 11.2 登记）。
-- Prompt Manager：引擎已 1:1（prompt-manager 差分 29 例，含 getPromptCollection/preparePrompt/shouldTrigger/getPromptOrderForCharacter/Prompt 构造；getCollection 空 order 不自动补默认、null prompt 触发恒 true 等官方语义已修）；App 已完整（设置→提示词管理器：官方字段 identifier/name/content/role/injection_position/depth/order/trigger/forbid_overrides + 每角色顺序选择器 + 默认项编辑（存为同名用户覆盖项）+ dryRun 提示词预览（聊天 ⋮ 菜单，只总装不发送，展示 role:content + token 合计）+ 顺序上下移/删除 + PromptManagerPrefs 存储已接入总装 userPrompts/userOrder）。
+- textgen/Novel/Kobold：✅ 全通（TextgenRequestBodyEngine 27 例 / NovelRequestBodyEngine 12 例 / KoboldRequestBodyEngine 12 例差分；LlmClient 三条路由 + 流式；providers.json 条目 + mancer/featherless/infermaticai 请求头 6 例差分；Kobold 非流式 MockWebServer）。
+- ChromaDB 远程向量后端（官方 vectors 默认）：未做，用 FileVectorStore/InMemory + OpenAI 兼容嵌入替代。
+- summarize 聊天摘要（vectors 扩展）：未做。
+- 第三方扩展市场/插件体系：未做。
+- Prompt Manager：引擎 1:1（29 例差分）+ App 完整（设置→提示词管理器 + dryRun 预览，见 5）。
 - 官方部分 slash 命令（命令数少于官方，见 3.4）。
-- connection-manager 扩展（官方连接管理）——App 以 ProviderScreen 多档案等价替代，未做官方扩展本体。
-- Claude/Gemini 官方 web tokenizer——用户豁免（cl100k 回退）。
-
-**预设体系**：官方 `default/content/presets` 已打包进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127 个），PresetLibrary 可加载；quick-replies 也打包。官方发版后跑 `node scripts/build-presets.mjs`。
+- connection-manager 扩展：App 用 ProviderScreen 多档案等价替代。
+- Claude/Gemini 官方 web tokenizer：用户豁免（cl100k 回退）。
+- 预设打包：官方 default/content/presets 已进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127）；quick-replies 已打包；官方发版后跑 `node scripts/build-presets.mjs`。
 
 ## 3. 引擎进度（对照官方 release）
 
 ### 3.1 角色卡 ✅
-PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导出 PNG/JSON）、CharX/YAML/BYAF 导入；JSON 导入 5 例 + JSON 导出 4 例（getCharaCardV2+unsetPrivateFields）、YAML 3 例、CharX 5 例、BYAF 14+5+4+4 例；V2 归一（readFromV2，官方差分 5 例 + 多轮补真 bug）、私有字段清理、JSON 导出（CharacterCardExporter）；PNG 字节级差分 6 例。
-✅ 导入保留世界书回归锁（WorldBookImportTest：JSON/PNG 导入后 data.character_book.entries 可读可解析）；✅ CharX 资源提取（引擎 CharXImporter.CharXAssets）；✅ BYAF 资源提取（getCharacterImages/getChatBackgrounds 官方差分 6 例：默认头像回退、字节去重、paths 合并、url-join 不折叠 ../）；✅ App 层资源入库（CharX icon→头像 + seed 取色，background/voice 落盘 assets/ 并记入 CharacterRecord）；✅ URL 导入角色卡（HomeViewModel.importCardFromUrl + 首页 FAB 弹层，PNG/CharX/JSON 按 URL 后缀/魔数探测，对齐官方 content-manager importURL）。
+PNG V2/V3（tEXt/ccv3）与 JSON 导入导出（官方也只导 PNG/JSON）、CharX/YAML/BYAF 导入；V2 归一（readFromV2 差分 5 例）、私有字段清理、PNG 字节级差分 6 例、JSON 导入 10 例/导出 6 例、YAML 5 例、CharX 9 例、BYAF 14+5+4 例。导入保留世界书回归锁（WorldBookImportTest）；CharX 资源提取（icon→头像+seed，background/voice 落盘 assets/）；URL 导入角色卡（PNG/CharX/JSON 按后缀/魔数探测，对齐 content-manager importURL）。
 
 ### 3.2 世界书 ✅（含 RAG 向量扩展）
-buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（含两段扫描、sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、装饰器/哈希、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器。 ✅ 世界书 BUILDING PROMPT 正则深度已差分（regexDepthOf 逐字提取官方表达式，40 例对拍）。
-✅ 扩展字段已全接上（数据全量透传 + 行为）：
- - vectorized → RAG：WorldInfoVectorActivation（同步/检索/强制激活，对齐 vectors activateWorldInfo）+ VectorStore/EmbeddingProvider（OpenAI 兼容）；**FileVectorStore 磁盘持久化对齐官方 vectra.LocalIndex**（目录 root/source/collection/model + items.json，重启不丢；InMemoryVectorStore 仅测试/临时）；Scanner 通过 externalActivations 强制激活（跳过关键词/概率）
- - 向量扩展补齐：**VectorChatRearranger**（聊天历史重排，对齐 rearrangeChat：protect 保留最近 N 条、insert 条数、模板 Past events:{{text}}、position 映射 BEFORE_PROMPT→start/IN_PROMPT→end）+ **文件/Data Bank 向量化**（对齐 processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile：分块 splitRecursive、overlap、chunk 检索注入）+ VectorTextUtils（splitRecursive/trimToEndSentence/trimToStartSentence/overlapChunks 官方 1:1）
- - automationId → 快捷回复自动执行：WorldInfoAutoExecute.resolve + AutoExecuteHandler（对齐 quick-reply AutoExecuteHandler，prevent 栈；选择逻辑 4 例官方差分）
- - displayIndex → 编辑器排序：WorldInfoEditorSort（对齐 sortWorldInfoEntries，6 例官方差分，抓出 length 方向 bug 已修）
- - addMemo → 官方核心从未读取，仅透传
+buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（两段扫描/sticky/cooldown/概率）、深度/递归、分组评分、角色过滤、时间效果、多世界合并、世界书文件导入导出、世界书↔角色书互转；正则在 BUILD 阶段接入扫描器；regexDepthOf 差分 40 例。
+- vectorized → RAG（WorldInfoVectorActivation 同步/检索/强制激活，对齐 vectors activateWorldInfo）；FileVectorStore 磁盘持久化对齐 vectra 目录（root/source/collection/model + items.json，重启不丢）；Scanner 经 externalActivations 强制激活（跳过关键词/概率）。
+- VectorChatRearranger（rearrangeChat：protect 最近 N、insert 条数、Past events:{{text}} 模板、BEFORE_PROMPT→start/IN_PROMPT→end）+ 文件/Data Bank 向量化（processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile；splitRecursive/overlap）+ VectorTextUtils 官方 1:1。
+- automationId → 快捷回复自动执行（WorldInfoAutoExecute + AutoExecuteHandler，4 例差分）；displayIndex → 编辑器排序（WorldInfoEditorSort 6 例差分）；addMemo 官方核心从不读取，仅透传。
+- 2026-08-14 审查修复（现状）：世界书条目内容激活时先宏替换（官方 checkWorldInfo substituteParams），替换后文本进递归缓冲/预算/输出，总装再替换一次（官方两次替换语义）；世界书关键词也过宏替换；delayUntilRecursion 首级按官方 shift() 扫描前移出；角色卡 tags 接进 characterFilter 标签过滤；WorldInfoScannerMacroTest 锁宏替换。
 
 ### 3.3 宏 ✅（含作用域宏）
-通用作用域宏（{{setvar::x}}content{{/setvar}}、{{#}} 保留空白、嵌套、trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 官方差分 7 例；!?~> flags 官方标 TBD 未实现（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。
-核心宏 + 官方 e2e 差分 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记/冒号/空格参数、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。
-✅ {{outlet::key}} 宏（官方 core-macros.js 逐字提取差分 5 例；App 把世界书 outletEntries 注入 MacroEnv.outlets，官方 NONE 位置不注入提示词、仅供宏读取；差分抓出空 key 未判空已修）；✅ MacroRegistry 动态注册/注销/解析；✅ 宏 flags（{{#}} 保留空白已随作用域宏实现）；✅ 角色字段已接线（App ChatPromptFactory 按官方 MacroEnvBuilder 映射 character/system.model，{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺；!?~> 官方标 TBD 无需补。
+通用作用域宏（{{setvar}}/{{#}} 保留空白/嵌套/trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 差分 7 例；!?~> flags 官方标 TBD（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。核心宏 + 官方 e2e 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。{{outlet::key}} 差分 5 例（官方 core-macros.js 逐字提取；空 key 未判空已修）；MacroRegistry 动态注册/注销/解析；角色字段已接线（{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺。
 
 ### 3.4 斜杠 🟡
-SlashParser（命名/无名/引号/转义/list 值/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；SlashEscape（testSymbol）官方差分 27 例；参数解析核心 43 例差分。
-输入框斜杠补全（App/UI）：聊天输入框输入 `/` 弹出补全面板，按已输入字母前缀优先过滤、最多 12 条、220dp 高可滚动（约 5 条可见），点击填入 `/命令 `；配色用主题 surfaceContainerHigh + 角色 accent 徽标。EmberTextField 聚焦仅保留主题描边光条，外层 emberShadow 炫光已按用户要求全局移除。
-斜杠数学/布尔命令已 1:1（SlashMathEngine + slash-math-official.mjs 288 例差分）：add/mul/min/max/sub/div/mod/pow/round/abs/sqrt/sin/cos/log（官方 parseNumericSeries 变量解析 + performOperation：空值/空数组/NaN→"0"、div/mod/pow 只取前两个操作数、单目只取第一个、JS Number 字符串化），evalBoolean（大小写不敏感、数字/字符串分支、truthy 检查、无右操作数/非法 rule 抛错、a/first/x、b/second/y 别名），len（JSON 数组/对象/字符串/数字/布尔），sort（列表按值、字典 keysort 键/值、混合类型按 typeof）；/if 已切到该实现。
-已接：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器。
-消息类命令已对齐官方：/sendas（name 缺省当前角色、SLASH_COMMAND 正则 characterOverride、{{bias}} 只偏置→系统消息 is_system、{{user}}/{{char}} 宏替换、at= 插入/负数倒数/-0 追加、avatar/compact 落 extra/force_avatar/isSmallSys、swipes 初始化）；/send（name 缺省 {{user}}、at/compact/bias）；/impersonate 的 prompt 参数走 quietPrompt（官方 quiet_prompt+quietToLoud）；return= 返回模式已接（官方 slashCommandReturnHelper：pipe/object/toast-html/toast-text/console/none，未知类型抛 Unknown return type）；按角色头像渲染已接（消息 extra.force_avatar/original_avatar → ChatViewModel.avatarPathOf 按角色 id/名解析 avatars/{id}.png，MessageRow 优先用该头像）。登记：/tokens 用 cl100k 近似。/inject 支持 chat_metadata.script_injects 持久化、before/after/chat/none/scan/ephemeral；参数归一按官方 injectCallback（数字枚举持久化，旧字符串兼容读取），scan 已真正传入元数据。
-剩余偏差：惰性闭包仍即时求值；/genraw 的 instruct/as/stop/trim 参数未实现；/inject filter 闭包（元数据复活 + 异步判定）未实现；/trigger await 不等待。官方 1.18 无 /while。
+SlashParser（命名/无名/引号/转义/list/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；testSymbol 差分 27 例；参数解析核心 43 例差分；斜杠数学/布尔/len/sort 1:1（SlashMathEngine 差分 288 例）；输入框斜杠补全 UI（/ 前缀过滤、最多 12 条、220dp 可滚动）。
+已接命令：/renamechat /getchatname /setinput /bg /impersonate /persona-set /trigger /inject /gen /genraw + 异步执行器；消息类命令（/sendas /send /impersonate return=）已对齐（sendas 缺省当前角色、SLASH_COMMAND 正则 characterOverride、{{bias}} 只偏置→is_system、avatar/compact 落 extra/force_avatar/isSmallSys、swipes 初始化；return= 官方 slashCommandReturnHelper：pipe/object/toast-html/toast-text/console/none）；按角色头像渲染已接（extra.force_avatar/original_avatar → avatars/{id}.png）。
+剩余偏差：惰性闭包仍即时求值；/genraw 的 instruct/as/stop/trim 未实现（stop/trim 已补，instruct/as 因无 instruct 模式登记边界）；/inject filter 闭包未实现（filter 持久化 + 生成前 SlashEngine 求值，true/1/yes 才注入，解析失败/空=始终注入）；/trigger await 已等待生成结束；官方 1.18 无 /while；/tokens 用 cl100k 近似。
 
 ### 3.5 提示词组装 ✅（核心）
-PromptManagerCore（默认/用户顺序、enabled、injection_trigger、preparePrompt original/groupOverride、mergeSystemPrompts）、PromptCollection、ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona/未知扩展）、in-chat 深度注入、continue nudge/prefill、bias、control prompts（impersonate/quiet）、nsfw/jailbreak/用户相对提示、工具调用（tool_calls）、ToolLoopPlanner 递归决策（官方 RECURSE_LIMIT=5，tool-loop 官方差分 17 例：canPerformToolCalls 禁用集/流式与静默分支/shouldDeleteMessage/shouldStopGeneration/递归/空聊天无最后消息；工具真正执行已接线，App 决策走 ToolLoopPlanner.decide，见 3.8.16）、人设 IN_CHAT 注入；**✅ PromptPipeline 总装器**（官方 prepareOpenAIMessages+populateChatCompletion 1:1：示例解析 parseExampleIntoIndividual/setOpenAIMessageExamples、控制提示、continue prefill、pin 顺序、squash；整链官方差分 29 例；in-chat 深度注入（populationInjectionPrompts：order 降序/角色固定序/深度 splice/reverse）已用官方真函数，扩展合并 order==100 规则由单测锁；getExtensionPrompt 过滤/拼接/wrap/宏替换已差分 19 例并接入 populationInjectionPrompts）、作者注释组合（ANWithWI）；CharacterCardFieldsEngine 官方差分 6 例；PromptUtils 官方差分 9 例；AuthorsNoteEngine（默认值解析+ANWithWI）官方差分 7 例（默认 position 修正为官方 1）。
-✅ 历史 reasoning 注入（PromptReasoningEngine.addToMessage 官方 1:1 差分 7 例；App 总装时先过 REASONING 正则（isPrompt=true+depth）再注入；power_user.reasoning.add_to_prompts 默认关，设置→服务开关；continue 最后一条 prefix 不受开关限制，官方语义）；✅ 角色 system_prompt / 剧情后指令已真正进请求体（官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride，App 漏传——角色系统提示词曾未生效；现按官方语义传 fields.system/jailbreak，且 chat_metadata 同名键优先）；✅ 每条历史消息过 preparePrompt 宏替换已补（对齐官方 populateChatHistory；ChatHistoryPrepareTest）；✅ 角色宏环境接线（ChatPromptFactory env.character=CharacterFields(system/jailbreak/description/…/charDepthPrompt)+system.model，官方 MacroEnvBuilder 映射 1:1，{{chardepthprompt}} 等历史消息宏可用）；✅ names_behavior 已按真实官方修正：Message.fromPromptAsync 不复制 name（请求体只在 COMPLETION 模式带 name，且先 isValidName 再 sanitizeName——PromptNameSanitizer 28 例差分；已修正 DEFAULT 模式误带 name）；✅ 工具预分配 token、媒体内联、推理签名已补（整链差分 20 例）；多模态请求体已接（MediaInliner/MediaConvert 差分）；✅ 工具真正执行 App 注册表已接线（见 3.8.16）。
+PromptManagerCore、PromptCollection/ChatCompletion 嵌套集合（预算/溢出/squash）、ChatHistoryPopulator、DialogueExamplesPopulator、扩展注入（summary/AN/vectors/chromadb/persona）、in-chat 深度注入、continue nudge/prefill、bias、control prompts、工具调用、ToolLoopPlanner（RECURSE_LIMIT=5，差分 17 例）、人设 IN_CHAT 注入。
+- PromptPipeline 总装器 1:1（prepareOpenAIMessages+populateChatCompletion；整链差分 29 例；populationInjectionPrompts 官方真函数；getExtensionPrompt 差分 19 例）；CharacterCardFieldsEngine 差分 6 例；PromptUtils 差分 9 例；AuthorsNoteEngine 差分 7 例（默认 position=1 修正）。
+- 历史 reasoning 注入（PromptReasoningEngine.addToMessage 差分 7 例；add_to_prompts 默认关，continue 最后一条 prefix 不受开关限制）；角色 system_prompt/剧情后指令已真正进请求体（fields.system/jailbreak，chat_metadata 同名键优先）；每条历史消息过 preparePrompt 宏替换；names_behavior 修正（COMPLETION 才带 name，PromptNameSanitizer 28 例）；工具预分配/媒体内联/推理签名端到端 20 例。
 
 ### 3.6 正则 ✅
-RegexEngine + substituteRegex/宏替换 + 27 例差分（扩：g/首匹配、i/m/s、x/X/A/J/U 非原生 flag → new RegExp 抛错 → 脚本跳过、u 原生 flag 应用、重复 flags 回退整体正则——全部对照官方 regexFromString 1:1）；世界书 key 解析 parseRegexFromString 差分 9→15 例（扩：x/X/A/J/U 无效 → null、重复 flag → null，WorldRegexUtils 已补重复 flag 拒绝；u/y 原生 flag 仍为边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展）官方差分 9 例；聊天消息正则已在扫描器接入（messageTransformer）。
-✅ 该卡正则已接线（CharacterCardEdit 读写 data.extensions.regex_scripts 官方 RegexScriptData）；✅ 存前应用（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT，全部走 ChatPromptFactory.resolveRegexScripts 统一脚本集合；落盘文本已过正则，宏仍延后到总装，请求等价）；✅ 总装应用（isPrompt=true + 官方 depth 公式，只跑 promptOnly 脚本——官方 coreChat.map 语义，普通脚本不再双应用；世界书内容过 WORLD_INFO 正则）；✅ 允许列表（character_allowed_regex 存储 + 角色详情开关 + allowedOnly=true，scoped 默认不生效）；✅ 全局开关（设置→正则“启用正则脚本”，写 disabledExtensions.regex 语义，关闭后存前/总装/编辑/世界书全位点跳过）；✅ preset 脚本存储/UI（命名预设集保存/恢复/编辑 + preset_allowed_regex[openai] 允许开关 + 存前/总装/编辑/开场白全位点接线；App 无采样预设管理器，命名集为官方 preset 扩展 regex_scripts 字段的结构等价，登记）。
+RegexEngine + substituteRegex/宏替换（27 例差分：g/首匹配/i/m/s/x/X/A/J/U 非原生 flag、u 原生、重复 flag 回退）；世界书 key 解析 parseRegexFromString（15 例，u/y 原生 flag 边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展，9 例差分）；聊天消息正则已接入扫描器。
+- 该卡正则接线：CharacterCardEdit 读写 data.extensions.regex_scripts（RegexScriptData）；存前（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT）；总装 isPrompt=true + 官方 depth（只跑 promptOnly）；允许列表 character_allowed_regex（角色详情开关 + allowedOnly=true，scoped 默认不生效）；全局开关 disabledExtensions.regex；preset 脚本命名预设集（结构等价官方 preset 扩展字段）。替换串宏替换（官方 runRegexScript 收尾 substituteParams）已全位点接线。
+- 登记：落盘文本宏未替换（发送时应用，请求等价）。
 
-### 3.7 预设 ✅（应用引擎差分 82 例 / App 全接；无 Prompt Manager 前置依赖）
+### 3.7 预设 ✅（应用引擎差分 99 例 / App 全接）
+官方定位（index.html 核实）：预设全链在 Power User 的 Advanced Formatting 抽屉 + 各 API 连接面板采样预设管理器；与 Prompt Manager 无关。
+- 引擎 PresetApplyEngine：类型识别（isPossibly*Data + performMasterImport legacy 顺序）、五类应用（context/instruct/sysprompt/reasoning/chat-completion + migrate）、保存过滤（getChatCompletionPresetBody/getContextSettingsCompiled/filterPresetSettings）、名字匹配（matchPresetNameExact/findMatchingTemplateName）、采样器应用（textgen setting_names 全量/novel loadNovelPreset/kobold loadKoboldSettingsFromPreset/applyGenerationParamsFromPreset：MAX_CONTEXT_DEFAULT=8192、MAX_RESPONSE_DEFAULT=2048）、autoSelectPresetDecision、detectSensitivePresetFields（openai 11 字段）。打桩登记：textgen/novel/kobold DOM 归约剥除、order 默认数组由参数注入。
+- App：预设页五类选择即应用 + 保存当前为预设 + 删除 + 单文件导入（legacy 顺序）+ 多区段 master 导入/导出；/preset exact + Fuse.js 7.1 模糊（27 例差分）；bind_preset_to_connection（默认 true）；autoSelectPreset（进聊天角色名=采样预设名自动应用）；用户预设同名覆盖官方打包预设；存储 = 官方打包 engine resources + 用户 filesDir/presets/{type}/{name}.json。
+- OpenAI 采样预设全字段：settingsToUpdate 102 键已按官方默认全量入档案/采样器；prompts/prompt_order 写 PromptManagerPrefs；其余生成字段（names_behavior/send_if_empty/new_chat/.../continue_postfix/function_calling/show_thoughts/media_inlining/.../max_context_unlocked）已接总装/请求体/UI；reverse_proxy/proxy_password 按 proxySupportedSources 替换；custom_include_body/exclude_body/include_headers 用 YamlMerge 标量子集（嵌套 YAML 边界登记）；custom_url 已接。
+- 分词器：getTokenizerModel 映射 1:1 差分 37 例；web 族 Claude（HfBpeTokenizer，官方 claude.json 打包，HF BPE：ByteLevel/merges/added tokens/NFKC/字节编解码）；sentencepiece 族（SentencePieceTokenizer：proto + BPE 按 score 合并 + <0xXX> fallback + dummy prefix），打包保留 Google Gemini（gemma.model）；按用户要求仅保留 OpenAI(JTokkit)/Google/Claude 三族，llama3/mistral/llama1/yi/jamba/nerdstash/command-r/qwen2/nemo/deepseek 未打包（回退 cl100k，bias 按官方返回 {}，登记）；tiktoken JTokkit（O200K/CL100K）按官方 /bias 真算；原始 id 数组透传、后写覆盖一致。登记：无官方库无法差分（sanity 值锁定）；command-r/command-a/qwen2/nemo/deepseek 官方无模型文件不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全空）。
+- bias_presets 官方弹窗已做；YamlMerge 用 SnakeYAML 对齐 js-yaml（锚点/别名/<< 原生解析/多文档静默/时间戳 ISO）；vertexai 服务账号认证已做（VertexAuth.kt + LlmClient vertexai express/full/proxy + UI）；bypass_status_check 已接；show_external_models 已接（extensions 键已持久化，官方 core 也只存不消费）。
+- 登记：context/instruct/sysprompt 官方消费点是非 OpenAI 路径（script.js:4663 renderStoryString/formatInstructModeStoryString/applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——App 对 OpenAI/Anthropic/Google 不消费与官方一致；textgen/novel/kobold 路径已把 context/instruct/sysprompt 传进引擎（InstructMode.createRawPrompt 消费；sysprompt 作 systemPrompt；post_history 按官方作为 user 消息注入）；master 导入的 textgen preset 暂存 sampler 用户预设（不应用）；moving-ui 延期见 6.4。
+- 预设缺口清单（用户确认）：①采样预设逐字段勾选 settings_checked——官方 1.18 源码无此字段，不实现；②textgen/Novel/Kobold 全通（见 2）；③/preset fuzzy 已完成。
 
-**官方定位（index.html 核实）**：预设全链在 Power User 的 Advanced Formatting 抽屉（context/instruct/sysprompt/reasoning 选择器 + af_master_import/af_master_export 多区段导入导出）+ 各 API 连接面板的采样预设管理器；与 Prompt Manager（提示词编辑面板，12.16 登记）无关，不存在“先做 Prompt Manager 才能做预设”的依赖。
+### 3.8 聊天/消息 ✅（核心）
+jsonl 基础 + BYAF 聊天导入 + continue nudge；swipes 数据模型（App 层，对齐 swipe_id/swipes[]/swipe_info[]：ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；聊天元数据 ChatHeader（chats/{id}.json chat_metadata：system_prompt/scenario/mes_example/custom_background）；书签（bookmarkNames/createBookmark/openBookmark，存档 chats/{id}-Checkpoint-*.jsonl + 最后 AI extra.bookmark_link）；设置快照（SettingsSnapshotStore 命名 zip 保存/恢复 SharedPreferences+提供商档案，恢复需重启，登记）。
 
-**引擎（官方 1:1，82 例差分）**：
-- `PresetApplyEngine`（engine/prompt/PresetApplyEngine.kt，`preset-apply-official.mjs` → `PresetApplyDiffTest`）：
-  - 类型识别：isPossibly{Instruct,Context,SystemPrompt,TextCompletion,Reasoning,StartReplyWith}Data + performMasterImport legacy 顺序（instruct→context→sysprompt→preset→reasoning）；
-  - 应用：applyContextPreset（contextControls 循环 + autoFixStoryString）、applyInstructPreset（migrateInstructModeSettings + controls 循环）、applySyspromptPreset（enabled 自动置 true）、applyReasoningPreset、applyChatCompletionPreset（settingsToUpdate 全字段 + extensions 特例 + isConnection 绑定语义）、migrateChatCompletionSettings（含正则迁移）；
-  - 保存：getChatCompletionPresetBody / getContextSettingsCompiled / filterPresetSettings（getPresetSettings filteredKeys + genamt/max_length）；
-  - 名字匹配：matchPresetNameExact（/preset 精确匹配）+ findMatchingTemplateName（bind_to_context 同名绑定）。
-  - 采样器应用补齐：applyTextgenPreset（setting_names 全量 + extensions/json_schema/order/logit_bias 特例）、
-    applyNovelPreset（nai-settings loadNovelPreset 纯字段）、applyKoboldPreset（kai-settings loadKoboldSettingsFromPreset 纯字段）、
-    applyGenerationParamsFromPreset（MAX_CONTEXT_DEFAULT=8192/MAX_RESPONSE_DEFAULT=2048）、autoSelectPresetDecision、
-    detectSensitivePresetFields（openai sensitiveFields 11 字段）。打桩登记：textgen setSettingByName 的 DOM
-    checkbox/text/parseFloat 归约剥除（设置对象只落原始值）；novel/kobold slider/DOM 剥除；order 默认数组由 orders 参数注入。
-- 类型化包装（ContextApplyResult/InstructSettings/SyspromptSettings/ReasoningSettings）供 App 接线，经同一 JSON 级引擎单一路径。
+| 子模块 | 引擎/差分 | App 接线 |
+|---|---|---|
+| 消息清理 | CleanUpMessage.kt（cleanUpMessage/cleanGroupMessage/fixMarkdown；CleanUpDiffTest 49 例） | CleanUpConfig 注入 promptBias/regexTransform/stoppingStrings；finalizeStream 保存前走全链 |
+| 响应数据提取 | ResponseDataExtractor.kt（extractMessageFromData/extractJsonFromData；31 例；textgen content 数组/openai \n\n 拼接/tool_plan/非 openai {}） | LlmClient 非流式最终响应 |
+| 自动续写 | AutoContinue.kt（shouldAutoContinue 11 例；tokenCount 注入） | 单聊/群聊最大 5 轮 |
+| 停用词 | StoppingStrings.kt（14 例；openai 仅自定义；非 openai 名字/群成员/Instruct/自定义/单行 \n） | ChatViewModel + 协议分支 |
+| 偏置 | BiasEngine.kt（getBiasStrings/extractMessageBias/removeMacros；Handlebars ^4.7.9 vendor；17 例） | {{bias}} 提取/剥离/编辑回溯/impersonate-continue 不注入 |
+| 流式响应/错误 | StreamingResponse.kt（getStreamingReply/tryParseStreamingError；20 例；全厂商 delta 分支/reasoning/images/signature/错误分类） | SseChunkParser 运行时唯一路径 |
+| Reasoning 解析 | ReasoningEngine.kt（parse/remove/formatReasoning；13 例） | removeReasoning/token 预算未接（发送链路未接项见 6.2） |
+| Token 预算 | TokenBudgetEngine.kt（17 例；kobold/textgen/novel/未知默认 1487；override 校验） | ChatPromptFactory |
+| 滑动/自动过滤 | SwipeEngine.kt（29 例；isSwipingAllowed/isMessageSwipeable/getOverswipeBehavior/ensureSwipes/generatedTextFiltered/extractMultiSwipes） | 滑动/变体/auto_swipe |
+| 工具调用增量解析 | ToolCallParser.kt（ToolManager.parseToolCalls/#applyToolCallDelta；8 例；OpenAI/Cohere/Anthropic/Gemini） | 流式 tool_calls 回调 |
+| 记忆扩展纯逻辑 | MemoryEngine.kt（14 例；最新摘要/间隔/force/raw 提示词构建） | MemoryPrefs/MemoryService/{{summary}}/1_memory 注入/自动触发 |
+| append_title | PromptAssembler.appendMessageTitles（5 例） | App 从 JSONL extra 提取 titles |
+| 作者注释注入判定 | AuthorsNoteEngine.shouldInjectNote（8 例；按用户消息数，interval=1 恒注入） | AN 三层（全局/角色/聊天） |
+| 扩展提示/EM/深度/工具循环 | ExtensionPromptEngine（19 例）+ ExampleAssembler（9 例）+ DepthPromptEngine（6 例）+ ToolLoopPlanner（17 例） | /inject 数字枚举持久化/scan；EM before unshift/after push；深度提示 IN_CHAT 注入；ToolRegistry 执行+历史重构+递归重装 |
+| setOpenAIMessages | PromptAssembler.toOpenAiMessages（16 例；narrator→system/names 各模式/isSameModel 过滤/输出新的在前） | ChatPromptFactory 从 JSONL extra 解析 |
+| 边界补齐 | Captions refine/prompt_ask 弹层；extra.sprite 落盘；/genraw stop/trim；power-user 行为设置全接；auto_swipe；世界书编辑器全字段；strip_examples/message_token_count；外置世界书（WorldStore/WorldLoreMerger/globalSelect/插入策略） | 见 4.x/5 剩余清单 |
 
-**App**：
-- 预设页（PresetsScreen）：五类选择即应用（context 写 trim_sentences/names_as_stop_strings→BehaviorPrefs、example_separator→RenderPrefs；sampler 选中即应用到当前活动连接；reasoning 进总装）；每类“保存当前为预设”（引擎过滤语义）；用户预设删除；单预设文件导入（官方 legacy 识别顺序，openai 采样按官方不校验字段）；**多区段 master 导入/导出**（instruct/context/sysprompt/reasoning/srw + textgen preset 区段，导入时按官方全部勾选默认）。
-- `/preset` 斜杠命令：exact + Fuse.js 7.1 模糊回退（`preset-fuzzy-official.mjs` 差分 27 例，真实 fuse.js@7.1.0 对拍）。
-- 官方 openai 预设导入确认已接：敏感字段（reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/
-  include_headers/vertexai_region/express_project_id/azure_base_url/deployment_name/workers_ai_account_id）确认剥离 + 同名覆盖确认。
-- bind_preset_to_connection 开关已接（官方默认 true；关闭时应用采样预设跳过连接类字段）。
-- autoSelectPreset 已接：进入聊天（CHAT_CHANGED）时角色名精确等于采样预设名 → 自动选中并应用。
-- 用户预设同名覆盖官方打包预设（官方服务端同名覆盖语义），列表去重显示。
-- 预设存储：官方打包（engine resources）+ 用户预设 filesDir/presets/{type}/{name}.json（官方 data/default-user/content/presets/{type} 语义）。
-- reasoning 预设 prefix/suffix/separator → PromptReasoning.addToMessage 已接线；显示侧 formatReasoning 未接（12.16）。
+### 3.9 提供商 / LLM 客户端 ✅
+OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、xAI、Cohere、AI21 路由全部接完（转换器均已差分移植，网络层 MockWebServer 锁行为）；OpenRouter 已接媒体嵌入/推理签名/reasoning exclude；Vertex 服务账号认证已做（VertexAuth.kt：官方 google.js getVertexAIAuth/generateJWTToken/getAccessToken/getProjectIdFromServiceAccount 移植 + LlmClient vertexai express/full/proxy + ProviderScreen 服务账号 JSON 校验/保存）。
 
-**预设缺口清单（用户确认共 3 项，第 1 项经官方 1.18 源码核实不存在，第 2 项部分完成，第 3 项已完成）**：
-1. 采样预设逐字段勾选（`settings_checked`）：**官方 1.18 源码无此字段**（openai.js/preset-manager.js/预设 json 全仓搜索无），按 1:1 基线不实现、不发明新功能。
-2. textgen/Novel/Kobold 后端：✅ 全部路由完成——TextgenRequestBodyEngine 差分 27 例 + NovelRequestBodyEngine 差分 12 例 + KoboldRequestBodyEngine 差分 12 例；LlmClient 三条协议分支（非流式 + SSE）；providers.json 新增 textgenerationwebui/novel/kobold 条目；createRawPrompt 故事串消费；PresetsScreen 按协议暴露三套采样预设并真正应用（各 SettingsStore）；ProviderScreen 协议采样编辑器对照官方面板。✅ mancer/featherless/infermaticai 条目已入库（textgen-mancer/textgen-featherless/textgen-infermaticai，base_url 对齐官方 MANCER_SERVER/INFERMATICAI_SERVER/FEATHERLESS_SERVER）；请求头对齐 additional-headers.js：mancer X-API-KEY+Bearer、featherless HTTP-Referer/X-Title+Bearer、infermaticai Bearer；master 导入 textgen 区段按官方 savePreset 语义保存为协议目录用户预设（不应用）。
-3. `/preset` fuzzy 回退：✅ 已完成（Fuse.js 7.1 移植 + 27 例差分）。
+| 提供商 | 路由 | 请求体 | 转换/媒体 | 预算/缓存/签名 | 模型列表 | 状态 |
+|---|---|---|---|---|---|---|
+| OpenAI/Azure/DeepSeek/Groq/Moonshot/MiniMax/智谱/通义/硅基流动/Z.AI/Fireworks/Perplexity/Custom/NanoGPT/Chutes/ElectronHub/Ollama | openai-compatible（Azure deployments+api-version 2024-12-01；DeepSeek 默认 /v1） | 全厂商参数 27 例 + 实际请求体 28 例差分（o1/gpt-5/空 stop/温度 clamp/seed 边界） | MediaInliner 7 例 | — | data[].id / value[].id / 最小对话探测 | ✅ |
+| Workers AI | {account}/ai/v1/chat/completions | ✅ | ✅ | — | result[].name | ✅ |
+| Anthropic | /v1/messages + x-api-key + anthropic-version | 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | convertClaudeMessages 整链 41 例 + convertClaudePart 25 例 | calculateClaudeBudgetTokens 已接（adaptive→effort 字符串/auto→不加 thinking） | 官方不发模型列表，用默认 | ✅ 差 tokenizer |
+| Gemini AI Studio | v1beta/models/{model}:generateContent?key= | 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | convertGooglePrompt 41 例 + convertGooglePart 25 例 | calculateGoogleBudgetTokens 已接（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | models[].name（过滤 generateContent） | ✅ 差 tokenizer |
+| OpenRouter | openai-compatible | openrouter 分支 + transforms/plugins/reasoning.exclude/effort | embedOpenRouterMedia（audio+video） | addOpenRouterSignatures + cachingAtDepthForOpenRouterClaude + cachingSystemPromptForOpenRouter（SamplerParams 缓存开关/深度/TTL）+ DeepSeek addReasoningContentToToolCalls | ✅ | ✅ |
+| Mistral / xAI / AI21 | 专用路由 /chat/completions | body 差分 23 例含内（sendMistralAIRequest/sendXAIRequest/sendAI21Request） | convertMistral/convertXAI/convertAI21 | — | Mistral/xAI ✅；AI21 无端点用默认 jamba-large | ✅ |
+| Cohere | /v2/chat | sendCohereRequest（documents/tools/p/frequency/presence） | convertCohere | — | 无端点默认 command-r-plus | ✅ |
+| Vertex AI | LlmClient express/full/proxy | vertex 参数分支已差分 | 复用 Gemini 转换 | — | — | ✅ 认证已做 |
 
-**OpenAI 采样预设全字段（现状）**：settingsToUpdate 102 键已按官方默认值全量入档案/采样器；
-应用预设时 prompts/prompt_order 直接写 PromptManagerPrefs（官方 onSettingsPresetChange 写 oai_settings）；
-其余生成字段（names_behavior/send_if_empty/new_chat/new_group/new_example/continue_nudge/wi_format/
-scenario_format/personality_format/group_nudge/assistant_prefill/continue_prefill/continue_postfix/
-function_calling/show_thoughts/media_inlining/inline_image_quality/enable_web_search/tool_reasoning_mode/
-request_images/aspect/resolution/max_context_unlocked）已接总装/请求体/UI；continue_postfix 按官方
-runGenerate 追加 cyclePrompt（仅 chat completion）；show_thoughts 驱动 include_reasoning 与显示门控；
-reverse_proxy/proxy_password 按官方 proxySupportedSources 替换 base/API Key；custom_include_body/
-exclude_body/include_headers 用 YamlMerge 标量子集（嵌套 YAML 边界登记）；custom_url 已接。
-分词器三族现状：getTokenizerModel 映射已 1:1 差分（tokenizer-model-official.mjs 37 例）；
-web 族 Claude 已实现（HfBpeTokenizer，官方 claude.json 打包进 engine resources，HF tokenizer.json v3 BPE：
-ByteLevel 预分词、merges、added tokens、NFKC 归一、字节编解码）；sentencepiece 族已实现
-（SentencePieceTokenizer：proto 解析 + BPE 按 score 合并 + byte pieces <0xXX> fallback + dummy prefix/空格转义），
-打包保留 Google Gemini（gemma.model）；按用户要求仅保留 OpenAI(JTokkit)/Google/Claude 三族，
-llama3/mistral/llama1/yi/jamba/nerdstash/command-r/qwen2/nemo/deepseek 未打包
-（计数回退 cl100k、bias 按官方不可用返回 {}，登记）；
-tiktoken（JTokkit，O200K/CL100K）按官方 /bias 分支真算。原始 id 数组透传、后写覆盖与官方一致。
-仍登记：官方依赖 @agnai/sentencepiece-js / web-tokenizers，本环境无库无法官方差分（编码按规范移植，
-Llama "Hello"=15043 等已知值 sanity 锁定）；web 族 command-r/command-a/qwen2/nemo/deepseek 参考仓库
-无模型文件（官方运行时下载），不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全为空）。
-✅ bias_presets 官方弹窗已做（ProviderScreen：预设新建/导入/导出/删除 + 条目 text/value(-100~100)/上下移/删除，对齐 openai.js createLogitBias* / onLogitBiasPreset*）；✅ YamlMerge 已用 SnakeYAML 对齐 js-yaml（锚点/别名/合并键<<原生解析、多文档→官方 try/catch 静默忽略、时间戳→ISO，单测覆盖）；✅ vertexai 服务账号认证已做（VertexAuth.kt：官方 google.js getVertexAIAuth/generateJWTToken/getAccessToken/getProjectIdFromServiceAccount 移植 + LlmClient vertexai 协议分支 express/full/proxy + ProviderScreen 服务账号 JSON 校验/保存）；✅ bypass_status_check 已接（openai/custom 测试连接失败时跳过状态检查，官方 canBypass 语义）。
-✅ show_external_models 已接（官方 #openai_external_category 语义）：openai 源关闭时模型选择器过滤到内置 default_models，开启时显示状态检查拉到的全部模型。仍登记：extensions 键已持久化（官方 core 也只存不消费，与官方一致）。
+其余：providers.json 数据驱动 **36 家**（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 api.cohere.com/v2；DeepSeek 默认 /v1），端点按官方 chat-completions.js 核对 + 联网核实最新模型；LlmClient 七协议路由（openai-compatible/Anthropic/Gemini/Mistral/xAI/AI21/Cohere）+ SSE 四格式（OpenAI delta 覆盖 Mistral/xAI/AI21、Anthropic content_block_delta、Gemini candidates.parts、Cohere content-delta），流结束兜底 onDone；能力管道全通（tools/tool_choice/json_schema/Anthropic·Gemini web_search/Gemini requestImages+safety）；响应解析按协议取纯文本；ProviderStore 多档案（profiles.json + activeId，旧 connection.json 自动迁移）。边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参；convertClaudePrompt 遗留旧函数（仅 token 计数用）未移植；Claude/Gemini tokenizer 回退 cl100k。
 
-**仍登记（诚实边界）**：
-- context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。✅ textgen/novel/kobold 路径已把 context/instruct/sysprompt 传进引擎：`InstructMode.createRawPrompt` 消费 context/instruct，sysprompt.content 作 systemPrompt、post_history 按官方作为 user 消息注入（continue 插末条前，否则追加）；三套采样预设（6/24/6）按协议暴露并应用。
-- sampler-textgen/novel/kobold：预设已打包（6/24/6）；三套均按活动协议在预设页暴露并应用（LlmClient 三条协议分支已路由）。
-- master 导入的 textgen preset 区段暂存为 sampler 用户预设（不应用）。
-- moving-ui（界面预设）：用户决策延期见 8.9。
+### 3.10 群聊 / 其它 ✅
+群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
 
-### 3.8 聊天 🟡
-jsonl 基础 + BYAF 聊天导入 + continue nudge；**swipes 数据模型（App 层，对齐官方 `swipe_id`/`swipes[]`/`swipe_info[]`：ensureSwipes 初始化、syncSwipeToMes 同步、Generate('swipe') 追加、deleteSwipe、editMessage 写回）**。
-✅ 聊天元数据：官方 ChatHeader（chats/{id}.json chat_metadata）读写 + 字段覆盖（system_prompt/scenario/mes_example）+ 背景（custom_background）；✅ 书签（ChatStore bookmarkNames/createBookmark/openBookmark，存档 chats/{id}-Checkpoint-*.jsonl + 最后 AI extra.bookmark_link，官方 saveBookmark 语义；UI 对话框 + 二次确认）；✅ 设置快照（SettingsSnapshotStore 命名 zip 保存/恢复/删除 SharedPreferences + 提供商档案，对齐官方 user.js 设置快照语义；恢复后需重启 App 完全生效，登记）。
-
-### 3.8.5 消息清理 ✅
-官方 `script.js cleanUpMessage`（停用词逐字符裁剪/prompt bias/错误名字裁剪/endoftext/Instruct 序列/群消息裁剪/名字剥离/fixMarkdown/句子与空格收尾）+ `cleanGroupMessage` + `power-user.js fixMarkdown` 已移植到引擎：
-- `engine/prompt/CleanUpMessage.kt`：`CleanUpConfig` 注入 promptBias/regexTransform/stoppingStrings 等官方依赖；App 接线时传入已宏替换的 bias、真实 RegexPipelineEngine 与 API 停用词。
-- `engine/prompt/FixMarkdown.kt`：forDisplay=false（cleanUp 用）与 forDisplay=true（显示用）两条官方路径。
-- 差分：`scripts/diff/cleanup-official.mjs`（函数体逐字摘自 script.js:3112/6383、power-user.js:408/429、utils.js:883/1378；打桩 substituteParams/getRegexedString/stoppingStrings 已在脚本头部登记）→ `CleanUpDiffTest` 34 例全过。
-
-### 3.8.6 响应数据提取 ✅
-官方 `script.js extractMessageFromData / extractJsonFromData` 已移植到 `engine/provider/ResponseDataExtractor.kt`：
-- `extractMessageFromData`：kobold/koboldhorde/textgenerationwebui/novel/openai 各协议响应取文本链，与官方逐字段一致（含 textgen `data[0].content` 数组分支、openai content 文本数组 `\n\n` 拼接、tool_plan 回退）。
-- `extractJsonFromData`：openai 主 API 下按 chat_completion_source 解析 JSON；claude 取 tool_use.input；perplexity 先过 removeReasoning（调用方注入）；returnInvalidJson 原样返回；非 openai 返回 `{}`。kotlinx 会把裸词当字符串，已加官方 JSON.parse 语义白名单。
-- 差分：`scripts/diff/response-data-official.mjs`（script.js:6217/6252 逐字；打桩 removeReasoningFromString=恒等，已登记）→ `ResponseDataDiffTest` 31 例全过。
-
-### 3.8.7 自动续写判定 ✅
-官方 `script.js shouldAutoContinue` 已移植到 `engine/prompt/AutoContinue.kt`：
-- 开关/冒充/发送中/停止/目标长度/OpenAI 禁止/输入框非空/短 chunk/无最后消息/已达目标长度/应续写 全分支 11 例差分。
-- `tokenCount` 由调用方注入（App 用 TokenCounterFactory），`AutoContinueConfig` 承载官方 power_user/chat/textarea 状态。
-- 差分：`scripts/diff/auto-continue-official.mjs`（script.js:5657 逐字；打桩 getTokenCount/textarea/abortController，已登记）→ `AutoContinueDiffTest` 11 例全过。
-
-### 3.8.8 停用词全链 ✅
-官方 `getStoppingStrings` + `getCustomStoppingStrings` 已移植到 `engine/prompt/StoppingStrings.kt`：
-- openai 只返回自定义停止串；非 openai 组装名字停止串/群成员停止串/Instruct 停止串/自定义停止串/单行 `\n`，最后去重。
-- Instruct 部分复用已差分的 `InstructMode.stoppingSequences`；自定义停止串支持 JSON 解析、宏替换、临时停止串、limit。
-- 差分：`scripts/diff/stopping-strings-official.mjs`（script.js:2966 + power-user.js:3072 + instruct-mode.js:301 逐字；打桩 substituteParams/EPHEMERAL，已登记）→ `StoppingStringsDiffTest` 14 例全过。
-
-### 3.8.9 偏置全链 ✅
-官方 `getBiasStrings` + `extractMessageBias` + `removeMacros` 已移植到 `engine/prompt/BiasEngine.kt`：
-- `extractMessageBias` 用 Handlebars 官方 vendor 生成差分基准，引擎实现兼容 `{{bias "..."}}` 字面量、未定义路径（undefined→空串）、无参 `{{bias}}`（[object Object]）。
-- `getBiasStrings` 覆盖 impersonate/continue 空返回、文本 bias、用户全局 bias、回溯聊天 bias、swipe 跳过最后一条、空 bias 继续回溯。
-- 差分：`scripts/diff/bias-official.mjs`（script.js:3081/5735/5801 逐字；Handlebars ^4.7.9 加入 diff vendor）→ `BiasDiffTest` 17 例全过。
-
-### 3.9.6 流式响应/错误解析 ✅
-官方 `openai.js getStreamingReply / tryParseStreamingError` 已移植到 `engine/provider/StreamingResponse.kt`：
-- `StreamingReplyParser`：Claude/Gemini/Cohere/DeepSeek/xAI/OpenRouter/自定义源/Mistral/默认源全部 delta 分支，reasoning/images/signature/toolSignatures 状态纯函数返回。
-- `StreamingErrorParser`：quota/moderation/error/message/detail 分类，严格 JSON.parse 语义（裸词不算 JSON）。
-- 差分：`scripts/diff/streaming-response-official.mjs`（openai.js:1624/3128 逐字；打桩 oai_settings/toastr/check*，已登记）→ `StreamingResponseDiffTest` 20 例全过。
-
-### 3.8.10 Reasoning 解析 ✅
-官方 `reasoning.js parseReasoningFromString / removeReasoningFromString / formatReasoning` 已移植到 `engine/prompt/ReasoningEngine.kt`：
-- strict 锚定/非 strict 任意位置、prefix/suffix 缺失返回 null、无匹配返回 `{reasoning:"", content:原串}`（官方真语义）、trimSpaces 开关。
-- `formatReasoning` 与 `ResponseDataExtractor` 的 removeReasoning 注入点可直接接真函数。
-- 差分：`scripts/diff/reasoning-official.mjs`（reasoning.js:1389/1410/1450 + utils.js trimSpaces 逐字）→ `ReasoningDiffTest` 13 例全过。
-
-### 3.9.7 Token 预算 ✅
-官方 `getMaxContextTokens / getMaxResponseTokens / getMaxPromptTokens` + `getKayraMaxContextTokens` 已移植到 `engine/provider/TokenBudgetEngine.kt`：
-- kobold/textgen/novel（clio/kayra/erato 与订阅 tier）/openai/未知默认 1487 全分支。
-- `getMaxPromptTokens` 的 override 校验（非数字/<=0/NaN → 回退 response）与官方一致。
-- 差分：`scripts/diff/token-budget-official.mjs`（script.js:5870/5907/5922 + nai-settings.js:92 逐字）→ `TokenBudgetDiffTest` 17 例全过。
-
-### 3.8.11 滑动/自动过滤 ✅
-官方 `isSwipingAllowed / isMessageSwipeable / getOverswipeBehavior / ensureSwipes / generatedTextFiltered / extractMultiSwipes` 已移植到 `engine/prompt/SwipeEngine.kt`：
-- 滑动允许/消息可滑/越界行为（pristine_greeting/regenerate/loop/none）与 ensureSwipes 初始化/归一。
-- auto-swipe 最短长度/黑名单阈值过滤；openai/textgen llamacpp 多回复提取（cleanUpMessage 注入，已单独差分）。
-- 差分：`scripts/diff/swipe-official.mjs`（script.js:9100/9123/9163/6778/6300 + power-user.js:3032 逐字；打桩 cleanUpMessage/syncMesToSwipe，已登记）→ `SwipeDiffTest` 29 例全过。
-
-### 3.8.12 工具调用增量解析 ✅
-官方 `tool-calling.js ToolManager.parseToolCalls / #applyToolCallDelta` 已移植到 `engine/provider/ToolCallParser.kt`：
-- OpenAI choices/tool_calls 字符串增量拼接、多 choice、thought signature 转移。
-- Cohere 工具事件、Anthropic content_block/input_json_delta/content_block_stop、Gemini candidates functionCall。
-- 差分：`scripts/diff/tool-calls-official.mjs`（tool-calling.js:427 逐字；打桩 isToolCallingSupported，已登记）→ `ToolCallDiffTest` 8 例全过。
-
-### 3.8.13 记忆扩展纯逻辑 ✅
-官方 `extensions/memory` 的 `getLatestMemoryFromChat / getIndexOfLatestChatSummary / getSummaryPromptForNow / getRawSummaryPrompt` 已移植到 `engine/prompt/MemoryEngine.kt`：
-- 摘要位置回溯、间隔/强制字数/force 条件、原始摘要提示词构建（最新摘要 + 消息缓冲区 + token 截断 + maxMessagesPerRequest）。
-- 差分：`scripts/diff/memory-official.mjs`（memory/index.js:353/374/559/756 + utils.js extractAllWords 逐字；打桩 substituteParamsExtended/countSourceTokens，已登记）→ `MemoryDiffTest` 14 例全过。
-
-### 3.8.14 append_title 标题追加 ✅
-官方 `Generate coreChat.map` 的 `append_title` / 媒体 `append_title` 标题拼接已下沉到引擎 `PromptAssembler.appendMessageTitles`：
-- App 只负责从 JSONL extra 提取 titles 列表，拼接逻辑由引擎完成并差分。
-- 差分：`scripts/diff/append-title-official.mjs`（script.js:4448-4462 逐字）→ `AppendTitleDiffTest` 5 例全过。
-
-### 3.8.15 作者注释注入判定 ✅
-官方 `authors-note.js` 的“按用户消息数决定是否注入 AN”已下沉到引擎 `AuthorsNoteEngine.shouldInjectNote`：
-- 修正 App 旧实现用“总消息数”而非“用户消息数”的问题；interval=1 恒注入。
-- 差分：`scripts/diff/authors-note-inject-official.mjs`（authors-note.js:333-362 逐字）→ `AuthorsNoteInjectDiffTest` 8 例全过。
-
-### 3.8.16 扩展提示引擎 / EM 示例 / 深度提示 / 工具执行循环 ✅
-- `ExtensionPromptEngine`：官方 setExtensionPrompt/getExtensionPrompt/getExtensionPromptByName + injectCallback 参数映射（positions before→2/after→0/chat→1/none→-1、depth Number+NaN 回退 4、role 字符串查表、scan isTrueBoolean、script_inject_ 前缀）下沉引擎；差分 19 例。App `/inject` 现在按官方数字枚举持久化（旧字符串位置兼容读取），scan 参数已补传。
-- `ExampleAssembler`：官方 generate “Add message example WI” 1:1——EM 内容先 baseChatReplace（宏替换+collapse+去 \r）再 parseMesExamples，before unshift/after push；差分 9 例（曾缺 baseChatReplace，已补）。
-- `DepthPromptEngine`：角色卡/群聊/世界书深度提示按官方 setExtensionPrompt(IN_CHAT, depth, role) 规格落 PromptItem（identifier 对齐官方 DEPTH_PROMPT / DEPTH_PROMPT_{i} / customDepthWI_{depth}_{roleInt}）；角色卡 `data.extensions.depth_prompt.depth/role` 已解析，单聊深度提示已补；差分 6 例。
-- `WorldInfoScanner.scan` 新增 `scanInjections`：官方 checkWorldInfo 把 scan=true 扩展提示 addInject 进扫描缓冲（原实现拼进聊天数组，语义偏差）；scan 值按 getExtensionPromptByName 先宏替换。
-- `PromptPipeline.populationInjectionPrompts`：in-chat 扩展现在按官方 getExtensionPrompt 语义 trim → key 升序 → separator 拼接 → wrap → substituteParams（原实现为原始拼接，不替换宏）。
-- 工具调用执行循环已全链接线：`ToolRegistry.executeToolCalls`（兼容引擎 ToolCallAccumulator 快照形状）→ 官方 shouldDeleteMessage（空回复删新发送用户消息）/ finalizeIntermediaryMessage（非空回复先落盘）→ `ChatStore.appendToolInvocations`（官方 saveFunctionToolInvocations：is_system + extra.tool_invocations）→ RECURSE_LIMIT=5 内递归 `Generate('normal')` 重新总装（工具调用历史经 ChatPromptFactory 解析 `extra.tool_invocations` → PromptMessage.toolInvocations，ChatHistoryPopulator 重构 tool_call + tool 结果消息）。
-
-### 3.8.17 记忆扩展 App 层 / 快捷回复多文件 / 表情精灵 / Captions ✅
-- 记忆扩展全链接线：`MemoryPrefs`（官方 defaultSettings 全字段）+ `MemoryService`（官方 onChatEvent 触发判定、getSummaryPromptForNow/getRawSummaryPrompt、DEFAULT=generateQuietPrompt / RAW=generateRaw、setMemoryContext 落盘 `extra.memory` 到倒数第二条或 lastUsedIndex）+ 聊天 ⋮“记忆总结（立即）”+ `/summarize` + 设置页；`{{summary}}` 宏与 `1_memory` 注入（位置/深度/角色/scan）经 ChatPromptFactory 接入；消息编辑/删除/滑动/回复完成后自动触发。登记边界：source=main（extras/webllm 未接）；RAW builder 的 promptSize 用当前模型上下文近似官方 getMaxPromptTokens。
-- 快捷回复多文件：QuickReplyStore 改为目录 `filesDir/quick-replies/*.json`（官方 data/default-user/quick-replies 语义），旧单文件自动迁移；设置页预设选择/新建/删除；聊天快捷盘与 automationId 自动执行按当前激活预设。
-- 表情精灵 App 层：`ExpressionStore`（expressions/{角色名}/*.png + Risu 导入）、设置页（启用/兜底/多立绘/去重 + 角色精灵导入/删除）、聊天 AI 消息按正文 `sampleClassifyText` → `chooseSprite` 渲染到头像下方。登记：extra.sprite 持久化未做（渲染期确定性选择）；LLM 分类未接。
-- Captions App 层：`CaptionPrefs` + 输入区“图片描述”按钮（对首张待发图生成描述 → `sendCaptionedMessage` 语义追加 captioned 用户消息 → 触发回复）+ 设置页。登记：source 仅 multimodal（extras/local/horde 未接）；refine_mode/prompt_ask 为开关未接确认弹层。
-- 官方设置对齐：`collapse_newlines`（字段/示例/回复清理折叠换行）与 `example_separator`（默认 ***）已加到 消息渲染 设置页并全链路接线（CharacterCardFieldsEngine/ExampleAssembler/CleanUpConfig）。
-
-### 3.8.18 setOpenAIMessages 构造循环 ✅
-- `PromptAssembler.toOpenAiMessages` 按官方 openai.js setOpenAIMessages 1:1 下沉：narrator→system、names_behavior（DEFAULT 群聊/force_avatar、CONTENT 非旁白、NONE/COMPLETION 不加）、isSameModel 过滤（reasoning/signature 仅同 API/模型携带，工具调用里的推理/签名同步剥离）、输出“新的在前”。
-- ChatMessage 增补 api/model/reasoningSignature/reasoning/narrator/forceAvatar 字段；ChatPromptFactory 从 JSONL extra 解析并接线。
-- 差分：`set-openai-messages-official.mjs`（openai.js:561-640 逐字；打桩 getMediaDisplay/getMediaIndex/IGNORE_SYMBOL，已登记）→ `SetOpenAiMessagesDiffTest` 9 例全过。引擎 328 测全绿。
-
-### 3.8.19 边界补齐
-- Captions：refine_mode（发送前编辑确认弹层）与 prompt_ask（生成前自定义提示词弹层）已接，状态机在 ChatViewModel（CaptionDraft/captionPromptRequest）。
-- 表情精灵：AI 回复落盘后把选中精灵路径写进 `extra.sprite`，渲染优先读存储（官方 extra.sprite 语义）。
-- `/genraw` 官方参数补齐：instruct/as/stop/trim（stop 按 JSON 数组注入一次性停用词；trim 裁掉 user/char 名前缀；instruct/as 因 App 无 instruct 模式登记边界）。
-- 官方行为设置（power-user）：user_prompt_bias/show_user_prompt_bias、trim_spaces、trim_sentences、pin_examples、names_as_stop_strings 已加设置页并全链路接线（BiasEngine/CleanUpMessage/StoppingStrings/PromptPipeline.pinExamples）。
-- auto_swipe（最短长度/黑名单/阈值）：设置页 + finalizeStream 正常回复落盘后按 SwipeEngine.generatedTextFiltered 命中自动生成新变体（官方 power_user.auto_swipe 语义）。
-- 世界书条目编辑器补齐全部官方字段（原仅 7 个）：position 整数枚举/深度/角色/selectiveLogic/大小写/整词/scanDepth/六个 match 开关/prevent/exclude/delayUntilRecursion/概率/ignoreBudget/triggers/outletName/sticky/cooldown/delay/group/组权重/组覆盖/组评分/角色过滤/vectorized/addMemo/automationId/displayIndex/keysecondary；读写按官方字段位置（case_sensitive 等进 entry.extensions）。
-- strip_examples（完全移除示例）与 message_token_count（落盘 extra.token_count + 消息时间旁显示 token 数）已接。
-- 外置世界书（官方双轨外置轨）数据层已接：WorldStore（filesDir/worlds/*.json，{name, entries:{uid:entry}} 官方格式）、
-  CharacterCardEdit.readWorldLink/applyWorldLink（data.extensions.world）、chat_metadata.world_info 指定、
-  settings 全局选择 globalSelect 与插入策略；ChatPromptFactory 用 WorldLoreMerger 把内嵌卡书+关联+聊天+全局合并进扫描。
-  角色详情页“关联外置世界”选择、聊天 ⋮“外置世界（本会话）”指定（chat_metadata.world_info）已接；
-  世界书扫描设置补全官方字段：minActivationsDepthMax/budgetCap/useGroupScoring/include_names（扫描文本带名字前缀）已接线；
-  2026-08-14 审查修复：世界书条目内容在激活时先宏替换（官方 checkWorldInfo 的 substituteParams），
-  替换后文本进递归缓冲/预算/最终输出，总装 preparePrompt 再替换一次（官方 openai.js 两次替换语义）；
-  世界书关键词也过宏替换（此前 App 未传 substituter，{{user}} 等 key 不生效）；delayUntilRecursion
-  首级按官方 shift() 在扫描前移出（原实现多扫一轮同级）；角色卡 tags 接进 characterFilter 标签过滤
-  （官方 getTagKeyForEntity 恒有 tagMap 项，无标签=[]）；差分新增 3 例（空消息空洞 join 语义、带标签/空标签过滤），
-  WorldInfoScannerMacroTest 锁宏替换（harness 打桩恒等无法差分）；移除遗留调试 println。
-  外置世界条目编辑器已接：复用内嵌同款 WorldEntryEditorSheet（官方全字段），保存进 worlds/*.json 官方格式
-  （字段命名对齐官方 world 文件：key/keysecondary 数组 + case_sensitive/scan_depth 等进 extensions）；
-  世界文件导入/导出 UI（GetContent/CreateDocument）与 overflow_alert 开关已接。
-- `/trigger await`：await=true 等待生成结束（官方语义）；`/inject filter`：filter 参数持久化，生成前用 SlashEngine 求值（true/1/yes 才注入；解析失败/空=始终注入，与官方 filter 复活失败同语义；闭包上下文为 App 近似）。
-
-### 3.9 提供商 / LLM 客户端（引擎 1:1 审计）
-
-**一句话结论**：OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、xAI、Cohere、AI21 路由全部接完（转换器均已差分移植，网络层用 MockWebServer 单测锁行为）；OpenRouter 已接媒体嵌入/推理签名/reasoning exclude，缓存标记待设置项；只剩 Vertex 服务账号认证未做。
-
-| 提供商 | 协议路由 | 请求体 | 消息转换 | 媒体 | 预算/缓存/签名 | 模型列表 | 状态 |
-|---|---|---|---|---|---|---|---|
-| OpenAI | ✅ `/chat/completions` | ✅ 全厂商参数 27 例差分 + 实际请求体 28 例差分（chat-request-body-official.mjs，锁 openai 系/o1/gpt-5/空 stop/温度 clamp/seed 边界） | ✅ | ✅ MediaInliner 7 例差分 | — | ✅ `data[].id` | ✅ |
-| Azure OpenAI | ✅ `deployments/{model}/chat/completions?api-version=2024-12-01` + api-key 头 | ✅ 同全厂商参数 | ✅ | ✅ | — | ✅ `value[].id` | ✅ |
-| DeepSeek | ✅ `/v1/chat/completions`（/beta 仅 strict schema，官方文档以 /v1 为默认） | ✅ | ✅（官方 sendDeepSeekRequest：postProcessPrompt semi_tools + addAssistantPrefix + addReasoningContentToToolCalls + reasoning_effort） | ✅ | — | ✅ | ✅ |
-| Groq / Moonshot / MiniMax / 智谱 / 通义 / 硅基流动 / Z.AI / Fireworks / Perplexity / Custom / NanoGPT / Chutes / ElectronHub / SiliconFlow / o1 / Ollama | ✅ openai-compatible | ✅（各自厂商参数分支） | ✅ | ✅（OpenAI 媒体数组） | — | ✅ `data[].id` / 无端点时最小对话探测 | ✅ |
-| Workers AI | ✅ `{account}/ai/v1/chat/completions` | ✅ | ✅ | ✅ | — | ✅ `result[].name` | ✅ |
-| Anthropic | ✅ `/v1/messages` + x-api-key + anthropic-version | ✅ 17 例差分（thinking/tools/web_search/json_schema/beta/采样/verbosity/no-prefill） | ✅ `convertClaudeMessages` 整链 41 例差分，已接入 builder | ✅ `convertClaudePart` 25 例差分（image/text/video/audio → 块） | ✅ `calculateClaudeBudgetTokens` 已接入 LlmClient（SamplerParams.reasoningEffort 默认 auto；adaptive→effort 字符串/auto→不加 thinking） | 🟡 官方不发模型列表请求，用默认模型 | ✅ 差 tokenizer |
-| Gemini AI Studio | ✅ `v1beta/models/{model}:generateContent?key=` | ✅ 16 例差分（generationConfig/thinkingConfig/tools/toolConfig/google_search/图像模态） | ✅ `convertGooglePrompt` 整链 41 例差分，已接入 builder | ✅ `convertGooglePart` 25 例差分（inlineData/分辨率） | ✅ `calculateGoogleBudgetTokens` 已接入 LlmClient（gemini-3 flash/pro→thinkingLevel，2.5→数字预算） | ✅ `models[].name`（过滤 generateContent） | ✅ 差 tokenizer |
-| OpenRouter | ✅ openai-compatible | ✅（openrouter 参数分支 + transforms/plugins/reasoning.exclude/effort） | ✅ | ✅ `embedOpenRouterMedia`（audio+video）已接线 | ✅ `addOpenRouterSignatures` + `cachingAtDepthForOpenRouterClaude` + `cachingSystemPromptForOpenRouter`（SamplerParams 缓存开关/深度/TTL）+ DeepSeek `addReasoningContentToToolCalls` 全部接线 | ✅ | ✅ |
-| Mistral | ✅ 专用路由 `/chat/completions` | ✅ body 差分 23 例含内（sendMistralAIRequest 逐字提取） | ✅ `convertMistral` 已接线 | — | — | ✅ | ✅ |
-| xAI | ✅ 专用路由 `/chat/completions` | ✅（官方 sendXAIRequest 字段，reasoning_effort high→high/其它→low） | ✅ `convertXAI` 已接线 | — | — | ✅ | ✅ |
-| Cohere | ✅ 专用路由 `/v2/chat`（官方 API_COHERE_V2） | ✅（官方 sendCohereRequest 字段：documents/tools/p/frequency/presence） | ✅ `convertCohere` 已接线 | — | — | ❌（无 models 端点，默认模型 command-r-plus） | ✅ |
-| AI21 | ✅ 专用路由 `studio/v1/chat/completions` | ✅（官方 sendAI21Request 字段） | ✅ `convertAI21` 已接线 | — | — | ❌（无 models 端点，默认模型 jamba-large） | ✅ |
-| Vertex AI | ❌ LlmClient 明确拒绝（需服务账号/项目配置） | 🟡 vertex 参数分支已差分 | Gemini 转换可复用 | ✅ | — | ❌ | ❌ 服务账号认证未做 |
-
-其余要点：
-- providers.json 数据驱动 **36 家**（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 `api.cohere.com/v2`；含智谱/通义/火山方舟），端点按官方 `src/endpoints/backends/chat-completions.js` 核对 + 联网核实最新模型（OpenAI gpt-5.5/5.4、Claude opus-5/sonnet-5/haiku-4-5、Gemini 3.6/3.5-flash/3-pro、DeepSeek v4、Grok 4.3、Kimi k3、GLM-5.2、Qwen3.7、豆包 Seed 2.1、MiniMax M3 等）。新供应商均为 openai-compatible，协议集合不变
-- LlmClient 七协议路由：openai-compatible（/chat/completions）、Anthropic（/v1/messages）、Gemini（generateContent）、Mistral / xAI / AI21（/chat/completions）、Cohere（/v2/chat）；SSE 四格式（OpenAI delta 也覆盖 Mistral/xAI/AI21、Anthropic content_block_delta、Gemini candidates.parts、Cohere content-delta），流结束兜底 onDone
-- **能力管道已全通**（ProviderRequestOptions）：tools/tool_choice（OpenAI 兼容全家 + Anthropic + Gemini + Mistral/xAI/AI21/Cohere/DeepSeek 各自官方形态）、json_schema 结构化输出（openai/mistral/xai response_format、ai21/deepseek json_object+hack 消息、cohere response_format.schema、Anthropic 强制 tool、Gemini responseMimeType/responseSchema）、Anthropic/Gemini web_search、Gemini requestImages/aspectRatio/imageSize/safetySettings
-- 响应解析按协议取纯文本；Azure（deployments + api-version 2024-12-01 + api-key 头）、Workers AI（账户 ID + /ai/v1）专用 URL
-- 模型列表拉取四种格式：openai data[].id / google models[].name（过滤 generateContent）/ workers result[].name / azure value[].id；无模型端点的提供商（Perplexity/自定义）用最小对话探测
-- ProviderStore 多连接档案（profiles.json + activeId，旧 connection.json 自动迁移）
-- 边界：GEMINI_SAFETY/VERTEX_SAFETY 由调用方桩/传参（差分 fixture 同样打桩）；`convertClaudePrompt` 遗留旧函数（仅 token 计数用）未移植；Claude/Gemini tokenizer 仍是回退 cl100k
+### 3.11 向量扩展（RAG 全量）✅（引擎层）
+世界书 RAG（vectorized 同步/检索/强制激活）；聊天历史向量重排（enabled_chats/rearrangeChat）；文件/Data Bank 向量化（enabled_files：分块/overlap/检索注入）；FileVectorStore（磁盘持久化对齐 vectra 目录）+ InMemoryVectorStore；EmbeddingProvider（OpenAI 兼容 + BagOfGramsEmbedding）；查询语义对齐官方（multiQueryCollection 全局 topK/queryCollection 单集合，hashes 不过滤阈值）；扩展提示经 ExtensionPrompt（3_vectors/4_vectors_data_bank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）。未做：summarize（P3，官方默认关）、本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）、translate_files（P3）。
 
 ### 3.12 表情精灵 ✅（引擎层纯逻辑）
-- ExpressionEngine：文件名→标签（joy/joy-1/joy.expressive→joy）、图片元数据（fileName/title/imageSrc/isCustom）、分组排序（主文件优先、附加标记 additional）、chooseSpriteForExpression（fallback、多立绘随机、rerollIfSame、overrideSpriteFile）
-- sampleClassifyText：去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim（8 例差分）
-- 官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage 覆盖 spritesPath（含子目录/sanitize）与 importRisuSprites（提取/去重/删除字段）；DOM 显示/动画/LLM 分类 API 属 App/服务层
-- 差分顺带修 VectorTextUtils.trimToStartSentence：JS substring 自动钳制长度，Kotlin 需 coerceAtMost（原实现会越界）
-
-## 3.11 向量扩展（RAG 全量）✅（引擎层）
-- 世界书 RAG（vectorized 同步/检索/强制激活）
-- 聊天历史向量重排（enabled_chats / rearrangeChat）
-- 文件 / Data Bank 向量化（enabled_files：分块、overlap、检索注入）
-- 向量库：FileVectorStore（磁盘持久化，对齐 vectra 目录）+ InMemoryVectorStore（测试）；EmbeddingProvider：OpenAI 兼容 + BagOfGramsEmbedding（本地离线）
-- 查询语义对齐官方：multiQueryCollection 全局 topK / queryCollection 单集合（hashes 不过滤阈值）
-- ❌ 聊天摘要 summarize（P3，官方默认关）；本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）；translate_files（P3）
-- 扩展提示通过 ExtensionPrompt（3_vectors→vectorsMemory / 4_vectors_data_bank→vectorsDataBank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）
-- 引擎测试 351 全绿（含重排/文件/分块/工具函数/作用域宏/YAML/JSON 导入导出/提示词组装合并/CharX/BYAF 完整导入/名字规则/表情精灵/分类预处理/群聊完整循环/精灵存储/角色卡字段/斜杠转义/提示词工具/SSE 流解析/正则管线/导演备注/人设引擎/OpenAI 请求体全厂商+实际 requestBody/工具循环决策/世界书计时效果/StoryString/use_sysprompt 默认/预设库完整性/工具预算/管线计划/媒体附件/媒体内联/媒体成本）
-
-### 3.10 其它
-- ✅ 群聊成员激活策略官方差分 15 例；✅ APPEND 角色卡合并 8 例；✅ 深度提示 7 例；✅ 完整循环纯逻辑（GroupLoopEngine）官方差分 11 例；✅ App 调度层（GroupStore/新建群聊/GroupScheduler 选人/合并卡/顺序生成/续写与重生成按最后成员）；✅ natural/pooled 激活+ 队列提示；✅ 深度提示 App 接线（in-chat 扩展注入 + GroupDepthPromptsEngine）；✅ 自动续写（shouldAutoContinue + /continue 链，默认关）；✅ 策略切换 UI（新建群聊 + 聊天 ⋮ 群聊设置）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白消息群聊可用）。✅ 作者注释、聊天元数据模型、TokenCounterFactory（OpenAI 精确 JTokkit）
-- ❌ 服务层：TTS / STT / 图像 / 翻译（P3/P4）；向量引擎已齐，App 层接线待做
+ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseSpriteForExpression fallback/多立绘随机/rerollIfSame/overrideSpriteFile）；sampleClassifyText（去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim；8 例差分）；官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage（spritesPath 子目录/sanitize + importRisuSprites）；DOM 显示/动画/LLM 分类 API 属 App/服务层；差分顺带修 VectorTextUtils.trimToStartSentence（Kotlin 需 coerceAtMost）。
 
 ## 4. App / UI 进度
 
 ### 4.1 导航与返回手势 ✅
-底部三 Tab（角色/聊天/设置）；聊天页、设置子页都接 BackHandler，系统返回键/侧滑返回逐级回退（聊天→列表、提供商详情→列表→设置主页）；Manifest 已开 enableOnBackInvokedCallback（Android 13+ 预测性返回动画）。README 守则第 7 条已落实。
+底部三 Tab（角色/聊天/设置）；聊天页、设置子页 BackHandler 逐级回退；Manifest enableOnBackInvokedCallback（Android 13+ 预测性返回）。
 
-### 4.2 首页（角色 Tab）🟡
-品牌顶栏 + **全局搜索**（README 守则 8：角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；分组结果列表；世界书条目点击出详情弹层；设置项点击跳设置 Tab；空结果引导）、AI 对话置顶卡、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、字段详情弹层、空状态引导、Toast 反馈。角色卡取色 seed 已存（avatar → Palette）。
-✅ 角色字段编辑（README：分字段 标签+预览+点击展开编辑；保存改写 rawJson 并同步会话名）。
-✅ 角色详情编辑页已完成：官方 v2 卡字段全集编辑（名字/描述/性格/场景/开场白/示例对话/系统提示/历史指令/深度提示/话痨程度/作者/标签/备用开场白管理）+ 世界书条目管理 UI（增删改/启停/常量/选择性）+ 删除/置顶/导出 JSON/一键开始聊天。depth_prompt/talkativeness 读写已改到官方位置 data.extensions（旧实现写 data 顶层，{{chardepthprompt}} 读不到）；世界书读取兼容 data.character_book 与根级 character_book（历史卡）；保存只覆盖编辑字段、未知扩展字段（probability/vectorized/automationId/displayIndex/extensions 等）原样保留、v1（key/order/disable）归一 v2；新增开场白编辑行；布局上下留白加大、条目卡片化；导出文件名用编辑后名字。字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-✅ 正则（该卡）UI 已做（data.extensions.regex_scripts 官方格式读写 + 编辑弹层 + 聊天 USER_INPUT/AI_OUTPUT 位点接线，见；补“允许此角色应用该卡正则”开关，写官方 character_allowed_regex，默认关闭）；✅ 变量（该卡）UI 已做（data.extensions.emberinn_variables，README 自定义扩展，官方无 per-character 变量，见第 8 节不一致登记）；✅ 快捷回复（全局）已做（按官方 Quick Reply 扩展做成全局 preset + 槽位，字段 mes/label/enabled/automationId/preventAutoExecute 完全复用官方 QuickReplySlot；设置→服务→快捷回复管理，聊天输入区快捷盘点击执行；per-character 快捷回复已删除，README 表述已改全局）；✅ 模型覆盖已做；✅ 主题配方（部分）：data.extensions.emberinn_theme_recipe（seed/background/shape/font/style/lockMode）读写 + 角色详情页“主题配方”卡片（seed 输入、背景选图/清除、形状/字体/风格/浅深锁定 chips、恢复全局）；聊天页背景 = 会话锁定 custom_background 优先、角色配方 background 回退；✅ 全局应用已做（ThemeState + MainActivity 管线：浅深锁定/seed/形状生效；字体 source=系统衬线、lxgw 待字体包）；🟡 字体文件下载、风格档位映射未做（边界登记）。设置搜索深链已实现。
-注：模型覆盖/主题配方官方角色编辑器无对应字段（模型覆盖官方是聊天级 #custom_model_id），但为 README 明确承诺的项目自定义角色级覆盖，属待办，非移除。
+### 4.2 首页（角色 Tab）与角色详情 🟡
+- 首页：品牌顶栏 + 全局搜索（角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；条目详情弹层；设置项跳转）、AI 对话置顶、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、角色卡取色 seed 已存。
+- 角色详情编辑页：官方 v2 卡字段全集（name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings）+ 世界书条目管理 UI（官方全字段，v1 key→v2 keys 归一，未知扩展字段原样保留）+ 删除/置顶/导出/一键开始聊天。depth_prompt/talkativeness 读写官方位置 data.extensions；字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
+- 正则（该卡）UI：官方格式读写 + 编辑弹层 + USER_INPUT/AI_OUTPUT 位点接线 + “允许此角色应用该卡正则”开关（UI 默认开=用户要求；实际生效以 character_allowed_regex 列表为准，未进过详情页/未切换过开关时不写入）。
+- 变量（该卡）：data.extensions.emberinn_variables（README 自定义扩展，官方无 per-character 变量，见 6.1）。
+- 快捷回复（全局）：Quick Reply 官方字段（mes/label/enabled/automationId/preventAutoExecute），设置→服务→快捷回复管理；per-character 快捷回复已删。
+- 模型覆盖 / 主题配方：README 承诺的角色级自定义（官方无对应字段，模型覆盖官方是聊天级 #custom_model_id）；存储+UI+聊天背景已做；🟡 字体文件下载、风格档位映射未做。
 
-### 4.3 聊天页 🟡 v2（核心已接线 + 媒体 + 状态胶囊）
-> 发送行为：官方 send_if_empty 已接（最后一条 AI + 空输入 → 发送配置文本续聊，设置→服务→发送）。
-> 现状：continue 走官方默认 nudge 路径（历史“新的在前”对齐 setOpenAIMessages）；思考过程走 onReasoning 独立通道（流式显示 + 生成后折叠卡片）；重新生成/继续只对最后一条 AI 生效；新角色空会话自动补 first_mes 开场白（起：alternate_greetings 一并进第一条 AI 的 swipes，对齐官方 getFirstMessage，可滑动切换开场白）。
-消息流 LazyColumn + 气泡 + 自动滚底 + 输入框 + 发送；**PromptPipeline 总装流式发送**（角色卡/世界书/示例/历史全部引擎内完成，SSE 逐 token）；停止按钮 = 取消 OkHttp call 并保留已生成部分（官方 mes_stop）；重新生成 = 删最后 AI 回复、复用最后用户消息（option_regenerate）；继续生成 = 官方 mes_continue（移出最后 AI + continue 模式续写，流结束与原消息合并落盘）；复制 / 删除 / **编辑消息**（官方 updateMessage：isEdit 正则分位点 + 清/写 extra.bias）/ **冒充**（官方 Generate('impersonate')：模型以 {{user}} 视角写草稿，流式进输入框、不落历史；引擎 type=impersonate 整链差分已覆盖）/ 长按菜单；最后一条 AI 常驻 4 键；清空会话二次确认；Markdown + 代码高亮（mikepenz m3/coil3/code 0.43.0，import 包名已对 0.43.0 源码 jar 逐一核实；聊天气泡内已收敛为聊天风样式）；未配置模型横幅 → **一键深链“提供商与模型”子页**（先退出聊天再切 Tab，不会被早退逻辑挡住）；顶栏返回 + 角色头像 + accent 角色名；系统返回 / 侧滑返回已修。聊天页布局按 README 重排：systemBars 留白、**用户消息气泡内容自适应、上限 320dp（AI 全文宽）**、间距/圆角/留白加大、顶栏与输入栏为 Cloudy 0.7.1 真背板模糊玻璃（sky 源层 + cloudy 浮层，正文区不模糊）、空状态居中留白。
-✅ 角色详情入口已接通（角色卡长按菜单“查看/编辑详情”→ 详情编辑页，见 4.2）。
-❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，排 P2）。
-✅ **滑动切回复已做（README #1731“每条消息都能滑”）**：数据模型对齐官方 jsonl（`swipe_id` / `swipes[]` / `swipe_info[]`，ChatStore.ensureSwipes 初始化 + syncSwipeToMes 语义同步 mes/send_date/gen_*/extra）；AI 气泡横滑（右=下一个/最后一条 AI 越界生成新变体，左=上一个）；计数条 `n/N` + CaretLeft/Right（有变体时显示）；长按菜单“上一个/下一个回复”“删除当前回复”（官方 deleteSwipe 的 newSwipeId 规则）+“生成新回复（变体）”（官方 Generate('swipe')：coreChat.pop 排除最后一条，结果追加进最后一条 swipes 不新增消息）；编辑消息同步写回 swipes[swipe_id]（官方 editMessage）。导出 jsonl 含 swipes 字段可直接进酒馆。✅ 世界书扫描与官方一致（核对 script.js prepareMessages：swipe 在 coreChat.pop 之后才 chatForWI=coreChat 扫描，App 的 dropLast(1) 等价，原登记“官方含最后一条”为误记，已更正）。
-✅ 滑动切回复的 swipe picker（长按菜单“变体列表”→ ModalBottomSheet，逐条显示当前高亮，点击即跳转并关层；数据/跳转/删除接口均已接线）。
-✅ 上下文占比胶囊已达标（圆环+百分比+绿黄橙红分级+点开分解，分母=ConnectionProfile.contextWindow，设置页可配）；✅ 世界书状态已升级为命中面板（条目名/命中键/常驻/位置/token，点 pill 打开）。
-⚠️ 快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行（世界书命中条目 automationId 匹配槽位自动执行，prevent 栈 1:1）；图像生成/附件/TTS 已入快捷工具盘与长按菜单，全局正则开关在设置→正则页（disabledExtensions.regex 语义）。✅ 聊天元数据：chats/{id}.json 官方 ChatHeader 读写；chat_metadata.system_prompt/scenario/mes_example 覆盖角色卡（引擎参数已接）；custom_background 聊天背景（⋮ 菜单选图/清除，消息区低透明铺底）；✅ 书签（存档 + bookmark_link + 载入）；✅ 设置快照（见 3.8）。
-现状补充：键盘适配（adjustResize + imePadding 只作用“消息列表 + 输入栏”同一列，顶栏与静态背景不参与 IME 重排）、消息日期分隔（今天/昨天/日期）、删除消息二次确认、⋮ 会话菜单（导出聊天 JSONL / 清空）、发送按钮空输入禁用态、媒体附件与状态胶囊（见 4.8）。
-聊天页现状：列表 `reverseLayout=true`（官方 Jetchat 方案），最新消息天然钉在视口底部——新消息/流式内容增长无需 scrollToItem 强制滚动，键盘开合只让列表+输入栏列从底部收放；自动滚底=贴底跟随（`firstVisibleItemIndex==0`）+上滑暂停+回底恢复；思考过程空正文时独立成卡不再消失；流中断保留思考+人话提示；世界书状态=命中面板（名字/键/常驻/位置/token）；上下文胶囊分母=contextWindow（默认按模型自动填，见 4.4）；SSE 事件级容错对齐官方平滑流（坏事件跳过不中断，差分 16 例 + MockWebServer 回归）；发送复位跟随；首页预览走 ViewModel 缓存（不在组合期读盘）；**滑动切回复全链**（swipes 数据模型 + 手势/计数/菜单 + 生成变体 + 编辑同步，对齐官方 ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）。
+### 4.3 聊天页 🟡（核心已接线 + 媒体 + 状态胶囊）
+- 发送：PromptPipeline 总装流式发送（世界书/宏/人设/AN/示例/历史/控制提示/工具/媒体/推理签名全引擎内完成，SSE 逐 token）；停止=取消 OkHttp call 保留已生成（mes_stop）；重新生成=删最后 AI 回复复用最后用户消息（option_regenerate）；继续=mes_continue（移出最后 AI，流结束合并落盘）；send_if_empty 已接；冒充=Generate('impersonate')（流式进输入框不落历史）。
+- 交互：复制/删除/编辑（updateMessage：isEdit 正则分位点 + 清/写 extra.bias）/长按菜单/最后一条 AI 常驻 4 键/清空二次确认/未配置模型横幅一键深链；Markdown+代码高亮（mikepenz m3/coil3/code 0.43.0）；用户消息气泡上限 320dp（AI 全文宽）；顶栏/输入栏 Cloudy 0.7.1 真背板模糊玻璃（sky 源层静态）。
+- 滑动切回复全链：数据模型对齐官方 jsonl（swipe_id/swipes[]/swipe_info[]；ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；AI 气泡横滑（右=下一个/越界生成新变体，左=上一个）；计数条 n/N + 箭头；长按菜单变体列表 ModalBottomSheet；导出 jsonl 可直接进酒馆；世界书扫描按官方 prepareMessages（swipe 在 coreChat.pop 之后扫描，App dropLast(1) 等价）。
+- 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）；世界书命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
+- 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）。
+- ❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，P2）——注：assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4），此 ❌ 作废。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
-全部会话按时间倒序、置顶优先；点卡片进聊天；长按 / ⋯ = 置顶 / 导出聊天 JSONL（官方格式，可直接进酒馆）/ 删除（二次确认）；FAB「+」新建对话（AI 对话或选角色，每个角色可开多个会话，UUID 会话 id）；空状态引导；会话置顶持久化（SessionRecord.pinned，兼容旧 JSON）。
-✅ 新建群聊入口（会话 Tab FAB → 勾选角色 → 新建群聊，GroupRecord + 群聊设置 UI 已接线）。
+会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
 
 ### 4.4 设置 ✅（README 规格）
-- 数据与隐私页已做实：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明展示 + 清除全部数据（二次确认，建议先备份）
-- 首启引导已做实（README 启动体验）：欢迎页 + 导入角色卡（系统选择器直接导入）/ 直接开始聊天（进 AI 对话）/ 跳过；SharedPreferences 标记只显示一次；低饱和氛围渐变
-
-- 设置主页：大标题 + 副标题、设置搜索（真过滤）、常用快捷区（主题/模型/语音/备份）、六组卡片（外观与主题 / 提供商与模型 / 语音 / 服务 / 数据与隐私 / 关于）
-- 外观与主题：主题模式（跟随系统/浅色/深色）+ 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），点选立即全局生效（实时预览），SharedPreferences 持久化；字体/圆角/背景模糊标“开发中”
-- 提供商与模型（参照命理2 逻辑）：搜索 + 卡片列表（品牌 SVG 头像 + 名称 + 一句话 + 已配置/未配置 pill + “我的连接”切换/删除）；详情页 = 名称 / API Key（遮罩+显示）/ 接口地址（未配置时自动预填 providers.json 官方默认地址）/ 区域（默认选中第一个 variant）/ 账户 ID / API 版本（默认预填 spec.api_version，如 Azure 2024-12-01）/ 默认模型（底部弹层搜索）/ 上下文上限（tokens，占比胶囊分母）/ 最大回复 tokens（推理模型思考会占额度，512 太小正文被掐空；默认按 providers.json default_max_tokens）/ 测试连接 / 保存 / 删除确认
-- 关于页做实：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库
-- 语音（TTS）✅：Android 系统 TTS 本机引擎，语音选择/语速/试听真实可用；朗读选项字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；聊天自动朗读（auto_generation）、消息长按“朗读这条消息”、narrate_user 已接；文本处理对齐官方（跳代码块/标签、去星号、正则 /pat/flags、去图片、按行分段排队），纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装（未做）
-- 服务页 ✅：翻译（8 家全实现：Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐官方 src/endpoints/translate.js，Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程；语言映射/DeepL formality/free-pro 端点均按官方；自动翻译模式已接：responses/both→AI 回复译文进 extra.display_text、推理进 extra.reasoning_display_text，inputs/both→用户消息 mes 换译文、原文存 display_text，渲染按官方 display_text ?? mes；编辑后按官方 translateMessageEdit 自动重译/清除 display_text）、图像（AUTOMATIC1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace 已实现，协议对齐官方 stable-diffusion 扩展与 src/endpoints/{stable-diffusion,novelai}.js——SDCPP 同 /sdapi/v1/txt2img、NovelAI 请求体 1:1 且解 ZIP 取 PNG、HF 直连 /models/{model}；UI 增 API Key 字段； Stable Horde 已实现（官方 horde.js：截断+sanitize+异步任务+轮询 check/status，默认 cfg_scale=7/512x512/karras/sampler=k_euler_a）；DrawThings 仅 macOS 本地服务，Android 不适用已从 UI 移除；ComfyUI 已做（用户提供 workflow JSON（含 %prompt%/%model%/%steps%/%width%/%height%/%seed%/%denoise%/%clip_skip%/%vae%/%sampler%/%scheduler%/%scale% 占位符）→ POST /prompt → 轮询 /history → GET /view，官方 comfy.generate 1:1；官方默认 Default_Comfy_Workflow.json 不在仓库，由用户粘贴，登记）、向量（OpenAI 兼容嵌入 / 本地 BagOfGram）——✅ 已接线：设置页开关（启用/聊天历史重排/文件数据银行 + query/insert/protect/阈值）、发送时 VectorChatRearranger 重排+数据银行检索、世界书 vectorized 条目经 externalActivations 强制激活、聊天 ⋮ 数据银行管理；OpenAI 配置不完整时禁用并人话提示
+- 数据与隐私：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明 + 清除全部数据（二次确认）；首启引导（欢迎页 + 导入角色卡/直接开始/跳过）。
+- 设置主页：搜索（真过滤）+ 六组卡片（外观与主题/提供商与模型/语音/服务/数据与隐私/关于）；外观：主题模式 + 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），实时预览；字体/圆角/背景模糊标“开发中”。
+- 提供商与模型：搜索 + 卡片列表（品牌 SVG/已配置 pill/我的连接）；详情页 = API Key（遮罩）/接口地址（未配置自动预填 providers.json 默认）/区域/账户 ID/API 版本/默认模型（底部弹层搜索）/上下文上限/最大回复/测试连接/保存/删除确认；模型页已补 top_k/min_p/top_a/repetition_penalty/seed/n/流式/logprobs/use_sysprompt + OpenRouter use_fallback/allow_fallbacks/middleout/providers/quantizations。
+- 关于页：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库。
+- 语音（TTS）：Android 系统 TTS，语音/语速/试听；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。
+- 服务页：翻译 8 家全实现（Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐 translate.js；自动模式 responses/both/inputs/both；编辑后 translateMessageEdit 自动重译/清除）；图像（A1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace/Stable Horde 异步轮询（官方 horde.js）/ComfyUI workflow+轮询；DrawThings 仅 macOS 已移除；官方默认 Default_Comfy_Workflow.json 不在仓库，由用户粘贴，登记）；向量（OpenAI 兼容嵌入/本地 BagOfGram；聊天历史重排+数据银行+强制激活+聊天 ⋮ 管理）；翻译/图像/向量未完成项见 5。
 
 ### 4.4.5 应用图标 ✅
-launcher 图标 = 用户提供的原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图只需替换该 PNG。
+launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图替换该 PNG。
 
 ### 4.5 主题系统 ✅（全局层）
-ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成整套 M3 ColorScheme（含 surfaceContainer 系列，浅色低饱和容器、深色提亮主色）；MainActivity 持有 themeMode/preset 状态，贯通 MainScreen → SettingsScreen → AppearanceScreen。
-✅ 玻璃表面：聊天页顶栏/输入栏 + 首页顶栏/搜索顶栏已接 Cloudy 0.7.1（背板模糊 + 半透明 tint，GPU + 旧设备 CPU 降级）；五处真毛玻璃 + AI 对话玻璃渐变卡均已补 1px 边缘高光，其余页面暂无毛玻璃。
-✅ 角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；🟡 MeshGradient 氛围背景未做（README 可选）。
+ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成 M3 ColorScheme；MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）已接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）；官方字段 st*/scheme* 填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…），其余 10 套色板派生；🟡 MeshGradient 氛围背景未做（README 可选）。
 
 ### 4.5.5 图标系统 ✅
-全 App 图标已从 Material icons 换成 Phosphor Regular（24dp 网格 / 256 viewport / 圆头圆角），内置 32 枚官方路径 `app/src/main/java/com/emberinn/app/ui/icons/PhosphorIcons.kt`（由 `scripts/gen-phosphor-icons.mjs` 从 phosphor-icons/core 官方 SVG 生成，增图重跑脚本即可）。
-备用 Maven 包：com.adamglin:phosphor-icon:1.0.0（六字重全量、API PhosphorIcons.Regular.X，Kotlin 2.0.21 构建）与 io.github.dev778g-me:phosphoricon-compose:1.0.5（拆分包）均可用（Android AAR 存在）；现选内置 32 枚是出于 APK 体积与精确可控，后续如需全量图标可换 adamglin 包。material-icons-core/extended 依赖已移除。
-规范：默认 onSurfaceVariant、激活 primary、警示 error；冒充用 MaskHappy、继续用 CaretDoubleRight、删除用 TrashSimple（README 图标系统节）。
+全 App 图标 = Phosphor Regular（24dp/256 viewport），内置 32 枚 `app/src/main/java/com/emberinn/app/ui/icons/PhosphorIcons.kt`（scripts/gen-phosphor-icons.mjs 从 phosphor-icons/core 官方 SVG 生成，增图重跑脚本）；备用 Maven 包 com.adamglin:phosphor-icon:1.0.0 / io.github.dev778g-me:phosphoricon-compose:1.0.5；material-icons-core/extended 已移除；规范：默认 onSurfaceVariant、激活 primary、警示 error；冒充 MaskHappy/继续 CaretDoubleRight/删除 TrashSimple。
 
 ### 4.6 数据存储 🟡
-角色卡 characters/*.json + avatars/*.png、会话 sessions/*.json（含 pinned 置顶字段）+ chats/*.jsonl、提供商 profiles.json、主题 SharedPreferences（README 计划是 DataStore，未迁移）。
-✅ 提供商“已配置”状态用进程内 ProviderState 共享（设置页保存/切换/删除后刷新，聊天页订阅，不再每发必读盘）；仅进入聊天页时读一次盘兜底。
-❌ Room 未引入。
+角色卡 characters/*.json + avatars/*.png；会话 sessions/*.json（含 pinned）+ chats/*.jsonl；提供商 profiles.json；主题 SharedPreferences（README 计划 DataStore 未迁移）；ProviderState 进程内共享（设置保存/切换/删除后刷新，聊天页订阅，仅进聊天页读一次盘兜底）；Room 未引入。
 
-### 4.7 App 接线时官方行为怎么接（源码对照，新会话先读这里）
-
-> 原则：App 接线只做“调用引擎 + 渲染结果”，不再重写一遍逻辑。每项都注明官方源码位置，接 UI 时照官方行为实现交互，引擎函数已经 1:1。
+### 4.7 App 接线总表（官方行为怎么接）
+> 原则：App 只做“调用引擎 + 渲染结果”，不再重写逻辑；每项注明官方源码位置。
 
 | 引擎能力 | 官方源码位置 | App 接线点 |
 |---|---|---|
-| 流式渲染 | `public/scripts/sse-stream.js` + `public/scripts/openai.js` eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 消息流逐 token 追加；停止 = 取消 OkHttp call（官方 abortController）；流结束必须走 onDone 收尾（引擎已兜底） |
-| 提示词组装 | `public/scripts/openai.js` prepareOpenAIMessages + populateChatCompletion + `public/scripts/script.js` generate | ✅ 引擎已接：PromptPipeline.prepare 一个入口出最终消息（世界书/宏/人设/AN/示例/历史/控制提示/工具调用/媒体/推理签名/squash，整链差分 29 例）；App 发送前调它 + 按协议走 ChatRequestBuilder / Anthropic / Google |
-| 消息转换 | `src/prompt-converters.js` convertClaudeMessages / convertGooglePrompt / 其余厂商 | ✅ 已全接：Claude/Gemini 在各自 builder 内部；Mistral/xAI/Cohere/AI21 在 LlmClient 对应协议分支调用；OpenRouter 在 openai-compatible 分支先签名/媒体再序列化 |
-| 工具/能力选项 | `src/endpoints/backends/chat-completions.js` 各厂商分支 + `public/scripts/openai.js` oai_settings | ✅ 已接：ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety，LlmClient 按各厂商官方形态写入请求体；App 层把设置/工具注册表填进 options 即可 |
-| 预算计算 | `src/endpoints/backends/chat-completions.js` sendClaudeRequest / getGeminiBody（调用 calculateClaudeBudgetTokens / calculateGoogleBudgetTokens） | ✅ 已接：LlmClient 按模型/effort 调两个预算函数，结果传进 builder 的 reasoningBudget（adaptive→effort 字符串、auto→不加 thinking、数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | 官方用 Showdown + highlight.js + DOMPurify | mikepenz multiplatform-markdown-renderer + Highlights/KodeView；✅ 官方 encode_tags 开关（AppearancePrefs.encodeTags，默认关=渲染 HTML，行首 > 保留的官方转义）/ Mermaid WebView 兜底（硬化：mermaid.min.js 本地资源离线渲染、放开网络与外链（远程图片/资源可加载、http(s) 链接走系统浏览器，不加开关）； JS 全开、sanitize 只拦 javascript: URL（用户要求活动页/交互页面能跑，官方 DOMPurify 禁脚本，已知偏差，风险登记）） |
-| 媒体渲染 | `public/scripts/openai.js` Message.addImage/addVideo/addAudio + `public/scripts/media.js` | 聊天消息 `extra.media` → MediaEngine.getFromMime 判定类型 → 图片/GIF 用 Coil3（coil-gif）、音视频用 Media3 ExoPlayer；URL 附件按官方逻辑下载/展示；✅ extra.media 解析与渲染组件已接（见 4.8） |
-| 世界书注入 | `public/scripts/world-info.js` checkWorldInfo + `public/scripts/openai.js` | 发送前：世界书条目 → Scanner（含正则 messageTransformer、RAG 强制激活）→ 注入结果进 PromptAssembler；命中灯只读 Scanner 完整 match 结果 |
-| 宏 | `public/scripts/macros/engine/` | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、作者注释、历史消息 preparePrompt 已由引擎接线，App 只需保证 MacroEnv 提供聊天/角色/系统状态） |
-| 正则 | `public/scripts/regex/` | 存前（sendMessageAsUser/saveReply/getFirstMessage）+ 总装（isPrompt=true/depth）双位点接入 RegexPipelineEngine；允许列表 character_allowed_regex；global/preset/scoped 分桶；✅ 命名预设集已做（采样预设管理器见 3.7） |
-| 群聊 | `public/scripts/group-chats.js` | 每轮：GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡字段 → GroupDepthPromptsEngine 深度提示 → GroupLoopEngine 判定续写/生成类型 → 多人回复按官方顺序拼接 |
-| 表情精灵 | `public/scripts/expressions/` + `endpoints/sprites.js` | ExpressionEngine.chooseSpriteForExpression 选图 → sprite 渲染到消息头像区；分类 API 接 LLM 或本地模型 |
-| 快捷回复 | `public/scripts/quick-reply.js` | 输入区快捷盘 → QuickReply 执行器（automationId 自动执行由引擎 WorldInfoAutoExecute 判定） |
-| 人设 | `public/scripts/personas.js` | ✅ PersonaStore 官方全字段（name/description/title/avatarPath/lorebook/position/depth/role/connections，depth 默认 2=官方 DEFAULT_DEPTH）+ 聊天页顶栏常驻人设按钮（官方右侧抽屉等价）+ ⋮ 菜单人设：搜索/选择/新建/编辑/删除/复制/备份/恢复/设为默认/锁定到本聊天（chat_metadata.persona）/同步名称到历史消息（syncUserNameToPersona）/头像选择/世界书选择；备份/恢复按官方 personas_YYYYMMDD.json 格式（{personas, persona_descriptions, default_persona}，恢复为合并语义：已存在跳过，default_persona 存在才应用）；发送时 effectivePersona = 引擎 PersonaEngine.resolve（聊天锁 > 角色/群聊连接 > 默认 > 当前选择）；注入按官方 persona_description_positions：0=IN_PROMPT/2=TOP_AN/3=BOTTOM_AN（合并作者注释）/4=AT_DEPTH/9=NONE；lorebook = 人设关联世界书（官方 getPersonaLore：聊天/全局已激活跳过，否则并入扫描）已接；matchPersonaDescription 扫描已接 |
-| 向量 RAG | `extensions/vectors/index.js` + `utils.js` | ✅ VectorRagService（OpenAI 兼容 / 本地 BagOfGram + FileVectorStore）→ ChatPromptFactory 总装前跑 VectorChatRearranger（聊天重排/文件分块/数据银行检索，引擎 1:1），世界书命中经 scanner externalActivations 强制激活，扩展提示 3_vectors/4_vectors_data_bank 注入；数据银行文件在聊天 ⋮ 菜单管理 |
-| 预设 | `public/scripts/preset-manager.js` + power-user/instruct-mode/sysprompt/reasoning/openai.js | ✅ PresetApplyEngine 官方差分 82 例（识别/五类应用/迁移/保存过滤/名字匹配）；PresetsScreen 五类选择即应用 + 保存当前为预设 + 删除用户预设 + 单文件导入（legacy 顺序）+ 多区段 master 导入导出；/preset 命令（exact + Fuse.js 7.1 模糊，FusePresetSearch 差分 27 例）；sampler 选中即应用到活动连接、reasoning 进总装 addToMessage；context/instruct/sysprompt 已按官方语义持久化，运行时消费点等 textgen 后端（登记） |
-| 作者注释 | `public/scripts/authors-note.js` | ✅ 三层：设置页全局默认（default/defaultPosition/defaultDepth/defaultInterval/defaultRole/allowWIScan）+ 角色备注（extension_settings.note.chara：useChara/before/after/replace，引擎 applyCharaNote 差分 6 例）+ 聊天级 note_*（内容/位置/深度/角色/间隔）；弹层显示官方 token 计数与下次插入计数；AuthorsNoteEngine.resolve 按用户消息数注入，ANWithWI 合并世界书 |
-| tokenizer | `src/tokenizers.js` | TokenCounterFactory：OpenAI 用 JTokkit；Claude/Gemini 目前回退 cl100k，P2 换官方 web tokenizer |
-| 提供商设置 | `public/script.js` / `src/endpoints/backends/chat-completions.js` | ProviderStore（profiles.json）多档案；协议/URL/认证/模型列表全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
+| 流式渲染 | sse-stream.js + openai.js eventSource | LlmClient.streamChatCompletions → SseChunkParser → ViewModel 增量状态 → 逐 token 追加；停止=取消 OkHttp call；流结束必须走 onDone |
+| 提示词组装 | openai.js prepareOpenAIMessages + populateChatCompletion + script.js generate | PromptPipeline.prepare 一个入口出最终消息；App 发送前调它 + 按协议走 ChatRequestBuilder/Anthropic/Google |
+| 消息转换 | src/prompt-converters.js | Claude/Gemini 在各自 builder；Mistral/xAI/Cohere/AI21 在 LlmClient 协议分支；OpenRouter 在 openai-compatible 先签名/媒体再序列化 |
+| 工具/能力选项 | chat-completions.js + openai.js oai_settings | ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety；LlmClient 按厂商官方形态写入请求体 |
+| 预算计算 | chat-completions.js calculateClaudeBudgetTokens/calculateGoogleBudgetTokens | LlmClient 按模型/effort 调两个预算函数，结果进 builder reasoningBudget（adaptive→effort/auto→不加/数字→budget_tokens/thinkingBudget） |
+| Markdown 渲染 | Showdown + highlight.js + DOMPurify | ✅ 显示格式化序列进引擎差分（MessageFormattingEngine + message-formatting 805 例）；渲染层 mikepenz + Highlights/KodeView；encode_tags 开关（默认关=渲染）；Mermaid WebView 兜底（mermaid.min.js 本地 asset，网络/外链放开，JS 全开只拦 javascript: URL——官方 DOMPurify 禁脚本，有意偏差） |
+| 媒体渲染 | openai.js Message.addImage/addVideo/addAudio + media.js | extra.media → MediaEngine.getFromMime → Coil3（图片/GIF）/ Media3 ExoPlayer（音视频）；URL 附件按官方逻辑下载/展示 |
+| 世界书注入 | world-info.js checkWorldInfo + openai.js | 发送前：条目 → Scanner（正则 messageTransformer、RAG 强制激活）→ PromptAssembler；命中灯只读 Scanner 结果 |
+| 宏 | macros/engine/ | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、AN、历史 preparePrompt 已引擎接线）；App 保证 MacroEnv 提供聊天/角色/系统状态 |
+| 正则 | regex/ | 存前（sendMessageAsUser/saveReply/getFirstMessage）+ 总装（isPrompt=true/depth）双位点接入 RegexPipelineEngine；替换串宏替换已接线；允许列表 character_allowed_regex；global/preset/scoped 分桶；命名预设集已做 |
+| 群聊 | group-chats.js | GroupActivationEngine 选成员 → GroupCharacterCardsEngine 合并卡 → GroupDepthPromptsEngine → GroupLoopEngine → 按官方顺序拼接 |
+| 表情精灵 | expressions/ + endpoints/sprites.js | ExpressionEngine.chooseSpriteForExpression → 消息头像区；LLM 分类未接 |
+| 快捷回复 | quick-reply.js | 输入区快捷盘 → QuickReply 执行器（automationId 由 WorldInfoAutoExecute 判定） |
+| 人设 | personas.js | PersonaStore 官方全字段 + 顶栏按钮 + ⋮ 菜单（搜索/选择/新建/编辑/删除/复制/备份/恢复/默认/锁定/同步名称/头像/世界书）；备份按官方 personas_YYYYMMDD.json 合并语义；effectivePersona = PersonaEngine.resolve（聊天锁 > 连接 > 默认 > 当前）；注入按 persona_description_positions 0/2/3/4/9；lorebook/matchPersonaDescription 已接 |
+| 向量 RAG | vectors/index.js + utils.js | VectorRagService → VectorChatRearranger → scanner externalActivations → 3_vectors/4_vectors_data_bank 注入；数据银行 ⋮ 管理 |
+| 预设 | preset-manager.js + power-user/instruct-mode/sysprompt/reasoning/openai.js | PresetApplyEngine 差分 99 例；PresetsScreen 五类选择即应用/保存/删除/单文件/master 导入导出；/preset exact+Fuse 7.1；sampler 应用到活动连接；reasoning 进 addToMessage |
+| 作者注释 | authors-note.js | 三层：全局默认 + 角色备注（useChara/before/after/replace，applyCharaNote 差分 6 例）+ 聊天级 note_*；弹层 token 计数与下次插入计数；AuthorsNoteEngine.resolve 按用户消息数注入，ANWithWI 合并世界书 |
+| tokenizer | src/tokenizers.js | TokenCounterFactory：OpenAI JTokkit；Claude/Gemini 回退 cl100k（豁免） |
+| 提供商设置 | script.js / chat-completions.js | ProviderStore（profiles.json）多档案；协议/URL/认证/模型全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
 
-### 4.8 媒体这轮覆盖盘点（引擎已做 / App 待做）
+### 4.8 媒体盘点
+- 引擎已做（差分全过）：MediaEngine 17 例（type/display/index 越界 NaN null）；MediaInliner 7 例（OpenAI content 文本→数组 + image_url/video_url/audio_url + detail）；MediaConverter 25 例（Claude/Gemini 内容块转换）；消息转换整链 41 例；MediaTokenCost 18 例（image low→85/auto≤512→85/2048 缩放→768 短边→512 方格 170/格+85；视频 263 tokens/秒（回退 263×40）；音频 32 tokens/秒（回退 32×300））。
+- App 已接：extra.media 解析（mediaDisplay/mediaIndex）；Coil3 图片/GIF + Media3 ExoPlayer；系统文件选择器 → filesDir/media/，extra.media 只存路径+source:"upload"（官方 saveBase64AsFile 语义）；发送时读文件转 data URL → 引擎链内联 + token 预算；上下文胶囊 + 世界书命中面板；图库切换（LIST↔GALLERY + media_index 落盘）；从 URL 导入附件（后缀+魔数判型）；删除/清空/删会话清理附件文件。
+- “只思考无正文/继续不出内容”已修：gpt-5 分支已移植（max_tokens→max_completion_tokens、删不支持采样参数，差分 27 例）+ 老档案默认值迁移（旧 maxTokens=512/contextWindow=8192 自动升厂商默认）+ providers.json 24 家补 default_context_window + model_contexts。
+- 未做（登记）：URL 型资产下载（compressImage 近似：非 jpeg/png/webp 转 JPEG 最长边 2048）。
 
-**引擎已做（差分全过）**：
-- MediaEngine 17 例：media type / display / index 纯逻辑（含越界、NaN、null 回退）
-- MediaInliner 7 例：OpenAI 消息 content 文本→数组、image_url/video_url/audio_url + detail 质量
-- MediaConverter 25 例：Claude/Gemini 内容块转换（image/text/video/audio → Claude image/text、Gemini inlineData，media_resolution_low/high、JS split 边缘）
-- 消息转换整链 41 例：convertClaudeMessages / convertGooglePrompt（媒体随消息走）
-- 已接入请求体：OpenAI（ChatRequestBuilder）、Anthropic/Gemini（builder 内 toChatMLJson → 转换器）
-- MediaTokenCost 18 例：getImageTokenCost（low→85、auto≤512→85、2048 缩放→768 短边→512 方格 170/格+85）、视频 263 tokens/秒（回退 263×40）、音频 32 tokens/秒（回退 32×300）
-
-**App 层已接**：
-- ✅ 聊天消息 `extra.media` 解析（ChatPromptFactory → PromptMessage.media/mediaDisplay/mediaIndex）
-- ✅ 媒体渲染组件：图片/GIF（Coil3 + coil-gif）、音视频（Media3 ExoPlayer 1.10.0 PlayerView）、发送前附件缩略图/移除
-- ✅ 系统文件选择器（image/video/audio 多选）→ 落盘 filesDir/media/，聊天 extra.media 只存路径 + source:"upload"（官方 saveBase64AsFile 语义，chats.js 逐行核实：{url,type,title,source} / media_display / media_index）→ 发送时 ChatPromptFactory 读文件转 data URL（官方 fetch→base64 语义）→ 引擎链内联 + token 预算；渲染时路径/URL 都支持
-- ✅ 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）+ 世界书命中面板（条目名/命中键/常驻/位置/token）
-- ✅ “只思考无正文 / 继续生成不出内容”已修复（根因两个）：
- - 引擎 1:1 缺口：官方 openai.js gpt-5 分支已移植——openai/azure_openai/openrouter 三源对 gpt-5 自动 max_tokens→max_completion_tokens，并按官方删不支持采样参数（gpt-5-chat-latest 删 tools/tool_choice；gpt-5.1–5.4 无 reasoning_effort 删 freq/pres；其余删 temp/top_p/freq/pres）；ChatRequestBuilder 增 source 参数接入 LlmClient 三个调用点，OpenAiParamsBuilder 同步镜像；差分 27 例。
- - 老档案默认值迁移：旧 profile 存 maxTokens=512 / contextWindow=8192（旧写死默认），运行时自动升为厂商默认（openai 16384）/ 模型窗口，不重进设置保存也生效。
- - providers.json 24 家补 default_context_window + model_contexts（gpt-5.5 272K / claude 1M / gemini 1M / deepseek 1M / grok-4.3 1M / kimi-k3 1M / glm 200K / qwen 262K / 豆包 256K 等）；上下文胶囊分母默认按所选模型，设置页显示“按模型自动”（手动改数字后退出自动）。
-- ✅ 官方对齐项：附件落盘 filesDir/media/（非 base64）、extra.media {url,type,title,source:"upload"} + inline_image:true、删除/清空/删会话时清理附件文件
-- ✅ 角色卡 extensions.assets（CharX）：icon→头像 + seed，background/voice 落盘 assets/ 并记入角色记录
-- ⚠️ 图库切换已做（发送端列表/图库切换 + 渲染横滑/圆点 + media_index 落盘）；✅ 从 URL 导入附件（输入区附件菜单“从 URL 添加”→ 下载 → 落盘 media/ → 与本地附件同链，URL 后缀+魔数判型；官方 Message.addImage/addVideo/addAudio URL 来源）；未做（登记）：URL 型资产下载（图片发送前压缩 compressImage 已做近似：非 jpeg/png/webp 转 JPEG 最长边 2048）
-
-### 4.9 App↔引擎接线状态
-聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；官方行为接线点明细不再单列，见 4.3/4.7 现状描述。
-上下文预算对齐官方（commit `131d5c6`）：默认 32K（旧 8192 视为未设置）、maxTokens 钳制保证预算为正、
-必选提示词装不下时走 `ContextBudgetException` 人话报错；Claude 直连缓存参数已接线。
+### 4.9 接线状态
+聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；上下文预算对齐官方（默认 4095/300，getMaxPromptTokens=context-response，必选提示词超限 ContextBudgetException，历史超限静默丢最老）；Claude 直连缓存参数已接线。
 
 ## 5. 完成度总览
 
-- 引擎/差分基线：引擎测试 328 例全绿；差分 85 组 / 1969 例对拍全绿（基线定义与细分见第 2 节，功能明细见第 3/4 节，完成项不在此重复）。
-- 剩余未做：Captions 的 extras/local/horde 来源与 refine/prompt_ask 确认弹层、表情精灵 LLM 分类、instruct 模式（textgen 协议提供商）、惰性闭包即时求值（引擎 SlashEngine）、发送链路未接项（见 12.16）、设置项 UI 缺口（reverse_proxy/custom_headers、assistant_prefill/continue_prefill、max_context_unlocked、show_external_models）、自定义预设保存/删除/设为默认（见 8.5/8.6）。✅ Prompt Itemization 分节明细面板已做（聊天消息菜单“提示词分节明细”，官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化每条生成消息的 rawPrompt + TokenHandler 八分桶 + 分节消息(identifier/role/tokens/内容) + 上下文/回复上限 + 复制/原文/与上一条对比）；面板布局对齐官方 itemizationText.html：五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias，副行 Description/Personality/Scenario/Examples/User Persona/System Prompt（instruction=非 openai 源启用 sysprompt 的内容，宏替换后单独补算进明细与总 token；openai 源为 0）；World Info；Chat History(条数)；Extensions 副行 Summarize/Author's Note/Smart Context/Vector Chats/Vector Data Bank；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 为词级 LCS（删除红底/新增绿底，官方 DiffMatchPatch 视觉等价，超大输入回退行级）；✅ Prompt Manager 面板（设置→提示词管理器，顺序/角色作用对象/提示项编辑/新增/删除）与 dryRun 预览（聊天会话菜单→提示词预览）已做；编辑表单已对齐官方 PromptManager popup：identifier 自动 uuid 只读、name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 项只读）、main/nsfw/jailbreak/enhanceDefinitions 支持官方 Reset 恢复默认；新提示项 system_prompt=false（官方 handleNewPrompt 语义）、删除二次确认、marker 项编辑/开关按官方 isPromptEditAllowed/isPromptToggleAllowed 强制名单限制；编辑表单改底部弹层（触屏/键盘友好）；顺序排序改为长按整行拖动（官方 sortable 拖拽的移动端等价，无 ↑↓）；追加顺序项改为官方 Append prompt 下拉；新增“查”检查弹窗（PromptAssemblyCache 保留最近一次总装消息，按 identifier 显示 role/content/tokens，官方 PromptManager.messages/handleInspect 语义，未总装过则提示先发送/预览一次）。
-- 用户决策延期：Custom CSS + Moving UI（见 8.9）；Claude/Gemini 官方 web tokenizer（cl100k 回退，用户豁免，只影响估算精度）。
-- 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 节更新基线。
+- 引擎测试 **362 例全绿**；差分分组表 91 行（表内例数合计 2856；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
+- 剩余未做：Captions extras/local/horde 来源；表情精灵 LLM 分类；instruct 模式（textgen 协议提供商）；惰性闭包即时求值（SlashEngine）；发送链路未接项（见 6.2 登记）；设置项 UI 缺口（reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/headers 已接网络层+UI 见 4.4；assistant_prefill/continue_prefill/max_context_unlocked/show_external_models 已接 SamplerParams+UI——原登记缺口大部分已补，见 3.7/4.4）；自定义预设保存/删除/设为默认（保存/删除已接；“设为默认”官方无此概念）。
+- Prompt Itemization 分节明细面板已做（聊天消息菜单；布局对齐官方 itemizationText.html；官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化 rawPrompt + TokenHandler 八分桶 + 分节消息；五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias；World Info；Chat History；Extensions；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 词级 LCS，超大输入回退行级）。
+- Prompt Manager 面板已做（设置→提示词管理器：identifier 自动 uuid 只读/name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 只读）/main·nsfw·jailbreak·enhanceDefinitions 官方 Reset/新提示项 system_prompt=false/删除二次确认/编辑底部弹层/长按拖动排序/官方 Append 下拉/“查”检查弹窗（PromptAssemblyCache 最近一次总装，官方 PromptManager.messages/handleInspect））+ dryRun 提示词预览（聊天会话菜单，全文+token）。
+- 用户决策延期：Custom CSS + Moving UI（6.4）；Claude/Gemini 官方 web tokenizer。
+- 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 更新基线。
 
-## 8. App/UI 关键实现与登记（精简）
-
-### 8.1 布局/组件定稿
-- 底部三 Tab + 平板 NavigationRail；首页毛玻璃顶栏/全局搜索/AI 对话置顶/双列网格/卡片 seed 底色
-- 角色详情：世界书收进一张卡片默认折叠并置底；全部分组 SectionCard（18dp 圆角/surfaceContainerLow）；
- BackHandler 防返回直接退出 App
-- 聊天消息布局：AI 全文宽纸面流、用户右对齐限宽 78% 整块气泡；图片内联大图（高限 320dp）
- + 点击 LIST↔GALLERY 切换并持久化（官方 switchMessageMediaDisplay）
-- 输入栏（OmniBot 借鉴）：图标 36dp onSurfaceVariant(0.8)；发送=实心圆（accent 底+亮度自适应图标）、
- 停止=error 实心圆；输入框 44dp
-- 设置：六组卡片 + 搜索深链；外观与主题四分区（主题 / 视觉与质感 / 消息外观 / 行为与兼容）
-- 共享组件：EmberSwitch（统一触觉）、EmberEmptyState、EmberSkeletonBox、emberShadow（元素色深版阴影）、
- ColorField（色块即选色入口 + hex 等宽预览 + 选色盘）、ColorPickerDialog（20 色板+RGB+hex）
-
-### 8.2 显示管线 / 流式 / 滚动（官方对照结论）
-- displayTextOf：显示位点正则（用户/旁白/AI + 官方 depth）→ fixMarkdown(forDisplay=true，跟随官方 auto_fix_generated_markdown 开关，默认开）→ encode_tags（可选，官方负向后顾等价：行首 > 保留）；
- 复制/编辑用原始落盘文本，显示与操作分离
-- 流式：120ms 节流；StreamingMarkdown 轻量 AnnotatedString 一次构建（粗/斜/删/下划线/行内码/引号/链接），
- 结束由 ChatMarkdown 完整重渲染；balanceStreamingDelimiters 为 App 增强（官方 1.18 无此函数）
-- 列表 key：流式/思考项与最终消息共用 `m-末尾索引` + contentType，结束原地替换不闪跳；
- MessageRow 派生字段 remember(el) 一次缓存
-- 自动触底：`reverseLayout=true`，`firstVisibleItemIndex==0` 即贴底（官方 LazyColumn 语义）；上滑暂停、回底恢复；新消息/流式增长底部天然钉住，不再 scrollToItem/layoutInfo 采样
-- 登记未做：LaTeX、MeshGradient、网络代理、快捷回复全屏编辑器（auto_scroll_chat_to_bottom 开关未做，见 8.5）
-
-### 8.3 性能 / 缓存（点卡进聊天、发送按钮卡顿治理结论）
-- CharacterStore/ChatStore 进程级共享缓存（companion object），写操作全量失效回填；
- displayCache 按消息索引缓存显示文本，组合期不再读盘/跑正则
-- 进聊天首帧即钉底（reverseLayout 初始偏移=0）；流式不再每 tick 整段 Markdown 解析/正则、也不再每 tick 滚动
-- 角色卡去掉逐卡 dropShadow；**Markdown 解析 LRU 缓存**（MarkdownCache.kt，按内容键、上限 32，滚回来的行首帧直出缓存解析结果，不再异步重解析/闪空）；**WebView 池保留已渲染页面+实测高度**（滚回同内容不重载、不白屏、不重新“长高”）；WebView 高度上限=90% 屏高，超上限内部滚动兜底（不再截断也不撑爆列表，详见第 12 章）
-- ✅ 发送链路提速（App 层，引擎零改动、发送内容不变）：角色卡解析缓存（按 rawJson，访问序 LRU 上限 8，淘汰最久未用）、外置世界书条目缓存（按文件 mtime）、连接档案缓存（按 profiles.json mtime）、聊天元数据缓存；JSONL/元数据落盘走单线程后台队列（内存缓存先更新；删除与排队写盘同队列串行，避免文件“复活”）；命中面板/上下文胶囊计算移出请求关键路径（UI 稍后更新，不影响生成语义）
-
-### 8.4 主题系统现状
-- 三层：全局（预设/视觉氛围/字体/圆角/密度/气泡/模糊）→ 角色配方（seed/背景/形状/字体/浅深锁定）
- → 状态微调；优先级：显式配方 seed > 头像取色 / 卡名哈希（无头像兜底，HSV 0.55/0.78）> 全局预设；
- 自动取色同时作强调色（名字/氛围光/气泡点缀）
-- 官方字段 st*/scheme*：酒馆官方主题填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…）；
- 其余 10 套由色板派生深色套；浅色模式回退 M3；官方主题浅深都强制官方深色
-- 聊天背景三层：显式背景（会话/配方）> 头像玻璃背景（开关 + 模糊五档 0/12/24/36/48 +
- 深/浅遮罩颜色与强度 65%/30% + 恢复默认）> 氛围渐变兜底
-
-### 8.5 半成品治理记录
-
-针对“UI 有入口/执行没实现、字段没暴露、文档滞后”的半成品逐项核对官方源码并补齐：
-
-| 项 | 现状 |
-|---|---|
-| 翻译执行层 | 8 家全实现（协议对齐 src/endpoints/translate.js；Bing 按官方依赖 bing-translate-api 4.2.1 移植 token 流程）；自动模式 responses/inputs/both 已按官方位点接线 |
-| 图像执行层 | A1111/SDCPP/NovelAI/OpenAI/HuggingFace/Stable Horde 已实现（Horde 对齐官方 horde.js 异步轮询）；DrawThings 仅 macOS 不适用已移除；ComfyUI 已实现（见下） |
-| 图像 API Key | 设置→服务→图像新增 API Key（NovelAI/HF/Horde 用） |
-| 向量 Data Bank 高级参数 | sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露（默认 5/5/0，接进 VectorChatSettings） |
-| 群聊入口文案 | 已实现（会话 Tab FAB 新建群聊） |
-| swipe picker / 书签 / URL 导入 | 已实现并更正文档 |
-| 死代码 | openComingSoon 已删除 |
-| 快照 | ✅ 设置快照（命名 zip 保存/恢复/删除设置+提供商档案，官方 user.js 语义；恢复需重启，登记） |
-| 预设正则 | ✅ 命名预设集 + 允许列表 + 全位点接线（结构等价官方 preset 扩展字段） |
-| 数据银行 URL 上传 | ✅ 从 URL 添加（官方 vectors Data Bank URL 上传语义） |
-| ComfyUI | ✅ 用户 workflow + 占位符 + /prompt + /history + /view（官方 comfy.generate 1:1；默认 workflow 文件官方仓库无，登记） |
-| send_if_empty | ✅ 空输入且最后一条为 AI 时发送配置文本续聊（官方 oai_settings.send_if_empty） |
-| 斜杠异步命令 | ✅ executeAsync + /gen /genraw（官方无 /while） |
-
-**剩余已知半成品（继续治理中）**：
-- Captions：✅ refine_mode 确认弹层 + prompt_ask 每次询问已接（ChatScreen/VM）；source 仅 multimodal（extras/local/horde 未接）。
-- 表情精灵：LLM 分类未接（官方 expressions LLM 模式）；extra.sprite 不持久化（渲染期按正文确定性分类，同消息结果稳定）。
-- 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
-- TTS：✅ 朗读前 substituteParams 宏替换已接（官方 tts/index.js:674）；多语音/对话专属/引号专属未实现。
-- 主题配方：字体文件下载、风格档位映射未做。
-- 设置项 UI：reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/headers（YAML 嵌套已支持）/bias JSON 编辑/
-custom_prompt_post_processing/sort_models/group_models/show_external_models/bypass_status_check/
-tool_call_recurse_limit/azure_deployment_name/azure_openai_model/vertexai_auth_mode/
-vertexai_express_project_id/nanogpt_provider/nanogpt_payg_override/assistant_impersonation 已接
-SamplerParams/ConnectionProfile+UI；custom_prompt_post_processing 已接总装 postProcessPrompt（官方
-chat-completions.js /generate 语义）；tool_call_recurse_limit 已接工具循环；assistant_impersonation 已接
-Claude 冒充预填；assistant_prefill/media_inlining/inline_image_quality/continue_prefill/continue_postfix/
-function_calling/show_thoughts/enable_web_search/tool_reasoning_mode/max_context_unlocked 已接；
-sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dryRun 预览已做完整。
-- 预设：保存/删除/应用已接（见 3.7）；“设为默认”官方无此概念；context/instruct/sysprompt 运行时消费已接 textgen 路径。
-- 发送链路未接清单见 12.16。
-- auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项，见 8.2 登记）。
-
-### 8.6 与官方不一致登记（防漏机制）
+## 6. 不一致与边界登记（防漏机制）
 
 > 规则：任何与官方 1:1 有出入的实现必须在此登记；未登记即视为未完成。
 
+### 6.1 与官方差异表
+
 | 功能 | 与官方的差异 | 状态 |
 |---|---|---|
-| 斜杠执行链 | 官方惰性闭包（传给命令对象、可延迟执行）vs 引擎闭包预解析立即执行；`/if` 的 then/else 闭包同样预解析为文本（官方惰性）；命令数少于官方（补 renamechat/getchatname/setinput/bg/impersonate/trigger/inject/gen/genraw；官方无 /while）；`/parser-flag REPLACE_GETVAR` 在官方新宏引擎为 no-op（已对齐） | 近似已登记，见 3.4 |
-| 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 已机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
-| 正则（该卡） | 存储/字段/位点同官方（data.extensions.regex_scripts、RegexScriptData、USER_INPUT=1/AI_OUTPUT=2/SLASH_COMMAND=3/WORLD_INFO=5）。✅ 存前应用；✅ 总装 isPrompt=true 只跑 promptOnly；✅ 编辑 isEdit；✅ 允许列表；✅ 全局开关；剩余差异：①落盘文本宏未替换（发送时应用、请求等价，登记边界）；②preset 脚本存储/UI 已做（命名预设集，结构等价官方 preset 扩展字段；采样预设管理器见 3.7） | 🟡 宏落盘 + preset 边界，见 3.6 |
-| 人设搜索 | 官方 FilterHelper 用 Fuse.js 模糊搜索（name 权重 20 + description 权重 3，按相关度排序）；App 为名称/描述子串过滤，无相关度排序 | 🟡 UI 近似 |
-| 人设同步 force_avatar | 官方 syncUserNameToPersona 写 `getThumbnailUrl('persona', user_avatar)` 缩略图 URL；App 写本地头像路径（导出 jsonl 时该字段为本地路径，官方无法解析） | 🟡 App 边界 |
-| 人设备份头像 | 官方备份只含 avatar key（头像文件在服务端，缺失时上传默认头像）；App 备份同样只含 key，恢复时本地无该头像文件则回退默认头像 | 🟡 等价边界 |
-| /preset fuzzy | 官方 presetCommandCallback 精确匹配后回退 Fuse.js 模糊；App exact + Fuse.js 7.1 移植（preset-fuzzy 差分 27 例） | ✅ 差分 |
-| 预设导入 | 官方 openai 采样预设导入不校验字段（敏感字段确认剥离 + 同名覆盖确认已接，引擎差分敏感字段 11 项）、textgen preset 进 textgenerationwebui 管理器；App 合并为单导入入口（legacy 顺序识别为引擎差分），textgen preset 暂存 sampler 目录且不应用（textgen 后端未接） | 🟡 等价边界 |
-| textgen 采样器应用 | 官方 setSettingByName 有 DOM checkbox/text/parseFloat 归约；引擎纯赋值（设置对象落原始值），归约登记剥除（99 例差分内打桩登记） | 🟡 打桩登记 |
-| 变量（该卡） | 官方变量是全局/聊天 scope（/let、variables.js），**没有 per-character 变量**；App 存 data.extensions.emberinn_variables 为 README 自定义扩展，官方导入会忽略该字段 | 🟡 README 自定义 |
-| 快捷回复 | 已按官方全局：QuickReplyPreset/QuickReplySlot（mes/label/enabled/automationId/preventAutoExecute）+ QuickReplyExecutor 1:1。差异：①官方多预设文件（data/default-user/quick-replies/*.json），App 单预设 filesDir/quick-replies.json；②UI 已编辑 automationId/preventAutoExecute；③点击槽位官方按命令类型处理结果，App 把文本输出填输入框（可改可发），/let 等无输出命令正确静默 | 🟡 存储/交互近似，见 4.2/4.3 |
-| 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness，App 同位置；App 保存时额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出/其它客户端一致，不冲突 | ✅ 兼容增强 |
-| 世界书 UI | 官方是独立 World Info 面板（world_info 扩展），App 在角色详情页自绘增删改；数据格式（data.character_book.entries、v1 key→v2 keys 归一）与官方一致，未知字段保留 | 🟡 UI 自主（兼容层一致） |
-| 角色 system_prompt / 剧情后指令 | 官方 script.js generate 传 systemPromptOverride/jailbreakPromptOverride；App 漏传（角色系统提示词曾未生效）→ 已修 | ✅ 已修 |
-| {{bias}} 提示词 | 官方 getBiasStrings 从输入/最近用户消息 extra.bias 提取；App 原不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ 已修 |
-| chatCompletionSource | 官方 Claude 走 claude 分支（assistant prefill 等）；App 原恒 openai → 已按 provider.protocol 传 claude | ✅ 已修 |
-| 人设 personaDescription | ✅ 已接：PersonaStore + 聊天 ⋮ 选择；App 选中人设即 personaInPrompt=true（官方默认关，语义一致）；官方还有 {{persona}} 宏可用 | ✅ |
-| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 已差分；App 作者注释已接；记忆扩展已接（MemoryScreen + MemoryService + /summarize，source=main；extras/webllm 未接） | 🟡 extras/webllm |
-| 工具调用 | PromptPipeline 支持 canUseTools/toolBudget/推理签名；ToolCallParser 与 ToolLoopPlanner 已差分；App ToolRegistry 执行/历史重构/递归重装已接（见 3.8.16） | ✅ 已接 |
-| 世界书设置 | 已做（设置→服务→世界书，深度/递归/预算/大小写/整词，改动即存并用于聊天扫描） | ✅ |
-| 模型覆盖 / 主题配方 | README 角色页承诺；官方无角色级字段（模型覆盖官方是聊天级 #custom_model_id）；已实现存储+UI+聊天背景，全局形状/字体/浅深锁定管线已做；配方导出/分享已做 | ✅ |
-| 向量 / 数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）；✅ URL 下载已做（数据银行对话框“从 URL 添加”，对齐官方 vectors 扩展 Data Bank URL 上传语义）；sizeThresholdDb/chunkCountDb/overlapPercentDb 已暴露 UI（官方默认 5/5/0）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+| 斜杠执行链 | 官方惰性闭包（可延迟执行）vs 引擎预解析立即执行；/if then/else 闭包同样预解析；命令数少于官方（官方无 /while）；/parser-flag REPLACE_GETVAR 在官方新宏引擎为 no-op（已对齐） | 🟡 见 3.4 |
+| 斜杠参数解析核心 | parseCommand/parseNamedArgument/parseUnnamedArgument/testSymbol 机器差分 18+27 例 1:1；执行链依赖 DOM/闭包无法逐字提取 | ✅ 差分 |
+| 正则（该卡） | 存储/字段/位点同官方；存前/总装 isPrompt/编辑 isEdit/允许列表/全局开关全接；差异：①落盘文本宏未替换（发送时应用，请求等价）；②preset 脚本命名预设集（结构等价官方 preset 扩展字段） | 🟡 见 3.6 |
+| 人设搜索 | 官方 FilterHelper 用 Fuse.js 模糊搜索（name 权重 20 + description 权重 3 相关度排序）；App 为名称/描述子串过滤，无相关度排序 | 🟡 UI 近似 |
+| 人设同步 force_avatar | 官方写 getThumbnailUrl('persona', user_avatar) 缩略图 URL；App 写本地头像路径（导出 jsonl 官方无法解析） | 🟡 App 边界 |
+| 人设备份头像 | 官方备份只含 avatar key（缺失时上传默认头像）；App 同 key，恢复时本地无文件回退默认头像 | 🟡 等价边界 |
+| /preset fuzzy | 官方精确匹配后回退 Fuse.js；App exact + Fuse.js 7.1 移植（27 例差分） | ✅ |
+| 预设导入 | 官方 openai 采样预设导入不校验字段（敏感字段 11 项剥离 + 同名覆盖已接）；textgen preset 进 textgenerationwebui 管理器；App 单导入入口，textgen preset 暂存 sampler 且不应用（后端未接） | 🟡 等价边界 |
+| textgen 采样器应用 | 官方 setSettingByName 有 DOM checkbox/text/parseFloat 归约；引擎纯赋值，归约登记剥除 | 🟡 打桩登记 |
+| 变量（该卡） | 官方变量是全局/聊天 scope，没有 per-character 变量；App 存 data.extensions.emberinn_variables（README 自定义，官方导入忽略） | 🟡 README 自定义 |
+| 快捷回复 | 已按官方全局（QuickReplyPreset/Slot 字段 1:1 + QuickReplyExecutor）；差异：①官方多预设文件，App 单预设 filesDir/quick-replies.json；②点击槽位官方按命令类型处理，App 文本输出填输入框（/let 等无输出正确静默） | 🟡 存储/交互近似 |
+| 角色详情保存 | 官方编辑器写 data.extensions.depth_prompt/talkativeness；App 同位置 + 额外把 readFromV2 提升字段镜像回 root（官方仅导入时提升），保证导出一致，不冲突 | ✅ 兼容增强 |
+| 世界书 UI | 官方独立 World Info 面板；App 在角色详情页自绘增删改；数据格式与官方一致（v1→v2 归一，未知字段保留） | 🟡 UI 自主 |
+| 角色 system_prompt/剧情后指令 | 曾漏传（角色系统提示词不生效）→ 已修：按官方传 fields.system/jailbreak，chat_metadata 同名优先 | ✅ |
+| {{bias}} 提示词 | 曾不传 → 已修：提取 {{bias:...}} 并剥离宏、generate/swipe 注入、impersonate/continue 不注入（Handlebars 嵌套近似） | ✅ |
+| chatCompletionSource | 曾恒 openai → 已按 provider.protocol 传 claude | ✅ |
+| 人设 personaDescription | PersonaStore + 选中即 personaInPrompt=true（官方默认关，语义一致）；{{persona}} 宏可用 | ✅ |
+| 扩展提示 extensionPrompts | 引擎支持 summary/AN/vectors + MemoryEngine 差分；App AN/记忆已接（source=main；extras/webllm 未接） | 🟡 |
+| 工具调用 | PromptPipeline canUseTools/toolBudget/推理签名；ToolCallParser + ToolLoopPlanner 差分；App ToolRegistry 执行/历史重构/递归重装已接 | ✅ |
+| 世界书设置 | 设置→服务→世界书（深度/递归/预算/大小写/整词），改动即存并用于扫描 | ✅ |
+| 模型覆盖/主题配方 | README 角色页承诺；官方无角色级字段；已实现存储+UI+聊天背景+全局管线；配方导出/分享已做 | ✅ |
+| 向量/数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）+ URL 下载（对齐官方语义）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
 
-### 8.7 官方对齐确认总表
+### 6.2 已确认 1:1 / 审计修复
 
-**已逐字/差分确认对齐（官方源码 1:1）**
-- 媒体内联能力：isImage/Video/AudioInliningSupported 白名单 + source 分支（差分 24 例）
-- 世界书：externalActivations 键 world.uid、负深度、深度注入、EM 锚点、coreChat 过滤 is_system、
- ensureSwipes（只排除 user/isSmallSys、swipe_info 回填 extra={}）
-- 斜杠：解析器 43 例差分、testSymbol 27 例；sendas 缺省 name 兜底当前角色名；/sysname 空名写 System；
- /hide=/message-role=is_system/narrator 语义；Comment 默认名 Note；/delswipe 1-based
-- 消息数据流：AI 消息落盘带 swipes 结构；saveReply 尾部 mes/swipes/swipe_info.extra 逐字段刷新（continue 同步）；
- deleteSwipe 新 id 规则；syncSwipeToMes 字段；send_date=ISO；AI extra 恒有
- api/model/reasoning/reasoning_duration/reasoning_signature；群聊 AI 带 gen_id（起整批共享 group_generation_id）；
- 普通用户消息 extra isSmallSys=false、无 gen_id；附件 media_index 恒写、inline_image=true
-- 提示词：默认提示集合/顺序、populationInjectionPrompts、历史消息 preparePrompt 宏替换、
- AN interval 公式与默认 position=1、Generate 类型（regenerate/continue/swipe/impersonate）
-- 正则分桶：GLOBAL→PRESET→SCOPED 顺序 + allowedOnly（差分 7 例）；JSON 导入导出（13/10 例）；
- slash-parser（43 例）；向量工具（14 例）等 57 组差分
+已逐字/差分确认对齐：媒体内联能力白名单 + source 分支（24 例）；世界书 externalActivations/负深度/深度注入/EM 锚点/coreChat 过滤 is_system/ensureSwipes；斜杠解析器 43 例 + testSymbol 27 例（sendas 缺省名/sysname 空名 System/hide·message-role 语义/Comment 默认 Note/delswipe 1-based）；消息数据流（AI 落盘 swipes 结构、saveReply 尾部逐字段刷新、deleteSwipe 新 id、syncSwipeToMes、send_date=ISO、AI extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature、群聊 AI gen_id 整批共享 group_generation_id、普通用户消息 extra isSmallSys=false 无 gen_id、附件 media_index 恒写 inline_image=true）；提示词默认集合/顺序/populationInjectionPrompts/历史 preparePrompt 宏替换/AN interval 与默认 position=1/Generate 类型；正则 GLOBAL→PRESET→SCOPED + allowedOnly（7 例）。
 
-**审计修复（bug/偏差已修）**
-- 用户消息保存顺序对齐官方 sendMessageAsUser（regex→substituteParams→removeMacros）；message_token_count_enabled 时用户消息写 extra.token_count
-- AI 消息补 extra.time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪之后注入（官方顺序）
-- 开场白（getFirstMessage）数据格式：extra={}、无 title/gen_*、空首条 swipes.shift()；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊、补 reasoning_duration/signature、token_count
-- 历史索引错位（media 挂错）、bias 提取最后用户消息 + 编辑存 extra.bias 回溯、
- /hide 语义、comment 不进提示词、系统消息防误操作（继续/重生成/变体/滑动）、
- continue swipe_info 同步、发送失败不丢输入、重生成先查配置、群聊配置实时、书签路径消毒、
- 世界书条目删除确认、角色主题/背景实时刷新、平板导航轨、滑动返回手势、返回按钮不贴最高处
+审计修复（已修）：用户消息保存顺序（regex→substituteParams→removeMacros，token_count 落盘）；AI 消息补 time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪后注入；开场白数据格式（extra={}、无 title/gen_*、空首条 swipes.shift()）；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊 + reasoning_duration/signature；历史索引错位（media 挂错）；bias 提取最后用户消息 + 编辑存 extra.bias 回溯；/hide 语义；comment 不进提示词；系统消息防误操作；continue swipe_info 同步；发送失败不丢输入；重生成先查配置；群聊配置实时；书签路径消毒；世界书条目删除确认；角色主题/背景实时刷新；平板导航轨；滑动返回手势；返回按钮不贴最高处。
 
-**登记边界（有意保留，非 bug）**
-- extra.api 存提供商 id（官方存 source）；落盘文本未过 regex/宏替换（发送时应用，请求等价）；
- bias 文本提取 vs extra.bias（双轨已接）；
- /hide name 过滤、narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；
- openrouter/mistral 等模型元数据缺失回退；远程 URL 附件；
- 表情精灵 App、Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）
+登记边界（有意保留）：extra.api 存提供商 id（官方存 source）；落盘文本未过 regex/宏替换（发送时应用，请求等价）；bias 文本提取 vs extra.bias 双轨；/hide name 过滤；narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；openrouter/mistral 模型元数据缺失回退；远程 URL 附件；Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）。
 
+### 6.3 渲染已知限制（App/UI）
+- 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似）。
+- 全站文字阴影覆盖聊天内全部文字；按钮/输入栏等 UI 未加（官方 `*` 全站）。
+- 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）。
+- Markdown 表格单元格/任务列表 checkbox 文本走库内直绘，官方字段可能残留占位符（低频）。
+- 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致。
+- abbr/acronym 官方虚线下划线，Compose 无虚线用实线近似；嵌套 sub/sup/small 按单层 0.83×（官方逐层累乘），极低频偏差。
+- 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（有意偏差，见 7.4 安全）。
+- 行内 Web 标签（button/input/select/.../span[属性]/font face-size/ruby/bdi/bdo 等）整段走 Web（Compose 无法原生文字+行内控件混排）。
+- 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似；img width/height 不保留；残缺元素延伸到末尾、跨围栏按片段处理（低频）。
+- WebViewPool 上限 6；HTML 开关关闭时围栏外一律原生且 < > 已转义；WebView 链接 text-decoration:none；高度允许回缩、按实测全高展开。
 
-### 8.8 设置即时生效与默认值
-- HTML 渲染统一走官方 encode_tags 一个开关（AppearancePrefs.encodeTags，默认关=渲染）；旧“HTML 消息（WebView 渲染）”键 html_enabled 已折算迁移，RenderPrefs.htmlEnabled() 只做取反派生
-- 角色卡“允许此角色应用该卡正则”默认改为开（CharacterDetailScreen regexAllowed=true；显式关闭仍会写入允许列表移除）
-- 即时生效补全：
- - TextTypographyScreen / MessageRenderScreen 接入 onAppearanceChanged（原来保存后不触发刷新）
- - AppearanceScreen 的 HTML/沉浸/气泡/密度/背景模糊/启动/转义保存全部补 onAppearanceChanged
- - 新增 DisplayCacheVersion：encode_tags / 全局正则 / 角色允许列表变更时 bump，displayTextOf 缓存整体失效（转义/正则设置即时生效）
- - OfficialMarkdownNode 的 remember 增加 style 键：字号/行高/阴影等排版改动对已渲染消息即时生效
- - 外观页卡片圆角从写死 18dp 改为 MaterialTheme.shapes.medium：切“全局圆角”档位时设置页即时预览
- - ColorField 支持 fallback=当前主题默认色：消息渲染页字段留空时显示主题默认值（#hex · 跟随主题），换主题即时更新
- - 新增官方玻璃色调设置（st_blur_tint）：消息渲染页“毛玻璃（官方字段）”卡；glassTint() 统一解析（用户 > 主题预设 > M3 surface），8 处玻璃面即时生效
+### 6.4 用户决策延期：Custom CSS + Moving UI（暂不做）
+- Custom CSS：官方写 data/_css/user.css 套整个 Web UI；EmberInn 是原生 Compose 无 DOM，无法 1:1。
+- Moving UI：官方设置→移动界面（top/left/.../margin + 命名预设 default/content/presets/moving-ui/*.json，1.18 自带只有空 Default.json）；**官方 isMobile() 直接禁用**。
+- 结论：1:1 不可行（依赖 DOM/CSS，且官方移动端禁用）。等价方案待选：A 自定义 CSS 限定 WebView 交互卡（推荐）；B 主题 JSON 编辑器；C 布局预设。用户答复：先记录以后再做，未选 A/B/C。本项不参与差分。
 
-## 10. 扩展插件：交互 HTML 卡片 / iframe 渲染器（App 层）
+## 7. 渲染与 HTML 卡片
 
-### 10.1 定位与结论（先读）
-- **这是 App/UI 层功能，不是引擎层**。engine 未改一行；官方 SillyTavern 本体也没有这个功能。
-- 官方本体通过 DOMPurify 剥掉消息里的 `<script>` 和 `on*`，所以“角色卡消息自带 JS 交互”在官方里跑不了。
-- 实现参照的第三方扩展机制：**Tavern Helper（酒馆助手）渲染器** 与 **阡濯《ST酒馆 html 代码注入器》** 都是同一个机制——消息里 ``` 包起来的 HTML 代码块 → 放进独立 iframe 网页运行，卡内 `<script>`/`onclick`/Vue/React 在 iframe 里正常执行。
-- App 按同一机制实现了等价渲染器，JS 全开，设置页 1 个总开关。
+### 7.1 官方管线 vs 我方管线
+官方：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染。
+我方：`displayTextOf`/`displayReasoningText`（引擎 MessageFormattingEngine 纯文本子集，差分 805 例；含首条宏替换写回 chat.mes 与非系统 trim）→ `preprocessOfficialHtml`（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`（buildMarkdownAnnotatedString + applyOfficialMarkers）→ 或 WebView 兜底（officialStyledHtml + 自动测高）。渲染层全部 App/UI，引擎只负责格式化序列。
 
-### 10.2 对照了哪些源代码 / 差分结论
-| 参照 | 用途 | 是否差分 |
-|---|---|---|
-| SillyTavern 1.18.0（~/sillytavern-ref，script.js messageFormatting + chats.js DOMPurify 钩子） | 确认官方禁消息脚本；本功能官方不存在 | 不适用（官方无此功能） |
-| Tavern Helper 渲染器文档（github.com/N0VI028/JS-Slash-Runner-Doc） | ``` + `<body>` 条件 → iframe；头像类/宏、vh 换算、代码折叠 | 否（文档级参考） |
-| 阡濯《ST酒馆 html 代码注入器》userscript（greasyfork 503174，CC BY-NC 4.0） | ``` 内以 `<` 开头以 `>` 结尾 → iframe；contentWindow.scrollHeight 测高 | 否（只参考机制，未复制代码） |
-- **差分验证：未做、也不适用**。差分体系（当前 85 组 / 1969 例，见第 2 节）只保证“官方引擎逻辑 1:1”；这是第三方扩展 + App/UI 层，按 README/HANDOFF 规则为 UI 自主。验证方式 = CI 编译 + 本文行为规则 + 手工回归清单（见 10.5）。
-- 许可证注意：若日后直接搬运注入器代码，其许可证为 CC BY-NC 4.0（非商用）；目前只实现了机制，不涉及搬运。
-- 设置与开关是 App 层自主 UI，不参与差分；总开关只影响扩展渲染器，不影响官方引擎 1:1 基线。
+**逐项对照表与文本级 HTML 标签细节见 [docs/RENDER_AUDIT.md](RENDER_AUDIT.md)。**
 
-### 10.3 设置入口与总开关（只留 1 个开关）
-- 设置 → **扩展插件** → **交互 HTML 卡片**（`ExtensionPrefs.interactiveCards`，默认开）。
-- 渲染与交互分离：``` 内 HTML 代码块无论开关都渲染成 iframe 卡片；关闭时卡片照常静态显示，脚本/表单被 `sandbox="allow-same-origin"` 沙箱禁止（无 allow-scripts/allow-forms）。
-- 头像类/宏、原代码折叠、自动测高随卡片一起保留；JS 执行、网络/外链放开、Mermaid 均不是独立开关。
+### 7.2 交互 HTML 卡片 / iframe 渲染器（App 层，第三方机制）
+- 定位：App/UI 层，官方本体没有（官方 DOMPurify 禁消息脚本）。机制参照 Tavern Helper 渲染器与阡濯《ST酒馆 html 代码注入器》（userscript，CC BY-NC 4.0——只参考机制未搬运代码；若日后搬运注意非商用）。
+- 开关：设置→扩展插件→交互 HTML 卡片（`ExtensionPrefs.interactiveCards`，默认开）。渲染与交互分离：``` 内 HTML 代码块无论开关都渲染成 iframe 卡片；关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用）。
+- 实现：ChatMarkdown 先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段（``` 内以 `<` 开头以 `>` 结尾或含 `<body>`）与 Mermaid/富 HTML 段各自进独立 WebView，围栏外文本走原生；embedInteractiveBlocks 做 `<iframe srcdoc>`（实体转义 + onload/ResizeObserver/MutationObserver 持续同步）；WebViewHtml JS 恒开、网络与外链放开、实例来自 WebViewPool 复用；加载方式=原文 UTF-8 + file base（曾因 base64 不解码导致空白，已修）；整页文档（<!DOCTYPE html>）整段走 WebView，兜底 CSS 注入原文档 `<head>`（不再 html 套 html）；测高/样式注入点跳过 `<script>/<style>` 文本内的伪 `</body>`；`allowFileAccessFromFileURLs`/`allowUniversalAccessFromFileURLs`/`MIXED_CONTENT_ALWAYS_ALLOW` 全开。
+- 能力对照：```→iframe 脚本可交互 ✅；非 HTML 代码块保留显示 ✅（pre/code）；自动测高 ✅；围栏外文本保留换行 ✅；头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` ✅（`{{userAvatarPath}}` 暂空登记）；min-height vh 换算 ➖；原代码折叠 ✅；后台脚本库/表情 VN STT EJS 变量/插件市场 ➖（App 等价物 = Kotlin 引擎 + 快捷回复/斜杠）。
+- 手工回归清单：①单个 ``` 包 HTML+onclick 按钮可点、高度自适应不撑爆；②交互块+普通文字/代码块混排正常；③纯 HTML 消息（无围栏）正常；④远程图片/字体可加载（离线占位）；⑤长网页 ≤90% 屏高全高展开、超上限 WebView 内滚动，`height:100%;overflow:hidden` 页面被注入 `height:auto!important;overflow:visible!important` 还原。
+- 安全：交互代码块（开关开）= 执行任意脚本（可发网络请求、可读该消息 WebView 内一切）；唯一 JS 桥 EmberInnBridge 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。与 JS 全开同风险等级，官方默认禁止，属有意偏差；收紧时先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
-### 10.4 实现位置与行为（维护必读）
-- `ChatScreen.kt / ChatMarkdown`：消息先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段（``` 内以 `<` 开头以 `>` 结尾或含 `<body>`）与 Mermaid / 富 HTML 段各自进独立 WebView，围栏外文本走原生 Markdown（详见第 12 章）。
-- `ChatScreen.kt / embedInteractiveBlocks`（在 officialStyledHtml 内对 WebView 页面调用）：
- - HTML 围栏 → `<iframe srcdoc="...">` 始终渲染；扩展开时无 sandbox（脚本可跑），关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用、保留同源供父页测高）；内容做 `& / " / < / >` 实体转义；`onload` 用 `contentWindow.document.documentElement.scrollHeight+5` 设 iframe 高度，并对 iframe 文档挂 ResizeObserver/MutationObserver 持续同步；
- - 非 HTML 围栏 → `<pre><code>`（转义）；
- - 围栏外纯文本 → 转义后 `<div style="white-space:pre-wrap">`（保留换行）；本身含 `<` 的 HTML 段原样放行。
-- `ChatScreen.kt / WebViewHtml`：JS 恒开、网络与外链放开；实例来自 `WebViewPool` 复用（release 不再 about:blank，保留已渲染页面 + `WebViewSession` 的 loaded/loadToken/heightPx，滚回同内容不重载、直接恢复记忆高度）；测高用 ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 800ms 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 测高未返回时 160dp 可见兜底（详见第 12 章）；等 iframe 加载完再撑外层高度；外层按实测全高展开（公式含 html/body scrollHeight + getBoundingClientRect + 全元素 max(bottom) + 2px 防亚像素，字体就绪再补测），**上限 90% 屏高，超上限 WebView 内部可滚动**（长页面不会截断、不会撑爆列表）；加载方式 = 原文 UTF-8 + file base（旧 base64 方案在非 data baseUrl 下不解码、显示 base64 原文，见 12.14）。
-- 与 JS 全开联动：卡内脚本能跑；http(s) 顶层导航仍走系统浏览器。
+### 7.3 分段渲染 / WebView 池 / 测高（App/UI 层）
+- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView，否则原生。
+- WebViewPool：ArrayDeque 闲置池（上限 6）；release 不 about:blank，保留已渲染页面 + WebViewSession（loaded/loadToken/heightPx）；token 每次进入换新，复用同页不重载、记忆高度直接恢复；同页滚动出屏不再销毁重建。
+- 测高：ResizeObserver(html+body) + load + fonts.ready + 图片未就绪 800ms 低频轮询（20s 上限）+ onPageFinished 纯字符串轮询 ≤15s + 初始 160dp 兜底；公式 = html/body scrollHeight 与 getBoundingClientRect 最大值 + ≤8000 元素 max(bottom) 扫描 + ceil+2px；CSS 像素 1:1 转 dp（旧代码按物理像素/density 导致高密度屏压扁）；上限 maxOf(90% 屏高, 280dp)，超上限 WebView 内滚动；iframe 150/500/1500/3000ms 复测 + 父页观察同源 srcdoc 持续同步。
+- 性能：animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（依据 Cloudy 源码 Sky.kt/SkyFrameDriver.kt：滚动活动触发每帧重捕；同屏玻璃 ≤2-3 处）；热路径缓存（chatTypography/chatTextShadow/NativeMarkdown 组件 remember；Markdown 解析 LRU 缓存 MarkdownCache.kt 上限 32）；行级参数稳定化（immersiveActions/bubbleStyle/density 层读一次、List<MediaAttachment> 包 @Immutable ChatMedia）；发送链路缓存（角色卡解析 LRU 8、外置世界书 mtime、连接档案 mtime、聊天元数据；JSONL/元数据落盘单线程后台队列；命中面板/上下文胶囊移出请求关键路径）。
+- 代码块：mikepenz 默认 MarkdownCode 挂 horizontalScroll（源码 MarkdownCode.kt）导致长 JSON 框死；WrappingHighlightedCode（snipme 高亮 + softWrap 换行）替换 codeFence/codeBlock（官方 overflow-x:auto，我方有意改换行，内容完整可见）。
+- 第三方扩展卡说明（MVU/酒馆助手/EJS，如“苍玄界”）：完整渲染依赖三层——①角色卡自带正则（官方核心，须角色详情开启“允许此角色应用该卡正则”→ character_allowed_regex；开启后 `【GameStart】`→HTML 启动页、`<inner>`→心声卡片、`<StatusPlaceHolderImpl/>`→状态栏）；②MVU 变量系统（`<UpdateVariable>/<initvar>/JSONPatch` + `{{format_message_variable::stat_data}}`，第三方扩展，官方核心不含）；③EJS 模板（`<% getvar(...) %>`，ST-Prompt-Template/酒馆助手，官方核心不含）。本 App 与官方核心一致：只做①接线与②③“未知标签可见”兜底，不实现 MVU/EJS 扩展本身。
 
-### 10.5 与 Tavern Helper 能力对照
-| 能力 | 状态 |
-|---|---|
-| ``` 代码块 → iframe 独立网页、脚本可交互 | ✅ 已实现 |
-| 非 HTML 代码块保留显示 | ✅ 已实现（pre/code） |
-| iframe 自动测高 | ✅ 已实现（onload + 150/500/1500/3000ms 复测；iframe 内 ResizeObserver/MutationObserver 持续同步高度；外层 ResizeObserver 上报） |
-| 围栏外文本保留换行 | ✅ 已实现（pre-wrap） |
-| 头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` | ✅ 已实现（角色头像传进 WebView 注入 CSS；`{{userAvatarPath}}` 暂空，登记） |
-| `min-height: *vh` 按 iframe 高度换算 | ➖ 未做（登记） |
-| 原代码折叠（details 默认收起） | ✅ 已实现 |
-| 后台脚本库（页面级自动化：改世界书/注入提示词/监听事件） | ➖ 不内嵌；App 等价物 = Kotlin 引擎 + 快捷回复/斜杠 |
-| 表情/VN/STT/EJS 变量/插件市场 | ➖ 未实现（登记） |
+## 8. 维护速记与注意事项
 
-### 10.6 手工回归清单
-1. 消息 = 单个 ``` 包着 `<html><body><button onclick=...>`：卡片内按钮可点、脚本执行、高度自适应、不撑爆列表
-2. 同一消息 = 交互块 + 普通文字/普通代码块：文字保留换行、普通代码块正常显示
-3. 纯 HTML 消息（无代码围栏）：行为同（透明底、图片加载、外链跳系统浏览器）
-4. 交互块内的远程图片/字体：可加载（网络已放开）；离线时显示占位
-5. 长网页：≤90% 屏高按实测全高展开；超上限时 WebView 内部可上下滚动（不截断、不撑爆列表）；带 `html/body{height:100%;overflow:hidden}` 的整页文档会被注入 `height:auto!important;overflow:visible!important` 还原，内容全部可测可滚
+### 8.1 常见编译坑（CI 红→绿经验）
+1. 注释里写 `group-chats/*.json` 会触发 Kotlin 嵌套注释吞文件 → 写成“目录的 *.json”。
+2. 缺 import、括号不配对、前向引用属性 → push 前自查。
+3. M3 1.4：Typography 无 defaultFontFamily；Modifier.padding 不能混用 horizontal+top。
+4. 正则字符串里 `\s` 必须双反斜杠（非 raw string）；helper 别嵌局部函数。
+5. 全局替换函数名时 `return@旧名` 标签必须同步改名。
+6. Modifier 扩展用 rememberUpdatedState 必须包 `Modifier.composed`。
+7. App 无法本地编译，全靠 CI；push 后以 `gh run list` 为准，网络不稳重试。
 
-### 10.7 安全与许可证
-- 交互代码块（开关开时）= 执行任意脚本：可发网络请求、可读该消息 WebView 内的一切；开关关时 iframe 带 `sandbox="allow-same-origin"`，脚本/表单不执行。唯一的 JS 桥 `EmberInnBridge` 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。
-- 与 JS 全开为同一风险等级；官方默认禁止，属有意偏差。后续若收紧，先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
-
-## 11. 渲染与官方源码逐项对照（审计）
-
-对照版本：SillyTavern 1.18.0（~/sillytavern-ref，release 8172dcd）。
-官方管线：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染。
-我方管线：`displayTextOf`（位点正则/fixMarkdown/encode_tags）→ `preprocessOfficialHtml`
-（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`
-（buildMarkdownAnnotatedString + applyOfficialMarkers）→ 或 WebView 兜底（officialStyledHtml + 自动测高）。
-引擎层未动，本审计只覆盖 App/UI 渲染。
-
-### 11.1 逐项对照表
-
-| 官方项（源码位置） | 官方行为 | 我方实现 | 1:1 |
-|---|---|---|---|
-| 引号对 6 种（script.js） | `"…"`/“…”/«»/「」/『』/＂＂ → `<q>` 含引号字符，代码/style 先保护 | preprocessOfficialHtml 同 6 种 → \uE001..\uE002；保护 ```/~~~ /``/`/style | ✅ |
-| 系统消息（script.js `if (!isSystem)`） | 引号转换/encode_tags 跳过，fixMarkdown 仍执行 | displayTextOf 已跳过正则+encode；补跳过引号转换 | ✅ |
-| 用户消息（script.js getMessageTextHTML） | 与 AI 消息同样走 messageFormatting | 用户气泡改走 ChatMarkdown（Markdown/HTML/WebView 同一管线） | ✅ |
-| 普通换行（script.js simpleLineBreaks） | 单个 `\n` 也会变 `<br>` | mikepenz `eolAsNewLine=true`（OfficialMarkdownNode + NativeMarkdown 两处注入） | ✅ |
-| ~text~ 下划线（Showdown underline） | → `<u>` 下划线色+Underline | \uE003..\uE004 → 下划线色+Underline | ✅ |
-| `<em>/<i>`（style.css .mes_text i,em） | 斜体 + --SmartThemeEmColor | 原生 annotator EMPH → emColor；WebView CSS em,i 同色 | ✅ |
-| `<b>/<strong>`（style.css strong/h1/h2） | font-weight bold | → `**` Markdown 加粗 | ✅ |
-| `<s>/<strike>/<del>` | 删除线 | → `~~` | ✅ |
-| `<font color="#hex">`（style.css font[color]…inherit） | 指定色，内部 em/i/u/q 继承 | \uE005..#hex..\uE007 → 最后覆盖 em/u/q | ✅ |
-| `<hr>`/`<br>` | 分隔线/换行 | `<hr>`→`\n\n---\n\n`（避免紧跟文字时被解析成 Setext 标题）；`<br>`→`  \n`（Markdown 硬换行） | ✅ |
-| sub/sup（Chromium UA html.css） | font-size: smaller + vertical-align: sub/super | 原生 SpanStyle：0.83×字号 + BaselineShift.Subscript/Superscript | ✅ |
-| ins（UA） | text-decoration: underline | 原生 Underline | ✅ |
-| small/big（UA） | font-size: smaller / larger | 0.83× / 1.2× 字号 | ✅ |
-| mark（UA） | background: Mark（黄）+ color: MarkText（黑） | 黄底黑字，最后叠加、不被继承色覆盖（UA 声明 > 继承值） | ✅ |
-| kbd/samp/tt/code（UA） | font-family: monospace | FontFamily.Monospace | ✅ |
-| var/dfn/cite（UA） | font-style: italic | Italic | ✅ |
-| abbr[title]/acronym（UA） | text-decoration: dotted underline | 实线近似（Compose 无虚线） | 🟡 视觉近似 |
-| data/time/wbr | 无视觉样式 | 剥标签留内容 | ✅ |
-| bdi/bdo/ruby/rt/rp（UA） | 方向隔离/覆盖、注音 | WebView 兜底（原生无法表达） | ✅ 需 Web |
-| font face/size | UA 字体族/1-7 号字 | WebView 兜底（原生仅 font color） | 🟡 需 Web |
-| `<a href>`（原始 HTML） | 官方 a 链接色+无下划线 | 原生转换 `[text](url)`，支持无引号 href；无 href 剥标签 | ✅ |
-| `<img src>`（原始 HTML） | 浏览器内联图片 | 原生转换 `![alt](url)`，支持无引号 src、保留 alt；无 src 剥标签 | 🟡 width/height 不保留 |
-| 无属性 `<div>`/`<p>` | 块级布局（上下分行） | 原生剥标签 + 空行段落近似（`\n\n`） | 🟡 视觉近似 |
-| 无属性 `<span>` | 行内无视觉 | 原生剥标签 | ✅ |
-| 带属性 `<div>`/`<p>`（class/style/align 等） | 块级+样式 | 独立 WebView 元素（周围文字保持原生，不再整条 Web） | ✅ 需 Web |
-| 正文色（style.css body） | --SmartThemeBodyColor | 原生无色样式统一补 bodyColor；WebView body color | ✅ |
-| 链接（style.css a） | --SmartThemeQuoteColor，无下划线 | linkTextSpanStyle=quoteColor；typography.textLink 同色无下划线；WebView `a{text-decoration:none}` | ✅ |
-| 引用块（style.css blockquote） | 左 3px quote + padding-left 10px + black30a + margin 0 | 原生黑 30% Box + MarkdownBlockQuote 左边条；WebView CSS 同官方 | ✅ |
-| q 内斜体（style.css q i/q em） | color:inherit（被 q 色覆盖） | applyOfficialMarkers q 后于 em | ✅ |
-| u 与 em 层级（style.css u / em 优先级） | u 段 em 保持 em 色 | u 避开 em 段上色 | ✅ |
-| 代码块（style.css pre code） | display:block + overflow-x:auto（长行横向滚动） | WrappingHighlightedCode（snipme 高亮 + softWrap 换行，不再横向截断；WebView pre 同样 pre-wrap） | ✅ 功能级（官方横向滚动→我方换行，内容完整可见） |
-| 表格/列表/p/li tt（style.css .mes_text） | border/padding/margin 定值 | WebView CSS 同官方；原生 mikepenz 为 M3 风格近似 | 🟡 原生视觉近似 |
-| 全站文字阴影（style.css `*`） | 0 0 2px --SmartThemeShadowColor | chatTypography body+h1-6 + 名字/时间/日期/思考卡（补）+ WebView text-shadow | 🟡 聊天内全文字；按钮/输入栏等 UI 未加 |
-| 阴影/边框色（style.css :root） | rgba(0,0,0,.5)=#80000000 | stShadow/stBorder #80000000 | ✅ |
-| --SmartThemeBlurTintColor（style.css :root） | 玻璃底色 rgba(23,23,23,1) | 设置 st_blur_tint（空=主题预设；酒馆官方 #171717）；8 处玻璃面共用 glassTint()，alpha 按面叠加 | ✅ |
-| 用户/AI 气泡底（style.css :root） | rgba(0,0,0,.3) / rgba(60,60,60,.3) | stUserBubble #4D000000 / stBotBubble #4D3C3C3C | ✅ 色值；气泡无官方玻璃模糊 🟡 |
-| 头像圆角（style.css :root） | 2px / 10px / 50% | avatarShape square/rounded/circle | ✅（默认圆形，官方默认方形，可改） |
-| 主字体/字号（style.css :root） | Noto Sans / 15px（fontScale=1） | Noto Sans 4 面下载 / textSize=official 15px | ✅（默认 16px，可切官方 15） |
-| encode_tags（script.js） | `<` 全转义；行首/换行+空白后的 `>` 保留（负向后顾 (?<!^|\n\s*)） | AppearancePrefs.encodeTags（等价字符扫描实现，非系统消息） | ✅ |
-| 流式渲染（官方 StreamingProcessor） | 增量整段 messageFormatting | StreamingMarkdown 轻量着色，结束完整重渲染 | 🟡 中间态近似，最终一致 |
-| DOMPurify（script.js） | 剥 script/on*，白名单 | JS 全开、网络全开（用户要求），只拦 javascript: URL | ❌ 有意偏差，风险登记 |
-| `<style>` | 官方默认剥除（角色开关恢复+前缀） | 默认放行，且只影响该消息自己的 WebView | ❌ 有意偏差 |
-| 外部媒体 | 官方 forbid_external_media 默认禁 | 默认放行 | ❌ 有意偏差 |
-| Mermaid | 官方插件渲染 | WebView + 本地 asset JS | ✅ 功能级 |
-| reasoning | 官方独立样式（em 色/左栏） | App 折叠卡（onSurfaceVariant） | 🟡 功能级非 1:1 |
-| WebView 高度 | 官方 DOM 正常撑高 | ResizeObserver + `EmberInnBridge`（addJavascriptInterface）事件上报 + 图片未就绪 1s 低频兜底 + onPageFinished 轮询兜底（≤15s）+ 初始 160dp 可见兜底；scrollHeight 按 CSS 像素 1:1 转 dp（不是 Android 物理像素）；iframe 150/500/1500/3000ms 复测 + iframe 内 ResizeObserver/MutationObserver 持续同步；实测全高展开、不封顶（替换旧 75% 屏高内滚与 250ms 轮询） | ✅ 机制自研 |
-
-### 11.2 已知 bug / 限制登记（继续治理清单）
-1. 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似，UI 层自主）
-2. 全站文字阴影覆盖聊天内全部文字（正文/标题/名字/时间/日期/思考卡）；按钮/输入栏等 UI 控件未加（官方 `*` 全站）
-3. 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）
-4. Markdown 表格单元格/任务列表 checkbox 文本仍走库内直绘，引号等官方字段可能残留占位符（低频）
-5. 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致
-6. WebView 按实测全高渲染、随列表滚动（官方页面流语义；旧 75% 封顶内滚已移除）
-7. 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（登记）
-8. abbr/acronym 官方为虚线下划线，Compose 无虚线，用实线近似；嵌套 sub/sup/small 缩放按单层 0.83× 计算（官方逐层累乘），极低频偏差
-
-### 11.3 对照源码文件
-- `~/sillytavern-ref/public/script.js`：messageFormatting（引号对/encode_tags/Showdown/DOMPurify）
-- `~/sillytavern-ref/public/style.css`：`:root`（SmartTheme*、阴影、字号、字体、头像圆角）、`.mes_text`（i/em、q、u、a、blockquote、table/p/ol/ul/li tt、pre code、font[color]）
-- Chromium UA 样式表 `third_party/blink/renderer/core/html/resources/html.css`：sub/sup/small（font-size: smaller）、big（larger）、mark（Mark/MarkText）、tt/code/kbd/samp（monospace）、i/cite/em/var/address/dfn（italic）、u/ins（underline）、abbr[title]/acronym[title]（dotted underline）
-- AOSP `core/java/android/text/Html.java` + Compose `AnnotatedString.fromHtml`（Android-only）：平台原生 HTML 支持范围（无 mark/kbd/samp/var/ins/abbr/code，不采用的原因）
-- beeper/matrix-messageformat-compose：生产库“HTML→AnnotatedString + 组合期延迟着色”架构（架构验证，未引依赖）
-
-### 11.4 文本级 HTML 标签原生渲染对照
-- **问题**：官方 DOMPurify 默认白名单放行的文本级标签，一部分走 WebView、一部分（sub/sup/ins/small/code 等）因 HTML 判定收紧直接漏成纯文本。
-- **调研结论（权威依据）**：
-  - 官方管线：script.js messageFormatting → Showdown → DOMPurify（默认 HTML 白名单）→ 浏览器按 UA 默认渲染；ST style.css 只覆盖 q/u/em/b/s/font[color]/blockquote 等，**没有**为 sub/sup/ins/small/big/mark/kbd/samp/tt/code/var/dfn/cite/abbr 写任何规则 → 全部是浏览器 UA 默认。
-  - Chromium UA 样式表（third_party/blink/renderer/core/html/resources/html.css）：`sub,sup { font-size: smaller }`、`small { font-size: smaller }`、`big { font-size: larger }`、`mark { background-color: Mark; color: MarkText }`（黄底黑字）、`tt,code,kbd,samp { font-family: monospace }`、`i,cite,em,var,address,dfn { font-style: italic }`、`u,ins { text-decoration: underline }`、`abbr[title],acronym[title] { text-decoration: dotted underline }`。
-  - Android 平台 `Html.fromHtml`/Compose `AnnotatedString.fromHtml`（Android-only）只支持 b/i/u/s/font/big/small/sub/sup/tt/h1-6/p/div/span 等，**不支持 mark/kbd/samp/var/ins/abbr/code**，且无法接入我方 q/u/font 官方着色层 → 不采用。
-  - Beeper/Element 生产库 matrix-messageformat-compose 采用“HTML → AnnotatedString + 组合期延迟着色”架构，与本项目 preprocess → 私有标记 → applyOfficialMarkers 同构（验证架构方向，不引依赖）。
-- **实现**：preprocessOfficialHtml 新增 10 组文本级标签转换（私有标记 \uE020-\uE031）：sub/sup（0.83× + BaselineShift）、ins（下划线）、small/big（0.83×/1.2×）、mark（黄底黑字，最后叠加）、kbd/samp/tt/code（等宽）、var/dfn/cite（斜体）、abbr[title]/acronym（实线下划线近似）；data/time/wbr 剥标签留内容。无 title 的 abbr/acronym 无 UA 装饰，同样剥标签。
-- **layering 依据**：UA 声明优先于继承值（CSS 层叠），所以 mark 的黄底黑字最后加、不被 q/u/font/em 继承色覆盖；var/dfn/cite 斜体先加、q/font 颜色后加只覆盖 color 属性。
-- **保留 WebView**：bdi/bdo（方向）、ruby/rt/rp（注音）、font face/size、nobr（nowrap）、marquee/blink 等原生无对应能力；布局/交互/媒体/整页仍走 WebView（12.14 已修 base64 加载）。
-- **OFFICIAL_HTML_TAG 补齐**（防漏成纯文本）：script/html/head/body/title/meta/link、caption/col/colgroup/tbody/thead/tfoot/tr/td/th、dl/dt/dd、datalist/optgroup/option、marquee/blink/nobr/xmp/shadow/menuitem/slot；文本级标签保留在清单作为转换失败兜底。
-- 影响：纯 App/UI 层，引擎零改动。
-
-
-
-## 12. 消息分段渲染 / WebView 复用池 / ResizeObserver 测高（App/UI 层）
-
-### 12.1 为什么改（问题）
-- 旧实现：只要消息里出现 HTML / 交互卡 / Mermaid，整条消息丢进一个 WebView。围栏外 Markdown（`**粗体**`、列表、引用）会被 `embedPlainText` 转义成纯文本，Markdown 语法失效。
-- 旧实现每个 HTML 消息新建 WebView，LazyColumn 滚出即销毁重建（AndroidView 本身不复用 View），聊天滚动 / 发送时卡顿。
-- 旧测高用 `evaluateJavascript` 每 250ms 轮询，每个 HTML 消息最多 60 次空转。
-
-### 12.2 分段渲染（ChatScreen.kt：buildMessageSegments / SegmentedMarkdown）
-- **第一步：Web 元素切分**：`carveWebElementRanges` 在围栏外找出“真正需要 WebView”的块级/结构元素（table/ul/ol/li/blockquote/pre/h1-6/center/figure/…/video/audio/canvas/svg/math/iframe/style/script/form 等，以及带属性的 div/p、face/size 的 font），从开标签到同名闭标签（同层嵌套计数、自闭合除外）切出独立 WebView 段；**周围文字保持原生 Markdown**，不再“一条消息有一点 HTML 就整条 Web”。切分受 `htmlEnabled` 控制，开关关闭时该区间并入原生段，不创建 WebView。
-- **第二步：非 Web 部分按围栏切分**：`ANY_FENCE` 按 ``` / ~~~ 分段：
- - HTML 围栏段：``` 内以 `<` 开头以 `>` 结尾或含 `<body>`（`INTERACTIVE_FENCE` 与 `embedInteractiveBlocks` 同一正则）→ 独立 WebViewHtml，内部 details 原代码 + iframe srcdoc；渲染不依赖扩展开关，开关只决定 iframe 是否 sandbox（脚本是否可执行）
- - Mermaid 段：```mermaid → 独立 WebViewHtml（mermaid.min.js 本地 asset）
- - 普通代码块段：原样交给原生 Markdown
- - 围栏外文本段：先 `preprocessOfficialHtml`（a/img 原生转换（支持无引号属性、保留 img alt）、无属性 div/p/span 剥标签、`<br>` 硬换行、`<hr>` 空行分隔），命中 `OFFICIAL_HTML_TAG`（行内 Web 标签：button/input/span[属性]/font face-size/ruby/bdi/bdo 等；标签名统一 `(?=[\s/>])` 边界、不再用 ASCII \b，避免 `a<p<b`、中文 `x <p值` 误判）或 `looksLikeHtml`（必须是带属性且以 `>` 结尾的良构标签，纯文字比较式 `a<b，而 c=1` 不再误判）且 `htmlEnabled` → 整段 WebView 兜底；否则原生 Markdown
-- 纯 Markdown 消息（全段 Native）仍整条一次原生渲染，不拆散列表 / 引用等跨段 Markdown 结构。
-- 段间 `Arrangement.spacedBy(6.dp)`；外层 modifier（气泡 / 长按 / 滑回复）包在整条 Column 上。
-- 保留：`officialStyledHtml` / `embedInteractiveBlocks` / `embedPlainText`（iframe 转换与 CSS 样式仍按原机制），`sanitizeHtmlForWebView`（只拦 javascript:）。
-
-### 12.3 WebView 复用池（WebViewPool.kt）
-- `object WebViewPool`：ArrayDeque 闲置池；`acquire` 从池取（空则新建 applicationContext WebView），`release` 摘除父容器、中断在途加载、`onPause()` 暂停 JS/动画后回池；闲置超过 6 个销毁。**release 不再 `loadUrl("about:blank")`/清空 tag**——已渲染页面与 `WebViewSession`（含实测高度）随实例保留。
-- `WebViewHtml` 通过 `remember { WebViewPool.acquire(context) }` 取实例，`AndroidView(onRelease = { WebViewPool.release(it) })` 回池。
-- 每个加载会话一个 `WebViewSession`（token + html + loaded/loadToken/heightPx）：token 每次进入都换新（旧轮询/桥接回调作废，避免死行写状态）；html 变化才重载；**同页面复用时不重载、只换桥/回调，并把记忆高度直接恢复**（不再 0→160dp→实测重走一遍）；release 中断的在途加载（loaded=false && loadToken=null）回来会自动重载。
-- 效果：HTML 消息滚动出屏不再销毁重建、滚回来不整页重载，发送 / 滚动卡顿消除；官方无此机制，属 App/UI 性能层，不改变渲染语义。
-
-### 12.4 ResizeObserver 测高（ChatScreen.kt：WEBVIEW_MEASURE_SCRIPT）
-- 兜底页 `</body>` 前注入脚本：`ResizeObserver(document.documentElement)` + `ResizeObserver(document.body)` + load 事件 + `document.fonts.ready` 补测 + 图片未就绪 800ms 低频轮询（`p==0` 停，20s 上限）。
-- 高度经 `window.EmberInnBridge.onMeasure(h,p)` 直接回调 Kotlin（`addJavascriptInterface`，仅回传高度/未加载图片数，不暴露其它能力）；`onPageFinished` 轮询作为第二道兜底。
-- **测高公式（修“下面截断”根因）**：取 html/body `scrollHeight` 与各自 `getBoundingClientRect()` 的最大值（含 body 外边距、绝对定位/浮动溢出），再对 ≤8000 个元素做一次 `max(bottom)` 扫描兜底，最后 `ceil+2px` 防亚像素截断；字体就绪后再补测（字体晚到导致的行高变化也能撑满）。
-- **页面样式还原（修“vh/overflow:hidden 截断且无法滚动”根因）**：注入 `html,body{height:auto!important;min-height:0!important;overflow:visible!important}`——页面自带 `html/body{height:100%;overflow:hidden}` 时 scrollHeight 只等于视口高度、WebView 内部也无滚动余地，强制还原后内容全部可测可滚。
-- `onPageFinished` ≤15s 轮询兜底（纯字符串 `高度:未加载图片数`，公式与注入脚本一致，避免 JSON 转义问题）；初始测高未返回时给 160dp 可见兜底，打破“高度 0 → 不布局 → 量不到高度”的死循环。
-- **CSS 像素换算**：`scrollHeight` 是 WebView 的 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素除以 density，高密度屏上 HTML/卡片被压成细条甚至不可见；现改为 `heightPx.toFloat().dp`。
-- **高度上限**：`maxOf(90% 屏高, 280dp)`——≤上限的网页全高展开；超上限时 WebView 内部可滚动（不再裁掉内容，也不会把列表撑成万 px 巨项）；实测高度全量存回 `WebViewSession.heightPx`，滚动复用直接恢复。
-- iframe（交互卡内部）按 onload + 150/500/1500/3000ms 复测，并在 iframe 文档上挂 ResizeObserver/MutationObserver 持续同步高度（不注入卡片代码，仅从父页观察同源 srcdoc）。
-- token 机制保证复用后旧页面的上报不会写进新消息的高度状态。
-
-### 12.7 滚动 / 键盘卡顿治理
-- **animateItem 移除（“每条消息都在动”根因）**：消息行原本挂 `Modifier.animateItem()`，对应 Google Issue Tracker 395536917（BOM 2025.01.01 复现，2026-03 仍 Not started）：上下滚动时条目位移动画持续触发，表现为“列表自己在动 / 每条消息都在动”。聊天列表不需要位移动画（google compose-samples 的 Jetchat 消息行不用），已移除。
-- **毛玻璃静态化（滚动卡顿主因之二）**：原实现把“消息列表”整列作为 Cloudy `sky` 模糊源；Cloudy 0.7.1 的 SkyFrameDriver 检测到滚动活动后，滚动期间每帧重捕整屏并重模糊。现改为只把“静态背景层”（氛围渐变 + 光晕 + 显式/头像背景）作为 sky 源，消息列表不再参与模糊重绘；顶栏/输入栏保留玻璃质感，只是不再实时模糊滚过的消息文字。
-- **reverseLayout 重构（键盘/触底卡顿根治）**：列表改 `reverseLayout=true`（google compose-samples Jetchat 方案），第 0 项=最新消息固定在视口底部；内容增长时底部天然钉住，彻底删掉三条 `scrollToItem(Int.MAX_VALUE)` 强制滚动（新消息、首帧、流式节流滚动）与每帧读 `layoutInfo` 的手写贴底判定。IME 处理改为 `imePadding()` 只作用于“消息列表 + 输入栏”同一列（输入栏沉底进列、不再悬浮叠加），顶栏与静态背景不再随键盘整屏重排；发送后只收键盘、不再先滚底。
-- **热路径缓存**：`chatTypography()` / `chatTextShadow()` 按设置值 `remember`（流式每 tick、每条消息重组时不再重建几十个 TextStyle / Shadow）；`NativeMarkdown` 的 colors / typography / padding / components 按实际值缓存，参数不变即复用同一实例（对照 mikepenz 官方 PR #408 的 remember 复用方向）。
-- **行级参数稳定化**：`immersiveActions` / `bubbleStyle` / `density` 在 ChatScreen 层读一次传入列表，避免每条消息组合时各自读 SharedPreferences；`List<MediaAttachment>` 包成 `@Immutable ChatMedia`，让 MessageRow 可跳过重组（Compose 把 List 判为不稳定参数）。
-- **玻璃边缘高光（毛玻璃美化，全量铺开）**：共用 `EmberFx.glassEdgeHighlight` 画 1dp 白色渐变细线（深色 0.16 / 浅色 0.30）——聊天顶栏下缘、聊天输入栏上缘、首页顶栏下缘、搜索态顶栏下缘、AI 对话玻璃渐变卡上缘、首页玻璃 FAB 上缘；补上 README 遗留的“1px 高光描边”。边缘反光是毛玻璃“高级感”的主要来源，tint / 阴影保持克制（README 格调守则）。全 app 真模糊玻璃共 5 处：聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB，已全部覆盖。
-- 影响：纯 App/UI 层，不动引擎；`backgroundBlur` 开关仍生效（关=纯色表面）；渲染语义仍对照官方（第 11 章），不参与差分。
-
-### 12.9 M3 组件整体升级
-- **共享高级输入框 `EmberTextField`（ui/components/EmberM3.kt）**：全局替换 `OutlinedTextField`（65 处）。无边框 tonal 容器（聚焦 0.58 / 未聚焦 0.34 低饱和表面），圆角跟随主题大圆角，聚焦主色光标 + 标签上色，错误态保留 M3 语义色；聊天输入框单独用 accent 光标 + 更淡容器，配合玻璃输入栏。
-- **共享高级底部栏 `EmberBottomSheet`（ui/components/EmberM3.kt）**：全局替换 `ModalBottomSheet`（14 处）。顶部 28dp 大圆角 + 拖拽把手 + `surfaceContainerLow` 低对比表面；交互语义（sheetState/onDismissRequest/content）不变。
-- 依据：M3 Expressive 全组件（Glow/ButtonGroup/新 FAB 等）在 1.4.0 稳定版已移除、仅 1.5.x alpha 可用，生产不引入 alpha；改用 1.4 稳定 API 自研封装达到同类质感（tonal 容器 + 大圆角 + 拖拽把手），零依赖新增、旧设备无降级。
-- 影响：纯 App/UI 层，未动引擎；官方渲染语义不受影响。
-
-### 12.10 UI 质感整体升级
-- **聊天输入区重做**：输入框 `EmberTextField` 聚焦时 1.5dp 描边 + `emberShadow` 柔光环（默认主题主色，聊天输入框传角色 seed 的 accent，180ms 淡入）；快捷工具/快捷回复统一成 999 圆角胶囊流；附件/语音/快捷工具按钮换成 40dp tonal 圆钮（`EmberInputIcon`）；发送钮保留角色 seed 取色（accent 底 + 自适应亮暗图标 + accent 柔光），停止钮同规格 error 柔光。
-- **聊天列表页（Sessions）**：补静态背景层 + 玻璃顶栏 + 玻璃新建 FAB（`EmberGlassFab` 共享组件）；会话卡升级为 seed 专属配色——60dp 圆角头像块 + seed 描边、角色头像整卡淡背景（alpha 0.15）、卡片底 seed tint、左侧 seed 竖条、彩色发光阴影（与首页角色卡同一套语言）。
-- **设置页全量玻璃顶栏**：`SettingsGlassPage` 提供静态背景层（内容滚动不触发整屏重捕），`SettingsTopBar` 升级支持 glass（sky + 边缘高光 + Cloudy 背板模糊）/ subtitle / trailing；11 个子页（外观/文字排版/消息渲染/扩展/语音/快捷回复/世界书/正则/数据隐私/关于/提供商列表+详情）全部接入，ProviderScreen 原私有 `TopBar` 并入 `SettingsTopBar`。
-- 主题影响：所有新颜色均取色自 `MaterialTheme.colorScheme` / 角色 seed accent，11 套主题与深浅模式自动适配，无硬编码色值。
-- 依据：M3 1.4 稳定版（Expressive 仅 1.5 alpha），Cloudy 静态 sky 源原则，首页角色卡既有 seed 语言。
-- 影响：纯 App/UI 层，未动引擎。
-
-### 12.11 取色盘组件升级
-- **`ColorPickerDialog` 重做（ui/components/ColorPickerSheet.kt）**：旧版“色板 + 三条普通 M3 滑杆”换成高级选色器——二维 HSV 取色板（横=饱和度、纵=明度，渐变底 + 可拖圆点）、色相渐变条、RGB 渐变滑杆（轨道渐变跟随另外两通道）、大预览色块（当前色 + 主题环 + 彩色阴影）、官方 SillyTavern 色板、hex 输入；容器从 AlertDialog 换成 `EmberBottomSheet`（28dp 圆角 + 拖拽把手）。
-- **`ColorField` 重做（ui/components/ColorField.kt）**：色块升级为 38dp 大色块（彩色阴影 + 白边内描边），整行可点开选色盘；保留 hex 输入 + 跟随主题 fallback 语义。
-- 使用点：消息渲染（官方 st* 字段）、外观（阴影/遮罩颜色）等全部自动生效；`ColorPickerDialog` 公共签名未变，调用方零改动。
-- 依据：HSV 取色是主流选色器范式（Android/iOS 系统取色器同构）；颜色全部取色自主题/所选色，11 套主题不受影响。
-- 影响：纯 App/UI 层，未动引擎。
-
-### 12.12 模型页 UI + 服务商默认值 + 官方字段审计
-- **模型页（ProviderScreen）UI 升级**：ProviderCard 补彩色阴影、状态胶囊改 999 圆角、箭头换 PhosphorIcons；默认模型选择卡片同款阴影；ModelPickerSheet 选中行 tonal 高亮 + 主色 ✓ 圆点；服务商文案动态显示 `vm.providers.size` 家。
-- **providers.json 默认值**：36 家全部预置 base_url / default_models / default_context_window / default_max_tokens / docs_url（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 `api.cohere.com/v2`；DeepSeek 默认 `/v1`）。azure/custom 保持空（Azure 部署名、自定义地址必须用户填，不硬编码）。
-- **默认地址补齐（现状）**：详情页无已保存连接时自动预填 providers.json 默认 base_url / 区域（第一个 variant）/ API 版本（spec.api_version，如 Azure 2024-12-01）；默认模型与窗口为各厂商公开常见值，模型列表以“测试连接”拉取为准。
-- **官方模型设置项对照（现状）**：UI 已覆盖 名称/API Key/接口地址/区域/账户 ID/API 版本/默认模型/上下文上限/最大回复/温度/topP/存在惩罚/频率惩罚/测试连接 + **top_k/min_p/top_a/repetition_penalty/seed/n/流式开关/请求 token 概率（logprobs）/use_sysprompt**；OpenRouter 详情页另有 use_fallback/allow_fallbacks/middleout/providers/quantizations。引擎 `SamplerParams` 全字段对应官方 oai_settings（topK 默认 0=不发送、minP=0、topA=0、repetitionPenalty=1、seed=-1、n=1、middleout=on、requestTokenProbabilities=false、**useSysprompt=false=官方默认**）。实际请求体已按官方后端 chat-completions.js 差分 28 例（chat-request-body-official.mjs → ChatRequestBodyDiffTest），覆盖 openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5 分支 + 空 stop/温度 clamp/seed 边界；o1 强制非流式（App 走非流式路径）；**Claude/Gemini 的 use_sysprompt 已按官方默认 false 接线（system 消息转 user），Gemini topK 已接线**（LlmClientTest 锁定）。官方面板其余字段：reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/include_headers
-网络层与请求体已接（引擎）+ UI 已补；custom_prompt_post_processing 已接总装；tool_call_recurse_limit
-已接工具循环；max_context_unlocked、names_behavior、assistant_prefill、assistant_impersonation、
-continue_prefill、continue_postfix、function_calling、media_inlining、inline_image_quality、request_images、
-web_search、show_thoughts、tool_reasoning_mode、squash_system_messages 已接 SamplerParams+UI；
-sort_models/group_models/show_external_models/bypass_status_check/azure/vertex/nanogpt 连接 UI 已补
-（✅ vertex 认证已做：Express API Key / Full 服务账号 JWT（VertexAuth.kt，官方 google.js 移植）+ ProviderScreen 服务账号 JSON 校验/保存；✅ YamlMerge 已用 SnakeYAML 对齐 js-yaml 锚点/合并键/多文档静默；bias_presets tokenizer 差分仍登记）。
-- **官方字段审计（对照 SillyTavern V2 spec + char-data.js）**：角色详情页已 1:1 覆盖 V2 核心字段——name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings；extensions 已接线：talkativeness（话痨滑杆）、depth_prompt（深度提示）、regex_scripts（卡正则）、fav（置顶）、world（内嵌世界书，导入端处理 `embeded://`/`__asset:` 资源）。明确不做的两项（避免“无效接线”）：group_only（引擎无消费点，只加 UI 不生效）、官方“linked world name”字符串引用（本 App 用卡内嵌世界书，不依赖官方世界书文件体系）。
-- 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
-- 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。
-
-### 12.13 引擎接线迁移
-- **媒体纯逻辑 → MediaEngine（官方 script.js getMediaDisplay/getMediaIndex + constants.js getFromMime）**：
-  - ChatPromptFactory 历史消息：`media_display` 手写白名单 → `MediaEngine.getMediaDisplay`（extra 优先、无效回退 LIST）；`media_index` 手写 `toIntOrNull` → `MediaEngine.getMediaIndex`（数字/字符串原样、越界/负数/NaN 回退 0、null 透传），再转 Int? 供 UI 使用。
-  - ChatViewModel 本地附件 / URL 附件：手写 mime 前缀分类 → `MediaEngine.typeFromMime`（未知类型拒绝，与原来一致）。
-  - 保留 `mimeFromPath`（引擎无扩展名→具体 mime 表，OpenAI/Claude 请求需要）。
-- **变量宏接线（{{getvar}} 读角色卡变量）**：`MacroEnv.local` 由默认 `EmptyVariableStore` 改为 `MemoryVariableStore`，预置本卡 `extensions.emberinn_variables`（CharacterCardEdit.readVariables）；`{{getvar::x}}` 现在能读到角色变量；`{{setvar}}` 走内存（官方 setvar 是聊天级内存变量，不写回卡文件，语义正确）。global 无 UI 保持空。
-- **明确不做（无收益/高风险）**：
-  - ChatJsonl：`ChatStore.messages` 早已用 `ChatJsonl.import`；导出保留原文件直读（格式零改动，不再序列化一遍）。
-  - PersonaEngine：App 无人设连接/聊天锁/默认锁 UI，接 `resolve` 后行为与现状完全相同，纯增风险，跳过。
-  - WorldInfoConverter：App 编辑器“只覆盖编辑字段、未知字段透传”的保存策略优于整表归一；转换器补的 secondary_keys/position 无 UI 展示，跳过。
-  - 群聊队列（GroupChat/GroupQueue）、工具调用、Instruct 模式、表情立绘：功能新增而非迁移，未做。
-- 影响：纯 App/UI 层，引擎零改动；变量宏行为从“读不到”变为“可读”，属于修复。
-
-### 12.14 WebView 空白根因修复 + HTML 判定收紧 + 代码块换行
-- **空白根因（已修）**：`configureWebView` 曾用 `loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)`（baseUrl=null 路径，data 按 data: URL 处理，`#`/`%` 被 URL 解析截断），随后又改成 `Base64` + `encoding="base64"`。**后一方案仍错**：`loadDataWithBaseURL` 在“非 data: 的 baseUrl”（`file:///android_asset/`）下把 data 当作普通字符串直接灌入 WebView，**不做 base64 解码**（AOSP CTS 2b3744f 明确 non-data base URL → treat the String as a raw string；Android 文档：URL 编码实体也不解码）。实际表现：WebView 把整段 base64 原文当页面文本显示，开头即 `PCFET0NUWVBFIGh0bWw+...`（= `<!DOCTYPE html><html><head>`），下面大片空白——用户多轮报告“网页/交互卡片从来渲染不出来”的真根因。
-- **最终修复**：直接传原文 + `encoding="UTF-8"` + `mime="text/html; charset=UTF-8"`，baseUrl 仍保留 `file:///android_asset/`。非 data: baseUrl 下 data 按 HTTP 响应体加载、不做 URL 解码，`#`/`%` 不会截断（截断只发生在 baseUrl=null 的 data: URL 路径，即 `loadData`）；mermaid.min.js 相对引用与 file:// 字体不受影响。社区权威解法一致（SO 57198560 等）。
-- **渲染不出来的第二根因**：Compose 初始把 WebView 高度给成 0 → 页面不布局 → `scrollHeight` 也量不到 → 高度永远 0。修复：测高未返回时先给 160dp 可见兜底高度，让页面先布局，再回缩/撑到真实高度。
-- **渲染不出来的第三根因**：`scrollHeight` 是 CSS 像素（1 CSS px == 1 dp），旧代码 `heightPx.toDp()` 按 Android 物理像素换算，高密度屏上高度被除以 density，HTML/卡片被压成细条甚至不可见。现改为 `heightPx.toFloat().dp`。
-- **测高链路**：`EmberInnBridge`（addJavascriptInterface，只回传高度/未加载图片数）→ ResizeObserver(html+body) + load + fonts.ready + 800ms 兜底；`onPageFinished` 纯字符串 `高度:未加载图片数` 轮询 ≤15s 作为第二道；token 每次进入都换新，丢弃复用后的旧回调。
-- **渲染语义**：普通 `\n` 对齐官方 `simpleLineBreaks:true`（`eolAsNewLine=true`）；HTML 开关真正关闭 WebView；WebView 链接补 `text-decoration:none`；用户消息改走 Markdown/HTML 同一管线；Mermaid 不再 html 套 html；iframe 高度由父页观察同源 srcdoc 持续同步。
-- **整页文档处理**：角色卡自带网页 / 模型直接输出 `<!DOCTYPE html>` 整页时，消息分段器整段走 WebView（不再被 carveWebElementRanges 拆散 head/body）；`officialStyledHtml` 检测完整文档后把兜底 CSS 注入原文档 `<head>`（`injectIntoFullDocument`），不再外套 `<html>`（html 套 html → 嵌套 `</head></body>` 提前关闭外层文档 → 页面错乱/大片空白）。
-- **注入健壮性**：测高脚本与 CSS 注入点通过 `structuralTagPositions` 查找，跳过 `<script>/<style>` 文本内的伪 `</body>`/`</head>` 字面量（角色卡 JS 字符串里常见），避免脚本被插进字符串中间导致整段 JS 失效。
-- **本地资源访问补齐**：`allowFileAccessFromFileURLs=true` + `allowUniversalAccessFromFileURLs=true`（file:// 页面加载 file:// 字体/图片，WebView 默认禁止 file→file 跨源）；`MIXED_CONTENT_ALWAYS_ALLOW`（消息内 http 图片/资源在 data 页可加载）。与用户“网络/JS 全放开”要求一致，不加开关。
-- **HTML 误判收紧**：`looksLikeHtml` 由“任意 `<tag>`”改为“带属性或自闭合标签”（`<[a-zA-Z][^>]*(?:=|/>)`，忽略 ``` / ~~~ 围栏）。原因：普通文字/JSON 里出现 `<tag>` 会被旧规则整条丢进 WebView，WebView 又因上面的截断 bug 白屏 → 表现为“文字被框死/正文消失”。裸标签（b/i/q/u/s/font color/hr/br）已由 `preprocessOfficialHtml` 原生转换，官方富标签仍由 `OFFICIAL_HTML_TAG` 接管，行为不回退。
-- **代码块“框死看不全”（fd95265）**：mikepenz 默认 `MarkdownCode` 对 code 挂 `horizontalScroll`（源码 MarkdownCode.kt），长 JSON 只能横向滚动、内容“被框住”。新增 `WrappingHighlightedCode`：snipme 高亮保留 + `Text(softWrap=true)` 自动换行，替换 codeFence/codeBlock 两个入口。官方 style.css 是 overflow-x:auto（横向滚动），此处为视觉可用性有意改成换行（功能级对齐，内容完整可见）。
-- 影响：纯 App/UI 层，引擎零改动；与第 11 章官方对照结论不冲突。
-
-### 12.15 引擎新功能 App 接线
-- `ChatPromptFactory` / `ChatViewModel` 的 `{{bias}}` 提取与宏剥离已从私有正则改为 `BiasEngine`（官方 Handlebars 语义；同时兼容历史 `{{bias:...}}` 冒号写法，作为 README 扩展保留）。
-- `ChatViewModel.finalizeStream` 保存回复前已接 `CleanUpMessageEngine` + `StoppingStringsEngine`（停用词/名字/群消息/trim 全链），替换原先只过正则的保存路径。
-- 单聊自动续写已接 `AutoContinueEngine`（原只有群聊 `GroupLoopEngine`），最大 5 轮与群聊一致。
-- `LlmClient` OpenAI 兼容非流式最终响应已改用 `ResponseDataExtractor`；`StreamingReplyParser` / `ReasoningEngine` / `TokenBudgetEngine` 引擎已差分就绪但 App 未接（流式 SSE delta 解析走 SseChunkParser、removeReasoning/token 预算未接，见 12.16）；`SwipeEngine.generatedTextFiltered` 已接（自动滑动判定）。
-
-### 12.16 发送链路审计
-对照官方 `sendTextareaMessage → Generate → prepareOpenAIMessages/populateChatCompletion → createGenerationParameters → sendOpenAIRequest → saveReply`：
-- ✅ 已对齐：continue_on_send、send_if_empty（仅 OpenAI 系）、用户消息 `extra.bias` + removeMacros + substituteParams、append_title/媒体标题、请求 stop/seed/n/top_k/logit_bias/reasoning_effort/verbosity（官方源白名单）、默认上下文 4095 / 最大回复 300、getMaxPromptTokens=context-response（不再扣非官方安全余量）、流式 tool_calls 回调管线。
-- 默认值：官方 `oai_settings` 默认 = `openai_max_context: max_4k(4095)`、`openai_max_tokens: 300`（openai.js default_settings）。App UI 常量已 4095/300；**引擎 `ConnectionProfile.contextWindow` 与 `SamplerParams.maxTokens` 的旧默认 8192/512 已修正为 4095/300**（旧注释误标“官方 8192”），ChatPromptFactory/MemoryService 兜底同步。必选提示词超限：官方 `TokenBudgetExceededError` → toast “Mandatory prompts exceed the context size.” + Prompt Manager 提示调大限额，随后仍带残缺消息请求（空数组会 API 400）；我方引擎管线同语义（抛错→返回已装下部分），App 层在空消息时直接给友好错误、不请求 API（有意收敛）。聊天历史超限：官方与引擎都是**静默丢弃最老消息**直到能装下，不报错。
-- 🟡 仍未接：quiet/quietImage/quietToLoud、runGenerationInterceptors 扩展事件、appendFileContent 文本附件、itemizedPrompts/parseTokenCounts、force_name2（非 OpenAI 文本后端）、非流式 title/reasoning/image 提取。✅ dryRun 提示词预览已做（聊天会话菜单→提示词预览，PromptPreview 全文+token）。
-- token_count 落盘：官方 1.18 不落盘（token 计数只用于预算/计数器，openai.js countTokenAsyncFn），按 1:1 标记 N/A，删除该项。
-- 规则：这些缺口不会伪造“已对齐”；HANDOFF 只在真正接完并 CI 绿后改成 ✅。
-
-### 12.8 性能治理权威依据（调研结论）
-- **LazyColumn 消息列表**：稳定 key + contentType 是底线（项目已具备：key=`m-索引`、contentType=`chat-message`）；不要把 `animateItem()` 用在滚动型聊天行（Google Issue 395536917，官方未修复；官方样本 Jetchat 不用）。
-- **毛玻璃（Cloudy 0.7.1）**：sky 源必须静态。Cloudy 源码 `Sky.kt` / `SkyFrameDriver.kt` 确认：滚动活动会触发每帧 recorder 重捕 + overlay 重模糊；API ≤ 30 默认 Scrim 不跑 CPU 模糊（Cloudy README 性能优先策略）。同屏玻璃 ≤ 2-3 处（README 格调守则）。首页顶栏原把整张角色网格当 sky 源（与聊天页同样的问题），已一并改为静态背景层。
-- **重组 / 分配**：skydoves compose-performance-skills（optimizing-lazy-layouts / deferring-state-reads / choosing-derivedstateof）——分配重的值移出 items lambda 并 remember；滚动/动画状态读进 `LaunchedEffect` / `snapshotFlow` 或 `graphicsLayer`（Draw 阶段），不在 Composition 阶段读滚动值。本项目 followBottom 只在 effect 里消费、光标动画已走 graphicsLayer，符合该规范。
-- **Markdown**：mikepenz PR #408 官方性能方向——解析/参数 remember 复用，内容未变不重建组件模型；本项目流式走轻量渲染器、结束后一次性完整渲染，与官方 streaming_fps 语义一致。
-- **键盘 / 滚底**：已采用聊天客户端权威做法 `reverseLayout = true`（google compose-samples Jetchat；官方 LazyColumn 文档：reverse 布局下 `firstVisibleItemIndex==0` 即滚到底部），新消息/键盘开合天然锚底、无底部跳动；IME 用 `imePadding()` 只垫“列表+输入栏”列（SO 78736912 结论 + 官方 insets 文档），不在根节点读 `WindowInsets.ime` 手动垫。
-
-### 12.6 已知边界
-- **行内 Web 标签仍整段走 Web（无法与原生文本混排）**：button/input/select/textarea/label/progress/meter/output/map/area/object/span[属性]/font face-size/ruby/rt/rp/bdi/bdo 等出现在围栏外文字里时，所在整段仍进 WebView（Compose 不支持“原生文字 + 任意行内 HTML 控件”混排）；块级卡片/表格/媒体已独立切出，周围文字不再被拖入。
-- 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似块级分行（官方是块级 margin）；连续 `<div>` 的间隔视觉略不同。带属性 div/p 走 Web 元素，不参与该近似。
-- `<a href>`/`<img src>` 转原生 markdown：现已支持无引号属性值；img 的 alt 会保留，width/height 仍不保留（官方 parseImgDimensions 差异登记）。
-- 围栏外“非官方裸标签”（如 `<foo>`、`a<b>`）不再误判成富 HTML：无属性/非官方清单标签走原生 Markdown（原样显示文本）；带属性或自闭合标签（`<foo x=1>`、`<br/>`）仍进 WebView。HTML 开关关闭时围栏外文本一律走原生，符合“HTML 开关关闭 = 不渲染任意 HTML”。
-- Web 元素切分边界：无闭标签的残缺元素延伸到消息末尾；同名嵌套按层计数；跨围栏的残缺 HTML（开标签在围栏外、闭标签在围栏后）会按片段分别处理（低频边缘，行为不崩溃）。
-- iframe 内部动态改高：已从父页对同源 srcdoc 文档挂 ResizeObserver/MutationObserver 持续同步，不再只靠 3s 内复测（未向卡片脚本注入代码）。
-- WebViewPool 上限 6：长聊天中同时可见的 HTML 消息数远小于 6，正常不会触发销毁重建。
-- 普通 `\n` 已按官方 `simpleLineBreaks:true` 打开 `eolAsNewLine`；encode_tags 开关开启时围栏外一律原生且 < > 已转义；WebView 链接补 `text-decoration:none`；WebView 高度允许回缩、按实测全高展开（不再封顶）；用户消息改走与 AI 同一条 Markdown/HTML 渲染管线。
-- 本项全为 App/UI 层，未动 engine；渲染语义仍对照 SillyTavern 1.18.0 style.css / script.js（第 11 章），不参与差分。
-
-### 8.9 用户决策延期：自定义 CSS + Moving UI（暂不做）
-
-**官方是什么（对照 release 8172dcd）**：
-- Custom CSS：设置页文本框 → 写 `data/_css/user.css`，整个 Web UI（DOM）套用；因 EmberInn 是原生 Compose 无 DOM，无法 1:1。
-- Moving UI：设置→“移动界面”开关，鼠标拖拽/缩放聊天、角色列表、设置面板等，位置尺寸存 `power_user.movingUIState`（top/left/right/bottom/width/height/margin），可保存/加载/删除命名预设（`default/content/presets/moving-ui/*.json`，结构 `{name, movingUIState}`），窗口缩放按比例重算；**官方 `isMobile()` 直接禁用**，1.18 自带预设只有空 `Default.json`。
-
-**结论**：1:1 不可行（依赖 DOM/CSS，且官方移动端禁用）。等价方案待用户选择：
-- A（推荐）：自定义 CSS 限定 WebView 交互卡片/HTML 消息（当前渲染器已可承载，需加“自定义样式”输入 + user.css 注入）；
-- B：主题 JSON 编辑器（颜色/字体/圆角/密度映射 Compose 主题令牌，扩展现有主题配方体系）；
-- C：布局预设（面板显隐/消息密度/双栏，数据结构可对齐 movingUIState 思路，但控件语义为 Ember 自有）。
-
-用户答复：先记录，以后再做；未选 A/B/C。**本项不参与差分**（官方移动端禁用 + 非引擎逻辑）。
-
-## 9. 维护速记（精简归档）
-
-### 常见编译坑（CI 红→绿经验）
-1. 注释里写 `group-chats/*.json` 会触发 Kotlin 嵌套注释，把文件后半段吞掉 → 写成“目录的 *.json”
-2. 缺 import、括号不配对、属性初始化引用后声明属性（前向引用）→ push 前自查
-3. M3 1.4：Typography 无 defaultFontFamily（需逐样式 copy）；Modifier.padding 不能混用 horizontal+top
-4. 正则字符串里 `\s` 必须双反斜杠（非 raw string 时）；helper 函数别嵌进局部函数
-4.5. 全局替换函数名时，`return@旧名` 标签必须同步改名（Switch→EmberSwitch 踩过）
-5. Modifier 扩展若用 rememberUpdatedState，必须包 `Modifier.composed`（@Composable 上下文）
-6. App 无法本地编译，全靠 CI；push 后以 `gh run list` 为准，网络不稳就重试
-
-## 7. 注意事项
-
-- **兼容层 1:1，UI 层自由**：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主（设置与提供商参照命理2 + README）
-- 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注
-- App 无法本地编译（无 Android SDK），全靠 CI 验证；引擎测试本机可跑
-- 推送用 `gh`（已 `gh auth setup-git`）；push 会自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定，失败就重试
-- 本沙箱 apply_patch 被审批策略禁用，文件编辑用 python3 精确改写（多替换时链式 `replace(...).replace(...)`，否则只有最后一处落盘）；路径相对 `~/` 而不是仓库根
-- 删除类操作先确认；大改动保持小步提交
+### 8.2 注意事项
+- 兼容层 1:1，UI 层自由：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主。
+- 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注（登记 6.1/6.3）。
+- App 无法本地编译（无 Android SDK），全靠 CI；引擎测试本机可跑。
+- 推送用 `gh`（已 auth setup-git）；push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
+- 本沙箱 apply_patch 被审批策略禁用，文件编辑用 python3 精确改写；路径相对 `~/` 而不是仓库根。
+- 删除类操作先确认；大改动保持小步提交。

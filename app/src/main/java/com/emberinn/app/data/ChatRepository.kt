@@ -78,6 +78,9 @@ class ChatRepository(private val context: Context) {
     private var localVariables: VariableStore = MemoryVariableStore()
     private var seededCardRaw: String? = null
 
+    /** 会话级变量存储读取（显示/测试用；写入仍只经宏引擎 setvar 副作用）。 */
+    fun localVariableStore(): VariableStore = localVariables
+
     private fun syncLocalVariables(characterRawJson: String?) {
         val raw = characterRawJson.orEmpty()
         if (raw == seededCardRaw) return

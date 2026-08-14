@@ -554,8 +554,8 @@ fun ChatScreen(
     val streamingDisplay = remember(displayStreaming, isStreaming) {
         val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
         if (!isStreaming) {
-            val fixed = DisplayPipeline.fixMarkdown(balanced)
-            if (AppearancePrefs.encodeTags(context)) DisplayPipeline.encodeTags(fixed) else fixed
+            val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+            if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
         } else {
             balanced
         }
@@ -732,7 +732,7 @@ fun ChatScreen(
                                 mediaDisplay = derived.mediaDisplay,
                                 mediaIndex = derived.mediaIndex,
                                 onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
-                                reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning else null,
+                                reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning?.let { vm.displayReasoningText(it) } else null,
                                 reasoningExpanded = reasoningExpanded,
                                 onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
                                 name = derived.name,
@@ -776,7 +776,7 @@ fun ChatScreen(
                         ChatItem.ReasoningOnly -> {
                             lastReasoning?.let {
                                 ReasoningCard(
-                                    text = it,
+                                    text = vm.displayReasoningText(it),
                                     expanded = reasoningExpanded,
                                     onToggle = { reasoningExpanded = !reasoningExpanded },
                                 )
@@ -2462,6 +2462,9 @@ private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
     }
 }
 
+/** 官方 script.js systemUserName：只有这个名字的系统消息按系统消息格式化（Note 评论等按普通消息）。 */
+private const val SYSTEM_USER_NAME = "SillyTavern System"
+
 @Composable
 private fun MessageRow(
     modifier: Modifier = Modifier,
@@ -2497,6 +2500,9 @@ private fun MessageRow(
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
+    // 官方 messageFormatting：仅 'SillyTavern System' 命名的系统消息按系统格式化（跳过引号/encode/正则）；
+    // Note 评论等 is_system 消息正文按普通消息格式化（样式仍按系统灰字）
+    val formatAsSystem = isSystem && name == SYSTEM_USER_NAME
     // 表情精灵：AI 消息按正文分类选立绘（官方 expressions chooseSpriteForExpression 纯逻辑）
     val spriteFile = remember(text, name, isUser, spritePath) {
         if (isUser) {
@@ -2670,7 +2676,7 @@ private fun MessageRow(
                     ChatMarkdown(
                         content = text,
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        isSystem = isSystem,
+                        isSystem = formatAsSystem,
                         charAvatarPath = avatarPath,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
                     )
@@ -2680,7 +2686,7 @@ private fun MessageRow(
                 ChatMarkdown(
                     content = text,
                     onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    isSystem = isSystem,
+                    isSystem = formatAsSystem,
                     charAvatarPath = avatarPath,
                     modifier = bubbleModifier,
                 )
@@ -3199,10 +3205,11 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
         }
         if (expanded) {
             Spacer(Modifier.size(5.dp))
-            Text(
-                text = text,
-                style = (MaterialTheme.typography.bodySmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ChatMarkdown(
+                content = text,
+                onSurface = MaterialTheme.colorScheme.onSurfaceVariant,
+                isSystem = false,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -4218,18 +4225,11 @@ private fun mermaidHtmlOf(content: String): String? {
 <script>mermaid.initialize({startOnLoad:true,theme:'base'});</script>"""
 }
 
-/** 良构的“带属性标签”判定：<标签名 属性=值 … > 必须以 > 结尾才算富 HTML。
- *  裸标签（<b>/<i>/<q>/<u>/<s>/<font color> 等）已被 preprocessOfficialHtml 原生转换，
- *  官方富标签由 OFFICIAL_HTML_TAG 接管；这里只兜底自定义/带属性标签。
- *  旧正则 <[a-zA-Z][^>]*(?:=|/>) 不要求闭合 >，且 [^>] 可跨行，会把 a<b、而 c=1 / x<10,y=20
- *  这类纯文字比较式误判成 HTML（“纯文字也走 Web 渲染”根因）。 */
-private val LOOKS_LIKE_HTML_TAG = Regex(
-    "<[a-zA-Z][a-zA-Z0-9-]*(?:\\s+[^<>]*?\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s\"'=<>`]+))+\\s*/?>",
-)
-private fun looksLikeHtml(content: String): Boolean {
-    val outsideFence = content.replace(ANY_FENCE, "")
-    return LOOKS_LIKE_HTML_TAG.containsMatchIn(outsideFence)
-}
+/** 完整标签判定（官方 messageFormatting → Showdown/DOMPurify → 浏览器语义）：
+ *  任意完整标签（含无属性自定义/扩展标签，如 <inner>、<UpdateVariable>）都按 HTML 解析、
+ *  标签内文本可见；原生 Markdown 渲染器会吞掉 HTML 块，所以交给 MessageHtml 走 WebView 兜底。
+ *  纯文字比较式（a<b、x<10、1 < 2、a < b）没有完整 > 或标签名不以字母开头，不会误判。 */
+private fun looksLikeHtml(content: String): Boolean = com.emberinn.app.data.MessageHtml.looksLikeHtml(content)
 
 /** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
  *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */

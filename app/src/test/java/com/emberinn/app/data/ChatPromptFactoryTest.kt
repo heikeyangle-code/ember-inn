@@ -514,4 +514,12 @@ class ChatPromptFactoryTest {
         )
         assertTrue(result.messages.any { it.content == "群聊深度提示文本" })
     }
+
+    @Test
+    fun `display macro env substitutes first message macros with card fields`() {
+        val characterJson = """{"data":{"name":"小炭","description":"测试描述","first_mes":"你好","alternate_greetings":[]}}"""
+        val env = ChatPromptFactory().displayMacroEnv("小明", "小炭", characterJson)
+        val out = com.emberinn.engine.macros.MacroEngine.substitute("{{user}}|{{char}}|{{description}}|{{未知宏}}", env)
+        assertEquals("小明|小炭|测试描述|{{未知宏}}", out)
+    }
 }

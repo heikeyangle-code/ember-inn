@@ -212,6 +212,10 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             behavior = behavior.copy(showUserPromptBias = it)
                             BehaviorPrefs.save(context, behavior)
                         }
+                        BehaviorToggle("保留 AI 正文里的“角色名:”前缀（allow_name2_display）", behavior.allowName2Display) {
+                            behavior = behavior.copy(allowName2Display = it)
+                            BehaviorPrefs.save(context, behavior)
+                        }
                         BehaviorToggle("清理时裁掉句尾（trim_sentences）", behavior.trimSentences) {
                             behavior = behavior.copy(trimSentences = it)
                             BehaviorPrefs.save(context, behavior)

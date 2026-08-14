@@ -122,6 +122,19 @@ class ChatPromptFactory {
         )
     }
 
+    /** 显示位点宏环境（对齐官方 messageFormatting 的 substituteParams 环境：角色卡字段 + 用户/角色名）。
+     *  官方显示宏使用全量环境；聊天级变量等仍由 prepare 的会话存储注入。 */
+    fun displayMacroEnv(
+        userName: String,
+        charName: String,
+        characterRawJson: String?,
+        localVariables: VariableStore = EmptyVariableStore,
+    ): MacroEnv {
+        val parsed = characterRawJson?.let { runCatching { parseCard(it) }.getOrNull() }
+        val fields = CharacterCardFieldsEngine.fields(character = parsed?.source)
+        return MacroEnv(user = userName, char = charName, character = fields, local = localVariables)
+    }
+
     fun prepare(
         characterRawJson: String?,
         history: List<JsonElement>,
@@ -351,6 +364,7 @@ class ChatPromptFactory {
                     isPrompt = true,
                     depth = indexedChatMessages.size - i - (if (isContinue) 2 else 1),
                     characterOverride = charName,
+                    substitute = { MacroEngine.substitute(it, env) },
                     disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
                 ),
             )
@@ -454,6 +468,7 @@ class ChatPromptFactory {
                     isPrompt = true,
                     depth = depth,
                     characterOverride = charName,
+                    substitute = { MacroEngine.substitute(it, env) },
                     disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
                 )
                 val isPrefix = isContinue && i == indexedChat.lastIndex
@@ -537,6 +552,7 @@ class ChatPromptFactory {
                     isPrompt = true,
                     depth = regexDepth,
                     characterOverride = charName,
+                    substitute = { MacroEngine.substitute(it, env) },
                     disabledExtensions = if (regexEnabled) emptySet() else setOf("regex"),
                 )
             },

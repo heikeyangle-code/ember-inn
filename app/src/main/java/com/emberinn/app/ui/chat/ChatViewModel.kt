@@ -18,7 +18,6 @@ import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.DisplayCacheVersion
-import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.ItemizationEntry
 import com.emberinn.app.data.ItemizationStore
 import com.emberinn.app.data.MemoryService
@@ -53,6 +52,8 @@ import com.emberinn.engine.worldinfo.TokenCounterFactory
 import com.emberinn.engine.worldinfo.WorldInfoEntry
 import com.emberinn.app.ui.settings.WorldInfoPrefs
 import com.emberinn.engine.macros.MacroEngine
+import com.emberinn.engine.prompt.MessageFormattingEngine
+import com.emberinn.engine.prompt.MessageFormattingSettings
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineEngine
 import com.emberinn.engine.regex.RegexPipelineScript
@@ -423,6 +424,60 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * → fixMarkdown(forDisplay=true) → encode_tags（可选）。
      * 只影响显示，不改落盘文本。
      */
+    private fun displayEnv(): MacroEnv =
+        ChatPromptFactory().displayMacroEnv(currentUserName, currentCharName, character?.rawJson, chatRepository.localVariableStore())
+
+    /** 推理显示文本（官方 messageFormatting isReasoning=true：REASONING 位点正则 → fixMarkdown → encode_tags）。
+     *  官方 messageId=-1 无 depth 过滤；ch_name 为空 → characterOverride 空。 */
+    private val reasoningDisplayCache = mutableMapOf<String, String>()
+    private var reasoningDisplayCacheVersion = -1
+    fun displayReasoningText(raw: String): String {
+        if (raw.isBlank()) return raw
+        if (reasoningDisplayCacheVersion != DisplayCacheVersion.version) {
+            reasoningDisplayCache.clear()
+            reasoningDisplayCacheVersion = DisplayCacheVersion.version
+        }
+        reasoningDisplayCache[raw]?.let { return it }
+        val env = displayEnv()
+        val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
+        val scripts = if (regexEnabled) resolveDisplayRegexScripts() else emptyList()
+        val reasoningTemplate = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning.template
+        // 官方 messageFormatting isReasoning=true：messageId=-1、ch_name=''（bias/名字剥离跳过）
+        val result = MessageFormattingEngine.format(
+            mes = raw,
+            chName = "",
+            isSystem = false,
+            isUser = false,
+            isNarrator = false,
+            messageId = -1,
+            isReasoning = true,
+            settings = MessageFormattingSettings(
+                userPromptBias = "",
+                showUserPromptBias = true,
+                autoFixMarkdown = AppearancePrefs.fixMarkdown(getApplication()),
+                encodeTags = AppearancePrefs.encodeTags(getApplication()),
+                reasoningPrefix = reasoningTemplate.prefix,
+                reasoningSuffix = reasoningTemplate.suffix,
+                allowName2Display = true,
+            ),
+            depth = null,
+            macroSubstitute = { MacroEngine.substitute(it, env) },
+            regexApply = if (regexEnabled) { text, placement, depth ->
+                RegexPipelineEngine.apply(
+                    raw = text,
+                    placement = placement,
+                    scripts = scripts,
+                    isMarkdown = true,
+                    depth = depth,
+                    characterOverride = "",
+                    substitute = { MacroEngine.substitute(it, env) },
+                )
+            } else { text, _, _ -> text },
+        )
+        reasoningDisplayCache[raw] = result.text
+        return result.text
+    }
+
     fun displayTextOf(index: Int): String {
         if (displayCacheVersion != DisplayCacheVersion.version) {
             displayCache.clear()
@@ -433,42 +488,63 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val extra = el["extra"] as? JsonObject
         val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
             ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
-        // 官方 messageFormatting：系统消息不走显示位点正则、不做 encode_tags；fixMarkdown 仍然执行
-        val isSystem = isSystemMsg(el)
-        var out = base
-        if (!isSystem && GlobalRegexPrefs.enabled(getApplication())) {
-            val (presetScripts, presetAllowed) = presetRegex()
-            val scripts = ChatPromptFactory().resolveRegexScripts(
-                characterRawJson = character?.rawJson,
-                globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
-                scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
-                presetScripts = presetScripts,
-                presetAllowed = presetAllowed,
-            )
-            val isUser = isUser(el)
-            val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
-            val placement = when {
-                isUser -> ChatPromptFactory.REGEX_USER_INPUT
-                isNarrator -> ChatPromptFactory.REGEX_SLASH_COMMAND
-                else -> ChatPromptFactory.REGEX_AI_OUTPUT
+        // 官方 messageFormatting 纯文本子集全部交给引擎（MessageFormattingEngine，差分锁死）：
+        // 首条宏替换 → Note/systemUserName 归一 → bias 剥离 → 显示正则 → fixMarkdown → encode_tags
+        // → reasoning 前后缀转义 → allow_name2_display 名字前缀剥离
+        val rawIsSystem = isSystemMsg(el)
+        val isUser = isUser(el)
+        val chName = el["name"]?.jsonPrimitive?.contentOrNull
+        val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
+        val behavior = BehaviorPrefs.load(getApplication())
+        val reasoningTemplate = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning.template
+        val env = displayEnv()
+        val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
+        val scripts = if (regexEnabled) resolveDisplayRegexScripts() else emptyList()
+        // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）；
+        // 按原始下标定位，避免结构相等消息（内容重复）误匹配
+        val usableIndices = _messages.value.indices.filter { !isSystemMsg(_messages.value[it]) }
+        val pos = usableIndices.indexOf(index)
+        val depth = if (pos >= 0) usableIndices.size - pos - 1 else null
+        val result = MessageFormattingEngine.format(
+            mes = base,
+            chName = chName,
+            isSystem = rawIsSystem,
+            isUser = isUser,
+            isNarrator = isNarrator,
+            messageId = index,
+            settings = MessageFormattingSettings(
+                userPromptBias = behavior.userPromptBias,
+                showUserPromptBias = behavior.showUserPromptBias,
+                autoFixMarkdown = AppearancePrefs.fixMarkdown(getApplication()),
+                encodeTags = AppearancePrefs.encodeTags(getApplication()),
+                reasoningPrefix = reasoningTemplate.prefix,
+                reasoningSuffix = reasoningTemplate.suffix,
+                allowName2Display = behavior.allowName2Display,
+            ),
+            depth = depth,
+            macroSubstitute = { MacroEngine.substitute(it, env) },
+            regexApply = if (regexEnabled) { text, placement, d ->
+                RegexPipelineEngine.apply(
+                    raw = text,
+                    placement = placement,
+                    scripts = scripts,
+                    isMarkdown = true,
+                    depth = d,
+                    characterOverride = chName ?: currentCharName,
+                    substitute = { MacroEngine.substitute(it, env) },
+                )
+            } else { text, _, _ -> text },
+        )
+        // 官方 messageFormatting：messageId==0 时把宏替换结果写回 chat.mes（chatMessage.mes === 原文
+        // 且 extra.display_text !== 原文 才写；只改 mes，不动 swipes/extra）
+        result.firstMessageSubstituted?.let { substituted ->
+            val rawMes = el["mes"]?.jsonPrimitive?.contentOrNull
+            val displayText = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
+            if (rawMes == base && displayText != base) {
+                chatStore.updateMesText(sessionId, index, substituted)
             }
-            // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）；
-            // 按原始下标定位，避免结构相等消息（内容重复）误匹配
-            val usableIndices = _messages.value.indices.filter { !isSystemMsg(_messages.value[it]) }
-            val pos = usableIndices.indexOf(index)
-            val depth = if (pos >= 0) usableIndices.size - pos - 1 else null
-            out = RegexPipelineEngine.apply(
-                raw = base,
-                placement = placement,
-                scripts = scripts,
-                isMarkdown = true,
-                depth = depth,
-                characterOverride = el["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
-            )
         }
-        // 官方 auto_fix_generated_markdown（默认开）：仅开时 fixMarkdown(forDisplay=true)
-        if (AppearancePrefs.fixMarkdown(getApplication())) out = DisplayPipeline.fixMarkdown(out)
-        if (!isSystem && AppearancePrefs.encodeTags(getApplication())) out = DisplayPipeline.encodeTags(out)
+        val out = result.text
         displayCache[index] = out
         return out
     }
@@ -594,6 +670,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 placement = ChatPromptFactory.REGEX_SLASH_COMMAND,
                 scripts = resolveCurrentRegexScripts(),
                 characterOverride = resolvedName,
+                substitute = { MacroEngine.substitute(it, MacroEnv(user = currentUserName, char = resolvedName)) },
             )
         }
         // 官方：只设置 bias 的消息是系统消息（is_system=true、mes 为空），不进上下文
@@ -656,6 +733,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 当前会话正则脚本（全局 + 角色 + 预设），供 /sendas 等 SLASH_COMMAND 位点复用。 */
+    /** 显示位点正则脚本集合（displayTextOf/displayReasoningText 共用）。 */
+    private fun resolveDisplayRegexScripts(): List<RegexPipelineScript> {
+        val (presetScripts, presetAllowed) = presetRegex()
+        return ChatPromptFactory().resolveRegexScripts(
+            characterRawJson = character?.rawJson,
+            globalRegexScripts = GlobalRegexPrefs.read(getApplication()),
+            scopedAllowed = character?.let { "${it.id}.png" in GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false,
+            presetScripts = presetScripts,
+            presetAllowed = presetAllowed,
+        )
+    }
+
     private fun resolveCurrentRegexScripts(): List<RegexPipelineScript> {
         val (presetScripts, presetAllowed) = presetRegex()
         return ChatPromptFactory().resolveRegexScripts(
@@ -1284,8 +1373,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     presetAllowed = presetAllowed,
                 )
                 val regexOn = GlobalRegexPrefs.enabled(getApplication())
+                val greetingEnv = ChatPromptFactory().displayMacroEnv(currentUserName, charName, currentCharacter?.rawJson)
                 val greetings = (listOfNotNull(firstMes) + alternates)
-                    .map { if (regexOn) RegexPipelineEngine.apply(it, ChatPromptFactory.REGEX_AI_OUTPUT, scripts) else it }
+                    .map {
+                        if (regexOn) RegexPipelineEngine.apply(
+                            it,
+                            ChatPromptFactory.REGEX_AI_OUTPUT,
+                            scripts,
+                            substitute = { MacroEngine.substitute(it, greetingEnv) },
+                        ) else it
+                    }
                     .toMutableList()
                 // 官方 getFirstMessage：first_mes 正则后为空 → swipes.shift()，改用第一条 alternate
                 if (greetings.firstOrNull()?.isBlank() == true && greetings.size > 1) {
@@ -1403,7 +1500,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方 Generate：getBiasStrings(textareaText, type) 先提取 {{bias}}，sendMessageAsUser 再存 extra.bias
         val messageBias = BiasEngine.extractMessageBias(effectiveText)
         val regexedText = if (GlobalRegexPrefs.enabled(getApplication())) {
-            RegexPipelineEngine.apply(effectiveText, ChatPromptFactory.REGEX_USER_INPUT, saveRegexScripts)
+            RegexPipelineEngine.apply(
+                effectiveText,
+                ChatPromptFactory.REGEX_USER_INPUT,
+                saveRegexScripts,
+                substitute = { MacroEngine.substitute(it, ChatPromptFactory().displayMacroEnv(userName, charName, character?.rawJson)) },
+            )
         } else {
             effectiveText
         }
@@ -1673,7 +1775,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方 memory MESSAGE_DELETED → onChatEvent
         memoryService.maybeAutoSummarize(sessionId)
         // 官方 deleteItemizedPromptForMessage：删除明细并把后续消息索引下移。
-        ItemizationStore.deleteMessage(getApplication().filesDir, sessionId, index)
+        ItemizationStore.deleteMessage(getApplication<Application>().filesDir, sessionId, index)
     }
 
     /** 编辑消息（官方 updateMessage：getRegexedString(isEdit) → extractMessageBias → substituteParams → 清/写 extra.bias）。 */
@@ -1701,6 +1803,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         )
         // 官方 updateMessage：getRegexedString(text, regexPlacement, { characterOverride, isEdit: true })；
         // 旁白不传 characterOverride（官方 narrator 分支）；disabledExtensions.regex 关闭时不应用
+        val env = MacroEnv(user = currentUserName, char = currentCharName)
         val regexed = if (GlobalRegexPrefs.enabled(getApplication())) {
             RegexPipelineEngine.apply(
                 raw = text,
@@ -1708,11 +1811,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 scripts = scripts,
                 isEdit = true,
                 characterOverride = if (isNarrator) null else obj["name"]?.jsonPrimitive?.contentOrNull ?: currentCharName,
+                substitute = { MacroEngine.substitute(it, env) },
             )
         } else {
             text
         }
-        val env = MacroEnv(user = currentUserName, char = currentCharName)
         // 官方 updateMessage：extractMessageBias 在 substituteParams 之前；bias 存入 extra.bias
         val (cleaned, bias) = extractEditBias(regexed)
         val processed = MacroEngine.substitute(cleaned, env)
@@ -2476,6 +2579,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             if (rag.enabled() && vectorStore == null) {
                 _notice.value = "（向量检索已开启，但嵌入服务未配置完整（地址/Key/模型），本轮未启用向量检索。）"
             }
+            val itemizationCallback: ((ItemizationEntry) -> Unit)? =
+                if (previewOnly) null else { entry -> pendingItemization = entry }
             val session = chatRepository.streamPrepared(
                 characterRawJson = characterRawJsonOverride ?: character?.rawJson,
                 history = history,
@@ -2483,7 +2588,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 charName = currentCharName,
                 previewOnly = previewOnly,
                 onPreview = onPreview,
-                onItemization = if (previewOnly) null else { pendingItemization = it },
+                onItemization = itemizationCallback,
                 onDelta = { delta ->
                     if (streamActive) {
                         if (firstDeltaAt == null) firstDeltaAt = System.currentTimeMillis()
@@ -2825,7 +2930,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             ),
             regexTransform = { text ->
                 if (GlobalRegexPrefs.enabled(getApplication())) {
-                    RegexPipelineEngine.apply(text, ChatPromptFactory.REGEX_AI_OUTPUT, saveRegexScripts)
+                    RegexPipelineEngine.apply(
+                        text,
+                        ChatPromptFactory.REGEX_AI_OUTPUT,
+                        saveRegexScripts,
+                        substitute = { MacroEngine.substitute(it, ChatPromptFactory().displayMacroEnv(currentUserName, currentCharName, character?.rawJson)) },
+                    )
                 } else {
                     text
                 }
@@ -3037,7 +3147,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         pendingItemization?.let { entry ->
             val idx = chatStore.messages(sessionId).lastIndex
             if (idx >= 0) {
-                ItemizationStore.put(getApplication().filesDir, sessionId, entry.copy(messageIndex = idx))
+                ItemizationStore.put(getApplication<Application>().filesDir, sessionId, entry.copy(messageIndex = idx))
             }
             pendingItemization = null
         }
@@ -3045,11 +3155,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 官方 findItemizedPromptSet：按消息索引取该条的总装明细。 */
     fun itemizationFor(index: Int): ItemizationEntry? =
-        ItemizationStore.load(getApplication().filesDir, sessionId).firstOrNull { it.messageIndex == index }
+        ItemizationStore.load(getApplication<Application>().filesDir, sessionId).firstOrNull { it.messageIndex == index }
 
     /** 全部明细（供“与上一条对比”）。 */
     fun itemizations(): List<ItemizationEntry> =
-        ItemizationStore.load(getApplication().filesDir, sessionId)
+        ItemizationStore.load(getApplication<Application>().filesDir, sessionId)
 
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)

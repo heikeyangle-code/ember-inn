@@ -255,6 +255,15 @@ class ChatStore(private val context: Context) {
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
+    /** 只替换 mes（官方 messageFormatting messageId==0 写回 chat.mes；不动 swipes/extra）。 */
+    fun updateMesText(sessionId: String, index: Int, content: String) {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return
+        val el = list[index].jsonObject
+        list[index] = JsonObject(el + ("mes" to JsonPrimitive(content)))
+        save(sessionId, list)
+    }
+
     /** 编辑消息：更新文本并清空 extra.bias（对齐官方 editMessage 的 AI_OUTPUT 分支；regex/isEdit 待正则 UI 接线）。
      *  有 swipes 时同步写回 swipes[swipe_id]（官方 editMessage：mes.swipes[mes.swipe_id] = text），否则滑走再滑回会显示旧文本。 */
     fun updateMessage(sessionId: String, index: Int, content: String, bias: String? = null) {
