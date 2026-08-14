@@ -19,6 +19,8 @@ import com.emberinn.app.data.ChatStore
 import com.emberinn.app.data.ContextBudgetException
 import com.emberinn.app.data.DisplayCacheVersion
 import com.emberinn.app.data.DisplayPipeline
+import com.emberinn.app.data.ItemizationEntry
+import com.emberinn.app.data.ItemizationStore
 import com.emberinn.app.data.MemoryService
 import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GenerationPrefs
@@ -143,6 +145,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      *  设置（encode_tags/正则/允许列表）变更时 DisplayCacheVersion.bump()，这里整体失效即时生效。 */
     private val displayCache = mutableMapOf<Int, String>()
     private var displayCacheVersion = -1
+    /** 最近一次真实发送（非预览）的总装明细，落盘时写进 ItemizationStore（官方 itemizedPrompts）。 */
+    private var pendingItemization: ItemizationEntry? = null
 
     private val _streamingText = MutableStateFlow("")
     val streamingText: StateFlow<String> = _streamingText
@@ -1668,6 +1672,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
         // 官方 memory MESSAGE_DELETED → onChatEvent
         memoryService.maybeAutoSummarize(sessionId)
+        // 官方 deleteItemizedPromptForMessage：删除明细并把后续消息索引下移。
+        ItemizationStore.deleteMessage(getApplication().filesDir, sessionId, index)
     }
 
     /** 编辑消息（官方 updateMessage：getRegexedString(isEdit) → extractMessageBias → substituteParams → 清/写 extra.bias）。 */
@@ -2477,6 +2483,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 charName = currentCharName,
                 previewOnly = previewOnly,
                 onPreview = onPreview,
+                onItemization = if (previewOnly) null else { pendingItemization = it },
                 onDelta = { delta ->
                     if (streamActive) {
                         if (firstDeltaAt == null) firstDeltaAt = System.currentTimeMillis()
@@ -3026,7 +3033,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val idx = chatStore.messages(sessionId).lastIndex
             if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
         }
+        // 官方 itemized-prompts.js：生成落盘后保存该消息的总装明细。
+        pendingItemization?.let { entry ->
+            val idx = chatStore.messages(sessionId).lastIndex
+            if (idx >= 0) {
+                ItemizationStore.put(getApplication().filesDir, sessionId, entry.copy(messageIndex = idx))
+            }
+            pendingItemization = null
+        }
     }
+
+    /** 官方 findItemizedPromptSet：按消息索引取该条的总装明细。 */
+    fun itemizationFor(index: Int): ItemizationEntry? =
+        ItemizationStore.load(getApplication().filesDir, sessionId).firstOrNull { it.messageIndex == index }
+
+    /** 全部明细（供“与上一条对比”）。 */
+    fun itemizations(): List<ItemizationEntry> =
+        ItemizationStore.load(getApplication().filesDir, sessionId)
 
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)

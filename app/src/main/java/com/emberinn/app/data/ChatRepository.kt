@@ -30,6 +30,7 @@ import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
 import com.emberinn.app.ui.settings.KoboldSettingsStore
 import com.emberinn.app.ui.settings.NovelSettingsStore
+import com.emberinn.app.ui.settings.PresetPrefsStore
 import com.emberinn.app.ui.settings.PresetSettingsStore
 import com.emberinn.app.ui.settings.TextgenSettingsStore
 import java.io.File
@@ -215,6 +216,7 @@ class ChatRepository(private val context: Context) {
         userOrder: List<com.emberinn.engine.prompt.PromptOrderEntry> = emptyList(),
         previewOnly: Boolean = false,
         onPreview: ((PromptPreview) -> Unit)? = null,
+        onItemization: ((ItemizationEntry) -> Unit)? = null,
         worldInfoSettings: WorldInfoSettings = WorldInfoSettings(),
         globalRegexScripts: List<RegexPipelineScript> = emptyList(),
         regexScopedAllowed: Boolean = false,
@@ -390,6 +392,24 @@ class ChatRepository(private val context: Context) {
         onPrepared?.invoke(prepared)
         // 官方 PromptManager.messages：总装后保留，供 Prompt Manager 检查弹窗按 identifier 查看。
         PromptAssemblyCache.lastMessages = prepared.messages
+        // 官方 itemized-prompts.js：每条生成消息的总装明细（rawPrompt + TokenHandler 分桶 + 分节消息）。
+        onItemization?.invoke(
+            ItemizationEntry(
+                messageIndex = 0,
+                rawPrompt = prepared.messages.joinToString("\n\n") { "${it.role}: ${it.content}" },
+                totalTokens = prepared.counts.values.sum() + 3,
+                counts = prepared.counts,
+                sections = prepared.messages.map { m ->
+                    ItemizationSection(identifier = m.identifier.orEmpty(), role = m.role, content = m.content, tokens = m.tokens)
+                },
+                providerName = provider.displayName,
+                model = effectiveModel,
+                presetName = PresetPrefsStore.load(context).samplerPreset,
+                tokenizer = "按当前模型分词器",
+                maxContext = effectiveContextWindow,
+                maxTokens = effectiveMaxTokens,
+            ),
+        )
         if (previewOnly) {
             // dryRun：只总装不发送（官方 Generate dryRun）；展示 role: content 全文 + 分节 token（含 start_chat 预留 3）
             onPreview?.invoke(

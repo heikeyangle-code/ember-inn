@@ -1005,7 +1005,7 @@ fun ChatScreen(
                         vm.translateMessage(index)
                         menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.ChartBar, "Token 统计") {
+                    MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
                         tokenStatsIndex = index
                         menuMessageIndex = null
                     }
@@ -1972,31 +1972,147 @@ fun ChatScreen(
     }
 
     tokenStatsIndex?.let { index ->
-        val stats = vm.messageTokenCount(index)
-        if (stats != null) {
-            AlertDialog(
-                onDismissRequest = { tokenStatsIndex = null },
-                title = { Text("Token 统计") },
-                text = {
-                    Column {
-                        Text(
-                            "按当前模型 tokenizer 估算：${stats.second} tokens",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        Text(
-                            stats.first,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 10,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                },
-                confirmButton = {
+        // 官方 itemized-prompts.js promptItemize：按消息索引显示该次总装的分节明细。
+        val entry = vm.itemizationFor(index)
+        val prev = vm.itemizations().lastOrNull { it.messageIndex < index }
+        EmberBottomSheet(onDismissRequest = { tokenStatsIndex = null }, sheetState = rememberModalBottomSheetState()) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+                var showRaw by remember { mutableStateOf(false) }
+                var showDiff by remember { mutableStateOf(false) }
+                Text(
+                    "提示词分节明细（Prompt Itemization）",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (entry == null) {
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "该消息没有分节明细：明细只在生成（发送/继续/变体）时记录，官方 itemized-prompts 同语义。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     TextButton(onClick = { tokenStatsIndex = null }) { Text("关闭") }
-                },
-            )
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(entry.rawPrompt))
+                            Toast.makeText(context, "已复制提示词", Toast.LENGTH_SHORT).show()
+                        }) { Text("复制") }
+                        TextButton(onClick = { showRaw = !showRaw }) { Text(if (showRaw) "收起原文" else "显示原文") }
+                        TextButton(
+                            onClick = { showDiff = !showDiff },
+                            enabled = prev != null,
+                        ) { Text(if (showDiff) "收起对比" else "与上一条对比") }
+                    }
+                    Text(
+                        "API/模型：${entry.providerName} – ${entry.model}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "预设：${entry.presetName.ifBlank { "默认" }} · 分词器：${entry.tokenizer}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text("TokenHandler 分桶（官方八类）", style = MaterialTheme.typography.labelMedium)
+                    val total = entry.totalTokens.coerceAtLeast(1)
+                    entry.counts.filterValues { it > 0 }.toList().sortedBy { it.first }.forEach { (key, value) ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                            Text(promptSectionLabel(key), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+                            Text("$value t（${value * 100 / total}%）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        "总 Token：${entry.totalTokens}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        "Max Context（上下文-回复）：${entry.maxContext - entry.maxTokens}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        "分节消息（identifier / role / tokens，点击展开内容）",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                        itemsIndexed(entry.sections) { _, sec ->
+                            var expanded by remember(sec) { mutableStateOf(false) }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expanded = !expanded }
+                                    .padding(vertical = 5.dp),
+                            ) {
+                                Row {
+                                    Text(
+                                        sec.identifier.ifBlank { "（无标识）" },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        "${sec.role} · ${sec.tokens}t",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                if (expanded) {
+                                    Text(
+                                        sec.content.ifBlank { "（无内容）" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (showRaw) {
+                        HorizontalDivider()
+                        Spacer(Modifier.size(6.dp))
+                        Text("原文（raw prompt）：", style = MaterialTheme.typography.labelMedium)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            Text(entry.rawPrompt, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (showDiff && prev != null) {
+                        HorizontalDivider()
+                        Spacer(Modifier.size(6.dp))
+                        Text("与上一条（${prev.messageIndex}）的差异：", style = MaterialTheme.typography.labelMedium)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            simpleLineDiff(prev.rawPrompt, entry.rawPrompt).forEach { (tag, line) ->
+                                Text(
+                                    line,
+                                    color = when (tag) {
+                                        '+' -> Color(0xFF7CB342)
+                                        '-' -> Color(0xFFE57373)
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.size(10.dp))
+                    TextButton(onClick = { tokenStatsIndex = null }) { Text("关闭") }
+                }
+            }
         }
     }
 
@@ -4911,6 +5027,39 @@ private fun WorldHitLight(color: Color, label: String) {
 }
 
 /** dryRun 分节计数标签（官方 TokenHandler 类型）。 */
+/** 简单 LCS 行级 diff（官方 DiffMatchPatch diff_main 的 App 等价，只标 +/-/空格）。 */
+private fun simpleLineDiff(a: String, b: String): List<Pair<Char, String>> {
+    val aa = a.lines()
+    val bb = b.lines()
+    val n = aa.size
+    val m = bb.size
+    val dp = Array(n + 1) { IntArray(m + 1) }
+    for (i in n - 1 downTo 0) {
+        for (j in m - 1 downTo 0) {
+            dp[i][j] = if (aa[i] == bb[j]) dp[i + 1][j + 1] + 1 else maxOf(dp[i + 1][j], dp[i][j + 1])
+        }
+    }
+    val out = mutableListOf<Pair<Char, String>>()
+    var i = 0
+    var j = 0
+    while (i < n && j < m) {
+        if (aa[i] == bb[j]) {
+            out += ' ' to aa[i]
+            i++
+            j++
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+            out += '-' to aa[i]
+            i++
+        } else {
+            out += '+' to bb[j]
+            j++
+        }
+    }
+    while (i < n) { out += '-' to aa[i]; i++ }
+    while (j < m) { out += '+' to bb[j]; j++ }
+    return out
+}
+
 private fun promptSectionLabel(key: String): String = when (key) {
     "start_chat" -> "起始预留"
     "prompt" -> "主提示（系统）"
