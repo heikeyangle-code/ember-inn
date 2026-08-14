@@ -287,6 +287,23 @@ fun ProviderDetailScreen(
     val sampler by vm.editingSampler.collectAsState()
     val testing by vm.testing.collectAsState()
     val message by vm.message.collectAsState()
+    val reverseProxy by vm.reverseProxy.collectAsState()
+    val proxyPassword by vm.proxyPassword.collectAsState()
+    val customUrl by vm.customUrl.collectAsState()
+    val customIncludeBody by vm.customIncludeBody.collectAsState()
+    val customExcludeBody by vm.customExcludeBody.collectAsState()
+    val customIncludeHeaders by vm.customIncludeHeaders.collectAsState()
+    val customPromptPostProcessing by vm.customPromptPostProcessing.collectAsState()
+    val bypassStatusCheck by vm.bypassStatusCheck.collectAsState()
+    val showExternalModels by vm.showExternalModels.collectAsState()
+    val groupModels by vm.groupModels.collectAsState()
+    val sortModels by vm.sortModels.collectAsState()
+    val azureDeploymentName by vm.azureDeploymentName.collectAsState()
+    val azureOpenaiModel by vm.azureOpenaiModel.collectAsState()
+    val vertexaiAuthMode by vm.vertexaiAuthMode.collectAsState()
+    val vertexaiExpressProjectId by vm.vertexaiExpressProjectId.collectAsState()
+    val nanogptProvider by vm.nanogptProvider.collectAsState()
+    val nanogptPaygOverride by vm.nanogptPaygOverride.collectAsState()
 
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     var showModelSheet by remember { mutableStateOf(false) }
@@ -661,6 +678,125 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            // ---- 官方 oai_settings 连接类字段（settingsToUpdate isConnection=true） ----
+            Text("连接高级设置（官方连接字段）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
+            SwitchRow("bypass_status_check（跳过状态检查）", bypassStatusCheck, vm::setBypassStatusCheck)
+            SwitchRow("show_external_models（显示外部模型）", showExternalModels, vm::setShowExternalModels)
+            SwitchRow("group_models（按提供商分组）", groupModels, vm::setGroupModels)
+            Text("sort_models（模型排序）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("alphabetically", "reverse").forEach { value ->
+                    FilterChip(
+                        selected = sortModels == value,
+                        onClick = { vm.setSortModels(value) },
+                        label = { Text(value) },
+                    )
+                }
+            }
+            IntRow("tool_call_recurse_limit（工具递归上限，官方默认 5）", sampler.toolCallRecurseLimit.toString(), vm::setToolCallRecurseLimit)
+            EmberTextField(
+                value = reverseProxy,
+                onValueChange = vm::setReverseProxy,
+                label = { Text("reverse_proxy（官方代理地址）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = proxyPassword,
+                onValueChange = vm::setProxyPassword,
+                label = { Text("proxy_password（代理 Key）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            if (spec.id == "custom") {
+                EmberTextField(
+                    value = customUrl,
+                    onValueChange = vm::setCustomUrl,
+                    label = { Text("custom_url（自定义 API 地址）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+            EmberTextField(
+                value = customIncludeBody,
+                onValueChange = vm::setCustomIncludeBody,
+                label = { Text("custom_include_body（YAML 合并进请求体，仅 custom 源）") },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = customExcludeBody,
+                onValueChange = vm::setCustomExcludeBody,
+                label = { Text("custom_exclude_body（YAML 剔除字段，仅 custom 源）") },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = customIncludeHeaders,
+                onValueChange = vm::setCustomIncludeHeaders,
+                label = { Text("custom_include_headers（YAML 请求头，仅 custom 源）") },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Text("custom_prompt_post_processing（消息合并模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("", "merge", "merge_tools", "semi", "semi_tools", "strict", "strict_tools", "single").forEach { value ->
+                    FilterChip(
+                        selected = customPromptPostProcessing == value,
+                        onClick = { vm.setCustomPromptPostProcessing(value) },
+                        label = { Text(value.ifBlank { "none" }) },
+                    )
+                }
+            }
+            if (spec.id == "azure") {
+                EmberTextField(
+                    value = azureDeploymentName,
+                    onValueChange = vm::setAzureDeploymentName,
+                    label = { Text("azure_deployment_name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                EmberTextField(
+                    value = azureOpenaiModel,
+                    onValueChange = vm::setAzureOpenaiModel,
+                    label = { Text("azure_openai_model") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+            if (spec.id == "vertexai") {
+                Text("vertexai_auth_mode（认证方式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("express", "oauth").forEach { value ->
+                        FilterChip(
+                            selected = vertexaiAuthMode == value,
+                            onClick = { vm.setVertexaiAuthMode(value) },
+                            label = { Text(value) },
+                        )
+                    }
+                }
+                EmberTextField(
+                    value = vertexaiExpressProjectId,
+                    onValueChange = vm::setVertexaiExpressProjectId,
+                    label = { Text("vertexai_express_project_id") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+            if (spec.id == "nanogpt") {
+                EmberTextField(
+                    value = nanogptProvider,
+                    onValueChange = vm::setNanogptProvider,
+                    label = { Text("nanogpt_provider") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                SwitchRow("nanogpt_payg_override", nanogptPaygOverride, vm::setNanogptPaygOverride)
+            }
+            EmberTextField(
+                value = sampler.assistantImpersonation,
+                onValueChange = vm::setAssistantImpersonation,
+                label = { Text("assistant_impersonation（Claude 冒充模式预填）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
                 vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
             }
@@ -766,9 +902,23 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
     val models by vm.models.collectAsState()
     val selected by vm.selectedModel.collectAsState()
     val testing by vm.testing.collectAsState()
+    val sort by vm.sortModels.collectAsState()
+    val group by vm.groupModels.collectAsState()
     var query by remember { mutableStateOf("") }
-    val filtered = remember(models, query) {
-        models.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
+    // 官方 openai.js：sortModelsBy(sort_models) + group_models 分组（App 列表无 pricing/context 元数据，
+    // 支持 alphabetical/reverse；pricing/context 排序登记边界）
+    val items: List<Pair<String, Boolean>> = remember(models, query, sort, group) {
+        val base = models.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
+        val sorted = when (sort) {
+            "reverse" -> base.sortedDescending()
+            else -> base.sorted()
+        }
+        if (group) {
+            sorted.groupBy { it.substringBefore('/').ifBlank { it } }
+                .flatMap { (g, list) -> listOf(g to true) + list.map { it to false } }
+        } else {
+            sorted.map { it to false }
+        }
     }
 
     EmberBottomSheet(onDismissRequest = onDismiss) {
@@ -785,7 +935,16 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).padding(top = 4.dp)) {
-                items(filtered, key = { it }) { model ->
+                items(items, key = { it.first }) { (model, isHeader) ->
+                    if (isHeader) {
+                        Text(
+                            model,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
+                        return@items
+                    }
                     val isSel = model == selected
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

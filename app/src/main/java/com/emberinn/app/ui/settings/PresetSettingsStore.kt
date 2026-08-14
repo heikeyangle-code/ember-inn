@@ -44,6 +44,8 @@ data class PresetSettingsState(
     val instruct: InstructSettings = InstructSettings(),
     val sysprompt: SyspromptSettings = SyspromptSettings(),
     val reasoning: ReasoningSettings = ReasoningSettings(),
+    /** 官方 oai_settings.extensions：预设里的扩展配置（onSettingsPresetChange 直接赋值；App 无扩展消费，持久化登记）。 */
+    val openaiExtensions: JsonObject = JsonObject(emptyMap()),
 )
 
 object PresetSettingsStore {
@@ -240,6 +242,7 @@ object PresetSettingsStore {
                 ?.mapNotNull { it.jsonPrimitive.contentOrNull }
         // 连接类：当前 provider 对应模型键生效（openai_model/claude_model/openrouter_model/google_model/...）
         val modelKey = providerModelKey(profile.providerId)
+        val pid = provider?.id ?: ""
         val updated = profile.copy(
             model = modelKey?.let { s(it)?.takeIf { v -> v.isNotBlank() } } ?: profile.model,
             sampler = profile.sampler.copy(
@@ -311,12 +314,12 @@ object PresetSettingsStore {
             vertexaiExpressProjectId = s("vertexai_express_project_id") ?: profile.vertexaiExpressProjectId,
             nanogptProvider = s("nanogpt_provider") ?: profile.nanogptProvider,
             nanogptPaygOverride = b("nanogpt_payg_override"),
-            baseUrlOverride = if (provider.id == "azure" && appliedJson["azure_base_url"] != null) {
+            baseUrlOverride = if (pid == "azure" && appliedJson["azure_base_url"] != null) {
                 s("azure_base_url") ?: profile.baseUrlOverride
             } else {
                 profile.baseUrlOverride
             },
-            apiVersionOverride = if (provider.id == "azure" && appliedJson["azure_api_version"] != null) {
+            apiVersionOverride = if (pid == "azure" && appliedJson["azure_api_version"] != null) {
                 s("azure_api_version") ?: profile.apiVersionOverride
             } else {
                 profile.apiVersionOverride
@@ -352,6 +355,11 @@ object PresetSettingsStore {
                 }.toMap()
                 PromptManagerPrefs.saveOrders(context, orders)
             }
+        }
+        // 官方 onSettingsPresetChange：extensions 无 DOM 选择器，直接 oai_settings.extensions = preset.extensions || {}
+        (preset["extensions"] as? JsonObject)?.let { ext ->
+            val state = load(context)
+            save(context, state.copy(openaiExtensions = ext))
         }
         repo.saveProfile(updated, active = true)
         PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = name))

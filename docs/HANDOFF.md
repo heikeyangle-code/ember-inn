@@ -286,9 +286,10 @@ request_images/aspect/resolution/max_context_unlocked）已接总装/请求体/U
 runGenerate 追加 cyclePrompt（仅 chat completion）；show_thoughts 驱动 include_reasoning 与显示门控；
 reverse_proxy/proxy_password 按官方 proxySupportedSources 替换 base/API Key；custom_include_body/
 exclude_body/include_headers 用 YamlMerge 标量子集（嵌套 YAML 边界登记）；custom_url 已接。
-仍登记：extensions 键（regex 预设桥）、bias_presets 表/UI、assistant_impersonation 消费点、
-custom_prompt_post_processing 消费点、tool_call_recurse_limit 消费点、group_models/sort_models/
-show_external_models/bypass_status_check UI、azure/vertex/workers/nanogpt 连接 UI。
+仍登记：bias_presets 表/UI（需 cl100k tokenizer 对拍）、show_external_models 视觉差（App 模型列表
+恒显示全部已拉取模型，官方该开关仅影响 openai 外部类别）、bypass_status_check 仅影响官方在线状态文案
+（App 无该概念，已存储+UI）、YAML 嵌套/多文档（YamlMerge 支持标量+顶层列表）、vertexai 服务账号认证
+（LlmClient 拒绝）、extensions 键已持久化（官方无 App 侧扩展消费，登记）。
 
 **仍登记（诚实边界）**：
 - context/instruct/sysprompt 预设已按官方语义持久化；官方消费点已核实为**非 OpenAI 路径**（script.js:4663 renderStoryString + formatInstructModeStoryString + applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——故 App 对已接的 OpenAI/Anthropic/Google 不消费与官方一致。剩余：textgen 协议后端接入时把 ContextSettings/InstructSettings/SyspromptSettings 传进引擎（InstructMode/PromptAssembler/系统提示覆盖），并暴露 textgen/novel/kobold 采样预设（6/24/6 已打包，见第 5 节）。
@@ -653,7 +654,15 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 记忆扩展：source=main（extras/webllm 未接）；RAW 摘要 promptSize 用当前模型上下文近似。
 - TTS：✅ 朗读前 substituteParams 宏替换已接（官方 tts/index.js:674）；多语音/对话专属/引号专属未实现。
 - 主题配方：字体文件下载、风格档位映射未做。
-- 设置项 UI：reverse_proxy/proxy_password 引擎网络层已接（官方 proxySupportedSources），UI 输入框登记；custom_include_body/exclude_body/headers 引擎 YamlMerge 标量子集已接，UI 登记；assistant_prefill/media_inlining/inline_image_quality/continue_prefill/continue_postfix/function_calling/show_thoughts/enable_web_search/tool_reasoning_mode/max_context_unlocked 已接 SamplerParams+UI；show_external_models/bypass_status_check/group_models/sort_models UI 登记；dryRun 预览已做完整；reasoning_effort/verbosity/use_sysprompt/request_token_probabilities/squash_system_messages 已接。
+- 设置项 UI：reverse_proxy/proxy_password/custom_url/custom_include_body/exclude_body/headers/
+custom_prompt_post_processing/sort_models/group_models/show_external_models/bypass_status_check/
+tool_call_recurse_limit/azure_deployment_name/azure_openai_model/vertexai_auth_mode/
+vertexai_express_project_id/nanogpt_provider/nanogpt_payg_override/assistant_impersonation 已接
+SamplerParams/ConnectionProfile+UI；custom_prompt_post_processing 已接总装 postProcessPrompt（官方
+chat-completions.js /generate 语义）；tool_call_recurse_limit 已接工具循环；assistant_impersonation 已接
+Claude 冒充预填；assistant_prefill/media_inlining/inline_image_quality/continue_prefill/continue_postfix/
+function_calling/show_thoughts/enable_web_search/tool_reasoning_mode/max_context_unlocked 已接；
+sort_models（alphabetically/reverse）+ group_models 已接模型选择器；dryRun 预览已做完整。
 - 预设：保存/删除/应用已接（见 3.7）；“设为默认”官方无此概念；context/instruct/sysprompt 运行时消费已接 textgen 路径。
 - 发送链路未接清单见 12.16。
 - auto_scroll_chat_to_bottom 开关未做（App 恒开，官方默认开，行为一致但无设置项，见 8.2 登记）。
@@ -947,7 +956,13 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - **模型页（ProviderScreen）UI 升级**：ProviderCard 补彩色阴影、状态胶囊改 999 圆角、箭头换 PhosphorIcons；默认模型选择卡片同款阴影；ModelPickerSheet 选中行 tonal 高亮 + 主色 ✓ 圆点；服务商文案动态显示 `vm.providers.size` 家。
 - **providers.json 默认值**：36 家全部预置 base_url / default_models / default_context_window / default_max_tokens / docs_url（含 Together/Cerebras/SambaNova/NVIDIA NIM/GitHub Models/Hugging Face/腾讯混元/阶跃星辰/零一万物/百度千帆/讯飞星火/LM Studio；Cohere 官方地址 `api.cohere.com/v2`；DeepSeek 默认 `/v1`）。azure/custom 保持空（Azure 部署名、自定义地址必须用户填，不硬编码）。
 - **默认地址补齐（现状）**：详情页无已保存连接时自动预填 providers.json 默认 base_url / 区域（第一个 variant）/ API 版本（spec.api_version，如 Azure 2024-12-01）；默认模型与窗口为各厂商公开常见值，模型列表以“测试连接”拉取为准。
-- **官方模型设置项对照（现状）**：UI 已覆盖 名称/API Key/接口地址/区域/账户 ID/API 版本/默认模型/上下文上限/最大回复/温度/topP/存在惩罚/频率惩罚/测试连接 + **top_k/min_p/top_a/repetition_penalty/seed/n/流式开关/请求 token 概率（logprobs）/use_sysprompt**；OpenRouter 详情页另有 use_fallback/allow_fallbacks/middleout/providers/quantizations。引擎 `SamplerParams` 全字段对应官方 oai_settings（topK 默认 0=不发送、minP=0、topA=0、repetitionPenalty=1、seed=-1、n=1、middleout=on、requestTokenProbabilities=false、**useSysprompt=false=官方默认**）。实际请求体已按官方后端 chat-completions.js 差分 28 例（chat-request-body-official.mjs → ChatRequestBodyDiffTest），覆盖 openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5 分支 + 空 stop/温度 clamp/seed 边界；o1 强制非流式（App 走非流式路径）；**Claude/Gemini 的 use_sysprompt 已按官方默认 false 接线（system 消息转 user），Gemini topK 已接线**（LlmClientTest 锁定）。官方面板其余字段：reverse_proxy/proxy_password/custom_headers 网络层已接（引擎）+ UI 输入框待补；custom_include/exclude_body 引擎 YamlMerge 标量子集已接 + UI 待补；max_context_unlocked、names_behavior、assistant_prefill、continue_prefill、continue_postfix、function_calling、media_inlining、inline_image_quality、request_images、web_search、show_thoughts、tool_reasoning_mode、squash_system_messages 已接 SamplerParams+UI；show_external_models、bypass_status_check、group_models、sort_models、bias_presets、extensions、custom_prompt_post_processing、tool_call_recurse_limit 消费点、azure/vertex/workers/nanogpt 连接 UI 仍登记，不伪造 ✅。
+- **官方模型设置项对照（现状）**：UI 已覆盖 名称/API Key/接口地址/区域/账户 ID/API 版本/默认模型/上下文上限/最大回复/温度/topP/存在惩罚/频率惩罚/测试连接 + **top_k/min_p/top_a/repetition_penalty/seed/n/流式开关/请求 token 概率（logprobs）/use_sysprompt**；OpenRouter 详情页另有 use_fallback/allow_fallbacks/middleout/providers/quantizations。引擎 `SamplerParams` 全字段对应官方 oai_settings（topK 默认 0=不发送、minP=0、topA=0、repetitionPenalty=1、seed=-1、n=1、middleout=on、requestTokenProbabilities=false、**useSysprompt=false=官方默认**）。实际请求体已按官方后端 chat-completions.js 差分 28 例（chat-request-body-official.mjs → ChatRequestBodyDiffTest），覆盖 openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5 分支 + 空 stop/温度 clamp/seed 边界；o1 强制非流式（App 走非流式路径）；**Claude/Gemini 的 use_sysprompt 已按官方默认 false 接线（system 消息转 user），Gemini topK 已接线**（LlmClientTest 锁定）。官方面板其余字段：reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/include_headers
+网络层与请求体已接（引擎）+ UI 已补；custom_prompt_post_processing 已接总装；tool_call_recurse_limit
+已接工具循环；max_context_unlocked、names_behavior、assistant_prefill、assistant_impersonation、
+continue_prefill、continue_postfix、function_calling、media_inlining、inline_image_quality、request_images、
+web_search、show_thoughts、tool_reasoning_mode、squash_system_messages 已接 SamplerParams+UI；
+sort_models/group_models/show_external_models/bypass_status_check/azure/vertex/nanogpt 连接 UI 已补
+（vertex 认证、bias_presets tokenizer、YAML 嵌套仍登记，不伪造 ✅）。
 - **官方字段审计（对照 SillyTavern V2 spec + char-data.js）**：角色详情页已 1:1 覆盖 V2 核心字段——name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings；extensions 已接线：talkativeness（话痨滑杆）、depth_prompt（深度提示）、regex_scripts（卡正则）、fav（置顶）、world（内嵌世界书，导入端处理 `embeded://`/`__asset:` 资源）。明确不做的两项（避免“无效接线”）：group_only（引擎无消费点，只加 UI 不生效）、官方“linked world name”字符串引用（本 App 用卡内嵌世界书，不依赖官方世界书文件体系）。
 - 接线验证：CharacterCardEdit 的 readFields/writeFields 与导入导出共用同一 data 层，所有可编辑字段非 UI-only；保存按 V2 归一写回并同步 root/data。
 - 影响：模型页为 App/UI 层；providers.json 为引擎资源，仅追加默认模型列表，不改协议逻辑。

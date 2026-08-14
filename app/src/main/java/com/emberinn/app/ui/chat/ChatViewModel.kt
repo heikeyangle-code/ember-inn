@@ -2711,7 +2711,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             dryRun = false,
             type = "normal",
             depth = toolLoopRuns,
-            recurseLimit = ToolLoopPlanner.DEFAULT_RECURSE_LIMIT,
+            recurseLimit = chatRepository.profile()?.sampler?.toolCallRecurseLimit ?: ToolLoopPlanner.DEFAULT_RECURSE_LIMIT,
             toolCallingSupported = true,
             isStreaming = true,
             isStreamFinished = true,

@@ -17,6 +17,8 @@ import com.emberinn.engine.macros.MemoryVariableStore
 import com.emberinn.engine.macros.VariableStore
 import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.provider.TextgenSettingsDefaults
+import com.emberinn.engine.provider.toChatMLJson
+import com.emberinn.engine.provider.toCompletionMessage
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.InstructMode
@@ -320,7 +322,12 @@ class ChatRepository(context: Context) {
             scenarioFormat = profile.sampler.scenarioFormat,
             personalityFormat = profile.sampler.personalityFormat,
             groupNudgePrompt = profile.sampler.groupNudgePrompt,
-            assistantPrefill = profile.sampler.assistantPrefill,
+            // 官方 createGenerationParameters（openai.js:2816）：Claude 冒充模式用 assistant_impersonation 作预填
+            assistantPrefill = if (type == "impersonate" && chatCompletionSource == "claude") {
+                profile.sampler.assistantImpersonation
+            } else {
+                profile.sampler.assistantPrefill
+            },
             toolReasoningMode = profile.sampler.toolReasoningMode,
             chatMetadata = chatMetadata,
             chatCompletionSource = chatCompletionSource,
@@ -426,10 +433,26 @@ class ChatRepository(context: Context) {
             sampler = sampler.copy(maxTokens = effectiveMaxTokens),
             contextWindow = effectiveContextWindow,
         )
+        // 官方后端 chat-completions.js /generate：custom_prompt_post_processing 对所有 chat completion
+        // 源先过 postProcessPrompt（merge/semi/strict/single 系列）；text completion 不执行。
+        val isTextCompletion = provider.protocol == "textgenerationwebui" || provider.protocol == "novel" || provider.protocol == "kobold"
+        val chatMessages = if (!isTextCompletion && profile.customPromptPostProcessing.isNotBlank()) {
+            com.emberinn.engine.provider.ProviderConverters.postProcessPrompt(
+                messages = prepared.messages.map { it.toChatMLJson() },
+                type = profile.customPromptPostProcessing,
+                names = com.emberinn.engine.provider.PromptNames(
+                    charName = charName,
+                    userName = userName,
+                    groupNames = stopGroupMemberNames,
+                ),
+            ).mapNotNull { it.toCompletionMessage() }
+        } else {
+            prepared.messages
+        }
         // Text Completion（textgen/novel）：官方 getTextGenGenerationData / getNovelGenerationData 路径。
         // 提示词 = 官方 createRawPrompt（story string/instruct/历史/输出序列，引擎差分）；
         // textgen 请求体由 TextgenRequestBodyEngine 差分，novel 请求体由 NovelRequestBodyEngine 差分。
-        if (provider.protocol == "textgenerationwebui" || provider.protocol == "novel" || provider.protocol == "kobold") {
+        if (isTextCompletion) {
             val presetState = PresetSettingsStore.load(context)
             val env = MacroEnv(user = userName, char = charName)
             val raw = InstructMode.createRawPrompt(
@@ -480,7 +503,7 @@ class ChatRepository(context: Context) {
         // 官方 createGenerationParameters：isO1（openai/azure_openai + o1-2024-12-17/o1）强制非流式
         if (provider.id in setOf("openai", "azure") && effectiveModel in setOf("o1-2024-12-17", "o1")) {
             return try {
-                val full = client.chatCompletions(provider, effectiveProfile, prepared.messages, finalOptions)
+                val full = client.chatCompletions(provider, effectiveProfile, chatMessages, finalOptions)
                 onDelta(full)
                 onDone()
                 null
@@ -493,7 +516,7 @@ class ChatRepository(context: Context) {
             provider = provider,
             // 请求体同样用有效值：老档案 512 自动升级为厂商建议（如 16384）
             profile = effectiveProfile,
-            messages = prepared.messages,
+            messages = chatMessages,
             onDelta = onDelta,
             onDone = onDone,
             onError = onError,

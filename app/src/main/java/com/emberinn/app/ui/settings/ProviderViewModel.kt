@@ -66,6 +66,41 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _apiVersion = MutableStateFlow("")
     val apiVersion: StateFlow<String> = _apiVersion
 
+    private val _reverseProxy = MutableStateFlow("")
+    val reverseProxy: StateFlow<String> = _reverseProxy
+    private val _proxyPassword = MutableStateFlow("")
+    val proxyPassword: StateFlow<String> = _proxyPassword
+    private val _customUrl = MutableStateFlow("")
+    val customUrl: StateFlow<String> = _customUrl
+    private val _customIncludeBody = MutableStateFlow("")
+    val customIncludeBody: StateFlow<String> = _customIncludeBody
+    private val _customExcludeBody = MutableStateFlow("")
+    val customExcludeBody: StateFlow<String> = _customExcludeBody
+    private val _customIncludeHeaders = MutableStateFlow("")
+    val customIncludeHeaders: StateFlow<String> = _customIncludeHeaders
+    private val _customPromptPostProcessing = MutableStateFlow("")
+    val customPromptPostProcessing: StateFlow<String> = _customPromptPostProcessing
+    private val _bypassStatusCheck = MutableStateFlow(false)
+    val bypassStatusCheck: StateFlow<Boolean> = _bypassStatusCheck
+    private val _showExternalModels = MutableStateFlow(false)
+    val showExternalModels: StateFlow<Boolean> = _showExternalModels
+    private val _groupModels = MutableStateFlow(false)
+    val groupModels: StateFlow<Boolean> = _groupModels
+    private val _sortModels = MutableStateFlow("alphabetically")
+    val sortModels: StateFlow<String> = _sortModels
+    private val _azureDeploymentName = MutableStateFlow("")
+    val azureDeploymentName: StateFlow<String> = _azureDeploymentName
+    private val _azureOpenaiModel = MutableStateFlow("")
+    val azureOpenaiModel: StateFlow<String> = _azureOpenaiModel
+    private val _vertexaiAuthMode = MutableStateFlow("express")
+    val vertexaiAuthMode: StateFlow<String> = _vertexaiAuthMode
+    private val _vertexaiExpressProjectId = MutableStateFlow("")
+    val vertexaiExpressProjectId: StateFlow<String> = _vertexaiExpressProjectId
+    private val _nanogptProvider = MutableStateFlow("")
+    val nanogptProvider: StateFlow<String> = _nanogptProvider
+    private val _nanogptPaygOverride = MutableStateFlow(false)
+    val nanogptPaygOverride: StateFlow<Boolean> = _nanogptPaygOverride
+
     private val _models = MutableStateFlow<List<String>>(emptyList())
     val models: StateFlow<List<String>> = _models
 
@@ -107,6 +142,23 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             ?: spec.regionVariants.firstOrNull().orEmpty()
         _accountId.value = existing?.accountId.orEmpty()
         _apiVersion.value = existing?.apiVersionOverride?.takeIf { it.isNotBlank() } ?: spec.apiVersion
+        _reverseProxy.value = existing?.reverseProxy.orEmpty()
+        _proxyPassword.value = existing?.proxyPassword.orEmpty()
+        _customUrl.value = existing?.customUrl.orEmpty()
+        _customIncludeBody.value = existing?.customIncludeBody.orEmpty()
+        _customExcludeBody.value = existing?.customExcludeBody.orEmpty()
+        _customIncludeHeaders.value = existing?.customIncludeHeaders.orEmpty()
+        _customPromptPostProcessing.value = existing?.customPromptPostProcessing.orEmpty()
+        _bypassStatusCheck.value = existing?.bypassStatusCheck ?: false
+        _showExternalModels.value = existing?.showExternalModels ?: false
+        _groupModels.value = existing?.groupModels ?: false
+        _sortModels.value = existing?.sortModels?.takeIf { it.isNotBlank() } ?: "alphabetically"
+        _azureDeploymentName.value = existing?.azureDeploymentName.orEmpty()
+        _azureOpenaiModel.value = existing?.azureOpenaiModel.orEmpty()
+        _vertexaiAuthMode.value = existing?.vertexaiAuthMode?.takeIf { it.isNotBlank() } ?: "express"
+        _vertexaiExpressProjectId.value = existing?.vertexaiExpressProjectId.orEmpty()
+        _nanogptProvider.value = existing?.nanogptProvider.orEmpty()
+        _nanogptPaygOverride.value = existing?.nanogptPaygOverride ?: false
         val model = existing?.model?.takeIf { it.isNotBlank() }
             ?: spec.defaultModels.firstOrNull().orEmpty()
         val list = spec.defaultModels.toMutableList()
@@ -284,6 +336,25 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setEnableWebSearch(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(enableWebSearch = v) }
     fun setToolReasoningMode(v: String) { _editingSampler.value = _editingSampler.value.copy(toolReasoningMode = v) }
     fun setMaxContextUnlocked(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(maxContextUnlocked = v) }
+    fun setToolCallRecurseLimit(v: Int) { _editingSampler.value = _editingSampler.value.copy(toolCallRecurseLimit = v) }
+    fun setAssistantImpersonation(v: String) { _editingSampler.value = _editingSampler.value.copy(assistantImpersonation = v) }
+    fun setReverseProxy(v: String) { _reverseProxy.value = v }
+    fun setProxyPassword(v: String) { _proxyPassword.value = v }
+    fun setCustomUrl(v: String) { _customUrl.value = v }
+    fun setCustomIncludeBody(v: String) { _customIncludeBody.value = v }
+    fun setCustomExcludeBody(v: String) { _customExcludeBody.value = v }
+    fun setCustomIncludeHeaders(v: String) { _customIncludeHeaders.value = v }
+    fun setCustomPromptPostProcessing(v: String) { _customPromptPostProcessing.value = v }
+    fun setBypassStatusCheck(v: Boolean) { _bypassStatusCheck.value = v }
+    fun setShowExternalModels(v: Boolean) { _showExternalModels.value = v }
+    fun setGroupModels(v: Boolean) { _groupModels.value = v }
+    fun setSortModels(v: String) { _sortModels.value = v }
+    fun setAzureDeploymentName(v: String) { _azureDeploymentName.value = v }
+    fun setAzureOpenaiModel(v: String) { _azureOpenaiModel.value = v }
+    fun setVertexaiAuthMode(v: String) { _vertexaiAuthMode.value = v }
+    fun setVertexaiExpressProjectId(v: String) { _vertexaiExpressProjectId.value = v }
+    fun setNanogptProvider(v: String) { _nanogptProvider.value = v }
+    fun setNanogptPaygOverride(v: Boolean) { _nanogptPaygOverride.value = v }
 
     /** 应用官方 OpenAI 采样预设：引擎 onSettingsPresetChange 纯循环（bind_preset_to_connection=官方默认 true）。 */
     fun applySamplerPreset(name: String) {
@@ -456,6 +527,23 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             accountId = _accountId.value,
             apiVersionOverride = _apiVersion.value,
             contextWindow = _contextWindow.value,
+            reverseProxy = _reverseProxy.value,
+            proxyPassword = _proxyPassword.value,
+            customUrl = _customUrl.value,
+            customIncludeBody = _customIncludeBody.value,
+            customExcludeBody = _customExcludeBody.value,
+            customIncludeHeaders = _customIncludeHeaders.value,
+            customPromptPostProcessing = _customPromptPostProcessing.value,
+            bypassStatusCheck = _bypassStatusCheck.value,
+            showExternalModels = _showExternalModels.value,
+            groupModels = _groupModels.value,
+            sortModels = _sortModels.value,
+            azureDeploymentName = _azureDeploymentName.value,
+            azureOpenaiModel = _azureOpenaiModel.value,
+            vertexaiAuthMode = _vertexaiAuthMode.value,
+            vertexaiExpressProjectId = _vertexaiExpressProjectId.value,
+            nanogptProvider = _nanogptProvider.value,
+            nanogptPaygOverride = _nanogptPaygOverride.value,
             sampler = _editingSampler.value.copy(maxTokens = _maxTokens.value),
         )
     }
