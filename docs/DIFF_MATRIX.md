@@ -1,6 +1,6 @@
 # 差分矩阵（HANDOFF 附录；由 scripts/diff/*.mjs 生成 fixture，禁止手改）
 
-> HANDOFF 第 2 节引用。表内 93 行、例数合计 2901；scripts/diff/ 共 95 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
+> HANDOFF 第 2 节引用。表内 94 行、例数合计 2911；scripts/diff/ 共 96 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类。
@@ -94,6 +94,7 @@
 | 消息显示格式化纯文本子集（首条宏替换与 chat.mes 写回结果/Note-system 归一/bias 剥离/显示正则位点与 depth/fixMarkdown/encode_tags/reasoning 转义/非系统 trim/名字前缀剥离；打桩 substituteParams={{user}}→Alice、getRegexedString=可观测位点标记） | message-formatting-official.mjs | MessageFormattingDiffTest | 805 |
 | CFG Scale 纯逻辑（getGuidanceScale 优先级/getCfgPrompt unshift 合并/getCustomSeparator JSON 回退/插入深度；打桩 substituteParams={{user}}→Alice；charaCfg 缺失+群聊覆盖官方抛 TypeError 登记不生成用例） | cfg-prompt-official.mjs | CfgPromptDiffTest | 25 |
 | Token 概率解析（parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs source 分支；text 解析 top_logprobs 整体缺失官方抛 TypeError 登记） | logprobs-official.mjs | LogprobsDiffTest | 20 |
+| 图像生成请求体（generateAutoImage/generateSdcppImage payload；ADetailer/其余后端登记未移植） | imagegen-official.mjs | ImageGenDiffTest | 10 |
 
 **打桩/分支登记（防漏机制）**：差分脚本内任何打桩/未覆盖分支必须登记在本节 + 脚本头部；未登记即视为未完成。
 - prepare-messages：populationInjectionPrompts 用官方真函数；getExtensionPrompt(IN_CHAT) 已由 extension-prompt 19 例覆盖；工具调用历史/推理链/推理签名/媒体内联端到端 8 例；打桩见脚本头（registerFunctionToolsOpenAI 空对象→工具预算恒 1 token；setToolCalls tokens=JSON 长度/4；getChat content ?? ''；媒体仅 data: URL 内联）。in-chat order==100 规则由引擎单测锁。

@@ -150,10 +150,45 @@ private fun ImageCard() {
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     var comfyWorkflow by rememberSaveable { mutableStateOf(ServicesPrefs.comfyWorkflow(context)) }
+    var promptPrefix by rememberSaveable { mutableStateOf(ServicesPrefs.imagePromptPrefix(context)) }
+    var negativePrompt by rememberSaveable { mutableStateOf(ServicesPrefs.imageNegativePrompt(context)) }
+    var sampler by rememberSaveable { mutableStateOf(ServicesPrefs.imageSampler(context)) }
+    var scheduler by rememberSaveable { mutableStateOf(ServicesPrefs.imageScheduler(context)) }
+    var seed by rememberSaveable { mutableStateOf(ServicesPrefs.imageSeed(context).toString()) }
+    var scale by rememberSaveable { mutableStateOf(ServicesPrefs.imageScale(context).toString()) }
+    var width by rememberSaveable { mutableStateOf(ServicesPrefs.imageWidth(context).toString()) }
+    var height by rememberSaveable { mutableStateOf(ServicesPrefs.imageHeight(context).toString()) }
+    var restoreFaces by rememberSaveable { mutableStateOf(ServicesPrefs.imageRestoreFaces(context)) }
+    var clipSkip by rememberSaveable { mutableStateOf(ServicesPrefs.imageClipSkip(context).toString()) }
+    var vae by rememberSaveable { mutableStateOf(ServicesPrefs.imageVae(context)) }
+    var enableHr by rememberSaveable { mutableStateOf(ServicesPrefs.imageEnableHr(context)) }
+    var hrUpscaler by rememberSaveable { mutableStateOf(ServicesPrefs.imageHrUpscaler(context)) }
+    var hrScale by rememberSaveable { mutableStateOf(ServicesPrefs.imageHrScale(context).toString()) }
+    var hrSecondPassSteps by rememberSaveable { mutableStateOf(ServicesPrefs.imageHrSecondPassSteps(context).toString()) }
+    var denoising by rememberSaveable { mutableStateOf(ServicesPrefs.imageDenoisingStrength(context).toString()) }
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
+    fun saveAdvanced() = ServicesPrefs.saveImageAdvanced(
+        context,
+        promptPrefix,
+        negativePrompt,
+        sampler,
+        scheduler,
+        seed.toLongOrNull() ?: -1L,
+        scale.toDoubleOrNull() ?: 7.0,
+        width.toIntOrNull() ?: 512,
+        height.toIntOrNull() ?: 512,
+        restoreFaces,
+        clipSkip.toIntOrNull() ?: 1,
+        vae,
+        enableHr,
+        hrUpscaler,
+        hrScale.toDoubleOrNull() ?: 1.0,
+        hrSecondPassSteps.toIntOrNull() ?: 0,
+        denoising.toDoubleOrNull() ?: 0.7,
+    )
 
     ServiceCard(title = "图像生成") {
-        ServiceNote("官方 stable-diffusion 扩展：来源 / 接口地址 / 模型 / 采样步数。快捷工具盘可生成图像。")
+        ServiceNote("官方 stable-diffusion 扩展核心参数（A1111/sdcpp 请求体 1:1）。来源 / 地址 / 模型 / 步数 + 采样器 / CFG / 尺寸 / HR 等。")
         MenuPicker("来源", labelOf(IMAGE_SOURCES, source), IMAGE_SOURCES) { source = it; save() }
         if (source == "novel" || source == "huggingface" || source == "horde") {
             KeyRow(
@@ -174,20 +209,61 @@ private fun ImageCard() {
             EmberTextField(
                 value = comfyWorkflow,
                 onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
-                label = { Text("ComfyUI workflow JSON（含 %prompt%/%model%/%steps%/%width%/%height% 等占位符）") },
+                label = { Text("ComfyUI workflow JSON（含 %prompt%/%negative%/%model%/%steps%/%width%/%height% 等占位符）") },
                 minLines = 6,
                 maxLines = 12,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
         EmberTextField(
+            value = promptPrefix,
+            onValueChange = { promptPrefix = it; saveAdvanced() },
+            label = { Text("提示词前缀（sd_prompt_prefix）") },
+            minLines = 2,
+            maxLines = 4,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        EmberTextField(
+            value = negativePrompt,
+            onValueChange = { negativePrompt = it; saveAdvanced() },
+            label = { Text("负向提示（sd_negative_prompt）") },
+            minLines = 2,
+            maxLines = 4,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        EmberTextField(
             value = steps.toString(),
             onValueChange = { steps = it.toIntOrNull() ?: 0; save() },
-            label = { Text("采样步数") },
+            label = { Text("采样步数（steps）") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
+        TextFieldRow("采样器（sampler_name）", sampler) { sampler = it; saveAdvanced() }
+        TextFieldRow("调度器（scheduler）", scheduler) { scheduler = it; saveAdvanced() }
+        DecimalRow("CFG 强度（cfg_scale）", scale) { scale = it; saveAdvanced() }
+        TextFieldRow("种子（seed，-1=随机）", seed) { seed = it; saveAdvanced() }
+        TextFieldRow("宽度（width）", width) { width = it; saveAdvanced() }
+        TextFieldRow("高度（height）", height) { height = it; saveAdvanced() }
+        TextButton(
+            onClick = {
+                val w = width
+                width = height
+                height = w
+                saveAdvanced()
+            },
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) { Text("交换宽高（swap）") }
+        ToggleRow("恢复人脸（restore_faces）", restoreFaces) { restoreFaces = it; saveAdvanced() }
+        TextFieldRow("CLIP skip", clipSkip) { clipSkip = it; saveAdvanced() }
+        TextFieldRow("VAE（留空=默认）", vae) { vae = it; saveAdvanced() }
+        ToggleRow("高清修复（enable_hr）", enableHr) { enableHr = it; saveAdvanced() }
+        if (enableHr) {
+            TextFieldRow("HR 放大模型（hr_upscaler）", hrUpscaler) { hrUpscaler = it; saveAdvanced() }
+            DecimalRow("HR 放大倍数（hr_scale）", hrScale) { hrScale = it; saveAdvanced() }
+            NumberRow("HR 二次步数（hr_second_pass_steps）", hrSecondPassSteps) { hrSecondPassSteps = it; saveAdvanced() }
+            DecimalRow("去噪强度（denoising_strength）", denoising) { denoising = it; saveAdvanced() }
+        }
     }
 }
 

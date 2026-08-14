@@ -32,22 +32,27 @@ class ImageGenClient {
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
     /** 返回生成的图片本地路径（失败返回 null）。 */
-    suspend fun generate(context: Context, prompt: String): String? = withContext(Dispatchers.IO) {
+    suspend fun generate(context: Context, prompt: String, negativePrompt: String = "", extraPrompt: String = ""): String? = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) return@withContext null
         val source = ServicesPrefs.imageSource(context)
         val url = ServicesPrefs.imageUrl(context)
         val model = ServicesPrefs.imageModel(context)
         val steps = ServicesPrefs.imageSteps(context)
         val apiKey = ServicesPrefs.imageApiKey(context)
+        // 官方 generatePicture：prompt = prompt_prefix + 角色前缀 + 用户提示；negative 同理
+        val prefix = ServicesPrefs.imagePromptPrefix(context)
+        val fullPrompt = listOf(prefix, extraPrompt, prompt).filter { it.isNotBlank() }.joinToString("\n")
+        val fullNegative = listOf(ServicesPrefs.imageNegativePrompt(context), negativePrompt)
+            .filter { it.isNotBlank() }.joinToString("\n")
         runCatching {
             when (source) {
-                "openai" -> openAi(context, prompt)
-                "sdcpp" -> auto1111(context, url, prompt, steps, model)
-                "novel" -> novel(context, prompt, model, apiKey, steps)
-                "huggingface" -> huggingface(context, prompt, model, apiKey)
-                "horde" -> horde(context, prompt, model, apiKey, steps)
-                "comfy" -> comfy(context, url, prompt, model, steps)
-                else -> auto1111(context, url, prompt, steps, null)
+                "openai" -> openAi(context, fullPrompt)
+                "sdcpp" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = true)
+                "novel" -> novel(context, fullPrompt, model, apiKey, steps)
+                "huggingface" -> huggingface(context, fullPrompt, model, apiKey)
+                "horde" -> horde(context, fullPrompt, model, apiKey, steps)
+                "comfy" -> comfy(context, url, fullPrompt, fullNegative, model, steps)
+                else -> auto1111(context, url, fullPrompt, fullNegative, steps, null, sdcpp = false)
             }
         }.getOrNull()
     }
@@ -75,16 +80,40 @@ class ImageGenClient {
         }
     }
 
-    /** AUTOMATIC1111 / SDCPP：POST {url}/sdapi/v1/txt2img，images[0]=base64（sdcpp 带 model）。 */
-    private fun auto1111(context: Context, url: String, prompt: String, steps: Int, model: String?): String? {
+    /** AUTOMATIC1111 / SDCPP：POST {url}/sdapi/v1/txt2img（官方 generateAutoImage/generateSdcppImage 请求体 1:1）。 */
+    private fun auto1111(
+        context: Context,
+        url: String,
+        prompt: String,
+        negativePrompt: String,
+        steps: Int,
+        model: String?,
+        sdcpp: Boolean,
+    ): String? {
         if (url.isBlank()) return null
-        val payload = JSONObject()
-            .put("prompt", prompt)
-            .put("steps", steps)
-            .put("width", 512)
-            .put("height", 768)
-            .apply { if (!model.isNullOrBlank()) put("model", model) }
-            .toString()
+        val settings = com.emberinn.engine.prompt.ImageGenRequestEngine.ImageGenSettings(
+            sampler = ServicesPrefs.imageSampler(context),
+            scheduler = ServicesPrefs.imageScheduler(context),
+            steps = steps,
+            scale = ServicesPrefs.imageScale(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            restoreFaces = ServicesPrefs.imageRestoreFaces(context),
+            enableHr = ServicesPrefs.imageEnableHr(context),
+            hrUpscaler = ServicesPrefs.imageHrUpscaler(context),
+            hrScale = ServicesPrefs.imageHrScale(context),
+            denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),
+            hrSecondPassSteps = ServicesPrefs.imageHrSecondPassSteps(context),
+            seed = ServicesPrefs.imageSeed(context),
+            clipSkip = ServicesPrefs.imageClipSkip(context),
+            vae = ServicesPrefs.imageVae(context),
+            model = model ?: "",
+        )
+        val payload = if (sdcpp) {
+            com.emberinn.engine.prompt.ImageGenRequestEngine.sdcppPayload(settings, prompt, negativePrompt, url)
+        } else {
+            com.emberinn.engine.prompt.ImageGenRequestEngine.auto1111Payload(settings, prompt, negativePrompt, url)
+        }.toString()
         val request = Request.Builder()
             .url(url.trimEnd('/') + "/sdapi/v1/txt2img")
             .post(payload.toRequestBody(jsonMedia))

@@ -155,7 +155,11 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 官方 openai.js parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs 1:1 差分移植（20 例）；流式 OpenAI chat 每块 choices[0].logprobs 经 LogprobsEngine 解析 → ChatViewModel 内存保留最近一条 → 会话菜单 “Token 概率（logprobs）” 底部面板点击 token 查看备选。
 登记（非 1:1 边界）：官方 viewer 的“从备选重roll/从词前缀重roll”未移植（需 swipe 预填链路）；textgen/novel 非流式 logprobs 未解析（官方 parseAndSaveLogprobs 路径）；text 解析 top_logprobs 整体缺失官方抛 TypeError（响应契约恒带）。
 
-### 3.12 群聊 / 其它 ✅
+### 3.12 图像生成（stable-diffusion） ✅（核心子集）
+官方扩展 generateAutoImage/generateSdcppImage 请求体 1:1 差分移植（imagegen-official.mjs 10 例）：prompt/negative/sampler/scheduler/steps/cfg_scale/width/height/seed/restore_faces/clip_skip/vae/HR 全字段，JSON.stringify undefined 省略语义一致。App 设置页补齐核心参数（前缀/负向/采样器/调度器/CFG/尺寸/种子/恢复人脸/CLIP skip/VAE/HR），消息级生成挂 extra.media（官方 sd_message_gen）。角色提示词前缀按角色 id 存储并在聊天生成时合并。
+登记（未移植）：ADetailer、vlad/drawthings/openai/horde/hf/comfy 等其余 23 个后端的请求体、样式库/prompt templates/refine/interactive/multimodal 等交互模式、Comfy workflow 管理。
+
+### 3.13 群聊 / 其它 ✅
 群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
 
 ### 3.11 向量扩展（RAG 全量）✅（引擎层）

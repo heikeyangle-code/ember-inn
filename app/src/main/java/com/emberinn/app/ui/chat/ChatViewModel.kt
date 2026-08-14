@@ -355,7 +355,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 图像生成（A1111）：成功则追加到待发送附件，用户可预览后发送。 */
     fun generateImage(prompt: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val path = imageGenClient.generate(getApplication(), prompt)
+            val ctx = getApplication<Application>()
+            val path = imageGenClient.generate(
+                ctx,
+                prompt,
+                negativePrompt = ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
+                extraPrompt = ServicesPrefs.imageCharaPrompt(ctx, character?.id),
+            )
             withContext(Dispatchers.Main) {
                 if (path != null) {
                     _pendingMedia.value = _pendingMedia.value + MediaAttachment(
@@ -375,7 +381,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val list = chatStore.messages(sessionId)
         val text = list.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val path = imageGenClient.generate(getApplication(), text)
+            val ctx = getApplication<Application>()
+            val path = imageGenClient.generate(
+                ctx,
+                text,
+                negativePrompt = ServicesPrefs.imageCharaNegativePrompt(ctx, character?.id),
+                extraPrompt = ServicesPrefs.imageCharaPrompt(ctx, character?.id),
+            )
             withContext(Dispatchers.Main) {
                 if (path != null) {
                     chatStore.addMediaToMessage(sessionId, index, "image", path, "生成的图片")

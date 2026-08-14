@@ -44,6 +44,135 @@ object ServicesPrefs {
     fun imageApiKey(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_api_key", "") ?: ""
 
+    // 官方 stable-diffusion 扩展核心参数（defaultSettings 1:1 默认值）
+    fun imagePromptPrefix(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_prompt_prefix", "") ?: ""
+
+    fun imageNegativePrompt(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_negative_prompt", "") ?: ""
+
+    fun imageSampler(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_sampler", "DDIM") ?: "DDIM"
+
+    fun imageScheduler(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_scheduler", "normal") ?: "normal"
+
+    fun imageSeed(context: Context): Long =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getLong("sd_seed", -1L)
+
+    fun imageScale(context: Context): Double =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("sd_scale", 7f).toDouble()
+
+    fun imageWidth(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_width", 512)
+
+    fun imageHeight(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_height", 512)
+
+    fun imageRestoreFaces(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_restore_faces", false)
+
+    fun imageClipSkip(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_clip_skip", 1)
+
+    fun imageVae(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_vae", "") ?: ""
+
+    fun imageEnableHr(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_enable_hr", false)
+
+    fun imageHrUpscaler(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_hr_upscaler", "Latent") ?: "Latent"
+
+    fun imageHrScale(context: Context): Double =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("sd_hr_scale", 1.0f).toDouble()
+
+    fun imageHrSecondPassSteps(context: Context): Int =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("sd_hr_second_pass_steps", 0)
+
+    fun imageDenoisingStrength(context: Context): Double =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("sd_denoising_strength", 0.7f).toDouble()
+
+    /** 角色提示词前缀（官方 extension_settings.sd.character_prompts，按角色 id 存）。 */
+    fun imageCharaPrompt(context: Context, characterId: String?): String =
+        if (characterId.isNullOrBlank()) "" else imageCharaPromptMap(context)[characterId] ?: ""
+
+    fun imageCharaNegativePrompt(context: Context, characterId: String?): String =
+        if (characterId.isNullOrBlank()) "" else imageCharaNegativeMap(context)[characterId] ?: ""
+
+    fun saveImageCharaPrompts(context: Context, characterId: String?, positive: String, negative: String) {
+        if (characterId.isNullOrBlank()) return
+        val prefs = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val pos = imageCharaPromptMap(context).toMutableMap()
+        val neg = imageCharaNegativeMap(context).toMutableMap()
+        if (positive.isBlank()) pos.remove(characterId) else pos[characterId] = positive
+        if (negative.isBlank()) neg.remove(characterId) else neg[characterId] = negative
+        prefs.edit()
+            .putString("sd_character_prompts", kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.json.JsonObject.serializer(),
+                kotlinx.serialization.json.JsonObject(pos.mapValues { (_, v) -> kotlinx.serialization.json.JsonPrimitive(v) }),
+            ))
+            .putString("sd_character_negative_prompts", kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.json.JsonObject.serializer(),
+                kotlinx.serialization.json.JsonObject(neg.mapValues { (_, v) -> kotlinx.serialization.json.JsonPrimitive(v) }),
+            ))
+            .apply()
+    }
+
+    fun saveImageAdvanced(
+        context: Context,
+        promptPrefix: String,
+        negativePrompt: String,
+        sampler: String,
+        scheduler: String,
+        seed: Long,
+        scale: Double,
+        width: Int,
+        height: Int,
+        restoreFaces: Boolean,
+        clipSkip: Int,
+        vae: String,
+        enableHr: Boolean,
+        hrUpscaler: String,
+        hrScale: Double,
+        hrSecondPassSteps: Int,
+        denoisingStrength: Double,
+    ) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("sd_prompt_prefix", promptPrefix)
+            .putString("sd_negative_prompt", negativePrompt)
+            .putString("sd_sampler", sampler)
+            .putString("sd_scheduler", scheduler)
+            .putLong("sd_seed", seed)
+            .putFloat("sd_scale", scale.toFloat())
+            .putInt("sd_width", width)
+            .putInt("sd_height", height)
+            .putBoolean("sd_restore_faces", restoreFaces)
+            .putInt("sd_clip_skip", clipSkip)
+            .putString("sd_vae", vae)
+            .putBoolean("sd_enable_hr", enableHr)
+            .putString("sd_hr_upscaler", hrUpscaler)
+            .putFloat("sd_hr_scale", hrScale.toFloat())
+            .putInt("sd_hr_second_pass_steps", hrSecondPassSteps)
+            .putFloat("sd_denoising_strength", denoisingStrength.toFloat())
+            .apply()
+    }
+
+    private fun imageCharaPromptMap(context: Context): Map<String, String> =
+        readStringMap(context, "sd_character_prompts")
+
+    private fun imageCharaNegativeMap(context: Context): Map<String, String> =
+        readStringMap(context, "sd_character_negative_prompts")
+
+    private fun readStringMap(context: Context, key: String): Map<String, String> {
+        val raw = context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(key, null) ?: return emptyMap()
+        return runCatching {
+            kotlinx.serialization.json.Json.parseToJsonElement(raw).jsonObject
+                .mapNotNull { (k, v) -> k to (v.jsonPrimitive.contentOrNull ?: return@mapNotNull null) }
+                .toMap()
+        }.getOrDefault(emptyMap())
+    }
+
     /** ComfyUI 用户 workflow JSON（官方 comfy_workflow 文件内容；含 %prompt% 等占位符）。 */
     fun comfyWorkflow(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_workflow", "") ?: ""
