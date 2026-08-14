@@ -790,6 +790,12 @@ class ChatPromptFactory {
         val tags: List<String> = emptyList(),
     )
 
+    /** 预热：打开聊天/切角色时后台解析当前卡，让第一次发送直接命中缓存（App 层提速）。 */
+    fun warmCardCache(characterRawJson: String?) {
+        if (characterRawJson.isNullOrBlank()) return
+        runCatching { parseCard(characterRawJson) }
+    }
+
     private fun parseCard(raw: String): ParsedCard {
         synchronized(cardCache) {
             cardCache[raw]?.let { return it }

@@ -132,6 +132,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
     val messages: StateFlow<List<JsonElement>> = _messages
 
+    init {
+        // 卡解析预热：后台提前解析当前角色卡，首次发送直接命中 LRU 缓存
+        viewModelScope.launch(Dispatchers.Default) {
+            character?.rawJson?.let { chatRepository.warmCard(it) }
+        }
+    }
+
     /** 显示文本缓存：displayTextOf 只在消息刷新时算一次，组合期不再读盘/跑正则（性能）。
      *  设置（encode_tags/正则/允许列表）变更时 DisplayCacheVersion.bump()，这里整体失效即时生效。 */
     private val displayCache = mutableMapOf<Int, String>()

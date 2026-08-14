@@ -60,6 +60,9 @@ class ChatRepository(context: Context) {
     private val store = ProviderStore(File(context.filesDir, "provider"))
     private val client = LlmClient()
     private val promptFactory = ChatPromptFactory()
+
+    /** 角色卡解析缓存预热（打开聊天/切角色时调用，首次发送不再等解析）。 */
+    fun warmCard(characterRawJson: String?) = promptFactory.warmCardCache(characterRawJson)
     private val json = Json { ignoreUnknownKeys = true }
 
     /** 连接档案缓存：按 profiles.json 修改时间失效，避免每次发送都重读重解析。 */
