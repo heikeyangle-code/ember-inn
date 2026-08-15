@@ -150,6 +150,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
     }
 
     var confirmReset by remember { mutableStateOf(false) }
+    var importMessage by remember { mutableStateOf<String?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
@@ -163,7 +164,6 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         }.getOrNull().orEmpty()
         importJson(text)?.let { err -> importMessage = err }
     }
-    var importMessage by remember { mutableStateOf<String?>(null) }
 
     SettingsGlassPage { settingsSky ->
         Column(modifier = Modifier.fillMaxSize()) {

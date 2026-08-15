@@ -13,6 +13,7 @@ import com.emberinn.engine.prompt.ReasoningSettings
 import com.emberinn.engine.prompt.SyspromptSettings
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderRegistry
+import com.emberinn.engine.provider.ProviderStore
 import com.emberinn.engine.provider.SamplerParams
 import com.emberinn.engine.provider.TextgenSettingsDefaults
 import java.io.File

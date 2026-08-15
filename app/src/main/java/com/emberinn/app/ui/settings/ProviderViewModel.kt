@@ -223,7 +223,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun selectModel(model: String) {
         _selectedModel.value = model
         // 官方 bind_model_templates：模型切换时绑定/激活当前 context+instruct 模板（chat_template_hash 登记边界）
-        val app = getApplication()
+        val app: android.app.Application = getApplication()
         val state = com.emberinn.app.ui.settings.PresetSettingsStore.load(app)
         if (state.bindModelTemplates) {
             val powerUser = kotlinx.serialization.json.buildJsonObject {
