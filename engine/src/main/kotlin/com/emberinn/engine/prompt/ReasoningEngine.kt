@@ -16,7 +16,20 @@ data class ReasoningTemplate(
 data class ReasoningSettings(
     /** 官方 power_user.reasoning.name 默认 "Think XML"（预设名，仅用于回显/保存）。 */
     val name: String = "Think XML",
+    @kotlinx.serialization.SerialName("auto_parse")
     val autoParse: Boolean = false,
+    /** 官方 power_user.reasoning.add_to_prompts（默认关）。 */
+    @kotlinx.serialization.SerialName("add_to_prompts")
+    val addToPrompts: Boolean = false,
+    /** 官方 power_user.reasoning.auto_expand（默认关，UI 自动展开）。 */
+    @kotlinx.serialization.SerialName("auto_expand")
+    val autoExpand: Boolean = false,
+    /** 官方 power_user.reasoning.show_hidden（默认关，UI 显示隐藏思考）。 */
+    @kotlinx.serialization.SerialName("show_hidden")
+    val showHidden: Boolean = false,
+    /** 官方 power_user.reasoning.max_additions（默认 1，非 prefix 注入上限）。 */
+    @kotlinx.serialization.SerialName("max_additions")
+    val maxAdditions: Int = 1,
     val trimSpaces: Boolean = false,
     val template: ReasoningTemplate = ReasoningTemplate(),
 )

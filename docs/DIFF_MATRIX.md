@@ -1,6 +1,6 @@
 # 差分矩阵（HANDOFF 附录；由 scripts/diff/*.mjs 生成 fixture，禁止手改）
 
-> HANDOFF 第 2 节引用。表内 94 行、例数合计 2911；scripts/diff/ 共 96 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
+> HANDOFF 第 2 节引用。表内 95 行、例数合计 2936；scripts/diff/ 共 97 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类。
@@ -44,6 +44,7 @@
 | 斜杠参数解析核心 | slash-parser-official.mjs | SlashParserDiffTest | 18 |
 | 斜杠数学/布尔/len/sort | slash-math-official.mjs | SlashMathDiffTest | 444 |
 | Prompt Manager 纯逻辑 | prompt-manager-official.mjs | PromptManagerDiffTest | 29 |
+| 模型模板派生/绑定（deriveTemplatesFromChatTemplate/bindModelTemplates） | chat-template-official.mjs | ChatTemplateDiffTest | 25 |
 | NovelAI 请求体 | novel-body-official.mjs | NovelBodyDiffTest | 12 |
 | 提示词工具 | prompt-utils-official.mjs | PromptUtilsDiffTest | 9 |
 | JSON 角色卡导出 | json-export-official.mjs | JsonExportDiffTest | 6 |
