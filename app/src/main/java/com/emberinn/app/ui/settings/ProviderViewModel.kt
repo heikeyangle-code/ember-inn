@@ -281,7 +281,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
                             buildProfile().copy(sampler = buildProfile().sampler.copy(maxTokens = 1, stream = false)),
                             listOf(CompletionMessage(role = "user", content = "ping")),
                         )
-                        spec.defaultModels
+                        spec.defaultModels.map { com.emberinn.engine.provider.ModelSortEngine.ModelMeta(id = it) }
                     }
                 }
             }
@@ -315,7 +315,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
 
     /** 官方 textgen-settings.js props 流程（KOBOLDCPP/LLAMACPP）：chat_template_hash、派生模板自动选中、n_ctx 上下文。 */
     private fun applyKoboldModelProps(spec: ProviderSpec, profile: ConnectionProfile) {
-        val app = getApplication()
+        val app: android.app.Application = getApplication()
         val state = com.emberinn.app.ui.settings.PresetSettingsStore.load(app)
         val props = client.modelProps(spec, profile) ?: return
         val chatTemplate = props["chat_template"]?.jsonPrimitive?.contentOrNull.orEmpty()

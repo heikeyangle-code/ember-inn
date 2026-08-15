@@ -1224,7 +1224,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
-                        return@items
+                        return@itemsIndexed
                     }
                     val isSel = modelId == selected
                     Row(
