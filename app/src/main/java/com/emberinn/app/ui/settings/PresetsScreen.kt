@@ -500,6 +500,16 @@ fun PresetsScreen(onBack: () -> Unit) {
                     onCheckedChange = { applied = applied.copy(bindModelTemplates = it); PresetSettingsStore.update(context, applied) },
                 )
             }
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                Text("context_size_derived（koboldcpp/llamacpp 连接时按后端 n_ctx 自动改上下文，官方默认关）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                EmberSwitch(
+                    checked = applied.contextSizeDerived,
+                    onCheckedChange = { applied = applied.copy(contextSizeDerived = it); PresetSettingsStore.update(context, applied) },
+                )
+            }
             PresetSection(
                 title = "上下文模板（context）",
                 items = (PresetLibrary.contextPresets().map { it.preset } - userPresets["context"].orEmpty().toSet()).map { it to false } +

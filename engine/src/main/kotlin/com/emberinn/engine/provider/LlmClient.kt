@@ -16,6 +16,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -170,7 +173,7 @@ class LlmClient(
     fun models(
         provider: ProviderSpec,
         profile: ConnectionProfile,
-    ): List<String> {
+    ): List<ModelSortEngine.ModelMeta> {
         val url = modelsUrl(provider, profile) ?: return emptyList()
         val builder = Request.Builder().url(url).get()
         applyAuth(builder, provider, profile, anthropicVersion = true)
@@ -182,6 +185,24 @@ class LlmClient(
             val text = response.body?.string() ?: return emptyList()
             return parseModels(provider, text)
         }
+    }
+
+    /**
+     * 官方 /api/backends/text-completions/props（koboldcpp/llamacpp）：
+     * GET {base}/props → { chat_template, default_generation_settings.n_ctx, ... }。
+     */
+    fun modelProps(provider: ProviderSpec, profile: ConnectionProfile): JsonObject? {
+        val base = profile.baseUrlOverride.ifBlank { provider.baseUrl }.trimEnd('/')
+        if (base.isBlank()) return null
+        val builder = Request.Builder().url("$base/props").get()
+        applyAuth(builder, provider, profile, anthropicVersion = true)
+        provider.extraHeaders.forEach { (k, v) -> builder.header(k, v) }
+        return runCatching {
+            http.newCall(builder.build()).execute().use { response ->
+                if (!response.isSuccessful) return null
+                json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject
+            }
+        }.getOrNull()
     }
 
     /** SSE 流式：按协议解析增量；流结束（含服务端直接关闭）保证回调 onDone。 */
@@ -866,7 +887,7 @@ class LlmClient(
         }
     }.getOrDefault("")
 
-    private fun parseModels(provider: ProviderSpec, text: String): List<String> = runCatching {
+    private fun parseModels(provider: ProviderSpec, text: String): List<ModelSortEngine.ModelMeta> = runCatching {
         val root = json.parseToJsonElement(text).jsonObject
         when (provider.modelsFormat) {
             "google" -> root["models"]?.jsonArray?.mapNotNull { m ->
@@ -874,22 +895,43 @@ class LlmClient(
                 val name = obj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 val methods = obj["supportedGenerationMethods"]?.jsonArray
                     ?.mapNotNull { it.jsonPrimitive.content }
-                if (methods != null && "generateContent" !in methods) null else name.removePrefix("models/")
+                if (methods != null && "generateContent" !in methods) null else ModelSortEngine.ModelMeta(id = name.removePrefix("models/"))
             }.orEmpty()
             "workers" -> root["result"]?.jsonArray
-                ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content }.orEmpty()
+                ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content?.let { n -> ModelSortEngine.ModelMeta(id = n) } }.orEmpty()
             "azure" -> {
                 val value = root["value"]?.jsonArray
-                    ?.mapNotNull { it.jsonObject["id"]?.jsonPrimitive?.content }.orEmpty()
+                    ?.mapNotNull { it.jsonObject["id"]?.jsonPrimitive?.content?.let { n -> ModelSortEngine.ModelMeta(id = n) } }.orEmpty()
                 if (value.isNotEmpty()) {
                     value
                 } else {
-                    root["data"]?.jsonArray?.mapNotNull { it.jsonObject["id"]?.asText() }.orEmpty()
+                    root["data"]?.jsonArray?.mapNotNull { it.jsonObject["id"]?.asText()?.let { n -> ModelSortEngine.ModelMeta(id = n) } }.orEmpty()
                 }
             }
-            else -> root["data"]?.jsonArray?.mapNotNull { it.jsonObject["id"]?.asText() }.orEmpty()
+            else -> root["data"]?.jsonArray?.mapNotNull { modelFromJson(it as? JsonObject ?: return@mapNotNull null) }.orEmpty()
         }
     }.getOrDefault(emptyList())
+
+    /** 官方模型对象字段投影（data[] 各源：id/name/context_length/pricing/tokens/endpoints/type/info）。 */
+    private fun modelFromJson(obj: JsonObject): ModelSortEngine.ModelMeta {
+        val pricing = obj["pricing"] as? JsonObject
+        val info = obj["info"] as? JsonObject
+        return ModelSortEngine.ModelMeta(
+            id = obj["id"]?.asText().orEmpty(),
+            name = obj["name"]?.asText(),
+            contextLength = obj["context_length"]?.jsonPrimitive?.longOrNull,
+            pricingPrompt = pricing?.get("prompt")?.jsonPrimitive?.doubleOrNull,
+            pricingCompletion = pricing?.get("completion")?.jsonPrimitive?.doubleOrNull,
+            pricingInput = pricing?.get("input")?.jsonPrimitive?.doubleOrNull,
+            pricingOutput = pricing?.get("output")?.jsonPrimitive?.doubleOrNull,
+            tokens = obj["tokens"]?.jsonPrimitive?.longOrNull,
+            infoName = info?.get("name")?.jsonPrimitive?.contentOrNull,
+            infoContextLength = info?.get("contextLength")?.jsonPrimitive?.longOrNull,
+            infoDeveloper = info?.get("developer")?.jsonPrimitive?.contentOrNull,
+            endpoints = (obj["endpoints"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull },
+            type = obj["type"]?.asText(),
+        )
+    }
 
     private fun JsonElement?.asText(): String? = when (this) {
         is JsonPrimitive -> if (isString) content else toString()

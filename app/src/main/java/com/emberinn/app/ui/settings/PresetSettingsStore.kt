@@ -58,6 +58,10 @@ data class PresetSettingsState(
     val bindModelTemplates: Boolean = false,
     /** 官方 power_user.model_templates_mappings：模型 id / chat template hash → {context, instruct}。 */
     val modelTemplateMappings: JsonObject = JsonObject(emptyMap()),
+    /** 官方 power_user.context_size_derived（默认关）：koboldcpp/llamacpp 连接时按后端 n_ctx 自动改上下文。 */
+    val contextSizeDerived: Boolean = false,
+    /** 官方 power_user.chat_template_hash：最近连接模型（koboldcpp/llamacpp）的 chat template sha256。 */
+    val chatTemplateHash: String = "",
 )
 
 object PresetSettingsStore {

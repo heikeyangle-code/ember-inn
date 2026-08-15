@@ -13,3 +13,4 @@
 *.keystore
 !debug.keystore
 scripts/diff/vendor/node_modules/
+**/.kotlin/

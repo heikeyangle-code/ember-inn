@@ -117,7 +117,7 @@ class LlmClientTest {
                 baseUrlOverride = server.url("/").toString().trimEnd('/'),
             ),
         )
-        assertEquals(listOf("gpt-4o", "gpt-4o-mini"), models)
+        assertEquals(listOf("gpt-4o", "gpt-4o-mini"), models.map { it.id })
         server.close()
     }
     @Test
@@ -263,7 +263,7 @@ class LlmClientTest {
             ProviderRegistry.get("google")!!,
             ConnectionProfile(providerId = "google", apiKey = "gkey", model = "", baseUrlOverride = server.url("/").toString().trimEnd('/')),
         )
-        assertEquals(listOf("gemini-3.6-flash"), models)
+        assertEquals(listOf("gemini-3.6-flash"), models.map { it.id })
         server.close()
     }
 
@@ -290,7 +290,7 @@ class LlmClientTest {
         assertEquals("/openai/models", request.url.encodedPath)
         assertEquals("2024-12-01", request.url.queryParameter("api-version"))
         assertEquals("azkey", request.headers["api-key"])
-        assertEquals(listOf("gpt-5.4"), models)
+        assertEquals(listOf("gpt-5.4"), models.map { it.id })
         server.close()
     }
 

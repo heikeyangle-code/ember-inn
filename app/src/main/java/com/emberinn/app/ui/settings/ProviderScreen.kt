@@ -890,65 +890,63 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            // 官方 Reverse Proxy 预设列表（openai.js proxies：name/url/password，选中即填入）
-            if (existing != null) {
-                var proxies by remember(existing.id) {
-                    mutableStateOf(com.emberinn.app.data.ProxyPresetStore.list(context, existing.id))
-                }
-                var proxySelected by remember { mutableStateOf("") }
-                var showProxyNew by remember { mutableStateOf(false) }
-                var proxyNewName by remember { mutableStateOf("") }
-                Text("代理预设（官方 proxies 列表）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    proxies.forEach { preset ->
-                        FilterChip(
-                            selected = proxySelected == preset.name,
-                            onClick = {
-                                proxySelected = preset.name
-                                vm.setReverseProxy(preset.url)
-                                vm.setProxyPassword(preset.password)
-                            },
-                            label = { Text(preset.name) },
-                        )
-                    }
-                    TextButton(onClick = { proxyNewName = ""; showProxyNew = true }) { Text("新建预设") }
-                    TextButton(
-                        enabled = proxySelected.isNotBlank(),
+            // 官方 Reverse Proxy 预设列表（openai.js proxies：全局 name/url/password，选中即填入）
+            var proxies by remember {
+                mutableStateOf(com.emberinn.app.data.ProxyPresetStore.list(context))
+            }
+            var proxySelected by remember { mutableStateOf("") }
+            var showProxyNew by remember { mutableStateOf(false) }
+            var proxyNewName by remember { mutableStateOf("") }
+            Text("代理预设（官方 proxies 列表，全局）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                proxies.forEach { preset ->
+                    FilterChip(
+                        selected = proxySelected == preset.name,
                         onClick = {
-                            proxies = proxies.filterNot { it.name == proxySelected }
-                            com.emberinn.app.data.ProxyPresetStore.save(context, existing.id, proxies)
-                            proxySelected = ""
-                            vm.setReverseProxy("")
-                            vm.setProxyPassword("")
+                            proxySelected = preset.name
+                            vm.setReverseProxy(preset.url)
+                            vm.setProxyPassword(preset.password)
                         },
-                    ) { Text("删除预设") }
-                }
-                if (showProxyNew) {
-                    AlertDialog(
-                        onDismissRequest = { showProxyNew = false },
-                        title = { Text("新建代理预设") },
-                        text = {
-                            EmberTextField(
-                                value = proxyNewName,
-                                onValueChange = { proxyNewName = it },
-                                label = { Text("预设名（必须唯一）") },
-                                singleLine = true,
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                val n = proxyNewName.trim()
-                                if (n.isNotEmpty() && proxies.none { it.name == n }) {
-                                    proxies = proxies + com.emberinn.app.data.ProxyPreset(n, reverseProxy, proxyPassword)
-                                    com.emberinn.app.data.ProxyPresetStore.save(context, existing.id, proxies)
-                                    proxySelected = n
-                                    showProxyNew = false
-                                }
-                            }) { Text("保存") }
-                        },
-                        dismissButton = { TextButton(onClick = { showProxyNew = false }) { Text("取消") } },
+                        label = { Text(preset.name) },
                     )
                 }
+                TextButton(onClick = { proxyNewName = ""; showProxyNew = true }) { Text("新建预设") }
+                TextButton(
+                    enabled = proxySelected.isNotBlank(),
+                    onClick = {
+                        proxies = proxies.filterNot { it.name == proxySelected }
+                        com.emberinn.app.data.ProxyPresetStore.save(context, proxies)
+                        proxySelected = ""
+                        vm.setReverseProxy("")
+                        vm.setProxyPassword("")
+                    },
+                ) { Text("删除预设") }
+            }
+            if (showProxyNew) {
+                AlertDialog(
+                    onDismissRequest = { showProxyNew = false },
+                    title = { Text("新建代理预设") },
+                    text = {
+                        EmberTextField(
+                            value = proxyNewName,
+                            onValueChange = { proxyNewName = it },
+                            label = { Text("预设名（必须唯一）") },
+                            singleLine = true,
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val n = proxyNewName.trim()
+                            if (n.isNotEmpty() && proxies.none { it.name == n }) {
+                                proxies = proxies + com.emberinn.app.data.ProxyPreset(n, reverseProxy, proxyPassword)
+                                com.emberinn.app.data.ProxyPresetStore.save(context, proxies)
+                                proxySelected = n
+                                showProxyNew = false
+                            }
+                        }) { Text("保存") }
+                    },
+                    dismissButton = { TextButton(onClick = { showProxyNew = false }) { Text("取消") } },
+                )
             }
             if (spec.id == "custom") {
                 EmberTextField(
@@ -1179,21 +1177,28 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
     // 关闭时 openai 源只显示内置默认模型列表。App 等价：openai 且关闭 → 过滤到 defaultModels。
     val visible = remember(models, providerId, showExternal, spec) {
         if (providerId == "openai" && !showExternal) {
-            models.filter { it in (spec?.defaultModels ?: emptyList()) }
+            models.filter { it.id in (spec?.defaultModels ?: emptyList()) }
         } else {
             models
         }
     }
-    // 官方 openai.js：sortModelsBy(sort_models) + group_models 分组；App 模型列表无 pricing/context
-    // 元数据，pricing/context_length 排序回退字母序（登记边界）
-    val items: List<Pair<String, Boolean>> = remember(visible, query, sort, group) {
-        val base = visible.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
-        val sorted = base.sorted()
+    // 官方 openai.js：sortModelsBy(sort_models) + groupModelsByVendor（元数据排序 1:1 差分移植）
+    // items = (id, 显示名, isHeader)；显示名按官方各源 option text（name ?? info.name ?? id）
+    val items: List<Triple<String, String, Boolean>> = remember(visible, query, sort, group, providerId) {
+        val base = visible.filter {
+            query.isBlank() ||
+                it.id.contains(query, ignoreCase = true) ||
+                (it.name ?: "").contains(query, ignoreCase = true) ||
+                (it.infoName ?: "").contains(query, ignoreCase = true)
+        }
+        val sorted = com.emberinn.engine.provider.ModelSortEngine.sortModelsBy(base, sort, providerId)
         if (group) {
-            sorted.groupBy { it.substringBefore('/').ifBlank { it } }
-                .flatMap { (g, list) -> listOf(g to true) + list.map { it to false } }
+            com.emberinn.engine.provider.ModelSortEngine.groupModelsByVendor(sorted, providerId)
+                .flatMap { (vendor, list) ->
+                    listOf(Triple("", vendor, true)) + list.map { Triple(it.id, it.name ?: it.infoName ?: it.id, false) }
+                }
         } else {
-            sorted.map { it to false }
+            sorted.map { Triple(it.id, it.name ?: it.infoName ?: it.id, false) }
         }
     }
 
@@ -1211,17 +1216,17 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).padding(top = 4.dp)) {
-                items(items, key = { it.first }) { (model, isHeader) ->
+                itemsIndexed(items, key = { i, _ -> i }) { _, (modelId, label, isHeader) ->
                     if (isHeader) {
                         Text(
-                            model,
+                            label,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                         return@items
                     }
-                    val isSel = model == selected
+                    val isSel = modelId == selected
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -1231,13 +1236,13 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                                 if (isSel) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else Color.Transparent,
                             )
                             .clickable {
-                                vm.selectModel(model)
+                                vm.selectModel(modelId)
                                 onDismiss()
                             }
                             .padding(horizontal = 10.dp, vertical = 10.dp),
                     ) {
                         Text(
-                            model,
+                            label,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isSel) androidx.compose.ui.text.font.FontWeight.SemiBold else null,
                             modifier = Modifier.weight(1f),

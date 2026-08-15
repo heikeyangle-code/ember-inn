@@ -35,8 +35,20 @@ import com.emberinn.app.ui.theme.VibePrefs
 import com.emberinn.app.ui.theme.VibePreset
 
 class MainActivity : ComponentActivity() {
+    /** 官方每次加载设置都会把当前采样预设应用到 oai_settings；App 等价在冷启动应用一次。 */
+    private fun applySelectedSamplerPresetOnLoad() {
+        val ctx = applicationContext
+        if (com.emberinn.app.data.ChatRepository(ctx).profile() == null) return
+        val prefs = com.emberinn.app.ui.settings.PresetPrefsStore.load(ctx)
+        if (prefs.samplerPreset.isNotBlank()) {
+            com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(ctx, prefs.samplerPreset)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 官方 settings 加载即应用当前选中的采样预设（oai_settings.preset_settings_openai → onSettingsPresetChange）
+        runCatching { applySelectedSamplerPresetOnLoad() }
         enableEdgeToEdge()
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }

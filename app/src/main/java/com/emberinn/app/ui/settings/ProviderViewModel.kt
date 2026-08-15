@@ -114,8 +114,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _nanogptPaygOverride = MutableStateFlow(false)
     val nanogptPaygOverride: StateFlow<Boolean> = _nanogptPaygOverride
 
-    private val _models = MutableStateFlow<List<String>>(emptyList())
-    val models: StateFlow<List<String>> = _models
+    private val _models = MutableStateFlow<List<com.emberinn.engine.provider.ModelSortEngine.ModelMeta>>(emptyList())
+    val models: StateFlow<List<com.emberinn.engine.provider.ModelSortEngine.ModelMeta>> = _models
 
     private val _selectedModel = MutableStateFlow("")
     val selectedModel: StateFlow<String> = _selectedModel
@@ -171,8 +171,9 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _nanogptPaygOverride.value = existing?.nanogptPaygOverride ?: false
         val model = existing?.model?.takeIf { it.isNotBlank() }
             ?: spec.defaultModels.firstOrNull().orEmpty()
-        val list = spec.defaultModels.toMutableList()
-        existing?.model?.takeIf { it.isNotBlank() && it !in list }?.let { list.add(0, it) }
+        val list = spec.defaultModels.map { com.emberinn.engine.provider.ModelSortEngine.ModelMeta(id = it) }.toMutableList()
+        existing?.model?.takeIf { it.isNotBlank() && list.none { m -> m.id == it } }
+            ?.let { list.add(0, com.emberinn.engine.provider.ModelSortEngine.ModelMeta(id = it)) }
         _models.value = list
         _selectedModel.value = model
         // 官方 1.18：只有“从未设置”才用默认值（4095/300）；用户存的值原样保留。
@@ -286,23 +287,77 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
             }
             _testing.value = false
             result.onSuccess { models ->
-                val list = models.ifEmpty { spec.defaultModels }
+                // 官方 load*Models 内联 filter（electronhub endpoints / chutes affine / aimlapi type）
+                val filtered = com.emberinn.engine.provider.ModelSortEngine.filterModelsBySource(models, spec.id)
+                val list = filtered.ifEmpty { spec.defaultModels.map { com.emberinn.engine.provider.ModelSortEngine.ModelMeta(id = it) } }
                 _models.value = list
-                if (_selectedModel.value.isBlank() || _selectedModel.value !in list) {
-                    _selectedModel.value = list.firstOrNull() ?: ""
+                if (_selectedModel.value.isBlank() || list.none { it.id == _selectedModel.value }) {
+                    _selectedModel.value = list.firstOrNull()?.id ?: ""
                 }
-                _message.value = if (models.isNotEmpty()) "连接成功，共 ${models.size} 个模型" else "连接成功"
+                _message.value = if (filtered.isNotEmpty()) "连接成功，共 ${filtered.size} 个模型" else "连接成功"
+                // 官方 textgen-settings.js：koboldcpp/llamacpp 连接后读 /props →
+                // chat_template_hash + 派生/自动选中模板 + context_size_derived 自动改上下文
+                if (spec.protocol == "kobold") {
+                    applyKoboldModelProps(spec, buildProfile())
+                }
             }.onFailure { e ->
                 // 官方 openai.js canBypass：openai/custom 源开启 bypass_status_check 时跳过状态检查，
                 // 直接按默认模型继续（不阻断保存/使用）。
                 if (_bypassStatusCheck.value && (spec.id == "openai" || spec.id == "custom")) {
-                    _models.value = spec.defaultModels
+                    _models.value = spec.defaultModels.map { com.emberinn.engine.provider.ModelSortEngine.ModelMeta(id = it) }
                     _message.value = "已跳过状态检查（bypass_status_check）"
                 } else {
                     _message.value = humanError(e)
                 }
             }
         }
+    }
+
+    /** 官方 textgen-settings.js props 流程（KOBOLDCPP/LLAMACPP）：chat_template_hash、派生模板自动选中、n_ctx 上下文。 */
+    private fun applyKoboldModelProps(spec: ProviderSpec, profile: ConnectionProfile) {
+        val app = getApplication()
+        val state = com.emberinn.app.ui.settings.PresetSettingsStore.load(app)
+        val props = client.modelProps(spec, profile) ?: return
+        val chatTemplate = props["chat_template"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        val hash = if (chatTemplate.isNotEmpty()) sha256Hex(chatTemplate) else ""
+        val updated = state.copy(chatTemplateHash = hash)
+
+        // 官方 wantsContextSize：default_generation_settings.n_ctx → setGenerationParamsFromPreset
+        if (state.contextSizeDerived) {
+            val nCtx = (props["default_generation_settings"] as? kotlinx.serialization.json.JsonObject)
+                ?.get("n_ctx")?.jsonPrimitive?.content?.toLongOrNull()
+            if (nCtx != null && nCtx > 0 && nCtx != _contextWindow.value.toLong()) {
+                _contextWindow.value = nCtx.toInt().coerceIn(256, 2_000_000)
+            }
+        }
+
+        // 官方 deriveTemplatesFromChatTemplate → selectContextPreset / selectInstructPreset（isAuto）
+        if (chatTemplate.isNotEmpty() && (state.contextDerived || (state.instructDerived && state.instruct.enabled))) {
+            val derived = com.emberinn.engine.prompt.ChatTemplateEngine.deriveTemplatesFromChatTemplate(chatTemplate, hash)
+            if (state.contextDerived) {
+                derived.context?.let { ctx ->
+                    val ctxJson = com.emberinn.app.ui.settings.PresetSettingsStore.presetJsonOf("context", ctx, app)
+                    if (ctxJson.isNotEmpty()) com.emberinn.app.ui.settings.PresetSettingsStore.applyContext(app, ctxJson)
+                }
+            }
+            if (state.instruct.enabled && state.instructDerived) {
+                derived.instruct?.let { ins ->
+                    val insJson = com.emberinn.app.ui.settings.PresetSettingsStore.presetJsonOf("instruct", ins, app)
+                    if (insJson.isNotEmpty()) com.emberinn.app.ui.settings.PresetSettingsStore.applyInstruct(app, insJson)
+                }
+            }
+        }
+
+        com.emberinn.app.ui.settings.PresetSettingsStore.save(app, updated)
+        if (hash.isNotEmpty() || state.contextSizeDerived) {
+            _message.value = "连接成功：已读取模型属性（chat_template_hash=${hash.take(8)}…）"
+        }
+    }
+
+    /** 官方后端 createHash('sha256').update(chat_template).digest('hex')。 */
+    private fun sha256Hex(input: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
     }
 
     fun setTemperature(v: Double) { _editingSampler.value = _editingSampler.value.copy(temperature = v) }
