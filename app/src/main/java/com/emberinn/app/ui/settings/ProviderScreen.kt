@@ -336,6 +336,7 @@ fun ProviderDetailScreen(
                 .imePadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
+            CollapsibleSection("连接（API Connection）", initiallyExpanded = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProviderIcon(spec.icon, spec.displayName, modifier = Modifier.size(52.dp))
                 Spacer(Modifier.width(12.dp))
@@ -443,6 +444,7 @@ fun ProviderDetailScreen(
             Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
+            }
             EmberTextField(
                 value = maxTokens.toString(),
                 onValueChange = vm::setMaxTokens,
@@ -452,6 +454,7 @@ fun ProviderDetailScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            CollapsibleSection("采样参数（Sampler Settings）", initiallyExpanded = true) {
             var showSamplerPreset by remember { mutableStateOf(false) }
             // 官方选中名持久化在 oai_settings.preset_settings_openai；App 存 PresetPrefs.samplerPreset
             var samplerPresetName by remember {
@@ -572,6 +575,8 @@ fun ProviderDetailScreen(
                 sampler.squashSystemMessages,
                 vm::setSquashSystemMessages,
             )
+            }
+            CollapsibleSection("预设联动与提示词（oai_settings：bias/names/提示词/工具开关）") {
             // ---- 官方 oai_settings 其余预设联动字段 ----
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
@@ -852,6 +857,7 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            CollapsibleSection("连接高级（Advanced：代理/custom/azure/vertex/nanogpt/模型排序）") {
             // ---- 官方 oai_settings 连接类字段（settingsToUpdate isConnection=true） ----
             Text("连接高级设置（官方连接字段）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             SwitchRow("bypass_status_check（跳过状态检查）", bypassStatusCheck, vm::setBypassStatusCheck)
@@ -1082,6 +1088,7 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            }
             // 协议专属采样参数（对照官方 textgen/novel/kobold 面板）
             when (spec.protocol) {
                 "textgenerationwebui" -> ProtocolSamplerEditors.TextGenEditor(context)
@@ -1089,6 +1096,8 @@ fun ProviderDetailScreen(
                 "kobold" -> ProtocolSamplerEditors.KoboldEditor(context)
                 else -> Unit
             }
+            }
+            CollapsibleSection("上下文与连接测试", initiallyExpanded = true) {
             EmberTextField(
                 value = contextWindow.toString(),
                 onValueChange = vm::setContextWindow,
@@ -1134,6 +1143,7 @@ fun ProviderDetailScreen(
                 ) {
                     Text("保存")
                 }
+            }
             }
             Spacer(Modifier.size(24.dp))
         }
@@ -1349,5 +1359,38 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         EmberSwitch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** 官方 API 面板的分区/抽屉：标题行点击折叠（App Compose 等价物）。 */
+@Composable
+private fun CollapsibleSection(
+    title: String,
+    initiallyExpanded: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+            .padding(top = 18.dp, bottom = 2.dp),
+    ) {
+        Text(
+            if (expanded) "▼" else "▶",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    if (expanded) {
+        content()
     }
 }
