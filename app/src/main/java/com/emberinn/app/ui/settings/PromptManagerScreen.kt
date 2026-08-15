@@ -197,7 +197,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                 }
                 item {
-                    Text("注入顺序", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("注入顺序", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                        Text(
+                            "总 Token：${PromptAssemblyCache.lastMessages?.sumOf { it.tokens } ?: 0}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
                 if (order.isEmpty()) {
                     item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -606,6 +613,19 @@ private fun PromptRow(
     onInspect: (() -> Unit)?,
     onDelete: (() -> Unit)?,
 ) {
+    // 官方 prompt_manager_list：每行显示 token 数 + 图标（marker/global/important/user/injection/角色）
+    val tokens = PromptAssemblyCache.lastMessages
+        ?.filter { it.identifier == item.identifier }
+        ?.sumOf { it.tokens } ?: 0
+    val icons = buildList {
+        if (item.marker) add("📌" to "Marker")
+        if (!item.marker && item.systemPrompt && !item.forbidOverrides) add("🌐" to "Global Prompt")
+        if (!item.marker && item.systemPrompt && item.forbidOverrides) add("★" to "Important Prompt")
+        if (!item.marker && !item.systemPrompt) add("※" to "Preset Prompt")
+        if (item.injectionPosition == 1) add("💉" to "In-Chat Injection")
+        if (item.role == "user") add("👤" to "Prompt will be sent as User")
+        if (item.role == "assistant") add("🤖" to "Prompt will be sent as Assistant")
+    }
     // 官方 isPromptEditAllowed / isPromptToggleAllowed：marker 项默认不可编辑/开关，
     // 强制名单（charDescription/charPersonality/scenario/personaDescription/worldInfoBefore/After，
     // toggle 另含 main/chatHistory/dialogueExamples）除外。
@@ -627,8 +647,16 @@ private fun PromptRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(item.name.ifBlank { item.identifier }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    icons.forEach { (icon, title) ->
+                        Spacer(Modifier.width(4.dp))
+                        Text(icon, style = MaterialTheme.typography.labelSmall)
+                    }
                     Spacer(Modifier.width(8.dp))
                     Text(item.identifier, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    if (item.injectionPosition == 1 && item.injectionDepth != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Text("@ ${item.injectionDepth}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    }
                     if (!userDefined) {
                         Spacer(Modifier.width(6.dp))
                         Text("默认", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
@@ -642,6 +670,12 @@ private fun PromptRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (tokens > 0) "$tokens" else "-",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
             EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onCheckedChange = onToggleOrder)
             if (onInspect != null) {
                 IconButton(onClick = onInspect, modifier = Modifier.size(38.dp)) {

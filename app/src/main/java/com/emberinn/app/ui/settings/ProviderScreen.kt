@@ -565,22 +565,14 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            SwitchRow(
-                "use_sysprompt（Claude/Gemini system 独立角色，官方默认关）",
-                sampler.useSysprompt,
-                vm::setUseSysprompt,
-            )
-            SwitchRow(
-                "合并 system 消息（squash_system_messages，官方默认关）",
-                sampler.squashSystemMessages,
-                vm::setSquashSystemMessages,
-            )
+
             }
             CollapsibleSection("预设联动与提示词（oai_settings：bias/names/提示词/工具开关）") {
             // ---- 官方 oai_settings 其余预设联动字段 ----
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
             //      onLogitBiasPresetImportFileChange / onLogitBiasPresetExportClick / createLogitBiasListItem）----
+            Text("Logit Bias 预设（官方 openai_logit_bias）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
             Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
@@ -727,6 +719,17 @@ fun ProviderDetailScreen(
                     )
                 }
             }
+            Text("消息角色与续写（names_behavior/continue_postfix/use_sysprompt/squash_system_messages）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
+                    FilterChip(
+                        selected = sampler.namesBehavior == v,
+                        onClick = { vm.setNamesBehavior(v) },
+                        label = { Text(label) },
+                    )
+                }
+            }
             Text("continue_postfix（继续生成后缀）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("" to "无", " " to "空格", "\n" to "换行", "\n\n" to "双换行").forEach { (v, label) ->
@@ -737,6 +740,16 @@ fun ProviderDetailScreen(
                     )
                 }
             }
+                        SwitchRow(
+                "use_sysprompt（Claude/Gemini system 独立角色，官方默认关）",
+                sampler.useSysprompt,
+                vm::setUseSysprompt,
+            )
+            SwitchRow(
+                "合并 system 消息（squash_system_messages，官方默认关）",
+                sampler.squashSystemMessages,
+                vm::setSquashSystemMessages,
+            )
             Text("inline_image_quality（内联图片质量）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("auto", "low", "high").forEach { value ->
@@ -757,6 +770,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
+            Text("工具与媒体（function_calling/tool_reasoning_mode/media_inlining/web_search/request_images）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
             SwitchRow("media_inlining（媒体 data URL 内联，官方默认开）", sampler.mediaInlining, vm::setMediaInlining)
             SwitchRow("function_calling（工具调用总开关，官方默认关）", sampler.functionCalling, vm::setFunctionCalling)
             SwitchRow("show_thoughts（显示推理内容，官方默认开）", sampler.showThoughts, vm::setShowThoughts)
@@ -787,6 +801,11 @@ fun ProviderDetailScreen(
                     }
                 }
             }
+            Text("提示词模板（Prompts）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            PromptQuickEdit(context, "main", "Main Prompt")
+            PromptQuickEdit(context, "nsfw", "Auxiliary Prompt")
+            PromptQuickEdit(context, "jailbreak", "Post-History Instructions")
             EmberTextField(
                 value = sampler.sendIfEmpty,
                 onValueChange = vm::setSendIfEmpty,
@@ -854,6 +873,20 @@ fun ProviderDetailScreen(
                 value = sampler.groupNudgePrompt,
                 onValueChange = vm::setGroupNudgePrompt,
                 label = { Text("group_nudge_prompt") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+                        EmberTextField(
+                value = sampler.impersonationPrompt,
+                onValueChange = vm::setImpersonationPrompt,
+                label = { Text("impersonation_prompt（冒充模式注入提示词）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
+                value = sampler.assistantImpersonation,
+                onValueChange = vm::setAssistantImpersonation,
+                label = { Text("assistant_impersonation（Claude 冒充模式预填）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -1074,20 +1107,7 @@ fun ProviderDetailScreen(
                 )
                 SwitchRow("nanogpt_payg_override", nanogptPaygOverride, vm::setNanogptPaygOverride)
             }
-            EmberTextField(
-                value = sampler.impersonationPrompt,
-                onValueChange = vm::setImpersonationPrompt,
-                label = { Text("impersonation_prompt（冒充模式注入提示词）") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            EmberTextField(
-                value = sampler.assistantImpersonation,
-                onValueChange = vm::setAssistantImpersonation,
-                label = { Text("assistant_impersonation（Claude 冒充模式预填）") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+
             }
             // 协议专属采样参数（对照官方 textgen/novel/kobold 面板）
             when (spec.protocol) {
@@ -1393,4 +1413,36 @@ private fun CollapsibleSection(
     if (expanded) {
         content()
     }
+}
+
+/** 官方 OpenAI 面板 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts 同名更新）。 */
+@Composable
+private fun PromptQuickEdit(context: android.content.Context, identifier: String, label: String) {
+    val all = remember(identifier) { com.emberinn.app.data.PromptManagerPrefs.prompts(context) }
+    val existing = all.firstOrNull { it.identifier == identifier }
+    var text by remember(identifier) {
+        mutableStateOf(existing?.content.orEmpty())
+    }
+    EmberTextField(
+        value = text,
+        onValueChange = { new ->
+            text = new
+            val current = com.emberinn.app.data.PromptManagerPrefs.prompts(context)
+            val found = current.firstOrNull { it.identifier == identifier }
+            val updated = if (found != null) found.copy(content = new) else com.emberinn.engine.prompt.PromptItem(
+                identifier = identifier,
+                name = label,
+                content = new,
+                role = "system",
+                systemPrompt = true,
+            )
+            com.emberinn.app.data.PromptManagerPrefs.savePrompts(
+                context,
+                if (found != null) current.map { if (it.identifier == identifier) updated else it } else current + updated,
+            )
+        },
+        label = { Text(label) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+    )
 }

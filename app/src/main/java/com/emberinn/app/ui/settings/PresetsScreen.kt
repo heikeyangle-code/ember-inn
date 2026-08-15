@@ -3,6 +3,7 @@ package com.emberinn.app.ui.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -558,7 +561,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 onRename = { if (prefs.contextPreset.isNotBlank()) { renameTarget = "context" to prefs.contextPreset; renameName = prefs.contextPreset } },
                 onExport = { if (prefs.contextPreset.isNotBlank()) startSingleExport("context", prefs.contextPreset) },
                 onRestore = { if (prefs.contextPreset.isNotBlank()) requestRestore("context", prefs.contextPreset) },
-                onDeleteUser = { name -> pendingDeleteUser = "context" to name },
+                onDeleteUser = { pendingDeleteUser = "context" to prefs.contextPreset },
             )
             AppliedEditorToggle("context", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "context") {
@@ -578,7 +581,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 onRename = { if (prefs.instructPreset.isNotBlank()) { renameTarget = "instruct" to prefs.instructPreset; renameName = prefs.instructPreset } },
                 onExport = { if (prefs.instructPreset.isNotBlank()) startSingleExport("instruct", prefs.instructPreset) },
                 onRestore = { if (prefs.instructPreset.isNotBlank()) requestRestore("instruct", prefs.instructPreset) },
-                onDeleteUser = { name -> pendingDeleteUser = "instruct" to name },
+                onDeleteUser = { pendingDeleteUser = "instruct" to prefs.instructPreset },
             )
             AppliedEditorToggle("instruct", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "instruct") {
@@ -611,7 +614,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                     if (prefs.samplerPreset == "gui") importMessage = "GUI 预设不可恢复（官方语义）"
                     else if (prefs.samplerPreset.isNotBlank()) requestRestore("sampler", prefs.samplerPreset)
                 },
-                onDeleteUser = { name -> pendingDeleteUser = "sampler" to name },
+                onDeleteUser = { pendingDeleteUser = "sampler" to prefs.samplerPreset },
             )
             PresetSection(
                 title = "系统提示预设（sysprompt）",
@@ -624,7 +627,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 onRename = { if (prefs.syspromptPreset.isNotBlank()) { renameTarget = "sysprompt" to prefs.syspromptPreset; renameName = prefs.syspromptPreset } },
                 onExport = { if (prefs.syspromptPreset.isNotBlank()) startSingleExport("sysprompt", prefs.syspromptPreset) },
                 onRestore = { if (prefs.syspromptPreset.isNotBlank()) requestRestore("sysprompt", prefs.syspromptPreset) },
-                onDeleteUser = { name -> pendingDeleteUser = "sysprompt" to name },
+                onDeleteUser = { pendingDeleteUser = "sysprompt" to prefs.syspromptPreset },
             )
             AppliedEditorToggle("sysprompt", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "sysprompt") {
@@ -644,7 +647,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 onRename = { if (prefs.reasoningPreset.isNotBlank()) { renameTarget = "reasoning" to prefs.reasoningPreset; renameName = prefs.reasoningPreset } },
                 onExport = { if (prefs.reasoningPreset.isNotBlank()) startSingleExport("reasoning", prefs.reasoningPreset) },
                 onRestore = { if (prefs.reasoningPreset.isNotBlank()) requestRestore("reasoning", prefs.reasoningPreset) },
-                onDeleteUser = { name -> pendingDeleteUser = "reasoning" to name },
+                onDeleteUser = { pendingDeleteUser = "reasoning" to prefs.reasoningPreset },
             )
             AppliedEditorToggle("reasoning", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "reasoning") {
@@ -1043,16 +1046,15 @@ private fun PresetSection(
     selected: String,
     onSelect: (String) -> Unit,
     onSaveCurrent: () -> Unit,
-    onDeleteUser: (String) -> Unit,
+    onDeleteUser: () -> Unit,
     onUpdate: (() -> Unit)? = null,
     onRename: (() -> Unit)? = null,
     onExport: (() -> Unit)? = null,
     onRestore: (() -> Unit)? = null,
-    emptyLabel: String? = null,
 ) {
-    // 系统预设按类型默认折叠：展开才查看，避免一屏全铺开
+    // 官方 preset manager：下拉选择 + 对选中项的一排操作按钮（update/new/rename/delete/export/restore）
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = selected.ifEmpty { emptyLabel ?: "默认" }
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         modifier = Modifier
@@ -1072,7 +1074,7 @@ private fun PresetSection(
             modifier = Modifier.weight(1f),
         )
         Text(
-            "当前：$selectedName",
+            "当前：${selected.ifBlank { "默认" }}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -1085,14 +1087,25 @@ private fun PresetSection(
     if (expanded) {
         Row(
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         ) {
-            Spacer(Modifier.width(16.dp))
-            Text(
-                "点击预设即应用；系统预设 ${items.count { !it.second }} 个，我的预设 ${items.count { it.second }} 个",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
+            Box {
+                TextButton(onClick = { menuOpen = true }) {
+                    Text("${selected.ifBlank { "默认" }} ▾")
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    items.forEach { (name, isUser) ->
+                        DropdownMenuItem(
+                            text = { Text(if (name.isEmpty()) "默认" else name + (if (isUser) "（我的）" else "")) },
+                            onClick = {
+                                menuOpen = false
+                                onSelect(name)
+                            },
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.weight(1f))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
             TextButton(onClick = onSaveCurrent) { Text("另存为") }
@@ -1105,34 +1118,10 @@ private fun PresetSection(
             if (onExport != null) {
                 TextButton(onClick = onExport) { Text("导出") }
             }
+            TextButton(onClick = onDeleteUser, enabled = selected.isNotBlank()) { Text("删除", color = MaterialTheme.colorScheme.error) }
             if (onRestore != null) {
                 TextButton(onClick = onRestore) { Text("恢复默认") }
             }
-        }
-        items.forEach { (name, isUser) ->
-            Row(
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(name) }
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    if (name.isEmpty()) (emptyLabel ?: "默认") else name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (selected == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-                if (selected == name) {
-                    Text("✓", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                }
-                if (isUser) {
-                    IconButton(onClick = { onDeleteUser(name) }, modifier = Modifier.size(28.dp)) {
-                        Icon(PhosphorIcons.Delete, contentDescription = "删除用户预设", modifier = Modifier.size(14.dp))
-                    }
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(start = 4.dp))
         }
     }
 }
