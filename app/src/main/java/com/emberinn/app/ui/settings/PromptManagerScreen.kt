@@ -149,7 +149,6 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         return null
     }
 
-    var confirmReset by remember { mutableStateOf(false) }
     var importMessage by remember { mutableStateOf<String?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -193,7 +192,6 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
                         TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }
-                        TextButton(onClick = { confirmReset = true }) { Text("重置顺序") }
                     }
                 }
                 item {
@@ -382,23 +380,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         }
     }
 
-    confirmReset?.let {
-        AlertDialog(
-            onDismissRequest = { confirmReset = false },
-            title = { Text("重置全局顺序？") },
-            text = { Text("将恢复官方默认顺序（不会删除任何提示项）。") },
-            confirmButton = {
-                TextButton(onClick = {
-                    PromptManagerPrefs.resetOrderToDefault(context)
-                    order = PromptManagerPrefs.order(context)
-                    confirmReset = false
-                }) { Text("重置") }
-            },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("取消") } },
-        )
-    }
-
-    deleteTarget?.let { doomed ->
+                        TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
+                        TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }    deleteTarget?.let { doomed ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text("删除提示项？") },

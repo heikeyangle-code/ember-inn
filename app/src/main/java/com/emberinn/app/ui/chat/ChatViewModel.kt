@@ -1063,7 +1063,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             history = chatStore.messages(sessionId),
             type = "impersonate",
             impersonation = true,
-            impersonationPrompt = ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT,
+            impersonationPrompt = impersonationPromptText(),
             quietPrompt = prompt.trim(),
         )
         return ""
@@ -2043,8 +2043,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             history = chatStore.messages(sessionId),
             type = "impersonate",
             impersonation = true,
+            impersonationPrompt = impersonationPromptText(),
         )
     }
+
+    /** 官方 oai_settings.impersonation_prompt（默认 default_impersonation_prompt）。 */
+    private fun impersonationPromptText(): String =
+        chatRepository.profile()?.sampler?.impersonationPrompt?.takeIf { it.isNotBlank() }
+            ?: ChatPromptFactory.DEFAULT_IMPERSONATION_PROMPT
 
     fun consumeImpersonation() {
         _impersonated.value = null
