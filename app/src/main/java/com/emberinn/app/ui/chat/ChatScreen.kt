@@ -3067,7 +3067,7 @@ private fun streamingStyledText(
 private fun closeStreamingDelimiters(text: String): String {
     var out = text
     // ** 与 * 分开计数：** 优先（**bold 有一个 ** → 补 **；*italic 有一个 * → 补 *）
-    val doubleStars = Regex("\*\*").findAll(text).count()
+    val doubleStars = Regex("\\*\\*").findAll(text).count()
     val totalStars = text.count { it == '*' }
     val singleStars = totalStars - doubleStars * 2
     if (doubleStars % 2 == 1) out += "**"
