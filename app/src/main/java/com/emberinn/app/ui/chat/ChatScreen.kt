@@ -3011,7 +3011,9 @@ private fun streamingStyledText(
     emColor: Color,
     underlineColor: Color,
 ): AnnotatedString {
-    val cleaned = Regex("""(?m)^\s{0,3}(#{1,6})\s+(.+)$""").replace(raw) { m -> "**${m.groupValues[2]}**" }
+    // 流式未闭合定界符补齐：**bold → **bold**，让下面的正则整段吞掉标记（否则流式中会露 `**` 等符号）
+    val closed = closeStreamingDelimiters(raw)
+    val cleaned = Regex("""(?m)^\s{0,3}(#{1,6})\s+(.+)$""").replace(closed) { m -> "**${m.groupValues[2]}**" }
     val out = AnnotatedString.Builder()
     out.pushStyle(SpanStyle(color = bodyColor))
     val pattern = Regex(
@@ -3058,6 +3060,33 @@ private fun streamingStyledText(
     }
     out.append(cleaned.substring(last))
     return out.toAnnotatedString()
+}
+
+/** 流式未闭合定界符补齐（App 增强，仅流式中间态；官方 1.18 流式是每 tick 全量 messageFormatting，
+ *  未闭合时同样露符号。这里补上闭合符让轻量渲染器吞掉标记，最终态仍由 ChatMarkdown 全量渲染一致）。 */
+private fun closeStreamingDelimiters(text: String): String {
+    var out = text
+    // ** 与 * 分开计数：** 优先（**bold 有一个 ** → 补 **；*italic 有一个 * → 补 *）
+    val doubleStars = Regex("\*\*").findAll(text).count()
+    val totalStars = text.count { it == '*' }
+    val singleStars = totalStars - doubleStars * 2
+    if (doubleStars % 2 == 1) out += "**"
+    else if (singleStars % 2 == 1) out += "*"
+    val doubleTilde = Regex("~~").findAll(text).count()
+    val totalTilde = text.count { it == '~' }
+    val singleTilde = totalTilde - doubleTilde * 2
+    if (doubleTilde % 2 == 1) out += "~~"
+    else if (singleTilde % 2 == 1) out += "~"
+    if (text.count { it == '`' } % 2 == 1) out += "`"
+    for ((open, close) in listOf(
+        "\"" to "\"", "“" to "”", "«" to "»", "「" to "」", "『" to "』", "＂" to "＂",
+    )) {
+        if (text.count { it == open[0] } > text.count { it == close[0] }) out += close
+    }
+    // 链接：[text](url 未闭合 → 补 )
+    val lastLinkOpen = text.lastIndexOf("](")
+    if (lastLinkOpen >= 0 && text.indexOf(")", lastLinkOpen + 2) == -1) out += ")"
+    return out
 }
 
 /**
