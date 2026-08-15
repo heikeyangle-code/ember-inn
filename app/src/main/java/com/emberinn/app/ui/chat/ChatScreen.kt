@@ -268,6 +268,10 @@ fun ChatScreen(
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
     var reasoningExpanded by rememberSaveable { mutableStateOf(false) }
+    // 思考卡默认折叠；每次流式开始强制收起（展开+每 tick 全量渲染是滑动卡顿主因）
+    LaunchedEffect(isStreaming) {
+        if (isStreaming) reasoningExpanded = false
+    }
     var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
@@ -567,7 +571,8 @@ fun ChatScreen(
         if (messages.isNotEmpty() && followBottom) {
             // 首帧尚未测量时 animateScrollToItem 会被吞甚至越界：先等列表布局出条目再滚。
             snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
-            listState.animateScrollToItem(0)
+            // 瞬时定位：reverseLayout 下已贴底时无需动画，动画是“新条目出现卡一下”的来源之一
+            listState.scrollToItem(0)
         }
     }
 
@@ -808,6 +813,12 @@ fun ChatScreen(
                                     displayReasoning = sr
                                 }
                             }
+                            // 思考流式同正文：定界符补齐 + fixMarkdown + encode_tags（官方 messageFormatting 每 tick）
+                            val reasoningDisplay = remember(displayReasoning, isStreaming) {
+                                val balanced = DisplayPipeline.balanceStreamingDelimiters(displayReasoning, isFinal = !isStreaming)
+                                val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                                if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
+                            }
                             // 官方 messageFormatting 每 tick：定界符补齐（onProgressStreaming）+ fixMarkdown(forDisplay=true)
                             // + encode_tags（auto_fix_generated_markdown 默认开）——流式中也必须跑，否则未闭合 ** 会露符号
                             val streamingDisplay = remember(displayStreaming, isStreaming) {
@@ -818,7 +829,7 @@ fun ChatScreen(
                             StreamingRow(
                                 modifier = Modifier,
                                 text = streamingDisplay,
-                                reasoning = displayReasoning,
+                                reasoning = reasoningDisplay,
                                 reasoningExpanded = reasoningExpanded,
                                 onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
                                 name = currentName,
@@ -2945,6 +2956,7 @@ private fun StreamingRow(
                     text = reasoning,
                     expanded = reasoningExpanded,
                     onToggle = onReasoningToggle,
+                    streaming = true,
                 )
                 Spacer(Modifier.size(6.dp))
             }
@@ -3372,9 +3384,10 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
     )
 }
 
-/** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。 */
+/** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。
+ *  streaming=true 时用轻量流式渲染（不跑完整 ChatMarkdown，否则每 tick 全量解析卡死滑动），并限高滚动。 */
 @Composable
-private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit) {
+private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit, streaming: Boolean = false) {
     val textShadow = chatTextShadow()
     Column(
         modifier = Modifier
@@ -3392,12 +3405,23 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit)
         }
         if (expanded) {
             Spacer(Modifier.size(5.dp))
-            ChatMarkdown(
-                content = text,
-                onSurface = MaterialTheme.colorScheme.onSurfaceVariant,
-                isSystem = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (streaming) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    StreamingMarkdown(content = text.ifEmpty { "…" })
+                }
+            } else {
+                ChatMarkdown(
+                    content = text,
+                    onSurface = MaterialTheme.colorScheme.onSurfaceVariant,
+                    isSystem = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
