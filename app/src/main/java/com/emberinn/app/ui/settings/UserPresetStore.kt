@@ -47,9 +47,6 @@ object UserPresetStore {
         return runCatching { from.renameTo(to) }.getOrDefault(false)
     }
 
-    /** 复制内置预设为同名用户预设（官方 rename 对默认预设等价于另存新名）。 */
-    fun saveBuiltinAs(context: Context, type: String, content: JsonObject, name: String): Boolean =
-        save(context, type, name, json.encodeToString(JsonObject.serializer(), content))
 
     fun delete(context: Context, type: String, name: String) {
         File(dir(context, type), "$name.json").delete()

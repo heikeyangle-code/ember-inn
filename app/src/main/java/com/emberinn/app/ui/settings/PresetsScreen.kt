@@ -94,7 +94,6 @@ fun PresetsScreen(onBack: () -> Unit) {
     var pendingDeleteUser by remember { mutableStateOf<Pair<String, String>?>(null) }
     var renameTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     var renameName by remember { mutableStateOf("") }
-    var exportSingleTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     var exportConnectionData by remember { mutableStateOf(false) }
     var pendingSensitiveExport by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
     var exportStep2 by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
