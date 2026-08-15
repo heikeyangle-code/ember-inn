@@ -198,20 +198,7 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("官方行为（power-user）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        EmberTextField(
-                            value = behavior.userPromptBias,
-                            onValueChange = {
-                                behavior = behavior.copy(userPromptBias = it)
-                                BehaviorPrefs.save(context, behavior)
-                            },
-                            label = { Text("回复前缀（user_prompt_bias；会拼在生成回复前）") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        )
-                        BehaviorToggle("显示回复前缀（show_user_prompt_bias）", behavior.showUserPromptBias) {
-                            behavior = behavior.copy(showUserPromptBias = it)
-                            BehaviorPrefs.save(context, behavior)
-                        }
+                        // start_reply_with / show_user_prompt_bias 已移到 设置→预设（Advanced Formatting，官方位点）
                         BehaviorToggle("保留 AI 正文里的“角色名:”前缀（allow_name2_display）", behavior.allowName2Display) {
                             behavior = behavior.copy(allowName2Display = it)
                             BehaviorPrefs.save(context, behavior)

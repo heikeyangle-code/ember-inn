@@ -124,6 +124,18 @@ fun PresetsScreen(onBack: () -> Unit) {
         }
 
     fun apply(type: String, name: String) {
+        // 官方 kobold GUI 特殊预设：不读预设文件，直接保持当前 UI 设置
+        if (type == "sampler" && name == "gui") {
+            if (!PresetSettingsStore.applySampler(context, "gui")) {
+                importMessage = "应用失败：未配置提供商或预设不存在"
+                return
+            }
+            prefs = prefs.copy(samplerPreset = "gui")
+            PresetPrefsStore.save(context, prefs)
+            refresh()
+            importMessage = "已应用：sampler / gui"
+            return
+        }
         val preset = presetJson(type, name) ?: return
         when (type) {
             "context" -> PresetSettingsStore.applyContext(context, preset)
@@ -510,6 +522,31 @@ fun PresetsScreen(onBack: () -> Unit) {
                     onCheckedChange = { applied = applied.copy(contextSizeDerived = it); PresetSettingsStore.update(context, applied) },
                 )
             }
+            var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
+            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            EmberTextField(
+                value = afBehavior.userPromptBias,
+                onValueChange = {
+                    afBehavior = afBehavior.copy(userPromptBias = it)
+                    BehaviorPrefs.save(context, afBehavior)
+                },
+                label = { Text("回复前缀（会拼在生成回复前）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            )
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            ) {
+                Text("显示回复前缀（show_user_prompt_bias，官方默认开）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                EmberSwitch(
+                    checked = afBehavior.showUserPromptBias,
+                    onCheckedChange = {
+                        afBehavior = afBehavior.copy(showUserPromptBias = it)
+                        BehaviorPrefs.save(context, afBehavior)
+                    },
+                )
+            }
             PresetSection(
                 title = "上下文模板（context）",
                 items = (PresetLibrary.contextPresets().map { it.preset } - userPresets["context"].orEmpty().toSet()).map { it to false } +
@@ -552,15 +589,28 @@ fun PresetsScreen(onBack: () -> Unit) {
             }
             PresetSection(
                 title = "采样预设（OpenAI）",
-                items = (PresetLibrary.samplerPresets(samplerType).map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
-                    userPresets["sampler"].orEmpty().map { it to true },
+                items = PresetSettingsStore.samplerPresetNames(context).map { name ->
+                    name to (name in userPresets["sampler"].orEmpty().toSet())
+                },
                 selected = prefs.samplerPreset,
                 onSelect = { apply("sampler", it) },
                 onSaveCurrent = { saveAsType = "sampler"; saveAsName = prefs.samplerPreset },
-                onUpdate = { if (prefs.samplerPreset.isNotBlank()) saveCurrent("sampler", prefs.samplerPreset) },
-                onRename = { if (prefs.samplerPreset.isNotBlank()) { renameTarget = "sampler" to prefs.samplerPreset; renameName = prefs.samplerPreset } },
-                onExport = { if (prefs.samplerPreset.isNotBlank()) startSingleExport("sampler", prefs.samplerPreset) },
-                onRestore = { if (prefs.samplerPreset.isNotBlank()) requestRestore("sampler", prefs.samplerPreset) },
+                onUpdate = {
+                    if (prefs.samplerPreset == "gui") importMessage = "GUI 预设不可更新（官方语义）"
+                    else if (prefs.samplerPreset.isNotBlank()) saveCurrent("sampler", prefs.samplerPreset)
+                },
+                onRename = {
+                    if (prefs.samplerPreset == "gui") importMessage = "GUI 预设不可重命名（官方语义）"
+                    else if (prefs.samplerPreset.isNotBlank()) { renameTarget = "sampler" to prefs.samplerPreset; renameName = prefs.samplerPreset }
+                },
+                onExport = {
+                    if (prefs.samplerPreset == "gui") importMessage = "GUI 预设不可导出（官方语义）"
+                    else if (prefs.samplerPreset.isNotBlank()) startSingleExport("sampler", prefs.samplerPreset)
+                },
+                onRestore = {
+                    if (prefs.samplerPreset == "gui") importMessage = "GUI 预设不可恢复（官方语义）"
+                    else if (prefs.samplerPreset.isNotBlank()) requestRestore("sampler", prefs.samplerPreset)
+                },
                 onDeleteUser = { name -> pendingDeleteUser = "sampler" to name },
             )
             PresetSection(

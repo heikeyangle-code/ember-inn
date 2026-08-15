@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +38,16 @@ fun AppliedPresetEditor(
                 EditMulti("story_string（上下文模板）", c.storyString) { onChange(state.copy(context = c.copy(storyString = it))) }
                 EditText("example_separator（示例分隔符）", c.exampleSeparator) { onChange(state.copy(context = c.copy(exampleSeparator = it))) }
                 EditText("chat_start", c.chatStart) { onChange(state.copy(context = c.copy(chatStart = it))) }
-                EditInt("story_string_position", c.storyStringPosition) { onChange(state.copy(context = c.copy(storyStringPosition = it))) }
+                Text("story_string_position（官方 select：0=默认顶部 / 1=In-chat @ Depth）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0 to "0（默认顶部）", 1 to "1（In-chat @ Depth）").forEach { (v, label) ->
+                        FilterChip(
+                            selected = c.storyStringPosition == v,
+                            onClick = { onChange(state.copy(context = c.copy(storyStringPosition = v))) },
+                            label = { Text(label) },
+                        )
+                    }
+                }
                 EditInt("story_string_depth", c.storyStringDepth) { onChange(state.copy(context = c.copy(storyStringDepth = it))) }
                 EditInt("story_string_role", c.storyStringRole) { onChange(state.copy(context = c.copy(storyStringRole = it))) }
                 EditSwitch("use_stop_strings", c.useStopStrings) { onChange(state.copy(context = c.copy(useStopStrings = it))) }
@@ -65,7 +75,16 @@ fun AppliedPresetEditor(
                 EditText("stop_sequence", i.stopSequence) { onChange(state.copy(instruct = i.copy(stopSequence = it))) }
                 EditText("user_alignment_message", i.userAlignmentMessage) { onChange(state.copy(instruct = i.copy(userAlignmentMessage = it))) }
                 EditText("activation_regex", i.activationRegex) { onChange(state.copy(instruct = i.copy(activationRegex = it))) }
-                EditText("names_behavior", i.namesBehavior.value) { onChange(state.copy(instruct = i.copy(namesBehavior = NamesBehavior.fromValue(it)))) }
+                Text("names_behavior（官方 select：none/force/always）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("none" to "Never", "force" to "Groups and Past Personas", "always" to "Always").forEach { (v, label) ->
+                        FilterChip(
+                            selected = i.namesBehavior.value == v,
+                            onClick = { onChange(state.copy(instruct = i.copy(namesBehavior = NamesBehavior.fromValue(v)))) },
+                            label = { Text(label) },
+                        )
+                    }
+                }
                 EditSwitch("wrap", i.wrap) { onChange(state.copy(instruct = i.copy(wrap = it))) }
                 EditSwitch("macro", i.macro) { onChange(state.copy(instruct = i.copy(macro = it))) }
                 EditSwitch("bind_to_context", i.bindToContext) { onChange(state.copy(instruct = i.copy(bindToContext = it))) }

@@ -78,10 +78,12 @@ object PresetSettingsStore {
         }
     }
 
-    /** 当前协议的采样预设名（官方 presetManager.getAllPresets）。 */
-    fun samplerPresetNames(context: Context): List<String> =
-        PresetLibrary.samplerPresets(samplerPresetType(context)).map { it.name } +
-            UserPresetStore.list(context, "sampler")
+    /** 当前协议的采样预设名（官方 presetManager.getAllPresets；kobold 含 GUI 特殊预设）。 */
+    fun samplerPresetNames(context: Context): List<String> {
+        val type = samplerPresetType(context)
+        val base = PresetLibrary.samplerPresets(type).map { it.name } + UserPresetStore.list(context, "sampler")
+        return if (type == "kobold") listOf("gui") + base else base
+    }
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
@@ -188,6 +190,11 @@ object PresetSettingsStore {
         val profile = repo.profile() ?: return false
         val provider = ProviderRegistry.get(profile.providerId)
         if (provider?.protocol == "kobold") {
+            // 官方 GUI KoboldAI Settings：不落盘预设，直接使用当前 UI 设置
+            if (name == "gui") {
+                PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(samplerPreset = "gui"))
+                return true
+            }
             val preset = PresetLibrary.samplerPresets("kobold").firstOrNull { it.name == name }?.settings
                 ?: UserPresetStore.load(context, "sampler", name) ?: return false
             val sliderKeys = listOf(
