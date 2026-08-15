@@ -99,6 +99,8 @@ class ChatPromptFactory {
         /** CFG Scale 命中档（官方 cfgGuidanceScale；null=未启用）与负向提示，供 textgen/novel 请求体消费。 */
         val cfgGuidanceScale: JsonElement? = null,
         val cfgNegativePrompt: String = "",
+        /** 官方 PromptCollection.overriddenPrompts（角色卡覆盖 main/jailbreak）。 */
+        val overriddenPrompts: List<String> = emptyList(),
     )
 
     /** 官方 /inject 的 script_injects 条目（chat_metadata.script_injects），引擎 1:1 模型。 */
@@ -831,6 +833,7 @@ class ChatPromptFactory {
             activatedWorldInfo = wiResult.activated,
             counts = result.counts,
             maxContextTokens = cfgEffectiveMaxContext,
+            overriddenPrompts = result.overriddenPrompts,
             cfgGuidanceScale = cfgGuidance?.let { g ->
                 buildJsonObject {
                     put("type", JsonPrimitive(g.type))

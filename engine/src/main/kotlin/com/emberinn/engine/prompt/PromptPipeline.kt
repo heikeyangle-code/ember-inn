@@ -435,6 +435,8 @@ object PromptPipeline {
     data class PrepareResult(
         val messages: List<CompletionMessage>,
         val counts: Map<String, Int>,
+        /** 官方 PromptCollection.overriddenPrompts：被角色卡覆盖的提示项（main/jailbreak）。 */
+        val overriddenPrompts: List<String> = emptyList(),
     )
 
     fun prepare(input: PrepareInput): PrepareResult {
@@ -515,6 +517,7 @@ object PromptPipeline {
         return PrepareResult(
             messages = chatCompletion.getChat(),
             counts = handler.counts,
+            overriddenPrompts = prompts.overriddenPrompts.toList(),
         )
     }
 }

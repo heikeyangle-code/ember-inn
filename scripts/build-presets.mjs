@@ -35,11 +35,39 @@ function loadSamplerDir(rel) {
     }));
 }
 
+// 用户确认裁剪：老模型专用/用处不大的内置预设不打包（2026-08-16；官方发版重跑本脚本仍保持裁剪）
+const trimPresets = {
+    context: new Set([
+        'Alpaca', 'Alpaca-Single-Turn', 'Command R', 'DeepSeek-V2.5', 'Dots1', 'GLM-4', 'Gemma 2', 'Gemma 4',
+        'Libra-32B', 'Lightning 1.1', 'Llama 2 Chat', 'Llama 3 Instruct', 'Llama 4 Instruct', 'Llama-3-Instruct-Names',
+        'Metharme', 'Mistral V1', 'Mistral V2 & V3', 'Mistral V3-Tekken', 'Mistral V7-Tekken', 'Mistral V7',
+        'Moonshot AI', 'OldDefault', 'OpenAI Harmony', 'Phi', 'Synthia', 'Tulu', 'simple-proxy-for-tavern',
+    ]),
+    instruct: new Set([
+        'Alpaca-Single-Turn', 'Command R', 'DeepSeek-V2.5', 'Dots1', 'GLM-4', 'Gemma 2', 'Gemma 4', 'Koala',
+        'Libra-32B', 'Lightning 1.1', 'Llama 2 Chat', 'Llama 3 Instruct', 'Llama 4 Instruct', 'Llama-3-Instruct-Names',
+        'Metharme', 'Mistral V1', 'Mistral V2 & V3', 'Mistral V3-Tekken', 'Mistral V7-Tekken', 'Mistral V7',
+        'Moonshot AI', 'OpenAI Harmony (Thinking)', 'OpenAI Harmony', 'OpenOrca-OpenChat', 'Phi', 'Synthia', 'Tulu',
+        'Vicuna 1.0', 'Vicuna 1.1', 'WizardLM-13B', 'WizardLM', 'simple-proxy-for-tavern',
+    ]),
+    'sampler-novel': new Set([
+        'Edgewise-Clio', 'Erato-Dragonfruit', 'Erato-Golden Arrow', 'Erato-Shosetsu', 'Erato-Wilder',
+        'Erato-Zany Scribe', 'Fresh-Coffee-Clio', 'Keelback-Clio', 'Long-Press-Clio', 'Talker-Chat-Clio', 'Vingt-Un-Clio',
+    ]),
+    reasoning: new Set(['DeepSeek', 'Gemma 4', 'OpenAI Harmony']),
+};
+
+function trimmed(rel, data) {
+    const trim = trimPresets[rel];
+    return trim ? data.filter((p) => !trim.has(p.name)) : data;
+}
+
 function write(rel, data) {
     const file = join(outDir, `${rel}.json`);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, JSON.stringify({ source: 'sillytavern-ref default/content/presets', presets: data }, null, 2) + '\n');
-    console.log(`wrote ${file} (${data.length} presets)`);
+    const out = trimmed(rel, data);
+    writeFileSync(file, JSON.stringify({ source: 'sillytavern-ref default/content/presets（用户裁剪）', presets: out }, null, 2) + '\n');
+    console.log(`wrote ${file} (${out.length} presets)`);
 }
 
 write('context', loadNamedDir('context'));

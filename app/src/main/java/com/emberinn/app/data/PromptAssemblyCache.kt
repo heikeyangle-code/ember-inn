@@ -9,4 +9,8 @@ import com.emberinn.engine.prompt.CompletionMessage
 object PromptAssemblyCache {
     @Volatile
     var lastMessages: List<CompletionMessage>? = null
+
+    /** 官方 overriddenPrompts：被角色卡覆盖的提示项（main/jailbreak），Prompt Manager 行内标记用。 */
+    @Volatile
+    var overriddenPrompts: List<String> = emptyList()
 }

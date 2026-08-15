@@ -625,6 +625,7 @@ private fun PromptRow(
         if (item.injectionPosition == 1) add("💉" to "In-Chat Injection")
         if (item.role == "user") add("👤" to "Prompt will be sent as User")
         if (item.role == "assistant") add("🤖" to "Prompt will be sent as Assistant")
+        if (item.identifier in PromptAssemblyCache.overriddenPrompts) add("🪪" to "Pulled from a character card")
     }
     // 官方 isPromptEditAllowed / isPromptToggleAllowed：marker 项默认不可编辑/开关，
     // 强制名单（charDescription/charPersonality/scenario/personaDescription/worldInfoBefore/After，

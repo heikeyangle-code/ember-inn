@@ -431,6 +431,7 @@ class ChatRepository(private val context: Context) {
         onPrepared?.invoke(prepared)
         // 官方 PromptManager.messages：总装后保留，供 Prompt Manager 检查弹窗按 identifier 查看。
         PromptAssemblyCache.lastMessages = prepared.messages
+        PromptAssemblyCache.overriddenPrompts = prepared.overriddenPrompts
         // 官方 itemized-prompts.js：每条生成消息的总装明细（rawPrompt + TokenHandler 分桶 + 分节消息）。
         // instruction（官方 System Prompt (Instruct)）= 非 openai 源启用 sysprompt 时的系统提示（宏替换后）。
         // 注意 textgen/novel/kobold 的 sysprompt 在 createRawPrompt 阶段才插入，必须在此单独补算，

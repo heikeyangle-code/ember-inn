@@ -67,7 +67,7 @@ gh workflow run 328789880 --ref main   # 需要手工跑一次
 - 官方部分 slash 命令（命令数少于官方，见 3.4）。
 - connection-manager 扩展：App 用 ProviderScreen 多档案等价替代。
 - Claude/Gemini 官方 web tokenizer：用户豁免（cl100k 回退）。
-- 预设打包：官方 default/content/presets 已进 engine resources（context 34 / instruct 38 / openai 1 / textgen 6 / novel 24 / kobold 6 / sysprompt 13 / reasoning 5，共 127）；quick-replies 已打包；官方发版后跑 `node scripts/build-presets.mjs`。
+- 预设打包：官方 default/content/presets 已进 engine resources，并按用户确认裁剪表过滤（context 7 / instruct 6 / openai 1 / textgen 6 / novel 13 / kobold 6 / sysprompt 13 / reasoning 2，共 54；裁剪表在 scripts/build-presets.mjs trimPresets，官方发版重跑仍保持裁剪）；quick-replies 已打包；官方发版后跑 `node scripts/build-presets.mjs`。
 
 ## 3. 引擎进度（对照官方 release）
 
@@ -294,7 +294,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 代理预设 | 官方 settings.proxies 全局列表；App 已改全局存储（旧档案侧数据自动迁移） | ✅ |
 | 预设默认选中 | 官方加载设置即应用当前采样预设；App 冷启动应用一次（applySelectedSamplerPresetOnLoad） | ✅ |
 | 内置预设删除 | 官方删除默认预设会从列表移除且可恢复；App 内置预设来自只读资源，删除仅切到下一个（资源不可删） | 🟡 登记 |
-| Prompt Manager overridden 标记 | 官方行内显示“来自角色卡”覆盖标记；App 缓存未持久化 overriddenPrompts，未显示 | 🟡 登记 |
+| Prompt Manager overridden 标记 | 官方行内显示“来自角色卡”覆盖标记；PrepareResult/缓存已带 overriddenPrompts，行内 🪪 图标显示 | ✅ |
+| 内置预设裁剪 | 用户确认：老模型专用/用处不大的内置预设从 127 裁剪到 54（build-presets.mjs trimPresets 登记，重打包保持） | ✅ 用户决策 |
 
 ### 6.2 已确认 1:1 / 审计修复
 
