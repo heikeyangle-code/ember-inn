@@ -83,6 +83,11 @@ fun AppliedPresetEditor(
             "reasoning" -> {
                 val r = state.reasoning
                 EditText("name", r.name) { onChange(state.copy(reasoning = r.copy(name = it))) }
+                EditSwitch("auto_parse（自动解析并剥离思考块，官方默认关）", r.autoParse) { onChange(state.copy(reasoning = r.copy(autoParse = it))) }
+                EditSwitch("add_to_prompts（历史思考注入提示词，官方默认关）", r.addToPrompts) { onChange(state.copy(reasoning = r.copy(addToPrompts = it))) }
+                EditSwitch("auto_expand（自动展开思考，官方默认关）", r.autoExpand) { onChange(state.copy(reasoning = r.copy(autoExpand = it))) }
+                EditSwitch("show_hidden（显示隐藏思考，官方默认关）", r.showHidden) { onChange(state.copy(reasoning = r.copy(showHidden = it))) }
+                EditInt("max_additions（非 prefix 注入次数上限，官方默认 1）", r.maxAdditions) { onChange(state.copy(reasoning = r.copy(maxAdditions = it))) }
                 EditText("prefix", r.template.prefix) { onChange(state.copy(reasoning = r.copy(template = r.template.copy(prefix = it)))) }
                 EditText("suffix", r.template.suffix) { onChange(state.copy(reasoning = r.copy(template = r.template.copy(suffix = it)))) }
                 EditMulti("separator", r.template.separator) { onChange(state.copy(reasoning = r.copy(template = r.template.copy(separator = it)))) }

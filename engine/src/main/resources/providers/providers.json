@@ -1043,6 +1043,115 @@
       "icon": "",
       "base_url": "https://api.totalgpt.ai",
       "requires_key": true
+    },
+    {
+      "id": "electronhub",
+      "display_name": "ElectronHub",
+      "description": "官方 OpenAI 兼容端点",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.electronhub.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "gpt-4o-mini"
+      ],
+      "requires_key": true,
+      "docs_url": "https://electronhub.ai",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
+    },
+    {
+      "id": "chutes",
+      "display_name": "Chutes",
+      "description": "官方 OpenAI 兼容端点",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://llm.chutes.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "deepseek-ai/DeepSeek-V3-0324"
+      ],
+      "requires_key": true,
+      "docs_url": "https://chutes.ai",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
+    },
+    {
+      "id": "nanogpt",
+      "display_name": "NanoGPT",
+      "description": "官方 OpenAI 兼容端点（X-Provider 头）",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://nano-gpt.com/api/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "extra_headers": {},
+      "default_models": [
+        "gpt-4o-mini"
+      ],
+      "requires_key": true,
+      "docs_url": "https://nano-gpt.com",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
+    },
+    {
+      "id": "aimlapi",
+      "display_name": "AIMLAPI",
+      "description": "官方 OpenAI 兼容端点",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.aimlapi.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "chatgpt-4o-latest"
+      ],
+      "requires_key": true,
+      "docs_url": "https://aimlapi.com",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
+    },
+    {
+      "id": "pollinations",
+      "display_name": "Pollinations",
+      "description": "官方 OpenAI 兼容端点",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://gen.pollinations.ai/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "openai"
+      ],
+      "requires_key": false,
+      "docs_url": "https://pollinations.ai",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
+    },
+    {
+      "id": "cometapi",
+      "display_name": "CometAPI",
+      "description": "官方 OpenAI 兼容端点",
+      "icon": "",
+      "protocol": "openai-compatible",
+      "auth_type": "bearer",
+      "base_url": "https://api.cometapi.com/v1",
+      "models_endpoint": "models",
+      "models_format": "openai",
+      "default_models": [
+        "gpt-4o"
+      ],
+      "requires_key": true,
+      "docs_url": "https://cometapi.com",
+      "default_max_tokens": 4096,
+      "default_context_window": 131072
     }
   ]
 }

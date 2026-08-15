@@ -86,6 +86,16 @@ fun PresetsScreen(onBack: () -> Unit) {
     var pendingSensitive by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
     var pendingOverwrite by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
     var expandedEditor by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteUser by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var renameTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var renameName by remember { mutableStateOf("") }
+    var exportSingleTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var exportConnectionData by remember { mutableStateOf(false) }
+    var pendingSensitiveExport by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
+    var exportStep2 by remember { mutableStateOf<Pair<String, JsonObject>?>(null) }
+    var masterExportSections by remember { mutableStateOf<Map<String, Boolean>?>(null) }
+    var masterExportKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingRestore by remember { mutableStateOf<Triple<String, String, Boolean>?>(null) }
     // 采样预设按当前活动连接协议选择（openai/textgen/novel/kobold）
     val samplerType = remember { activeSamplerPresetType(context) }
 
@@ -120,7 +130,10 @@ fun PresetsScreen(onBack: () -> Unit) {
             "reasoning" -> PresetSettingsStore.applyReasoning(context, preset)
             "sampler" -> {
                 // 官方 onSettingsPresetChange：选中即应用到当前活动连接（bind_preset_to_connection 默认 true）。
-                PresetSettingsStore.applySampler(context, name)
+                if (!PresetSettingsStore.applySampler(context, name)) {
+                    importMessage = "应用失败：未配置提供商或预设不存在"
+                    return
+                }
                 prefs = prefs.copy(samplerPreset = name)
                 PresetPrefsStore.save(context, prefs)
             }
@@ -214,7 +227,110 @@ fun PresetsScreen(onBack: () -> Unit) {
             pendingOverwrite = name to content
         } else {
             saveSamplerImport(name, content)
+            // 官方 onPresetImportFileChange：导入成功后 trigger('change') 应用该预设
+            apply("sampler", name)
         }
+    }
+
+    /** 官方 restore：内置默认预设 → 恢复默认设置；自定义预设 → 恢复到上次保存。 */
+    fun requestRestore(type: String, name: String) {
+        val builtin = when (type) {
+            "context" -> PresetLibrary.contextPresets().any { it.preset == name }
+            "instruct" -> PresetLibrary.instructPresets().any { it.preset == name }
+            "sampler" -> PresetLibrary.samplerPresets(samplerType).any { it.name == name }
+            "sysprompt" -> PresetLibrary.systemPromptPresets().any { it.name == name }
+            else -> PresetLibrary.reasoningPresets().any { it.name == name }
+        }
+        pendingRestore = Triple(type, name, builtin)
+    }
+
+    /** 官方 deletePreset：删用户预设；删的是当前选中项时自动选第一个剩余并应用。 */
+    fun deleteUserPreset(type: String, name: String) {
+        UserPresetStore.delete(context, type, name)
+        userPresets = userPresets + (type to UserPresetStore.list(context, type))
+        val selected = when (type) {
+            "context" -> prefs.contextPreset
+            "instruct" -> prefs.instructPreset
+            "sampler" -> prefs.samplerPreset
+            "sysprompt" -> prefs.syspromptPreset
+            else -> prefs.reasoningPreset
+        }
+        if (selected == name) {
+            val remaining = when (type) {
+                "context" -> PresetLibrary.contextPresets().map { it.preset } + UserPresetStore.list(context, type)
+                "instruct" -> PresetLibrary.instructPresets().map { it.preset } + UserPresetStore.list(context, type)
+                "sampler" -> PresetLibrary.samplerPresets(samplerType).map { it.name } + UserPresetStore.list(context, type)
+                "sysprompt" -> PresetLibrary.systemPromptPresets().map { it.name } + UserPresetStore.list(context, type)
+                else -> PresetLibrary.reasoningPresets().map { it.name } + UserPresetStore.list(context, type)
+            }.distinct()
+            if (remaining.isNotEmpty()) {
+                apply(type, remaining.first())
+            } else {
+                refresh()
+            }
+        } else {
+            refresh()
+        }
+        importMessage = "已删除预设：$type / $name"
+    }
+
+    /** 官方 renamePreset：用户预设改名；内置预设改名为另存新用户预设，选中项同步并应用。 */
+    fun doRename(type: String, oldName: String, newName: String) {
+        val safe = UserPresetStore.sanitizeFilename(newName) ?: run {
+            importMessage = "重命名失败：名字无效"
+            return
+        }
+        val renamed = if (UserPresetStore.list(context, type).contains(oldName)) {
+            UserPresetStore.rename(context, type, oldName, safe)
+        } else {
+            val body = presetJson(type, oldName) ?: return
+            UserPresetStore.save(context, type, safe, body.toString())
+        }
+        if (!renamed) {
+            importMessage = "重命名失败：名字无效或已存在"
+            return
+        }
+        userPresets = userPresets + (type to UserPresetStore.list(context, type))
+        when (type) {
+            "context" -> prefs = prefs.copy(contextPreset = safe)
+            "instruct" -> prefs = prefs.copy(instructPreset = safe)
+            "sampler" -> prefs = prefs.copy(samplerPreset = safe)
+            "sysprompt" -> prefs = prefs.copy(syspromptPreset = safe)
+            "reasoning" -> prefs = prefs.copy(reasoningPreset = safe)
+        }
+        PresetPrefsStore.save(context, prefs)
+        apply(type, safe)
+        importMessage = "已重命名：$oldName → $safe"
+    }
+
+    // 单预设导出（官方 data-preset-manager-export + openai onExportPresetClick：
+    // 敏感字段确认（sampler）+ 是否导出连接数据（默认不导出））
+    val singleExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val (name, body) = exportStep2 ?: return@rememberLauncherForActivityResult
+        val out = body.toMutableMap()
+        if (!exportConnectionData) {
+            for (k in connectionPresetKeys) out.remove(k)
+        }
+        runCatching {
+            context.contentResolver.openOutputStream(uri)?.use {
+                it.write(kotlinx.serialization.json.JsonObject(out).toString().toByteArray())
+            }
+            importMessage = "已导出预设：$name"
+        }.onFailure { importMessage = "导出失败：${it.message}" }
+        exportStep2 = null
+    }
+
+    fun startSingleExport(type: String, name: String) {
+        val body = presetJson(type, name) ?: return
+        if (type == "sampler") {
+            val sensitive = PresetApplyEngine.detectSensitivePresetFields(body)
+            if (sensitive.isNotEmpty()) {
+                pendingSensitiveExport = name to body
+                return
+            }
+        }
+        exportStep2 = name to body
     }
 
     // 单预设文件导入（官方 performMasterImport legacy 顺序识别）
@@ -254,10 +370,11 @@ fun PresetsScreen(onBack: () -> Unit) {
     }
 
 
-    // 多区段主导出（官方 af_master_export：instruct/context/sysprompt/reasoning/srw）
+    // 多区段主导出（官方 af_master_export：弹窗勾选区段；默认 instruct/context/sysprompt/reasoning 勾选，
+    // textgen preset 与 srw 不勾；文件名 ST-formatting-{yyyy-MM-dd}.json）
     val masterExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val sections = masterExportBody(context)
+        val sections = masterExportBody(context, masterExportKeys)
         runCatching {
             context.contentResolver.openOutputStream(uri)?.use {
                 it.write(sections.toString().toByteArray())
@@ -281,7 +398,9 @@ fun PresetsScreen(onBack: () -> Unit) {
         if (legacy != null) {
             val type = if (legacy == "preset") "sampler" else legacy
             val fileName = uri.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".json").orEmpty().ifBlank { "preset" }
-            val name = parsed["name"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: fileName
+            // 官方 performMasterImport：textgen（preset）用文件名，其余用 data.name ?? 文件名
+            val name = if (legacy == "preset") fileName
+                else parsed["name"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: fileName
             val ok = UserPresetStore.save(context, type, name, text)
             importMessage = if (ok) "已导入：$type / $name" else "导入失败：文件名无效"
             userPresets = userPresets + (type to UserPresetStore.list(context, type))
@@ -313,8 +432,10 @@ fun PresetsScreen(onBack: () -> Unit) {
                 ) {
                     TextButton(onClick = { presetImporter.launch(arrayOf("application/json")) }) { Text("导入预设") }
                     TextButton(onClick = {
-                        val stamp = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
-                        masterExporter.launch("presets_$stamp.json")
+                        masterExportSections = mapOf(
+                            "instruct" to true, "context" to true, "sysprompt" to true,
+                            "reasoning" to true, "preset" to false, "srw" to false,
+                        )
                     }) { Text("导出全部") }
                     TextButton(onClick = { masterImporter.launch(arrayOf("application/json")) }) { Text("导入全部") }
                 }
@@ -345,6 +466,38 @@ fun PresetsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+            Text("Advanced Formatting（官方 power-user 派生/绑定设置）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                Text("context_derived（连接模型时按元数据派生 context 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                EmberSwitch(
+                    checked = applied.contextDerived,
+                    onCheckedChange = { applied = applied.copy(contextDerived = it); PresetSettingsStore.update(context, applied) },
+                )
+            }
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                Text("instruct_derived（连接模型时按元数据派生 instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                EmberSwitch(
+                    checked = applied.instructDerived,
+                    onCheckedChange = { applied = applied.copy(instructDerived = it); PresetSettingsStore.update(context, applied) },
+                )
+            }
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            ) {
+                Text("bind_model_templates（切换模型时自动激活绑定的 context/instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                EmberSwitch(
+                    checked = applied.bindModelTemplates,
+                    onCheckedChange = { applied = applied.copy(bindModelTemplates = it); PresetSettingsStore.update(context, applied) },
+                )
+            }
             PresetSection(
                 title = "上下文模板（context）",
                 items = (PresetLibrary.contextPresets().map { it.preset } - userPresets["context"].orEmpty().toSet()).map { it to false } +
@@ -352,10 +505,11 @@ fun PresetsScreen(onBack: () -> Unit) {
                 selected = prefs.contextPreset,
                 onSelect = { apply("context", it) },
                 onSaveCurrent = { saveAsType = "context"; saveAsName = applied.context.preset },
-                onDeleteUser = { name ->
-                    UserPresetStore.delete(context, "context", name)
-                    userPresets = userPresets + ("context" to UserPresetStore.list(context, "context"))
-                },
+                onUpdate = { if (prefs.contextPreset.isNotBlank()) saveCurrent("context", prefs.contextPreset) },
+                onRename = { if (prefs.contextPreset.isNotBlank()) { renameTarget = "context" to prefs.contextPreset; renameName = prefs.contextPreset } },
+                onExport = { if (prefs.contextPreset.isNotBlank()) startSingleExport("context", prefs.contextPreset) },
+                onRestore = { if (prefs.contextPreset.isNotBlank()) requestRestore("context", prefs.contextPreset) },
+                onDeleteUser = { name -> pendingDeleteUser = "context" to name },
             )
             AppliedEditorToggle("context", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "context") {
@@ -371,10 +525,11 @@ fun PresetsScreen(onBack: () -> Unit) {
                 selected = prefs.instructPreset,
                 onSelect = { apply("instruct", it) },
                 onSaveCurrent = { saveAsType = "instruct"; saveAsName = applied.instruct.preset },
-                onDeleteUser = { name ->
-                    UserPresetStore.delete(context, "instruct", name)
-                    userPresets = userPresets + ("instruct" to UserPresetStore.list(context, "instruct"))
-                },
+                onUpdate = { if (prefs.instructPreset.isNotBlank()) saveCurrent("instruct", prefs.instructPreset) },
+                onRename = { if (prefs.instructPreset.isNotBlank()) { renameTarget = "instruct" to prefs.instructPreset; renameName = prefs.instructPreset } },
+                onExport = { if (prefs.instructPreset.isNotBlank()) startSingleExport("instruct", prefs.instructPreset) },
+                onRestore = { if (prefs.instructPreset.isNotBlank()) requestRestore("instruct", prefs.instructPreset) },
+                onDeleteUser = { name -> pendingDeleteUser = "instruct" to name },
             )
             AppliedEditorToggle("instruct", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "instruct") {
@@ -385,31 +540,29 @@ fun PresetsScreen(onBack: () -> Unit) {
             }
             PresetSection(
                 title = "采样预设（OpenAI）",
-                items = listOf("" to false) +
-                    (PresetLibrary.samplerPresets(samplerType).map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
+                items = (PresetLibrary.samplerPresets(samplerType).map { it.name } - userPresets["sampler"].orEmpty().toSet()).map { it to false } +
                     userPresets["sampler"].orEmpty().map { it to true },
                 selected = prefs.samplerPreset,
                 onSelect = { apply("sampler", it) },
-                onSaveCurrent = { saveAsType = "sampler"; saveAsName = "" },
-                emptyLabel = "默认（不应用）",
-                onDeleteUser = { name ->
-                    UserPresetStore.delete(context, "sampler", name)
-                    userPresets = userPresets + ("sampler" to UserPresetStore.list(context, "sampler"))
-                },
+                onSaveCurrent = { saveAsType = "sampler"; saveAsName = prefs.samplerPreset },
+                onUpdate = { if (prefs.samplerPreset.isNotBlank()) saveCurrent("sampler", prefs.samplerPreset) },
+                onRename = { if (prefs.samplerPreset.isNotBlank()) { renameTarget = "sampler" to prefs.samplerPreset; renameName = prefs.samplerPreset } },
+                onExport = { if (prefs.samplerPreset.isNotBlank()) startSingleExport("sampler", prefs.samplerPreset) },
+                onRestore = { if (prefs.samplerPreset.isNotBlank()) requestRestore("sampler", prefs.samplerPreset) },
+                onDeleteUser = { name -> pendingDeleteUser = "sampler" to name },
             )
             PresetSection(
                 title = "系统提示预设（sysprompt）",
-                items = listOf("" to false) +
-                    (PresetLibrary.systemPromptPresets().map { it.name } - userPresets["sysprompt"].orEmpty().toSet()).map { it to false } +
+                items = (PresetLibrary.systemPromptPresets().map { it.name } - userPresets["sysprompt"].orEmpty().toSet()).map { it to false } +
                     userPresets["sysprompt"].orEmpty().map { it to true },
                 selected = prefs.syspromptPreset,
                 onSelect = { apply("sysprompt", it) },
                 onSaveCurrent = { saveAsType = "sysprompt"; saveAsName = applied.sysprompt.name },
-                emptyLabel = "默认（不应用）",
-                onDeleteUser = { name ->
-                    UserPresetStore.delete(context, "sysprompt", name)
-                    userPresets = userPresets + ("sysprompt" to UserPresetStore.list(context, "sysprompt"))
-                },
+                onUpdate = { if (prefs.syspromptPreset.isNotBlank()) saveCurrent("sysprompt", prefs.syspromptPreset) },
+                onRename = { if (prefs.syspromptPreset.isNotBlank()) { renameTarget = "sysprompt" to prefs.syspromptPreset; renameName = prefs.syspromptPreset } },
+                onExport = { if (prefs.syspromptPreset.isNotBlank()) startSingleExport("sysprompt", prefs.syspromptPreset) },
+                onRestore = { if (prefs.syspromptPreset.isNotBlank()) requestRestore("sysprompt", prefs.syspromptPreset) },
+                onDeleteUser = { name -> pendingDeleteUser = "sysprompt" to name },
             )
             AppliedEditorToggle("sysprompt", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "sysprompt") {
@@ -420,17 +573,16 @@ fun PresetsScreen(onBack: () -> Unit) {
             }
             PresetSection(
                 title = "推理预设（reasoning）",
-                items = listOf("" to false) +
-                    (PresetLibrary.reasoningPresets().map { it.name } - userPresets["reasoning"].orEmpty().toSet()).map { it to false } +
+                items = (PresetLibrary.reasoningPresets().map { it.name } - userPresets["reasoning"].orEmpty().toSet()).map { it to false } +
                     userPresets["reasoning"].orEmpty().map { it to true },
                 selected = prefs.reasoningPreset,
                 onSelect = { apply("reasoning", it) },
                 onSaveCurrent = { saveAsType = "reasoning"; saveAsName = applied.reasoning.name },
-                emptyLabel = "默认（不应用）",
-                onDeleteUser = { name ->
-                    UserPresetStore.delete(context, "reasoning", name)
-                    userPresets = userPresets + ("reasoning" to UserPresetStore.list(context, "reasoning"))
-                },
+                onUpdate = { if (prefs.reasoningPreset.isNotBlank()) saveCurrent("reasoning", prefs.reasoningPreset) },
+                onRename = { if (prefs.reasoningPreset.isNotBlank()) { renameTarget = "reasoning" to prefs.reasoningPreset; renameName = prefs.reasoningPreset } },
+                onExport = { if (prefs.reasoningPreset.isNotBlank()) startSingleExport("reasoning", prefs.reasoningPreset) },
+                onRestore = { if (prefs.reasoningPreset.isNotBlank()) requestRestore("reasoning", prefs.reasoningPreset) },
+                onDeleteUser = { name -> pendingDeleteUser = "reasoning" to name },
             )
             AppliedEditorToggle("reasoning", expandedEditor) { expandedEditor = it }
             if (expandedEditor == "reasoning") {
@@ -512,9 +664,169 @@ fun PresetsScreen(onBack: () -> Unit) {
                 TextButton(onClick = {
                     pendingOverwrite = null
                     saveSamplerImport(name, content)
+                    apply("sampler", name)
                 }) { Text("覆盖") }
             },
             dismissButton = { TextButton(onClick = { pendingOverwrite = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方删除确认（deletePreset：不可恢复，当前设置将被覆盖）
+    pendingDeleteUser?.let { (type, name) ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteUser = null },
+            title = { Text("删除此预设？") },
+            text = { Text("此操作不可恢复，当前设置将被覆盖。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDeleteUser = null
+                    deleteUserPreset(type, name)
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDeleteUser = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方 renamePreset：输入新名字
+    renameTarget?.let { (type, oldName) ->
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("重命名预设") },
+            text = {
+                EmberTextField(
+                    value = renameName,
+                    onValueChange = { renameName = it },
+                    label = { Text("新名字") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newName = renameName.trim()
+                    renameTarget = null
+                    if (newName.isNotBlank() && newName != oldName) doRename(type, oldName, newName)
+                }) { Text("重命名") }
+            },
+            dismissButton = { TextButton(onClick = { renameTarget = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方 onExportPresetClick：敏感字段确认（sampler）
+    pendingSensitiveExport?.let { (name, content) ->
+        AlertDialog(
+            onDismissRequest = { pendingSensitiveExport = null },
+            title = { Text("预设包含敏感字段") },
+            text = { Text("将导出 proxy / 自定义端点等敏感字段：${PresetApplyEngine.detectSensitivePresetFields(content).joinToString(", ")}") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingSensitiveExport = null
+                    val stripped = content.toMutableMap()
+                    for (field in PresetApplyEngine.openaiSensitiveFields) stripped.remove(field)
+                    exportStep2 = name to kotlinx.serialization.json.JsonObject(stripped)
+                }) { Text("移除后导出") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingSensitiveExport = null
+                        exportStep2 = name to content
+                    }) { Text("原样导出") }
+                    TextButton(onClick = { pendingSensitiveExport = null }) { Text("取消") }
+                }
+            },
+        )
+    }
+
+    // 官方 exportPreset 弹窗：是否导出连接数据（默认不导出）
+    exportStep2?.let { (name, _) ->
+        AlertDialog(
+            onDismissRequest = { exportStep2 = null },
+            title = { Text("是否导出连接数据？") },
+            text = {
+                Column {
+                    Text("包括所选源、模型等 API 连接面板设置；API Key 永不会导出。", style = MaterialTheme.typography.bodySmall)
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = exportConnectionData,
+                            onClick = { exportConnectionData = true },
+                            label = { Text("导出连接数据") },
+                        )
+                        FilterChip(
+                            selected = !exportConnectionData,
+                            onClick = { exportConnectionData = false },
+                            label = { Text("不导出连接数据") },
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    singleExporter.launch("$name.json")
+                }) { Text("导出") }
+            },
+            dismissButton = { TextButton(onClick = { exportStep2 = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方 restore：默认预设恢复默认设置 / 自定义预设恢复到上次保存
+    pendingRestore?.let { (type, name, builtin) ->
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text("恢复预设？") },
+            text = {
+                Text(if (builtin) "重置内置预设将恢复官方默认设置。" else "重置自定义预设将恢复到上次保存的设置。")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingRestore = null
+                    if (builtin) UserPresetStore.delete(context, type, name)
+                    apply(type, name)
+                    importMessage = "已恢复：$type / $name"
+                }) { Text("恢复") }
+            },
+            dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("取消") } },
+        )
+    }
+
+    // 官方 af_master_export：勾选区段后导出
+    masterExportSections?.let { sections ->
+        AlertDialog(
+            onDismissRequest = { masterExportSections = null },
+            title = { Text("选择要导出的区段") },
+            text = {
+                Column {
+                    sections.forEach { (key, checked) ->
+                        Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                masterExportSections = sections + (key to !checked)
+                            }.padding(vertical = 4.dp),
+                        ) {
+                            Text(
+                                sectionLabel(key),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(if (checked) "✓" else "", color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val checked = sections.filterValues { it }.keys
+                    masterExportSections = null
+                    if (checked.isEmpty()) {
+                        importMessage = "未选择任何区段"
+                        return@TextButton
+                    }
+                    masterExportKeys = checked
+                    masterExporter.launch("ST-formatting-${java.time.LocalDate.now()}.json")
+                }) { Text("导出") }
+            },
+            dismissButton = { TextButton(onClick = { masterExportSections = null }) { Text("取消") } },
         )
     }
 
@@ -578,17 +890,25 @@ fun PresetsScreen(onBack: () -> Unit) {
     }
 }
 
-/** 活动连接协议 → 采样预设目录（官方 sampler presets：openai/textgen/novel；kobold 后端未路由前不暴露）。 */
-private fun activeSamplerPresetType(context: android.content.Context): String {
-    val profile = ProviderStore(File(context.filesDir, "provider")).load() ?: return "openai"
-    val provider = ProviderRegistry.get(profile.providerId) ?: return "openai"
-    return when (provider.protocol) {
-        "textgenerationwebui" -> "textgen"
-        "novel" -> "novel"
-        "kobold" -> "kobold"
-        else -> "openai"
-    }
-}
+/** 活动连接协议 → 采样预设目录（官方 sampler presets：openai/textgen/novel/kobold）。 */
+private fun activeSamplerPresetType(context: android.content.Context): String =
+    PresetSettingsStore.samplerPresetType(context)
+
+/** 官方 settingsToUpdate 中 isConnection=true 的 preset 键（单预设导出“不导出连接数据”时剥离）。 */
+private val connectionPresetKeys = setOf(
+    "chat_completion_source", "group_models", "sort_models", "openai_model", "claude_model",
+    "openrouter_model", "openrouter_use_fallback", "openrouter_providers", "openrouter_quantizations",
+    "openrouter_allow_fallbacks", "openrouter_middleout", "ai21_model", "mistralai_model", "cohere_model",
+    "perplexity_model", "groq_model", "chutes_model", "siliconflow_model", "siliconflow_endpoint",
+    "minimax_model", "minimax_endpoint", "electronhub_model", "nanogpt_model", "nanogpt_provider",
+    "nanogpt_payg_override", "deepseek_model", "aimlapi_model", "xai_model", "pollinations_model",
+    "moonshot_model", "fireworks_model", "cometapi_model", "custom_model", "custom_url",
+    "custom_include_body", "custom_exclude_body", "custom_include_headers", "custom_prompt_post_processing",
+    "google_model", "vertexai_model", "zai_model", "zai_endpoint", "workers_ai_model", "workers_ai_account_id",
+    "reverse_proxy", "show_external_models", "proxy_password", "vertexai_auth_mode", "vertexai_region",
+    "vertexai_express_project_id", "azure_base_url", "azure_deployment_name", "azure_api_version",
+    "azure_openai_model", "bypass_status_check",
+)
 
 private fun sectionLabel(key: String): String = when (key) {
     "instruct" -> "指导模板（instruct）"
@@ -600,8 +920,8 @@ private fun sectionLabel(key: String): String = when (key) {
     else -> key
 }
 
-/** 官方 af_master_export 多区段体（不含 textgen preset；srw 从 BehaviorPrefs）。 */
-private fun masterExportBody(context: android.content.Context): JsonObject {
+/** 官方 af_master_export 多区段体（按勾选区段导出；srw 从 BehaviorPrefs）。 */
+private fun masterExportBody(context: android.content.Context, sections: Set<String>): JsonObject {
     val json = Json { ignoreUnknownKeys = true }
     val state = PresetSettingsStore.load(context)
     val behavior = BehaviorPrefs.load(context)
@@ -612,25 +932,35 @@ private fun masterExportBody(context: android.content.Context): JsonObject {
     contextSettings["single_line"] = JsonPrimitive(state.contextGlobals.singleLine)
 
     return buildJsonObject {
-        put("instruct", PresetApplyEngine.filterPresetSettings(
-            json.encodeToJsonElement(InstructSettings.serializer(), state.instruct).jsonObject,
-            "instruct", state.instruct.preset, state.instruct.preset, true, 0, 0,
-        ))
-        put("context", PresetApplyEngine.filterPresetSettings(
-            JsonObject(contextSettings), "context", state.context.preset, state.context.preset, true, 0, 0,
-        ))
-        put("sysprompt", PresetApplyEngine.filterPresetSettings(
-            json.encodeToJsonElement(SyspromptSettings.serializer(), state.sysprompt).jsonObject,
-            "sysprompt", state.sysprompt.name, state.sysprompt.name, true, 0, 0,
-        ))
-        put("reasoning", PresetApplyEngine.filterPresetSettings(
-            json.encodeToJsonElement(ReasoningSettings.serializer(), state.reasoning).jsonObject,
-            "reasoning", state.reasoning.name, state.reasoning.name, true, 0, 0,
-        ))
-        put("srw", buildJsonObject {
-            put("value", JsonPrimitive(behavior.userPromptBias))
-            put("show", JsonPrimitive(behavior.showUserPromptBias))
-        })
+        if ("instruct" in sections) {
+            put("instruct", PresetApplyEngine.filterPresetSettings(
+                json.encodeToJsonElement(InstructSettings.serializer(), state.instruct).jsonObject,
+                "instruct", state.instruct.preset, state.instruct.preset, true, 0, 0,
+            ))
+        }
+        if ("context" in sections) {
+            put("context", PresetApplyEngine.filterPresetSettings(
+                JsonObject(contextSettings), "context", state.context.preset, state.context.preset, true, 0, 0,
+            ))
+        }
+        if ("sysprompt" in sections) {
+            put("sysprompt", PresetApplyEngine.filterPresetSettings(
+                json.encodeToJsonElement(SyspromptSettings.serializer(), state.sysprompt).jsonObject,
+                "sysprompt", state.sysprompt.name, state.sysprompt.name, true, 0, 0,
+            ))
+        }
+        if ("reasoning" in sections) {
+            put("reasoning", PresetApplyEngine.filterPresetSettings(
+                json.encodeToJsonElement(ReasoningSettings.serializer(), state.reasoning).jsonObject,
+                "reasoning", state.reasoning.name, state.reasoning.name, true, 0, 0,
+            ))
+        }
+        if ("srw" in sections) {
+            put("srw", buildJsonObject {
+                put("value", JsonPrimitive(behavior.userPromptBias))
+                put("show", JsonPrimitive(behavior.showUserPromptBias))
+            })
+        }
     }
 }
 
@@ -652,6 +982,10 @@ private fun PresetSection(
     onSelect: (String) -> Unit,
     onSaveCurrent: () -> Unit,
     onDeleteUser: (String) -> Unit,
+    onUpdate: (() -> Unit)? = null,
+    onRename: (() -> Unit)? = null,
+    onExport: (() -> Unit)? = null,
+    onRestore: (() -> Unit)? = null,
     emptyLabel: String? = null,
 ) {
     // 系统预设按类型默认折叠：展开才查看，避免一屏全铺开
@@ -697,8 +1031,21 @@ private fun PresetSection(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onSaveCurrent) { Text("保存当前为预设") }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
+            TextButton(onClick = onSaveCurrent) { Text("另存为") }
+            if (onUpdate != null) {
+                TextButton(onClick = onUpdate) { Text("更新当前") }
+            }
+            if (onRename != null) {
+                TextButton(onClick = onRename) { Text("重命名") }
+            }
+            if (onExport != null) {
+                TextButton(onClick = onExport) { Text("导出") }
+            }
+            if (onRestore != null) {
+                TextButton(onClick = onRestore) { Text("恢复默认") }
+            }
         }
         items.forEach { (name, isUser) ->
             Row(

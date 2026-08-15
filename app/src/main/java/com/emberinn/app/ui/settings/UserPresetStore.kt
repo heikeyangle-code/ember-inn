@@ -32,13 +32,39 @@ object UserPresetStore {
     fun save(context: Context, type: String, name: String, content: String): Boolean =
         runCatching {
             val parsed = json.parseToJsonElement(content).jsonObject
-            val safeName = name.replace(Regex("""[^\w\- ]"""), "").trim().ifBlank { return false }
+            val safeName = sanitizeFilename(name) ?: return false
             File(dir(context, type), "$safeName.json").writeText(json.encodeToString(JsonObject.serializer(), parsed))
             true
         }.getOrDefault(false)
 
+    fun rename(context: Context, type: String, oldName: String, newName: String): Boolean {
+        val safe = sanitizeFilename(newName) ?: return false
+        if (safe == oldName) return true
+        val from = File(dir(context, type), "$oldName.json")
+        val to = File(dir(context, type), "$safe.json")
+        if (!from.exists()) return false
+        if (to.exists()) return false
+        return runCatching { from.renameTo(to) }.getOrDefault(false)
+    }
+
+    /** 复制内置预设为同名用户预设（官方 rename 对默认预设等价于另存新名）。 */
+    fun saveBuiltinAs(context: Context, type: String, content: JsonObject, name: String): Boolean =
+        save(context, type, name, json.encodeToString(JsonObject.serializer(), content))
+
     fun delete(context: Context, type: String, name: String) {
         File(dir(context, type), "$name.json").delete()
+    }
+
+    /**
+     * 对齐官方后端 sanitize-filename 默认行为（Unicode 保留）：
+     * 剔除路径分隔符/保留字非法字符与控制字符，去首尾空格与尾部点号；空名返回 null。
+     */
+    fun sanitizeFilename(name: String): String? {
+        val illegal = Regex("[<>:\"/\\|?*\u0000-\u001f]")
+        var out = illegal.replace(name, "").trim()
+        while (out.endsWith(".")) out = out.dropLast(1)
+        out = out.trim()
+        return out.ifBlank { null }
     }
 
     /**

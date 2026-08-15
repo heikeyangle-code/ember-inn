@@ -2,13 +2,13 @@ package com.emberinn.app.ui.settings
 
 import android.content.Context
 
-/** 官方预设管理器选择（context/instruct/sampler/sysprompt/reasoning，按预设名保存）。 */
+/** 官方预设管理器选择（context/instruct/sampler/sysprompt/reasoning，按预设名保存；默认值与官方一致）。 */
 data class PresetPrefs(
     val contextPreset: String = "Default",
     val instructPreset: String = "Alpaca",
-    val samplerPreset: String = "",
-    val syspromptPreset: String = "",
-    val reasoningPreset: String = "",
+    val samplerPreset: String = "Default",
+    val syspromptPreset: String = "Neutral - Chat",
+    val reasoningPreset: String = "Think XML",
     /** 官方 oai_settings.bind_preset_to_connection（默认 true）：应用采样预设时是否覆盖连接类字段。 */
     val bindPresetToConnection: Boolean = true,
 )
@@ -21,9 +21,9 @@ object PresetPrefsStore {
         return PresetPrefs(
             contextPreset = p.getString("preset_context", "Default") ?: "Default",
             instructPreset = p.getString("preset_instruct", "Alpaca") ?: "Alpaca",
-            samplerPreset = p.getString("preset_sampler", "") ?: "",
-            syspromptPreset = p.getString("preset_sysprompt", "") ?: "",
-            reasoningPreset = p.getString("preset_reasoning", "") ?: "",
+            samplerPreset = p.getString("preset_sampler", "Default") ?: "Default",
+            syspromptPreset = p.getString("preset_sysprompt", "Neutral - Chat") ?: "Neutral - Chat",
+            reasoningPreset = p.getString("preset_reasoning", "Think XML") ?: "Think XML",
             bindPresetToConnection = p.getBoolean("preset_bind_to_connection", true),
         )
     }

@@ -105,7 +105,6 @@ fun ServicesScreen(onBack: () -> Unit) {
             TranslateCard()
             ImageCard()
             VectorCard()
-            ReasoningCard()
             SendCard()
             Spacer(Modifier.height(16.dp))
         }
@@ -501,35 +500,4 @@ private fun SendCard() {
     }
 }
 
-/** 思考过程入提示词（官方 power_user.reasoning.add_to_prompts，默认关；prefix/suffix/separator 用官方默认）。 */
-@Composable
-private fun ReasoningCard() {
-    val context = LocalContext.current
-    var enabled by rememberSaveable { mutableStateOf(GenerationPrefs.reasoningToPrompts(context)) }
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("把思考过程加入提示词", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "对齐官方 power_user.reasoning.add_to_prompts（默认关）。开启后历史消息的思考会按 <think>…</think> 注入提示词，continue 的最后一条前缀不受开关限制（官方语义）。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            EmberSwitch(
-                checked = enabled,
-                onCheckedChange = { on ->
-                    enabled = on
-                    GenerationPrefs.saveReasoningToPrompts(context, on)
-                },
-            )
-        }
-    }
-}
+

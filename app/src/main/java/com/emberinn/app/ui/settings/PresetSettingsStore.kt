@@ -49,9 +49,34 @@ data class PresetSettingsState(
     val reasoning: ReasoningSettings = ReasoningSettings(),
     /** 官方 oai_settings.extensions：预设里的扩展配置（onSettingsPresetChange 直接赋值；App 无扩展消费，持久化登记）。 */
     val openaiExtensions: JsonObject = JsonObject(emptyMap()),
+    /** 官方 power_user.context_derived（默认关）：连接模型时按元数据派生 context 模板。 */
+    val contextDerived: Boolean = false,
+    /** 官方 power_user.instruct_derived（默认关）：连接模型时按元数据派生 instruct 模板。 */
+    val instructDerived: Boolean = false,
+    /** 官方 bind_model_templates（默认关）：模型切换时自动激活绑定的 context/instruct 模板。 */
+    val bindModelTemplates: Boolean = false,
+    /** 官方 power_user.model_templates_mappings：模型 id / chat template hash → {context, instruct}。 */
+    val modelTemplateMappings: JsonObject = JsonObject(emptyMap()),
 )
 
 object PresetSettingsStore {
+
+    /** 活动连接协议 → 采样预设目录（官方按 main_api 取 preset manager）。 */
+    fun samplerPresetType(context: Context): String {
+        val profile = ProviderStore(File(context.filesDir, "provider")).load() ?: return "openai"
+        val provider = ProviderRegistry.get(profile.providerId) ?: return "openai"
+        return when (provider.protocol) {
+            "textgenerationwebui" -> "textgen"
+            "novel" -> "novel"
+            "kobold" -> "kobold"
+            else -> "openai"
+        }
+    }
+
+    /** 当前协议的采样预设名（官方 presetManager.getAllPresets）。 */
+    fun samplerPresetNames(context: Context): List<String> =
+        PresetLibrary.samplerPresets(samplerPresetType(context)).map { it.name } +
+            UserPresetStore.list(context, "sampler")
 
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
@@ -79,7 +104,7 @@ object PresetSettingsStore {
         RenderPrefs.setExampleSeparator(context, state.context.exampleSeparator)
     }
 
-    /** 官方 context_presets change：应用 + 写全局消费位点 + 记录选中预设名。 */
+    /** 官方 context_presets change：应用 + 写全局消费位点 + 记录选中预设名；bind_to_context 联动选同名 instruct。 */
     fun applyContext(context: Context, preset: JsonObject): ContextSettings {
         val state = load(context)
         val result = PresetApplyEngine.applyContextPreset(state.context, state.contextGlobals, preset)
@@ -94,17 +119,44 @@ object PresetSettingsStore {
         RenderPrefs.setExampleSeparator(context, result.context.exampleSeparator)
         save(context, state.copy(context = result.context, contextGlobals = result.globals))
         PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(contextPreset = result.presetName))
+        // 官方 power-user.js：context change 后若 instruct.bind_to_context，选同名 instruct 模板
+        if (result.context.preset.isNotBlank() && state.instruct.bindToContext) {
+            val instructJson = presetJsonOf("instruct", result.context.preset, context)
+            if (instructJson.isNotEmpty() && instructJson["name"]?.jsonPrimitive?.contentOrNull != state.instruct.preset) {
+                applyInstruct(context, instructJson)
+            }
+        }
         return result.context
     }
 
-    /** 官方 instruct_presets change。 */
+    /** 官方 instruct_presets change；bind_to_context 联动选同名 context 模板。 */
     fun applyInstruct(context: Context, preset: JsonObject): InstructSettings {
         val state = load(context)
         val result = PresetApplyEngine.applyInstructPreset(state.instruct, preset)
         save(context, state.copy(instruct = result))
         PresetPrefsStore.save(context, PresetPrefsStore.load(context).copy(instructPreset = result.preset))
+        // 官方 instruct-mode.js：instruct change 后若 bind_to_context，选同名 context 模板
+        if (result.bindToContext && result.preset.isNotBlank()) {
+            val ctxMatch = PresetLibrary.contextPresetsRaw().firstOrNull {
+                it["name"]?.jsonPrimitive?.contentOrNull == result.preset
+            } ?: UserPresetStore.load(context, "context", result.preset)
+            if (ctxMatch != null && ctxMatch["name"]?.jsonPrimitive?.contentOrNull != state.context.preset) {
+                applyContext(context, ctxMatch)
+            }
+        }
         return result
     }
+
+    internal fun presetJsonOf(type: String, name: String, context: Context): JsonObject =
+        when (type) {
+            "instruct" -> PresetLibrary.instructPresetsRaw().firstOrNull {
+                it["name"]?.jsonPrimitive?.contentOrNull == name
+            } ?: UserPresetStore.load(context, "instruct", name) ?: JsonObject(emptyMap())
+            "context" -> PresetLibrary.contextPresetsRaw().firstOrNull {
+                it["name"]?.jsonPrimitive?.contentOrNull == name
+            } ?: UserPresetStore.load(context, "context", name) ?: JsonObject(emptyMap())
+            else -> JsonObject(emptyMap())
+        }
 
     /** 官方 sysprompt $select.on('change')：enabled 自动置 true。 */
     fun applySysprompt(context: Context, preset: JsonObject): SyspromptSettings {
@@ -390,6 +442,12 @@ object PresetSettingsStore {
         "azure" -> "azure_openai_model"
         "zai" -> "zai_model"
         "custom" -> "custom_model"
+        "electronhub" -> "electronhub_model"
+        "chutes" -> "chutes_model"
+        "nanogpt" -> "nanogpt_model"
+        "aimlapi" -> "aimlapi_model"
+        "pollinations" -> "pollinations_model"
+        "cometapi" -> "cometapi_model"
         else -> null
     }
 

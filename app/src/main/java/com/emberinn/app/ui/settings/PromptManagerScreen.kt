@@ -2,6 +2,8 @@
 
 package com.emberinn.app.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.ui.components.EmberBottomSheet
@@ -64,6 +65,16 @@ import com.emberinn.engine.prompt.PromptCollection
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.PromptManagerCore
 import com.emberinn.engine.prompt.PromptOrderEntry
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Prompt Manager（官方 PromptManager 面板字段）：顺序 + 提示项 + marker/system_prompt，全局存储；
  *  dryRun 提示词预览在聊天顶栏菜单（会话菜单 → 提示词预览）。 */
@@ -71,9 +82,8 @@ import com.emberinn.engine.prompt.PromptOrderEntry
 fun PromptManagerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var prompts by remember { mutableStateOf(PromptManagerPrefs.prompts(context)) }
-    val characters = remember { CharacterStore(context).list() }
-    var selectedChar by remember { mutableStateOf<String?>(null) }
-    var order by remember(selectedChar) { mutableStateOf(PromptManagerPrefs.order(context, selectedChar)) }
+    // 官方 1.18 PromptManager global 策略：全局一份顺序（character_id=100000），无角色分叉。
+    var order by remember { mutableStateOf(PromptManagerPrefs.order(context)) }
     var editTarget by remember { mutableStateOf<PromptItem?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<PromptItem?>(null) }
@@ -88,8 +98,72 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         prompts = p
         order = o
         PromptManagerPrefs.savePrompts(context, p)
-        PromptManagerPrefs.saveOrder(context, selectedChar, o)
+        PromptManagerPrefs.saveOrder(context, null, o)
     }
+
+    /** 官方 handleFullExport：只导非 system_prompt、非 marker 的用户提示项 + 全局顺序（条目数组）。 */
+    fun exportJson(): String {
+        val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+        val exportPrompts = prompts.filter { !it.systemPrompt && !it.marker }
+        return json.encodeToString(
+            kotlinx.serialization.json.JsonObject.serializer(),
+            buildJsonObject {
+                put("version", JsonPrimitive(1))
+                put("type", JsonPrimitive("full"))
+                put("data", buildJsonObject {
+                    put("prompts", kotlinx.serialization.json.JsonArray(exportPrompts.map { json.encodeToJsonElement(it) }))
+                    put("prompt_order", kotlinx.serialization.json.JsonArray(order.map { json.encodeToJsonElement(it) }))
+                })
+            },
+        )
+    }
+
+    /** 官方 import()：validateObject + mergeKeepNewer（同名后写覆盖）+ 全局顺序 Object.assign 按下标替换。 */
+    fun importJson(text: String): String? {
+        val parsed = runCatching {
+            Json { ignoreUnknownKeys = true }.parseToJsonElement(text).jsonObject
+        }.getOrNull() ?: return "导入失败：不是有效 JSON"
+        val version = (parsed["version"] as? JsonPrimitive)?.content
+        val data = parsed["data"] as? JsonObject ?: return "导入失败：结构不符（缺少 data）"
+        val importedPrompts = (data["prompts"] as? JsonArray) ?: return "导入失败：结构不符（缺少 prompts）"
+        if (version != "1" || parsed["type"] !is JsonPrimitive) return "导入失败：结构不符（version/type）"
+        val decoded = importedPrompts.mapNotNull { el ->
+            runCatching {
+                Json { ignoreUnknownKeys = true }.decodeFromJsonElement(com.emberinn.engine.prompt.PromptItem.serializer(), el)
+            }.getOrNull()
+        }
+        // mergeKeepNewer：既有 + 导入，按 identifier 去重，后写（导入）覆盖
+        val merged = LinkedHashMap<String, PromptItem>()
+        prompts.forEach { merged[it.identifier] = it }
+        decoded.forEach { merged[it.identifier] = it }
+        val mergedPrompts = merged.values.toList()
+        // 全局顺序：官方 Object.assign(promptOrder, imported) —— 按下标替换，短的保留原有尾部
+        val importedOrder = (data["prompt_order"] as? JsonArray)?.mapNotNull { el ->
+            runCatching {
+                Json { ignoreUnknownKeys = true }.decodeFromJsonElement(com.emberinn.engine.prompt.PromptOrderEntry.serializer(), el)
+            }.getOrNull()
+        } ?: emptyList()
+        val mergedOrder = importedOrder.toMutableList()
+        if (mergedOrder.size < order.size) mergedOrder.addAll(order.subList(mergedOrder.size, order.size))
+        save(mergedPrompts, mergedOrder)
+        return null
+    }
+
+    var confirmReset by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { it.write(exportJson().toByteArray()) }
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        }.getOrNull().orEmpty()
+        importJson(text)?.let { err -> importMessage = err }
+    }
+    var importMessage by remember { mutableStateOf<String?>(null) }
 
     SettingsGlassPage { settingsSky ->
         Column(modifier = Modifier.fillMaxSize()) {
@@ -104,7 +178,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text("说明", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                             Text(
-                                "对齐官方 PromptManager：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度。App 当前为全局条目 + 全局顺序（每角色顺序登记扩展）；dryRun 预览登记下一步。",
+                                "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp),
@@ -113,16 +187,13 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                 }
                 item {
-                    Text("顺序作用对象（官方 prompt_order 按角色 id）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("全局顺序（官方 global 策略，character_id=100000）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 }
                 item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item(key = "global") {
-                            FilterChip(selected = selectedChar == null, onClick = { selectedChar = null }, label = { Text("全局") })
-                        }
-                        items(characters.size, key = { i -> characters[i].id }) { i ->
-                            FilterChip(selected = selectedChar == characters[i].id, onClick = { selectedChar = characters[i].id }, label = { Text(characters[i].name) })
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
+                        TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }
+                        TextButton(onClick = { confirmReset = true }) { Text("重置顺序") }
                     }
                 }
                 item {
@@ -130,6 +201,9 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
                 if (order.isEmpty()) {
                     item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                importMessage?.let {
+                    item { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
                 }
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
@@ -161,7 +235,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                                     val list = order.toMutableList()
                                                     list.add(target, list.removeAt(idx))
                                                     order = list
-                                                    PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                                    PromptManagerPrefs.saveOrder(context, null, order)
                                                     dragOrderOffset -= crossed * h
                                                     crossed = (dragOrderOffset / h).toInt()
                                                 }
@@ -188,14 +262,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                     checked = entry.enabled,
                                     onCheckedChange = { on ->
                                         order = order.mapIndexed { j, e -> if (j == i) e.copy(enabled = on) else e }
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                        PromptManagerPrefs.saveOrder(context, null, order)
                                     },
                                 )
                                 // 小的 ↑↓ 提示按钮：与长按拖动并存（官方 sortable 的移动端补充入口）
                                 IconButton(onClick = {
                                     if (i > 0) {
                                         order = order.toMutableList().apply { add(i - 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                        PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
                                     Text("↑", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
@@ -203,14 +277,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 IconButton(onClick = {
                                     if (i < order.lastIndex) {
                                         order = order.toMutableList().apply { add(i + 1, removeAt(i)) }
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                        PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
                                     Text("↓", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                                 }
                                 IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
-                                    PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                    PromptManagerPrefs.saveOrder(context, null, order)
                                 }, modifier = Modifier.size(30.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
@@ -236,7 +310,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                     text = { Text(id) },
                                     onClick = {
                                         order = order + PromptOrderEntry(id)
-                                        PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                        PromptManagerPrefs.saveOrder(context, null, order)
                                         appendOpen = false
                                     },
                                 )
@@ -268,7 +342,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 } else {
                                     order + PromptOrderEntry(def.identifier, enabled = on)
                                 }
-                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                PromptManagerPrefs.saveOrder(context, null, order)
                             },
                             // 官方默认项可编辑：保存为用户覆盖项（同名 identifier 优先于默认）
                             onEdit = { editTarget = def; showEdit = true },
@@ -289,7 +363,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 } else {
                                     order + PromptOrderEntry(item.identifier, enabled = on)
                                 }
-                                PromptManagerPrefs.saveOrder(context, selectedChar, order)
+                                PromptManagerPrefs.saveOrder(context, null, order)
                             },
                             onEdit = { editTarget = item; showEdit = true },
                             onInspect = { inspectTarget = item },
@@ -299,6 +373,22 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
             }
         }
+    }
+
+    confirmReset?.let {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("重置全局顺序？") },
+            text = { Text("将恢复官方默认顺序（不会删除任何提示项）。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    PromptManagerPrefs.resetOrderToDefault(context)
+                    order = PromptManagerPrefs.order(context)
+                    confirmReset = false
+                }) { Text("重置") }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("取消") } },
+        )
     }
 
     deleteTarget?.let { doomed ->

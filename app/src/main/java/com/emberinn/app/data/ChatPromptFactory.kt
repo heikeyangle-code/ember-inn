@@ -210,6 +210,8 @@ class ChatPromptFactory {
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
+        /** 官方 power_user.reasoning.max_additions（默认 1，非 prefix 注入上限）。 */
+        reasoningMaxAdditions: Int = 1,
         /** 官方 power_user.reasoning.prefix/suffix/separator（reasoning 预设应用后生效）。 */
         reasoningTemplate: com.emberinn.engine.prompt.ReasoningTemplate = com.emberinn.engine.prompt.ReasoningTemplate(),
         scriptInjections: List<ScriptInject> = emptyList(),
@@ -509,6 +511,7 @@ class ChatPromptFactory {
                         duration = duration,
                         settings = ReasoningPromptSettings(
                             addToPrompts = reasoningToPrompts,
+                            maxAdditions = reasoningMaxAdditions,
                             prefix = reasoningTemplate.prefix,
                             suffix = reasoningTemplate.suffix,
                             separator = reasoningTemplate.separator,

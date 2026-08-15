@@ -12,7 +12,7 @@ flowchart LR
  C -->|OkHttp SSE| D[厂商 API]
  E[官方 SillyTavern 1.18.0<br/>~/sillytavern-ref] -->|scripts/diff/*.mjs<br/>逐字提取纯函数| F[差分 fixture<br/>engine/src/test/resources/diff]
  B -->|引擎 Kotlin 同输入跑一遍| F
- F -->|DiffTest 断言一致| G[引擎 365 测全绿]
+ F -->|DiffTest 断言一致| G[引擎 366 测全绿]
 ```
 
 - 一句话：**引擎与官方 SillyTavern 1:1（必须差分）；App/UI 对照官方功能与设置实现官方语义，样式用 Ember 风格。**
@@ -35,7 +35,7 @@ flowchart LR
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `~/ember-inn`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `~/sillytavern-ref`（release 8172dcd / 1.18.0）。
-- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **365 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
+- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **366 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
 
 ```sh
 cd ~/ember-inn && ./gradlew :engine:test
@@ -54,7 +54,7 @@ gh workflow run 328789880 --ref main   # 需要手工跑一次
 
 **用法**：①`scripts/diff/*-official.mjs` 从 `~/sillytavern-ref` 逐字提取官方函数、桩掉 DOM/全局依赖 → 生成 `engine/src/test/resources/diff/*.json`；②`*DiffTest.kt` 读 fixture 调 Kotlin 引擎逐例对比；③官方发版/改代码后重生成 fixture → `:engine:test`；④fixture 只能脚本生成，不许手改，新功能先加 case 再实现。
 
-**差分分组清单（94 行，表内合计 2911 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例、cfg-prompt 25 例、logprobs 20 例、imagegen 10 例。**
+**差分分组清单（95 行，表内合计 2936 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例、cfg-prompt 25 例、logprobs 20 例、imagegen 10 例、chat-template-official.mjs → ChatTemplateDiffTest 25 例。**
 
 **打桩/未差分登记与“官方有而引擎/App 还没有”清单见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。**
 
@@ -107,6 +107,7 @@ RegexEngine + substituteRegex/宏替换（27 例差分：g/首匹配/i/m/s/x/X/A
 - 分词器：getTokenizerModel 映射 1:1 差分 37 例；web 族 Claude（HfBpeTokenizer，官方 claude.json 打包，HF BPE：ByteLevel/merges/added tokens/NFKC/字节编解码）；sentencepiece 族（SentencePieceTokenizer：proto + BPE 按 score 合并 + <0xXX> fallback + dummy prefix），打包保留 Google Gemini（gemma.model）；按用户要求仅保留 OpenAI(JTokkit)/Google/Claude 三族，llama3/mistral/llama1/yi/jamba/nerdstash/command-r/qwen2/nemo/deepseek 未打包（回退 cl100k，bias 按官方返回 {}，登记）；tiktoken JTokkit（O200K/CL100K）按官方 /bias 真算；原始 id 数组透传、后写覆盖一致。登记：无官方库无法差分（sanity 值锁定）；command-r/command-a/qwen2/nemo/deepseek 官方无模型文件不可实现；precompiled_charsmap 非空模型不支持（现 9 个模型全空）。
 - bias_presets 官方弹窗已做；YamlMerge 用 SnakeYAML 对齐 js-yaml（锚点/别名/<< 原生解析/多文档静默/时间戳 ISO）；vertexai 服务账号认证已做（VertexAuth.kt + LlmClient vertexai express/full/proxy + UI）；bypass_status_check 已接；show_external_models 已接（extensions 键已持久化，官方 core 也只存不消费）。
 - 登记：context/instruct/sysprompt 官方消费点是非 OpenAI 路径（script.js:4663 renderStoryString/formatInstructModeStoryString/applyStoryStringInject=main_api!=='openai'），OpenAI 主提示不走 story string——App 对 OpenAI/Anthropic/Google 不消费与官方一致；textgen/novel/kobold 路径已把 context/instruct/sysprompt 传进引擎（InstructMode.createRawPrompt 消费；sysprompt 作 systemPrompt；post_history 按官方作为 user 消息注入）；master 导入的 textgen preset 暂存 sampler 用户预设（不应用）；moving-ui 延期见 6.4。
+- 模型模板派生/绑定：ChatTemplateEngine（chat-template-official.mjs 25 例差分）——deriveTemplatesFromChatTemplate（哈希表+子串启发式派生 context/instruct 模板名）+ bindModelTemplates（模型 id / chat template hash 映射）；App Advanced Formatting 已补 context_derived / instruct_derived / bind_model_templates 开关，模型切换时按官方绑定/激活。登记：chat_template_hash 依赖 textgen 模型元数据端点、context_size_derived 依赖 llamacpp/koboldcpp 模型信息，均未接（App 无对应端点）。
 - 预设缺口清单（用户确认）：①采样预设逐字段勾选 settings_checked——官方 1.18 源码无此字段，不实现；②textgen/Novel/Kobold 全通（见 2）；③/preset fuzzy 已完成。
 
 ### 3.8 聊天/消息 ✅（核心）
@@ -248,7 +249,7 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 
 ## 5. 完成度总览
 
-- 引擎测试 **365 例全绿**；差分分组表 94 行（表内例数合计 2911；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
+- 引擎测试 **366 例全绿**；差分分组表 95 行（表内例数合计 2936；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
 - 剩余未做：图像生成其余 23 个后端请求体 / ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；Captions extras/local/horde 来源；表情精灵 LLM 分类；instruct 模式（textgen 协议提供商）；惰性闭包即时求值（SlashEngine）；发送链路未接项（见 6.2 登记）；设置项 UI 缺口（reverse_proxy/proxy_password/custom_url/custom_include/exclude_body/headers 已接网络层+UI 见 4.4；assistant_prefill/continue_prefill/max_context_unlocked/show_external_models 已接 SamplerParams+UI——原登记缺口大部分已补，见 3.7/4.4）；自定义预设保存/删除/设为默认（保存/删除已接；“设为默认”官方无此概念）。
 - Prompt Itemization 分节明细面板已做（聊天消息菜单；布局对齐官方 itemizationText.html；官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化 rawPrompt + TokenHandler 八分桶 + 分节消息；五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias；World Info；Chat History；Extensions；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 词级 LCS，超大输入回退行级）。
 - Prompt Manager 面板已做（设置→提示词管理器：identifier 自动 uuid 只读/name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 只读）/main·nsfw·jailbreak·enhanceDefinitions 官方 Reset/新提示项 system_prompt=false/删除二次确认/编辑底部弹层/长按拖动排序/官方 Append 下拉/“查”检查弹窗（PromptAssemblyCache 最近一次总装，官方 PromptManager.messages/handleInspect））+ dryRun 提示词预览（聊天会话菜单，全文+token）。
@@ -285,12 +286,18 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 | 世界书设置 | 设置→服务→世界书（深度/递归/预算/大小写/整词），改动即存并用于扫描 | ✅ |
 | 模型覆盖/主题配方 | README 角色页承诺；官方无角色级字段；已实现存储+UI+聊天背景+全局管线；配方导出/分享已做 | ✅ |
 | 向量/数据银行 | 官方 Data Bank 是浏览器附件/URL 上传；App 存 filesDir/databank/ 本地文本（UTF-8）+ URL 下载（对齐官方语义）；本地 BagOfGram 为离线兜底（无官方对应） | 🟡 存储/交互近似 |
+| Prompt Manager 顺序 | 官方 1.18 global 策略固定 character_id=100000；App 已统一存/读该键，preset prompt_order 按官方格式互导 | ✅ |
+| Prompt Manager 应用范围 | 官方仅 chat-completion 源（main_api==='openai'）；App textgen/novel/kobold 路径已移除 PM 注入 | ✅ |
+| 模型排序 pricing/context | 官方对 openrouter/chutes/electronhub/nanogpt/aimlapi 按模型元数据排序；App 列表无元数据，回退字母序 | 🟡 登记 |
+| context_size_derived / chat_template_hash | 官方按 llama.cpp/koboldcpp 模型信息派生 context 大小/模板；App 无对应模型元数据端点 | 🟡 登记 |
+| 代理预设 | 官方 proxies 全局列表（name/url/password）；App 按连接档案侧存，字段语义一致 | 🟡 存储近似 |
+| 预设默认选中 | 官方加载设置即应用 Default 采样预设；App 默认名一致，首次进入不自动写回采样器 | 🟡 近似 |
 
 ### 6.2 已确认 1:1 / 审计修复
 
 已逐字/差分确认对齐：媒体内联能力白名单 + source 分支（24 例）；世界书 externalActivations/负深度/深度注入/EM 锚点/coreChat 过滤 is_system/ensureSwipes；斜杠解析器 43 例 + testSymbol 27 例（sendas 缺省名/sysname 空名 System/hide·message-role 语义/Comment 默认 Note/delswipe 1-based）；消息数据流（AI 落盘 swipes 结构、saveReply 尾部逐字段刷新、deleteSwipe 新 id、syncSwipeToMes、send_date=ISO、AI extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature、群聊 AI gen_id 整批共享 group_generation_id、普通用户消息 extra isSmallSys=false 无 gen_id、附件 media_index 恒写 inline_image=true）；提示词默认集合/顺序/populationInjectionPrompts/历史 preparePrompt 宏替换/AN interval 与默认 position=1/Generate 类型；正则 GLOBAL→PRESET→SCOPED + allowedOnly（7 例）。
 
-审计修复（已修）：用户消息保存顺序（regex→substituteParams→removeMacros，token_count 落盘）；AI 消息补 time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪后注入；开场白数据格式（extra={}、无 title/gen_*、空首条 swipes.shift()）；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊 + reasoning_duration/signature；历史索引错位（media 挂错）；bias 提取最后用户消息 + 编辑存 extra.bias 回溯；/hide 语义；comment 不进提示词；系统消息防误操作；continue swipe_info 同步；发送失败不丢输入；重生成先查配置；群聊配置实时；书签路径消毒；世界书条目删除确认；角色主题/背景实时刷新；平板导航轨；滑动返回手势；返回按钮不贴最高处。
+审计修复（已修）：Prompt Manager 全局顺序 key=100000（原 null/UUID 三键不互通）+ prompt_order 导出带 character_id；导入采样预设后即应用；删除预设二次确认+自动切换首个剩余；Unicode 预设名保存；textgen legacy 导入用文件名；bind_to_context 双向联动；auto-select 与 /preset 按活动协议+群聊名；sort_models 官方四项并限 5 源显示；request_images 组/impersonation_prompt UI；补 6 家官方提供商（electronhub/chutes/nanogpt/aimlapi/pollinations/cometapi）；reverse proxy 预设列表；删除 contextAuto/defaultMaxTokens 假“按厂商自动填”；reasoning auto_parse/add_to_prompts/auto_expand/show_hidden/max_additions 字段+UI；textgen/novel/kobold 路径移除 PM 注入；用户消息保存顺序（regex→substituteParams→removeMacros，token_count 落盘）；AI 消息补 time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪后注入；开场白数据格式（extra={}、无 title/gen_*、空首条 swipes.shift()）；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊 + reasoning_duration/signature；历史索引错位（media 挂错）；bias 提取最后用户消息 + 编辑存 extra.bias 回溯；/hide 语义；comment 不进提示词；系统消息防误操作；continue swipe_info 同步；发送失败不丢输入；重生成先查配置；群聊配置实时；书签路径消毒；世界书条目删除确认；角色主题/背景实时刷新；平板导航轨；滑动返回手势；返回按钮不贴最高处。
 
 登记边界（有意保留）：extra.api 存提供商 id（官方存 source）；落盘文本未过 regex/宏替换（发送时应用，请求等价）；bias 文本提取 vs extra.bias 双轨；/hide name 过滤；narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；openrouter/mistral 模型元数据缺失回退；远程 URL 附件；Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式、记忆摘要（官方默认关/远期）。
 

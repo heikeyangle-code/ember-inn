@@ -967,8 +967,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     override fun applyPreset(name: String): String {
         val prefs = com.emberinn.app.ui.settings.PresetPrefsStore.load(getApplication())
-        val names = com.emberinn.engine.prompt.PresetLibrary.samplerPresets("openai").map { it.name } +
-            com.emberinn.app.ui.settings.UserPresetStore.list(getApplication(), "sampler")
+        // 官方 presetCommandCallback：getPresetManager() 按当前 API 取预设列表
+        val names = com.emberinn.app.ui.settings.PresetSettingsStore.samplerPresetNames(getApplication())
         if (name.isBlank()) return prefs.samplerPreset.ifBlank { names.firstOrNull().orEmpty() }
         // 官方 presetCommandCallback：exact + Fuse.js 7.1 模糊回退（引擎差分，见 FusePresetSearch）
         val target = com.emberinn.engine.prompt.FusePresetSearch.selectPresetName(names, name)
@@ -1469,14 +1469,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方新聊天第一条消息 = 角色开场白 first_mes（script.js newChat 语义）；空会话才补。
         // README：AI 对话（无角色卡）带默认开场“我是余烬，想聊点什么？”
         val isGroupSession = chatStore.get(sessionId)?.groupId != null
-        // 官方 preset-manager.js autoSelectPreset（CHAT_CHANGED）：角色名精确等于采样预设名 → 自动选中并应用
-        val autoCharName = character?.name
-        if (autoCharName != null && !isGroupSession) {
-            val samplerNames = com.emberinn.engine.prompt.PresetLibrary.samplerPresets("openai").map { it.name } +
-                com.emberinn.app.ui.settings.UserPresetStore.list(getApplication(), "sampler")
+        // 官方 preset-manager.js autoSelectPreset（CHAT_CHANGED）：当前 API 的采样预设里
+        // 角色名/群聊名精确匹配 → 自动选中并应用（getPresetManager() 按 main_api 取）
+        val autoPresetName = if (isGroupSession) group?.name else character?.name
+        if (!autoPresetName.isNullOrBlank()) {
+            val samplerNames = com.emberinn.app.ui.settings.PresetSettingsStore.samplerPresetNames(getApplication())
             val presetPrefs = com.emberinn.app.ui.settings.PresetPrefsStore.load(getApplication())
             val decided = com.emberinn.engine.prompt.PresetApplyEngine.autoSelectPresetDecision(
-                autoCharName, samplerNames, presetPrefs.samplerPreset,
+                autoPresetName, samplerNames, presetPrefs.samplerPreset,
             )
             if (decided != null && decided != presetPrefs.samplerPreset) {
                 com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(getApplication(), decided)
@@ -2692,7 +2692,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val regexAllowedAvatars = GlobalRegexPrefs.characterAllowedRegex(getApplication())
             val regexScopedAllowed = (scopedRegexAvatar ?: character?.id)?.let { "$it.png" in regexAllowedAvatars } ?: false
             val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
-            val reasoningToPrompts = GenerationPrefs.reasoningToPrompts(getApplication())
+            // 官方 power_user.reasoning：add_to_prompts / max_additions 从推理预设（Advanced Formatting）读取
+            val reasoningState = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning
+            val reasoningToPrompts = reasoningState.addToPrompts
+            val reasoningMaxAdditions = reasoningState.maxAdditions
+            // 官方 PromptManager 只服务 chat completion（main_api==='openai'）；textgen/novel/kobold 不注入 PM 提示
+            val textCompletionProtocol = chatRepository.profile()?.let {
+                com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+            } in setOf("textgenerationwebui", "novel", "kobold")
             // 官方 /inject：chat_metadata.script_injects → 本轮扩展提示 + scan 扫描文本
             val scriptInjections = (chatStore.metadata(sessionId)["script_injects"] as? JsonObject)
                 ?.mapNotNull { (id, el) ->
@@ -2823,8 +2830,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 vectorDataBank = vectorDataBank,
                 vectorFileText = { path -> rag.readDataBankText(path) },
                 inChatExtensions = inChatExtensions,
-                userPrompts = PromptManagerPrefs.prompts(getApplication()),
-                userOrder = PromptManagerPrefs.order(getApplication(), character?.id),
+                // 官方 global 策略：始终读 character_id=100000 的全局顺序；text completion 不注入 PM
+                userPrompts = if (textCompletionProtocol) emptyList() else PromptManagerPrefs.prompts(getApplication()),
+                userOrder = if (textCompletionProtocol) emptyList() else PromptManagerPrefs.order(getApplication()),
                 worldInfoSettings = worldInfoSettings,
                 globalRegexScripts = globalRegexScripts,
                 regexScopedAllowed = regexScopedAllowed,
@@ -2833,7 +2841,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 isContinue = continueMode,
                 regexEnabled = regexEnabled,
                 reasoningToPrompts = reasoningToPrompts,
-                reasoningTemplate = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning.template,
+                reasoningMaxAdditions = reasoningMaxAdditions,
+                reasoningTemplate = reasoningState.template,
                 scriptInjections = scriptInjections,
                 useCharacterDepthPrompt = inChatExtensions.isEmpty(),
                 memorySummary = memoryService.latestMemory(history),

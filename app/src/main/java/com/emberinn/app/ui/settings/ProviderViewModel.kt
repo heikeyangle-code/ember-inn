@@ -123,10 +123,6 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     private val _contextWindow = MutableStateFlow(DEFAULT_CONTEXT_WINDOW)
     val contextWindow: StateFlow<Int> = _contextWindow
 
-    /** 上下文上限是否跟随模型自动拉满（默认关：官方保守机制，避免提示词爆炸变慢）。 */
-    private val _contextAuto = MutableStateFlow(false)
-    val contextAuto: StateFlow<Boolean> = _contextAuto
-
     private val _maxTokens = MutableStateFlow(DEFAULT_MAX_TOKENS)
     val maxTokens: StateFlow<Int> = _maxTokens
 
@@ -180,10 +176,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _models.value = list
         _selectedModel.value = model
         // 官方 1.18：只有“从未设置”才用默认值（4095/300）；用户存的值原样保留。
-        val storedContext = existing?.contextWindow
-        val legacyDefault = storedContext == null
-        _contextAuto.value = false
-        _contextWindow.value = storedContext ?: DEFAULT_CONTEXT_WINDOW
+        _contextWindow.value = existing?.contextWindow ?: DEFAULT_CONTEXT_WINDOW
         val storedTokens = existing?.sampler?.maxTokens
         _maxTokens.value = storedTokens ?: DEFAULT_MAX_TOKENS
         _message.value = null
@@ -215,9 +208,8 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
         _apiVersion.value = value.trim()
     }
 
-    /** 上下文上限（tokens），占比胶囊分母；手动输入即退出“按模型自动”。 */
+    /** 上下文上限（tokens），占比胶囊分母；官方固定默认 4095，不跟随模型。 */
     fun setContextWindow(value: String) {
-        _contextAuto.value = false
         val n = value.filter { it.isDigit() }.toIntOrNull()
         _contextWindow.value = (n ?: DEFAULT_CONTEXT_WINDOW).coerceIn(256, 2_000_000)
     }
@@ -230,9 +222,45 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
 
     fun selectModel(model: String) {
         _selectedModel.value = model
-        val spec = provider()
-        if (_contextAuto.value && spec != null) {
-            _contextWindow.value = defaultContextFor(spec, model)
+        // 官方 bind_model_templates：模型切换时绑定/激活当前 context+instruct 模板（chat_template_hash 登记边界）
+        val app = getApplication()
+        val state = com.emberinn.app.ui.settings.PresetSettingsStore.load(app)
+        if (state.bindModelTemplates) {
+            val powerUser = kotlinx.serialization.json.buildJsonObject {
+                put("context", kotlinx.serialization.json.buildJsonObject { put("preset", kotlinx.serialization.json.JsonPrimitive(state.context.preset)) })
+                put("instruct", kotlinx.serialization.json.buildJsonObject {
+                    put("enabled", kotlinx.serialization.json.JsonPrimitive(state.instruct.enabled))
+                    put("preset", kotlinx.serialization.json.JsonPrimitive(state.instruct.preset))
+                })
+                put("context_derived", kotlinx.serialization.json.JsonPrimitive(state.contextDerived))
+                put("instruct_derived", kotlinx.serialization.json.JsonPrimitive(state.instructDerived))
+                put("model_templates_mappings", state.modelTemplateMappings)
+                put("chat_template_hash", kotlinx.serialization.json.JsonPrimitive(""))
+            }
+            val result = com.emberinn.engine.prompt.ChatTemplateEngine.bindModelTemplates(powerUser, model)
+            if (result.bound) {
+                val mappings = (result.powerUser["model_templates_mappings"] as? kotlinx.serialization.json.JsonObject)
+                    ?: state.modelTemplateMappings
+                com.emberinn.app.ui.settings.PresetSettingsStore.save(app, state.copy(modelTemplateMappings = mappings))
+                val mapping = (mappings[model] as? kotlinx.serialization.json.JsonObject)
+                    ?: mappings.values.lastOrNull() as? kotlinx.serialization.json.JsonObject
+                mapping?.let { m ->
+                    (m["context"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.isNotBlank() }?.let { ctx ->
+                        val ctxJson = com.emberinn.app.ui.settings.PresetSettingsStore.presetJsonOf("context", ctx, app)
+                        if (ctxJson.isNotEmpty()) {
+                            com.emberinn.app.ui.settings.PresetSettingsStore.applyContext(app, ctxJson)
+                        }
+                    }
+                    if (state.instruct.enabled) {
+                        (m["instruct"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.isNotBlank() }?.let { ins ->
+                            val insJson = com.emberinn.app.ui.settings.PresetSettingsStore.presetJsonOf("instruct", ins, app)
+                            if (insJson.isNotEmpty()) {
+                                com.emberinn.app.ui.settings.PresetSettingsStore.applyInstruct(app, insJson)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -328,6 +356,15 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     }
     fun setRequestTokenProbabilities(v: Boolean) {
         _editingSampler.value = _editingSampler.value.copy(requestTokenProbabilities = v)
+    }
+    fun setRequestImages(v: Boolean) {
+        _editingSampler.value = _editingSampler.value.copy(requestImages = v)
+    }
+    fun setRequestImageAspectRatio(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(requestImageAspectRatio = v)
+    }
+    fun setRequestImageResolution(v: String) {
+        _editingSampler.value = _editingSampler.value.copy(requestImageResolution = v)
     }
     fun setReasoningEffort(v: String) { _editingSampler.value = _editingSampler.value.copy(reasoningEffort = v) }
     fun setVerbosity(v: String) { _editingSampler.value = _editingSampler.value.copy(verbosity = v) }
@@ -462,6 +499,7 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setMaxContextUnlocked(v: Boolean) { _editingSampler.value = _editingSampler.value.copy(maxContextUnlocked = v) }
     fun setToolCallRecurseLimit(v: Int) { _editingSampler.value = _editingSampler.value.copy(toolCallRecurseLimit = v) }
     fun setAssistantImpersonation(v: String) { _editingSampler.value = _editingSampler.value.copy(assistantImpersonation = v) }
+    fun setImpersonationPrompt(v: String) { _editingSampler.value = _editingSampler.value.copy(impersonationPrompt = v) }
     fun setReverseProxy(v: String) { _reverseProxy.value = v }
     fun setProxyPassword(v: String) { _proxyPassword.value = v }
     fun setCustomUrl(v: String) { _customUrl.value = v }
@@ -491,129 +529,21 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun setNanogptProvider(v: String) { _nanogptProvider.value = v }
     fun setNanogptPaygOverride(v: Boolean) { _nanogptPaygOverride.value = v }
 
-    /** 应用官方 OpenAI 采样预设：引擎 onSettingsPresetChange 纯循环（bind_preset_to_connection=官方默认 true）。 */
+    /** 应用采样预设：与预设页同一条官方路径（PresetSettingsStore.applySampler，按活动协议分发），
+     *  并同步选中名 + 重载详情状态（官方 onSettingsPresetChange 后 UI 全量刷新）。 */
     fun applySamplerPreset(name: String) {
         if (name.isBlank()) return
-        val official = PresetLibrary.samplerPresets("openai").firstOrNull { it.name == name }
-        val preset = official?.settings ?: UserPresetStore.load(getApplication(), "sampler", name) ?: return
-        val sam = _editingSampler.value
-        val settings = kotlinx.serialization.json.buildJsonObject {
-            put("temp_openai", kotlinx.serialization.json.JsonPrimitive(sam.temperature))
-            put("top_p_openai", kotlinx.serialization.json.JsonPrimitive(sam.topP))
-            put("freq_pen_openai", kotlinx.serialization.json.JsonPrimitive(sam.frequencyPenalty))
-            put("pres_pen_openai", kotlinx.serialization.json.JsonPrimitive(sam.presencePenalty))
-            put("top_k_openai", kotlinx.serialization.json.JsonPrimitive(sam.topK))
-            put("top_a_openai", kotlinx.serialization.json.JsonPrimitive(sam.topA))
-            put("min_p_openai", kotlinx.serialization.json.JsonPrimitive(sam.minP))
-            put("repetition_penalty_openai", kotlinx.serialization.json.JsonPrimitive(sam.repetitionPenalty))
-            put("seed", kotlinx.serialization.json.JsonPrimitive(sam.seed))
-            put("n", kotlinx.serialization.json.JsonPrimitive(sam.n))
-            put("stream_openai", kotlinx.serialization.json.JsonPrimitive(sam.stream))
-            put("squash_system_messages", kotlinx.serialization.json.JsonPrimitive(sam.squashSystemMessages))
-            put("names_behavior", kotlinx.serialization.json.JsonPrimitive(sam.namesBehavior))
-            put("send_if_empty", kotlinx.serialization.json.JsonPrimitive(sam.sendIfEmpty))
-            put("impersonation_prompt", kotlinx.serialization.json.JsonPrimitive(sam.impersonationPrompt))
-            put("new_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newChatPrompt))
-            put("new_group_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newGroupChatPrompt))
-            put("new_example_chat_prompt", kotlinx.serialization.json.JsonPrimitive(sam.newExampleChatPrompt))
-            put("continue_nudge_prompt", kotlinx.serialization.json.JsonPrimitive(sam.continueNudgePrompt))
-            put("bias_preset_selected", kotlinx.serialization.json.JsonPrimitive(sam.biasPresetSelected))
-            put("wi_format", kotlinx.serialization.json.JsonPrimitive(sam.wiFormat))
-            put("scenario_format", kotlinx.serialization.json.JsonPrimitive(sam.scenarioFormat))
-            put("personality_format", kotlinx.serialization.json.JsonPrimitive(sam.personalityFormat))
-            put("group_nudge_prompt", kotlinx.serialization.json.JsonPrimitive(sam.groupNudgePrompt))
-            put("assistant_prefill", kotlinx.serialization.json.JsonPrimitive(sam.assistantPrefill))
-            put("assistant_impersonation", kotlinx.serialization.json.JsonPrimitive(sam.assistantImpersonation))
-            put("continue_prefill", kotlinx.serialization.json.JsonPrimitive(sam.continuePrefill))
-            put("continue_postfix", kotlinx.serialization.json.JsonPrimitive(sam.continuePostfix))
-            put("function_calling", kotlinx.serialization.json.JsonPrimitive(sam.functionCalling))
-            put("show_thoughts", kotlinx.serialization.json.JsonPrimitive(sam.showThoughts))
-            put("media_inlining", kotlinx.serialization.json.JsonPrimitive(sam.mediaInlining))
-            put("inline_image_quality", kotlinx.serialization.json.JsonPrimitive(sam.inlineImageQuality))
-            put("enable_web_search", kotlinx.serialization.json.JsonPrimitive(sam.enableWebSearch))
-            put("tool_reasoning_mode", kotlinx.serialization.json.JsonPrimitive(sam.toolReasoningMode))
-            put("tool_call_recurse_limit", kotlinx.serialization.json.JsonPrimitive(sam.toolCallRecurseLimit))
-            put("request_images", kotlinx.serialization.json.JsonPrimitive(sam.requestImages))
-            put("request_image_aspect_ratio", kotlinx.serialization.json.JsonPrimitive(sam.requestImageAspectRatio))
-            put("request_image_resolution", kotlinx.serialization.json.JsonPrimitive(sam.requestImageResolution))
-            put("max_context_unlocked", kotlinx.serialization.json.JsonPrimitive(sam.maxContextUnlocked))
-            put("openai_max_context", kotlinx.serialization.json.JsonPrimitive(_contextWindow.value))
-            put("openai_max_tokens", kotlinx.serialization.json.JsonPrimitive(_maxTokens.value))
+        val ok = com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(getApplication(), name)
+        if (ok) {
+            PresetPrefsStore.save(
+                getApplication(),
+                PresetPrefsStore.load(getApplication()).copy(samplerPreset = name),
+            )
+            openDetail(_providerId.value)
+            _message.value = "已应用采样预设：$name"
+        } else {
+            _message.value = "应用失败：未配置提供商或预设不存在"
         }
-        val applied = com.emberinn.engine.prompt.PresetApplyEngine.applyChatCompletionPresetJson(
-            settings = settings,
-            preset = preset,
-            bindPresetToConnection = PresetPrefsStore.load(getApplication()).bindPresetToConnection,
-        )
-        fun d(key: String): Double? = (applied[key] as? JsonPrimitive)?.content?.toDoubleOrNull()
-        fun i(key: String): Int? = (applied[key] as? JsonPrimitive)?.content?.toIntOrNull()
-        fun b(key: String): Boolean = (applied[key] as? JsonPrimitive)?.content == "true"
-        fun s(key: String): String? = (applied[key] as? JsonPrimitive)?.content
-        _editingSampler.value = sam.copy(
-            temperature = d("temp_openai") ?: sam.temperature,
-            topP = d("top_p_openai") ?: sam.topP,
-            presencePenalty = d("pres_pen_openai") ?: sam.presencePenalty,
-            frequencyPenalty = d("freq_pen_openai") ?: sam.frequencyPenalty,
-            topK = i("top_k_openai") ?: sam.topK,
-            minP = d("min_p_openai") ?: sam.minP,
-            topA = d("top_a_openai") ?: sam.topA,
-            repetitionPenalty = d("repetition_penalty_openai") ?: sam.repetitionPenalty,
-            seed = i("seed") ?: sam.seed,
-            n = i("n") ?: sam.n,
-            stream = b("stream_openai"),
-            squashSystemMessages = b("squash_system_messages"),
-            namesBehavior = i("names_behavior") ?: sam.namesBehavior,
-            sendIfEmpty = s("send_if_empty") ?: sam.sendIfEmpty,
-            impersonationPrompt = s("impersonation_prompt") ?: sam.impersonationPrompt,
-            newChatPrompt = s("new_chat_prompt") ?: sam.newChatPrompt,
-            newGroupChatPrompt = s("new_group_chat_prompt") ?: sam.newGroupChatPrompt,
-            newExampleChatPrompt = s("new_example_chat_prompt") ?: sam.newExampleChatPrompt,
-            continueNudgePrompt = s("continue_nudge_prompt") ?: sam.continueNudgePrompt,
-            biasPresetSelected = s("bias_preset_selected") ?: sam.biasPresetSelected,
-            wiFormat = s("wi_format") ?: sam.wiFormat,
-            scenarioFormat = s("scenario_format") ?: sam.scenarioFormat,
-            personalityFormat = s("personality_format") ?: sam.personalityFormat,
-            groupNudgePrompt = s("group_nudge_prompt") ?: sam.groupNudgePrompt,
-            assistantPrefill = s("assistant_prefill") ?: sam.assistantPrefill,
-            assistantImpersonation = s("assistant_impersonation") ?: sam.assistantImpersonation,
-            continuePrefill = b("continue_prefill"),
-            continuePostfix = s("continue_postfix") ?: sam.continuePostfix,
-            functionCalling = b("function_calling"),
-            showThoughts = b("show_thoughts"),
-            mediaInlining = b("media_inlining"),
-            inlineImageQuality = s("inline_image_quality") ?: sam.inlineImageQuality,
-            enableWebSearch = b("enable_web_search"),
-            toolReasoningMode = s("tool_reasoning_mode") ?: sam.toolReasoningMode,
-            toolCallRecurseLimit = i("tool_call_recurse_limit") ?: sam.toolCallRecurseLimit,
-            requestImages = b("request_images"),
-            requestImageAspectRatio = s("request_image_aspect_ratio") ?: sam.requestImageAspectRatio,
-            requestImageResolution = s("request_image_resolution") ?: sam.requestImageResolution,
-            maxContextUnlocked = b("max_context_unlocked"),
-        )
-        // 官方 onSettingsPresetChange：prompts/prompt_order 直接写 PromptManager
-        val presetJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-        (preset["prompts"] as? kotlinx.serialization.json.JsonArray)?.let { arr ->
-            runCatching {
-                PromptManagerPrefs.savePrompts(
-                    getApplication(),
-                    presetJson.decodeFromJsonElement(ListSerializer(PromptItem.serializer()), arr),
-                )
-            }
-        }
-        (preset["prompt_order"] as? kotlinx.serialization.json.JsonArray)?.let { arr ->
-            runCatching {
-                val orders = arr.mapNotNull { el ->
-                    val obj = el.jsonObject
-                    val cid = obj["character_id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                    val order = obj["order"]?.jsonArray ?: return@mapNotNull null
-                    cid to presetJson.decodeFromJsonElement(ListSerializer(PromptOrderEntry.serializer()), order)
-                }.toMap()
-                PromptManagerPrefs.saveOrders(getApplication(), orders)
-            }
-        }
-        _maxTokens.value = i("openai_max_tokens") ?: _maxTokens.value
-        _contextWindow.value = i("openai_max_context") ?: _contextWindow.value
-        _message.value = "已应用采样预设：$name"
     }
 
     fun save() {
@@ -643,10 +573,6 @@ class ProviderViewModel(application: Application) : AndroidViewModel(application
     fun clearMessage() {
         _message.value = null
     }
-
-    /** 模型窗口优先，其次厂商默认窗口，兜底 8192。 */
-    private fun defaultContextFor(spec: ProviderSpec, model: String): Int =
-        spec.modelContexts[model] ?: spec.defaultContextWindow ?: 8192
 
     private fun buildProfile(): ConnectionProfile {
         val spec = provider() ?: return ConnectionProfile(providerId = "")

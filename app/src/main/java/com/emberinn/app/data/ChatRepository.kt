@@ -254,6 +254,7 @@ class ChatRepository(private val context: Context) {
         isContinue: Boolean = false,
         regexEnabled: Boolean = true,
         reasoningToPrompts: Boolean = false,
+        reasoningMaxAdditions: Int = 1,
         reasoningTemplate: com.emberinn.engine.prompt.ReasoningTemplate = com.emberinn.engine.prompt.ReasoningTemplate(),
         scriptInjections: List<ExtensionPromptEngine.ScriptInject> = emptyList(),
         /** 官方 generate：群聊深度提示存在时用群聊提示，否则角色卡深度提示。 */
@@ -395,6 +396,7 @@ class ChatRepository(private val context: Context) {
             isContinue = isContinue,
             regexEnabled = regexEnabled,
             reasoningToPrompts = reasoningToPrompts,
+            reasoningMaxAdditions = reasoningMaxAdditions,
             reasoningTemplate = reasoningTemplate,
             scriptInjections = scriptInjections,
             useCharacterDepthPrompt = useCharacterDepthPrompt,

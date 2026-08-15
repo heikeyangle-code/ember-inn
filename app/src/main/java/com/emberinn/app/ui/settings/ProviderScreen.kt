@@ -287,7 +287,6 @@ fun ProviderDetailScreen(
     val apiVersion by vm.apiVersion.collectAsState()
     val selectedModel by vm.selectedModel.collectAsState()
     val contextWindow by vm.contextWindow.collectAsState()
-    val contextAuto by vm.contextAuto.collectAsState()
     val maxTokens by vm.maxTokens.collectAsState()
     val sampler by vm.editingSampler.collectAsState()
     val testing by vm.testing.collectAsState()
@@ -448,35 +447,30 @@ fun ProviderDetailScreen(
                 value = maxTokens.toString(),
                 onValueChange = vm::setMaxTokens,
                 label = { Text("最大回复 tokens") },
-                supportingText = { Text("默认按厂商建议自动填（OpenAI 16384 / Claude 8192…）；思考型模型太小会只思考不出正文") },
+                supportingText = { Text("官方默认 300（openai_max_tokens）；思考型模型太小会只思考不出正文") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             var showSamplerPreset by remember { mutableStateOf(false) }
-            var samplerPresetName by remember { mutableStateOf("") }
+            // 官方选中名持久化在 oai_settings.preset_settings_openai；App 存 PresetPrefs.samplerPreset
+            var samplerPresetName by remember {
+                mutableStateOf(com.emberinn.app.ui.settings.PresetPrefsStore.load(context).samplerPreset)
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text("采样预设（官方 sampler-openai）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text("采样预设（官方 sampler-${com.emberinn.app.ui.settings.PresetSettingsStore.samplerPresetType(context)}）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Box {
                     TextButton(onClick = { showSamplerPreset = true }) {
-                        Text(if (samplerPresetName.isBlank()) "默认" else samplerPresetName)
+                        Text(if (samplerPresetName.isBlank()) "Default" else samplerPresetName)
                     }
                     DropdownMenu(
                         expanded = showSamplerPreset,
                         onDismissRequest = { showSamplerPreset = false },
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("默认（不应用）") },
-                            onClick = {
-                                samplerPresetName = ""
-                                showSamplerPreset = false
-                            },
-                        )
-                        (PresetLibrary.samplerPresets("openai").map { it.name } +
-                            com.emberinn.app.ui.settings.UserPresetStore.list(context, "sampler")).forEach { presetName ->
+                        com.emberinn.app.ui.settings.PresetSettingsStore.samplerPresetNames(context).forEach { presetName ->
                             DropdownMenuItem(
                                 text = { Text(presetName) },
                                 onClick = {
@@ -496,6 +490,18 @@ fun ProviderDetailScreen(
             DecimalRow("repetition_penalty（1-2）", sampler.repetitionPenalty.toString(), vm::setRepetitionPenalty)
             IntRow("seed（-1 = 不发送）", sampler.seed.toString(), vm::setSeed)
             IntRow("n（多回复变体，1-8）", sampler.n.toString(), vm::setN)
+            DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
+                vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
+            }
+            DecimalRow("核采样（topP）", sampler.topP.toString()) { v ->
+                vm.setTopP(v.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 1.0)
+            }
+            DecimalRow("存在惩罚（presencePenalty）", sampler.presencePenalty.toString()) { v ->
+                vm.setPresencePenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
+            }
+            DecimalRow("频率惩罚（frequencyPenalty）", sampler.frequencyPenalty.toString()) { v ->
+                vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
+            }
             if (spec.id == "openrouter") {
                 SwitchRow("use_fallback（route=fallback）", sampler.useFallback, vm::setUseFallback)
                 SwitchRow("allow_fallbacks", sampler.allowFallbacks, vm::setAllowFallbacks)
@@ -752,6 +758,30 @@ fun ProviderDetailScreen(
             SwitchRow("enable_web_search（联网搜索，官方默认关）", sampler.enableWebSearch, vm::setEnableWebSearch)
             SwitchRow("continue_prefill（继续生成预填，官方默认关）", sampler.continuePrefill, vm::setContinuePrefill)
             SwitchRow("max_context_unlocked（解锁上下文上限，官方默认关）", sampler.maxContextUnlocked, vm::setMaxContextUnlocked)
+            // 官方 request_images 块（data-source=makersuite,vertexai）：仅 Gemini 源显示
+            if (spec.id in setOf("google", "vertexai")) {
+                SwitchRow("request_images（请求内联图片，官方默认关）", sampler.requestImages, vm::setRequestImages)
+                Text("request_image_resolution（分辨率）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("", "1K", "2K", "4K").forEach { value ->
+                        FilterChip(
+                            selected = sampler.requestImageResolution == value,
+                            onClick = { vm.setRequestImageResolution(value) },
+                            label = { Text(value.ifBlank { "Auto" }) },
+                        )
+                    }
+                }
+                Text("request_image_aspect_ratio（宽高比）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("", "1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3").forEach { value ->
+                        FilterChip(
+                            selected = sampler.requestImageAspectRatio == value,
+                            onClick = { vm.setRequestImageAspectRatio(value) },
+                            label = { Text(value.ifBlank { "Auto" }) },
+                        )
+                    }
+                }
+            }
             EmberTextField(
                 value = sampler.sendIfEmpty,
                 onValueChange = vm::setSendIfEmpty,
@@ -825,16 +855,22 @@ fun ProviderDetailScreen(
             // ---- 官方 oai_settings 连接类字段（settingsToUpdate isConnection=true） ----
             Text("连接高级设置（官方连接字段）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             SwitchRow("bypass_status_check（跳过状态检查）", bypassStatusCheck, vm::setBypassStatusCheck)
-            SwitchRow("show_external_models（显示外部模型）", showExternalModels, vm::setShowExternalModels)
-            SwitchRow("group_models（按提供商分组）", groupModels, vm::setGroupModels)
-            Text("sort_models（模型排序）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("alphabetically", "reverse").forEach { value ->
-                    FilterChip(
-                        selected = sortModels == value,
-                        onClick = { vm.setSortModels(value) },
-                        label = { Text(value) },
-                    )
+            // 官方 openai_show_external_models 只在 OpenAI 面板；其余源不显示
+            if (spec.id == "openai") {
+                SwitchRow("show_external_models（显示外部模型）", showExternalModels, vm::setShowExternalModels)
+            }
+            // 官方 #model_sorting_form 只对 openrouter/chutes/electronhub/nanogpt/aimlapi 显示
+            if (spec.id in setOf("openrouter", "chutes", "electronhub", "nanogpt", "aimlapi")) {
+                SwitchRow("group_models（按提供商分组）", groupModels, vm::setGroupModels)
+                Text("sort_models（模型排序）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("alphabetically", "pricing.prompt", "pricing.completion", "context_length").forEach { value ->
+                        FilterChip(
+                            selected = sortModels == value,
+                            onClick = { vm.setSortModels(value) },
+                            label = { Text(value) },
+                        )
+                    }
                 }
             }
             IntRow("tool_call_recurse_limit（工具递归上限，官方默认 5）", sampler.toolCallRecurseLimit.toString()) { v ->
@@ -854,6 +890,66 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+            // 官方 Reverse Proxy 预设列表（openai.js proxies：name/url/password，选中即填入）
+            if (existing != null) {
+                var proxies by remember(existing.id) {
+                    mutableStateOf(com.emberinn.app.data.ProxyPresetStore.list(context, existing.id))
+                }
+                var proxySelected by remember { mutableStateOf("") }
+                var showProxyNew by remember { mutableStateOf(false) }
+                var proxyNewName by remember { mutableStateOf("") }
+                Text("代理预设（官方 proxies 列表）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    proxies.forEach { preset ->
+                        FilterChip(
+                            selected = proxySelected == preset.name,
+                            onClick = {
+                                proxySelected = preset.name
+                                vm.setReverseProxy(preset.url)
+                                vm.setProxyPassword(preset.password)
+                            },
+                            label = { Text(preset.name) },
+                        )
+                    }
+                    TextButton(onClick = { proxyNewName = ""; showProxyNew = true }) { Text("新建预设") }
+                    TextButton(
+                        enabled = proxySelected.isNotBlank(),
+                        onClick = {
+                            proxies = proxies.filterNot { it.name == proxySelected }
+                            com.emberinn.app.data.ProxyPresetStore.save(context, existing.id, proxies)
+                            proxySelected = ""
+                            vm.setReverseProxy("")
+                            vm.setProxyPassword("")
+                        },
+                    ) { Text("删除预设") }
+                }
+                if (showProxyNew) {
+                    AlertDialog(
+                        onDismissRequest = { showProxyNew = false },
+                        title = { Text("新建代理预设") },
+                        text = {
+                            EmberTextField(
+                                value = proxyNewName,
+                                onValueChange = { proxyNewName = it },
+                                label = { Text("预设名（必须唯一）") },
+                                singleLine = true,
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val n = proxyNewName.trim()
+                                if (n.isNotEmpty() && proxies.none { it.name == n }) {
+                                    proxies = proxies + com.emberinn.app.data.ProxyPreset(n, reverseProxy, proxyPassword)
+                                    com.emberinn.app.data.ProxyPresetStore.save(context, existing.id, proxies)
+                                    proxySelected = n
+                                    showProxyNew = false
+                                }
+                            }) { Text("保存") }
+                        },
+                        dismissButton = { TextButton(onClick = { showProxyNew = false }) { Text("取消") } },
+                    )
+                }
+            }
             if (spec.id == "custom") {
                 EmberTextField(
                     value = customUrl,
@@ -975,24 +1071,19 @@ fun ProviderDetailScreen(
                 SwitchRow("nanogpt_payg_override", nanogptPaygOverride, vm::setNanogptPaygOverride)
             }
             EmberTextField(
+                value = sampler.impersonationPrompt,
+                onValueChange = vm::setImpersonationPrompt,
+                label = { Text("impersonation_prompt（冒充模式注入提示词）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            EmberTextField(
                 value = sampler.assistantImpersonation,
                 onValueChange = vm::setAssistantImpersonation,
                 label = { Text("assistant_impersonation（Claude 冒充模式预填）") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            DecimalRow("温度（temperature）", sampler.temperature.toString()) { v ->
-                vm.setTemperature(v.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0)
-            }
-            DecimalRow("核采样（topP）", sampler.topP.toString()) { v ->
-                vm.setTopP(v.toDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 1.0)
-            }
-            DecimalRow("存在惩罚（presencePenalty）", sampler.presencePenalty.toString()) { v ->
-                vm.setPresencePenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
-            }
-            DecimalRow("频率惩罚（frequencyPenalty）", sampler.frequencyPenalty.toString()) { v ->
-                vm.setFrequencyPenalty(v.toDoubleOrNull()?.coerceIn(-2.0, 2.0) ?: 0.0)
-            }
             // 协议专属采样参数（对照官方 textgen/novel/kobold 面板）
             when (spec.protocol) {
                 "textgenerationwebui" -> ProtocolSamplerEditors.TextGenEditor(context)
@@ -1004,15 +1095,7 @@ fun ProviderDetailScreen(
                 value = contextWindow.toString(),
                 onValueChange = vm::setContextWindow,
                 label = { Text("上下文上限（tokens）") },
-                supportingText = {
-                    Text(
-                        if (contextAuto) {
-                            "默认按所选模型窗口自动填（如 gpt-5.5 = 272K）；手动改数字后不再自动跟随"
-                        } else {
-                            "已手动设置，切换模型不再自动改；想恢复自动请改回后重新打开"
-                        },
-                    )
-                },
+                supportingText = { Text("官方默认 4095（openai_max_context），不随模型自动变化。") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1101,14 +1184,11 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
             models
         }
     }
-    // 官方 openai.js：sortModelsBy(sort_models) + group_models 分组（App 列表无 pricing/context 元数据，
-    // 支持 alphabetical/reverse；pricing/context 排序登记边界）
+    // 官方 openai.js：sortModelsBy(sort_models) + group_models 分组；App 模型列表无 pricing/context
+    // 元数据，pricing/context_length 排序回退字母序（登记边界）
     val items: List<Pair<String, Boolean>> = remember(visible, query, sort, group) {
         val base = visible.filter { query.isBlank() || it.contains(query, ignoreCase = true) }
-        val sorted = when (sort) {
-            "reverse" -> base.sortedDescending()
-            else -> base.sorted()
-        }
+        val sorted = base.sorted()
         if (group) {
             sorted.groupBy { it.substringBefore('/').ifBlank { it } }
                 .flatMap { (g, list) -> listOf(g to true) + list.map { it to false } }

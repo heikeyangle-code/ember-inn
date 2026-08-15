@@ -16,10 +16,6 @@ object GenerationPrefs {
     fun allowChatCompletions(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("auto_continue_allow_chat_completions", true)
 
-    /** 官方 power_user.reasoning.add_to_prompts（默认关）。 */
-    fun reasoningToPrompts(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("reasoning_to_prompts", false)
-
     /** 官方 oai_settings.send_if_empty：最后一条是 AI 且输入为空时发送的默认消息（默认关）。 */
     fun sendIfEmpty(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("send_if_empty", "") ?: ""
@@ -37,12 +33,6 @@ object GenerationPrefs {
     fun saveContinueOnSend(context: Context, enabled: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("continue_on_send", enabled)
-            .apply()
-    }
-
-    fun saveReasoningToPrompts(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean("reasoning_to_prompts", enabled)
             .apply()
     }
 
