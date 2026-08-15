@@ -34,3 +34,28 @@ object MarkdownCache {
         cache.clear()
     }
 }
+
+/**
+ * 最终着色 AnnotatedString 的 LRU 缓存（OfficialMarkdownNode 产物）。
+ *
+ * OfficialMarkdownNode 的 built/styled 之前在组合里同步计算且只活在行组合里：
+ * LazyColumn 滚出屏幕再滚回来，每条长消息都要在主线程重算一次（buildMarkdownAnnotatedString +
+ * applyOfficialMarkers），这就是“来回滑动、出现别的消息就卡一下”的来源。
+ * 这里按 内容+颜色+样式 缓存最终 AnnotatedString，滚回来的行首帧直接渲染。
+ */
+object AnnotatedCache {
+    private const val MAX_ENTRIES = 64
+
+    private val cache = object : LinkedHashMap<String, androidx.compose.ui.text.AnnotatedString>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, androidx.compose.ui.text.AnnotatedString>?): Boolean =
+            size > MAX_ENTRIES
+    }
+
+    @Synchronized
+    fun get(key: String): androidx.compose.ui.text.AnnotatedString? = cache[key]
+
+    @Synchronized
+    fun put(key: String, value: androidx.compose.ui.text.AnnotatedString) {
+        cache[key] = value
+    }
+}

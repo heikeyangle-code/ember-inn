@@ -111,6 +111,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
@@ -572,8 +573,10 @@ fun ChatScreen(
         if (messages.isNotEmpty() && followBottom) {
             // 首帧尚未测量时 animateScrollToItem 会被吞甚至越界：先等列表布局出条目再滚。
             snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
-            // 瞬时定位：reverseLayout 下已贴底时无需动画，动画是“新条目出现卡一下”的来源之一
-            listState.scrollToItem(0)
+            // 瞬时定位：reverseLayout 下已贴底（index 0）就直接跳过，避免键盘收起/新消息时反复纠正滚动位置
+            if (listState.firstVisibleItemIndex != 0) {
+                listState.scrollToItem(0)
+            }
         }
     }
 
@@ -3932,23 +3935,45 @@ private fun OfficialMarkdownNode(
     val targetNode = contentChildType?.let { model.node.findChildOfType(it) } ?: model.node
     // 官方正文色：无色样式（正文/标题/代码）补 bodyColor；引用等已指定色的样式保持自身颜色
     val resolvedStyle = if (style.color.isSpecified) style else style.copy(color = bodyColor)
-    val built = remember(model.content, model.node, targetNode, emAnnotator, style, bodyColor, quoteColor) {
-        buildAnnotatedString {
-            pushStyle(resolvedStyle.toSpanStyle())
-            buildMarkdownAnnotatedString(model.content, targetNode, mdSettings)
-            pop()
+    // 最终着色 AnnotatedString 后台计算 + 全局缓存：滚出屏再滚回来不再主线程重算（滑动卡顿来源之一）
+    val cacheKey = remember(model.content, bodyColor, quoteColor, underlineColor, emColor, style) {
+        buildString {
+            append(model.content)
+            append('|').append(bodyColor.value.toArgb())
+            append('|').append(quoteColor.value.toArgb())
+            append('|').append(underlineColor.value.toArgb())
+            append('|').append(emColor.value.toArgb())
+            append('|').append(style.hashCode())
         }
     }
-    val styled = remember(built, quoteColor, underlineColor, style.fontSize) {
-        applyOfficialMarkers(built, quoteColor, underlineColor, baseFontSize = style.fontSize)
+    var styled by remember(cacheKey) { mutableStateOf<androidx.compose.ui.text.AnnotatedString?>(AnnotatedCache.get(cacheKey)) }
+    LaunchedEffect(cacheKey) {
+        if (styled == null) {
+            val computed = withContext(kotlinx.coroutines.Dispatchers.Default) {
+                val built = buildAnnotatedString {
+                    pushStyle(resolvedStyle.toSpanStyle())
+                    buildMarkdownAnnotatedString(model.content, targetNode, mdSettings)
+                    pop()
+                }
+                applyOfficialMarkers(built, quoteColor, underlineColor, baseFontSize = style.fontSize)
+            }
+            AnnotatedCache.put(cacheKey, computed)
+            styled = computed
+        }
     }
-    MarkdownText(
-        content = styled,
-        node = model.node,
-        modifier = Modifier.fillMaxWidth(),
-        style = resolvedStyle,
-        sourceContent = model.content,
-    )
+    val result = styled
+    if (result != null) {
+        MarkdownText(
+            content = result,
+            node = model.node,
+            modifier = Modifier.fillMaxWidth(),
+            style = resolvedStyle,
+            sourceContent = model.content,
+        )
+    } else {
+        // 首帧轻量占位（保持行高），后台算完无缝切换
+        StreamingMarkdown(content = model.content)
+    }
 }
 
 /** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
