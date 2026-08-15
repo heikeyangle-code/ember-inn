@@ -808,15 +808,12 @@ fun ChatScreen(
                                     displayReasoning = sr
                                 }
                             }
-                            // 流式中只补定界符，不跑 fixMarkdown/encodeTags；结束后一次性走完整管线
+                            // 官方 messageFormatting 每 tick：定界符补齐（onProgressStreaming）+ fixMarkdown(forDisplay=true)
+                            // + encode_tags（auto_fix_generated_markdown 默认开）——流式中也必须跑，否则未闭合 ** 会露符号
                             val streamingDisplay = remember(displayStreaming, isStreaming) {
                                 val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
-                                if (!isStreaming) {
-                                    val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
-                                    if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
-                                } else {
-                                    balanced
-                                }
+                                val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                                if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
                             }
                             StreamingRow(
                                 modifier = Modifier,
