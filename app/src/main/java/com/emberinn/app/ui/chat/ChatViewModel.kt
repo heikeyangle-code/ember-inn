@@ -159,6 +159,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 流式思考过程（官方 reasoning 独立通道，不进聊天正文）。 */
     private val _streamingReasoning = MutableStateFlow("")
     val streamingReasoning: StateFlow<String> = _streamingReasoning
+    /** 官方 oai_settings.show_thoughts（默认 true）：显示/保存思考过程；会话菜单可快速开关。 */
+    private val _showThoughts = MutableStateFlow(chatRepository.profile()?.sampler?.showThoughts != false)
+    val showThoughts: StateFlow<Boolean> = _showThoughts
 
     /** 最近一次生成的完整思考过程（生成完保留，UI 折叠展示；新请求时清空）。 */
     private val _lastReasoning = MutableStateFlow<String?>(null)
@@ -351,6 +354,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun stopNarration() { TtsReader.stop() }
+
+    /** 会话菜单快速开关 show_thoughts（官方 oai_settings.show_thoughts，默认 true）。 */
+    fun setShowThoughtsQuick(enabled: Boolean) {
+        _showThoughts.value = enabled
+        if (!enabled) {
+            _streamingReasoning.value = ""
+            _lastReasoning.value = null
+        }
+        val p = chatRepository.profile() ?: return
+        chatRepository.saveProfile(p.copy(sampler = p.sampler.copy(showThoughts = enabled)), active = true)
+        ProviderState.refresh(chatRepository.profile())
+    }
 
     /** 图像生成（A1111）：成功则追加到待发送附件，用户可预览后发送。 */
     fun generateImage(prompt: String) {
@@ -2761,7 +2776,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 },
                 onReasoning = { text ->
                     // 官方 oai_settings.show_thoughts：false 时不请求/不展示推理（include_reasoning=show_thoughts）
-                    if (streamActive && chatRepository.profile()?.sampler?.showThoughts != false) {
+                    if (streamActive && _showThoughts.value) {
                         _streamingReasoning.value += text
                     }
                 },

@@ -94,6 +94,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -241,14 +242,13 @@ fun ChatScreen(
     // /renamechat 后实时刷新顶栏/空态名字（不用 MainScreen 传入的固定 name）
     val currentName = vm.sessionName().ifBlank { name }
     val messages by vm.messages.collectAsState()
-    val streamingText by vm.streamingText.collectAsState()
     val isStreaming by vm.isStreaming.collectAsState()
     val providerConfigured by vm.providerConfigured.collectAsState()
     val notice by vm.notice.collectAsState()
     val isImpersonating by vm.isImpersonating.collectAsState()
     val impersonated by vm.impersonated.collectAsState()
-    val streamingReasoning by vm.streamingReasoning.collectAsState()
     val lastReasoning by vm.lastReasoning.collectAsState()
+    val showThoughtsNow by vm.showThoughts.collectAsState()
     val pendingMedia by vm.pendingMedia.collectAsState()
     val worldHits by vm.worldHits.collectAsState()
     val contextUsage by vm.contextUsage.collectAsState()
@@ -572,31 +572,6 @@ fun ChatScreen(
     }
 
     // 流式显示：120ms 节流（官方 streaming_fps=30 是上限不是目标；每 tick 全量解析的成本远高于 30fps 的收益）。
-    // 流式中只补定界符，不跑 fixMarkdown/encodeTags（交给轻量流式渲染器），结束后一次性走完整管线。
-    var displayStreaming by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        var lastNanos = 0L
-        snapshotFlow { streamingText }.collect { text ->
-            val now = System.nanoTime()
-            if (now - lastNanos >= 120_000_000L) {
-                displayStreaming = text
-                lastNanos = now
-            }
-        }
-    }
-    LaunchedEffect(isStreaming) {
-        if (!isStreaming) displayStreaming = streamingText
-    }
-    val streamingDisplay = remember(displayStreaming, isStreaming) {
-        val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
-        if (!isStreaming) {
-            val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
-            if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
-        } else {
-            balanced
-        }
-    }
-
     val sky = rememberSky()
     val keyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
@@ -805,17 +780,56 @@ fun ChatScreen(
                                 onLongPress = { menuMessageIndex = item.index },
                             )
                         }
-                        ChatItem.Streaming -> StreamingRow(
-                            modifier = Modifier,
-                            text = streamingDisplay,
-                            reasoning = streamingReasoning,
-                            reasoningExpanded = reasoningExpanded,
-                            onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
-                            name = currentName,
-                            avatarPath = vm.avatarPath,
-                            accent = accent,
-                            impersonating = isImpersonating,
-                        )
+                        ChatItem.Streaming -> {
+                            // 流式状态只在“流式这一行”订阅：每 token 更新不会让整棵消息列表重组
+                            val st by vm.streamingText.collectAsState()
+                            val sr by vm.streamingReasoning.collectAsState()
+                            var displayStreaming by remember { mutableStateOf("") }
+                            var lastTextNanos by remember { mutableLongStateOf(0L) }
+                            LaunchedEffect(st) {
+                                val now = System.nanoTime()
+                                if (now - lastTextNanos >= 120_000_000L) {
+                                    displayStreaming = st
+                                    lastTextNanos = now
+                                }
+                            }
+                            var displayReasoning by remember { mutableStateOf("") }
+                            var lastReasoningNanos by remember { mutableLongStateOf(0L) }
+                            LaunchedEffect(sr) {
+                                val now = System.nanoTime()
+                                if (now - lastReasoningNanos >= 120_000_000L) {
+                                    displayReasoning = sr
+                                    lastReasoningNanos = now
+                                }
+                            }
+                            LaunchedEffect(isStreaming) {
+                                if (!isStreaming) {
+                                    displayStreaming = st
+                                    displayReasoning = sr
+                                }
+                            }
+                            // 流式中只补定界符，不跑 fixMarkdown/encodeTags；结束后一次性走完整管线
+                            val streamingDisplay = remember(displayStreaming, isStreaming) {
+                                val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
+                                if (!isStreaming) {
+                                    val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                                    if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
+                                } else {
+                                    balanced
+                                }
+                            }
+                            StreamingRow(
+                                modifier = Modifier,
+                                text = streamingDisplay,
+                                reasoning = displayReasoning,
+                                reasoningExpanded = reasoningExpanded,
+                                onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
+                                name = currentName,
+                                avatarPath = vm.avatarPath,
+                                accent = accent,
+                                impersonating = isImpersonating,
+                            )
+                        }
                         ChatItem.ReasoningOnly -> {
                             lastReasoning?.let {
                                 ReasoningCard(
@@ -1268,6 +1282,20 @@ fun ChatScreen(
                 MenuRow(PhosphorIcons.List, "Token 概率（logprobs）") {
                     showMore = false
                     showLogprobsSheet = true
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.setShowThoughtsQuick(!showThoughtsNow) }
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        "显示思考过程（show_thoughts）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    EmberSwitch(checked = showThoughtsNow, onCheckedChange = { vm.setShowThoughtsQuick(it) })
                 }
                 if (vm.group != null) {
                     MenuRow(PhosphorIcons.Person, "群聊设置") {
