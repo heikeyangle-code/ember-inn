@@ -491,12 +491,13 @@ fun ChatScreen(
     }
 
     val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
-    val items = remember(messages, isStreaming, lastReasoning) {
+    val items = remember(messages, isStreaming, lastReasoning, isImpersonating) {
         buildList {
             // reverseLayout=true：第 0 项固定在视口底部，因此最新内容（流式/最后一条）放在最前。
-            if (isStreaming) {
+            // 官方冒充：不建消息、聊天区不显示，结果只进输入框（onProgressStreaming isImpersonate → send_textarea）
+            if (isStreaming && !isImpersonating) {
                 add(ChatItem.Streaming)
-            } else if (lastReasoning != null && messages.indexOfLast { el -> !isUser(el) } < 0) {
+            } else if (lastReasoning != null && !isImpersonating && messages.indexOfLast { el -> !isUser(el) } < 0) {
                 // 空正文场景：思考过程独立成卡，不随流式结束消失
                 add(ChatItem.ReasoningOnly)
             }
@@ -865,6 +866,8 @@ fun ChatScreen(
             ChatInputBar(
                 accent = accent,
                 input = input,
+                impersonating = isImpersonating,
+                streamingText = vm.streamingText,
                 onInputChange = { input = it },
                 pendingMedia = pendingMedia,
                 pendingDisplay = pendingDisplay,
@@ -4984,8 +4987,12 @@ private fun ChatInputBar(
     onAttach: () -> Unit,
     onVoice: () -> Unit,
     slashCommands: List<Pair<String, String>> = emptyList(),
+    impersonating: Boolean = false,
+    streamingText: kotlinx.coroutines.flow.StateFlow<String> = kotlinx.coroutines.flow.MutableStateFlow(""),
     modifier: Modifier = Modifier,
 ) {
+    // 官方冒充：流式正文实时写输入框（聊天区不显示）
+    val streamingDraft by streamingText.collectAsState()
     // 斜杠补全：输入以 / 开头且第一个词未完成时，按已输入字母过滤（前缀优先，其次包含），最多 12 条
     val slashMatches = remember(input, slashCommands) {
         val show = input.startsWith("/") && input.length > 1 && !input.substring(1).contains(' ')
@@ -5145,8 +5152,8 @@ private fun ChatInputBar(
                 contentDescription = "附件与工具",
             )
             EmberTextField(
-                value = input,
-                onValueChange = onInputChange,
+                value = if (impersonating) streamingDraft else input,
+                onValueChange = if (impersonating) { _ -> } else onInputChange,
                 placeholder = {
                     Text(
                         "输入消息…",
