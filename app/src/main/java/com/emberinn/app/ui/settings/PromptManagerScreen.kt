@@ -150,6 +150,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
     }
 
     var importMessage by remember { mutableStateOf<String?>(null) }
+    // 官方 handleCharacterReset 的确认语义；用页面内联确认（AlertDialog 在该玻璃页曾出现点击无响应，不再用模态）
+    var resetConfirming by remember { mutableStateOf(false) }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
@@ -192,6 +194,18 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
                         TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }
+                        if (resetConfirming) {
+                            Text("确认恢复官方默认顺序？", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 4.dp))
+                            TextButton(onClick = {
+                                PromptManagerPrefs.resetOrderToDefault(context)
+                                order = PromptManagerPrefs.order(context)
+                                resetConfirming = false
+                                importMessage = "已重置为官方默认顺序（不会删除任何提示项）"
+                            }) { Text("确认") }
+                            TextButton(onClick = { resetConfirming = false }) { Text("取消") }
+                        } else {
+                            TextButton(onClick = { resetConfirming = true }) { Text("重置顺序") }
+                        }
                     }
                 }
                 item {
