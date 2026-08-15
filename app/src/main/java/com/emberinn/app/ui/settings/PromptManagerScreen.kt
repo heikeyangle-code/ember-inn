@@ -394,8 +394,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         }
     }
 
-                        TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
-                        TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }    deleteTarget?.let { doomed ->
+    deleteTarget?.let { doomed ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text("删除提示项？") },

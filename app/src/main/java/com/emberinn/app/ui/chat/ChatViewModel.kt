@@ -163,6 +163,53 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _showThoughts = MutableStateFlow(chatRepository.profile()?.sampler?.showThoughts != false)
     val showThoughts: StateFlow<Boolean> = _showThoughts
 
+    // 流式节流缓冲：SSE 每 token 只追加进 StringBuilder，每 100ms 才写一次 StateFlow。
+    // 之前每 token 直接写 StateFlow，流式行每 token 重组（思考时 ReasoningCard 也在行内），
+    // 加上每帧的呼吸光标动画，思考流式时滑动被拖死。现在状态写入从每秒几十次降到 ~10 次。
+    private val streamingTextBuffer = StringBuilder()
+    private val streamingReasoningBuffer = StringBuilder()
+    private var streamingFlusher: kotlinx.coroutines.Job? = null
+
+    private fun appendStreamingText(delta: String) {
+        synchronized(streamingTextBuffer) { streamingTextBuffer.append(delta) }
+        ensureStreamingFlusher()
+    }
+
+    private fun appendStreamingReasoning(text: String) {
+        synchronized(streamingReasoningBuffer) { streamingReasoningBuffer.append(text) }
+        ensureStreamingFlusher()
+    }
+
+    private fun ensureStreamingFlusher() {
+        if (streamingFlusher?.isActive == true) return
+        streamingFlusher = viewModelScope.launch {
+            while (true) {
+                delay(100)
+                flushStreamingBuffers()
+                if (!streamActive && streamingTextBuffer.isEmpty() && streamingReasoningBuffer.isEmpty()) break
+            }
+        }
+    }
+
+    private fun flushStreamingBuffers() {
+        var text: String? = null
+        var reasoning: String? = null
+        synchronized(streamingTextBuffer) {
+            if (streamingTextBuffer.isNotEmpty()) {
+                text = streamingTextBuffer.toString()
+                streamingTextBuffer.clear()
+            }
+        }
+        synchronized(streamingReasoningBuffer) {
+            if (streamingReasoningBuffer.isNotEmpty()) {
+                reasoning = streamingReasoningBuffer.toString()
+                streamingReasoningBuffer.clear()
+            }
+        }
+        text?.let { _streamingText.value = _streamingText.value + it }
+        reasoning?.let { _streamingReasoning.value = _streamingReasoning.value + it }
+    }
+
     /** 最近一次生成的完整思考过程（生成完保留，UI 折叠展示；新请求时清空）。 */
     private val _lastReasoning = MutableStateFlow<String?>(null)
     val lastReasoning: StateFlow<String?> = _lastReasoning
@@ -359,6 +406,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun setShowThoughtsQuick(enabled: Boolean) {
         _showThoughts.value = enabled
         if (!enabled) {
+            synchronized(streamingReasoningBuffer) { streamingReasoningBuffer.clear() }
             _streamingReasoning.value = ""
             _lastReasoning.value = null
         }
@@ -1688,6 +1736,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 停止按钮：取消请求并保留已生成的部分（官方 abortController + mes_stop 语义）。 */
     fun stop() {
+        flushStreamingBuffers()
         if (!_isStreaming.value) return
         streamSession?.cancel()
         streamSession = null
@@ -2668,6 +2717,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         streamStartedAt = java.time.Instant.now().toString()
         _streamingText.value = ""
         _streamingReasoning.value = ""
+        synchronized(streamingTextBuffer) { streamingTextBuffer.clear() }
+        synchronized(streamingReasoningBuffer) { streamingReasoningBuffer.clear() }
         _lastReasoning.value = null
         _worldHits.value = emptyList()
         _contextUsage.value = null
@@ -2777,13 +2828,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 onDelta = { delta ->
                     if (streamActive) {
                         if (firstDeltaAt == null) firstDeltaAt = System.currentTimeMillis()
-                        _streamingText.value += delta
+                        appendStreamingText(delta)
                     }
                 },
                 onReasoning = { text ->
                     // 官方 oai_settings.show_thoughts：false 时不请求/不展示推理（include_reasoning=show_thoughts）
                     if (streamActive && _showThoughts.value) {
-                        _streamingReasoning.value += text
+                        appendStreamingReasoning(text)
                     }
                 },
                 onToolCalls = { calls ->
@@ -2795,6 +2846,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 stopGroupMemberNames = groupMembers.map { it.name },
                 onDone = { handleStreamDone(streamContinueMode, onFinished) },
                 onError = { e ->
+                    flushStreamingBuffers()
                     if (streamActive) {
                         streamActive = false
                         pendingToolCalls = null
@@ -2956,6 +3008,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * 否则落盘 + 自动续写（官方 triggerAutoContinue；群聊走 runGroupStep）。
      */
     private fun handleStreamDone(continueMode: Boolean, onFinished: (() -> Unit)?) {
+        flushStreamingBuffers()
         if (!streamActive) {
             onFinished?.invoke()
             return
@@ -3076,6 +3129,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     private fun finalizeStream(continueMode: Boolean = false) {
+        flushStreamingBuffers()
         _isStreaming.value = false
         streamSession = null
         // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
