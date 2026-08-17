@@ -3939,10 +3939,10 @@ private fun OfficialMarkdownNode(
     val cacheKey = remember(model.content, bodyColor, quoteColor, underlineColor, emColor, style) {
         buildString {
             append(model.content)
-            append('|').append(bodyColor.value.toArgb())
-            append('|').append(quoteColor.value.toArgb())
-            append('|').append(underlineColor.value.toArgb())
-            append('|').append(emColor.value.toArgb())
+            append('|').append(bodyColor.toArgb())
+            append('|').append(quoteColor.toArgb())
+            append('|').append(underlineColor.toArgb())
+            append('|').append(emColor.toArgb())
             append('|').append(style.hashCode())
         }
     }
