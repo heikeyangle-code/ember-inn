@@ -275,23 +275,29 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
             rawQuotes = true,
             callback = { _, _ -> "" },
             suspendCallback = { inv, _ ->
+                // 官方 isFalseBoolean：off/false/0 视为关
                 actions.generateRaw(
                     prompt = inv.unnamedArgs.joinToString(" "),
                     system = inv.namedArgs["system"] ?: "",
                     prefill = inv.namedArgs["prefill"] ?: "",
                     length = inv.namedArgs["length"]?.toIntOrNull(),
-                    instruct = inv.namedArgs["instruct"]?.lowercase() != "off",
+                    instruct = !com.emberinn.engine.slash.SlashMathEngine.isFalseBoolean(inv.namedArgs["instruct"]),
                     asRole = inv.namedArgs["as"] ?: "system",
                     stop = inv.namedArgs["stop"] ?: "[]",
-                    trim = inv.namedArgs["trim"]?.lowercase() != "off",
+                    trim = !com.emberinn.engine.slash.SlashMathEngine.isFalseBoolean(inv.namedArgs["trim"]),
                 )
             },
         ),
         SlashCommandDef(
             "inject",
-            description = "注入提示文本（官方 inject：position=before/after/chat/none，depth，role，scan，ephemeral；返回注入 ID）",
+            description = "注入提示文本（官方 inject：position=before/after/chat/none，depth，role，scan，ephemeral，filter=闭包；返回注入 ID）",
             rawQuotes = true,
+            closureArgs = setOf("filter"),
             callback = { inv, _ ->
+                // 官方 injectCallback：filter 参数解析失败（提供但为空）直接抛错
+                if (inv.namedArgs.containsKey("filter") && inv.namedArgs["filter"].isNullOrBlank()) {
+                    throw com.emberinn.engine.slash.SlashParseException("无法解析 filter 参数：必须是有效的非空闭包 {: ... :}")
+                }
                 actions.injectScript(
                     text = inv.unnamedArgs.joinToString(" "),
                     id = inv.namedArgs["id"] ?: "",

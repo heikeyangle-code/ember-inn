@@ -18,7 +18,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const tokenizers = { NONE: 0, NERD: 1, NERD2: 2, LLAMA3: 3 };
-const default_order = ['temperature', 'tail_free_sampling', 'repetition_penalty', 'top_p', 'top_k'];
+// 官方真实默认（nai-settings.js:25）：数字索引（samplers 名→数字映射）
+const default_order = [1, 5, 0, 2, 3, 4];
 
 // ---- 官方函数（逐字） ----
 function getTokenizerTypeForModel(model) {

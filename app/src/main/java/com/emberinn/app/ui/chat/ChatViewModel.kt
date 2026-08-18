@@ -321,7 +321,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return chatRepository.chat(history, maxTokensOverride = length) ?: "（生成失败）"
     }
 
-    /** 官方 /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本。 */
+    /** 官方 /genraw：直接用提示请求（system/prefill/length 可选），返回生成文本。
+     *  官方 generateRawCallback + createRawPrompt：instruct=off 跳过 instruct 格式化、
+     *  as=char → quietToLoud（输出序列用角色名）；text completion 走 instruct 整段格式化，
+     *  chat completion（openai 族）官方 instruct/as 本就不参与（isInstruct 排除 openai）。 */
     override suspend fun generateRaw(
         prompt: String,
         system: String,
@@ -336,12 +339,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             refreshProviderConfigured()
             return "（未配置模型，请先选一个模型。）"
         }
-        // 官方 genraw：stop 是 JSON 数组（一次性停用词）；instruct/as 在 App 无 instruct 模式，登记边界
+        // 官方 genraw：stop 是 JSON 数组（一次性停用词）
         val stops = runCatching {
             kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
                 .parseToJsonElement(stop).jsonArray.map { it.jsonPrimitive.content }
         }.getOrDefault(emptyList())
-        val result = chatRepository.rawGenerate(prompt, system, prefill, length, stops) ?: "（生成失败）"
+        // 官方 createRawPrompt：text completion（textgen/novel/kobold）走文本化
+        // （novel 被 isInstruct 排除，但仍走名字前缀 + adjustNovelInstructionPrompt 拼接）。
+        // 官方字符串 prompt 先 .trim() 再转消息；length<=0 视为未设置。
+        val protocol = chatRepository.profile()?.let {
+            com.emberinn.engine.provider.ProviderRegistry.get(it.providerId)?.protocol
+        }
+        val effectiveLength = length?.takeIf { it > 0 }
+        val textPrompt = if (protocol in setOf("textgenerationwebui", "novel", "kobold")) {
+            val presetState = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication())
+            val raw = com.emberinn.engine.prompt.InstructMode.createRawPrompt(
+                prompt = listOf(com.emberinn.engine.prompt.PromptMessage(role = "user", content = prompt.trim())),
+                api = protocol ?: "",
+                instructOverride = !instruct,
+                quietToLoud = asRole == "char",
+                systemPrompt = system,
+                prefill = prefill,
+                instruct = presetState.instruct,
+                context = presetState.context,
+                env = MacroEnv(user = currentUserName, char = currentCharName),
+            )
+            (raw as? com.emberinn.engine.prompt.InstructMode.RawPrompt.Text)?.text
+        } else {
+            null
+        }
+        val result = chatRepository.rawGenerate(prompt, system, prefill, effectiveLength, stops, textPrompt) ?: "（生成失败）"
         if (!trim) return result
         var out = result
         for (prefix in listOf("$currentUserName:", "$currentCharName:")) {
@@ -2777,13 +2804,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 ?.mapNotNull { (id, el) ->
                     val o = el.jsonObject
                     val value = o["value"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                    // 官方 /inject filter：闭包在生成时判定，结果 true 才注入；解析失败/空=始终注入
                     val filterRaw = o["filter"]?.jsonPrimitive?.contentOrNull
-                    val filterPassed = filterRaw.isNullOrBlank() || runCatching {
-                        val out = slashExecutor.execute(filterRaw, SlashState())
-                        out.trim().lowercase() in setOf("true", "1", "yes", "y", "on")
-                    }.getOrDefault(true)
-                    if (!filterPassed) return@mapNotNull null
                     val positionRaw = o["position"]?.jsonPrimitive?.contentOrNull
                     val roleRaw = o["role"]?.jsonPrimitive?.contentOrNull
                     ExtensionPromptEngine.ScriptInject(
@@ -2801,8 +2822,21 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         role = roleRaw?.toIntOrNull()
                             ?: ExtensionPromptEngine.roleByName(roleRaw),
                         scan = o["scan"]?.jsonPrimitive?.content == "true",
+                        filter = filterRaw,
                     )
                 } ?: emptyList()
+            // 官方 /inject filter：闭包在生成时判定（closureToFilter：执行→isTrueBoolean(pipe)），
+            // false 跳过注入与 scan；求值异常按官方 reviveFilterClosure 失败语义=始终注入。
+            val scriptFilterEvaluator: (String) -> Boolean = { raw ->
+                runCatching {
+                    val evalState = SlashState()
+                    // 官方闭包在当前作用域执行：聊天变量对 /getvar 可见
+                    chatRepository.localVariableStore().names().forEach { n ->
+                        chatRepository.localVariableStore().get(n)?.let { evalState.variables[n] = it }
+                    }
+                    ExtensionPromptEngine.isTrueBoolean(slashExecutor.execute(raw, evalState).trim())
+                }.getOrDefault(true)
+            }
             // 官方 saveReply：AI_OUTPUT 正则存前应用，使用与本轮生成相同的脚本集合（群聊按发言人判定）
             val (presetScripts, presetAllowed) = presetRegex()
             saveRegexScripts = ChatPromptFactory().resolveRegexScripts(
@@ -2917,6 +2951,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 reasoningMaxAdditions = reasoningMaxAdditions,
                 reasoningTemplate = reasoningState.template,
                 scriptInjections = scriptInjections,
+                scriptFilterEvaluator = scriptFilterEvaluator,
                 useCharacterDepthPrompt = inChatExtensions.isEmpty(),
                 memorySummary = memoryService.latestMemory(history),
                 memoryTemplate = memorySettings.template,
@@ -3335,6 +3370,43 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /**
+     * 官方 expressions getExpressionLabel 的 LLM 分支：
+     * sampleClassifyText(useLlm) → raw: generateRaw / full: generateQuietPrompt → parseLlmResponse。
+     * 结果不落盘；失败/非 LLM API 回调 null（调用方走 fallback_expression）。
+     */
+    fun classifyExpression(text: String, onResult: (String?) -> Unit) {
+        val prefs = com.emberinn.app.ui.settings.ExpressionPrefs.load(getApplication())
+        if (prefs.api != com.emberinn.engine.expression.ExpressionApi.LLM || text.isBlank()) {
+            onResult(null)
+            return
+        }
+        val labels = com.emberinn.engine.expression.ExpressionEngine.DEFAULT_EXPRESSIONS
+        val prompt = com.emberinn.engine.expression.ExpressionEngine.llmPrompt(labels, prefs.llmPrompt)
+        val sampled = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(text, useLlm = true)
+        if (sampled.isNullOrBlank()) {
+            onResult(null)
+            return
+        }
+        if (prefs.promptType == com.emberinn.engine.expression.ExpressionPromptType.RAW) {
+            chatRepository.summarizeRaw(
+                systemPrompt = prompt,
+                userPrompt = sampled,
+                responseLength = 50,
+                onResult = { resp -> onResult(com.emberinn.engine.expression.ExpressionEngine.parseLlmResponse(resp.trim(), labels)) },
+                onError = { onResult(null) },
+            )
+        } else {
+            chatRepository.generateQuietSummary(
+                history = chatStore.messages(sessionId),
+                quietPrompt = prompt,
+                responseLength = 50,
+                onResult = { resp -> onResult(com.emberinn.engine.expression.ExpressionEngine.parseLlmResponse(resp.trim(), labels)) },
+                onError = { onResult(null) },
+            )
+        }
+    }
+
     /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning/time_to_first_token）。 */
     private fun appendAiReply(reply: String) {
         val profile = chatRepository.profile()
@@ -3354,31 +3426,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             // 官方群聊 AI 消息带 gen_id（group_generation_id，整批共享）；单聊不带
             groupGenId = pendingGroupGenId,
         )
-        // 官方 expressions：回复落盘后把选中的精灵路径写进 extra.sprite（渲染优先读它）
-        runCatching {
-            val prefs = com.emberinn.app.ui.settings.ExpressionPrefs.load(getApplication())
-            if (prefs.enabled) {
-                val store = com.emberinn.app.data.ExpressionStore(getApplication())
-                val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(reply)
-                val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
-                    store.sprites(currentCharName),
-                    prefs.customLabels,
-                )
-                val chosen = com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
-                    folderName = currentCharName,
-                    expression = expression ?: "",
-                    spriteCache = mapOf(currentCharName to groups),
-                    settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
-                        fallbackExpression = prefs.fallbackExpression.ifBlank { null },
-                        allowMultiple = prefs.allowMultiple,
-                        rerollIfSame = prefs.rerollIfSame,
-                        customLabels = prefs.customLabels,
-                    ),
-                )?.imageSrc
-                // 官方 expressions 扩展不持久化 extra.sprite（渲染期按正文确定性分类）；
-                // 不写 extra，避免 jsonl 混入非官方字段
-            }
-        }
+        // 官方 expressions：分类在渲染期异步完成（classifyExpression），不持久化 extra.sprite
         // 官方 power_user.message_token_count_enabled：extra.token_count 落盘
         if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
             val model = profile?.model.orEmpty()

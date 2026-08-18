@@ -46,7 +46,29 @@ object KoboldRequestBodyEngine {
 
     data class Result(val apiServer: String, val url: String, val body: String)
 
-    /** 由“应用 kobold 预设后的设置 JSON + 连接档案”组装请求输入（App 传输映射；字段沿用官方 kai_settings）。 */
+    /** 官方 kai_settings 默认（kai-settings.js:28-50）：空存储/未应用预设时请求体仍带完整采样参数。 */
+    private val KAI_DEFAULTS = buildJsonObject {
+        put("temp", 1.0)
+        put("rep_pen", 1.0)
+        put("rep_pen_range", 0)
+        put("top_p", 1.0)
+        put("min_p", 0.0)
+        put("top_a", 1.0)
+        put("top_k", 0)
+        put("typical", 1.0)
+        put("tfs", 1.0)
+        put("rep_pen_slope", 0.9)
+        put("sampler_order", JsonArray(listOf(0, 1, 2, 3, 4, 5, 6).map { JsonPrimitive(it) }))
+        put("mirostat", 0)
+        put("mirostat_tau", 5.0)
+        put("mirostat_eta", 0.1)
+        put("use_default_badwordsids", false)
+        put("grammar", "")
+        put("seed", -1)
+    }
+
+    /** 由“应用 kobold 预设后的设置 JSON + 连接档案”组装请求输入（App 传输映射；字段沿用官方 kai_settings）。
+     *  settings 为空时回退官方 kai_settings 默认，保证请求体始终含采样参数。 */
     fun fromSettingsJson(
         apiServer: String,
         prompt: String,
@@ -55,10 +77,11 @@ object KoboldRequestBodyEngine {
         streaming: Boolean,
         settings: kotlinx.serialization.json.JsonObject?,
     ): Input {
-        fun d(key: String): Double? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
-        fun i(key: String): Int? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
-        fun b(key: String): Boolean = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
-        fun s(key: String): String? = (settings?.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content
+        val effective = if (settings.isNullOrEmpty()) KAI_DEFAULTS else settings
+        fun d(key: String): Double? = (effective.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
+        fun i(key: String): Int? = (effective.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
+        fun b(key: String): Boolean = (effective.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
+        fun s(key: String): String? = (effective.get(key) as? kotlinx.serialization.json.JsonPrimitive)?.content
         return Input(
             apiServer = apiServer,
             prompt = prompt,
@@ -75,7 +98,7 @@ object KoboldRequestBodyEngine {
             topP = d("top_p"),
             minP = d("min_p"),
             typical = d("typical"),
-            samplerOrder = (settings?.get("sampler_order") as? JsonArray)?.mapNotNull { it.jsonPrimitive.intOrNull },
+            samplerOrder = (effective.get("sampler_order") as? JsonArray)?.mapNotNull { it.jsonPrimitive.intOrNull },
             useDefaultBadwordsids = b("use_default_badwordsids"),
             mirostat = i("mirostat"),
             mirostatEta = d("mirostat_eta"),

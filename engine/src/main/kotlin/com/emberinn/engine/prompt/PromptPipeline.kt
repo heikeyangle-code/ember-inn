@@ -471,6 +471,8 @@ object PromptPipeline {
     fun prepareWithPrompts(input: PrepareInput, prompts: PromptItems): PrepareResult {
         val handler = TokenHandler(input.tokenCounter)
         val chatCompletion = ChatCompletion(handler)
+        // 官方 openai.js prepareOpenAIMessages:1558：预算 = maxContext - maxTokens（不含 token_padding；
+        // padding 只进 script.js 影子计数用于最终溢出检查，不参与 ChatCompletion 裁剪）
         chatCompletion.setTokenBudget(input.maxContextTokens, input.maxTokens)
 
         // 官方 prepareOpenAIMessages：TokenBudgetExceededError / InvalidCharacterNameError / 未知错误

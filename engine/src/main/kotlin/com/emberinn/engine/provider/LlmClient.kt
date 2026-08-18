@@ -35,7 +35,8 @@ data class ConnectionProfile(
     val baseUrlOverride: String = "",
     val model: String = "",
     val sampler: SamplerParams = SamplerParams(),
-    val region: String = "",
+    /** 官方 oai_settings.vertexai_region 默认 us-central1。 */
+    val region: String = "us-central1",
     val accountId: String = "",
     val apiVersionOverride: String = "",
     /** 上下文上限（tokens），对齐官方 openai_max_context 默认 max_4k=4095；App 配置后作为占比胶囊分母。 */

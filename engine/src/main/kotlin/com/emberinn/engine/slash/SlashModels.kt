@@ -29,6 +29,11 @@ data class SlashCommandDef(
     val splitUnnamedArgument: Boolean = false,
     /** 对齐官方 splitUnnamedArgumentCount：前 N 个拆开，其余合并为一个值。 */
     val splitUnnamedArgumentCount: Int? = null,
+    /**
+     * 对齐官方 ARGUMENT_TYPE.CLOSURE：这些命名参数收到 {: ... :} 闭包时保留原文
+     * （\u0002 包裹）而非立即执行，由命令在需要时自行求值（如 /inject filter）。
+     */
+    val closureArgs: Set<String> = emptySet(),
 )
 
 class SlashParseException(message: String) : RuntimeException(message)

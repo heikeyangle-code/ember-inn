@@ -9,6 +9,9 @@ interface VariableStore {
     fun set(name: String, value: String)
     fun delete(name: String)
     fun has(name: String): Boolean
+
+    /** 全部变量名（斜杠 /getvar 等需要枚举种子时用；默认空）。 */
+    fun names(): Set<String> = emptySet()
 }
 
 /** 空实现：所有读取为空、写入丢弃（默认环境）。 */
@@ -26,6 +29,7 @@ class MemoryVariableStore : VariableStore {
     override fun set(name: String, value: String) { map[name] = value }
     override fun delete(name: String) { map.remove(name) }
     override fun has(name: String): Boolean = map.containsKey(name)
+    override fun names(): Set<String> = map.keys.toSet()
 }
 
 /** 对齐官方 addLocalVariable/addGlobalVariable：数组 push / 字符串拼接 / 数字相加。 */

@@ -91,6 +91,67 @@ class ExtensionPromptDiffTest {
         }
     }
 
+    // ---- 官方 /inject filter（closureToFilter + openai.js populateExtensionPrompt 门控）----
+
+    @Test
+    fun `filter false skips injection and scan`() {
+        val plan = ExtensionPromptEngine.planScriptInjections(
+            injects = listOf(
+                ExtensionPromptEngine.ScriptInject(id = "a", value = "V", filter = "/getvar flag"),
+                ExtensionPromptEngine.ScriptInject(id = "b", value = "W", scan = true, filter = "/getvar flag"),
+                ExtensionPromptEngine.ScriptInject(id = "c", value = "U"),
+            ),
+            evalFilter = { false },
+        )
+        assertEquals(setOf(ExtensionPromptEngine.SCRIPT_PROMPT_KEY + "c"), plan.extensionPrompts.keys)
+        assertEquals(0, plan.scanValues.size)
+    }
+
+    @Test
+    fun `filter true keeps injection and scan`() {
+        val plan = ExtensionPromptEngine.planScriptInjections(
+            injects = listOf(
+                ExtensionPromptEngine.ScriptInject(id = "a", value = "V", filter = "/getvar flag"),
+                ExtensionPromptEngine.ScriptInject(id = "b", value = "W", scan = true, filter = "/getvar flag"),
+            ),
+            evalFilter = { true },
+        )
+        assertEquals(setOf("script_inject_a", "script_inject_b"), plan.extensionPrompts.keys)
+        assertEquals(listOf("W"), plan.scanValues)
+    }
+
+    @Test
+    fun `blank or missing filter always injects`() {
+        val plan = ExtensionPromptEngine.planScriptInjections(
+            injects = listOf(
+                ExtensionPromptEngine.ScriptInject(id = "a", value = "V"),
+                ExtensionPromptEngine.ScriptInject(id = "b", value = "W", filter = ""),
+                ExtensionPromptEngine.ScriptInject(id = "c", value = "U", filter = "  "),
+            ),
+            evalFilter = { false },
+        )
+        assertEquals(setOf("script_inject_a", "script_inject_b", "script_inject_c"), plan.extensionPrompts.keys)
+    }
+
+    @Test
+    fun `no evalFilter falls back to always inject`() {
+        // 官方 reviveFilterClosure 解析失败 → filter=null → 无门控
+        val plan = ExtensionPromptEngine.planScriptInjections(
+            injects = listOf(ExtensionPromptEngine.ScriptInject(id = "a", value = "V", filter = "/getvar flag")),
+        )
+        assertEquals(setOf("script_inject_a"), plan.extensionPrompts.keys)
+    }
+
+    @Test
+    fun `isTrueBoolean matches official utils`() {
+        listOf("true", "True", "1", "yes", "y", "on").forEach {
+            assertEquals("official true: $it", true, ExtensionPromptEngine.isTrueBoolean(it))
+        }
+        listOf("false", "no", "0", "", "maybe", "2").forEach {
+            assertEquals("official false: $it", false, ExtensionPromptEngine.isTrueBoolean(it))
+        }
+    }
+
     private fun storeOf(entries: List<JsonObject>): Map<String, ExtensionPromptEngine.Entry> {
         val store = mutableMapOf<String, ExtensionPromptEngine.Entry>()
         for (item in entries) {

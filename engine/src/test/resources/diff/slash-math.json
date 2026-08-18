@@ -4467,7 +4467,7 @@
   "b": null,
   "keysort": null,
   "throws": false,
-  "expected": "0.5623790762907029"
+  "expected": "0.562379076290703"
  },
  {
   "kind": "math",

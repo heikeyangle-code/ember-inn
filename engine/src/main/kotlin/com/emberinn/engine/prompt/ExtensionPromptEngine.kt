@@ -4,9 +4,11 @@ package com.emberinn.engine.prompt
  * 官方 script.js setExtensionPrompt / getExtensionPrompt / getExtensionPromptByName
  * 与 slash-commands.js injectCallback 的 1:1 移植。
  *
- * 边界登记：filter 闭包无法从元数据复活（官方 closureToFilter 依赖 SlashCommandParser，
- * App 不支持 /inject filter 参数，见 HANDOFF 3.4 剩余偏差）；ephemeral 生命周期在 App 层
- * （GENERATION_ENDED/STOPPED 后删除，官方 eventSource.once 语义）。
+ * filter（官方 ARGUMENT_TYPE.CLOSURE）：闭包原文持久化在 chat_metadata.script_injects[id].filter，
+ * 生成前经 closureToFilter 等价求值（SlashEngine 执行 → isTrueBoolean(pipe)），
+ * false 跳过注入（提示词与 scan 皆跳过，对齐 openai.js populateExtensionPrompt /
+ * script.js getExtensionPromptByName）；无 filter/求值异常按官方解析失败语义=始终注入。
+ * ephemeral 生命周期在 App 层（GENERATION_ENDED/STOPPED 后删除，官方 eventSource.once 语义）。
  */
 object ExtensionPromptEngine {
 
@@ -37,7 +39,7 @@ object ExtensionPromptEngine {
         val role: Int,
     )
 
-    /** chat_metadata.script_injects[id] 条目（官方 injectCallback 持久化字段）。 */
+    /** chat_metadata.script_injects[id] 条目（官方 injectCallback 持久化字段；filter=闭包原文）。 */
     data class ScriptInject(
         val id: String,
         val value: String,
@@ -45,6 +47,7 @@ object ExtensionPromptEngine {
         val depth: Int = DEFAULT_DEPTH,
         val role: Int = ROLE_SYSTEM,
         val scan: Boolean = false,
+        val filter: String? = null,
     )
 
     /** 一次生成前把 script_injects 全部落成官方扩展提示的规划。 */
@@ -118,6 +121,7 @@ object ExtensionPromptEngine {
         depthRaw: Any?,
         roleRaw: Any?,
         scanRaw: Boolean,
+        filterRaw: String? = null,
     ): ScriptInject {
         val positions = mapOf(
             "before" to POSITION_BEFORE_PROMPT,
@@ -154,24 +158,33 @@ object ExtensionPromptEngine {
             depth = depth,
             role = role,
             scan = scanRaw,
+            filter = filterRaw?.takeIf { it.isNotBlank() },
         )
     }
 
+    /** 官方 utils.js isTrueBoolean（closureToFilter 的 pipe 判定）。 */
+    fun isTrueBoolean(value: String): Boolean =
+        value.lowercase() in setOf("on", "true", "1", "yes", "y")
+
     /**
      * 一次生成前：官方 processChatSlashCommands 把 chat_metadata.script_injects
-     * 逐条 setExtensionPrompt；这里产出引擎侧三种落点：
+     * 逐条 setExtensionPrompt（filter 闭包经 closureToFilter 复活）；这里产出引擎侧三种落点：
      * before→start 扩展提示、after→end 扩展提示、chat→in-chat PromptItem、none→不注入；
      * scan=true 的 value 按官方 getExtensionPromptByName（宏替换后）进世界书扫描缓冲。
+     * evalFilter：官方生成位点 filter 门控（hasFilter && !await filter() → continue）；
+     * 注入与 scan 同受门控；filter 空白=始终注入（官方解析失败回退 null filter）。
      */
     fun planScriptInjections(
         injects: List<ScriptInject>,
         substitute: (String) -> String = { it },
+        evalFilter: ((String) -> Boolean)? = null,
     ): ScriptInjectionPlan {
         val extensionPrompts = mutableMapOf<String, ExtensionPrompt>()
         val inChatPrompts = mutableListOf<PromptItem>()
         val scanValues = mutableListOf<String>()
         for (inject in injects) {
             if (inject.value.isEmpty()) continue
+            if (!inject.filter.isNullOrBlank() && evalFilter != null && !evalFilter(inject.filter)) continue
             val key = SCRIPT_PROMPT_KEY + inject.id
             val roleName = roleName(inject.role)
             if (inject.scan) {

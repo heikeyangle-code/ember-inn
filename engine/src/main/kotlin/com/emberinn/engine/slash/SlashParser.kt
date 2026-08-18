@@ -164,6 +164,7 @@ class SlashTokenizer(
         take() // discard "="
         val value = when {
             testClosure() -> throw SlashParseException("闭包参数需由 SlashEngine 预解析：{:")
+            testMarkedValue() -> parseMarkedValue()
             testQuotedValue() -> parseQuotedValue()
             testListValue() -> parseListValue()
             testValue() -> parseValue()
@@ -175,6 +176,22 @@ class SlashTokenizer(
             if (inner.contains('|')) inner.split('|').map { it.trim() }.filter { it.isNotEmpty() } else null
         } else null
         return Triple(key.toString(), value, list)
+    }
+
+    /**
+     * 闭包占位值（\u0001 输出 / \u0002 原文，SlashEngine.resolveClosures 产生）：
+     * 取到闭合标记为止的整段（含空格/|/引号），保持单个参数不被空白截断。
+     * 标记本身保留在返回值里，由 SlashEngine 统一剥离。
+     */
+    fun testMarkedValue(): Boolean = char == '\u0001' || char == SlashEngine.CLOSURE_RAW_MARK
+
+    private fun parseMarkedValue(): String {
+        val mark = take()[0]
+        val sb = StringBuilder(mark.toString())
+        while (index < text.length && char != mark) sb.append(take())
+        if (index >= text.length) throw SlashParseException("未闭合的闭包占位值")
+        sb.append(take()) // 闭合标记
+        return sb.toString()
     }
 
     fun testUnnamedArgument(): Boolean = !testCommandEnd()
@@ -202,6 +219,7 @@ class SlashTokenizer(
                     // 官方 split 分支才判闭包；非 split 直接逐字符取值（转义闭包即普通文本）
                     if (testClosure()) throw SlashParseException("闭包参数需由 SlashEngine 预解析：{:")
                     when {
+                        testMarkedValue() -> listValues += parseMarkedValue()
                         testQuotedValue() -> listValues += parseQuotedValue()
                         testListValue() -> listValues += parseListValue()
                         testValue() -> listValues += parseValue()
@@ -209,7 +227,7 @@ class SlashTokenizer(
                     }
                     discardWhitespace()
                 }
-                else -> value += take()
+                else -> value += if (testMarkedValue()) parseMarkedValue() else take()
             }
         }
         if (isList && value.isNotEmpty()) listValues += value

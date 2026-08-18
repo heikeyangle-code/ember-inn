@@ -54,8 +54,7 @@ class NovelBodyDiffTest {
                 mirostatLr = d("mirostat_lr"),
                 mirostatTau = d("mirostat_tau"),
                 phraseRepPen = str("phrase_rep_pen"),
-                order = (s["order"] as? JsonArray)?.map { it.jsonPrimitive.content }
-                    ?: (e["order"] as? JsonArray)?.map { it.jsonPrimitive.content },
+                order = ((s["order"] as? JsonArray) ?: (e["order"] as? JsonArray))?.toList(),
                 logitBias = s["logit_bias"]?.jsonArray ?: JsonArray(emptyList()),
                 bannedTokens = (s["banned_tokens"]?.jsonArray ?: JsonArray(emptyList())).map { it.jsonPrimitive.content },
                 prefix = str("prefix"),

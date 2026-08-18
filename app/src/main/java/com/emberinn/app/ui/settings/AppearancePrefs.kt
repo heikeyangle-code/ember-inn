@@ -322,9 +322,9 @@ object AppearancePrefs {
             .apply()
     }
 
-    /** 毛玻璃模糊强度（Cloudy radius，0-40，默认 16）。 */
+    /** 毛玻璃模糊强度（Cloudy radius，0-40，官方 power_user.blur_strength 默认 10）。 */
     fun blurStrength(context: Context): Int =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("blur_strength", 16)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt("blur_strength", 10)
 
     fun saveBlurStrength(context: Context, strength: Int) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()

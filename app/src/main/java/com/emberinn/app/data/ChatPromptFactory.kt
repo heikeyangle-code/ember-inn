@@ -217,6 +217,8 @@ class ChatPromptFactory {
         /** 官方 power_user.reasoning.prefix/suffix/separator（reasoning 预设应用后生效）。 */
         reasoningTemplate: com.emberinn.engine.prompt.ReasoningTemplate = com.emberinn.engine.prompt.ReasoningTemplate(),
         scriptInjections: List<ScriptInject> = emptyList(),
+        /** 官方 closureToFilter：生成时对 script_injects[id].filter 闭包原文求值，false 跳过注入与 scan。 */
+        scriptFilterEvaluator: ((String) -> Boolean)? = null,
         /** 官方 generate：群聊有 depth 提示时用群聊深度提示，否则用角色卡深度提示（DEPTH_PROMPT）。 */
         useCharacterDepthPrompt: Boolean = true,
         /** 官方 oai_settings.squash_system_messages：总装后合并连续 system 消息；dryRun/textgen 不生效。 */
@@ -594,9 +596,11 @@ class ChatPromptFactory {
         // 官方 /inject：script_injects → processChatSlashCommands 逐条 setExtensionPrompt，
         // 引擎 ExtensionPromptEngine 1:1 落成 before→start / after→end / chat→in-chat / none→不注入；
         // scan=true 的 value 按官方 getExtensionPromptByName 先宏替换再进世界书扫描缓冲
-        val scriptPlan = ExtensionPromptEngine.planScriptInjections(scriptInjections) {
-            MacroEngine.substitute(it, env)
-        }
+        val scriptPlan = ExtensionPromptEngine.planScriptInjections(
+            injects = scriptInjections,
+            substitute = { MacroEngine.substitute(it, env) },
+            evalFilter = scriptFilterEvaluator,
+        )
 
         val wiResult = scanner.scan(
             // 官方：chatForWI = coreChat.map(x => include_names ? `${x.name}: ${x.mes}` : x.mes).reverse()

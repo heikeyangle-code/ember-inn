@@ -165,25 +165,51 @@ class ChatRepository(private val context: Context) {
         prefill: String = "",
         maxTokensOverride: Int? = null,
         stopSequences: List<String> = emptyList(),
+        /** text completion 路径：官方 createRawPrompt 产物（instruct 格式化后的整段提示词）。 */
+        textPrompt: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         val profile = profile() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
-        val messages = buildList {
-            if (system.isNotBlank()) add(CompletionMessage(role = "system", content = system))
-            add(CompletionMessage(role = "user", content = prompt))
-            if (prefill.isNotBlank()) add(CompletionMessage(role = "assistant", content = prefill))
-        }
         val effective = if (maxTokensOverride != null && maxTokensOverride > 0) {
             profile.copy(sampler = profile.sampler.copy(maxTokens = maxTokensOverride))
         } else {
             profile
         }
-        client.chatCompletions(
-            provider,
-            effective,
-            messages,
-            options = ProviderRequestOptions(stopSequences = stopSequences),
-        )
+        val isTextCompletion = provider.protocol == "textgenerationwebui" ||
+            provider.protocol == "novel" ||
+            provider.protocol == "kobold"
+        val options = if (isTextCompletion && textPrompt != null) {
+            // 官方 generateRawData text completion 分支：quiet 类型 + instruct 格式化提示词
+            when (provider.protocol) {
+                "novel" -> ProviderRequestOptions(
+                    stopSequences = stopSequences,
+                    textGenPrompt = textPrompt,
+                    novelSettings = NovelSettingsStore.load(context),
+                )
+                "kobold" -> ProviderRequestOptions(
+                    stopSequences = stopSequences,
+                    textGenPrompt = textPrompt,
+                    koboldSettings = KoboldSettingsStore.load(context),
+                )
+                else -> ProviderRequestOptions(
+                    stopSequences = stopSequences,
+                    textGenPrompt = textPrompt,
+                    textGenSettings = TextgenSettingsDefaults.forProfile(
+                        provider,
+                        effective,
+                        TextgenSettingsStore.load(context),
+                    ),
+                )
+            }
+        } else {
+            ProviderRequestOptions(stopSequences = stopSequences)
+        }
+        val messages = buildList {
+            if (system.isNotBlank()) add(CompletionMessage(role = "system", content = system))
+            add(CompletionMessage(role = "user", content = prompt))
+            if (prefill.isNotBlank()) add(CompletionMessage(role = "assistant", content = prefill))
+        }
+        client.chatCompletions(provider, effective, messages, options)
     }
 
     /** 官方 caption 扩展 multimodal：用当前提供商发视觉请求生成图片描述。 */
@@ -257,6 +283,8 @@ class ChatRepository(private val context: Context) {
         reasoningMaxAdditions: Int = 1,
         reasoningTemplate: com.emberinn.engine.prompt.ReasoningTemplate = com.emberinn.engine.prompt.ReasoningTemplate(),
         scriptInjections: List<ExtensionPromptEngine.ScriptInject> = emptyList(),
+        /** 官方 closureToFilter：生成时对 script_injects[id].filter 闭包原文求值，false 跳过注入与 scan。 */
+        scriptFilterEvaluator: ((String) -> Boolean)? = null,
         /** 官方 generate：群聊深度提示存在时用群聊提示，否则角色卡深度提示。 */
         useCharacterDepthPrompt: Boolean = true,
         /** 官方 generateQuietPrompt 的 quietPrompt（记忆扩展 DEFAULT 总结器）。 */
@@ -399,6 +427,7 @@ class ChatRepository(private val context: Context) {
             reasoningMaxAdditions = reasoningMaxAdditions,
             reasoningTemplate = reasoningTemplate,
             scriptInjections = scriptInjections,
+            scriptFilterEvaluator = scriptFilterEvaluator,
             useCharacterDepthPrompt = useCharacterDepthPrompt,
             // 官方 prepareOpenAIMessages：squash 仅 chat completion 且 dryRun=false；textgen/novel/kobold 不执行
             squashSystemMessages = profile.sampler.squashSystemMessages &&

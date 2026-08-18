@@ -19,7 +19,7 @@ let yaml;
 try {
     yaml = require('yaml');
 } catch {
-    yaml = require('/data/data/com.termux/files/usr/tmp/diffdeps/node_modules/yaml');
+    yaml = require(join(here, 'vendor', 'node_modules', 'yaml'));
 }
 
 const src = readFileSync(join(officialRef, 'src', 'util.js'), 'utf8');

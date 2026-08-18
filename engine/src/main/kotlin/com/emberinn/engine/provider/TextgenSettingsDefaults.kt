@@ -24,6 +24,10 @@ object TextgenSettingsDefaults {
     /** 官方默认对象（textgen-settings.js:150-230，逐字段）。 */
     fun defaults(): JsonObject = buildJsonObject {
         put("temp", 0.7)
+        put("temperature_last", true)
+        put("top_p", 0.5)
+        put("top_k", 40)
+        put("top_a", 0)
         put("tfs", 1)
         put("epsilon_cutoff", 0)
         put("eta_cutoff", 0)

@@ -2,20 +2,50 @@ package com.emberinn.engine.expression
 
 import com.emberinn.engine.macros.MacroEngine
 import com.emberinn.engine.macros.MacroEnv
+import com.emberinn.engine.prompt.ReasoningEngine
+import com.emberinn.engine.prompt.ReasoningSettings
 import com.emberinn.engine.worldinfo.VectorTextUtils
 import kotlin.random.Random
 
+/** 官方 EXPRESSION_API 数值（local/extras/webllm 需对应后端，App 端消费 llm/none）。 */
+enum class ExpressionApi(val value: Int) {
+    LOCAL(0),
+    EXTRAS(1),
+    LLM(2),
+    WEBLLM(3),
+    NONE(99),
+}
+
+/** 官方 PROMPT_TYPE。 */
+enum class ExpressionPromptType(val value: String) {
+    RAW("raw"),
+    FULL("full"),
+}
+
 /**
  * 表情精灵引擎（对齐官方 extensions/expressions + endpoints/sprites.js 纯逻辑）：
- * 文件名→标签、图片元数据、按标签分组排序、按表达式选立绘。
- * DOM 显示/动画/LLM 分类属于 App/服务层。
+ * 文件名→标签、图片元数据、按标签分组排序、按表达式选立绘、LLM 分类提示词构造与响应解析。
+ * DOM 显示/动画属于 App/服务层。
  */
 object ExpressionEngine {
 
     const val RESET_SPRITE_LABEL = "#reset"
 
+    /** 官方 DEFAULT_LLM_PROMPT（{{labels}} 占位）。 */
+    const val DEFAULT_LLM_PROMPT =
+        "Ignore previous instructions. Classify the emotion of the last message. Output just one word, e.g. \"joy\" or \"anger\". Choose only one of the following labels: {{labels}}"
+
+    /** 官方 DEFAULT_EXPRESSIONS：28 个 GoEmotions 标签（resolveExpressionsList 离线回退集）。 */
+    val DEFAULT_EXPRESSIONS: List<String> = listOf(
+        "admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion",
+        "curiosity", "desire", "disappointment", "disapproval", "disgust", "embarrassment",
+        "excitement", "fear", "gratitude", "grief", "joy", "love", "nervousness", "optimism",
+        "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral",
+    )
+
     private val labelRegex = Regex("""^(.+?)(?:[-\.].*?)?$""")
     private val extensionRegex = Regex("""\.[^/.]+$""")
+
 
     data class SpriteEntry(val label: String, val path: String)
 
@@ -144,5 +174,45 @@ object ExpressionEngine {
             spriteFile = possible[((random() * possible.size).toInt()).coerceIn(0, possible.size - 1)]
         }
         return spriteFile
+    }
+
+    /**
+     * 对齐官方 getLlmPrompt：labels → `"a", "b"` 串后替换 {{labels}}；
+     * customPrompt 为空时用 DEFAULT_LLM_PROMPT（官方 substituteParamsExtended(customPrompt) || 默认）。
+     */
+    fun llmPrompt(labels: List<String>, customPrompt: String? = null): String {
+        val labelsString = labels.joinToString(", ") { "\"$it\"" }
+        val template = customPrompt?.takeIf { it.isNotBlank() } ?: DEFAULT_LLM_PROMPT
+        return template.replace("{{labels}}", labelsString)
+    }
+
+    /**
+     * 对齐官方 parseLlmResponse：
+     * 1) JSON.parse 取 emotion（trim + 小写，必须在 labels 内）；
+     * 2) 失败 → removeReasoningFromString 清理后 Fuse 模糊搜索（App 等价：标签整词匹配 → includes 匹配）；
+     * 3) 全部失败返回 null（调用方走 fallback_expression）。
+     */
+    fun parseLlmResponse(
+        emotionResponse: String,
+        labels: List<String>,
+        reasoningSettings: ReasoningSettings = ReasoningSettings(),
+    ): String? {
+        // 1) JSON {emotion: "..."}
+        runCatching {
+            val parsed = kotlinx.serialization.json.Json.parseToJsonElement(emotionResponse)
+            val emotion = (parsed as? kotlinx.serialization.json.JsonObject)
+                ?.get("emotion") as? kotlinx.serialization.json.JsonPrimitive
+            val response = emotion?.content?.trim()?.lowercase()
+            if (!response.isNullOrBlank() && labels.contains(response)) return response
+        }
+
+        // 2) 清理推理内容后模糊匹配（官方 Fuse → 简化：整词 → includes）
+        val cleaned = ReasoningEngine.removeReasoningFromString(emotionResponse, reasoningSettings).lowercase()
+        val wordMatch = Regex("""[a-z]+""").findAll(cleaned).map { it.value }.toList()
+        wordMatch.firstOrNull { it in labels }?.let { return it }
+        for (label in labels) {
+            if (cleaned.contains(label.lowercase())) return label
+        }
+        return null
     }
 }

@@ -9,38 +9,42 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.math.abs
 
-/** 官方 nai-settings.js getNovelGenerationData 的输入（SillyTavern 1.18.0 / 8172dcd）。 */
+/** 官方 nai-settings.js getNovelGenerationData 的输入（SillyTavern 1.18.0 / 8172dcd）。
+ *  默认值对齐官方 nai_settings 运行时默认（temperature 1.5 / rep_pen 2.25 / range 2048 / slope 0.09 /
+ *  presence 0.005 / tfs 0.975 / top_k 10 / top_p 0.75 / top_a 0.08 / typical 0.975 / min_length 1 /
+ *  prefix '' / order 数字索引 [1,5,0,2,3,4] / maximum_output_length 150）。 */
 data class NovelGenerationInput(
     val model: String,
-    val temperature: Double = 1.0,
-    val minLength: Int = 0,
-    val tailFreeSampling: Double = 1.0,
-    val repetitionPenalty: Double = 1.0,
-    val repetitionPenaltyRange: Int = 1024,
-    val repetitionPenaltySlope: Double = 0.9,
+    val temperature: Double = 1.5,
+    val minLength: Int = 1,
+    val tailFreeSampling: Double = 0.975,
+    val repetitionPenalty: Double = 2.25,
+    val repetitionPenaltyRange: Int = 2048,
+    val repetitionPenaltySlope: Double = 0.09,
     val repetitionPenaltyFrequency: Double = 0.0,
-    val repetitionPenaltyPresence: Double = 0.0,
-    val topA: Double = 0.0,
-    val topP: Double = 1.0,
-    val topK: Int = 0,
+    val repetitionPenaltyPresence: Double = 0.005,
+    val topA: Double = 0.08,
+    val topP: Double = 0.75,
+    val topK: Int = 10,
     val minP: Double = 0.0,
     val math1Temp: Double = 1.0,
     val math1Quad: Double = 0.0,
     val math1QuadEntropyScale: Double = 0.0,
-    val typicalP: Double = 1.0,
+    val typicalP: Double = 0.975,
     val mirostatLr: Double = 0.1,
     val mirostatTau: Double = 5.0,
     val phraseRepPen: String = "off",
-    val order: List<String>? = null,
+    /** 官方 order 恒为数字索引数组（samplers 名→数字映射；默认 [1,5,0,2,3,4]），差分 fixture 用字符串桩。 */
+    val order: List<JsonElement>? = null,
     val logitBias: List<JsonElement> = emptyList(),
     val bannedTokens: List<String> = emptyList(),
-    val prefix: String = "vanilla",
+    val prefix: String = "",
     val finalPrompt: String = "",
     val maxLength: Int = 200,
     val isImpersonate: Boolean = false,
     val isContinue: Boolean = false,
     val stoppingStrings: List<String> = emptyList(),
-    val maximumOutputLength: Int = 600,
+    val maximumOutputLength: Int = 150,
     val requestTokenProbabilities: Boolean = false,
 )
 
@@ -56,7 +60,8 @@ object NovelRequestBodyEngine {
     private const val TOKENIZER_NERD = 1
     private const val TOKENIZER_NERD2 = 2
     private const val TOKENIZER_LLAMA3 = 3
-    private val DEFAULT_ORDER = listOf("temperature", "tail_free_sampling", "repetition_penalty", "top_p", "top_k")
+    /** 官方 nai-settings.js default_order = [1,5,0,2,3,4]（数字索引：top_k/typical_p/temperature/top_p/tfs/top_a）。 */
+    private val DEFAULT_ORDER = listOf(1, 5, 0, 2, 3, 4).map { JsonPrimitive(it) }
 
     /** 由“应用 novel 预设后的设置 JSON + 连接档案”组装请求输入（App 传输映射；字段名沿用官方 nai_settings）。 */
     fun fromSettingsJson(
@@ -94,6 +99,7 @@ object NovelRequestBodyEngine {
             mirostatLr = d("mirostat_lr") ?: defaults.mirostatLr,
             mirostatTau = d("mirostat_tau") ?: defaults.mirostatTau,
             phraseRepPen = s("phrase_rep_pen") ?: defaults.phraseRepPen,
+            order = (settings?.get("order") as? JsonArray)?.toList() ?: defaults.order,
             prefix = s("prefix") ?: defaults.prefix,
             finalPrompt = finalPrompt,
             maxLength = maxLength,
@@ -196,7 +202,7 @@ object NovelRequestBodyEngine {
             put("use_cache", JsonPrimitive(false))
             put("return_full_text", JsonPrimitive(false))
             put("prefix", JsonPrimitive(prefix))
-            put("order", JsonArray((input.order ?: DEFAULT_ORDER).map { JsonPrimitive(it) }))
+            put("order", JsonArray(input.order ?: DEFAULT_ORDER))
             if (numLogprobs != null) put("num_logprobs", numLogprobs)
         }
     }

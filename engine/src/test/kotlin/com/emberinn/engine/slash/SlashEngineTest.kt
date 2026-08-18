@@ -114,4 +114,73 @@ class SlashEngineTest {
         assertEquals("no", SlashEngine.execute("/if left=a right=b rule=eq else=no yes"))
     }
 
+    // ---- 官方 ARGUMENT_TYPE.CLOSURE：closureArgs 命名参数保留闭包原文（/inject filter）----
+
+    /** 记录命名参数的探针命令（closureArgs=filter）。 */
+    private class ProbeResolver : SlashCommandResolver {
+        var filterArg: String? = null
+        var otherArg: String? = null
+        private val probe = SlashCommandDef(
+            "probe",
+            description = "probe",
+            callback = { inv, _ ->
+                filterArg = inv.namedArgs["filter"]
+                otherArg = inv.namedArgs["other"]
+                "OK"
+            },
+            closureArgs = setOf("filter"),
+        )
+
+        override fun resolve(name: String): SlashCommandDef? =
+            if (name == "probe") probe else SlashRegistry.resolve(name)
+    }
+
+    @Test
+    fun `closure arg keeps raw text for declared closureArgs`() {
+        val probe = ProbeResolver()
+        SlashEngine.execute("/probe filter={: /getvar chat_over :} hi", resolver = probe)
+        // 官方 SlashCommandClosure.rawText：textStart 在 discardWhitespace 之前捕获，
+        // 故保留前导空格、去尾随空格；延迟求值
+        assertEquals(" /getvar chat_over", probe.filterArg)
+    }
+
+    @Test
+    fun `closure arg raw text is not macro-substituted at parse time`() {
+        val probe = ProbeResolver()
+        SlashEngine.execute("/let key=x 1 || /probe filter={: /echo {{var::x}} :}", resolver = probe)
+        assertEquals(" /echo {{var::x}}", probe.filterArg)
+    }
+
+    @Test
+    fun `non-closureArgs named arg still executes closure eagerly`() {
+        val probe = ProbeResolver()
+        SlashEngine.execute("/probe other={: /echo a b :}", resolver = probe)
+        assertEquals("a b", probe.otherArg)
+    }
+
+    @Test
+    fun `closure output with spaces stays single named arg`() {
+        // 既有 bug 回归：命名参数里的闭包输出含空格不被截断
+        assertEquals("yes", SlashEngine.execute("/if left={: /echo a b :} right=\"a b\" rule=eq yes"))
+    }
+
+    @Test
+    fun `closure raw text survives pipes and further args`() {
+        val probe = ProbeResolver()
+        SlashEngine.execute("/echo x | /probe filter={: /getvar a | /if left={{pipe}} right=x rule=eq then=true :} tail", resolver = probe)
+        assertEquals(" /getvar a | /if left={{pipe}} right=x rule=eq then=true", probe.filterArg)
+    }
+
+    @Test
+    fun `stored filter raw text evaluates at generation time`() {
+        val probe = ProbeResolver()
+        SlashEngine.execute("/probe filter={: /getvar flag :} hi", resolver = probe)
+        val raw = probe.filterArg!!
+        // 官方 closureToFilter：执行闭包 → isTrueBoolean(pipe)
+        val out1 = SlashEngine.execute("/let key=flag true || $raw")
+        assertEquals(true, out1.equals("true", ignoreCase = true))
+        val out2 = SlashEngine.execute("/let key=flag false || $raw")
+        assertEquals("false", out2)
+    }
+
 }

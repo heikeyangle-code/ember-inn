@@ -14,6 +14,7 @@ const outFile = join(repoRoot, 'engine', 'src', 'test', 'resources', 'diff', 'in
 const instructSrc = readFileSync(join(officialRef, 'public', 'scripts', 'instruct-mode.js'), 'utf8');
 const openaiSrc = readFileSync(join(officialRef, 'public', 'scripts', 'openai.js'), 'utf8');
 const scriptSrc = readFileSync(join(officialRef, 'public', 'script.js'), 'utf8');
+const naiSrc = readFileSync(join(officialRef, 'public', 'scripts', 'nai-settings.js'), 'utf8');
 
 function extractFunction(source, name) {
     const start = source.indexOf(`function ${name}`);
@@ -97,6 +98,7 @@ const funcs = [
 
 const createRawPrompt = extractFunction(scriptSrc, 'createRawPrompt');
 const parseExample = extractFunction(openaiSrc, 'parseExampleIntoIndividual');
+const adjustNovel = extractFunction(naiSrc, 'adjustNovelInstructionPrompt');
 
 const stub = `
 let name1 = 'User';
@@ -142,9 +144,8 @@ function regexFromString(regexString) {
     return new RegExp(match[1], match[2]);
 }
 
-function adjustNovelInstructionPrompt(prompt) {
-    return prompt;
-}
+// 真实官方实现（nai-settings.js）：去 []、trim；无 "{ " 前缀则包裹 "{ ... }"
+${adjustNovel}
 
 ${parseExample}
 `;
@@ -249,6 +250,11 @@ const cases = [
     { id: 'raw_tc_chatml', fn: 'createRawPrompt', instruct: chatml, context, args: { prompt: [{ role: 'user', content: 'Hello' }, { role: 'assistant', content: 'Hi' }], api: 'textgenerationwebui', instructOverride: false, quietToLoud: false, systemPrompt: 'You are a cat.', prefill: '' } },
     { id: 'raw_cc', fn: 'createRawPrompt', instruct: alpaca, context, args: { prompt: [{ role: 'user', content: 'Hello' }], api: 'openai', instructOverride: false, quietToLoud: false, systemPrompt: 'You are a cat.', prefill: 'Sure' } },
     { id: 'raw_tc_instruct_override', fn: 'createRawPrompt', instruct: alpaca, context, args: { prompt: [{ role: 'user', content: 'Hello' }], api: 'textgenerationwebui', instructOverride: true, quietToLoud: false, systemPrompt: 'You are a cat.', prefill: '' } },
+    // novel 被 isInstruct 排除：名字前缀 + '\n' 拼接 + '\n'+prefill（adjustNovel stub 为恒等）
+    { id: 'raw_tc_novel', fn: 'createRawPrompt', instruct: alpaca, context, args: { prompt: [{ role: 'user', content: 'Hello' }], api: 'novel', instructOverride: false, quietToLoud: false, systemPrompt: 'You are a cat.', prefill: 'Sure' } },
+    // quietToLoud=true → last_output_sequence；quietToLoud=false → last_system_sequence（二者非空且不同才有区分度）
+    { id: 'raw_tc_quiet_to_loud', fn: 'createRawPrompt', instruct: { ...alpaca, last_system_sequence: '[SYS_LAST]', last_output_sequence: '[OUT_LAST]' }, context, args: { prompt: [{ role: 'user', content: 'Hello' }], api: 'textgenerationwebui', instructOverride: false, quietToLoud: true, systemPrompt: '', prefill: '' } },
+    { id: 'raw_tc_quiet_system', fn: 'createRawPrompt', instruct: { ...alpaca, last_system_sequence: '[SYS_LAST]', last_output_sequence: '[OUT_LAST]' }, context, args: { prompt: [{ role: 'user', content: 'Hello' }], api: 'textgenerationwebui', instructOverride: false, quietToLoud: false, systemPrompt: '', prefill: '' } },
 ];
 
 const moduleText = stub + funcs + createRawPrompt + `

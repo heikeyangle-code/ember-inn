@@ -63,9 +63,9 @@ import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, PROVIDERS, PROVIDER_DETAIL, APPEARANCE, TYPOGRAPHY, RENDER, EXTENSIONS, VOICE, SERVICES, QUICK_REPLIES, WORLD_INFO, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
+private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, TYPOGRAPHY, RENDER, EXTENSIONS, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
 
-/** 设置入口：README 信息架构（分组 + 搜索 + 常用区），子页：提供商 / 外观主题 / 关于。 */
+/** 设置入口：对照官方 SillyTavern 移动端 8 分区抽屉（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理）。 */
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
@@ -81,15 +81,20 @@ fun SettingsScreen(
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
     var providerId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // 一键深链：聊天页“先选一个模型”→ 直接进提供商与模型页
+    // 一键深链：聊天页“先选一个模型”→ 直接进 API 连接分区
     LaunchedEffect(deepLink) {
         when (deepLink) {
             "providers" -> page = SettingsPage.PROVIDERS
-            "appearance" -> page = SettingsPage.APPEARANCE
+            "ai" -> page = SettingsPage.AI_RESPONSE
+            "formatting" -> page = SettingsPage.ADVANCED_FORMATTING
+            "worldinfo" -> page = SettingsPage.WORLD_INFO
+            "user" -> page = SettingsPage.USER_SETTINGS
+            "appearance" -> page = SettingsPage.USER_SETTINGS
+            "backgrounds" -> page = SettingsPage.BACKGROUNDS
+            "personas" -> page = SettingsPage.PERSONAS
             "voice" -> page = SettingsPage.VOICE
             "services" -> page = SettingsPage.SERVICES
             "quickreplies" -> page = SettingsPage.QUICK_REPLIES
-            "worldinfo" -> page = SettingsPage.WORLD_INFO
             "memory" -> page = SettingsPage.MEMORY
             "caption" -> page = SettingsPage.CAPTION
             "expression" -> page = SettingsPage.EXPRESSION
@@ -117,6 +122,13 @@ fun SettingsScreen(
             .edgeSwipeBack(enabled = page != SettingsPage.HOME, onBack = ::goBack),
     ) {
     when (page) {
+        SettingsPage.AI_RESPONSE -> AiResponseScreen(
+            vm = vm,
+            onBack = { page = SettingsPage.HOME },
+            onOpenPresets = { page = SettingsPage.PRESETS },
+            onOpenPromptManager = { page = SettingsPage.PROMPT_MANAGER },
+            onOpenProviders = { page = SettingsPage.PROVIDERS },
+        )
         SettingsPage.PROVIDERS -> ProviderListScreen(
             vm = vm,
             onOpenDetail = { id ->
@@ -131,6 +143,16 @@ fun SettingsScreen(
                 ProviderDetailScreen(vm = vm, providerId = id, onBack = { page = SettingsPage.PROVIDERS })
             }
         }
+        SettingsPage.ADVANCED_FORMATTING -> PresetsScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.WORLD_INFO -> WorldInfoScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.USER_SETTINGS -> UserSettingsScreen(
+            onBack = { page = SettingsPage.HOME },
+            onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
+            onOpenRender = { page = SettingsPage.RENDER },
+            onOpenData = { page = SettingsPage.DATA },
+            onOpenAbout = { page = SettingsPage.ABOUT },
+        )
         SettingsPage.APPEARANCE -> AppearanceScreen(
             themeMode = themeMode,
             themePreset = themePreset,
@@ -138,15 +160,29 @@ fun SettingsScreen(
             onVibeChanged = onVibeChanged,
             onAppearanceChanged = onAppearanceChanged,
             onThemeChanged = onThemeChanged,
-            onBack = { page = SettingsPage.HOME },
+            onBack = { page = SettingsPage.USER_SETTINGS },
         )
+        SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
         SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
-        SettingsPage.EXTENSIONS -> ExtensionsScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.EXTENSIONS -> ExtensionsHubScreen(
+            onBack = { page = SettingsPage.HOME },
+            onOpenServices = { page = SettingsPage.SERVICES },
+            onOpenVoice = { page = SettingsPage.VOICE },
+            onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
+            onOpenMemory = { page = SettingsPage.MEMORY },
+            onOpenCaption = { page = SettingsPage.CAPTION },
+            onOpenExpression = { page = SettingsPage.EXPRESSION },
+            onOpenRegex = { page = SettingsPage.REGEX },
+            onOpenInteractive = { page = SettingsPage.INTERACTIVE },
+            onOpenAuthorsNote = { page = SettingsPage.AUTHORS_NOTE },
+            onOpenData = { page = SettingsPage.DATA },
+        )
+        SettingsPage.INTERACTIVE -> ExtensionsScreen(onBack = { page = SettingsPage.EXTENSIONS })
         SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.WORLD_INFO -> WorldInfoScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.MEMORY -> MemoryScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.CAPTION -> CaptionScreen(onBack = { page = SettingsPage.HOME })
         SettingsPage.EXPRESSION -> ExpressionScreen(onBack = { page = SettingsPage.HOME })
@@ -160,15 +196,19 @@ fun SettingsScreen(
             vm = vm,
             themeMode = themeMode,
             themePreset = themePreset,
+            onOpenAiResponse = { page = SettingsPage.AI_RESPONSE },
             onOpenProviders = { page = SettingsPage.PROVIDERS },
-            onOpenAppearance = { page = SettingsPage.APPEARANCE },
+            onOpenFormatting = { page = SettingsPage.ADVANCED_FORMATTING },
+            onOpenWorldInfo = { page = SettingsPage.WORLD_INFO },
+            onOpenUserSettings = { page = SettingsPage.USER_SETTINGS },
+            onOpenBackgrounds = { page = SettingsPage.BACKGROUNDS },
+            onOpenExtensionsHub = { page = SettingsPage.EXTENSIONS },
+            onOpenPersonas = { page = SettingsPage.PERSONAS },
             onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
             onOpenRender = { page = SettingsPage.RENDER },
-            onOpenExtensions = { page = SettingsPage.EXTENSIONS },
             onOpenVoice = { page = SettingsPage.VOICE },
             onOpenServices = { page = SettingsPage.SERVICES },
             onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
-            onOpenWorldInfo = { page = SettingsPage.WORLD_INFO },
             onOpenMemory = { page = SettingsPage.MEMORY },
             onOpenCaption = { page = SettingsPage.CAPTION },
             onOpenExpression = { page = SettingsPage.EXPRESSION },
@@ -189,27 +229,39 @@ private data class QuickAction(
     val onClick: () -> Unit,
 )
 
+/** 官方移动端 8 分区抽屉顺序（index.html #top-settings-holder）。 */
+private data class OfficialSection(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
 @Composable
 private fun SettingsHome(
     vm: ProviderViewModel,
     themeMode: ThemeMode,
     themePreset: ThemePreset,
+    onOpenAiResponse: () -> Unit,
     onOpenProviders: () -> Unit,
-    onOpenAppearance: () -> Unit,
+    onOpenFormatting: () -> Unit,
+    onOpenWorldInfo: () -> Unit,
+    onOpenUserSettings: () -> Unit,
+    onOpenBackgrounds: () -> Unit,
+    onOpenExtensionsHub: () -> Unit,
+    onOpenPersonas: () -> Unit,
     onOpenTypography: () -> Unit,
     onOpenRender: () -> Unit,
-    onOpenExtensions: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenQuickReplies: () -> Unit,
-    onOpenWorldInfo: () -> Unit,
     onOpenMemory: () -> Unit,
-    onOpenAuthorsNote: () -> Unit,
-    onOpenPresets: () -> Unit,
-    onOpenPromptManager: () -> Unit,
     onOpenCaption: () -> Unit,
     onOpenExpression: () -> Unit,
     onOpenRegex: () -> Unit,
+    onOpenAuthorsNote: () -> Unit,
+    onOpenPresets: () -> Unit,
+    onOpenPromptManager: () -> Unit,
     onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
@@ -217,7 +269,6 @@ private fun SettingsHome(
     val activeId by vm.activeId.collectAsState()
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
-    var showLicense by remember { mutableStateOf(false) }
 
     val activeProfile = profiles.firstOrNull { it.id == activeId }
     val providerSummary = activeProfile?.let { p ->
@@ -228,101 +279,22 @@ private fun SettingsHome(
         }
     } ?: "未配置"
 
-    val themeSummary = "${themePreset.name} · ${themeMode.label}"
-
-    val quickActions = listOf(
-        QuickAction("主题", PhosphorIcons.Star, onOpenAppearance),
-        QuickAction("模型", PhosphorIcons.Settings, onOpenProviders),
-        QuickAction("语音", PhosphorIcons.SpeakerHigh, onOpenVoice),
-        QuickAction("备份", PhosphorIcons.Refresh, onOpenData),
+    // 官方 8 分区（顺序对照官方 index.html 顶部抽屉栏）
+    val sections = listOf(
+        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", PhosphorIcons.Settings, onOpenAiResponse),
+        OfficialSection("API 连接", providerSummary, PhosphorIcons.Link, onOpenProviders),
+        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", PhosphorIcons.Edit, onOpenFormatting),
+        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", PhosphorIcons.Book, onOpenWorldInfo),
+        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", PhosphorIcons.User, onOpenUserSettings),
+        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", PhosphorIcons.ImageSquare, onOpenBackgrounds),
+        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", PhosphorIcons.Sparkle, onOpenExtensionsHub),
+        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", PhosphorIcons.Person, onOpenPersonas),
     )
 
-    val groups = listOf(
-        SettingsGroup(
-            "外观与主题",
-            icon = PhosphorIcons.Star,
-            rows = listOf(
-                SettingRow("主题与视觉", "预设主题 · 视觉氛围 · 圆角 · 字体", Color.Unspecified, onOpenAppearance, icon = PhosphorIcons.Star),
-                SettingRow("文字排版", "字号 · 行高 · 标题 · 引用 · 代码 · 间距", Color.Unspecified, onOpenTypography, icon = PhosphorIcons.Edit),
-                SettingRow("消息渲染（官方字段）", "正文/引用/下划线/气泡/边框/阴影/模糊强度", Color.Unspecified, onOpenRender, icon = PhosphorIcons.FileText),
-            ),
-        ),
-        SettingsGroup(
-            "提供商与模型",
-            icon = PhosphorIcons.Settings,
-            rows = listOf(
-                SettingRow("提供商与模型", providerSummary, Color.Unspecified, onOpenProviders, icon = PhosphorIcons.Settings),
-            ),
-        ),
-        SettingsGroup(
-            "语音",
-            icon = PhosphorIcons.SpeakerHigh,
-            rows = listOf(
-                SettingRow(
-                    "语音朗读（TTS）",
-                    if (VoicePrefs.enabled(context)) "已启用 · 本机引擎可试听" else "未启用 · 可在语音页开启自动朗读",
-                    Color.Unspecified,
-                    onOpenVoice,
-                    icon = PhosphorIcons.SpeakerHigh,
-                ),
-            ),
-        ),
-        SettingsGroup(
-            "扩展插件",
-            icon = PhosphorIcons.MaskHappy,
-            rows = listOf(
-                SettingRow("扩展插件（交互 HTML 卡片）", "iframe 渲染器 · 头像类 · 原代码折叠", Color.Unspecified, onOpenExtensions, icon = PhosphorIcons.BookmarkSimple),
-                SettingRow("表情精灵", "角色立绘 · 正文表情分类 · 导入/删除", Color.Unspecified, onOpenExpression, icon = PhosphorIcons.MaskHappy),
-            ),
-        ),
-        SettingsGroup(
-            "服务",
-            icon = PhosphorIcons.List,
-            rows = listOf(
-                SettingRow("翻译 · 图像 · 向量", "执行层已接入（Libre/DeepL/A1111/gpt-image/RAG）", Color.Unspecified, onOpenServices, icon = PhosphorIcons.Share),
-                SettingRow("快捷回复（全局）", "官方 Quick Reply 槽位 · 输入区快捷盘执行", Color.Unspecified, onOpenQuickReplies, icon = PhosphorIcons.Send),
-                SettingRow("世界书", "扫描深度 / 递归 / 预算", Color.Unspecified, onOpenWorldInfo, icon = PhosphorIcons.Book),
-                SettingRow("记忆扩展", "自动摘要 · {{summary}} 注入 · 立即总结", Color.Unspecified, onOpenMemory, icon = PhosphorIcons.Refresh),
-                SettingRow("作者注释", "全局默认 · 间隔 · 角色备注", Color.Unspecified, onOpenAuthorsNote, icon = PhosphorIcons.Edit),
-                SettingRow("预设", "上下文 · 指导 · 采样 · 系统提示 · 推理", Color.Unspecified, onOpenPresets, icon = PhosphorIcons.Settings),
-                SettingRow("提示词管理器（Prompt Manager）", "顺序 · 提示项 · 内容/角色/位置/深度/触发", Color.Unspecified, onOpenPromptManager, icon = PhosphorIcons.List),
-                SettingRow("图片描述（Caption）", "图片生成描述并发送（multimodal）", Color.Unspecified, onOpenCaption, icon = PhosphorIcons.FileText),
-                SettingRow("正则脚本（全局）", "GLOBAL 分桶 · 用户输入/AI 输出", Color.Unspecified, onOpenRegex, icon = PhosphorIcons.Search),
-            ),
-        ),
-        SettingsGroup(
-            "数据与隐私",
-            icon = PhosphorIcons.User,
-            rows = listOf(
-                SettingRow("数据仅保存在本地", "存储位置见数据与隐私页", Color.Unspecified, onOpenData, icon = PhosphorIcons.User),
-                SettingRow("备份与导出", "导出 zip · 二次确认", Color.Unspecified, onOpenData, icon = PhosphorIcons.Share),
-            ),
-        ),
-        SettingsGroup(
-            "关于",
-            icon = PhosphorIcons.Book,
-            rows = listOf(
-                SettingRow("版本", "0.1.0", Color.Unspecified, icon = PhosphorIcons.Star),
-                SettingRow("开源仓库", "GitHub", Color.Unspecified, onClick = {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
-                        )
-                    }
-                }, icon = PhosphorIcons.Share),
-                SettingRow("开源许可", "AGPL-3.0", Color.Unspecified, onClick = { showLicense = true }, icon = PhosphorIcons.FileText),
-            ),
-        ),
-    )
-
-    val visibleGroups = remember(groups, query) {
+    val visibleSections = remember(sections, query, providerSummary) {
         val q = query.trim()
-        groups.mapNotNull { group ->
-            val rows = if (q.isBlank()) group.rows else group.rows.filter {
-                it.title.contains(q, ignoreCase = true) || it.subtitle.contains(q, ignoreCase = true)
-            }
-            if (rows.isNotEmpty()) group.copy(rows = rows) else null
-        }
+        if (q.isBlank()) sections
+        else sections.filter { it.title.contains(q, true) || it.subtitle.contains(q, true) }
     }
 
     LazyColumn(
@@ -336,7 +308,7 @@ private fun SettingsHome(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("设置", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "外观、模型、语音与数据都在这里",
+                            "对照官方移动端布局的八个分区",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -372,191 +344,53 @@ private fun SettingsHome(
                 )
             }
         }
-        if (query.isBlank()) {
-            item {
-                QuickActionsCard(quickActions)
-            }
+        items(visibleSections, key = { it.title }) { section ->
+            OfficialSectionCard(section)
         }
-        items(visibleGroups, key = { it.title }) { group ->
-            SettingsGroupCard(group)
-        }
-    }
-
-    if (showLicense) {
-        AlertDialog(
-            onDismissRequest = { showLicense = false },
-            title = { Text("开源许可") },
-            text = { Text("本软件基于 AGPL-3.0 发布：参考/翻译 SillyTavern 源码，派生义务；分发必须开源。") },
-            confirmButton = {
-                TextButton(onClick = { showLicense = false }) { Text("知道了") }
-            },
-        )
     }
 }
 
-
 @Composable
-private fun QuickActionsCard(actions: List<QuickAction>) {
+private fun OfficialSectionCard(section: OfficialSection) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = section.onClick),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(vertical = 14.dp)) {
-            Text(
-                "常用",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
-            )
-            Spacer(Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-                actions.forEach { action ->
-                    QuickActionCell(action, modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickActionCell(action: QuickAction, modifier: Modifier = Modifier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .clickable(onClick = action.onClick)
-            .padding(vertical = 8.dp),
-    ) {
-        Box(
-            modifier = Modifier.size(46.dp).clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)),
-            contentAlignment = Alignment.Center,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            Icon(
-                action.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-        Spacer(Modifier.height(7.dp))
-        Text(action.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
-    }
-}
-
-private data class SettingRow(
-    val title: String,
-    val subtitle: String,
-    val dot: Color,
-    val onClick: (() -> Unit)? = null,
-    val icon: ImageVector? = null,
-)
-
-private data class SettingsGroup(
-    val title: String,
-    val rows: List<SettingRow>,
-    val icon: ImageVector? = null,
-)
-
-@Composable
-private fun SettingsGroupCard(group: SettingsGroup) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp),
-            ) {
-                if (group.icon != null) {
-                    Box(
-                        modifier = Modifier.size(30.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            group.icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(10.dp))
-                }
-                Text(group.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            group.rows.forEachIndexed { index, row ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 18.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    )
-                }
-                SettingRowView(row)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingRowView(row: SettingRow) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = row.onClick != null, onClick = { row.onClick?.invoke() })
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        if (row.icon != null) {
             Box(
-                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    row.icon,
+                    section.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(19.dp),
+                    modifier = Modifier.size(21.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
-        } else if (row.dot != Color.Unspecified) {
-            Box(
-                modifier = Modifier.size(10.dp).clip(CircleShape).background(row.dot),
-            )
             Spacer(Modifier.width(14.dp))
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(row.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (row.subtitle.isNotBlank()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(section.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text(
-                    row.subtitle,
+                    section.subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-        if (row.onClick != null) {
-            Box(
-                modifier = Modifier.size(24.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    PhosphorIcons.CaretRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
+            Icon(
+                PhosphorIcons.CaretRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

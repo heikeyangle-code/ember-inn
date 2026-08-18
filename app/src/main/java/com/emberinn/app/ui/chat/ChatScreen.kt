@@ -7,6 +7,7 @@ import com.emberinn.app.ui.components.glassTint
 
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.ExpressionStore
+import com.emberinn.engine.expression.ExpressionApi
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
@@ -786,6 +787,8 @@ fun ChatScreen(
                                     bookmarkDraftName = vm.defaultBookmarkName()
                                     showBookmarkDialog = true
                                 },
+                                onClassifyExpression = { t, cb -> vm.classifyExpression(t, cb) },
+                                classifyEnabled = true,
                                 onLongPress = { menuMessageIndex = item.index },
                             )
                         }
@@ -2668,14 +2671,28 @@ private fun MessageRow(
     onEdit: () -> Unit = {},
     onMore: () -> Unit = {},
     onBookmark: () -> Unit = {},
+    /** LLM 表情分类回调（官方 getExpressionLabel LLM 分支；null=不支持）。 */
+    onClassifyExpression: ((String, (String?) -> Unit) -> Unit)? = null,
+    classifyEnabled: Boolean = false,
     onLongPress: () -> Unit,
 ) {
     val context = LocalContext.current
     // 官方 messageFormatting：仅 'SillyTavern System' 命名的系统消息按系统格式化（跳过引号/encode/正则）；
     // Note 评论等 is_system 消息正文按普通消息格式化（样式仍按系统灰字）
     val formatAsSystem = isSystem && name == SYSTEM_USER_NAME
-    // 表情精灵：AI 消息按正文分类选立绘（官方 expressions chooseSpriteForExpression 纯逻辑）
-    val spriteFile = remember(text, name, isUser, spritePath) {
+    // 表情精灵：AI 消息按正文分类选立绘（官方 expressions getExpressionLabel + chooseSpriteForExpression）。
+    // none API → 直接 fallback；LLM API → 先 fallback，异步分类完成后用标签重选（官方异步设置 sprite DOM 的等价）。
+    val expressionPrefs = remember(text, name) { if (isUser) null else ExpressionPrefs.load(context) }
+    var classified by remember(text, name) { mutableStateOf<String?>(null) }
+    val classifier = onClassifyExpression
+    if (expressionPrefs?.enabled == true && expressionPrefs.api == ExpressionApi.LLM &&
+        classifier != null && classifyEnabled
+    ) {
+        LaunchedEffect(text, name) {
+            if (classified == null) classifier(text) { classified = it }
+        }
+    }
+    val spriteFile = remember(text, name, isUser, spritePath, classified) {
         if (isUser) {
             null
         } else {
@@ -2683,19 +2700,22 @@ private fun MessageRow(
             if (stored != null) {
                 stored
             } else {
-                val prefs = ExpressionPrefs.load(context)
+                val prefs = expressionPrefs ?: ExpressionPrefs.load(context)
                 if (!prefs.enabled) {
                     null
                 } else {
                     val store = ExpressionStore(context)
-                    val expression = com.emberinn.engine.expression.ExpressionEngine.sampleClassifyText(text)
+                    val expression = when {
+                        prefs.api == ExpressionApi.LLM && classified != null -> classified!!
+                        else -> prefs.fallbackExpression
+                    }
                     val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
                         store.sprites(name),
                         prefs.customLabels,
                     )
                     com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
                         folderName = name,
-                        expression = expression ?: "",
+                        expression = expression,
                         spriteCache = mapOf(name to groups),
                         settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
                             fallbackExpression = prefs.fallbackExpression.ifBlank { null },

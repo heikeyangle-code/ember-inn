@@ -15,6 +15,9 @@ import kotlinx.coroutines.runBlocking
  */
 object SlashEngine {
 
+    /** 闭包原文参数占位标记（\u0002；\u0001 为闭包立即执行输出占位）。 */
+    const val CLOSURE_RAW_MARK = '\u0002'
+
     fun execute(
         text: String,
         state: SlashState = SlashState(),
@@ -52,7 +55,7 @@ object SlashEngine {
                     }
                     finalInv = substituteInvocation(finalInv, state)
                     finalInv = finalInv.copy(
-                        namedArgs = finalInv.namedArgs.mapValues { (_, v) -> v.replace("\u0001", "") },
+                        namedArgs = finalInv.namedArgs.mapValues { (_, v) -> v.replace("\u0001", "").replace(CLOSURE_RAW_MARK.toString(), "") },
                         namedLists = finalInv.namedLists.mapValues { (_, v) -> v.map { it.replace("\u0001", "") } },
                         unnamedArgs = finalInv.unnamedArgs.map { it.replace("\u0001", "") },
                     )
@@ -80,11 +83,15 @@ object SlashEngine {
     private suspend fun invokeCommand(def: SlashCommandDef, invocation: CommandInvocation, state: SlashState): String =
         def.suspendCallback?.invoke(invocation, state) ?: def.callback(invocation, state)
 
-    /** 对齐官方：命令参数在执行前过宏替换（{{var}}/{{pipe}}/{{arg}} 等）。 */
+    /** 对齐官方：命令参数在执行前过宏替换（{{var}}/{{pipe}}/{{arg}} 等）。
+     *  闭包原文参数（\u0002 包裹）跳过替换——官方在闭包执行时才替换。 */
     private fun substituteInvocation(invocation: CommandInvocation, state: SlashState): CommandInvocation {
         val env = MacroEnv(user = "", char = "", slash = state)
+        fun sub(v: String): String =
+            if (v.length >= 2 && v.startsWith(CLOSURE_RAW_MARK) && v.endsWith(CLOSURE_RAW_MARK)) v
+            else MacroEngine.substitute(v, env)
         return invocation.copy(
-            namedArgs = invocation.namedArgs.mapValues { (_, v) -> MacroEngine.substitute(v, env) },
+            namedArgs = invocation.namedArgs.mapValues { (_, v) -> sub(v) },
             namedLists = invocation.namedLists.mapValues { (_, v) -> v.map { MacroEngine.substitute(it, env) } },
             unnamedArgs = invocation.unnamedArgs.map { MacroEngine.substitute(it, env) },
         )
@@ -93,6 +100,8 @@ object SlashEngine {
     /**
      * 把 {: 链 :} 替换为其执行输出（加控制字符占位，保持单个参数）。
      * 转义判定对齐官方 testSymbol：{ 前反斜杠为奇数个时不是闭包。
+     * 命令声明 closureArgs 的命名参数（官方 ARGUMENT_TYPE.CLOSURE，如 /inject filter）
+     * 保留闭包原文（\u0002 包裹）不立即执行——官方惰性闭包语义的可移植子集。
      */
     private suspend fun resolveClosuresAsync(text: String, resolver: SlashCommandResolver): String {
         val sb = StringBuilder()
@@ -121,14 +130,36 @@ object SlashEngine {
                 }
                 if (end < 0) { sb.append(text, i, text.length); break }
                 val inner = text.substring(i + 2, end)
-                val output = runCatching { executeAsync(inner, resolver = resolver) }.getOrElse { "" }
-                sb.append('\u0001').append(output).append('\u0001')
+                val closureTarget = closureArgTarget(text, i, resolver)
+                if (closureTarget != null) {
+                    // 官方 SlashCommandClosure.rawText = text.slice(textStart, index)：
+                    // 保留前导空白、去尾空白（官方循环收尾 discardWhitespace）
+                    sb.append(CLOSURE_RAW_MARK).append(inner.trimEnd()).append(CLOSURE_RAW_MARK)
+                } else {
+                    val output = runCatching { executeAsync(inner, resolver = resolver) }.getOrElse { "" }
+                    sb.append('\u0001').append(output).append('\u0001')
+                }
                 i = end + 2
             } else {
                 sb.append(text[i]); i++
             }
         }
         return sb.toString()
+    }
+
+    /**
+     * 判定 text[start] 处的闭包是否为「命令声明的闭包型命名参数」的值：
+     * 回看 `命令段 /name ... arg=`，仅当 resolver 解析到该命令且 arg 在 closureArgs 中。
+     * 检测失败一律返回 null（回退官方外的立即执行，不影响既有行为）。
+     */
+    private fun closureArgTarget(text: String, start: Int, resolver: SlashCommandResolver): String? {
+        val behind = text.substring(0, start)
+        val eq = Regex("""([A-Za-z0-9_-]+)=\s*$""").find(behind) ?: return null
+        val argName = eq.groupValues[1]
+        val segment = behind.substring(0, eq.range.first).substringAfterLast('|')
+        val cmd = Regex("""/([A-Za-z0-9_-]+)""").find(segment) ?: return null
+        val def = runCatching { resolver.resolve(cmd.groupValues[1].lowercase()) }.getOrNull() ?: return null
+        return argName.takeIf { it in def.closureArgs }
     }
 
     /** 前一个（非转义链）反斜杠为奇数个 → 该位置被转义。 */
