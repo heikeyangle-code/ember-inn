@@ -199,7 +199,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 
 ### 4.4 设置 ✅（README 规格）
 - 数据与隐私：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明 + 清除全部数据（二次确认）；首启引导（欢迎页 + 导入角色卡/直接开始/跳过）。
-- 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观（AppearanceScreen）：主题模式（浅/深/跟随系统）+ 23 套预设主题卡（预览色板 = 三圆点 + 宝石菱形 + 金属环，选中描边用主题 metal，架构见 4.5）+ 视觉氛围滑杆（VibePreset），实时预览。
+- 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观（AppearanceScreen）：主题模式（浅/深/跟随系统）+ 24 套预设主题卡（预览色板 = 三圆点 + 宝石菱形 + 金属环，选中描边用主题 metal，架构见 4.5）+ 视觉氛围滑杆（VibePreset），实时预览。
 - 提供商与模型：搜索 + 卡片列表（品牌 SVG/已配置 pill/我的连接）；详情页 = API Key（遮罩）/接口地址（未配置自动预填 providers.json 默认）/区域/账户 ID/API 版本/默认模型（底部弹层搜索）/上下文上限/最大回复/测试连接/保存/删除确认；模型页已补 top_k/min_p/top_a/repetition_penalty/seed/n/流式/logprobs/use_sysprompt + OpenRouter use_fallback/allow_fallbacks/middleout/providers/quantizations。
 - 关于页：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库。
 - 语音（TTS）：Android 系统 TTS，语音/语速/试听；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。
@@ -209,45 +209,47 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图替换该 PNG。
 
 ### 4.5 主题系统 ✅（全局层）
-**生成管线**：ThemePreset → Theme.kt 生成 M3 ColorScheme（浅色主色 darken(seed,0.10) + 纸色底，深色 schemePrimary ?? lighten(seed,0.30) + 夜色底）→ MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；VibePreset 视觉氛围（降饱和/冷暖/光效，外观页滑杆）对整盘 scheme 后处理（standard 档与官方主题豁免）；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底，艺术字段全默认=不启用）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）。
+**生成管线**：ThemePreset → Theme.kt 生成 M3 ColorScheme（浅色主色自适应加深至 WCAG 4.5:1 + 纸色底，深色 schemePrimary ?? lighten(seed,0.30) + 夜色底）→ MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；**容器色阶带主题色相**（画布着色）：浅色容器从纸色往 seed 色相轻移 5%（象牙白/大理石的暖底画布，非灰阶）、深色容器向"主色调白"提亮（卡片像被主题光照射——火光反射在铠甲上，官方主题豁免仍用纯灰阶）；VibePreset 视觉氛围（降饱和/冷暖/光效，外观页滑杆）对整盘 scheme 后处理（standard 档与官方主题豁免）；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底，艺术字段全默认=不启用）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）。
 
 **ThemePreset 字段架构**（ThemePreset.kt）：
 - 基础：seed/secondary/tertiary 三强调色 + lightBg/darkBg 纸色/夜色 + shape（square 4dp / default 12dp / rounded 16dp / circle 24dp）+ spacing 间距节奏倍数 + motionScale 动效速度倍数
 - 官方对齐：st*（消息渲染正文/强调/下划线/引用/气泡/阴影，对齐官方 SmartTheme 变量）+ scheme*（M3 角色覆盖；酒馆官方主题填绝对真值，无浅色模式恒按官方深色渲染且豁免一切滤镜）
-- 艺术扩展五字段（默认全关；官方主题恒关；实现全在 ArtBackdrop.kt）：
+- 艺术扩展六字段（默认全关；官方主题恒关；实现全在 ArtBackdrop.kt）：
   - `contrast` 明暗对照（chiaroscuro）：缩放 surfaceContainer 色阶梯，>1 夜更沉卡片浮更亮、<1 雾感压平（clamp 0.6–1.6）
-  - `gem` 宝石色：聊天页左下光晕 + 主题卡菱形预览
+  - `gem` 宝石色：聊天页左下光晕（深色 alpha 0.09 / 浅色 0.06）+ 主题卡菱形预览
   - `metal` 金属色：选中主题卡描边 + 圆环预览
   - `texture` 底材纹理：oil 油画布织纹 / etch 铜版蚀刻（布点+45°排线）/ wash 宣纸微尘；drawWithCache 预生成一次（固定随机种子不闪烁），两次批量 drawPoints 画在内容之下，滚动/重组零开销
-  - `auraTop` 天空氛围：深色模式页面顶部极淡渐变（红月/烟雾战场等），聊天页渐变 + emberBackdrop 四屏背景（角色/会话/设置/角色详情）
+  - `auraTop` 深色天空氛围：页面顶部极淡渐变（红月/烟雾战场等）
+  - `auraTopLight` 浅色天空氛围：象牙晨光/绯薄暮等——浅色模式同样有画面而非惨白纸面；聊天页渐变 + emberBackdrop 四屏背景（角色/会话/设置/角色详情）均深浅双模式生效
 
-**23 套主题清单**（性格 = 形状/间距/动效/艺术字段的组合，彼此不重复）：
+**24 套主题清单**（性格 = 形状/间距/动效/艺术字段的组合，彼此不重复；全部非官方主题均配深浅双天空）：
 
 | 组 | 主题 | 画种 · 关键性格 |
 |---|---|---|
-| 基础 11 | 墨韵 ink | 水墨：wash 宣纸 + 朱砂宝石 + 冷银金属 + 墨青天，rounded 慢 0.85x |
-| | 青瓷 celadon | 瓷器：全场唯一无纹理彩色主题（釉面光滑即身份），天青夜 aura |
-| | 夜航 night | 透纳海景：oil 画布 + 黄铜金属，灯塔琥珀宝石，深海夜天 |
+| 基础 11 | 墨韵 ink | 水墨：wash 宣纸 + 朱砂宝石 + 冷银金属 + 墨青天/青雾晨光，rounded 慢 0.85x |
+| | 青瓷 celadon | 瓷器：全场唯一无纹理彩色主题（釉面光滑即身份），天青夜/暖沙晨光 aura |
+| | 夜航 night | 透纳海景：oil 画布 + 黄铜金属，灯塔琥珀宝石，深海夜天/灯塔晨光 |
 | | 丹砂 cinnabar | 篆刻金石：etch 刀痕 + 印泥朱宝石 + 刻石白金属，square 快 1.15x |
-| | 琉璃 glaze | 玻璃器：无纹高反差 1.3 + 紫宝石/青金属，circle |
-| | 石墨 paper | 石墨素描：全场唯一无宝石无金属（极简即身份），etch 铅笔排线 |
-| | 竹青 bamboo | 竹园晨雾：wash 雾露 + 竹黄宝石/苔色金属，黛绿夜天 |
-| | 暮紫 dusk | 暮霭水彩：wash 暮尘 + 落日橙宝石/紫银金属，紫暮天 |
+| | 琉璃 glaze | 玻璃器：无纹高反差 1.3 + 紫宝石/青金属，circle，紫夜/淡紫玻璃光 |
+| | 石墨 paper | 石墨素描：全场唯一无宝石无金属（极简即身份），etch 铅笔排线，灰纸光 |
+| | 竹青 bamboo | 竹园晨雾：wash 雾露 + 竹黄宝石/苔色金属，黛绿夜天/竹雾晨光 |
+| | 暮紫 dusk | 暮霭水彩：wash 暮尘 + 落日橙宝石/紫银金属，紫暮天/暮光橙 |
 | | 晨雾 mist | 全场唯一低反差 0.9（雾压平明暗），wash + 晨光金宝石 |
-| | 樱粉 sakura | 樱吹雪：wash 落瓣 + 樱绯宝石/粉银金属，暮樱紫天 |
+| | 樱粉 sakura | 樱吹雪：wash 落瓣 + 樱绯宝石/粉银金属，暮樱紫天/樱霞光 |
 | | 酒馆官方 st | 官方 SmartTheme 逐值还原，无滤镜/纹理/氛围（恒定豁免） |
-| 艺术向 7 | 熔金 molten | 电影 teal&orange：oil + 熔金金属/余烬宝石 |
-| | 靛夜 indigo | 梦境星夜：wash + 星尘青宝石/月银金属，靛蓝天 |
-| | 琥珀 amber | 古典油画：oil + 烛光琥珀/威尼斯红宝石，画布夜天 |
-| | 黛山 inkwash | 水墨留白：wash + 枯金宝石，最慢 0.8x 最松 1.18x |
-| | 深海 abyss | 万米幽光：无纹 + 浮游青绿宝石，深海 aura |
-| | 胶片 film | 柯达褪色：wash + 褪棕宝石/灰青金属 |
-| | 霓虹 neon | 雨夜霓虹：无纹方正 + 品红宝石/青金属，最快 1.1x |
-| 画廊 5 | 金冕 crown | 巴洛克骷髅王：oil + 旧金金属 + 红宝石光晕 + 暗青战场 aura |
-| | 玄骑 knight | 黑甲白马：oil + 钢银金属 + 绯红宝石，square 1.2x 冲锋感 |
-| | 赤月 vermilion | 红月孤影：wash + 红黑有限色调，circle 1.2x 血月 aura |
-| | 安魂 requiem | 白袍玫瑰：etch 线稿 + 全场最高反差 1.4（白袍对黑虚空） |
-| | 沧溟 cobalt | 碧海神阶：etch 复古插画 + 钴蓝海/大理石/赤月宝石 |
+| 艺术向 7 | 熔金 molten | 电影 teal&orange：oil + 熔金金属/余烬宝石，金夜天/金色黄昏光 |
+| | 靛夜 indigo | 梦境星夜：wash + 星尘青宝石/月银金属，靛蓝天/淡靛光 |
+| | 琥珀 amber | 古典油画：oil + 烛光琥珀/威尼斯红宝石，画布夜天/暖琥珀光 |
+| | 黛山 inkwash | 水墨留白：wash + 枯金宝石，最慢 0.8x 最松 1.18x，青灰山雾光 |
+| | 深海 abyss | 万米幽光：无纹 + 浮游青绿宝石，深海 aura/浅海青光 |
+| | 胶片 film | 柯达褪色：wash + 褪棕宝石/灰青金属，褪色暖调光 |
+| | 霓虹 neon | 雨夜霓虹：无纹方正 + 品红宝石/青金属，最快 1.1x，雨后粉紫光 |
+| 画廊 6 | 猩红王座 crown | 巴洛克骷髅王：oil + 古金主色 + 红宝石光晕 + 暗青战场天/金色晨光，黑曜石王座厅 |
+| | 白鹰圣殿 knight | 白马白鹰圣殿：oil + 象牙白主色 + 暗红宝石，蓝灰夜空/象牙晨光，square 庄重 |
+| | 赤月森林 vermilion | 红月孤影：wash + 红黑有限色调（枯金/月象牙次色），circle，血月天/绯薄暮光 |
+| | 亡者圣堂 requiem | 白袍玫瑰：etch 线稿 + 全场最高反差 1.45（白袍对极黑虚空），黑白红三色 |
+| | 古海神殿 cobalt | 碧海神阶：etch 复古插画 + 钴蓝海/大理石/赤月宝石，钴蓝夜天/海雾蓝光 |
+| | 禁忌档案馆 archive | 原创·五画元素融为一馆：oil + 烛光古金主色 + 红宝石微光 + 蓝宝石点缀 + 旧铜金属，烛光暖天/羊皮纸暖光，最松 1.2x 最静 0.85x |
 
 🟡 MeshGradient 氛围背景未做（README 可选）。
 

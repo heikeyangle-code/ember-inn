@@ -50,6 +50,8 @@ data class ThemePreset(
     val texture: String = "none",
     /** 天空氛围色：深色模式页面顶部极淡渐变天色——红月、烟雾战场（null=不启用）。 */
     val auraTop: Color? = null,
+    /** 浅色模式天空氛围：象牙晨光、绯色薄暮等（null=浅色不画天空）。 */
+    val auraTopLight: Color? = null,
 )
 
 val ThemePresets: List<ThemePreset> = listOf(
@@ -84,6 +86,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFAEB2B6),
         texture = "wash",
         auraTop = Color(0xFF1B2224),
+        auraTopLight = Color(0xFFE2E8E4),
     ),
     ThemePreset(
         id = "celadon",
@@ -114,6 +117,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         gem = Color(0xFF3FC48C),
         metal = Color(0xFFC9AC70),
         auraTop = Color(0xFF183038),
+        auraTopLight = Color(0xFFEBDCC0),
     ),
     ThemePreset(
         id = "night",
@@ -143,6 +147,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFB8935A),
         texture = "oil",
         auraTop = Color(0xFF16263D),
+        auraTopLight = Color(0xFFEBE1D0),
     ),
     ThemePreset(
         id = "cinnabar",
@@ -204,6 +209,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         gem = Color(0xFFB587FF),
         metal = Color(0xFF5AC8D8),
         auraTop = Color(0xFF1B1435),
+        auraTopLight = Color(0xFFE2DCEC),
     ),
     ThemePreset(
         id = "paper",
@@ -231,6 +237,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.2f,
         texture = "etch",
         auraTop = Color(0xFF1E1E22),
+        auraTopLight = Color(0xFFE9E9E7),
     ),
     // 酒馆官方（SillyTavern 1.18 默认 SmartTheme，public/style.css :root 逐值核对）：
     // 墨黑底 #171717 · 象牙文字 rgb(220,220,210) · 次要 rgb(145,145,145)
@@ -292,6 +299,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFF9DAD8A),
         texture = "wash",
         auraTop = Color(0xFF182518),
+        auraTopLight = Color(0xFFE0E8DA),
     ),
     ThemePreset(
         id = "dusk",
@@ -321,6 +329,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFC2A2D2),
         texture = "wash",
         auraTop = Color(0xFF231733),
+        auraTopLight = Color(0xFFF0DCC6),
     ),
     ThemePreset(
         id = "mist",
@@ -351,6 +360,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFF9FB4C8),
         texture = "wash",
         auraTop = Color(0xFF1D2A38),
+        auraTopLight = Color(0xFFEFE6D0),
     ),
     ThemePreset(
         id = "sakura",
@@ -382,6 +392,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFCFACA8),
         texture = "wash",
         auraTop = Color(0xFF2A1626),
+        auraTopLight = Color(0xFFF2DFD8),
     ),
     // ---- 艺术向主题：每套围绕一种绘画/影像语言展开，冷暖对撞比基础 11 套更戏剧化 ----
     // 电影感黄昏：琥珀熔金压在深蓝夜幕上，冷影暖光的经典 teal & orange 对撞
@@ -414,6 +425,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFDFAE62),
         texture = "oil",
         auraTop = Color(0xFF22303C),
+        auraTopLight = Color(0xFFF2D9A6),
     ),
     // 梦境星夜：靛蓝垂到近黑，主色是月光下的长春花蓝，tertiary 取星尘青
     ThemePreset(
@@ -445,6 +457,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFAEB6D8),
         texture = "wash",
         auraTop = Color(0xFF141B3D),
+        auraTopLight = Color(0xFFD8DCF0),
     ),
     // 古典油画：烛光琥珀 + 熟褐 + 威尼斯红，底色像上了年纪的画布
     ThemePreset(
@@ -476,6 +489,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFC89A58),
         texture = "oil",
         auraTop = Color(0xFF2A1C0E),
+        auraTopLight = Color(0xFFF0DEB6),
     ),
     // 水墨山水：雾青灰 + 墨黑 + 芦苇枯金，最慢的动效（motionScale 0.8）配最松的留白
     ThemePreset(
@@ -507,6 +521,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFF9FAAA6),
         texture = "wash",
         auraTop = Color(0xFF1E2626),
+        auraTopLight = Color(0xFFDCE3DF),
     ),
     // 深海幽光：万米以下的黑青，主色是发光的浮游生物青绿，tertiary 是透进水面的浅青
     ThemePreset(
@@ -537,6 +552,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         gem = Color(0xFF4FE0D0),
         metal = Color(0xFFB8C8CC),
         auraTop = Color(0xFF0A2430),
+        auraTopLight = Color(0xFFC6DEE4),
     ),
     // 复古胶片：柯达褪色的暖棕 + 灰青阴影，像抽屉里放旧的照片
     ThemePreset(
@@ -568,6 +584,7 @@ val ThemePresets: List<ThemePreset> = listOf(
         metal = Color(0xFFA8A8A0),
         texture = "wash",
         auraTop = Color(0xFF23262B),
+        auraTopLight = Color(0xFFEAD8C2),
     ),
     // 雨夜霓虹：湿沥青路面反射品红/青双色霓虹，方正利落、动效更快
     ThemePreset(
@@ -598,19 +615,20 @@ val ThemePresets: List<ThemePreset> = listOf(
         gem = Color(0xFFFF5FB8),
         metal = Color(0xFF46C0DC),
         auraTop = Color(0xFF1A1024),
+        auraTopLight = Color(0xFFE8D8EE),
     ),
-    // ---- 画廊系列：五幅画五个主题，逐一还原画面语言 ----
-    // ① 骷髅王：巴洛克金工铠甲 + 红蓝宝石 + 黑蓝绿烟雾战场，dark fantasy 古典油画的顶配华丽
-    //    象牙骨白做正文、旧金做主色、红宝石做光晕、暗青做夜幕（提示词色板逐项落位）
+    // ---- 画廊系列：五幅画 + 一座档案馆 = 六套主题，同一世界观 ----
+    // ① 猩红王座：骷髅王 + 巴洛克银金铠甲 + 红蓝宝石 + 黑披风猩红内衬 + 暗青烟雾战场。
+    //    深色=黑曜石王座厅、古金主色、猩红宝石光、暗青战场天；浅色=象牙白画布上的古金与猩红撞色
     ThemePreset(
         id = "crown",
-        name = "金冕",
+        name = "猩红王座",
         desc = "骸骨加冕 · 巴洛克金工",
         seed = Color(0xFFC9A24B),
         secondary = Color(0xFF8E9086),
         tertiary = Color(0xFF9E2B25),
-        lightBg = Color(0xFFF7F3E6),
-        darkBg = Color(0xFF0C1416),
+        lightBg = Color(0xFFF7F2E2),
+        darkBg = Color(0xFF0B0A0D),
         shape = "rounded",
         spacing = 1.15f,
         motionScale = 0.9f,
@@ -626,27 +644,28 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFD4A94F),
         schemeSecondary = Color(0xFFADAE9F),
         schemeTertiary = Color(0xFFC4574A),
-        contrast = 1.25f,
+        contrast = 1.3f,
         gem = Color(0xFFD0342C),
         metal = Color(0xFFC9A24B),
         texture = "oil",
-        auraTop = Color(0xFF1E3A3C),
+        auraTop = Color(0xFF16333A),
+        auraTopLight = Color(0xFFE8CE8E),
     ),
-    // ② 黑甲魔王：黑化钢甲 + 绯红披风的对角线 + 白马白鹰 + 蓝灰烟尘天。
-    //    浅色=白昼绯红披风做主色；深色=夜幕下磨亮钢银做主色，蓝灰做天空，古金做点缀
+    // ② 白鹰圣殿：白色战马 + 巨型白鹰 + 黑甲骑士 + 白色大理石悬崖圣殿 + 暗红披风。
+    //    深色=月夜圣殿、象牙白主色（白马白鹰）、暗红宝石、蓝灰夜空；浅色=大理石白 + 钢蓝撞色 + 象牙晨光
     ThemePreset(
         id = "knight",
-        name = "玄骑",
-        desc = "玄甲白马 · 鹰唳残阳",
-        seed = Color(0xFFA63226),
+        name = "白鹰圣殿",
+        desc = "玄甲白翼 · 悬崖圣殿",
+        seed = Color(0xFF4A688C),
         secondary = Color(0xFF5C6670),
-        // 银鹰灰蓝（呼应白马白鹰）而非金——金与安魂的哥特金饰撞色
-        tertiary = Color(0xFF8C9AA8),
-        lightBg = Color(0xFFF3F4F2),
-        darkBg = Color(0xFF11151B),
+        // 暗红（披风与宝石）——骑士的荣誉之血
+        tertiary = Color(0xFFA63830),
+        lightBg = Color(0xFFF1F2EF),
+        darkBg = Color(0xFF10141B),
         shape = "square",
-        spacing = 0.95f,
-        motionScale = 1.2f,
+        spacing = 1.1f,
+        motionScale = 0.95f,
         stBody = Color(0xFFC8CCD2),
         stEm = Color(0xFF8A93A0),
         stUnderline = Color(0xFFA9B0B8),
@@ -656,26 +675,28 @@ val ThemePresets: List<ThemePreset> = listOf(
         stBorder = Color(0x80000000),
         stShadow = Color(0x80000000),
         stBlurTint = Color(0xFF151A22),
-        schemePrimary = Color(0xFFC3C9CF),
+        schemePrimary = Color(0xFFD9DDE2),
         schemeSecondary = Color(0xFF7C8B9A),
-        schemeTertiary = Color(0xFF8C9AA8),
-        contrast = 1.2f,
+        schemeTertiary = Color(0xFFB4433A),
+        contrast = 1.25f,
         gem = Color(0xFFB4362B),
-        metal = Color(0xFF9AA2AB),
+        metal = Color(0xFFB8BEC6),
         texture = "oil",
-        auraTop = Color(0xFF232D38),
+        auraTop = Color(0xFF1F2C3E),
+        auraTopLight = Color(0xFFE9E4D2),
     ),
-    // ③ 红月之下的黑发女人：巨大血月 + 垂直黑剪影 + 绯红森林 + 白色悬崖。
-    //    极度有限的红黑色调是灵魂——朱砂做主色、暖象牙做月光、黑做一切
+    // ③ 赤月森林：巨大血月 + 垂直黑剪影 + 绯红森林 + 白色悬崖。
+    //    极度有限的红黑色调是灵魂——深色=血月主色配黑幕；浅色=暖象牙月光 + 绯红撞色 + 绯薄暮天
     ThemePreset(
         id = "vermilion",
-        name = "赤月",
+        name = "赤月森林",
         desc = "血月孤影 · 绯林千丈",
         seed = Color(0xFFC7301F),
-        secondary = Color(0xFF8E837B),
-        tertiary = Color(0xFFE4D6B4),
-        lightBg = Color(0xFFF8EFE3),
-        darkBg = Color(0xFF140709),
+        // 枯金（悬崖古遗迹）与月象牙——红黑世界仅有的两种"光"
+        secondary = Color(0xFFA88C5C),
+        tertiary = Color(0xFFD9C79E),
+        lightBg = Color(0xFFF8EEDC),
+        darkBg = Color(0xFF150709),
         shape = "circle",
         spacing = 1.2f,
         motionScale = 0.8f,
@@ -689,25 +710,26 @@ val ThemePresets: List<ThemePreset> = listOf(
         stShadow = Color(0x80000000),
         stBlurTint = Color(0xFF180A0C),
         schemePrimary = Color(0xFFE05238),
-        schemeSecondary = Color(0xFF8E837B),
-        schemeTertiary = Color(0xFFE4D6B4),
-        contrast = 1.3f,
+        schemeSecondary = Color(0xFFA88C5C),
+        schemeTertiary = Color(0xFFD9C79E),
+        contrast = 1.35f,
         gem = Color(0xFFE04A30),
         metal = Color(0xFFDCC9A0),
         texture = "wash",
-        auraTop = Color(0xFF3D0E0C),
+        auraTop = Color(0xFF4A0F0C),
+        auraTopLight = Color(0xFFF2C4A0),
     ),
-    // ④ 白袍骷髅圣骑士：象牙白兜帽袍 + 兜下纯黑虚空 + 中央立剑 + 绯红玫瑰墓园 + 哥特教堂。
-    //    深色=白袍做主色（极黑虚空底），浅色=玫瑰绯做主色；黑白线稿/蚀刻画法
+    // ④ 亡者圣堂：白袍骷髅 + 兜下纯黑虚空 + 中央立剑 + 绯红玫瑰墓园 + 哥特教堂拱门。
+    //    黑白红三色强对比：深色=白袍主色对极黑虚空，浅色=象牙白袍画布 + 猩红玫瑰撞色；蚀刻线稿
     ThemePreset(
         id = "requiem",
-        name = "安魂",
+        name = "亡者圣堂",
         desc = "白袍圣柩 · 玫瑰墓园",
         seed = Color(0xFFA8222A),
         secondary = Color(0xFF5F7263),
         tertiary = Color(0xFFB99856),
-        lightBg = Color(0xFFF2EEE0),
-        darkBg = Color(0xFF0A0F0B),
+        lightBg = Color(0xFFF0EDE2),
+        darkBg = Color(0xFF08090A),
         shape = "square",
         spacing = 1.1f,
         motionScale = 0.85f,
@@ -723,22 +745,23 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFE6E1CF),
         schemeSecondary = Color(0xFFABAFA5),
         schemeTertiary = Color(0xFFC04A4A),
-        contrast = 1.4f,
+        contrast = 1.45f,
         gem = Color(0xFFC0262E),
         metal = Color(0xFFB9BDB3),
         texture = "etch",
-        auraTop = Color(0xFF16241A),
+        auraTop = Color(0xFF111C15),
+        auraTopLight = Color(0xFFE6E0CE),
     ),
-    // ⑤ 古希腊战士：钴蓝海 + 象牙大理石悬崖神殿 + 黑铜甲 + 赤红月，复古奇幻插画的线稿肌理。
-    //    深色=钴蓝夜海做底、大理石做次色、赤月做点缀；浅色=钴蓝做主色
+    // ⑤ 古海神殿：古希腊神殿 + 黑甲战士 + 深钴蓝海 + 赤红月 + 古代战船，复古奇幻插画的线稿肌理。
+    //    深色=钴蓝夜海 + 大理石次色 + 赤月点缀；浅色=海雾白画布 + 钴蓝撞色 + 钴蓝薄暮天
     ThemePreset(
         id = "cobalt",
-        name = "沧溟",
+        name = "古海神殿",
         desc = "碧海神阶 · 赤月归帆",
         seed = Color(0xFF2E56B4),
-        secondary = Color(0xFF3E4A44),
+        secondary = Color(0xFF3C4650),
         tertiary = Color(0xFFC22A1E),
-        lightBg = Color(0xFFF1F2EC),
+        lightBg = Color(0xFFEFF1EE),
         darkBg = Color(0xFF0A1226),
         shape = "square",
         spacing = 1.12f,
@@ -755,11 +778,48 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF6B90DC),
         schemeSecondary = Color(0xFFD5D1BF),
         schemeTertiary = Color(0xFFD04434),
-        contrast = 1.2f,
+        contrast = 1.25f,
         gem = Color(0xFFCE3222),
         metal = Color(0xFF9C8A62),
         texture = "etch",
         auraTop = Color(0xFF1A2C55),
+        auraTopLight = Color(0xFFC9D6EA),
+    ),
+    // ⑥ 禁忌档案馆（原创）：黑色石制图书馆 + 哥特拱顶 + 骷髅王冠徽记 + 巴洛克银金雕刻 +
+    //    机械齿轮 + 红宝石微光 + 高窗外的红月与绯林。五幅画的元素在此全部化为馆藏。
+    //    深色=烛光古金主色、红宝石微光、蓝宝石点缀；浅色=旧羊皮纸 + 古铜撞色 + 烛光暖天
+    ThemePreset(
+        id = "archive",
+        name = "禁忌档案馆",
+        desc = "王冠徽记 · 禁忌馆藏",
+        seed = Color(0xFFA07C3E),
+        // 旧铜（书架金属牌与机械齿轮）
+        secondary = Color(0xFF8A7A5E),
+        // 深蓝宝石（王冠上的第二类宝石）
+        tertiary = Color(0xFF4A6A9C),
+        lightBg = Color(0xFFF2E9D2),
+        darkBg = Color(0xFF0F0C08),
+        shape = "rounded",
+        spacing = 1.2f,
+        motionScale = 0.85f,
+        stBody = Color(0xFFD6CCB4),
+        stEm = Color(0xFF9A8E76),
+        stUnderline = Color(0xFFB9A26C),
+        stQuote = Color(0xFF7E9CC4),
+        stUserBubble = Color(0x4D000000),
+        stBotBubble = Color(0x4D241E10),
+        stBorder = Color(0x80000000),
+        stShadow = Color(0x80000000),
+        stBlurTint = Color(0xFF14100A),
+        schemePrimary = Color(0xFFC9A24B),
+        schemeSecondary = Color(0xFFA89A7E),
+        schemeTertiary = Color(0xFF7E9CC4),
+        contrast = 1.25f,
+        gem = Color(0xFFC01F28),
+        metal = Color(0xFF9C8A62),
+        texture = "oil",
+        auraTop = Color(0xFF2A1C0E),
+        auraTopLight = Color(0xFFEBD9A8),
     ),
 )
 

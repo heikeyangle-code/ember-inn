@@ -732,18 +732,18 @@ fun ChatScreen(
         // 不再把消息列表当 sky 源，避免每次滚动/键盘动画都重捕整屏模糊（滚动/收键盘卡顿主因）。
         val artPreset = LocalThemePreset.current
         val darkBg = isDarkThemeSurface()
+        // 顶部天空：深色=红月/雾战场，浅色=象牙晨光/绯薄暮（浅色也有画面，不再惨白）
+        val skyColor = (if (darkBg) artPreset.auraTop else artPreset.auraTopLight)
+            ?.let { lerp(it, MaterialTheme.colorScheme.background, 0.80f) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
                 .background(
-                    // README 格调守则：界面克制、背景出彩——正文区干净，顶部天空氛围（红月/雾战场），
+                    // README 格调守则：界面克制、背景出彩——正文区干净，顶部天空氛围，
                     // 底部透一点角色色低饱和氛围光
                     Brush.verticalGradient(
-                        0f to (artPreset.auraTop
-                            ?.takeIf { darkBg }
-                            ?.let { lerp(it, MaterialTheme.colorScheme.background, 0.80f) }
-                            ?: MaterialTheme.colorScheme.background),
+                        0f to (skyColor ?: MaterialTheme.colorScheme.background),
                         0.5f to MaterialTheme.colorScheme.background,
                         0.6f to MaterialTheme.colorScheme.background,
                         1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
@@ -759,8 +759,9 @@ fun ChatScreen(
                 ),
         ) {
             // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）；
-            // 艺术主题的宝石色在此点亮——红宝石余烬、星尘青光
+            // 艺术主题的宝石色在此点亮——红宝石余烬、星尘青光（浅色也画，更收敛）
             val glowColor = artPreset.gem ?: accent
+            val glowAlpha = if (darkBg) 0.09f else 0.06f
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -768,7 +769,7 @@ fun ChatScreen(
                     .offset(x = (-140).dp, y = 60.dp)
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = 0.09f), Color.Transparent),
+                            colors = listOf(glowColor.copy(alpha = glowAlpha), Color.Transparent),
                         ),
                     ),
             )

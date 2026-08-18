@@ -114,6 +114,9 @@ private fun ThemePreset.lightScheme(): ColorScheme {
     val tertiary = darken(this.tertiary, 0.03f)
     // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 白纸与卡片层次拉开，光影更戏剧
     val c = contrast.coerceIn(0.6f, 1.6f)
+    // 画布着色（官方主题豁免）：纸底往 seed 色相轻移，卡片是"着色画布上的层次"而非灰阶——
+    // 古典油画的浅色从来不是白纸，是象牙白/大理石的暖底，这是浅色不扁平的关键
+    val canvas = if (isOfficialTheme) bg else lerp(bg, seed, 0.05f)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
@@ -131,15 +134,15 @@ private fun ThemePreset.lightScheme(): ColorScheme {
         onBackground = onBackground,
         surface = bg,
         onSurface = onSurface,
-        surfaceVariant = lerp(bg, onSurface, 0.10f * c),
+        surfaceVariant = lerp(canvas, onSurface, 0.10f * c),
         onSurfaceVariant = darken(lightBg, 0.60f),
         outline = darken(lightBg, 0.42f),
-        outlineVariant = lerp(bg, onSurface, 0.16f * c),
-        surfaceContainerLowest = darken(bg, 0.03f * c),
-        surfaceContainerLow = lerp(bg, onSurface, 0.045f * c),
-        surfaceContainer = lerp(bg, onSurface, 0.075f * c),
-        surfaceContainerHigh = lerp(bg, onSurface, 0.11f * c),
-        surfaceContainerHighest = lerp(bg, onSurface, 0.15f * c),
+        outlineVariant = lerp(canvas, onSurface, 0.16f * c),
+        surfaceContainerLowest = darken(canvas, 0.03f * c),
+        surfaceContainerLow = lerp(canvas, onSurface, 0.045f * c),
+        surfaceContainer = lerp(canvas, onSurface, 0.075f * c),
+        surfaceContainerHigh = lerp(canvas, onSurface, 0.11f * c),
+        surfaceContainerHighest = lerp(canvas, onSurface, 0.15f * c),
     )
 }
 
@@ -154,6 +157,9 @@ private fun ThemePreset.darkScheme(): ColorScheme {
     val surface = schemeSurface ?: lighten(bg, 0.035f)
     // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 夜色更沉、卡片浮得更亮
     val c = contrast.coerceIn(0.6f, 1.6f)
+    // 提亮带色相（官方主题豁免）：向白提亮改为向"主色调白"提亮——卡片像被主题光照射
+    // （火光反射在铠甲上、月光洒在大理石上），不再是死灰浮层
+    val lift = if (isOfficialTheme) Color.White else lerp(Color.White, primary, 0.30f)
     return darkColorScheme(
         primary = primary,
         onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
@@ -171,15 +177,15 @@ private fun ThemePreset.darkScheme(): ColorScheme {
         onBackground = onBackground,
         surface = surface,
         onSurface = onSurface,
-        surfaceVariant = lighten(bg, 0.14f * c),
+        surfaceVariant = lerp(bg, lift, 0.14f * c),
         onSurfaceVariant = lighten(darkBg, 0.62f),
         outline = lighten(darkBg, 0.38f),
-        outlineVariant = lighten(bg, 0.10f * c),
+        outlineVariant = lerp(bg, lift, 0.10f * c),
         surfaceContainerLowest = darken(bg, 0.02f * c),
-        surfaceContainerLow = lighten(bg, 0.055f * c),
-        surfaceContainer = lighten(bg, 0.09f * c),
-        surfaceContainerHigh = lighten(bg, 0.125f * c),
-        surfaceContainerHighest = lighten(bg, 0.16f * c),
+        surfaceContainerLow = lerp(bg, lift, 0.055f * c),
+        surfaceContainer = lerp(bg, lift, 0.09f * c),
+        surfaceContainerHigh = lerp(bg, lift, 0.125f * c),
+        surfaceContainerHighest = lerp(bg, lift, 0.16f * c),
     )
 }
 
@@ -236,9 +242,11 @@ private fun darken(color: Color, fraction: Float): Color = lerp(color, Color.Bla
 private fun readableOn(color: Color): Color =
     if (color.luminance() > 0.5f) Color(0xFF221A16) else Color.White
 
+/** 酒馆官方主题（填了官方 schemeBackground 真值）：豁免一切派生艺术处理。 */
+private val ThemePreset.isOfficialTheme: Boolean get() = schemeBackground != null
+
 /** WCAG 对比度（前景/背景均可，返回 ≥1 的比值）。 */
-private fun contrastRatio(a: Color, b: Color): Float {
-    val la = a.luminance()
+private fun contrastRatio(a: Color, b: Color): Float {    val la = a.luminance()
     val lb = b.luminance()
     val hi = maxOf(la, lb)
     val lo = minOf(la, lb)

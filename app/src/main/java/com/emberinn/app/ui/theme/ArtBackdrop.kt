@@ -99,7 +99,7 @@ fun Modifier.themeTexture(texture: String, dark: Boolean): Modifier = drawWithCa
 }
 
 /**
- * 页面艺术底：底色 + 深色模式下的顶部天空氛围（红月/烟雾战场等，极淡渐变）+ 主题底材纹理。
+ * 页面艺术底：底色 + 顶部天空氛围（深色 auraTop / 浅色 auraTopLight，极淡渐变）+ 主题底材纹理。
  * 官方主题与未启用艺术扩展的主题全部退化为纯底色，行为与旧实现一致。
  */
 @Composable
@@ -107,14 +107,14 @@ fun Modifier.emberBackdrop(): Modifier {
     val preset = LocalThemePreset.current
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.background.luminance() < 0.5f
-    val aura = if (dark) preset.auraTop else null
+    val aura = if (dark) preset.auraTop else preset.auraTopLight
     return this
         .background(scheme.background)
         .then(
             if (aura != null) {
                 Modifier.background(
                     Brush.verticalGradient(
-                        0f to lerp(aura, scheme.background, 0.82f),
+                        0f to lerp(aura, scheme.background, if (dark) 0.82f else 0.86f),
                         0.5f to scheme.background,
                     ),
                 )
