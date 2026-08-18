@@ -171,12 +171,12 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 世界书 RAG（vectorized 同步/检索/强制激活）；聊天历史向量重排（enabled_chats/rearrangeChat）；文件/Data Bank 向量化（enabled_files：分块/overlap/检索注入）；FileVectorStore（磁盘持久化对齐 vectra 目录）+ InMemoryVectorStore；EmbeddingProvider（OpenAI 兼容 + BagOfGramsEmbedding）；查询语义对齐官方（multiQueryCollection 全局 topK/queryCollection 单集合，hashes 不过滤阈值）；扩展提示经 ExtensionPrompt（3_vectors/4_vectors_data_bank）注入组装管线（ChatCompletionPipeline KNOWN_RELATIVE）。未做：summarize（P3，官方默认关）、本地 transformers 嵌入（Android 用 Ollama 替代，接口已留）、translate_files（P3）。
 
 ### 3.15 表情精灵 ✅（引擎层纯逻辑）
-ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseSpriteForExpression fallback/多立绘随机/rerollIfSame/overrideSpriteFile）；sampleClassifyText（去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim；8 例差分）；官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage（spritesPath 子目录/sanitize + importRisuSprites）；LLM 分类 ✅（llmPrompt=官方 getLlmPrompt {{labels}} 模板 + parseLlmResponse=JSON {emotion} → removeReasoning 清理后模糊匹配 → null 走 fallback；App ExpressionScreen 开关/自定义提示词，ChatViewModel 生成后异步分类切换表情）；DOM 显示/动画属 App 层；差分顺带修 VectorTextUtils.trimToStartSentence（Kotlin 需 coerceAtMost）。
+ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseSpriteForExpression fallback/多立绘随机/rerollIfSame/overrideSpriteFile）；sampleClassifyText（去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim；8 例差分）；官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage（spritesPath 子目录/sanitize + importRisuSprites）；LLM 分类 ✅（llmPrompt=官方 getLlmPrompt {{labels}} 模板 + parseLlmResponse=JSON {emotion} → removeReasoning 清理后模糊匹配 → null 走 fallback；App ExpressionScreen 开关/自定义提示词，ChatViewModel 生成后异步分类切换表情）；App 层 ExpressionStore 精灵目录 LRU 缓存（24 角色，save/delete/import 即时失效——对齐官方 spriteCache 语义，聊天列表滚动每条 AI 消息组合不再列目录）；DOM 显示/动画属 App 层；差分顺带修 VectorTextUtils.trimToStartSentence（Kotlin 需 coerceAtMost）。
 
 ## 4. App / UI 进度
 
 ### 4.1 导航与返回手势 ✅
-底部三 Tab（角色/聊天/设置）；聊天页、设置子页 BackHandler 逐级回退；Manifest enableOnBackInvokedCallback（Android 13+ 预测性返回）。
+底部三 Tab（角色/聊天/设置）；聊天页、设置子页 BackHandler 逐级回退；设置页内导航栈（页面切换压栈，子页返回回真实上一级而非全跳 HOME；主页列表位置与搜索词常驻层保留，进出子页不重置）；Manifest enableOnBackInvokedCallback（Android 13+ 预测性返回）。
 
 ### 4.2 首页（角色 Tab）与角色详情 🟡
 - 首页：品牌顶栏 + 全局搜索（角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；条目详情弹层；设置项跳转）、AI 对话置顶、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、角色卡取色 seed 已存。
@@ -191,15 +191,15 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - 交互：复制/删除/编辑（updateMessage：isEdit 正则分位点 + 清/写 extra.bias）/长按菜单/最后一条 AI 常驻 4 键/清空二次确认/未配置模型横幅一键深链；Markdown+代码高亮（mikepenz m3/coil3/code 0.43.0）；用户消息气泡上限 320dp（AI 全文宽）；顶栏/输入栏 Cloudy 0.7.1 真背板模糊玻璃（sky 源层静态）。
 - 滑动切回复全链：数据模型对齐官方 jsonl（swipe_id/swipes[]/swipe_info[]；ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；AI 气泡横滑（右=下一个/越界生成新变体，左=上一个）；计数条 n/N + 箭头；长按菜单变体列表 ModalBottomSheet；导出 jsonl 可直接进酒馆；世界书扫描按官方 prepareMessages（swipe 在 coreChat.pop 之后扫描，App dropLast(1) 等价）。
 - 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）；世界书命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
-- 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）。
+- 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）；逐条滚动零磁盘 IO——displayTextOf 组合期的全局设置/宏环境/正则脚本收敛 ensureDisplayCtx 缓存（随 DisplayCacheVersion/会话身份失效），usable 下标随消息表实例缓存，ExpressionPrefs 进程级缓存（旧实现每条消息进视口都读盘，逐条卡顿根因）。
 - ❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，P2）——注：assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4），此 ❌ 作废。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
-会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
+会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话）；新会话名对齐官方 chat 文件名规则——同角色已有会话时带 humanizedDateTime 后缀（角色卡菜单与聊天菜单 startNewChat 统一，修复与老会话同名不可区分）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
 
 ### 4.4 设置 ✅（README 规格）
 - 数据与隐私：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明 + 清除全部数据（二次确认）；首启引导（欢迎页 + 导入角色卡/直接开始/跳过）。
-- 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观：主题模式 + 六套预设主题（墨韵/青瓷/夜航/丹砂/琉璃/简约纸感），实时预览。
+- 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观（AppearanceScreen）：主题模式（浅/深/跟随系统）+ 23 套预设主题卡（预览色板 = 三圆点 + 宝石菱形 + 金属环，选中描边用主题 metal，架构见 4.5）+ 视觉氛围滑杆（VibePreset），实时预览。
 - 提供商与模型：搜索 + 卡片列表（品牌 SVG/已配置 pill/我的连接）；详情页 = API Key（遮罩）/接口地址（未配置自动预填 providers.json 默认）/区域/账户 ID/API 版本/默认模型（底部弹层搜索）/上下文上限/最大回复/测试连接/保存/删除确认；模型页已补 top_k/min_p/top_a/repetition_penalty/seed/n/流式/logprobs/use_sysprompt + OpenRouter use_fallback/allow_fallbacks/middleout/providers/quantizations。
 - 关于页：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库。
 - 语音（TTS）：Android 系统 TTS，语音/语速/试听；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。
@@ -209,8 +209,47 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图替换该 PNG。
 
 ### 4.5 主题系统 ✅（全局层）
-ThemePreset（seed/secondary/tertiary + 纸色/夜色 + 艺术扩展五字段）→ Theme.kt 自动生成 M3 ColorScheme；MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）已接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底，新字段全默认=不启用）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）；官方字段 st*/scheme* 填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…），其余 22 套派生（11 基础 + 7 艺术向 + 5 画廊系列：金冕/玄骑/赤月/安魂/沧溟）。
-艺术扩展（ArtBackdrop.kt，默认全关=旧行为，官方主题恒关）：contrast 明暗对照（缩放容器色阶梯，chiaroscuro）、gem 宝石色（聊天页左下光晕 + 主题卡菱形预览）、metal 金属色（选中卡描边 + 圆环预览）、texture 底材纹理（oil 画布织纹 / etch 铜版布点+排线 / wash 宣纸微尘，drawWithCache 预生成、两次批量 drawPoints 绘制，画在内容之下）、auraTop 天空氛围（深色模式页面顶部极淡渐变，聊天页渐变 + emberBackdrop 四屏背景：角色/会话/设置/角色详情）；🟡 MeshGradient 氛围背景未做（README 可选）。
+**生成管线**：ThemePreset → Theme.kt 生成 M3 ColorScheme（浅色主色 darken(seed,0.10) + 纸色底，深色 schemePrimary ?? lighten(seed,0.30) + 夜色底）→ MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；VibePreset 视觉氛围（降饱和/冷暖/光效，外观页滑杆）对整盘 scheme 后处理（standard 档与官方主题豁免）；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底，艺术字段全默认=不启用）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）。
+
+**ThemePreset 字段架构**（ThemePreset.kt）：
+- 基础：seed/secondary/tertiary 三强调色 + lightBg/darkBg 纸色/夜色 + shape（square 4dp / default 12dp / rounded 16dp / circle 24dp）+ spacing 间距节奏倍数 + motionScale 动效速度倍数
+- 官方对齐：st*（消息渲染正文/强调/下划线/引用/气泡/阴影，对齐官方 SmartTheme 变量）+ scheme*（M3 角色覆盖；酒馆官方主题填绝对真值，无浅色模式恒按官方深色渲染且豁免一切滤镜）
+- 艺术扩展五字段（默认全关；官方主题恒关；实现全在 ArtBackdrop.kt）：
+  - `contrast` 明暗对照（chiaroscuro）：缩放 surfaceContainer 色阶梯，>1 夜更沉卡片浮更亮、<1 雾感压平（clamp 0.6–1.6）
+  - `gem` 宝石色：聊天页左下光晕 + 主题卡菱形预览
+  - `metal` 金属色：选中主题卡描边 + 圆环预览
+  - `texture` 底材纹理：oil 油画布织纹 / etch 铜版蚀刻（布点+45°排线）/ wash 宣纸微尘；drawWithCache 预生成一次（固定随机种子不闪烁），两次批量 drawPoints 画在内容之下，滚动/重组零开销
+  - `auraTop` 天空氛围：深色模式页面顶部极淡渐变（红月/烟雾战场等），聊天页渐变 + emberBackdrop 四屏背景（角色/会话/设置/角色详情）
+
+**23 套主题清单**（性格 = 形状/间距/动效/艺术字段的组合，彼此不重复）：
+
+| 组 | 主题 | 画种 · 关键性格 |
+|---|---|---|
+| 基础 11 | 墨韵 ink | 水墨：wash 宣纸 + 朱砂宝石 + 冷银金属 + 墨青天，rounded 慢 0.85x |
+| | 青瓷 celadon | 瓷器：全场唯一无纹理彩色主题（釉面光滑即身份），天青夜 aura |
+| | 夜航 night | 透纳海景：oil 画布 + 黄铜金属，灯塔琥珀宝石，深海夜天 |
+| | 丹砂 cinnabar | 篆刻金石：etch 刀痕 + 印泥朱宝石 + 刻石白金属，square 快 1.15x |
+| | 琉璃 glaze | 玻璃器：无纹高反差 1.3 + 紫宝石/青金属，circle |
+| | 石墨 paper | 石墨素描：全场唯一无宝石无金属（极简即身份），etch 铅笔排线 |
+| | 竹青 bamboo | 竹园晨雾：wash 雾露 + 竹黄宝石/苔色金属，黛绿夜天 |
+| | 暮紫 dusk | 暮霭水彩：wash 暮尘 + 落日橙宝石/紫银金属，紫暮天 |
+| | 晨雾 mist | 全场唯一低反差 0.9（雾压平明暗），wash + 晨光金宝石 |
+| | 樱粉 sakura | 樱吹雪：wash 落瓣 + 樱绯宝石/粉银金属，暮樱紫天 |
+| | 酒馆官方 st | 官方 SmartTheme 逐值还原，无滤镜/纹理/氛围（恒定豁免） |
+| 艺术向 7 | 熔金 molten | 电影 teal&orange：oil + 熔金金属/余烬宝石 |
+| | 靛夜 indigo | 梦境星夜：wash + 星尘青宝石/月银金属，靛蓝天 |
+| | 琥珀 amber | 古典油画：oil + 烛光琥珀/威尼斯红宝石，画布夜天 |
+| | 黛山 inkwash | 水墨留白：wash + 枯金宝石，最慢 0.8x 最松 1.18x |
+| | 深海 abyss | 万米幽光：无纹 + 浮游青绿宝石，深海 aura |
+| | 胶片 film | 柯达褪色：wash + 褪棕宝石/灰青金属 |
+| | 霓虹 neon | 雨夜霓虹：无纹方正 + 品红宝石/青金属，最快 1.1x |
+| 画廊 5 | 金冕 crown | 巴洛克骷髅王：oil + 旧金金属 + 红宝石光晕 + 暗青战场 aura |
+| | 玄骑 knight | 黑甲白马：oil + 钢银金属 + 绯红宝石，square 1.2x 冲锋感 |
+| | 赤月 vermilion | 红月孤影：wash + 红黑有限色调，circle 1.2x 血月 aura |
+| | 安魂 requiem | 白袍玫瑰：etch 线稿 + 全场最高反差 1.4（白袍对黑虚空） |
+| | 沧溟 cobalt | 碧海神阶：etch 复古插画 + 钴蓝海/大理石/赤月宝石 |
+
+🟡 MeshGradient 氛围背景未做（README 可选）。
 
 ### 4.5.5 图标系统 ✅
 全 App 图标 = **Font Awesome 6 Solid**（512 viewport viewBox，与酒馆官方前端同库同形），内置 88 枚 `app/src/main/java/com/emberinn/app/ui/icons/FaIcons.kt`（scripts/gen-fa-icons.mjs 从 Font Awesome 官方 SVG 生成，增图先加清单再重跑脚本；SVG 缓存 .fa-cache/）。material-icons-core/extended 与旧 Phosphor 已移除。规范：默认 onSurfaceVariant、激活 primary、警示 error。

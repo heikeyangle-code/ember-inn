@@ -78,7 +78,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFFF6A57),
         schemeSecondary = Color(0xFFB0B0B5),
         schemeTertiary = Color(0xFF7FAFD0),
+        // 水墨画：宣纸微尘底 + 冷银提亮 + 顶部墨青天，朱砂是唯一宝石
+        contrast = 1.1f,
         gem = Color(0xFFE8604F),
+        metal = Color(0xFFAEB2B6),
+        texture = "wash",
+        auraTop = Color(0xFF1B2224),
     ),
     ThemePreset(
         id = "celadon",
@@ -104,8 +109,11 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF35C98F),
         schemeSecondary = Color(0xFF8FA8A0),
         schemeTertiary = Color(0xFFC9AC70),
+        // 瓷器：釉面光滑是身份——全场唯一无纹理的彩色主题，天青夜做顶光
+        contrast = 1.05f,
         gem = Color(0xFF3FC48C),
         metal = Color(0xFFC9AC70),
+        auraTop = Color(0xFF183038),
     ),
     ThemePreset(
         id = "night",
@@ -129,8 +137,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFF5B04A),
         schemeSecondary = Color(0xFF8B9BB0),
         schemeTertiary = Color(0xFF6E93C4),
+        // 透纳海景油画：画布织纹 + 黄铜器件 + 深海夜幕天，灯塔琥珀是宝石
+        contrast = 1.2f,
         gem = Color(0xFFF0B04C),
-        metal = Color(0xFF8B9BB0),
+        metal = Color(0xFFB8935A),
+        texture = "oil",
+        auraTop = Color(0xFF16263D),
     ),
     ThemePreset(
         id = "cinnabar",
@@ -156,7 +168,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFFF7057),
         schemeSecondary = Color(0xFFC29882),
         schemeTertiary = Color(0xFFCDA85E),
-        gem = Color(0xFFB08A3E),
+        // 篆刻金石：蚀刻排线 = 刀刻痕，印泥朱做宝石、刻石白做金属，暗绛夜天
+        contrast = 1.25f,
+        gem = Color(0xFFC43A2B),
+        metal = Color(0xFFD8CFC5),
+        texture = "etch",
+        auraTop = Color(0xFF2A1214),
     ),
     ThemePreset(
         id = "glaze",
@@ -182,8 +199,11 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF8E90FF),
         schemeSecondary = Color(0xFF5AC8D8),
         schemeTertiary = Color(0xFFB587FF),
+        // 玻璃器：通体光滑无纹理（第二无纹主题，紫蓝与青瓷区分），高反差 + 紫蓝夜天
+        contrast = 1.3f,
         gem = Color(0xFFB587FF),
         metal = Color(0xFF5AC8D8),
+        auraTop = Color(0xFF1B1435),
     ),
     ThemePreset(
         id = "paper",
@@ -207,6 +227,10 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFB8BCC4),
         schemeSecondary = Color(0xFF93969C),
         schemeTertiary = Color(0xFFA6ABB5),
+        // 石墨素描：蚀刻排线 = 铅笔笔触，全场唯一无宝石无金属（极简即身份），高反差黑白
+        contrast = 1.2f,
+        texture = "etch",
+        auraTop = Color(0xFF1E1E22),
     ),
     // 酒馆官方（SillyTavern 1.18 默认 SmartTheme，public/style.css :root 逐值核对）：
     // 墨黑底 #171717 · 象牙文字 rgb(220,220,210) · 次要 rgb(145,145,145)
@@ -262,8 +286,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF5ECB84),
         schemeSecondary = Color(0xFF9DAD8A),
         schemeTertiary = Color(0xFFD8B955),
+        // 竹园晨雾：宣纸微尘 = 雾露，竹黄宝石 + 苔色金属，黛绿夜天
+        contrast = 1.05f,
         gem = Color(0xFFD8B955),
         metal = Color(0xFF9DAD8A),
+        texture = "wash",
+        auraTop = Color(0xFF182518),
     ),
     ThemePreset(
         id = "dusk",
@@ -287,8 +315,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFAB86EE),
         schemeSecondary = Color(0xFFC2A2D2),
         schemeTertiary = Color(0xFFF0A172),
+        // 暮霭水彩：宣纸微尘 = 暮尘，落日橙宝石 + 淡紫银金属，紫暮天做顶
+        contrast = 1.15f,
         gem = Color(0xFFF0A172),
         metal = Color(0xFFC2A2D2),
+        texture = "wash",
+        auraTop = Color(0xFF231733),
     ),
     ThemePreset(
         id = "mist",
@@ -313,8 +345,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF84AEDE),
         schemeSecondary = Color(0xFF9FB4C8),
         schemeTertiary = Color(0xFFC9AC77),
+        // 雾锁寒江：全场唯一低反差（0.9，雾把明暗压平），晨光金宝石 + 雾蓝金属
+        contrast = 0.9f,
         gem = Color(0xFFC9AC77),
         metal = Color(0xFF9FB4C8),
+        texture = "wash",
+        auraTop = Color(0xFF1D2A38),
     ),
     ThemePreset(
         id = "sakura",
@@ -340,8 +376,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFF095B0),
         schemeSecondary = Color(0xFFCFACA8),
         schemeTertiary = Color(0xFFAA9BDC),
+        // 樱吹雪：宣纸微尘 = 落瓣纷扬，樱绯宝石 + 粉银金属，暮樱紫天
+        contrast = 1.05f,
         gem = Color(0xFFF08AA9),
         metal = Color(0xFFCFACA8),
+        texture = "wash",
+        auraTop = Color(0xFF2A1626),
     ),
     // ---- 艺术向主题：每套围绕一种绘画/影像语言展开，冷暖对撞比基础 11 套更戏剧化 ----
     // 电影感黄昏：琥珀熔金压在深蓝夜幕上，冷影暖光的经典 teal & orange 对撞
