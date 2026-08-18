@@ -26,7 +26,13 @@ object ExpressionPrefs {
 
     private const val NAME = "ember_expression"
 
+    /** 进程级缓存：消息行组合/流式 tick 都会调 load（每 tick 读 SharedPreferences+构造+getStringSet
+     *  拷贝是滚动/流式的固定开销），命中缓存直接返回；save 后失效。 */
+    @Volatile
+    private var cached: ExpressionSettingsApp? = null
+
     fun load(context: Context): ExpressionSettingsApp {
+        cached?.let { return it }
         val p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         return ExpressionSettingsApp(
             enabled = p.getBoolean("enabled", false),
@@ -44,10 +50,11 @@ object ExpressionPrefs {
             allowMultiple = p.getBoolean("allowMultiple", false),
             rerollIfSame = p.getBoolean("rerollIfSame", false),
             customLabels = (p.getStringSet("customLabels", emptySet()) ?: emptySet()).toSet(),
-        )
+        ).also { cached = it }
     }
 
     fun save(context: Context, s: ExpressionSettingsApp) {
+        cached = null
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("enabled", s.enabled)
             .putInt("api", s.api.value)

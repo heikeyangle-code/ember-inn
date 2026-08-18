@@ -337,16 +337,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         return newSession(characterId, name)
     }
 
-    /** 新建空白会话（README：每个角色可开多个会话，UUID 会话 id）。 */
+    /** 新建空白会话（README：每个角色可开多个会话，UUID 会话 id）。
+     *  命名对齐官方：同角色已有会话时新会话名带 humanizedDateTime 后缀（官方 chat 文件名
+     *  charname-YYYY-MM-DD@HHhMMmSSs），修复"角色卡新对话与老对话同名不可区分"。 */
     fun newSession(characterId: String?, name: String): SessionRecord {
+        val sessionName = if (chatStore.list().any { it.characterId == characterId }) {
+            "$name - ${humanizedDateTime()}"
+        } else {
+            name
+        }
         val session = SessionRecord(
             id = UUID.randomUUID().toString(),
             characterId = characterId,
-            name = name,
+            name = sessionName,
         )
         chatStore.upsert(session)
         refresh()
         return session
+    }
+
+    /** 官方 humanizedDateTime：YYYY-MM-DD@HHhMMmSSs（秒级即可区分，毫秒仅内部文件用）。 */
+    private fun humanizedDateTime(): String {
+        val t = java.time.OffsetDateTime.now(java.time.ZoneId.systemDefault())
+        return "%04d-%02d-%02d@%02dh%02dm%02ds".format(t.year, t.monthValue, t.dayOfMonth, t.hour, t.minute, t.second)
     }
 
     fun clearMessage() { _message.value = null }

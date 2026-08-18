@@ -155,6 +155,59 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val displayCache = mutableMapOf<Int, DisplayCacheEntry>()
     private var displayCacheVersion = -1
 
+    /** 显示管线上下文缓存（全局设置层）：behavior/fixMarkdown/encodeTags/推理模板/正则开关与脚本/宏环境。
+     *  旧实现在 displayTextOf 未命中缓存时逐条消息重新加载——PresetSettingsStore.load 是主线程
+     *  磁盘 JSON 读+反序列化，BehaviorPrefs/GlobalRegexPrefs 每条一读，usableIndices 每条全表扫描：
+     *  这是滚动时"每出现一条新消息卡一下"的元凶。现在只在 DisplayCacheVersion / 会话身份 / 人设变化时刷新。 */
+    private var dctxValid = false
+    private var dctxVersion = -1
+    private var dctxSessionId: String? = null
+    private var dctxBehavior: com.emberinn.app.ui.settings.BehaviorSettings? = null
+    private var dctxFixMarkdown = false
+    private var dctxEncodeTags = false
+    private var dctxReasoningPrefix = ""
+    private var dctxReasoningSuffix = ""
+    private var dctxRegexEnabled = false
+    private var dctxScripts: List<com.emberinn.engine.regex.RegexPipelineScript>? = null
+    private var dctxEnv: com.emberinn.engine.macros.MacroEnv? = null
+    private var dctxUserName = ""
+    private var dctxCharName = ""
+
+    private fun ensureDisplayCtx() {
+        if (dctxValid && dctxVersion == DisplayCacheVersion.version && dctxSessionId == sessionId &&
+            dctxUserName == currentUserName && dctxCharName == currentCharName
+        ) {
+            return
+        }
+        val app = getApplication<Application>()
+        val behavior = com.emberinn.app.ui.settings.BehaviorPrefs.load(app)
+        val template = com.emberinn.app.ui.settings.PresetSettingsStore.load(app).reasoning.template
+        dctxBehavior = behavior
+        dctxFixMarkdown = com.emberinn.app.ui.settings.AppearancePrefs.fixMarkdown(app)
+        dctxEncodeTags = com.emberinn.app.ui.settings.AppearancePrefs.encodeTags(app)
+        dctxReasoningPrefix = template.prefix
+        dctxReasoningSuffix = template.suffix
+        dctxRegexEnabled = com.emberinn.app.ui.settings.GlobalRegexPrefs.enabled(app)
+        dctxScripts = if (dctxRegexEnabled) resolveDisplayRegexScripts() else emptyList()
+        dctxEnv = displayEnv()
+        dctxUserName = currentUserName
+        dctxCharName = currentCharName
+        dctxVersion = DisplayCacheVersion.version
+        dctxSessionId = sessionId
+        dctxValid = true
+    }
+
+    /** usable 消息下标（官方 depth 用的非系统消息序列）：随消息表实例缓存，替代逐消息全表扫描。 */
+    private var usableCacheRef: List<JsonElement>? = null
+    private var usableIndicesCache: List<Int> = emptyList()
+    private fun usableIndicesFor(msgs: List<JsonElement>): List<Int> {
+        if (usableCacheRef !== msgs) {
+            usableCacheRef = msgs
+            usableIndicesCache = msgs.indices.filter { !isSystemMsg(msgs[it]) }
+        }
+        return usableIndicesCache
+    }
+
     /** 显示管线修订号：消息列表每次替换 / DisplayCacheVersion 失效时 +1。
      *  ChatScreen 的 derived remember 以此为 key，缓存失效后历史行立即重算（修复改设置后显示旧文本）。 */
     private val _displayRevision = MutableStateFlow(0)
@@ -613,10 +666,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             reasoningDisplayCacheVersion = DisplayCacheVersion.version
         }
         reasoningDisplayCache[raw]?.let { return it }
-        val env = displayEnv()
-        val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
-        val scripts = if (regexEnabled) resolveDisplayRegexScripts() else emptyList()
-        val reasoningTemplate = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning.template
+        ensureDisplayCtx()
+        val env = dctxEnv!!
+        val regexEnabled = dctxRegexEnabled
+        val scripts = dctxScripts!!
         // 官方 messageFormatting isReasoning=true：messageId=-1、ch_name=''（bias/名字剥离跳过）
         val result = MessageFormattingEngine.format(
             mes = raw,
@@ -629,10 +682,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             settings = MessageFormattingSettings(
                 userPromptBias = "",
                 showUserPromptBias = true,
-                autoFixMarkdown = AppearancePrefs.fixMarkdown(getApplication()),
-                encodeTags = AppearancePrefs.encodeTags(getApplication()),
-                reasoningPrefix = reasoningTemplate.prefix,
-                reasoningSuffix = reasoningTemplate.suffix,
+                autoFixMarkdown = dctxFixMarkdown,
+                encodeTags = dctxEncodeTags,
+                reasoningPrefix = dctxReasoningPrefix,
+                reasoningSuffix = dctxReasoningSuffix,
                 allowName2Display = true,
             ),
             depth = null,
@@ -655,7 +708,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     fun displayTextOf(index: Int): String {
         syncDisplayVersion()
-        val el = _messages.value.getOrNull(index)?.jsonObject ?: return ""
+        val msgs = _messages.value
+        val el = msgs.getOrNull(index)?.jsonObject ?: return ""
         val sendDate = el["send_date"]?.jsonPrimitive?.contentOrNull
         // 身份校验：同 index 但消息已换（结构变更漂移）→ 视为未命中重算
         displayCache[index]?.takeIf { it.sendDate == sendDate }?.let { return it.text }
@@ -665,18 +719,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方 messageFormatting 纯文本子集全部交给引擎（MessageFormattingEngine，差分锁死）：
         // 首条宏替换 → Note/systemUserName 归一 → bias 剥离 → 显示正则 → fixMarkdown → encode_tags
         // → reasoning 前后缀转义 → allow_name2_display 名字前缀剥离
+        // 全局设置/宏环境/正则脚本全部走 ensureDisplayCtx 缓存（组合期零 prefs/磁盘 IO）
+        ensureDisplayCtx()
+        val behavior = dctxBehavior!!
+        val env = dctxEnv!!
+        val regexEnabled = dctxRegexEnabled
+        val scripts = dctxScripts!!
         val rawIsSystem = isSystemMsg(el)
         val isUser = isUser(el)
         val chName = el["name"]?.jsonPrimitive?.contentOrNull
         val isNarrator = extra?.get("type")?.jsonPrimitive?.contentOrNull == "narrator"
-        val behavior = BehaviorPrefs.load(getApplication())
-        val reasoningTemplate = com.emberinn.app.ui.settings.PresetSettingsStore.load(getApplication()).reasoning.template
-        val env = displayEnv()
-        val regexEnabled = GlobalRegexPrefs.enabled(getApplication())
-        val scripts = if (regexEnabled) resolveDisplayRegexScripts() else emptyList()
         // 官方 depth：usableMessages.length - indexOf - 1（usable 不含系统消息）；
         // 按原始下标定位，避免结构相等消息（内容重复）误匹配
-        val usableIndices = _messages.value.indices.filter { !isSystemMsg(_messages.value[it]) }
+        val usableIndices = usableIndicesFor(msgs)
         val pos = usableIndices.indexOf(index)
         val depth = if (pos >= 0) usableIndices.size - pos - 1 else null
         val result = MessageFormattingEngine.format(
@@ -689,10 +744,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             settings = MessageFormattingSettings(
                 userPromptBias = behavior.userPromptBias,
                 showUserPromptBias = behavior.showUserPromptBias,
-                autoFixMarkdown = AppearancePrefs.fixMarkdown(getApplication()),
-                encodeTags = AppearancePrefs.encodeTags(getApplication()),
-                reasoningPrefix = reasoningTemplate.prefix,
-                reasoningSuffix = reasoningTemplate.suffix,
+                autoFixMarkdown = dctxFixMarkdown,
+                encodeTags = dctxEncodeTags,
+                reasoningPrefix = dctxReasoningPrefix,
+                reasoningSuffix = dctxReasoningSuffix,
                 allowName2Display = behavior.allowName2Display,
             ),
             depth = depth,

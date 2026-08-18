@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -38,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -77,40 +80,48 @@ fun SettingsScreen(
 ) {
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
     var providerId by rememberSaveable { mutableStateOf<String?>(null) }
+    // 导航栈：子页返回回真实上一级（旧实现所有子页返回都跳 HOME，二级页如“排版”返回越过“用户设置”）。
+    // 主页列表位置/搜索词提升到本层常驻：切子页再返回不再重置滚动位置。
+    val navStack = remember { mutableStateListOf<SettingsPage>() }
+    val homeListState = rememberLazyListState()
+    var homeQuery by rememberSaveable { mutableStateOf("") }
+
+    fun open(target: SettingsPage) {
+        if (target == page) return
+        navStack.add(page)
+        page = target
+    }
+
+    fun goBack() {
+        page = navStack.removeLastOrNull() ?: SettingsPage.HOME
+    }
 
     // 一键深链：聊天页“先选一个模型”→ 直接进 API 连接分区
     LaunchedEffect(deepLink) {
         when (deepLink) {
-            "providers" -> page = SettingsPage.PROVIDERS
-            "ai" -> page = SettingsPage.AI_RESPONSE
-            "formatting" -> page = SettingsPage.ADVANCED_FORMATTING
-            "worldinfo" -> page = SettingsPage.WORLD_INFO
-            "user" -> page = SettingsPage.USER_SETTINGS
-            "appearance" -> page = SettingsPage.USER_SETTINGS
-            "backgrounds" -> page = SettingsPage.BACKGROUNDS
-            "personas" -> page = SettingsPage.PERSONAS
-            "voice" -> page = SettingsPage.VOICE
-            "services" -> page = SettingsPage.SERVICES
-            "quickreplies" -> page = SettingsPage.QUICK_REPLIES
-            "memory" -> page = SettingsPage.MEMORY
-            "caption" -> page = SettingsPage.CAPTION
-            "expression" -> page = SettingsPage.EXPRESSION
-            "regex" -> page = SettingsPage.REGEX
-            "about" -> page = SettingsPage.ABOUT
-            "data" -> page = SettingsPage.DATA
+            "providers" -> open(SettingsPage.PROVIDERS)
+            "ai" -> open(SettingsPage.AI_RESPONSE)
+            "formatting" -> open(SettingsPage.ADVANCED_FORMATTING)
+            "worldinfo" -> open(SettingsPage.WORLD_INFO)
+            "user" -> open(SettingsPage.USER_SETTINGS)
+            "appearance" -> open(SettingsPage.USER_SETTINGS)
+            "backgrounds" -> open(SettingsPage.BACKGROUNDS)
+            "personas" -> open(SettingsPage.PERSONAS)
+            "voice" -> open(SettingsPage.VOICE)
+            "services" -> open(SettingsPage.SERVICES)
+            "quickreplies" -> open(SettingsPage.QUICK_REPLIES)
+            "memory" -> open(SettingsPage.MEMORY)
+            "caption" -> open(SettingsPage.CAPTION)
+            "expression" -> open(SettingsPage.EXPRESSION)
+            "regex" -> open(SettingsPage.REGEX)
+            "about" -> open(SettingsPage.ABOUT)
+            "data" -> open(SettingsPage.DATA)
             else -> {}
         }
         onDeepLinkConsumed()
     }
 
-    fun goBack() {
-        page = when (page) {
-            SettingsPage.PROVIDER_DETAIL -> SettingsPage.PROVIDERS
-            else -> SettingsPage.HOME
-        }
-    }
-
-    // 系统返回 + 边缘滑动返回（子页逐级返回；主页返回交给系统退出）
+    // 系统返回 + 边缘滑动返回（栈逐级返回；主页返回交给系统退出）
     BackHandler(enabled = page != SettingsPage.HOME) { goBack() }
 
     Box(
@@ -121,34 +132,34 @@ fun SettingsScreen(
     when (page) {
         SettingsPage.AI_RESPONSE -> AiResponseScreen(
             vm = vm,
-            onBack = { page = SettingsPage.HOME },
-            onOpenPresets = { page = SettingsPage.PRESETS },
-            onOpenPromptManager = { page = SettingsPage.PROMPT_MANAGER },
-            onOpenProviders = { page = SettingsPage.PROVIDERS },
+            onBack = ::goBack,
+            onOpenPresets = { open(SettingsPage.PRESETS) },
+            onOpenPromptManager = { open(SettingsPage.PROMPT_MANAGER) },
+            onOpenProviders = { open(SettingsPage.PROVIDERS) },
         )
         SettingsPage.PROVIDERS -> ProviderListScreen(
             vm = vm,
             onOpenDetail = { id ->
                 providerId = id
-                page = SettingsPage.PROVIDER_DETAIL
+                open(SettingsPage.PROVIDER_DETAIL)
             },
-            onBack = { page = SettingsPage.HOME },
+            onBack = ::goBack,
         )
         SettingsPage.PROVIDER_DETAIL -> {
             val id = providerId
             if (id != null) {
-                ProviderDetailScreen(vm = vm, providerId = id, onBack = { page = SettingsPage.PROVIDERS })
+                ProviderDetailScreen(vm = vm, providerId = id, onBack = ::goBack)
             }
         }
-        SettingsPage.ADVANCED_FORMATTING -> PresetsScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.WORLD_INFO -> WorldInfoScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.ADVANCED_FORMATTING -> PresetsScreen(onBack = ::goBack)
+        SettingsPage.WORLD_INFO -> WorldInfoScreen(onBack = ::goBack)
         SettingsPage.USER_SETTINGS -> UserSettingsScreen(
-            onBack = { page = SettingsPage.HOME },
-            onOpenAppearance = { page = SettingsPage.APPEARANCE },
-            onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
-            onOpenRender = { page = SettingsPage.RENDER },
-            onOpenData = { page = SettingsPage.DATA },
-            onOpenAbout = { page = SettingsPage.ABOUT },
+            onBack = ::goBack,
+            onOpenAppearance = { open(SettingsPage.APPEARANCE) },
+            onOpenTypography = { open(SettingsPage.TYPOGRAPHY) },
+            onOpenRender = { open(SettingsPage.RENDER) },
+            onOpenData = { open(SettingsPage.DATA) },
+            onOpenAbout = { open(SettingsPage.ABOUT) },
         )
         SettingsPage.APPEARANCE -> AppearanceScreen(
             themeMode = themeMode,
@@ -157,64 +168,67 @@ fun SettingsScreen(
             onVibeChanged = onVibeChanged,
             onAppearanceChanged = onAppearanceChanged,
             onThemeChanged = onThemeChanged,
-            onBack = { page = SettingsPage.USER_SETTINGS },
+            onBack = ::goBack,
         )
-        SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
-        SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
-        SettingsPage.RENDER -> MessageRenderScreen(onBack = { page = SettingsPage.HOME }, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = ::goBack)
+        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.RENDER -> MessageRenderScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
         SettingsPage.EXTENSIONS -> ExtensionsHubScreen(
-            onBack = { page = SettingsPage.HOME },
-            onOpenServices = { page = SettingsPage.SERVICES },
-            onOpenVoice = { page = SettingsPage.VOICE },
-            onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
-            onOpenMemory = { page = SettingsPage.MEMORY },
-            onOpenCaption = { page = SettingsPage.CAPTION },
-            onOpenExpression = { page = SettingsPage.EXPRESSION },
-            onOpenRegex = { page = SettingsPage.REGEX },
-            onOpenInteractive = { page = SettingsPage.INTERACTIVE },
-            onOpenAuthorsNote = { page = SettingsPage.AUTHORS_NOTE },
-            onOpenData = { page = SettingsPage.DATA },
+            onBack = ::goBack,
+            onOpenServices = { open(SettingsPage.SERVICES) },
+            onOpenVoice = { open(SettingsPage.VOICE) },
+            onOpenQuickReplies = { open(SettingsPage.QUICK_REPLIES) },
+            onOpenMemory = { open(SettingsPage.MEMORY) },
+            onOpenCaption = { open(SettingsPage.CAPTION) },
+            onOpenExpression = { open(SettingsPage.EXPRESSION) },
+            onOpenRegex = { open(SettingsPage.REGEX) },
+            onOpenInteractive = { open(SettingsPage.INTERACTIVE) },
+            onOpenAuthorsNote = { open(SettingsPage.AUTHORS_NOTE) },
+            onOpenData = { open(SettingsPage.DATA) },
         )
-        SettingsPage.INTERACTIVE -> ExtensionsScreen(onBack = { page = SettingsPage.EXTENSIONS })
-        SettingsPage.VOICE -> VoiceScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.SERVICES -> ServicesScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.MEMORY -> MemoryScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.CAPTION -> CaptionScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.EXPRESSION -> ExpressionScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.REGEX -> RegexScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.AUTHORS_NOTE -> AuthorsNoteSettingsScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.PRESETS -> PresetsScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.PROMPT_MANAGER -> PromptManagerScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.DATA -> DataPrivacyScreen(onBack = { page = SettingsPage.HOME })
-        SettingsPage.ABOUT -> AboutScreen(onBack = { page = SettingsPage.HOME })
+        SettingsPage.INTERACTIVE -> ExtensionsScreen(onBack = ::goBack)
+        SettingsPage.VOICE -> VoiceScreen(onBack = ::goBack)
+        SettingsPage.SERVICES -> ServicesScreen(onBack = ::goBack)
+        SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = ::goBack)
+        SettingsPage.MEMORY -> MemoryScreen(onBack = ::goBack)
+        SettingsPage.CAPTION -> CaptionScreen(onBack = ::goBack)
+        SettingsPage.EXPRESSION -> ExpressionScreen(onBack = ::goBack)
+        SettingsPage.REGEX -> RegexScreen(onBack = ::goBack)
+        SettingsPage.AUTHORS_NOTE -> AuthorsNoteSettingsScreen(onBack = ::goBack)
+        SettingsPage.PRESETS -> PresetsScreen(onBack = ::goBack)
+        SettingsPage.PROMPT_MANAGER -> PromptManagerScreen(onBack = ::goBack)
+        SettingsPage.DATA -> DataPrivacyScreen(onBack = ::goBack)
+        SettingsPage.ABOUT -> AboutScreen(onBack = ::goBack)
         else -> SettingsHome(
             vm = vm,
             themeMode = themeMode,
             themePreset = themePreset,
-            onOpenAiResponse = { page = SettingsPage.AI_RESPONSE },
-            onOpenProviders = { page = SettingsPage.PROVIDERS },
-            onOpenFormatting = { page = SettingsPage.ADVANCED_FORMATTING },
-            onOpenWorldInfo = { page = SettingsPage.WORLD_INFO },
-            onOpenUserSettings = { page = SettingsPage.USER_SETTINGS },
-            onOpenBackgrounds = { page = SettingsPage.BACKGROUNDS },
-            onOpenExtensionsHub = { page = SettingsPage.EXTENSIONS },
-            onOpenPersonas = { page = SettingsPage.PERSONAS },
-            onOpenTypography = { page = SettingsPage.TYPOGRAPHY },
-            onOpenRender = { page = SettingsPage.RENDER },
-            onOpenVoice = { page = SettingsPage.VOICE },
-            onOpenServices = { page = SettingsPage.SERVICES },
-            onOpenQuickReplies = { page = SettingsPage.QUICK_REPLIES },
-            onOpenMemory = { page = SettingsPage.MEMORY },
-            onOpenCaption = { page = SettingsPage.CAPTION },
-            onOpenExpression = { page = SettingsPage.EXPRESSION },
-            onOpenRegex = { page = SettingsPage.REGEX },
-            onOpenAuthorsNote = { page = SettingsPage.AUTHORS_NOTE },
-            onOpenPresets = { page = SettingsPage.PRESETS },
-            onOpenPromptManager = { page = SettingsPage.PROMPT_MANAGER },
-            onOpenData = { page = SettingsPage.DATA },
-            onOpenAbout = { page = SettingsPage.ABOUT },
+            listState = homeListState,
+            query = homeQuery,
+            onQueryChange = { homeQuery = it },
+            onOpenAiResponse = { open(SettingsPage.AI_RESPONSE) },
+            onOpenProviders = { open(SettingsPage.PROVIDERS) },
+            onOpenFormatting = { open(SettingsPage.ADVANCED_FORMATTING) },
+            onOpenWorldInfo = { open(SettingsPage.WORLD_INFO) },
+            onOpenUserSettings = { open(SettingsPage.USER_SETTINGS) },
+            onOpenBackgrounds = { open(SettingsPage.BACKGROUNDS) },
+            onOpenExtensionsHub = { open(SettingsPage.EXTENSIONS) },
+            onOpenPersonas = { open(SettingsPage.PERSONAS) },
+            onOpenTypography = { open(SettingsPage.TYPOGRAPHY) },
+            onOpenRender = { open(SettingsPage.RENDER) },
+            onOpenVoice = { open(SettingsPage.VOICE) },
+            onOpenServices = { open(SettingsPage.SERVICES) },
+            onOpenQuickReplies = { open(SettingsPage.QUICK_REPLIES) },
+            onOpenMemory = { open(SettingsPage.MEMORY) },
+            onOpenCaption = { open(SettingsPage.CAPTION) },
+            onOpenExpression = { open(SettingsPage.EXPRESSION) },
+            onOpenRegex = { open(SettingsPage.REGEX) },
+            onOpenAuthorsNote = { open(SettingsPage.AUTHORS_NOTE) },
+            onOpenPresets = { open(SettingsPage.PRESETS) },
+            onOpenPromptManager = { open(SettingsPage.PROMPT_MANAGER) },
+            onOpenData = { open(SettingsPage.DATA) },
+            onOpenAbout = { open(SettingsPage.ABOUT) },
         )
     }
     }
@@ -240,6 +254,9 @@ private fun SettingsHome(
     vm: ProviderViewModel,
     themeMode: ThemeMode,
     themePreset: ThemePreset,
+    listState: LazyListState,
+    query: String,
+    onQueryChange: (String) -> Unit,
     onOpenAiResponse: () -> Unit,
     onOpenProviders: () -> Unit,
     onOpenFormatting: () -> Unit,
@@ -266,8 +283,6 @@ private fun SettingsHome(
     val profiles by vm.profiles.collectAsState()
     val activeId by vm.activeId.collectAsState()
     val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
-
     val activeProfile = profiles.firstOrNull { it.id == activeId }
     val providerSummary = activeProfile?.let { p ->
         val spec = vm.providers.firstOrNull { it.id == p.providerId }
@@ -298,6 +313,7 @@ private fun SettingsHome(
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -328,12 +344,12 @@ private fun SettingsHome(
                 }
                 EmberTextField(
                     value = query,
-                    onValueChange = { query = it },
+                    onValueChange = onQueryChange,
                     placeholder = { Text("搜索设置") },
                     leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
+                            IconButton(onClick = { onQueryChange("") }) {
                                 Icon(FaIcons.XMark, contentDescription = "清除")
                             }
                         }
