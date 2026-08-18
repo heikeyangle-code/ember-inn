@@ -813,11 +813,14 @@ fun ChatScreen(
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
-                                swipeCount = derived.swipeCount,
+                                // 官方默认（非 swipeAllMessages）：swipe 控件/手势只在最后一条消息生效，
+                                // 生成中隐藏计数（script.js:9268）——非最后一条 AI 传 0 即全部收敛
+                                swipeCount = if (item.index == lastAiIndex && !isStreaming) derived.swipeCount else 0,
                                 curSwipe = derived.curSwipe,
                                 isPrevSameSender = isPrevSameSender,
                                 onSwipeLeft = { vm.swipeLeft(item.index) },
                                 onSwipeRight = { vm.swipeRight(item.index) },
+                                onSwipePicker = { swipePickerIndex = MsgTarget(item.index, el) },
                                 onEdit = { editIndex = MsgTarget(item.index, el); editDraft = text },
                                 onMore = { menuMessageIndex = MsgTarget(item.index, el) },
                                 onBookmark = {
@@ -920,9 +923,6 @@ fun ChatScreen(
                 onStop = { vm.stop() },
                 onAttach = {
                     showAttachOptions = true
-                },
-                onVoice = {
-                    Toast.makeText(context, "语音输入开发中", Toast.LENGTH_SHORT).show()
                 },
                 slashCommands = slashCommands,
                 modifier = Modifier
@@ -1304,6 +1304,12 @@ fun ChatScreen(
                         showMore = false
                         vm.clearChatBackground()
                     }
+                }
+                // 官方 options 弹层 option_new_bookmark：在当前位置存检查点（分支聊天）
+                MenuRow(PhosphorIcons.Flag, "保存检查点（书签）") {
+                    showMore = false
+                    bookmarkDraftName = vm.defaultBookmarkName()
+                    showBookmarkDialog = true
                 }
                 MenuRow(PhosphorIcons.BookmarkSimple, "书签") {
                     showMore = false
@@ -2717,6 +2723,7 @@ private fun MessageRow(
     onImageToggle: () -> Unit = {},
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
+    onSwipePicker: () -> Unit = {},
     onEdit: () -> Unit = {},
     onMore: () -> Unit = {},
     onBookmark: () -> Unit = {},
@@ -2832,7 +2839,8 @@ private fun MessageRow(
             // 避免 fillMaxWidth(0.78f) 把长消息/列表/引用撑成整条宽气泡）
             modifier = if (isUser) Modifier.widthIn(max = 320.dp) else Modifier.fillMaxWidth(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 官方 .ch_name 行：名字 + mes_ghost + 时间戳靠左，mes_buttons（⋯/flag/pencil）靠右同一行
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = name,
                     style = (MaterialTheme.typography.labelMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
@@ -2842,7 +2850,20 @@ private fun MessageRow(
                     },
                     fontWeight = FontWeight.Medium,
                     fontStyle = if (isSystem) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                // 官方 mes_ghost：被用户隐藏（不进提示词）的消息在名字旁标记；'SillyTavern System' 真系统消息不带
+                if (isSystem && name != SYSTEM_USER_NAME) {
+                    Spacer(Modifier.size(5.dp))
+                    Icon(
+                        PhosphorIcons.EyeSlash,
+                        contentDescription = "此消息对 AI 不可见",
+                        tint = emColor.copy(alpha = 0.85f),
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
                 Spacer(Modifier.size(8.dp))
                 Text(
                     text = time,
@@ -2857,6 +2878,15 @@ private fun MessageRow(
                         color = emColor,
                     )
                 }
+                if (showActions) {
+                    Spacer(Modifier.weight(1f))
+                    // 官方 mes_buttons 常驻三项：⋯ 更多 / flag 书签 / pencil 编辑；复制/删除/变体等进 ⋯ 菜单
+                    MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
+                    Spacer(Modifier.size(6.dp))
+                    MessageActionIcon(PhosphorIcons.Flag, "创建书签（存档到此）", onBookmark)
+                    Spacer(Modifier.size(6.dp))
+                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
+                }
             }
             // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
             if (!reasoning.isNullOrBlank()) {
@@ -2868,9 +2898,10 @@ private fun MessageRow(
                 )
             }
             Spacer(Modifier.size(3.dp))
-            // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动
+            // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动。
+            // 官方 swiped-events 仅绑定最后一条消息 → swipeCount 仅最后一条 AI 非零，手势随之只在其上生效
             var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
-            if (!isUser && !isSystem) {
+            if (!isUser && !isSystem && swipeCount >= 1) {
                 val threshold = with(LocalDensity.current) { 56.dp.toPx() }
                 bubbleModifier = bubbleModifier.then(
                     Modifier.pointerInput(Unit) {
@@ -2946,10 +2977,15 @@ private fun MessageRow(
                             modifier = Modifier.size(14.dp),
                         )
                     }
+                    // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
                     Text(
                         text = "${curSwipe + 1}/${swipeCount}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(onClick = onSwipePicker)
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                     )
                     IconButton(
                         onClick = onSwipeRight,
@@ -2967,19 +3003,6 @@ private fun MessageRow(
             if (media.items.isNotEmpty()) {
                 Spacer(Modifier.size(8.dp))
                 MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
-            }
-            if (showActions) {
-                Spacer(Modifier.size(6.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Spacer(Modifier.weight(1f))
-                    // 官方 mes_buttons 常驻三项：⋯ 更多 / flag 书签 / pencil 编辑；复制/删除/变体等进 ⋯ 菜单
-                    MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
-                    MessageActionIcon(PhosphorIcons.Flag, "创建书签（存档到此）", onBookmark)
-                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
-                }
             }
         }
     }
@@ -5201,7 +5224,6 @@ private fun ChatInputBar(
     onSend: () -> Unit,
     onStop: () -> Unit,
     onAttach: () -> Unit,
-    onVoice: () -> Unit,
     slashCommands: List<Pair<String, String>> = emptyList(),
     impersonating: Boolean = false,
     streamingText: kotlinx.coroutines.flow.StateFlow<String> = kotlinx.coroutines.flow.MutableStateFlow(""),
@@ -5390,11 +5412,7 @@ private fun ChatInputBar(
                     .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                EmberInputIcon(
-                    onClick = onVoice,
-                    icon = PhosphorIcons.Mic,
-                    contentDescription = "语音输入",
-                )
+                // 官方 rightSendForm：impersonate(user-secret) + continue(arrow-right) + send(paper-plane)
                 EmberInputIcon(
                     onClick = onQuickImpersonate,
                     icon = PhosphorIcons.User,
