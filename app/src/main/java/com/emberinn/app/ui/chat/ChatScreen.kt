@@ -856,10 +856,10 @@ fun ChatScreen(
                             // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
                             val mediaList = remember(derived.media) { ChatMedia(derived.media) }
                             val immersiveActions = rowImmersiveActions
-                            // 官方：用户消息与 AI 消息都有 mes_buttons；移动端取“双方各自最后一条”显示，避免每条都铺按钮
-                            val lastUserIndex = remember(messages) { messages.indexOfLast { !isSystem(it) && isUser(it) } }
+                            // 底部操作条仅最后一条 AI 显示（⋯/flag/pencil 与变体箭头同行）；
+                            // 用户消息无常驻图标，长按气泡出菜单（官方移动端同款交互）
                             val showActions = !isStreaming && !isSystemMsg && !immersiveActions &&
-                                ((!isUserMsg && item.index == lastAiIndex) || (isUserMsg && item.index == lastUserIndex))
+                                !isUserMsg && item.index == lastAiIndex
                             val isPrevSameSender =
                                 item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
                             val prevEl = if (item.index == 0) null else messages[item.index - 1]
@@ -1212,6 +1212,79 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
                     HorizontalDivider()
+                    // ── 分层顺序整体颠倒：越常用越靠上（操作 → 变体 → 存档 → 结构 → 官方扩展），不再往下滑 ──
+                    // ── 官方常驻按钮：copy（剪贴板）/ edit / delete ──
+                    MenuSectionLabel("操作")
+                    MenuRow(FaIcons.Copy, "复制文本") {
+                        clipboard.setText(AnnotatedString(text))
+                        Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                        menuMessageIndex = null
+                    }
+                    MenuRow(FaIcons.Pencil, "编辑这条消息") {
+                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
+                    }
+                    MenuRow(FaIcons.TrashCan, "删除这条消息", danger = true) {
+                        deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
+                    }
+                    // ── 回复变体（官方 swipe chevrons：仅最后一条消息；swipes_visible 需 >1，
+                    //    overswipe=REGENERATE 时右箭头恒显 = 生成新变体入口；官方 per-message
+                    //    无 regenerate/impersonate/continue——重新生成是全局操作，在 ⋯ 菜单）──
+                    val isLastMessage = index == messages.lastIndex
+                    if (!isUserMsg && !isSystemMsg && (swipeCount > 1 || isLastMessage)) {
+                        MenuSectionLabel("回复变体（Swipes）")
+                        if (isLastMessage) {
+                            MenuRow(FaIcons.ChevronRight, "生成新回复（变体）") {
+                                vm.generateSwipe(); menuMessageIndex = null
+                            }
+                        }
+                        if (swipeCount > 1) {
+                            MenuRow(FaIcons.ChevronLeft, "上一个回复") {
+                                vm.swipeLeft(index); menuMessageIndex = null
+                            }
+                            MenuRow(FaIcons.ChevronRight, "下一个回复") {
+                                vm.swipeRight(index); menuMessageIndex = null
+                            }
+                        }
+                        if (swipeCount >= 1) {
+                            MenuRow(FaIcons.Bookmark, "变体列表") {
+                                swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
+                            }
+                        }
+                        if (swipeCount > 1) {
+                            MenuRow(FaIcons.TrashCan, "删除当前回复", danger = true) {
+                                deleteSwipeTargetIndex = MsgTarget(index, el); menuMessageIndex = null
+                            }
+                        }
+                    }
+                    // ── 存档（官方 mes_create_bookmark / mes_create_branch）──
+                    MenuSectionLabel("存档")
+                    MenuRow(FaIcons.Flag, "创建书签（存档到此）") {
+                        menuMessageIndex = null
+                        bookmarkDraftName = vm.defaultBookmarkName()
+                        showBookmarkDialog = true
+                    }
+                    MenuRow(FaIcons.CodeBranch, "创建分支（Branch）") {
+                        menuMessageIndex = null
+                        vm.createBranch(index)?.let { onSwitchSession(it) }
+                    }
+                    // ── 官方编辑模式按钮（mes_edit_*）：上移/下移/创建副本 ──
+                    MenuSectionLabel("消息结构（官方编辑模式）")
+                    if (index > 0) {
+                        MenuRow(FaIcons.ChevronUp, "上移一条") {
+                            vm.moveMessage(index, -1)
+                            menuMessageIndex = null
+                        }
+                    }
+                    if (index < messages.lastIndex) {
+                        MenuRow(FaIcons.ChevronDown, "下移一条") {
+                            vm.moveMessage(index, 1)
+                            menuMessageIndex = null
+                        }
+                    }
+                    MenuRow(FaIcons.Copy, "创建副本（插到本条之后）") {
+                        vm.duplicateMessage(index)
+                        menuMessageIndex = null
+                    }
                     // ── 官方 extraMesButtons 顺序：翻译 → 生成图片 → 朗读 → Prompt → 隐藏 → 媒体样式 → 嵌入 ──
                     MenuRow(FaIcons.Language, "翻译这条消息") {
                         vm.translateMessage(index)
@@ -1251,78 +1324,6 @@ fun ChatScreen(
                         menuMessageIndex = null
                         embedTargetIndex = MsgTarget(index, el)
                         embedPicker.launch(arrayOf("*/*"))
-                    }
-                    // ── 官方编辑模式按钮（mes_edit_*）：上移/下移/创建副本 ──
-                    MenuSectionLabel("消息结构（官方编辑模式）")
-                    if (index > 0) {
-                        MenuRow(FaIcons.ChevronUp, "上移一条") {
-                            vm.moveMessage(index, -1)
-                            menuMessageIndex = null
-                        }
-                    }
-                    if (index < messages.lastIndex) {
-                        MenuRow(FaIcons.ChevronDown, "下移一条") {
-                            vm.moveMessage(index, 1)
-                            menuMessageIndex = null
-                        }
-                    }
-                    MenuRow(FaIcons.Copy, "创建副本（插到本条之后）") {
-                        vm.duplicateMessage(index)
-                        menuMessageIndex = null
-                    }
-                    // ── 存档（官方 mes_create_bookmark / mes_create_branch）──
-                    MenuSectionLabel("存档")
-                    MenuRow(FaIcons.Flag, "创建书签（存档到此）") {
-                        menuMessageIndex = null
-                        bookmarkDraftName = vm.defaultBookmarkName()
-                        showBookmarkDialog = true
-                    }
-                    MenuRow(FaIcons.CodeBranch, "创建分支（Branch）") {
-                        menuMessageIndex = null
-                        vm.createBranch(index)?.let { onSwitchSession(it) }
-                    }
-                    // ── 回复变体（官方 swipe chevrons：仅最后一条消息；swipes_visible 需 >1，
-                    //    overswipe=REGENERATE 时右箭头恒显 = 生成新变体入口）──
-                    //    官方 per-message 无 regenerate/impersonate/continue（全局操作在 ⋯ 菜单与输入栏），此处不重复。
-                    val isLastMessage = index == messages.lastIndex
-                    if (!isUserMsg && !isSystemMsg && (swipeCount > 1 || isLastMessage)) {
-                        MenuSectionLabel("回复变体（Swipes）")
-                        if (isLastMessage) {
-                            MenuRow(FaIcons.ChevronRight, "生成新回复（变体）") {
-                                vm.generateSwipe(); menuMessageIndex = null
-                            }
-                        }
-                        if (swipeCount > 1) {
-                            MenuRow(FaIcons.ChevronLeft, "上一个回复") {
-                                vm.swipeLeft(index); menuMessageIndex = null
-                            }
-                            MenuRow(FaIcons.ChevronRight, "下一个回复") {
-                                vm.swipeRight(index); menuMessageIndex = null
-                            }
-                        }
-                        if (swipeCount >= 1) {
-                            MenuRow(FaIcons.Bookmark, "变体列表") {
-                                swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
-                            }
-                        }
-                        if (swipeCount > 1) {
-                            MenuRow(FaIcons.TrashCan, "删除当前回复", danger = true) {
-                                deleteSwipeTargetIndex = MsgTarget(index, el); menuMessageIndex = null
-                            }
-                        }
-                    }
-                    // ── 官方常驻按钮：copy（剪贴板）/ edit / delete ──
-                    MenuSectionLabel("操作")
-                    MenuRow(FaIcons.Copy, "复制文本") {
-                        clipboard.setText(AnnotatedString(text))
-                        Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
-                        menuMessageIndex = null
-                    }
-                    MenuRow(FaIcons.Pencil, "编辑这条消息") {
-                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
-                    }
-                    MenuRow(FaIcons.TrashCan, "删除这条消息", danger = true) {
-                        deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                     }
                 }
             }
@@ -3217,12 +3218,16 @@ private fun MessageRowContent(
         }
         Column(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-            // 用户消息：内容自适应紧凑气泡，上限 320dp（恢复早期 widthIn(max=300dp) 语义，
-            // 避免 fillMaxWidth(0.78f) 把长消息/列表/引用撑成整条宽气泡）
-            modifier = if (isUser) Modifier.widthIn(max = 320.dp) else Modifier.fillMaxWidth(),
+            // 气泡自适应：内容 hug 宽度 + 上限封顶（用户 320dp / AI 气泡 340dp），
+            // 纸面模式（无气泡）保持整行铺满便于长文阅读
+            modifier = when {
+                isUser -> Modifier.widthIn(max = 320.dp)
+                aiBubble -> Modifier.widthIn(max = 340.dp)
+                else -> Modifier.fillMaxWidth()
+            },
         ) {
-            // 官方 .ch_name 行：名字 + mes_ghost + 时间戳靠左，mes_buttons（⋯/flag/pencil）靠右同一行
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            // 官方 .ch_name 行：名字 + mes_ghost + 时间戳靠左（不 fillMaxWidth，否则会把 hug 气泡撑到上限）
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
                     style = (MaterialTheme.typography.labelMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
@@ -3260,15 +3265,7 @@ private fun MessageRowContent(
                         color = emColor,
                     )
                 }
-                if (showActions) {
-                    Spacer(Modifier.weight(1f))
-                    // 官方 mes_buttons 常驻三项：⋯ 更多 / flag 书签 / pencil 编辑；复制/删除/变体等进 ⋯ 菜单
-                    MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
-                    Spacer(Modifier.size(6.dp))
-                    MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
-                    Spacer(Modifier.size(6.dp))
-                    MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
-                }
+                // mes_buttons（⋯/flag/pencil）移至消息底部操作条，与变体箭头同行
             }
             // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
             if (!reasoning.isNullOrBlank()) {
@@ -3315,11 +3312,12 @@ private fun MessageRowContent(
                             onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
                             isSystem = false,
                             charAvatarPath = avatarPath,
+                            fillWidth = false,
                         )
                     }
                 }
             } else if (aiBubble) {
-                // README 气泡样式=bubble：AI 也带低对比气泡
+                // README 气泡样式=bubble：AI 也带低对比气泡（hug 内容，上限由外层列宽封顶）
                 Surface(
                     shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp),
                     color = botBubbleColor,
@@ -3331,6 +3329,7 @@ private fun MessageRowContent(
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         isSystem = formatAsSystem,
                         charAvatarPath = avatarPath,
+                        fillWidth = false,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
                     )
                 }
@@ -3344,41 +3343,52 @@ private fun MessageRowContent(
                     modifier = bubbleModifier,
                 )
             }
-            // 回复变体计数条（对齐官方 swipes-counter：n/total + 左右箭头；仅在已有变体时显示）
-            if (swipeCount >= 1 && !isSystem) {
+            // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
+            // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示
+            if (!isSystem && (swipeCount >= 1 || showActions)) {
                 Spacer(Modifier.size(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onSwipeLeft,
-                        modifier = Modifier.size(26.dp),
-                    ) {
-                        Icon(
-                            FaIcons.ChevronLeft,
-                            contentDescription = "上一个回复",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp),
+                    if (swipeCount >= 1) {
+                        IconButton(
+                            onClick = onSwipeLeft,
+                            modifier = Modifier.size(26.dp),
+                        ) {
+                            Icon(
+                                FaIcons.ChevronLeft,
+                                contentDescription = "上一个回复",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                        // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
+                        Text(
+                            text = "${curSwipe + 1}/${swipeCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable(onClick = onSwipePicker)
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                         )
+                        IconButton(
+                            onClick = onSwipeRight,
+                            modifier = Modifier.size(26.dp),
+                        ) {
+                            Icon(
+                                FaIcons.ChevronRight,
+                                contentDescription = "下一个回复",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
                     }
-                    // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
-                    Text(
-                        text = "${curSwipe + 1}/${swipeCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable(onClick = onSwipePicker)
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                    )
-                    IconButton(
-                        onClick = onSwipeRight,
-                        modifier = Modifier.size(26.dp),
-                    ) {
-                        Icon(
-                            FaIcons.ChevronRight,
-                            contentDescription = "下一个回复",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp),
-                        )
+                    if (showActions) {
+                        Spacer(Modifier.size(6.dp))
+                        MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
+                        Spacer(Modifier.size(6.dp))
+                        MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
+                        Spacer(Modifier.size(6.dp))
+                        MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
                     }
                 }
             }
@@ -3465,7 +3475,7 @@ private fun StreamingRow(
  *  只做粗粒度着色（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、行内码、六种引号对、链接）。
  *  生成结束后由 ChatMarkdown 一次性完整重渲染，视觉与最终一致。 */
 @Composable
-private fun StreamingMarkdown(content: String) {
+private fun StreamingMarkdown(content: String, fillWidth: Boolean = true) {
     val context = LocalContext.current
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
@@ -3488,7 +3498,7 @@ private fun StreamingMarkdown(content: String) {
     Text(
         text = styled,
         style = chatTypography().body,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier,
     )
 }
 
@@ -4794,6 +4804,8 @@ private fun NativeMarkdown(
     onSurface: Color,
     isSystem: Boolean = false,
     modifier: Modifier = Modifier,
+    // false = 不强制撑满（气泡 hug 模式）；含引用/表格等 fillMaxWidth 块时仍会被撑开，属可接受降级
+    fillWidth: Boolean = true,
 ) {
     val context = LocalContext.current
     // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
@@ -4949,7 +4961,7 @@ private fun NativeMarkdown(
     if (md is State.Success) {
         Markdown(
             state = md,
-            modifier = modifier.fillMaxWidth(),
+            modifier = if (fillWidth) modifier.fillMaxWidth() else modifier,
             imageTransformer = Coil3ImageTransformerImpl,
             components = components,
             colors = colors,
@@ -4958,7 +4970,7 @@ private fun NativeMarkdown(
             annotator = mdAnnotator,
         )
     } else {
-        StreamingMarkdown(content = content)
+        StreamingMarkdown(content = content, fillWidth = fillWidth)
     }
 }
 
@@ -5017,6 +5029,8 @@ private fun ChatMarkdown(
     charAvatarPath: String? = null,
     userAvatarPath: String? = null,
     modifier: Modifier = Modifier,
+    // 气泡模式 false：内容 hug 宽度让 Surface 包裹（否则短消息也撑满上限宽度）
+    fillWidth: Boolean = true,
 ) {
     val context = LocalContext.current
     val htmlEnabled = RenderPrefs.htmlEnabled(context)
@@ -5038,6 +5052,7 @@ private fun ChatMarkdown(
             onSurface = onSurface,
             isSystem = isSystem,
             modifier = modifier,
+            fillWidth = fillWidth,
         )
     } else {
         SegmentedMarkdown(
