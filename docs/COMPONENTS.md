@@ -24,7 +24,7 @@
 | 网格渐变 | 官方 MeshGradient | androidx.compose.ui.graphics.MeshGradient（已入 Compose UI，无需第三方） | 背景氛围渐变（2–4 色低饱和） | 聊天背景、卡片背景 | UI 层自由 |
 | 取色 | androidx.palette | androidx.palette:palette | 卡图取色 seed | 角色卡 → theme_seed（已实现） | UI 层自由 |
 | 种子色 → M3 配色 | MaterialKolor 4.1.x | com.jordond.materialkolor（5.0 是 alpha，不用） | 一套 seed 生成整套 M3 ColorScheme | 主题引擎 Theme.kt（已实现） | UI 层自由 |
-| 图标 | Phosphor Icons（主推，Regular 字重）。现用内置 32 枚官方路径（scripts/gen-phosphor-icons.mjs 生成，APK 小、精确可控）；备用 Maven 包 com.adamglin:phosphor-icon:1.0.0（六字重全量 26.7MB，Kotlin 2.0.21 构建，想换可直接替换） / Material Symbols Rounded（备选）/ Lucide（内容级备选） | 内置 PhosphorIcons.kt（零第三方依赖） | 圆头现代，配“余烬/炉火”美学 | 全 App 图标（README 图标系统节） | UI 层自由 |
+| 图标 | **Font Awesome 6 Solid**（与酒馆官方前端同库）。内置 88 枚官方路径（scripts/gen-fa-icons.mjs 从 FA 官方 SVG 生成，零第三方依赖、APK 小）；备用 Maven 包（需全量字重/图标时再评估） | 内置 FaIcons.kt | 与官方视觉 1:1 | 全 App 图标（HANDOFF 4.5.5） | UI 对齐官方 |
 | 文件选择 | SAF / PhotoPicker | 系统 API | 导入卡（PNG/JSON/CharX）、附件、背景 | FAB 导入、附件面板 | 官方文件上传是 `<input type=file>`（`public/scripts/characters.js`） |
 | 启动页 | SplashScreen API | androidx.core:core-splashscreen | Android 12+ 原生品牌启动 | MainActivity | UI 层自由 |
 | QR | ZXing | com.google.zxing | 连接档案扫码导入导出 | 提供商设置页 | UI 层自由 |

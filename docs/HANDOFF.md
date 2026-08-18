@@ -35,13 +35,13 @@ flowchart LR
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `~/ember-inn`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `~/sillytavern-ref`（release 8172dcd / 1.18.0）。
-- 引擎测试本机可跑（Java 21 + Gradle 9.7，当前 **378 测全绿**）；App 编译只能靠 CI（本机无 Android SDK）。
+- 引擎测试与 App Kotlin 编译本机均可跑（Java 21 + Gradle 9.7 + Android SDK，当前 **378 测全绿**）；完整 APK 组装/签名走 CI。
 
 ```sh
 cd ~/ember-inn && ./gradlew :engine:test
 node scripts/diff/*.mjs          # 改引擎/官方发版后重新生成 fixture
 node scripts/build-presets.mjs   # 打包官方预设
-git push origin main             # 本机已 gh auth setup-git；网络不稳重试
+git push origin main             # 需 GitHub 凭证；沙箱会话重置后 gh/token 可能丢失，届时 gh auth login 或临时 PAT
 gh run list --limit 3            # 看 CI（改 app/engine/gradle/工作流才自动触发；纯文档不触发）
 gh workflow run 328789880 --ref main   # 需要手工跑一次
 ```
@@ -212,7 +212,7 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成 M3 ColorScheme；MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）已接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）；官方字段 st*/scheme* 填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…），其余 10 套色板派生；🟡 MeshGradient 氛围背景未做（README 可选）。
 
 ### 4.5.5 图标系统 ✅
-全 App 图标 = Phosphor Regular（24dp/256 viewport），内置 32 枚 `app/src/main/java/com/emberinn/app/ui/icons/PhosphorIcons.kt`（scripts/gen-phosphor-icons.mjs 从 phosphor-icons/core 官方 SVG 生成，增图重跑脚本）；备用 Maven 包 com.adamglin:phosphor-icon:1.0.0 / io.github.dev778g-me:phosphoricon-compose:1.0.5；material-icons-core/extended 已移除；规范：默认 onSurfaceVariant、激活 primary、警示 error；冒充 MaskHappy/继续 CaretDoubleRight/删除 TrashSimple。
+全 App 图标 = **Font Awesome 6 Solid**（512 viewport viewBox，与酒馆官方前端同库同形），内置 88 枚 `app/src/main/java/com/emberinn/app/ui/icons/FaIcons.kt`（scripts/gen-fa-icons.mjs 从 Font Awesome 官方 SVG 生成，增图先加清单再重跑脚本；SVG 缓存 .fa-cache/）。material-icons-core/extended 与旧 Phosphor 已移除。规范：默认 onSurfaceVariant、激活 primary、警示 error。
 
 ### 4.6 数据存储 🟡
 角色卡 characters/*.json + avatars/*.png；会话 sessions/*.json（含 pinned）+ chats/*.jsonl；提供商 profiles.json；主题 SharedPreferences（README 计划 DataStore 未迁移）；ProviderState 进程内共享（设置保存/切换/删除后刷新，聊天页订阅，仅进聊天页读一次盘兜底）；Room 未引入。
@@ -342,8 +342,8 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 - 安全：交互代码块（开关开）= 执行任意脚本（可发网络请求、可读该消息 WebView 内一切）；唯一 JS 桥 EmberInnBridge 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。与 JS 全开同风险等级，官方默认禁止，属有意偏差；收紧时先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
 ### 7.3 分段渲染 / WebView 池 / 测高（App/UI 层）
-- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView，否则原生。
-- WebViewPool：ArrayDeque 闲置池（上限 6）；release 不 about:blank，保留已渲染页面 + WebViewSession（loaded/loadToken/heightPx）；token 每次进入换新，复用同页不重载、记忆高度直接恢复；同页滚动出屏不再销毁重建。
+- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；围栏（含未闭合围栏，行首 ```/~~~ 无闭合时延伸到文本末尾、对齐官方 marked 按代码块渲染）内不切 Web 元素；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView，否则原生。
+- WebViewPool：ArrayDeque 闲置池（上限 6）；release 不 about:blank，保留已渲染页面 + WebViewSession（loaded/loadToken/heightPx）；token 每次进入换新，复用同页不重载、记忆高度直接恢复；同页滚动出屏不再销毁重建；池化实例整页重载期间 INVISIBLE、onPageFinished（token 校验后）恢复显示，复用不闪上一条消息的旧页面。
 - 测高：ResizeObserver(html+body) + load + fonts.ready + 图片未就绪 800ms 低频轮询（20s 上限）+ onPageFinished 纯字符串轮询 ≤15s + 初始 160dp 兜底；公式 = html/body scrollHeight 与 getBoundingClientRect 最大值 + ≤8000 元素 max(bottom) 扫描 + ceil+2px；CSS 像素 1:1 转 dp（旧代码按物理像素/density 导致高密度屏压扁）；上限 maxOf(90% 屏高, 280dp)，超上限 WebView 内滚动；iframe 150/500/1500/3000ms 复测 + 父页观察同源 srcdoc 持续同步。
 - 性能：animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（依据 Cloudy 源码 Sky.kt/SkyFrameDriver.kt：滚动活动触发每帧重捕；同屏玻璃 ≤2-3 处）；热路径缓存（chatTypography/chatTextShadow/NativeMarkdown 组件 remember；Markdown 解析 LRU 缓存 MarkdownCache.kt 上限 32）；行级参数稳定化（immersiveActions/bubbleStyle/density 层读一次、List<MediaAttachment> 包 @Immutable ChatMedia）；发送链路缓存（角色卡解析 LRU 8、外置世界书 mtime、连接档案 mtime、聊天元数据；JSONL/元数据落盘单线程后台队列；命中面板/上下文胶囊移出请求关键路径）。
 - 代码块：mikepenz 默认 MarkdownCode 挂 horizontalScroll（源码 MarkdownCode.kt）导致长 JSON 框死；WrappingHighlightedCode（snipme 高亮 + softWrap 换行）替换 codeFence/codeBlock（官方 overflow-x:auto，我方有意改换行，内容完整可见）。
@@ -358,12 +358,12 @@ ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生�
 4. 正则字符串里 `\s` 必须双反斜杠（非 raw string）；helper 别嵌局部函数。
 5. 全局替换函数名时 `return@旧名` 标签必须同步改名。
 6. Modifier 扩展用 rememberUpdatedState 必须包 `Modifier.composed`。
-7. App 无法本地编译，全靠 CI；push 后以 `gh run list` 为准，网络不稳重试。
+7. App Kotlin 可本地编译（`:app:compileDebugKotlin`）；APK 组装/签名靠 CI，push 后以 `gh run list` 为准，网络不稳重试。
 
 ### 8.2 注意事项
 - 兼容层 1:1，UI 层自由：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主。
 - 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注（登记 6.1/6.3）。
-- App 无法本地编译（无 Android SDK），全靠 CI；引擎测试本机可跑。
-- 推送用 `gh`（已 auth setup-git）；push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
-- 本沙箱 apply_patch 被审批策略禁用，文件编辑用 python3 精确改写；路径相对 `~/` 而不是仓库根。
+- App Kotlin 编译本机可跑（Android SDK 已装）；APK 组装/签名走 CI；引擎测试本机可跑。
+- push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
+- 沙箱会话重置会丢 GitHub 凭证（gh auth/token）：push 失败先查 `gh auth status`，缺凭证就 `gh auth login` 或临时 PAT，不要反复盲推。
 - 删除类操作先确认；大改动保持小步提交。

@@ -12,7 +12,7 @@
 | `<em>/<i>`（style.css） | 斜体 + --SmartThemeEmColor | 原生 annotator EMPH → emColor；WebView CSS 同色 | ✅ |
 | `<b>/<strong>` | bold | → `**` Markdown 加粗 | ✅ |
 | `<s>/<strike>/<del>` | 删除线 | → `~~` | ✅ |
-| `<font color="#hex">` | 指定色，内部 em/i/u/q 继承 | \uE005..#hex..\uE007 → 最后覆盖 em/u/q | ✅ |
+| `<font color=…>` | 指定色，内部 em/i/u/q 继承；官方浏览器支持 hex/命名色/rgb() | \uE005..#RRGGBB..\uE007（normalizeHtmlColor：hex 3/6 位、48 个 CSS 命名色、rgb()/rgba() 统一归一；解析失败保持原标签=继承色） | ✅ |
 | `<hr>`/`<br>` | 分隔线/换行 | `<hr>`→`\n\n---\n\n`；`<br>`→`  \n` | ✅ |
 | sub/sup（UA） | smaller + vertical-align | 0.83× + BaselineShift.Sub/Super | ✅ |
 | ins（UA） | underline | 原生 Underline | ✅ |
