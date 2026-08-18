@@ -3323,6 +3323,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun maybeContinueToolLoop(continueMode: Boolean, onFinished: (() -> Unit)?): Boolean {
         val snapshot = pendingToolCalls ?: return false
         pendingToolCalls = null
+        // 无真实工具调用的快照（网络层空快照兜底/异常流）不进工具循环：
+        // 官方无 tool_calls 时走普通 saveReply，这里提前返回让 finalizeStream 统一落盘一次
+        val hasToolCalls = (snapshot as? kotlinx.serialization.json.JsonArray)
+            ?.any { choice -> (choice as? kotlinx.serialization.json.JsonArray)?.isNotEmpty() == true } == true
+        if (!hasToolCalls) return false
         val executed = ToolRegistry.executeToolCalls(snapshot)
         val toolCalls = executed.map { ToolCall(it.id, it.name, it.arguments) }
         val params = currentStreamParams ?: return false
@@ -3355,6 +3360,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         } else if (reply.isNotBlank()) {
             appendAiReply(reply)
         }
+        // 本轮流文本在此已消费：立即清空，否则提前 return false 后 finalizeStream
+        // 读到残留 _streamingText 会把同一段再落盘一次（单聊消息重复的直接根因）
+        _streamingText.value = ""
+        _streamingReasoning.value = ""
         refreshMessages()
         if (!decision.shouldRecurse) return false
         val profile = chatRepository.profile()
@@ -3367,8 +3376,6 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         )
         refreshMessages()
         toolLoopRuns = decision.nextDepth
-        _streamingText.value = ""
-        _streamingReasoning.value = ""
         // 官方递归 Generate('normal')：重新总装（工具调用历史经 extra.tool_invocations 进提示词）
         startStream(
             history = chatStore.messages(sessionId),

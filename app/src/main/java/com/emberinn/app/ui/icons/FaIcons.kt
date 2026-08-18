@@ -15,21 +15,35 @@ import androidx.compose.ui.unit.dp
  */
 object FaIcons {
 
-    private fun vector(name: String, vw: Float, vh: Float, vararg pathData: String): ImageVector =
-        ImageVector.Builder(
+    private fun vector(name: String, vw: Float, vh: Float, vararg pathData: String): ImageVector {
+        // 官方 FA 以字体渲染：每个字形等比居中放进正方形 em 框（带侧边距）。
+        // 这里同样 letterbox 到 512×512：非正方形 viewBox（ellipsis-vertical 128×512、
+        // language 640×512…）若直接映射 24dp 方形画布会被拉伸变形（胖点/压扁）
+        val scale = 512f / maxOf(vw, vh)
+        return ImageVector.Builder(
             name = name,
             defaultWidth = 24.dp,
             defaultHeight = 24.dp,
-            viewportWidth = vw,
-            viewportHeight = vh,
+            viewportWidth = 512f,
+            viewportHeight = 512f,
         ).apply {
+            // 非 lambda 的 addGroup/clearGroup 自 Compose 1.0 起即存在
+            // （带 lambda 的重载是后期新增），用最保守的 API 保证全版本可编译
+            addGroup(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = (512f - vw * scale) / 2f,
+                translationY = (512f - vh * scale) / 2f,
+            )
             for (d in pathData) {
                 addPath(
                     pathData = PathParser().parsePathString(d).toNodes(),
                     fill = SolidColor(Color.Black),
                 )
             }
+            clearGroup()
         }.build()
+    }
 
     val PaperPlane by lazy { vector("PaperPlane", 512f, 512f, "M498.1 5.6c10.1 7 15.4 19.1 13.5 31.2l-64 416c-1.5 9.7-7.4 18.2-16 23s-18.9 5.4-28 1.6L284 427.7l-68.5 74.1c-8.9 9.7-22.9 12.9-35.2 8.1S160 493.2 160 480l0-83.6c0-4 1.5-7.8 4.2-10.8L331.8 202.8c5.8-6.3 5.6-16-.4-22s-15.7-6.4-22-.7L106 360.8 17.7 316.6C7.1 311.3 .3 300.7 0 288.9s5.9-22.8 16.1-28.7l448-256c10.7-6.1 23.9-5.5 34 1.4z") }
     val CircleStop by lazy { vector("CircleStop", 512f, 512f, "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM192 160l128 0c17.7 0 32 14.3 32 32l0 128c0 17.7-14.3 32-32 32l-128 0c-17.7 0-32-14.3-32-32l0-128c0-17.7 14.3-32 32-32z") }

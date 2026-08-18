@@ -342,10 +342,12 @@ class LlmClient(
                     if (onToolCalls != null) {
                         val parsed = json.parseToJsonElement(dataText)
                         toolAccumulator.parse(parsed)
-                        val snapshot = toolAccumulator.snapshot().toString()
-                        if (snapshot != lastToolSnapshot) {
-                            lastToolSnapshot = snapshot
-                            onToolCalls(toolAccumulator.snapshot())
+                        // 空快照不上报：无工具调用的普通流，快照也会从 ""→"[]" 发生"变化"，
+                        // 误触发上层工具循环会把同一段回复落盘两次（消息重复的元凶之一）
+                        val snap = toolAccumulator.snapshot()
+                        if (snap.isNotEmpty() && snap.toString() != lastToolSnapshot) {
+                            lastToolSnapshot = snap.toString()
+                            onToolCalls(snap)
                         }
                     }
                     // 官方对拍解析器：逐字符增量；推理文本走独立通道（UI 显示思考过程，不进聊天正文）
