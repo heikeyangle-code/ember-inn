@@ -550,7 +550,9 @@ fun ChatScreen(
             }
         }
     }
-    val lastAiIndex = messages.indexOfLast { el -> !isUser(el) }
+    // 最后一条 AI 消息（排除用户/系统）：reasoning 兜底与生成类入口的目标。
+    // 官方 swipe/生成目标是 chat.length-1 且非用户非系统（isMessageSwipeable）。
+    val lastAiIndex = messages.indexOfLast { el -> !isUser(el) && !isSystem(el) }
 
     // 贴底跟随：用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
     // reverseLayout=true：贴底判定 = firstVisibleItemIndex == 0（官方 LazyColumn 语义，不再读 layoutInfo）。
@@ -848,9 +850,9 @@ fun ChatScreen(
                                 aiBubble = rowBubbleStyle == "bubble",
                                 onImageToggle = { vm.setMediaDisplay(item.index) },
                                 showActions = showActions,
-                                // 官方默认（非 swipeAllMessages）：swipe 控件/手势只在最后一条消息生效，
-                                // 生成中隐藏计数（script.js:9268）——非最后一条 AI 传 0 即全部收敛
-                                swipeCount = if (item.index == lastAiIndex && !isStreaming) derived.swipeCount else 0,
+                                // 官方 isMessageSwipeable：仅 chat.length-1 且非用户、非系统、生成中隐藏（script.js:9123-9145）
+                                // —— 最后一条是用户消息时，前面的 AI 消息也不显示 swipe 控件
+                                swipeCount = if (item.index == messages.lastIndex && !isUserMsg && !isSystemMsg && !isStreaming) derived.swipeCount else 0,
                                 curSwipe = derived.curSwipe,
                                 isPrevSameSender = isPrevSameSender,
                                 onSwipeLeft = { vm.swipeLeft(item.index) },
@@ -1215,35 +1217,29 @@ fun ChatScreen(
                         menuMessageIndex = null
                         vm.createBranch(index)?.let { onSwitchSession(it) }
                     }
-                    // ── 生成（官方 options 级操作：regenerate/impersonate/continue/swipe）──
-                    if (!isUserMsg && !isSystemMsg) {
-                        MenuSectionLabel("生成")
-                        MenuRow(FaIcons.User, "冒充（让模型替你说）") {
-                            vm.impersonate(); menuMessageIndex = null
-                        }
-                        if (index == lastAiIndex) {
-                            MenuRow(FaIcons.Repeat, "重新生成") {
-                                vm.regenerate(); menuMessageIndex = null
-                            }
-                            MenuRow(FaIcons.ArrowRight, "继续生成") {
-                                vm.continueGeneration(); menuMessageIndex = null
-                            }
-                            // 官方 swipe：任何 AI 消息都能生成变体（AI 消息落盘即带 swipes，恒显示入口）
+                    // ── 回复变体（官方 swipe chevrons：仅最后一条消息；swipes_visible 需 >1，
+                    //    overswipe=REGENERATE 时右箭头恒显 = 生成新变体入口）──
+                    //    官方 per-message 无 regenerate/impersonate/continue（全局操作在 ⋯ 菜单与输入栏），此处不重复。
+                    val isLastMessage = index == messages.lastIndex
+                    if (!isUserMsg && !isSystemMsg && (swipeCount > 1 || isLastMessage)) {
+                        MenuSectionLabel("回复变体（Swipes）")
+                        if (isLastMessage) {
                             MenuRow(FaIcons.ChevronRight, "生成新回复（变体）") {
                                 vm.generateSwipe(); menuMessageIndex = null
                             }
                         }
-                    }
-                    if (swipeCount >= 1 && !isSystemMsg) {
-                        MenuSectionLabel("回复变体（Swipes）")
-                        MenuRow(FaIcons.ChevronLeft, "上一个回复") {
-                            vm.swipeLeft(index); menuMessageIndex = null
+                        if (swipeCount > 1) {
+                            MenuRow(FaIcons.ChevronLeft, "上一个回复") {
+                                vm.swipeLeft(index); menuMessageIndex = null
+                            }
+                            MenuRow(FaIcons.ChevronRight, "下一个回复") {
+                                vm.swipeRight(index); menuMessageIndex = null
+                            }
                         }
-                        MenuRow(FaIcons.ChevronRight, "下一个回复") {
-                            vm.swipeRight(index); menuMessageIndex = null
-                        }
-                        MenuRow(FaIcons.Bookmark, "变体列表") {
-                            swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
+                        if (swipeCount >= 1) {
+                            MenuRow(FaIcons.Bookmark, "变体列表") {
+                                swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
+                            }
                         }
                         if (swipeCount > 1) {
                             MenuRow(FaIcons.TrashCan, "删除当前回复", danger = true) {
@@ -1465,7 +1461,7 @@ fun ChatScreen(
                     showMore = false
                     vm.continueGeneration()
                 }
-                MenuRow(FaIcons.TrashCan, "删除消息（勾选一条，从该条起删除）", danger = true) {
+                MenuRow(FaIcons.TrashCan, "删除消息（勾选一条，从该条起删除）", danger = true, enabled = !isStreaming) {
                     showMore = false
                     deleteMode = true
                     deleteCheckIndex = null
@@ -5502,17 +5498,28 @@ private fun MessageActionIcon(
 }
 
 @Composable
-private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, danger: Boolean = false, onClick: () -> Unit) {
+private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, danger: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, enabled = enabled)
             .padding(horizontal = 20.dp, vertical = 14.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, contentDescription = null, tint = when {
+            danger -> MaterialTheme.colorScheme.error
+            enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        })
         Spacer(Modifier.size(12.dp))
-        Text(label, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+        Text(
+            label,
+            color = when {
+                danger -> MaterialTheme.colorScheme.error
+                enabled -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+            },
+        )
     }
 }
 
@@ -5839,7 +5846,7 @@ private fun ChatInputBar(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.error),
                     ) {
-                        Icon(FaIcons.Square, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(18.dp))
+                        Icon(FaIcons.CircleStop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(20.dp))
                     }
                 }
             }

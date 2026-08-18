@@ -23,7 +23,8 @@ mkdirSync(cacheDir, { recursive: true });
 const ICONS = {
   // 官方聊天/消息操作（index.html mes_buttons / options 弹层 / script.js）
   PaperPlane: 'paper-plane',        // 官方 #send_but 发送
-  Square: 'square',                 // 官方 mes_stop 停止
+  CircleStop: 'circle-stop',        // 官方 mes_stop 停止
+  Square: 'square',
   ArrowRight: 'arrow-right',        // 官方 option_continue / stscript_continue
   Repeat: 'repeat',                 // 官方 option_regenerate
   UserSecret: 'user-secret',        // 官方 option_impersonate
