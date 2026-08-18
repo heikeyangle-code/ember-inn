@@ -1066,27 +1066,21 @@ fun ChatScreen(
         if (index != null && el != null) {
             val text = textOf(el)
             val isUserMsg = isUser(el)
+            val isSystemMsg = isSystem(el)
+            val msgName = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            val isRealSystem = isSystemMsg && msgName == SYSTEM_USER_NAME
+            val swipeCount = vm.swipeCountOf(el)
+            val mediaOfMsg = mediaOf(el)
             EmberBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
-                        if (isUserMsg) "我的消息" else currentName,
+                        if (isUserMsg) "我的消息" else msgName.ifBlank { currentName },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
                     HorizontalDivider()
-                    MenuRow(PhosphorIcons.Copy, "复制") {
-                        clipboard.setText(AnnotatedString(text))
-                        Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
-                        menuMessageIndex = null
-                    }
-                    MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
-                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
-                    }
-                    MenuRow(PhosphorIcons.Megaphone, "朗读这条消息") {
-                        vm.narrateMessage(index)
-                        menuMessageIndex = null
-                    }
+                    // ── 官方 extraMesButtons 顺序：翻译 → 生成图片 → 朗读 → Prompt → 隐藏 → 媒体样式 → 嵌入 ──
                     MenuRow(PhosphorIcons.Translate, "翻译这条消息") {
                         vm.translateMessage(index)
                         menuMessageIndex = null
@@ -1097,22 +1091,55 @@ fun ChatScreen(
                             vm.generateImageForMessage(index)
                         }
                     }
-                    MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {
+                    MenuRow(PhosphorIcons.Megaphone, "朗读这条消息") {
+                        vm.narrateMessage(index)
                         menuMessageIndex = null
-                        embedTargetIndex = MsgTarget(index, el)
-                        embedPicker.launch(arrayOf("*/*"))
                     }
-                    val mediaOfMsg = mediaOf(el)
+                    MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
+                        tokenStatsIndex = MsgTarget(index, el)
+                        menuMessageIndex = null
+                    }
+                    if (!isRealSystem) {
+                        val hidden = isSystemMsg
+                        MenuRow(
+                            if (hidden) PhosphorIcons.EyeSlash else PhosphorIcons.Eye,
+                            if (hidden) "取消隐藏（恢复参与提示词）" else "隐藏（不进提示词）",
+                        ) {
+                            vm.hideMessage(index, !hidden)
+                            menuMessageIndex = null
+                        }
+                    }
                     if (mediaOfMsg.isNotEmpty()) {
                         MenuRow(PhosphorIcons.ImageSquare, "切换媒体显示样式（列表/图库）") {
                             vm.setMediaDisplay(index)
                             menuMessageIndex = null
                         }
                     }
-                    MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
-                        tokenStatsIndex = MsgTarget(index, el)
+                    MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {
+                        menuMessageIndex = null
+                        embedTargetIndex = MsgTarget(index, el)
+                        embedPicker.launch(arrayOf("*/*"))
+                    }
+                    // ── 官方编辑模式按钮（mes_edit_*）：上移/下移/创建副本 ──
+                    MenuSectionLabel("消息结构（官方编辑模式）")
+                    if (index > 0) {
+                        MenuRow(PhosphorIcons.CaretUp, "上移一条") {
+                            vm.moveMessage(index, -1)
+                            menuMessageIndex = null
+                        }
+                    }
+                    if (index < messages.lastIndex) {
+                        MenuRow(PhosphorIcons.CaretDown, "下移一条") {
+                            vm.moveMessage(index, 1)
+                            menuMessageIndex = null
+                        }
+                    }
+                    MenuRow(PhosphorIcons.Copy, "创建副本（插到本条之后）") {
+                        vm.duplicateMessage(index)
                         menuMessageIndex = null
                     }
+                    // ── 存档（官方 mes_create_bookmark / mes_create_branch）──
+                    MenuSectionLabel("存档")
                     MenuRow(PhosphorIcons.Flag, "创建书签（存档到此）") {
                         menuMessageIndex = null
                         bookmarkDraftName = vm.defaultBookmarkName()
@@ -1122,21 +1149,9 @@ fun ChatScreen(
                         menuMessageIndex = null
                         vm.createBranch(index)?.let { onSwitchSession(it) }
                     }
-                    val msgName = el.jsonObject["name"]?.jsonPrimitive?.contentOrNull ?: ""
-                    val isRealSystem = isSystem(el) && msgName == SYSTEM_USER_NAME
-                    if (!isRealSystem) {
-                        val hidden = isSystem(el)
-                        MenuRow(
-                            if (hidden) PhosphorIcons.EyeSlash else PhosphorIcons.Eye,
-                            if (hidden) "取消隐藏（恢复参与提示词）" else "隐藏（不进提示词）",
-                        ) {
-                            vm.hideMessage(index, !hidden)
-                            menuMessageIndex = null
-                        }
-                    }
-                    val swipeCount = vm.swipeCountOf(el)
-                    val isSystemMsg = isSystem(el)
+                    // ── 生成（官方 options 级操作：regenerate/impersonate/continue/swipe）──
                     if (!isUserMsg && !isSystemMsg) {
+                        MenuSectionLabel("生成")
                         MenuRow(PhosphorIcons.User, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
@@ -1154,13 +1169,14 @@ fun ChatScreen(
                         }
                     }
                     if (swipeCount >= 1 && !isSystemMsg) {
+                        MenuSectionLabel("回复变体（Swipes）")
                         MenuRow(PhosphorIcons.CaretLeft, "上一个回复") {
                             vm.swipeLeft(index); menuMessageIndex = null
                         }
                         MenuRow(PhosphorIcons.CaretRight, "下一个回复") {
                             vm.swipeRight(index); menuMessageIndex = null
                         }
-                        MenuRow(PhosphorIcons.List, "变体列表") {
+                        MenuRow(PhosphorIcons.BookmarkSimple, "变体列表") {
                             swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
                         }
                         if (swipeCount > 1) {
@@ -1168,6 +1184,16 @@ fun ChatScreen(
                                 deleteSwipeTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                             }
                         }
+                    }
+                    // ── 官方常驻按钮：copy（剪贴板）/ edit / delete ──
+                    MenuSectionLabel("操作")
+                    MenuRow(PhosphorIcons.Copy, "复制文本") {
+                        clipboard.setText(AnnotatedString(text))
+                        Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                        menuMessageIndex = null
+                    }
+                    MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
+                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.Delete, "删除这条消息", danger = true) {
                         deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
@@ -1290,6 +1316,8 @@ fun ChatScreen(
     }
 
     if (showMore) {
+        // 官方 option_back_to_main：仅分支会话（metadata.main_chat）显示
+        val parentSession = remember { vm.parentSession() }
         EmberBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
@@ -1299,36 +1327,9 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(PhosphorIcons.Folder, "聊天背景") {
-                    showMore = false
-                    backgroundPicker.launch(arrayOf("image/*"))
-                }
-                if (chatBackground != null) {
-                    MenuRow(PhosphorIcons.Folder, "清除聊天背景") {
-                        showMore = false
-                        vm.clearChatBackground()
-                    }
-                }
-                // 官方 options 弹层 option_new_bookmark：在当前位置存检查点（分支聊天）
-                MenuRow(PhosphorIcons.Flag, "保存检查点（书签）") {
-                    showMore = false
-                    bookmarkDraftName = vm.defaultBookmarkName()
-                    showBookmarkDialog = true
-                }
-                MenuRow(PhosphorIcons.BookmarkSimple, "书签") {
-                    showMore = false
-                    showBookmarksSheet = true
-                }
-                MenuRow(PhosphorIcons.FileText, "数据银行（向量检索）") {
-                    showMore = false
-                    showDataBank = true
-                }
-                MenuRow(PhosphorIcons.ChartBar, "提示词预览（dryRun）") {
-                    showMore = false
-                    showPromptPreview = true
-                    vm.previewPrompt()
-                }
-                MenuRow(PhosphorIcons.Edit, "作者注释") {
+                // ── 官方 #options 顶部组：作者注释 / CFG / logprobs ──
+                MenuSectionLabel("写作工具（官方 options）")
+                MenuRow(PhosphorIcons.FileText, "作者注释") {
                     showMore = false
                     val draft = vm.authorsNoteDraft()
                     anPrompt = draft.prompt
@@ -1342,64 +1343,50 @@ fun ChatScreen(
                     charaNotePosition = charaDraft?.position ?: 0
                     showAuthorsNote = true
                 }
-                MenuRow(PhosphorIcons.ChartBar, "CFG Scale（引导缩放）") {
+                MenuRow(PhosphorIcons.Scales, "CFG Scale（引导缩放）") {
                     showMore = false
                     showCfgSheet = true
                 }
-                MenuRow(PhosphorIcons.List, "Token 概率（logprobs）") {
+                MenuRow(PhosphorIcons.ChartBar, "Token 概率（logprobs）") {
                     showMore = false
                     showLogprobsSheet = true
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { vm.setShowThoughtsQuick(!showThoughtsNow) }
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        "显示思考过程（show_thoughts）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    EmberSwitch(checked = showThoughtsNow, onCheckedChange = { vm.setShowThoughtsQuick(it) })
-                }
-                if (vm.group != null) {
-                    MenuRow(PhosphorIcons.Person, "群聊设置") {
+                // ── 官方检查点组：back_to_main / new_bookmark / convert_to_group ──
+                MenuSectionLabel("检查点与分支")
+                parentSession?.let { parent ->
+                    MenuRow(PhosphorIcons.ArrowLeft, "回到父聊天（${parent.name}）") {
                         showMore = false
-                        groupMode = vm.group?.generationMode ?: GroupGenerationMode.APPEND
-                        groupStrategy = vm.group?.activationStrategy ?: "natural"
-                        showGroupSettings = true
+                        onSwitchSession(parent)
                     }
                 }
-                MenuRow(PhosphorIcons.Person, "人设") {
+                // 官方 options 弹层 option_new_bookmark：在当前位置存检查点（分支聊天）
+                MenuRow(PhosphorIcons.Flag, "保存检查点（书签）") {
                     showMore = false
-                    showPersonaPicker = true
+                    bookmarkDraftName = vm.defaultBookmarkName()
+                    showBookmarkDialog = true
                 }
-                if (vm.character != null) {
-                    MenuRow(PhosphorIcons.Person, "角色详情") {
+                MenuRow(PhosphorIcons.BookmarkSimple, "书签列表") {
+                    showMore = false
+                    showBookmarksSheet = true
+                }
+                if (vm.character != null && vm.group == null) {
+                    MenuRow(PhosphorIcons.UsersThree, "转换为群聊") {
                         showMore = false
-                        showCharacterInfo = true
-                    }
-                    if (vm.group == null) {
-                        MenuRow(PhosphorIcons.MaskHappy, "转换为群聊") {
-                            showMore = false
-                            showConvertGroupConfirm = true
-                        }
+                        showConvertGroupConfirm = true
                     }
                 }
-                MenuRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
+                // ── 官方聊天管理组：start_new_chat / close_chat / select_chat ──
+                MenuSectionLabel("聊天管理")
+                MenuRow(PhosphorIcons.ChatCircleDots, "开始新聊天（旧的保留在会话列表）") {
                     showMore = false
-                    exportChatLauncher.launch("$currentName-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
+                    vm.startNewChat()?.let(onSwitchSession)
                 }
-                MenuRow(PhosphorIcons.Book, "记忆总结（立即）") {
+                MenuRow(PhosphorIcons.List, "管理聊天文件（会话列表）") {
                     showMore = false
-                    vm.forceMemorySummary()
+                    onBack()
                 }
-                MenuRow(PhosphorIcons.Book, "外置世界（本会话）") {
-                    showMore = false
-                    showWorldPicker = true
-                }
+                // ── 官方生成组：delete_mes / regenerate / impersonate / continue ──
+                MenuSectionLabel("生成")
                 MenuRow(PhosphorIcons.Refresh, "重新生成（最后一条 AI 回复）") {
                     showMore = false
                     vm.regenerate()
@@ -1412,9 +1399,76 @@ fun ChatScreen(
                     showMore = false
                     vm.continueGeneration()
                 }
-                MenuRow(PhosphorIcons.Delete, "清空会话", danger = true) {
+                MenuRow(PhosphorIcons.Delete, "删除消息（清空本聊天）", danger = true) {
                     showMore = false
                     showClearConfirm = true
+                }
+                // ── App 扩展（官方无此入口，移动端便捷项）──
+                MenuSectionLabel("更多")
+                MenuRow(PhosphorIcons.ImageSquare, "聊天背景") {
+                    showMore = false
+                    backgroundPicker.launch(arrayOf("image/*"))
+                }
+                if (chatBackground != null) {
+                    MenuRow(PhosphorIcons.Close, "清除聊天背景") {
+                        showMore = false
+                        vm.clearChatBackground()
+                    }
+                }
+                MenuRow(PhosphorIcons.Search, "数据银行（向量检索）") {
+                    showMore = false
+                    showDataBank = true
+                }
+                MenuRow(PhosphorIcons.ChartBar, "提示词预览（dryRun）") {
+                    showMore = false
+                    showPromptPreview = true
+                    vm.previewPrompt()
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.setShowThoughtsQuick(!showThoughtsNow) }
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                ) {
+                    Icon(PhosphorIcons.Lightning, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        "显示思考过程（show_thoughts）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    EmberSwitch(checked = showThoughtsNow, onCheckedChange = { vm.setShowThoughtsQuick(it) })
+                }
+                if (vm.group != null) {
+                    MenuRow(PhosphorIcons.UsersThree, "群聊设置") {
+                        showMore = false
+                        groupMode = vm.group?.generationMode ?: GroupGenerationMode.APPEND
+                        groupStrategy = vm.group?.activationStrategy ?: "natural"
+                        showGroupSettings = true
+                    }
+                }
+                MenuRow(PhosphorIcons.Person, "人设") {
+                    showMore = false
+                    showPersonaPicker = true
+                }
+                if (vm.character != null) {
+                    MenuRow(PhosphorIcons.Info, "角色详情") {
+                        showMore = false
+                        showCharacterInfo = true
+                    }
+                }
+                MenuRow(PhosphorIcons.DownloadSimple, "导出聊天（JSONL）") {
+                    showMore = false
+                    exportChatLauncher.launch("$currentName-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
+                }
+                MenuRow(PhosphorIcons.Sparkle, "记忆总结（立即）") {
+                    showMore = false
+                    vm.forceMemorySummary()
+                }
+                MenuRow(PhosphorIcons.Book, "外置世界（本会话）") {
+                    showMore = false
+                    showWorldPicker = true
                 }
             }
         }
@@ -5204,6 +5258,17 @@ private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
         Spacer(Modifier.size(12.dp))
         Text(label, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
     }
+}
+
+/** 菜单小节标题（对应官方 options 弹层的 hr 分组语义）。 */
+@Composable
+private fun MenuSectionLabel(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
+    )
 }
 
 @Composable

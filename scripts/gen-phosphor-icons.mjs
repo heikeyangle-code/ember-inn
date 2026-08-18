@@ -77,6 +77,11 @@ const ICONS = {
   Star: 'star',
   Stop: 'square',
   User: 'user',
+  ChatCircleDots: 'chat-circle-dots',
+  Scales: 'scales',
+  UsersThree: 'users-three',
+  Info: 'info',
+  DownloadSimple: 'download-simple',
 };
 
 function svgPathData(name) {

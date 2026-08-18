@@ -1056,6 +1056,30 @@ class ChatStore(private val context: Context) {
         }
     }
 
+    /** 官方 script.js messageEditMove（mes_edit_up/down）：相邻消息交换位置；非相邻直接拒绝。 */
+    fun swapMessages(sessionId: String, i: Int, j: Int) {
+        if (kotlin.math.abs(i - j) != 1) return
+        val list = messages(sessionId).toMutableList()
+        if (i !in list.indices || j !in list.indices) return
+        val tmp = list[i]
+        list[i] = list[j]
+        list[j] = tmp
+        writeMessages(sessionId, list)
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
+    /** 官方 mes_edit_copy：structuredClone 深拷贝、send_date=now，插到原消息之后（不复制附件文件引用）。 */
+    fun duplicateMessage(sessionId: String, index: Int): Int? {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return null
+        val clone = json.parseToJsonElement(list[index].toString()).jsonObject.toMutableMap()
+        clone["send_date"] = JsonPrimitive(java.time.Instant.now().toString())
+        list.add(index + 1, JsonObject(clone))
+        writeMessages(sessionId, list)
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        return index + 1
+    }
+
     /** 会话列表预览：最后一条消息文本（无消息返回 null）。 */
     fun lastMessage(sessionId: String): String? {
         val list = messages(sessionId)

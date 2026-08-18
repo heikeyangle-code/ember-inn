@@ -2036,6 +2036,44 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ItemizationStore.deleteMessage(getApplication<Application>().filesDir, sessionId, index)
     }
 
+    /** 官方 mes_edit_up/down（messageEditMove）：与相邻消息交换位置；首条不能上移、末条不能下移、生成中拒绝。 */
+    fun moveMessage(index: Int, delta: Int) {
+        if (_isStreaming.value) return
+        val target = index + delta
+        val size = chatStore.messages(sessionId).size
+        if (index !in 0 until size || target !in 0 until size) return
+        chatStore.swapMessages(sessionId, index, target)
+        refreshMessages()
+    }
+
+    /** 官方 mes_edit_copy：深拷贝本条消息（send_date 重置）插到其后。 */
+    fun duplicateMessage(index: Int) {
+        if (_isStreaming.value) return
+        chatStore.duplicateMessage(sessionId, index)
+        refreshMessages()
+    }
+
+    /** 官方 option_start_new_chat：为当前角色/群开一个新聊天文件（旧聊天保留在会话列表）。 */
+    fun startNewChat(): com.emberinn.app.data.SessionRecord? {
+        val src = chatStore.get(sessionId) ?: return null
+        val record = com.emberinn.app.data.SessionRecord(
+            id = java.util.UUID.randomUUID().toString(),
+            characterId = src.characterId,
+            name = src.name,
+            groupId = src.groupId,
+        )
+        chatStore.upsert(record)
+        return record
+    }
+
+    /** 官方 option_back_to_main：当前会话是分支（metadata.main_chat）时找到父会话。 */
+    fun parentSession(): com.emberinn.app.data.SessionRecord? {
+        val src = chatStore.get(sessionId) ?: return null
+        val mainChat = chatStore.metadata(sessionId)["main_chat"]?.jsonPrimitive?.contentOrNull
+            ?: return null
+        return chatStore.list().firstOrNull { it.id != src.id && it.name == mainChat && it.characterId == src.characterId }
+    }
+
     /** 编辑消息（官方 updateMessage：getRegexedString(isEdit) → extractMessageBias → substituteParams → 清/写 extra.bias）。 */
     fun editMessage(index: Int, newText: String) {
         if (_isStreaming.value) return
