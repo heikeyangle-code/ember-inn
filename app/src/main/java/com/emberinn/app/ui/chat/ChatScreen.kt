@@ -4045,20 +4045,31 @@ private fun OfficialMarkdownNode(
     }
 }
 
-/** 官方富文本标签清单：命中即需要 WebView 兜底（对齐官方 messageFormatting → DOMPurify 后由浏览器渲染）。 */
-private val OFFICIAL_HTML_TAG = Regex(
-    "<font(?=[\\s/>])|</?span(?=[\\s/>])|</?div(?=[\\s/>])|<style(?=[\\s/>])|<table(?=[\\s/>])|<img(?=[\\s/>])|<a(?=[\\s/>])|</?blockquote(?=[\\s/>])|<ul(?=[\\s/>])|<ol(?=[\\s/>])|<li(?=[\\s/>])|<p(?=[\\s/>])|<pre(?=[\\s/>])|<h[1-6](?=[\\s/>])|<center(?=[\\s/>])|<figure(?=[\\s/>])|<video(?=[\\s/>])|<audio(?=[\\s/>])|<button(?=[\\s/>])" +
-        "|</?section(?=[\\s/>])|</?header(?=[\\s/>])|</?footer(?=[\\s/>])|</?main(?=[\\s/>])|</?nav(?=[\\s/>])|</?aside(?=[\\s/>])|</?article(?=[\\s/>])|</?form(?=[\\s/>])|<input(?=[\\s/>])|<select(?=[\\s/>])|<textarea(?=[\\s/>])|<label(?=[\\s/>])|<details(?=[\\s/>])|<summary(?=[\\s/>])|<canvas(?=[\\s/>])|<svg(?=[\\s/>])|<math(?=[\\s/>])|<template(?=[\\s/>])|<mark(?=[\\s/>])|<progress(?=[\\s/>])|<meter(?=[\\s/>])|<output(?=[\\s/>])|<fieldset(?=[\\s/>])|<legend(?=[\\s/>])|<dialog(?=[\\s/>])|<menu(?=[\\s/>])|<picture(?=[\\s/>])|<source(?=[\\s/>])|<track(?=[\\s/>])|<map(?=[\\s/>])|<area(?=[\\s/>])|<iframe(?=[\\s/>])|<hgroup(?=[\\s/>])|<address(?=[\\s/>])|<figcaption(?=[\\s/>])|<data(?=[\\s/>])|<time(?=[\\s/>])|<var(?=[\\s/>])|<samp(?=[\\s/>])|<kbd(?=[\\s/>])|<abbr(?=[\\s/>])|<bdi(?=[\\s/>])|<bdo(?=[\\s/>])|<ruby(?=[\\s/>])|<rt(?=[\\s/>])|<rp(?=[\\s/>])" +
-        // DOMPurify 默认白名单里文本级标签已由 preprocessOfficialHtml 原生转换（sub/sup/ins/small/big/
-        // mark/kbd/samp/tt/code/var/dfn/cite/abbr/acronym）；这里保留它们作为转换失败时的 Web 兜底。
-        "|<sub(?=[\\s/>])|<sup(?=[\\s/>])|<ins(?=[\\s/>])|<small(?=[\\s/>])|<big(?=[\\s/>])|<tt(?=[\\s/>])|<acronym(?=[\\s/>])|<dfn(?=[\\s/>])|<cite(?=[\\s/>])|<code(?=[\\s/>])" +
-        // 布局/交互/媒体/完整网页标签：官方 DOMPurify 白名单放行，浏览器原生渲染，WebView 兜底。
-        "|<script(?=[\\s/>])|</?html(?=[\\s/>])|<head(?=[\\s/>])|<body(?=[\\s/>])|<title(?=[\\s/>])|<meta(?=[\\s/>])|<link(?=[\\s/>])" +
-        "|<caption(?=[\\s/>])|<col(?=[\\s/>])|<colgroup(?=[\\s/>])|<tbody(?=[\\s/>])|<thead(?=[\\s/>])|<tfoot(?=[\\s/>])|<tr(?=[\\s/>])|<td(?=[\\s/>])|<th(?=[\\s/>])" +
-        "|<dl(?=[\\s/>])|<dt(?=[\\s/>])|<dd(?=[\\s/>])|<datalist(?=[\\s/>])|<optgroup(?=[\\s/>])|<option(?=[\\s/>])" +
-        "|<marquee(?=[\\s/>])|<blink(?=[\\s/>])|<nobr(?=[\\s/>])|<xmp(?=[\\s/>])|<shadow(?=[\\s/>])|<menuitem(?=[\\s/>])|<slot(?=[\\s/>])",
+/** 真正无法原生的行内/对象标签（官方 DOMPurify 白名单放行、浏览器渲染，而原生文本无对应）：
+ *  带属性的 span、font face/size、bdi/bdo/ruby 注音、表单控件、svg/math/canvas、音视频。
+ *  段内命中才整段走 WebView；其余残留标签一律剥壳保内容走原生（官方 DOMPurify keepContent 语义）。 */
+private val WEB_INLINE_TAG = Regex(
+    "<span(?=[\\s/>])[^>]*\\s[a-zA-Z-]+\\s*=|<font(?=[\\s/>])[^>]*\\s(?:face|size)\\s*=" +
+        "|<(?:bdi|bdo|ruby|rt|rp|button|input|select|textarea|label|datalist|optgroup|option|output|progress|meter|fieldset|legend|svg|math|canvas|video|audio|source|track|picture|map|area|marquee|blink|nobr|xmp|slot|template|script|style|iframe)(?=[\\s/>])",
     RegexOption.IGNORE_CASE,
 )
+
+/** 剥掉剩余 HTML 标签、保留内容（官方 messageFormatting → DOMPurify 移除非白名单标签、keepContent=true）：
+ *  未知标签（<Status>、<giggle>…）、已原生化标签的残留壳全部消失只留文字——纯文字不再误入 WebView。
+ *  代码围栏/行内代码先占位保护：讲 HTML 语法的代码内容（如 “用 `<b>` 加粗”）里的标签不许剥。 */
+private val ANY_TAG = Regex("</?[A-Za-z][A-Za-z0-9:-]*(?:\\s+[^<>]*?)?\\s*/?>")
+
+private fun stripResidualTags(text: String): String {
+    val protected = mutableListOf<String>()
+    var out = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|``[^`\\n]*``|`[^`\\n]*`")
+        .replace(text) { m ->
+            protected += m.value
+            "\uE100${protected.lastIndex}\uE101"
+        }
+    out = ANY_TAG.replace(out, "")
+    for ((i, seg) in protected.withIndex()) out = out.replace("\uE100$i\uE101", seg)
+    return out
+}
 
 /** 分段渲染的段类型：原生 Markdown / WebView HTML / 交互卡片 / Mermaid。 */
 private enum class SegmentKind { Native, WebHtml, Interactive, Mermaid }
@@ -4100,10 +4111,13 @@ private fun appendTextSegment(
 ) {
     if (text.isBlank()) return
     val pre = preprocessOfficialHtml(text, convertQuotes = !isSystem)
-    val officialHtml = OFFICIAL_HTML_TAG.containsMatchIn(pre)
-    val looksHtml = looksLikeHtml(pre)
-    if ((officialHtml || looksHtml) && htmlEnabled) {
+    if (htmlEnabled && WEB_INLINE_TAG.containsMatchIn(pre)) {
+        // 段内混有真正无法原生的行内/对象标签：整段走 WebView（罕见路径）
         out += ChatSegment(SegmentKind.WebHtml, text)
+    } else if (htmlEnabled) {
+        // 官方 DOMPurify keepContent 语义：残留标签（未知标签/已原生化标签的壳）剥掉只留文字，
+        // 纯文字消息不再误入 WebView（此前 looksLikeHtml 整段判定是“纯文字走 Web”的根因）
+        out += ChatSegment(SegmentKind.Native, text, stripResidualTags(pre))
     } else {
         out += ChatSegment(SegmentKind.Native, text, pre)
     }
@@ -4113,7 +4127,7 @@ private fun appendTextSegment(
  *  行内 Web 标签（button/input/span[属性]/font face-size/ruby/bdi/bdo 等）无法与原生文本混排，
  *  仍按 12.6 登记整段走 Web；a/img 已原生转换，不进此清单。 */
 private val WEB_BLOCK_TAG = Regex(
-    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe)(?=[\\s/>])" +
+    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe|tr|td|th|tbody|thead|tfoot|caption|col|colgroup)(?=[\\s/>])" +
         "|<(div|p)(?=[\\s/>])(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
         "|<font(?=[\\s/>])(?=[^>]*\\s(?:face|size)=)",
     RegexOption.IGNORE_CASE,
@@ -4497,10 +4511,13 @@ private fun ChatMarkdown(
         buildMessageSegments(content, isSystem, htmlEnabled)
     }
     // 全原生段（纯 Markdown/普通代码块/官方行内字段）仍按整条一次渲染，保持原有排版；
-    // 只有出现 WebView 段（富 HTML/交互卡/Mermaid）才分段，避免拆散列表/引用等跨段 Markdown 结构
+    // 只有出现 WebView 段（富 HTML/交互卡/Mermaid）才分段，避免拆散列表/引用等跨段 Markdown 结构。
+    // display 必须用分段器产出的剥壳文本：残留 HTML 标签若不剥，原生 Markdown 渲染器会
+    // 整块吞掉 HTML 行导致“消息空白/内容丢失”。
     if (segments.none { it.kind != SegmentKind.Native }) {
-        val displayContent = remember(content, isSystem) {
-            preprocessOfficialHtml(content, convertQuotes = !isSystem)
+        val displayContent = remember(content, isSystem, htmlEnabled) {
+            if (htmlEnabled) segments.joinToString("") { it.display ?: it.raw }
+            else preprocessOfficialHtml(content, convertQuotes = !isSystem)
         }
         NativeMarkdown(
             content = displayContent,
@@ -4532,12 +4549,6 @@ private fun mermaidHtmlOf(content: String): String? {
 <pre class="mermaid">$diagram</pre>
 <script>mermaid.initialize({startOnLoad:true,theme:'base'});</script>"""
 }
-
-/** 完整标签判定（官方 messageFormatting → Showdown/DOMPurify → 浏览器语义）：
- *  任意完整标签（含无属性自定义/扩展标签，如 <inner>、<UpdateVariable>）都按 HTML 解析、
- *  标签内文本可见；原生 Markdown 渲染器会吞掉 HTML 块，所以交给 MessageHtml 走 WebView 兜底。
- *  纯文字比较式（a<b、x<10、1 < 2、a < b）没有完整 > 或标签名不以字母开头，不会误判。 */
-private fun looksLikeHtml(content: String): Boolean = com.emberinn.app.data.MessageHtml.looksLikeHtml(content)
 
 /** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
  *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
@@ -4621,12 +4632,51 @@ private fun injectMeasureScript(html: String): String {
     }
 }
 
+/** 拼接页内容容器：增量更新时只替换它的 innerHTML（官方流式 = mes 容器 innerHTML 更新，
+ *  不整页重载），测高脚本（ResizeObserver 盯 body）在容器外不受影响。 */
+private const val CONTENT_DIV_OPEN = "<div id=\"__ember_content\">"
+
+/** 拼接页固定后缀：容器闭合 + 注入的测高脚本 + 文档收尾。用于从成品页反解出内容区间。 */
+private val CONTENT_PAGE_SUFFIX = "</div>" + WEBVIEW_MEASURE_SCRIPT + "</body></html>"
+
+/** JS 字符串字面量转义（innerHTML 增量更新用）。 */
+private fun jsQuote(s: String): String = org.json.JSONObject.quote(s)
+
+/** 增量更新可用的成品页：head（含容器开标签）与 content 都可反解；完整网页文档返回 null 走整页加载。 */
+private class StyledWebPage(val full: String, val head: String?, val content: String?)
+
+private fun buildStyledWebPage(
+    html: String,
+    context: android.content.Context,
+    body: androidx.compose.ui.graphics.Color?,
+    em: androidx.compose.ui.graphics.Color?,
+    underline: androidx.compose.ui.graphics.Color?,
+    quote: androidx.compose.ui.graphics.Color?,
+    charAvatarPath: String?,
+    userAvatarPath: String?,
+    interactiveCardsOn: Boolean,
+): StyledWebPage {
+    val page = injectMeasureScript(
+        officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn),
+    )
+    val openIdx = page.indexOf(CONTENT_DIV_OPEN)
+    if (openIdx < 0 || !page.endsWith(CONTENT_PAGE_SUFFIX)) {
+        return StyledWebPage(page, null, null)
+    }
+    val contentStart = openIdx + CONTENT_DIV_OPEN.length
+    val contentEnd = page.length - CONTENT_PAGE_SUFFIX.length
+    if (contentEnd < contentStart) return StyledWebPage(page, null, null)
+    return StyledWebPage(page, page.substring(0, contentStart), page.substring(contentStart, contentEnd))
+}
+
 /** 一次 WebView 加载会话：token 用于丢弃旧页面回调，html 用于判断是否需要重载。
  *  loaded/loadToken/heightPx 跨滚动保留：滚回来同内容不重载、高度直接复用。
  *  internal：WebViewPool（同包另一文件）需要读写 loadToken。 */
 internal class WebViewSession {
     var token: Any = Any()
     var html: String? = null
+    /** 上次整页加载的 head 部分（含内容容器开标签）；相同则只做 innerHTML 增量更新。 */
+    var headKey: String? = null
     /** 页面是否已完成加载（release 中断加载时置 false，回来需要重载）。 */
     var loaded: Boolean = false
     /** 正在进行的 load 所属 token；null 表示没有在途加载（release 会清掉）。 */
@@ -4643,14 +4693,16 @@ private class WebViewMeasureBridge(private val onMeasure: (Int, Int) -> Unit) {
     }
 }
 
+/** 配置/加载：返回是否发生了整页重载（false = 增量 innerHTML 或复用）。
+ *  调用方据此决定是否把组合态高度清零——增量更新不清零，避免流式 tick 高度塌回兜底值抖动。 */
 private fun configureWebView(
     view: WebView,
     ctx: android.content.Context,
     session: WebViewSession,
-    page: String,
+    page: StyledWebPage,
     onMeasure: (Int, Int) -> Unit,
     reload: Boolean,
-) {
+): Boolean {
     // 每次进入都换新 token：旧的轮询/桥接回调全部作废，避免已滚走的行再更新状态
     val token = Any()
     session.token = token
@@ -4705,7 +4757,25 @@ private fun configureWebView(
         ViewGroup.LayoutParams.WRAP_CONTENT,
     )
     if (reload) {
-        session.html = page
+        // 同头增量更新：页面已加载完成且 head 相同（主题/结构没变，只是消息内容变了——典型=流式 tick）
+        // → 只替换内容容器 innerHTML，不整页重载。对齐官方流式（mes 容器 innerHTML 更新）语义，
+        // 消除流式 HTML 段每 tick 整页白屏重载的闪烁/掉帧/测高归零。
+        if (page.head != null && page.content != null &&
+            session.loaded && session.headKey == page.head && view.width > 0
+        ) {
+            session.html = page.full
+            session.heightPx = 0
+            view.evaluateJavascript(
+                "(function(){var c=document.getElementById('__ember_content');if(c){c.innerHTML=" + jsQuote(page.content) + ";}})()",
+            ) { _ ->
+                if (view.tag === session && session.token === token) {
+                    measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)
+                }
+            }
+            return false
+        }
+        session.headKey = page.head
+        session.html = page.full
         session.loaded = false
         session.loadToken = token
         session.heightPx = 0
@@ -4721,11 +4791,12 @@ private fun configureWebView(
         // mermaid.min.js 相对引用与 file:// 字体仍可正常解析。
         view.loadDataWithBaseURL(
             "file:///android_asset/",
-            page,
+            page.full,
             "text/html; charset=UTF-8",
             "UTF-8",
             null,
         )
+        return true
     } else {
         // 复用已加载页面：不重载、不白屏；布局落定后快速复核高度（旧回调已被新 token 作废）。
         view.post {
@@ -4733,6 +4804,7 @@ private fun configureWebView(
                 measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)
             }
         }
+        return false
     }
 }
 
@@ -4790,9 +4862,7 @@ private fun WebViewHtml(
     val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: (if (stDark) stTheme.stUnderline else null)
     val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: (if (stDark) stTheme.stQuote else null)
     val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn) {
-        injectMeasureScript(
-            officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn),
-        )
+        buildStyledWebPage(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn)
     }
     val webView = remember { WebViewPool.acquire(context) }
     // 内容高度上限：≤上限的网页全高展开；超上限的 WebView 内部可滚动，长页面不会被截断、也够得着。
@@ -4809,7 +4879,7 @@ private fun WebViewHtml(
     AndroidView(
         factory = { ctx ->
             val session = (webView.tag as? WebViewSession) ?: WebViewSession().also { webView.tag = it }
-            val reload = session.html != styled || (!session.loaded && session.loadToken == null)
+            val reload = session.html != styled.full || (!session.loaded && session.loadToken == null)
             configureWebView(
                 view = webView,
                 ctx = ctx,
@@ -4822,16 +4892,19 @@ private fun WebViewHtml(
         },
         update = { view ->
             val session = view.tag as? WebViewSession
-            if (session == null || session.html != styled || (!session.loaded && session.loadToken == null)) {
-                heightPx = 0
-                configureWebView(
-                    view = view,
-                    ctx = context,
-                    session = session ?: WebViewSession().also { view.tag = it },
-                    page = styled,
-                    onMeasure = { px, pending -> onMeasure(px, pending) },
-                    reload = true,
-                )
+            if (session == null || session.html != styled.full || (!session.loaded && session.loadToken == null)) {
+                // 整页重载才清高度；增量 innerHTML 更新保持旧高度，由测高回调平滑长高/回缩
+                if (configureWebView(
+                        view = view,
+                        ctx = context,
+                        session = session ?: WebViewSession().also { view.tag = it },
+                        page = styled,
+                        onMeasure = { px, pending -> onMeasure(px, pending) },
+                        reload = true,
+                    )
+                ) {
+                    heightPx = 0
+                }
             } else {
                 // 同页面复用：只换桥/回调 + 恢复记忆高度，不重载
                 configureWebView(
@@ -4998,7 +5071,7 @@ private fun officialStyledHtml(
     return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 $cssBlock
-</style></head><body>$bodyHtml</body></html>"""
+</style></head><body><div id="__ember_content">$bodyHtml</div></body></html>"""
 }
 
 /** 完整网页消息的文档级注入：把兜底 CSS 插进原文档 <head>（无 </head> 时插在 <body> 前）。
