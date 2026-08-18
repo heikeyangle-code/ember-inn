@@ -44,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -500,15 +503,39 @@ private fun PresetCard(
                 MaterialTheme.colorScheme.surfaceContainerLow
             },
         ),
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        border = if (selected) BorderStroke(2.dp, preset.metal ?: MaterialTheme.colorScheme.primary) else null,
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                listOf(preset.seed, preset.secondary, preset.tertiary).forEachIndexed { index, color ->
+                // 预览色板：seed/secondary/tertiary 圆点 + 宝石菱形 + 金属高光环
+                listOfNotNull(
+                    preset.seed,
+                    preset.secondary,
+                    preset.tertiary,
+                    preset.gem,
+                    preset.metal,
+                ).forEachIndexed { index, color ->
+                    val isGem = index == 3 && preset.gem != null
+                    val isMetal = index >= 4 && preset.metal != null
                     Box(
-                        modifier = Modifier.size(16.dp).clip(CircleShape).background(color),
+                        modifier = Modifier
+                            .size(16.dp)
+                            .let { m ->
+                                when {
+                                    isGem -> m.graphicsLayer { rotationZ = 45f }.clip(RoundedCornerShape(4.dp))
+                                    isMetal -> m.clip(CircleShape).drawBehind {
+                                        drawCircle(
+                                            color = Color.White.copy(alpha = 0.45f),
+                                            radius = size.minDimension / 2f - 2.dp.toPx(),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()),
+                                        )
+                                    }
+                                    else -> m.clip(CircleShape)
+                                }
+                            }
+                            .background(color),
                     )
-                    if (index < 2) Spacer(Modifier.width(6.dp))
+                    if (index < 4) Spacer(Modifier.width(6.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 if (selected) {

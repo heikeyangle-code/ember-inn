@@ -14,6 +14,7 @@ import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.theme.LocalVibe
+import com.emberinn.app.ui.theme.emberBackdrop
 
 import com.emberinn.app.ui.icons.FaIcons
 import android.content.Context
@@ -180,7 +181,7 @@ fun CharactersScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(MaterialTheme.colorScheme.background),
+                .emberBackdrop(),
         ) {
             Box(
                 modifier = Modifier

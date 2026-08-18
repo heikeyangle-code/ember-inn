@@ -9,6 +9,7 @@ import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.theme.LocalThemePreset
+import com.emberinn.app.ui.theme.emberBackdrop
 
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
@@ -143,7 +144,7 @@ fun SessionsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(MaterialTheme.colorScheme.background),
+                .emberBackdrop(),
         )
         Column(modifier = Modifier.fillMaxSize()) {
             Surface(

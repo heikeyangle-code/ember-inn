@@ -59,6 +59,7 @@ import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
+import com.emberinn.app.ui.theme.emberBackdrop
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
 import com.emberinn.app.ui.components.EmberTextField
@@ -477,7 +478,7 @@ fun SettingsGlassPage(content: @Composable (com.skydoves.cloudy.Sky) -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(MaterialTheme.colorScheme.background),
+                .emberBackdrop(),
         )
         content(sky)
     }

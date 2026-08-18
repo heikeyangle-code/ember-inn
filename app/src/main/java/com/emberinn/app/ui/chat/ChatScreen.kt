@@ -19,6 +19,7 @@ import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
+import com.emberinn.app.ui.theme.themeTexture
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -729,20 +730,37 @@ fun ChatScreen(
     ) {
         // 静态背景层：氛围渐变 + 光晕 + 显式/头像背景。作为顶栏/输入栏毛玻璃的静态模糊源；
         // 不再把消息列表当 sky 源，避免每次滚动/键盘动画都重捕整屏模糊（滚动/收键盘卡顿主因）。
+        val artPreset = LocalThemePreset.current
+        val darkBg = isDarkThemeSurface()
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
                 .background(
-                    // README 格调守则：界面克制、背景出彩——正文区干净，底部透一点角色色低饱和氛围光
+                    // README 格调守则：界面克制、背景出彩——正文区干净，顶部天空氛围（红月/雾战场），
+                    // 底部透一点角色色低饱和氛围光
                     Brush.verticalGradient(
-                        0f to MaterialTheme.colorScheme.background,
+                        0f to (artPreset.auraTop
+                            ?.takeIf { darkBg }
+                            ?.let { lerp(it, MaterialTheme.colorScheme.background, 0.80f) }
+                            ?: MaterialTheme.colorScheme.background),
+                        0.5f to MaterialTheme.colorScheme.background,
                         0.6f to MaterialTheme.colorScheme.background,
                         1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
                     ),
+                )
+                // 主题底材（油画布/蚀刻/宣纸）：画在背景之上、内容之下
+                .then(
+                    if (artPreset.texture != "none") {
+                        Modifier.themeTexture(artPreset.texture, darkBg)
+                    } else {
+                        Modifier
+                    },
                 ),
         ) {
-            // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）
+            // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）；
+            // 艺术主题的宝石色在此点亮——红宝石余烬、星尘青光
+            val glowColor = artPreset.gem ?: accent
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -750,7 +768,7 @@ fun ChatScreen(
                     .offset(x = (-140).dp, y = 60.dp)
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(accent.copy(alpha = 0.09f), Color.Transparent),
+                            colors = listOf(glowColor.copy(alpha = 0.09f), Color.Transparent),
                         ),
                     ),
             )

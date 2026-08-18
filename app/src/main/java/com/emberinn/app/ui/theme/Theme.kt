@@ -109,6 +109,8 @@ private fun ThemePreset.lightScheme(): ColorScheme {
     val onSurface = onBackground
     val secondary = darken(this.secondary, 0.03f)
     val tertiary = darken(this.tertiary, 0.03f)
+    // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 白纸与卡片层次拉开，光影更戏剧
+    val c = contrast.coerceIn(0.6f, 1.6f)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
@@ -126,15 +128,15 @@ private fun ThemePreset.lightScheme(): ColorScheme {
         onBackground = onBackground,
         surface = bg,
         onSurface = onSurface,
-        surfaceVariant = lerp(bg, onSurface, 0.10f),
+        surfaceVariant = lerp(bg, onSurface, 0.10f * c),
         onSurfaceVariant = darken(lightBg, 0.60f),
         outline = darken(lightBg, 0.42f),
-        outlineVariant = lerp(bg, onSurface, 0.16f),
-        surfaceContainerLowest = darken(bg, 0.03f),
-        surfaceContainerLow = lerp(bg, onSurface, 0.045f),
-        surfaceContainer = lerp(bg, onSurface, 0.075f),
-        surfaceContainerHigh = lerp(bg, onSurface, 0.11f),
-        surfaceContainerHighest = lerp(bg, onSurface, 0.15f),
+        outlineVariant = lerp(bg, onSurface, 0.16f * c),
+        surfaceContainerLowest = darken(bg, 0.03f * c),
+        surfaceContainerLow = lerp(bg, onSurface, 0.045f * c),
+        surfaceContainer = lerp(bg, onSurface, 0.075f * c),
+        surfaceContainerHigh = lerp(bg, onSurface, 0.11f * c),
+        surfaceContainerHighest = lerp(bg, onSurface, 0.15f * c),
     )
 }
 
@@ -147,6 +149,8 @@ private fun ThemePreset.darkScheme(): ColorScheme {
     val secondary = schemeSecondary ?: lighten(this.secondary, 0.24f)
     val tertiary = schemeTertiary ?: lighten(this.tertiary, 0.24f)
     val surface = schemeSurface ?: lighten(bg, 0.035f)
+    // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 夜色更沉、卡片浮得更亮
+    val c = contrast.coerceIn(0.6f, 1.6f)
     return darkColorScheme(
         primary = primary,
         onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
@@ -164,15 +168,15 @@ private fun ThemePreset.darkScheme(): ColorScheme {
         onBackground = onBackground,
         surface = surface,
         onSurface = onSurface,
-        surfaceVariant = lighten(bg, 0.14f),
+        surfaceVariant = lighten(bg, 0.14f * c),
         onSurfaceVariant = lighten(darkBg, 0.62f),
         outline = lighten(darkBg, 0.38f),
-        outlineVariant = lighten(bg, 0.10f),
-        surfaceContainerLowest = darken(bg, 0.02f),
-        surfaceContainerLow = lighten(bg, 0.055f),
-        surfaceContainer = lighten(bg, 0.09f),
-        surfaceContainerHigh = lighten(bg, 0.125f),
-        surfaceContainerHighest = lighten(bg, 0.16f),
+        outlineVariant = lighten(bg, 0.10f * c),
+        surfaceContainerLowest = darken(bg, 0.02f * c),
+        surfaceContainerLow = lighten(bg, 0.055f * c),
+        surfaceContainer = lighten(bg, 0.09f * c),
+        surfaceContainerHigh = lighten(bg, 0.125f * c),
+        surfaceContainerHighest = lighten(bg, 0.16f * c),
     )
 }
 

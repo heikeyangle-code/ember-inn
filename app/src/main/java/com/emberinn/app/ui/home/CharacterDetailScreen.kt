@@ -5,6 +5,7 @@ package com.emberinn.app.ui.home
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
+import com.emberinn.app.ui.theme.emberBackdrop
 
 import android.content.Intent
 import android.widget.Toast
@@ -234,7 +235,7 @@ fun CharacterDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(MaterialTheme.colorScheme.background),
+                .emberBackdrop(),
         )
         Column(modifier = Modifier.fillMaxSize()) {
             // 顶栏：玻璃 + 边缘高光，返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
