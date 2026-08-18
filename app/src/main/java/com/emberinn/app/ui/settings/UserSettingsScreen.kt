@@ -77,8 +77,8 @@ fun UserSettingsScreen(
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("排版", "字号 · 行距", FaIcons.FileLines, onOpenTypography) }
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "Markdown · 气泡", FaIcons.Eye, onOpenRender) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("排版", "字号 · 行距 · 标题 · 间距", FaIcons.FileLines, onOpenTypography) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "官方配色 · 兼容行为", FaIcons.Eye, onOpenRender) }
                     }
                 }
                 item {
@@ -173,6 +173,19 @@ fun UserSettingsScreen(
                     }
                 }
                 item {
+                    var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(context)) }
+                    UserSectionCard(title = "启动与恢复", subtitle = "应用启动时的会话行为") {
+                        UserSwitchRow(
+                            label = "启动进入上次聊天",
+                            hint = "开启后启动直接回到上次会话（默认关）",
+                            checked = openLastChat,
+                        ) {
+                            openLastChat = it
+                            AppearancePrefs.saveOpenLastChat(context, it)
+                        }
+                    }
+                }
+                item {
                     UserSectionCard(title = "用户提示偏置", subtitle = "每次请求附带的固定提示") {
                         UserSwitchRow(
                             label = "显示偏置输入框",
@@ -190,7 +203,7 @@ fun UserSettingsScreen(
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
                         Box(modifier = Modifier.weight(1f)) { UserNavCard("数据与隐私", "导出 · 清除", FaIcons.Folder, onOpenData) }
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("关于", "版本 · 许可", FaIcons.Star, onOpenAbout) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("关于", "版本 · 许可", FaIcons.CircleInfo, onOpenAbout) }
                     }
                 }
             }

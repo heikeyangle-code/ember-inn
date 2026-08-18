@@ -406,9 +406,9 @@ private fun AboutScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         ) {
-            Text("余烬酒馆", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("EmberInn", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "EmberInn · 以 SillyTavern 兼容为核心的原生 Android 酒馆客户端",
+                "SillyTavern 兼容的原生 Android 客户端",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),

@@ -1162,7 +1162,7 @@ fun CharacterDetailScreen(
                     }
                     Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("" to "系统", "lxgw" to "霞鹜文楷", "source" to "思源宋体").forEach { (v, label) ->
+                        listOf("" to "系统", "serif" to "衬线", "source" to "思源宋体").forEach { (v, label) ->
                             FilterChip(selected = tFont == v, onClick = { tFont = v }, label = { Text(label) })
                         }
                     }
@@ -2036,8 +2036,7 @@ private fun ThemeRecipe.summary(): String {
     if (shape == "square") parts += "方正"
     if (shape == "rounded") parts += "圆润"
     if (shape == "circle") parts += "浑圆"
-    if (font == "lxgw") parts += "霞鹜文楷"
-    if (font == "source") parts += "思源宋体"
+    if (font == "serif" || font == "source") parts += "衬线"
     if (style == "airy") parts += "轻盈"
     if (style == "calm") parts += "沉静"
     if (style == "vivid") parts += "鲜明"

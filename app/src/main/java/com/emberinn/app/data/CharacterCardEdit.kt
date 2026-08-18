@@ -104,7 +104,7 @@ data class ThemeRecipe(
     val seed: String = "",
     val background: String = "",
     val shape: String = "",        // "" 跟随全局 / "square" 4dp / "rounded" 16dp / "circle" 24dp
-    val font: String = "",         // "" 系统 / "lxgw" 霞鹜文楷 / "source" 思源宋体
+    val font: String = "",         // "" 系统 / "serif" 衬线 / "source" 思源宋体
     val style: String = "",        // "" 跟随全局 / "airy" / "calm" / "vivid"
     val lockMode: String = "",     // "" 跟随全局 / "system" / "light" / "dark"
 )

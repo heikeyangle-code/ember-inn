@@ -2936,12 +2936,21 @@ private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: I
             modifier = ring.background(accent.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = name.take(1).ifBlank { "✦" },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = accent,
-            )
+            if (name.isBlank()) {
+                Icon(
+                    FaIcons.User,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(15.dp),
+                )
+            } else {
+                Text(
+                    text = name.take(1),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accent,
+                )
+            }
         }
     }
 }
@@ -3329,60 +3338,39 @@ private fun MessageRowContent(
             }
             // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
             // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。
-            // 整条收进低对比胶囊：控件簇有归属感，不再裸浮在正文下方
+            // 重做：去掉胶囊容器与逐图标底色块——裸小图标一排，安静自然不抢正文
             if (!isSystem && (swipeCount >= 1 || showActions)) {
                 Spacer(Modifier.size(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.42f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                    ) {
+                    if (swipeCount >= 1) {
+                        MessageActionIcon(FaIcons.ChevronLeft, "上一个回复", onSwipeLeft)
+                        // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
+                        Text(
+                            text = "${curSwipe + 1}/${swipeCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable(onClick = onSwipePicker)
+                                .padding(horizontal = 4.dp, vertical = 3.dp),
+                        )
+                        MessageActionIcon(FaIcons.ChevronRight, "下一个回复", onSwipeRight)
+                    }
+                    if (showActions) {
                         if (swipeCount >= 1) {
-                            IconButton(
-                                onClick = onSwipeLeft,
-                                modifier = Modifier.size(26.dp),
-                            ) {
-                                Icon(
-                                    FaIcons.ChevronLeft,
-                                    contentDescription = "上一个回复",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                            }
-                            // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
-                            Text(
-                                text = "${curSwipe + 1}/${swipeCount}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
+                            Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable(onClick = onSwipePicker)
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    .padding(horizontal = 6.dp)
+                                    .size(width = 1.dp, height = 12.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                             )
-                            IconButton(
-                                onClick = onSwipeRight,
-                                modifier = Modifier.size(26.dp),
-                            ) {
-                                Icon(
-                                    FaIcons.ChevronRight,
-                                    contentDescription = "下一个回复",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                            }
                         }
-                        if (showActions) {
-                            if (swipeCount >= 1) Spacer(Modifier.size(4.dp))
-                            MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
-                            Spacer(Modifier.size(6.dp))
-                            MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
-                            Spacer(Modifier.size(6.dp))
-                            MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
-                        }
+                        MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
+                        MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
+                        MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
                     }
                 }
             }
@@ -5631,14 +5619,13 @@ private fun MessageActionIcon(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
 ) {
-    // 官方 mes_button 移动端等价：30dp 小图标钮，低对比 tonal 容器，无文字标签
+    // 官方 mes_button 移动端等价：无底色小图标钮（28dp 触达 / 15dp 视觉），与正文拉开层级
     Box(
         modifier = modifier
-            .size(30.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f))
+            .size(28.dp)
+            .clip(RoundedCornerShape(9.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

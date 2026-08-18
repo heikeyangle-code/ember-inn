@@ -506,12 +506,21 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = name.take(1).ifBlank { "✦" },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = seed ?: MaterialTheme.colorScheme.primary,
-                )
+                if (name.isBlank()) {
+                    Icon(
+                        FaIcons.User,
+                        contentDescription = null,
+                        tint = seed ?: MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                } else {
+                    Text(
+                        text = name.take(1),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = seed ?: MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }

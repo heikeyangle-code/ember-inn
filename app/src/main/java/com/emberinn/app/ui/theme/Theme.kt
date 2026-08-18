@@ -90,36 +90,37 @@ private fun typographyWith(fontFamily: FontFamily): Typography {
 private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
     // 视觉氛围：降饱和强度 + 冷暖偏移来自 vibe（默认标准 = 0，取色原样输出）
     val bg = tinted(lightBg, vibe.warmth)
-    val primary = desaturate(darken(seed, 0.06f), vibe.desaturateLight)
-    val onBackground = darken(lightBg, 0.82f)
+    val primary = desaturate(darken(seed, 0.04f), vibe.desaturateLight)
+    val onBackground = darken(lightBg, 0.86f)
     val onSurface = onBackground
-    val secondary = desaturate(darken(this.secondary, 0.05f), vibe.desaturateLight)
-    val tertiary = desaturate(darken(this.tertiary, 0.05f), vibe.desaturateLight)
+    val secondary = desaturate(darken(this.secondary, 0.03f), vibe.desaturateLight)
+    val tertiary = desaturate(darken(this.tertiary, 0.03f), vibe.desaturateLight)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
-        primaryContainer = lighten(seed, 0.76f),
-        onPrimaryContainer = darken(seed, 0.48f),
+        primaryContainer = lighten(seed, 0.72f),
+        onPrimaryContainer = darken(seed, 0.52f),
         secondary = secondary,
         onSecondary = readableOn(secondary),
-        secondaryContainer = lighten(this.secondary, 0.78f),
-        onSecondaryContainer = darken(this.secondary, 0.45f),
+        secondaryContainer = lighten(this.secondary, 0.74f),
+        onSecondaryContainer = darken(this.secondary, 0.50f),
         tertiary = tertiary,
         onTertiary = readableOn(tertiary),
-        tertiaryContainer = lighten(this.tertiary, 0.80f),
-        onTertiaryContainer = darken(this.tertiary, 0.42f),
+        tertiaryContainer = lighten(this.tertiary, 0.76f),
+        onTertiaryContainer = darken(this.tertiary, 0.46f),
         background = bg,
         onBackground = onBackground,
         surface = bg,
         onSurface = onSurface,
-        surfaceVariant = lerp(bg, onSurface, 0.08f),
-        onSurfaceVariant = darken(lightBg, 0.55f),
-        outline = darken(lightBg, 0.38f),
-        surfaceContainerLowest = bg,
-        surfaceContainerLow = lerp(bg, onSurface, 0.035f),
-        surfaceContainer = lerp(bg, onSurface, 0.06f),
-        surfaceContainerHigh = lerp(bg, onSurface, 0.09f),
-        surfaceContainerHighest = lerp(bg, onSurface, 0.12f),
+        surfaceVariant = lerp(bg, onSurface, 0.10f),
+        onSurfaceVariant = darken(lightBg, 0.60f),
+        outline = darken(lightBg, 0.42f),
+        outlineVariant = lerp(bg, onSurface, 0.16f),
+        surfaceContainerLowest = darken(bg, 0.03f),
+        surfaceContainerLow = lerp(bg, onSurface, 0.045f),
+        surfaceContainer = lerp(bg, onSurface, 0.075f),
+        surfaceContainerHigh = lerp(bg, onSurface, 0.11f),
+        surfaceContainerHighest = lerp(bg, onSurface, 0.15f),
     )
 }
 
@@ -129,12 +130,12 @@ private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
     val officialOverride = schemeBackground != null
     fun accent(scheme: Color?, auto: Color): Color =
         if (scheme != null && !officialOverride) desaturate(scheme, vibe.desaturateDark) else scheme ?: auto
-    val primary = accent(schemePrimary, desaturate(lighten(seed, 0.24f), vibe.desaturateDark))
-    val onBackground = schemeOnBackground ?: lighten(darkBg, 0.78f)
+    val primary = accent(schemePrimary, desaturate(lighten(seed, 0.30f), vibe.desaturateDark))
+    val onBackground = schemeOnBackground ?: lighten(darkBg, 0.82f)
     val onSurface = schemeOnSurface ?: onBackground
-    val secondary = accent(schemeSecondary, desaturate(lighten(this.secondary, 0.20f), vibe.desaturateDark))
-    val tertiary = accent(schemeTertiary, desaturate(lighten(this.tertiary, 0.20f), vibe.desaturateDark))
-    val surface = schemeSurface ?: lighten(bg, 0.03f)
+    val secondary = accent(schemeSecondary, desaturate(lighten(this.secondary, 0.24f), vibe.desaturateDark))
+    val tertiary = accent(schemeTertiary, desaturate(lighten(this.tertiary, 0.24f), vibe.desaturateDark))
+    val surface = schemeSurface ?: lighten(bg, 0.035f)
     return darkColorScheme(
         primary = primary,
         onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
@@ -152,14 +153,15 @@ private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
         onBackground = onBackground,
         surface = surface,
         onSurface = onSurface,
-        surfaceVariant = lighten(bg, 0.12f),
-        onSurfaceVariant = lighten(darkBg, 0.55f),
-        outline = lighten(darkBg, 0.32f),
-        surfaceContainerLowest = bg,
-        surfaceContainerLow = lighten(bg, 0.05f),
-        surfaceContainer = lighten(bg, 0.08f),
-        surfaceContainerHigh = lighten(bg, 0.11f),
-        surfaceContainerHighest = lighten(bg, 0.14f),
+        surfaceVariant = lighten(bg, 0.14f),
+        onSurfaceVariant = lighten(darkBg, 0.60f),
+        outline = lighten(darkBg, 0.34f),
+        outlineVariant = lighten(bg, 0.10f),
+        surfaceContainerLowest = darken(bg, 0.02f),
+        surfaceContainerLow = lighten(bg, 0.055f),
+        surfaceContainer = lighten(bg, 0.09f),
+        surfaceContainerHigh = lighten(bg, 0.125f),
+        surfaceContainerHighest = lighten(bg, 0.16f),
     )
 }
 

@@ -48,9 +48,9 @@ import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.icons.FaIcons
 
 /**
- * 首启欢迎页（完全重做）：一屏讲清三件事——这是什么（品牌+角色卡扇面视觉）、
+ * 首启欢迎页（完全重做）：一屏讲清三件事——这是什么（角色卡扇面主视觉）、
  * 能干什么（兼容酒馆卡/本地私密/自由扮演）、现在做什么（单一主 CTA 导入）。
- * 入场分四段错峰淡入，底部大胶囊主按钮 + 弱化的文字次行动。
+ * 品牌字样与星标装饰已删：视觉自己说话。三段错峰淡入。
  */
 @Composable
 fun OnboardingScreen(
@@ -61,9 +61,8 @@ fun OnboardingScreen(
     var step by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(120); step = 1
-        kotlinx.coroutines.delay(150); step = 2
-        kotlinx.coroutines.delay(150); step = 3
-        kotlinx.coroutines.delay(150); step = 4
+        kotlinx.coroutines.delay(180); step = 2
+        kotlinx.coroutines.delay(180); step = 3
     }
 
     val theme = MaterialTheme.colorScheme
@@ -109,42 +108,13 @@ fun OnboardingScreen(
                 .navigationBarsPadding()
                 .padding(horizontal = 28.dp),
         ) {
-            Spacer(Modifier.weight(0.9f))
-
-            // 品牌区：小标 + 大字 + 英文副标
-            EmberFadeIn(step >= 1) {
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .emberShadow(color = primary.copy(alpha = 0.35f), radius = 12.dp, offset = DpOffset(0.dp, 4.dp), alpha = 0.5f)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(primary, lerp(primary, Color.Black, 0.25f)))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("✦", style = MaterialTheme.typography.titleLarge, color = theme.onPrimary)
-                }
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "余烬酒馆",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "EMBERINN",
-                    style = MaterialTheme.typography.labelMedium,
-                    letterSpacing = MaterialTheme.typography.labelMedium.letterSpacing * 2.2f,
-                    color = theme.onSurfaceVariant,
-                )
-            }
-
             Spacer(Modifier.weight(1f))
 
             // 主视觉：三张角色卡扇面（产品语义：角色们住在这家酒馆里）
-            EmberFadeIn(step >= 2) {
+            EmberFadeIn(step >= 1) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
                 ) {
                     // 中央辉光
                     Box(
@@ -176,13 +146,13 @@ fun OnboardingScreen(
                 }
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(1.1f))
 
             // 一句话主张 + 三个卖点胶囊
-            EmberFadeIn(step >= 3) {
+            EmberFadeIn(step >= 2) {
                 Text(
                     "把每次对话，都点成一炉火",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                 )
@@ -204,7 +174,7 @@ fun OnboardingScreen(
             Spacer(Modifier.weight(1.4f))
 
             // 主 CTA：导入角色卡（全宽大胶囊 + 渐变 + 主色投影）
-            EmberFadeIn(step >= 4) {
+            EmberFadeIn(step >= 3) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -131,7 +131,7 @@ fun AppearanceScreen(
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("视觉与质感", "氛围滤镜、圆角字体、头像与文字阴影")
+                SectionLabel("视觉与质感", "氛围滤镜、圆角字体、头像、文字阴影与玻璃")
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val vibeContext = LocalContext.current
@@ -230,34 +230,17 @@ fun AppearanceScreen(
                             listOf(
                                 "default" to "系统",
                                 "serif" to "衬线（思源宋体近似）",
-                                "lxgw" to "霞鹜文楷（下载）",
                                 "noto" to "Noto Sans（官方·下载）",
                             ).forEach { (v, label) ->
                                 val fontReady = when (v) {
-                                    "lxgw" -> FontManager.lxgwFile(appearanceContext) != null
                                     "noto" -> FontManager.notoReady(appearanceContext)
                                     else -> true
                                 }
                                 FilterChip(
                                     selected = font == v,
-                                    enabled = fontReady || v == "lxgw" || v == "noto",
+                                    enabled = fontReady || v == "noto",
                                     onClick = {
                                         when {
-                                            v == "lxgw" && !fontReady -> {
-                                                font = "lxgw"
-                                                fontScope.launch {
-                                                    fontDownloading = true
-                                                    val result = FontManager.ensureLxgw(appearanceContext)
-                                                    fontDownloading = false
-                                                    result.onSuccess {
-                                                        AppearancePrefs.save(appearanceContext, radius, "lxgw")
-                                                        onAppearanceChanged()
-                                                    }.onFailure { e ->
-                                                        font = AppearancePrefs.font(appearanceContext)
-                                                        fontError = e.message ?: "未知错误"
-                                                    }
-                                                }
-                                            }
                                             v == "noto" && !fontReady -> {
                                                 font = "noto"
                                                 fontScope.launch {
@@ -343,6 +326,7 @@ fun AppearanceScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val optContext = LocalContext.current
                 var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
+                var blurStrength by remember { mutableStateOf(AppearancePrefs.blurStrength(optContext)) }
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -359,17 +343,29 @@ fun AppearanceScreen(
                         }
                         EmberSwitch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it); onAppearanceChanged() })
                         }
+                        if (blur) {
+                            // 强度与开关同卡：玻璃的所有控制集中一处，不再散落到消息渲染页
+                            // 下限 14 = EmberGlassDefaults.MIN_RADIUS（再低玻璃观感消失，官方默认 10 即为此被抬升）
+                            Text("模糊强度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+                            EmberSlider(
+                                value = blurStrength.coerceAtLeast(14).toFloat(),
+                                onValueChange = { blurStrength = it.toInt(); AppearancePrefs.saveBlurStrength(optContext, it.toInt()); onAppearanceChanged() },
+                                valueRange = 14f..40f,
+                            )
+                            Text("半径 $blurStrength px", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
 
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("消息外观", "气泡、HTML 渲染与文字排版")
+                SectionLabel("消息外观", "气泡、密度与消息操作按钮")
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val optContext = LocalContext.current
                 var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
                 var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
+                var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(optContext)) }
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -396,134 +392,25 @@ fun AppearanceScreen(
                                 FilterChip(selected = density == v, onClick = { density = v; AppearancePrefs.saveDensity(optContext, v); onAppearanceChanged() }, label = { Text(label) })
                             }
                         }
-                        
-                        
-                        
-                    }
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val typeContext = LocalContext.current
-                var textSize by remember { mutableStateOf(AppearancePrefs.textSize(typeContext)) }
-                var lineHeight by remember { mutableStateOf(AppearancePrefs.lineHeight(typeContext)) }
-                var headingStyle by remember { mutableStateOf(AppearancePrefs.headingStyle(typeContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("文字排版", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "聊天正文与标题的层级、字号、行高，全部可调",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text("正文字号", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            listOf("small" to "小 14", "normal" to "标准 16", "official" to "官方 15", "large" to "大 18", "xlarge" to "特大 20").forEach { (v, label) ->
-                                FilterChip(selected = textSize == v, onClick = { textSize = v; AppearancePrefs.saveTextSize(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
-                            }
-                        }
-                        Text("行高", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            listOf("compact" to "紧凑 1.4", "normal" to "标准 1.55", "loose" to "宽松 1.7").forEach { (v, label) ->
-                                FilterChip(selected = lineHeight == v, onClick = { lineHeight = v; AppearancePrefs.saveLineHeight(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
-                            }
-                        }
-                        Text("标题层级", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            listOf("flat" to "聊天风（标题缩小）", "real" to "正常层级（标题放大）").forEach { (v, label) ->
-                                FilterChip(selected = headingStyle == v, onClick = { headingStyle = v; AppearancePrefs.saveHeadingStyle(typeContext, v); onAppearanceChanged() }, label = { Text(label) })
-                            }
-                        }
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("行为与兼容", "沉浸模式、启动行为与官方转义")
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val immersiveContext = LocalContext.current
-                var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(immersiveContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(immersiveContext, immersive); onAppearanceChanged() }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("沉浸模式（隐藏消息常驻操作按钮）", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                "默认关=最后一条 AI 消息常驻 4 键；开=全部操作收进长按菜单",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(immersiveContext, it); onAppearanceChanged() })
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val optContext = LocalContext.current
-                var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(optContext)) }
-                var encodeTags by remember { mutableStateOf(AppearancePrefs.encodeTags(optContext)) }
-                var fixMarkdown by remember { mutableStateOf(AppearancePrefs.fixMarkdown(optContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                         Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { openLastChat = !openLastChat; AppearancePrefs.saveOpenLastChat(optContext, openLastChat); onAppearanceChanged() }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(optContext, immersive); onAppearanceChanged() }
+                                .padding(vertical = 6.dp),
                         ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                        Text("启动进入上次聊天", style = MaterialTheme.typography.bodyLarge)
-                        Text("默认关；开启后启动直接回到上次会话", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        EmberSwitch(checked = openLastChat, onCheckedChange = { openLastChat = it; AppearancePrefs.saveOpenLastChat(optContext, it); onAppearanceChanged() })
-                        }
-                        Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { encodeTags = !encodeTags; AppearancePrefs.saveEncodeTags(optContext, encodeTags); onAppearanceChanged() }.padding(vertical = 6.dp),
-                        ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                        Text("转义标签（encode_tags）", style = MaterialTheme.typography.bodyLarge)
-                        Text("官方 power_user.encode_tags（默认关）：开=把 < > 转义为纯文本、HTML 不再渲染；关=允许部分 HTML 标签按网页渲染", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        EmberSwitch(checked = encodeTags, onCheckedChange = { encodeTags = it; AppearancePrefs.saveEncodeTags(optContext, it); onAppearanceChanged() })
-                        }
-                        Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { fixMarkdown = !fixMarkdown; AppearancePrefs.saveFixMarkdown(optContext, fixMarkdown); onAppearanceChanged() }.padding(vertical = 6.dp),
-                        ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                        Text("自动修复 Markdown", style = MaterialTheme.typography.bodyLarge)
-                        Text("官方 power_user.auto_fix_generated_markdown（默认开）：显示前修复模型生成的坏 Markdown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        EmberSwitch(checked = fixMarkdown, onCheckedChange = { fixMarkdown = it; AppearancePrefs.saveFixMarkdown(optContext, it); onAppearanceChanged() })
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("沉浸模式", style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    "隐藏消息常驻操作按钮：关=最后一条 AI 消息常驻 4 键；开=全部操作收进长按菜单",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(optContext, it); onAppearanceChanged() })
                         }
                     }
                 }
-
             }
 
         }
@@ -531,7 +418,7 @@ fun AppearanceScreen(
             AlertDialog(
                 onDismissRequest = {},
                 title = { Text("下载字体") },
-                text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB / 霞鹜文楷约 70MB），完成后自动应用，请稍候…") },
+                text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB），完成后自动应用，请稍候…") },
                 confirmButton = {},
             )
         }

@@ -37,7 +37,11 @@ object EmberGlassDefaults {
  * 全局统一玻璃表面：毛玻璃 + 发丝边缘高光一处定义，替换各屏散落的
  * “glassEdgeHighlight + cloudy/background”三件套。
  * - sky = null：该面不做玻璃（保持调用方自己的背景），直接原样返回；
- * - 用户关闭“背景模糊”时退回纯色 surface，发丝高光仍保留，两种模式切换不跳变。
+ * - 底漆修复明暗跳变：Cloudy 首帧到位前 cloudy 节点直透底层（无玻璃），
+ *   位图到位后突然变成“模糊背景+tint”→ 进聊天/切深浅色时玻璃罩明暗跳一下。
+ *   现在恒定先铺“背景色+tint”底漆（与 cloudy 到位后的观感一致，静态
+ *   背景的模糊≈原色），位图到位后无缝覆盖，全程不跳。
+ * - 用户关闭“背景模糊”时用同一底漆，开关切换也不跳变。
  * - atTop：发丝高光画上缘（悬浮卡/输入栏）还是下缘（顶栏）。
  */
 @Composable
@@ -49,17 +53,22 @@ fun Modifier.emberGlass(
     if (sky == null) return this
     val context = LocalContext.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val tint = glassTint()
+    val baseCoat = Modifier
+        .background(MaterialTheme.colorScheme.background)
+        .background(tint.copy(alpha = tintAlpha))
     return this
         .glassEdgeHighlight(dark = dark, atTop = atTop)
+        .then(baseCoat)
         .then(
             if (AppearancePrefs.backgroundBlur(context)) {
                 Modifier.cloudy(
                     sky = sky,
                     radius = AppearancePrefs.blurStrength(context).coerceAtLeast(EmberGlassDefaults.MIN_RADIUS),
-                    tint = glassTint().copy(alpha = tintAlpha),
+                    tint = tint.copy(alpha = tintAlpha),
                 )
             } else {
-                Modifier.background(MaterialTheme.colorScheme.surface)
+                Modifier
             },
         )
 }

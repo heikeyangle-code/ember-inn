@@ -578,12 +578,21 @@ private fun SearchAvatar(name: String, isRole: Boolean) {
         modifier = Modifier.size(36.dp),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
-                name.take(1).ifBlank { "✦" },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-            )
+            if (name.isBlank()) {
+                Icon(
+                    FaIcons.User,
+                    contentDescription = null,
+                    tint = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(15.dp),
+                )
+            } else {
+                Text(
+                    name.take(1),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                )
+            }
         }
     }
 }
@@ -604,16 +613,8 @@ private fun HomeTopBar(
         shape = RoundedCornerShape(18.dp),
         modifier = modifier,
     ) {
+        // 顶栏只留搜索：大标题+品牌字+星标已删（自夸式装饰拉低观感，入口即内容）
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "✦ 余烬酒馆",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
             EmberTextField(
                 value = query,
                 onValueChange = onQueryChange,
@@ -680,7 +681,20 @@ private fun AiChatCard(onClick: () -> Unit) {
                 ),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                Text("✦", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        FaIcons.WandMagicSparkles,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 Spacer(Modifier.size(12.dp))
                 Column {
                     Text("AI 对话", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

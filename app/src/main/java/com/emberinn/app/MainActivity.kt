@@ -1,7 +1,6 @@
 package com.emberinn.app
 
 
-import android.graphics.Typeface
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,6 +48,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 官方 settings 加载即应用当前选中的采样预设（oai_settings.preset_settings_openai → onSettingsPresetChange）
         runCatching { applySelectedSamplerPresetOnLoad() }
+        // 已下线字体的旧文件回收（lxgw.ttf 等），启动时静默执行
+        runCatching { FontManager.cleanupLegacy(this) }
         enableEdgeToEdge()
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
@@ -111,7 +112,6 @@ class MainActivity : ComponentActivity() {
                 extraLarge = RoundedCornerShape(radius + 12.dp),
             )
             val fontFamily = when (recipe?.font ?: AppearancePrefs.font(this)) {
-                "lxgw" -> FontManager.lxgwFile(this)?.let { FontFamily(Typeface.createFromFile(it)) } ?: FontFamily.Serif
                 "noto" -> {
                     val files = FontManager.notoFiles(this)
                     if (files.size == 4) {
