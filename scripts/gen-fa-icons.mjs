@@ -111,6 +111,7 @@ const ICONS = {
   Recycle: 'recycle',
   Tags: 'tags',
   Music: 'music',
+  Eraser: 'eraser',               // 清空当前会话（App 扩展，官方无此入口）
 };
 delete ICONS.Eye_;
 

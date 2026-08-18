@@ -178,6 +178,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val streamingTextBuffer = StringBuilder()
     private val streamingReasoningBuffer = StringBuilder()
     private var streamingFlusher: kotlinx.coroutines.Job? = null
+    /** flusher 启动与缓冲弹出共用一把锁：避免双 flusher 并发读-改-写 StateFlow 丢 delta。 */
+    private val flushLock = Any()
 
     private fun appendStreamingText(delta: String) {
         synchronized(streamingTextBuffer) { streamingTextBuffer.append(delta) }
@@ -190,40 +192,46 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     private fun ensureStreamingFlusher() {
-        if (streamingFlusher?.isActive == true) return
-        streamingFlusher = viewModelScope.launch {
-            while (true) {
-                delay(33)
-                flushStreamingBuffers()
-                if (!streamActive && streamingTextBuffer.isEmpty() && streamingReasoningBuffer.isEmpty()) break
+        // check-then-act 全程持锁：SSE 回调线程并发触发时只会启动一个 flusher
+        synchronized(flushLock) {
+            if (streamingFlusher?.isActive == true) return
+            streamingFlusher = viewModelScope.launch {
+                while (true) {
+                    delay(33)
+                    flushStreamingBuffers()
+                    if (!streamActive && streamingTextBuffer.isEmpty() && streamingReasoningBuffer.isEmpty()) break
+                }
             }
         }
     }
 
     private fun flushStreamingBuffers() {
-        var text: String? = null
-        var reasoning: String? = null
-        synchronized(streamingTextBuffer) {
-            if (streamingTextBuffer.isNotEmpty()) {
-                text = streamingTextBuffer.toString()
-                streamingTextBuffer.clear()
+        synchronized(flushLock) {
+            var text: String? = null
+            var reasoning: String? = null
+            synchronized(streamingTextBuffer) {
+                if (streamingTextBuffer.isNotEmpty()) {
+                    text = streamingTextBuffer.toString()
+                    streamingTextBuffer.clear()
+                }
             }
-        }
-        synchronized(streamingReasoningBuffer) {
-            if (streamingReasoningBuffer.isNotEmpty()) {
-                reasoning = streamingReasoningBuffer.toString()
-                streamingReasoningBuffer.clear()
+            synchronized(streamingReasoningBuffer) {
+                if (streamingReasoningBuffer.isNotEmpty()) {
+                    reasoning = streamingReasoningBuffer.toString()
+                    streamingReasoningBuffer.clear()
+                }
             }
-        }
-        text?.let {
-            _streamingText.value = _streamingText.value + it
-            // 官方 onProgressStreaming(L3616)：冒充流式每 tick 先 cleanUpMessage(isImpersonate) + 定界符补齐
-            // 再写 send_textarea——输入框里是清洗后的文本，不是裸流（否则名字残留/未闭合引号先闪现再消失）
-            if (_isImpersonating.value) {
-                _impersonationDraft.value = cleanImpersonationText(_streamingText.value, isFinal = false)
+            // 读-改-写在锁内：与 stop()/handleStreamDone 的 flush 互斥，停止瞬间不丢末尾 token
+            text?.let {
+                _streamingText.value = _streamingText.value + it
+                // 官方 onProgressStreaming(L3616)：冒充流式每 tick 先 cleanUpMessage(isImpersonate) + 定界符补齐
+                // 再写 send_textarea——输入框里是清洗后的文本，不是裸流（否则名字残留/未闭合引号先闪现再消失）
+                if (_isImpersonating.value) {
+                    _impersonationDraft.value = cleanImpersonationText(_streamingText.value, isFinal = false)
+                }
             }
+            reasoning?.let { _streamingReasoning.value = _streamingReasoning.value + it }
         }
-        reasoning?.let { _streamingReasoning.value = _streamingReasoning.value + it }
     }
 
     /** 冒充流式输入框显示（官方 script.js:3600-3618 语义：clean(isImpersonate) + balance 后进 textarea）。 */
@@ -1041,6 +1049,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     override fun renameChat(name: String): String {
         if (name.isBlank()) return "（/renamechat 需要提供名字）"
         chatStore.renameSession(sessionId, name.trim())
+        // 当前会话也在 Past Chats 列表里：改名后驱动弹层刷新
+        _pastChatsRevision.value++
         return ""
     }
 
@@ -1587,11 +1597,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var pendingGroupGenId: Long? = null
     /** /inject ephemeral=true 的注入 ID：生成结束后从元数据删除（官方 GENERATION_ENDED/STOPPED）。 */
     private val ephemeralInjectIds = mutableSetOf<String>()
+    /** 用户主动停止标记（官方 stopGeneration：群聊整批终止，不推进下一位发言人）。 */
+    @Volatile
+    private var userStopped = false
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
     val userName: String get() = currentUserName
 
+    /** 生成入口统一刷新说话人名（官方 name1/name2 全局变量在聊天加载时已就绪；
+     *  冒充提示词宏/停用词/cleanUp 都依赖，不能停在 "Assistant"/"User" 默认值）。 */
+    private fun refreshSpeakerNames() {
+        chatStore.get(sessionId)?.name?.takeIf { it.isNotBlank() }?.let { currentCharName = it }
+        effectivePersona()?.name?.takeIf { it.isNotBlank() }?.let { currentUserName = it }
+    }
+
     init {
+        // 官方在聊天加载时即填充 name1/name2（selectChat/getChara）；
+        // 未发送前冒充/重生成/续写/滑动的宏与停用词不能停在默认值
+        refreshSpeakerNames()
         // 第三层主题（角色配方）：当前角色进入全局主题管线；离开聊天由 ChatScreen 清空回全局
         ThemeState.update(
             recipe = character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson) },
@@ -1710,8 +1733,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     _notice.value = "（未配置模型，请先选一个模型再发送。）"
                     return false
                 }
-                currentCharName = chatStore.get(sessionId)?.name ?: "Assistant"
-                currentUserName = userName
+                refreshSpeakerNames()
+                singleAutoContinueRuns = 0
                 _notice.value = null
                 _impersonated.value = null
                 startStream(
@@ -1733,8 +1756,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
         }
         if (effectiveText.isBlank() && media.isEmpty()) return false
-        // 官方 ST：输入以 / 开头即斜杠命令（消息类直接插消息，不触发生成；未知命令只提示不发送）
-        if (text.trimStart().startsWith("/") && media.isEmpty()) {
+        // 官方 ST processCommands 优先于附件处理：斜杠命令即便带附件也执行（命令消费输入，不落消息）
+        if (text.trimStart().startsWith("/")) {
             runSlash(text.trim())
             return true
         }
@@ -1745,8 +1768,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             return false
         }
         val charName = chatStore.get(sessionId)?.name ?: "Assistant"
-        currentCharName = charName
-        currentUserName = userName
+        refreshSpeakerNames()
+        singleAutoContinueRuns = 0
         _notice.value = null
         _impersonated.value = null
         // 官方 sendMessageAsUser：USER_INPUT 正则存前应用一次；总装 isPrompt=true 只跑 promptOnly 脚本
@@ -1806,50 +1829,66 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun stop() {
         flushStreamingBuffers()
         if (!_isStreaming.value) return
+        // 官方 stopGeneration：整批群聊终止——handleStreamDone 不再推进下一位发言人
+        userStopped = true
         streamSession?.cancel()
         streamSession = null
         streamActive = false
         pendingToolCalls = null
+        pendingGroupGenId = null
+        singleAutoContinueRuns = 0
         val partial = _streamingText.value
+        val rawReasoning = _streamingReasoning.value
         val wasImpersonating = _isImpersonating.value
         val wasContinue = streamContinueMode
         val wasSwipe = generatingSwipe
         _isStreaming.value = false
         _isImpersonating.value = false
-        if (!wasImpersonating && _streamingReasoning.value.isNotBlank()) {
-            _lastReasoning.value = _streamingReasoning.value
+        if (!wasImpersonating && rawReasoning.isNotBlank()) {
+            _lastReasoning.value = rawReasoning
         }
-        if (partial.isNotBlank()) {
+        // 官方 abort：textarea/消息保留的是最后一个 tick 已清洗的文本（onProgressStreaming 每 tick
+        // 全量 cleanUpMessage），停止路径同样过 clean 管线，绝不落裸流
+        val cleaned = if (partial.isBlank()) "" else cleanStreamReply(partial, wasImpersonating, wasContinue)
+        if (cleaned.isNotBlank() || wasImpersonating) {
             when {
-                // 官方 abort：textarea 保留的是最后一个 tick 已清洗的文本（onProgressStreaming 每 tick 清洗），
-                // 因此停止路径同样过 clean 管线，不落裸流
                 wasImpersonating -> _impersonated.value = cleanImpersonationText(partial, isFinal = true)
-                wasSwipe -> appendGeneratedSwipe(partial)
+                wasSwipe -> appendGeneratedSwipe(cleaned, reasoningOverride = rawReasoning.takeIf { it.isNotBlank() })
                 wasContinue -> {
                     // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                     // 官方追加目标是 chat 的最后一条（continue 允许最后一条是用户消息）
-                    val after = chatStore.messages(sessionId).toMutableList()
-                    val aiIdx = after.lastIndex
+                    val aiIdx = chatStore.messages(sessionId).lastIndex
                     if (aiIdx >= 0) {
                         val profile = chatRepository.profile()
                         chatStore.appendToCurrentSwipe(
-                            sessionId, aiIdx, partial,
+                            sessionId, aiIdx, cleaned,
                             api = profile?.providerId,
                             model = profile?.model,
-                            reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                            reasoning = rawReasoning.takeIf { it.isNotBlank() },
                         )
                         refreshMessages()
                     }
                 }
                 else -> {
-                    appendAiReply(partial)
+                    appendAiReply(cleaned, reasoningOverride = rawReasoning.takeIf { it.isNotBlank() })
+                    refreshMessages()
                 }
             }
         }
         _streamingText.value = ""
         _streamingReasoning.value = ""
+        _impersonationDraft.value = ""
         streamContinueMode = false
         generatingSwipe = false
+    }
+
+    /** ViewModel 销毁兜底：取消在途请求与 flusher，避免 OkHttp 连接/协程泄漏（生成中退出聊天页）。 */
+    override fun onCleared() {
+        streamSession?.cancel()
+        streamSession = null
+        streamActive = false
+        streamingFlusher?.cancel()
+        super.onCleared()
     }
 
     /** 重新生成（官方 option_regenerate / script.js:4340-4353）：最后一条是用户消息时"do nothing"
@@ -1865,6 +1904,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再重新生成。）"
             return
         }
+        refreshSpeakerNames()
+        singleAutoContinueRuns = 0
+        _impersonated.value = null
         // 官方 script.js:4346：lastMessage.is_user → 什么都不删，照常生成（对用户最后一句重新要一条 AI 回复）
         if (!isUser(last)) {
             chatStore.removeAt(sessionId, msgs.lastIndex)
@@ -1882,7 +1924,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * 传完整历史（ChatPromptFactory 会翻成“新的在前”），引擎把最后一条 AI 移进 continueNudge；
      * 流结束把续写追加回最后一条 AI（不新增消息）。
      */
-    fun continueGeneration() {
+    fun continueGeneration(fromAutoContinue: Boolean = false) {
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
@@ -1895,6 +1937,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再发送。）"
             return
         }
+        // 自动续写链（triggerAutoContinue）继承计数；用户手动续写重置新一轮计数
+        if (!fromAutoContinue) {
+            singleAutoContinueRuns = 0
+            _impersonated.value = null
+        }
+        refreshSpeakerNames()
         if (group != null) {
             startGroupTurn(type = "continue", cyclePrompt = lastText)
         } else {
@@ -1960,6 +2008,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再滑动生成。）"
             return
         }
+        refreshSpeakerNames()
+        singleAutoContinueRuns = 0
+        _impersonated.value = null
         chatStore.ensureSwipes(sessionId, msgs.lastIndex)
         startStream(
             history = msgs.dropLast(1),
@@ -2081,6 +2132,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val src = chatStore.get(sessionId) ?: return null
         val mainChat = chatStore.metadata(sessionId)["main_chat"]?.jsonPrimitive?.contentOrNull
             ?: return null
+        // 新分支存父会话 ID（重命名/同名不断链）；UUID 格式直接命中
+        chatStore.list().firstOrNull { it.id != src.id && it.id == mainChat }?.let { return it }
+        // 旧数据兼容：早期分支存的是父会话名称
         return chatStore.list().firstOrNull { it.id != src.id && it.name == mainChat && it.characterId == src.characterId }
     }
 
@@ -2112,10 +2166,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             .sortedByDescending { it.lastDate }
     }
 
+    /** past chats 列表修订号：重命名/删除后 +1，驱动弹层列表即时刷新（数据流不再依赖当前会话 messages）。 */
+    private val _pastChatsRevision = MutableStateFlow(0)
+    val pastChatsRevision: StateFlow<Int> = _pastChatsRevision
+
     /** 官方 renameChatFile。 */
     fun renamePastChat(id: String, newName: String) {
         val safe = newName.trim()
-        if (safe.isNotBlank()) chatStore.renameSession(id, safe)
+        if (safe.isNotBlank()) {
+            chatStore.renameSession(id, safe)
+            _pastChatsRevision.value++
+        }
     }
 
     /** 当前会话 id（Past Chats 删除当前聊天时判断跳转）。 */
@@ -2124,6 +2185,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 官方 delChat（PastChat_cross）：删除聊天文件；返回删除后剩余的 past chats。 */
     fun deletePastChat(id: String) {
         chatStore.delete(id)
+        _pastChatsRevision.value++
     }
 
     /** 官方 "Download chat as plain text document"。 */
@@ -2258,6 +2320,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再冒充。）"
             return
         }
+        refreshSpeakerNames()
+        singleAutoContinueRuns = 0
+        _impersonated.value = null
         startStream(
             history = chatStore.messages(sessionId),
             type = "impersonate",
@@ -2902,8 +2967,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         generatingSwipe = swipeMode
         pendingGroupGenId = groupGenId
         streamActive = true
+        userStopped = false
         firstDeltaAt = null
-        singleAutoContinueRuns = 0
+        // 注意：singleAutoContinueRuns 不在此重置——自动续写链经 continueGeneration(fromAutoContinue=true)
+        // 继承计数，5 次上限才真正生效；重置只发生在用户手动入口（send/regenerate/impersonate/generateSwipe）
         // 提示词总装（世界书扫描/宏/历史/token 计数）较重：丢后台线程做，UI 不卡顿，
         // 先置“生成中”，组装完再真正发起请求（官方异步语义）。
         viewModelScope.launch(Dispatchers.Default) {
@@ -3046,7 +3113,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         } else {
                             finalizeStream(streamContinueMode)
                         }
-                        onFinished?.invoke()
+                        // 官方 onErrorStreaming：上层 promise reject，群聊整批终止——不推进下一位发言人
                     }
                 },
                 type = type,
@@ -3191,7 +3258,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun handleStreamDone(continueMode: Boolean, onFinished: (() -> Unit)?) {
         flushStreamingBuffers()
         if (!streamActive) {
-            onFinished?.invoke()
+            // 用户主动停止（官方 stopGeneration：群聊整批终止，不推进下一位发言人）
+            if (!userStopped) onFinished?.invoke()
             return
         }
         if (maybeContinueToolLoop(continueMode, onFinished)) return
@@ -3228,7 +3296,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             )
         if (shouldAutoContinue) {
             singleAutoContinueRuns++
-            continueGeneration()
+            continueGeneration(fromAutoContinue = true)
         }
         onFinished?.invoke()
     }
@@ -3309,16 +3377,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return true
     }
 
-    private fun finalizeStream(continueMode: Boolean = false) {
-        flushStreamingBuffers()
-        _isStreaming.value = false
-        streamSession = null
-        // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
-        // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
-        val wasImpersonating = _isImpersonating.value
-        val wasSwipe = generatingSwipe
-        // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）；
-        // AI_OUTPUT 正则按官方位置在停用词裁剪之后注入（引擎 regexTransform）
+    /** 官方 saveReply 清洗管线：停用词/名字剥离/endoftext/trim/collapseNewlines + AI_OUTPUT 正则。
+     *  正常完成与停止保留半截文本共用，停止路径不落裸流。 */
+    private fun cleanStreamReply(
+        raw: String,
+        isImpersonate: Boolean,
+        isContinue: Boolean,
+        hasReasoningPrefix: Boolean = false,
+    ): String {
         val behavior = BehaviorPrefs.load(getApplication())
         val profileForClean = chatRepository.profile()
         val apiForClean = profileForClean?.let {
@@ -3327,8 +3393,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val stoppingStrings = StoppingStringsEngine.getStoppingStrings(
             api = apiForClean,
             config = StoppingStringsConfig(
-                isImpersonate = wasImpersonating,
-                isContinue = continueMode,
+                isImpersonate = isImpersonate,
+                isContinue = isContinue,
                 name1 = currentUserName,
                 name2 = currentCharName,
                 chatLastIsUser = chatStore.messages(sessionId).lastOrNull()?.let { isUser(it) } == true,
@@ -3338,15 +3404,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 env = MacroEnv(user = currentUserName, char = currentCharName),
             ),
         )
-        val reply = CleanUpMessageEngine.clean(
-            getMessage = _streamingText.value,
+        return CleanUpMessageEngine.clean(
+            getMessage = raw,
             config = CleanUpConfig(
-                isImpersonate = wasImpersonating,
-                isContinue = continueMode,
+                isImpersonate = isImpersonate,
+                isContinue = isContinue,
                 stoppingStrings = stoppingStrings,
                 name1 = currentUserName,
                 name2 = currentCharName,
-                hasReasoningPrefix = _streamingReasoning.value.isNotBlank(),
+                hasReasoningPrefix = hasReasoningPrefix,
                 groupMemberNames = groupMembers.map { it.name },
                 groupTrimmingEnabled = group != null,
                 collapseNewlines = RenderPrefs.collapseNewlines(getApplication()),
@@ -3368,14 +3434,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             },
         )
+    }
+
+    private fun finalizeStream(continueMode: Boolean = false) {
+        flushStreamingBuffers()
+        _isStreaming.value = false
+        streamSession = null
+        // 官方 saveReply：getRegexedString(getMessage, isImpersonate ? USER_INPUT : AI_OUTPUT)，
+        // 冒充不落盘（进输入框，发送时再过 USER_INPUT）；continue/swipe/普通回复都先过 AI_OUTPUT
+        val wasImpersonating = _isImpersonating.value
+        val wasSwipe = generatingSwipe
+        // 先捕获再复位：auto-swipe 触发的下一轮流（swipeRight→startStream）会重新置位
+        // generatingSwipe/_streamingText 等状态，收尾尾巴绝不能覆盖新流状态
+        val rawText = _streamingText.value
+        val rawReasoning = _streamingReasoning.value
+        _streamingText.value = ""
+        _streamingReasoning.value = ""
+        streamContinueMode = false
+        generatingSwipe = false
+        val behavior = BehaviorPrefs.load(getApplication())
+        // 官方 saveReply：cleanUpMessage（停用词/名字/endoftext/Instruct/群消息/trim 全链）；
+        // AI_OUTPUT 正则按官方位置在停用词裁剪之后注入（引擎 regexTransform）
+        val reply = cleanStreamReply(rawText, wasImpersonating, continueMode, hasReasoningPrefix = rawReasoning.isNotBlank())
         when {
             wasImpersonating -> {
                 // 官方：冒充结果进输入框，不写历史
                 if (reply.isNotBlank()) {
                     _impersonated.value = reply
                 } else {
-                    _lastReasoning.value = _streamingReasoning.value.takeIf { it.isNotBlank() }
-                    _notice.value = if (_streamingReasoning.value.isNotBlank()) {
+                    _lastReasoning.value = rawReasoning.takeIf { it.isNotBlank() }
+                    _notice.value = if (rawReasoning.isNotBlank()) {
                         "（模型只返回了思考，没有生成冒充内容。）"
                     } else {
                         "（冒充没有生成内容，请重试。）"
@@ -3385,17 +3473,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
             wasSwipe -> {
                 // 对齐官方 swipe 生成：结果追加进最后一条 AI 的 swipes，不新增消息
-                if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
+                if (rawReasoning.isNotBlank()) _lastReasoning.value = rawReasoning
                 if (reply.isNotBlank()) {
-                    appendGeneratedSwipe(reply)
-                } else if (_streamingReasoning.value.isBlank()) {
+                    appendGeneratedSwipe(reply, reasoningOverride = rawReasoning.takeIf { it.isNotBlank() })
+                } else if (rawReasoning.isBlank()) {
                     _notice.value = "（滑动生成没有新内容，已保留当前回复。）"
                 }
             }
             continueMode && reply.isNotBlank() -> {
                 // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
                 // 官方追加目标是 chat 最后一条（continue 允许最后一条是用户消息，脚本无 is_user 拦截）
-                if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
+                if (rawReasoning.isNotBlank()) _lastReasoning.value = rawReasoning
                 val after = chatStore.messages(sessionId).toMutableList()
                 val aiIdx = after.lastIndex
                 if (aiIdx >= 0) {
@@ -3416,7 +3504,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         sessionId, aiIdx, reply,
                         api = profile?.providerId,
                         model = profile?.model,
-                        reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                        reasoning = rawReasoning.takeIf { it.isNotBlank() },
                         genStarted = adjustedStart,
                     )
                     // 官方 saveReply('continue')：message_token_count_enabled 时刷新合并后 token_count
@@ -3427,7 +3515,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             val text = msgs[idx].jsonObject["mes"]?.jsonPrimitive?.contentOrNull.orEmpty()
                             val count = runCatching {
                                 com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(profile?.model.orEmpty())
-                                    .count(_streamingReasoning.value + text)
+                                    .count(rawReasoning + text)
                             }.getOrDefault(text.length / 4)
                             chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())
                         }
@@ -3435,11 +3523,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     refreshMessages()
                 }
             }
-            _streamingReasoning.value.isNotBlank() -> {
+            rawReasoning.isNotBlank() -> {
                 // 思考过程保留 + 正常追加回复；空正文不再静默吞掉，给用户明确反馈
-                _lastReasoning.value = _streamingReasoning.value
+                _lastReasoning.value = rawReasoning
                 if (reply.isNotBlank()) {
-                    appendAiReply(reply)
+                    appendAiReply(reply, reasoningOverride = rawReasoning)
                 } else {
                     _notice.value = "（模型只返回了思考过程，没有生成正文——多半是“最大回复 tokens”太小被思考占满。去 设置→提供商→最大回复 tokens 调大（如 8192），或关闭思考模式。）"
                 }
@@ -3463,14 +3551,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
             }
         }
-        _streamingText.value = ""
-        _streamingReasoning.value = ""
-        streamContinueMode = false
-        generatingSwipe = false
         // 官方 translate 扩展：auto_mode=responses/both 时 AI 回复自动翻译（译文进 extra.display_text）
         if (!wasImpersonating) {
             val lastAi = chatStore.messages(sessionId).indexOfLast { !isUser(it) }
-            if (lastAi >= 0) translateIncoming(lastAi, _streamingReasoning.value.takeIf { it.isNotBlank() })
+            if (lastAi >= 0) translateIncoming(lastAi, rawReasoning.takeIf { it.isNotBlank() })
         }
         // 官方 memory 扩展 onChatEvent（CHARACTER_MESSAGE_RENDERED 后）：满足条件时自动总结
         if (!wasImpersonating) memoryService.maybeAutoSummarize(sessionId)
@@ -3489,9 +3573,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 滑动生成完成落盘：追加为新变体（对齐官方 swipe 生成 saveReply）。 */
-    private fun appendGeneratedSwipe(reply: String) {
+    private fun appendGeneratedSwipe(reply: String, reasoningOverride: String? = null) {
         val msgs = chatStore.messages(sessionId)
         val aiIdx = msgs.indexOfLast { !isUser(it) }
+        val reasoning = reasoningOverride ?: _streamingReasoning.value.takeIf { it.isNotBlank() }
         if (aiIdx >= 0) {
             val profile = chatRepository.profile()
             chatStore.appendSwipe(
@@ -3502,14 +3587,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 model = profile?.model,
                 genStarted = streamStartedAt,
                 genFinished = java.time.Instant.now().toString(),
-                reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+                reasoning = reasoning,
                 groupGenId = if (group != null) pendingGroupGenId else null,
             )
             // 官方 swipe saveReply：message_token_count_enabled 时刷新新变体 token_count
             if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
                 val count = runCatching {
                     com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(profile?.model.orEmpty())
-                        .count(_streamingReasoning.value + reply)
+                        .count((reasoning ?: "") + reply)
                 }.getOrDefault(reply.length / 4)
                 chatStore.setExtraValue(sessionId, aiIdx, "token_count", count.toString())
             }
@@ -3555,8 +3640,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** AI 回复落盘：带官方字段（api/model/gen_started/gen_finished/reasoning/time_to_first_token）。 */
-    private fun appendAiReply(reply: String) {
+    private fun appendAiReply(reply: String, reasoningOverride: String? = null) {
         val profile = chatRepository.profile()
+        val reasoning = reasoningOverride ?: _streamingReasoning.value.takeIf { it.isNotBlank() }
         val startedAt = runCatching { java.time.Instant.parse(streamStartedAt).toEpochMilli() }.getOrNull()
         val ttf = firstDeltaAt?.let { first -> startedAt?.let { (first - it).coerceAtLeast(0) } }
         chatStore.append(
@@ -3569,7 +3655,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             timeToFirstToken = ttf,
             genStarted = streamStartedAt,
             genFinished = java.time.Instant.now().toString(),
-            reasoning = _streamingReasoning.value.takeIf { it.isNotBlank() },
+            reasoning = reasoning,
             // 官方群聊 AI 消息带 gen_id（group_generation_id，整批共享）；单聊不带
             groupGenId = pendingGroupGenId,
         )
@@ -3579,7 +3665,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             val model = profile?.model.orEmpty()
             val count = runCatching {
                 com.emberinn.engine.worldinfo.TokenCounterFactory.forModel(model)
-                    .count((_streamingReasoning.value + reply))
+                    .count((reasoning ?: "") + reply)
             }.getOrDefault(reply.length / 4)
             val idx = chatStore.messages(sessionId).lastIndex
             if (idx >= 0) chatStore.setExtraValue(sessionId, idx, "token_count", count.toString())

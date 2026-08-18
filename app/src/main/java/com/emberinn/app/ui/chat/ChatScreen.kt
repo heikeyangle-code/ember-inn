@@ -272,6 +272,7 @@ fun ChatScreen(
     val dataBank by vm.dataBank.collectAsState()
     val displayRevision by vm.displayRevision.collectAsState()
     val generationEpoch by vm.generationEpoch.collectAsState()
+    val pastChatsRevision by vm.pastChatsRevision.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -366,8 +367,6 @@ fun ChatScreen(
     var deleteSwipeTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var swipePickerIndex by remember { mutableStateOf<MsgTarget?>(null) }
     val listState = rememberLazyListState()
-    // 输入框斜杠补全用的命令清单（App 消息类 + 引擎纯函数，含中文描述）
-    val slashCommands = remember { vm.slashCommandList() }
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
@@ -586,8 +585,72 @@ fun ChatScreen(
         }
     }
 
-    // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”；设置页改快捷回复后同步刷新
-    LaunchedEffect(Unit) {
+    // 会话切换重置：MainScreen 的 onSwitchSession 原地换 sessionId（组合复用），vm(key=sessionId)
+    // 换新实例，但上面这些 remember/rememberSaveable 本地状态会残留旧会话的草稿/弹层/删除模式/
+    // 推理展开表/群聊设置——必须显式清空，否则切会话后旧状态串台（新会话里弹旧会话的重命名框等）。
+    LaunchedEffect(sessionId) {
+        input = ""
+        reasoningExpanded = false
+        reasoningExpandedMap.clear()
+        menuMessageIndex = null
+        editIndex = null
+        editDraft = ""
+        deleteTargetIndex = null
+        deleteSwipeTargetIndex = null
+        swipePickerIndex = null
+        tokenStatsIndex = null
+        deleteMode = false
+        deleteCheckIndex = null
+        showPastChats = false
+        pastChatsQuery = ""
+        renameChatTarget = null
+        renameChatDraft = ""
+        deleteChatTarget = null
+        pendingExportText = null
+        pendingExportTextName = ""
+        pendingExportJsonl = null
+        contextDetail = false
+        worldPanel = false
+        showClearConfirm = false
+        showConvertGroupConfirm = false
+        showLogprobsSheet = false
+        showMore = false
+        showCfgSheet = false
+        showPromptPreview = false
+        showWorldPicker = false
+        showAttachOptions = false
+        showUrlAttachmentDialog = false
+        urlAttachmentDraft = ""
+        showCharacterInfo = false
+        showPersonaPicker = false
+        personaQuery = ""
+        editingPersona = null
+        showBookmarkDialog = false
+        bookmarkDraftName = ""
+        showBookmarksSheet = false
+        bookmarkToOpen = null
+        showImageDialog = false
+        showDataBank = false
+        showDataBankUrlDialog = false
+        dataBankUrlDraft = ""
+        showAuthorsNote = false
+        showGroupSettings = false
+        pendingDisplay = null
+        imagePrompt = ""
+        showSyncNameConfirm = false
+        // 群聊设置从新 VM 重读（rememberSaveable 初值捕获的是旧 vm.group）
+        groupMode = vm.group?.generationMode ?: GroupGenerationMode.APPEND
+        groupStrategy = vm.group?.activationStrategy ?: "natural"
+        // 新会话从最新一条开始看（旧列表滚动位置对新会话无意义）
+        followBottom = true
+    }
+
+    // 斜杠命令清单随 VM 重建（会话切换后 vm 实例更换，避免持有旧实例快照）
+    val slashCommands = remember(vm) { vm.slashCommandList() }
+
+    // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”；设置页改快捷回复后同步刷新。
+    // key=vm：导航复用组合而 VM 实例更换时重启副作用，避免协程持有旧 VM 引用（刷新打到旧会话）。
+    LaunchedEffect(vm) {
         vm.refreshProviderConfigured()
         vm.refreshQuickReplies()
         vm.refreshTheme()
@@ -633,8 +696,9 @@ fun ChatScreen(
     LaunchedEffect(generationEpoch) {
         if (generationEpoch > 0) followBottom = true
     }
-    // 显示设置（encode_tags/正则/行为）变更即时生效：DisplayCacheVersion bump → VM 清缓存 + 全表行重算
-    LaunchedEffect(Unit) {
+    // 显示设置（encode_tags/正则/行为）变更即时生效：DisplayCacheVersion bump → VM 清缓存 + 全表行重算。
+    // key=vm 同上：VM 更换时重订阅，collect 回调不落在旧实例上。
+    LaunchedEffect(vm) {
         snapshotFlow { com.emberinn.app.data.DisplayCacheVersion.version }.drop(1).collect {
             vm.onDisplaySettingsChanged()
         }
@@ -1487,6 +1551,11 @@ fun ChatScreen(
                     showPromptPreview = true
                     vm.previewPrompt()
                 }
+                // App 扩展：官方 options 无“清空当前会话”（官方只删文件/删消息）；移动端便捷项，二次确认
+                MenuRow(FaIcons.Eraser, "清空当前会话", danger = true, enabled = messages.isNotEmpty()) {
+                    showMore = false
+                    showClearConfirm = true
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -1540,7 +1609,10 @@ fun ChatScreen(
     // 官方 displayPastChats（#select_chat_popup）：同角色/群聊天文件列表 + 搜索 +
     // 行内 改名(fa-pencil) / 导出JSONL(fa-file-export) / 导出txt(fa-file-lines) / 删除(fa-skull)，当前聊天高亮。
     if (showPastChats) {
-        val entries = remember(showPastChats, pastChatsQuery, messages) { vm.pastChats(pastChatsQuery) }
+        // key 含 pastChatsRevision：弹层内改名/删除后即时重读列表（否则要等 messages 变化才刷新）
+        val entries = remember(showPastChats, pastChatsQuery, messages, pastChatsRevision) {
+            vm.pastChats(pastChatsQuery)
+        }
         EmberBottomSheet(onDismissRequest = { showPastChats = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Row(
@@ -3965,11 +4037,42 @@ private data class ChatTypography(
  *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。
  *  代码围栏/行内代码/<style> 块先占位保护，避免引号、波浪线、HTML 标签转换污染代码内容
  *  （官方 messageFormatting 的正则同样把 ``` / ~~~ / `` / ` / <style> 放在引号匹配之前）。 */
+/** HTML 颜色值规范化（官方浏览器 font[color] 支持 hex/命名色/rgb）：统一转 #RRGGBB；解析不了返回 null。 */
+private fun normalizeHtmlColor(value: String): String? {
+    val v = value.trim()
+    if (v.matches(Regex("(?i)#?[0-9a-f]{3}|#?[0-9a-f]{6}"))) {
+        val hex = v.removePrefix("#").lowercase()
+        val full = if (hex.length == 3) hex.flatMap { listOf(it, it) }.joinToString("") else hex
+        return "#$full"
+    }
+    val rgb = Regex("(?i)rgba?\\s*\\(\\s*(\\d+)[\\s,]+(\\d+)[\\s,]+(\\d+)").find(v) ?: return CSS_NAMED_COLORS[v.lowercase()]
+    val r = rgb.groupValues[1].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
+    val g = rgb.groupValues[2].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
+    val b = rgb.groupValues[3].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
+    return "#%02x%02x%02x".format(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+}
+
+/** CSS 命名色（角色卡常用子集，浏览器支持 148 个全量表此处取高频色）。 */
+private val CSS_NAMED_COLORS = mapOf(
+    "black" to "#000000", "white" to "#ffffff", "red" to "#ff0000", "green" to "#008000",
+    "blue" to "#0000ff", "yellow" to "#ffff00", "orange" to "#ffa500", "purple" to "#800080",
+    "pink" to "#ffc0cb", "gray" to "#808080", "grey" to "#808080", "silver" to "#c0c0c0",
+    "maroon" to "#800000", "navy" to "#000080", "teal" to "#008080", "aqua" to "#00ffff",
+    "cyan" to "#00ffff", "fuchsia" to "#ff00ff", "magenta" to "#ff00ff", "lime" to "#00ff00",
+    "olive" to "#808000", "gold" to "#ffd700", "brown" to "#a52a2a", "crimson" to "#dc143c",
+    "coral" to "#ff7f50", "salmon" to "#fa8072", "violet" to "#ee82ee", "indigo" to "#4b0082",
+    "turquoise" to "#40e0d0", "skyblue" to "#87ceeb", "lightblue" to "#add8e6", "lightgray" to "#d3d3d3",
+    "lightgrey" to "#d3d3d3", "darkblue" to "#00008b", "darkred" to "#8b0000", "darkgreen" to "#006400",
+    "dimgray" to "#696969", "whitesmoke" to "#f5f5f5", "beige" to "#f5f5dc", "ivory" to "#fffff0",
+    "khaki" to "#f0e68c", "lavender" to "#e6e6fa", "orchid" to "#da70d6", "plum" to "#dda0dd",
+    "sienna" to "#a0522d", "tan" to "#d2b48c", "tomato" to "#ff6347", "wheat" to "#f5deb3",
+)
+
 private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = true): String {
     val protectedSegments = mutableListOf<String>()
     var out = content
     out = Regex(
-        "```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|``[^`\\n]*``|`[^`\\n]*`|<style>[\\s\\S]*?</style>",
+        "```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|(?m)^ {0,3}(?:`{3,}|~{3,})[\\s\\S]*$|``[^`\\n]*``|`[^`\\n]*`|<style>[\\s\\S]*?</style>",
         RegexOption.IGNORE_CASE,
     ).replace(out) { m ->
         protectedSegments += m.value
@@ -3980,8 +4083,12 @@ private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = tru
     out = Regex("<(em|i)[^>]*>([\\s\\S]*?)</(em|i)>", RegexOption.IGNORE_CASE).replace(out) { m -> "*${m.groupValues[2]}*" }
     out = Regex("<(b|strong)[^>]*>([\\s\\S]*?)</(b|strong)>", RegexOption.IGNORE_CASE).replace(out) { m -> "**${m.groupValues[2]}**" }
     out = Regex("<(s|strike|del)[^>]*>([\\s\\S]*?)</(s|strike|del)>", RegexOption.IGNORE_CASE).replace(out) { m -> "~~${m.groupValues[2]}~~" }
-    out = Regex("<font[^>]*color=[\"']?#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
-        .replace(out) { m -> "\uE005#${m.groupValues[1]}\uE006${m.groupValues[2]}\uE007" }
+    // 官方浏览器 font[color]：hex / 命名色 / rgb() 都有效；解析不了的保持原标签（后续剥壳=继承色）
+    out = Regex("<font[^>]*color\\s*=\\s*[\"']?([^\\s\"'>]+)[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
+        .replace(out) { m ->
+            normalizeHtmlColor(m.groupValues[1])
+                ?.let { "\uE005$it\uE006${m.groupValues[2]}\uE007" } ?: m.value
+        }
     out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n\n---\n\n")
     out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "  \n")
     // 官方 DOMPurify 白名单里的文本级标签原生渲染（浏览器 UA 默认样式 1:1）：
@@ -4394,7 +4501,8 @@ private val ANY_TAG = Regex("</?[A-Za-z][A-Za-z0-9:-]*(?:\\s+[^<>]*?)?\\s*/?>")
 
 private fun stripResidualTags(text: String): String {
     val protected = mutableListOf<String>()
-    var out = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|``[^`\\n]*``|`[^`\\n]*`")
+    // 闭合围栏/行内代码先配对保护；末尾未闭合围栏（行首 ```/~~~ 无闭合）也保护——内容是代码不许剥
+    var out = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|(?m)^ {0,3}(?:`{3,}|~{3,})[\\s\\S]*$|``[^`\\n]*``|`[^`\\n]*`")
         .replace(text) { m ->
             protected += m.value
             "\uE100${protected.lastIndex}\uE101"
@@ -4410,6 +4518,18 @@ private enum class SegmentKind { Native, WebHtml, Interactive, Mermaid }
 private class ChatSegment(val kind: SegmentKind, val raw: String, val display: String? = null)
 
 private val ANY_FENCE = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
+
+/** 全部围栏区间（含末尾未闭合围栏）：官方 marked/CommonMark 语义——未闭合围栏延伸到文本末尾、
+ *  渲染为代码块（流式中断/模型漏闭合时的官方表现）。只认闭合围栏会把残缺代码块的 ``` 与内容
+ *  当普通文字走剥壳管线（<div> 被剥掉），与官方渲染不一致。 */
+private fun fenceRanges(text: String): List<IntRange> {
+    val closed = ANY_FENCE.findAll(text).map { it.range }.toMutableList()
+    val consumed = closed.lastOrNull()?.last?.plus(1) ?: 0
+    val tail = text.substring(consumed)
+    val opener = Regex("(?m)^ {0,3}(?:`{3,}|~{3,})").find(tail) ?: return closed
+    closed += (consumed + opener.range.first) until text.length
+    return closed
+}
 private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*[ \\t]*\\n([\\s\\S]*?)```")
 
 /** 围栏内的结构性 HTML 标签（网页/卡片成分）：围栏含任意一个即按 HTML 围栏渲染成卡片。
@@ -4449,7 +4569,7 @@ private fun isFullHtmlDocument(html: String): Boolean {
 /** 围栏外首个“完整网页文档”起点（<!doctype 或带闭合结构的 <html）：0=文档在开头（调用方已整段处理），
  *  -1=没有。用于“前缀文字 + 完整网页”消息的拆分——文档起点前的文字走原生，其后整段走 Web。 */
 private fun fullDocumentStartOutsideFences(content: String): Int {
-    val fences = ANY_FENCE.findAll(content).map { it.range }.toList()
+    val fences = fenceRanges(content)
     fun outside(i: Int) = fences.none { i in it }
     val doctype = Regex("(?i)<!doctype\\s+html").findAll(content)
         .map { it.range.first }.filter { it > 0 && outside(it) }.minOrNull()
@@ -4491,50 +4611,59 @@ private val WEB_BLOCK_TAG = Regex(
 )
 
 /** 在围栏外切出“真正需要 WebView”的元素区间：从开标签到同名闭标签（同层嵌套计数，自闭合除外）。
- *  无闭标签（残缺 HTML）延伸到文本末尾；跨围栏的残缺元素按当前片段处理，见 12.6。 */
+ *  无闭标签（残缺 HTML）延伸到文本末尾；围栏区间（含未闭合围栏）内是代码，不许当 Web 元素切走。 */
 private fun carveWebElementRanges(text: String): List<IntRange> {
     val out = mutableListOf<IntRange>()
+    val fences = fenceRanges(text).sortedBy { it.first }
     var i = 0
-    val fence = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
     while (i < text.length) {
-        val f = fence.find(text, i)
-        val t = WEB_BLOCK_TAG.find(text, i)
-        val fi = f?.range?.first ?: Int.MAX_VALUE
-        val ti = t?.range?.first ?: Int.MAX_VALUE
-        if (fi == Int.MAX_VALUE && ti == Int.MAX_VALUE) break
-        if (fi <= ti) {
-            i = f!!.range.last + 1
+        // 命中围栏：整段跳过（代码内容按官方渲染为转义代码块，不进 WebView）
+        val hitFence = fences.firstOrNull { i in it }
+        if (hitFence != null) {
+            i = hitFence.last + 1
             continue
         }
-        val name = t!!.groupValues[1].ifEmpty { t.groupValues[2].ifEmpty { t.groupValues[3] } }
-        if (t.value.trimEnd().endsWith("/>")) {
-            out += t.range.first until t.range.last + 1
-            i = t.range.last + 1
+        // 下一个围栏起点之前找 Web 元素开标签；命中点落在围栏内（含未闭合围栏）的跳过
+        val nextFence = fences.firstOrNull { it.first > i }?.first ?: text.length
+        var t = WEB_BLOCK_TAG.find(text, i)
+        while (t != null && t.range.first >= nextFence) t = null
+        if (t == null) {
+            i = nextFence
             continue
         }
-        var depth = 1
-        var j = t.range.last + 1
-        val openRe = Regex("<${Regex.escape(name)}\\b(?![^>]*/\\s*>)[^>]*>", RegexOption.IGNORE_CASE)
-        val closeRe = Regex("</${Regex.escape(name)}\\s*>", RegexOption.IGNORE_CASE)
-        while (depth > 0 && j < text.length) {
-            val o = openRe.find(text, j)
-            val c = closeRe.find(text, j)
-            val oi = o?.range?.first ?: Int.MAX_VALUE
-            val ci = c?.range?.first ?: Int.MAX_VALUE
-            if (ci == Int.MAX_VALUE) break
-            if (oi < ci) {
-                depth++
-                j = o!!.range.last + 1
-            } else {
-                depth--
-                j = c!!.range.last + 1
-            }
-        }
-        val end = if (depth == 0) j else text.length
-        out += t.range.first until end
-        i = end
+        i = carveTag(text, t, out)
     }
     return out
+}
+
+/** 单个 Web 元素开标签的区间切分：从开标签同名闭标签计数（残缺 HTML 延伸到文本末尾），返回区间结束位置。 */
+private fun carveTag(text: String, t: MatchResult, out: MutableList<IntRange>): Int {
+    val name = t.groupValues[1].ifEmpty { t.groupValues[2].ifEmpty { t.groupValues[3] } }
+    if (t.value.trimEnd().endsWith("/>")) {
+        out += t.range.first until t.range.last + 1
+        return t.range.last + 1
+    }
+    var depth = 1
+    var j = t.range.last + 1
+    val openRe = Regex("<${Regex.escape(name)}\\b(?![^>]*/\\s*>)[^>]*>", RegexOption.IGNORE_CASE)
+    val closeRe = Regex("</${Regex.escape(name)}\\s*>", RegexOption.IGNORE_CASE)
+    while (depth > 0 && j < text.length) {
+        val o = openRe.find(text, j)
+        val c = closeRe.find(text, j)
+        val oi = o?.range?.first ?: Int.MAX_VALUE
+        val ci = c?.range?.first ?: Int.MAX_VALUE
+        if (ci == Int.MAX_VALUE) break
+        if (oi < ci) {
+            depth++
+            j = o!!.range.last + 1
+        } else {
+            depth--
+            j = c!!.range.last + 1
+        }
+    }
+    val end = if (depth == 0) j else text.length
+    out += t.range.first until end
+    return end
 }
 
 /** 把一条消息切成段：先切出真正需要 WebView 的块级 HTML 元素（周围文字保持原生 Markdown），
@@ -4558,15 +4687,15 @@ private fun buildMessageSegments(
             val out = mutableListOf<ChatSegment>()
             fun prefixFenced(text: String) {
                 var last = 0
-                for (m in ANY_FENCE.findAll(text)) {
-                    appendTextSegment(out, text.substring(last, m.range.first), isSystem, htmlEnabled)
-                    val raw = m.value
+                for (fr in fenceRanges(text)) {
+                    appendTextSegment(out, text.substring(last, fr.first), isSystem, htmlEnabled)
+                    val raw = text.substring(fr.first, fr.last + 1)
                     out += when {
                         isHtmlFence(raw) -> ChatSegment(SegmentKind.Interactive, raw)
                         MERMAID_FENCE.containsMatchIn(raw) -> ChatSegment(SegmentKind.Mermaid, raw)
                         else -> ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
                     }
-                    last = m.range.last + 1
+                    last = fr.last + 1
                 }
                 appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
             }
@@ -4578,15 +4707,16 @@ private fun buildMessageSegments(
     val out = mutableListOf<ChatSegment>()
     fun appendFenced(text: String) {
         var last = 0
-        for (m in ANY_FENCE.findAll(text)) {
-            appendTextSegment(out, text.substring(last, m.range.first), isSystem, htmlEnabled)
-            val raw = m.value
+        for (fr in fenceRanges(text)) {
+            appendTextSegment(out, text.substring(last, fr.first), isSystem, htmlEnabled)
+            val raw = text.substring(fr.first, fr.last + 1)
             when {
+                // 未闭合围栏（无结束 ```）走 Native：markdown 渲染器按官方语义渲染成到末尾的代码块
                 isHtmlFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
                 MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
                 else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
             }
-            last = m.range.last + 1
+            last = fr.last + 1
         }
         appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
     }
@@ -5130,6 +5260,9 @@ private fun configureWebView(
             session.loadToken = null
             val wv = view ?: return
             if (wv.tag !== session || session.token !== token) return
+            // 本次加载完成：恢复显示（重载期间被藏住的池化实例不再闪上一条消息的旧页面）。
+            // 迟到的旧加载回调已被上面的 token 校验拦下，不会提前解除新加载的隐藏。
+            wv.visibility = android.view.View.VISIBLE
             // 页面脚本正常时 ResizeObserver 已上报；这里再轮询兜底。
             // 轮询不能省：Compose 初始给 WebView 的高度是 0 时页面可能根本不做内容布局，
             // 只有先给一个可见高度、再读 scrollHeight，WebView 才会真正“长出来”。
@@ -5163,6 +5296,9 @@ private fun configureWebView(
         session.loaded = false
         session.loadToken = token
         session.heightPx = 0
+        // 池化复用的实例此刻还渲染着上一条消息的页面：整页重载完成前先藏住，
+        // 否则滚动时会在新消息位置闪现别人的旧卡片（onPageFinished 再恢复显示）
+        view.visibility = android.view.View.INVISIBLE
         // 2026-08-12 修复“开头显示 base64 原文（PCFET0NUWVBFIGh0bWw+... = <!DOCTYPE html><html><head>）+ 大片空白”：
         // loadDataWithBaseURL 在“非 data: 的 baseUrl”（这里是 file:///android_asset/）下，data 会被当作
         // 普通字符串直接灌进 WebView，**不做 base64 解码**（AOSP CTS 2b3744f：non-data base URL →
@@ -5182,7 +5318,9 @@ private fun configureWebView(
         )
         return true
     } else {
-        // 复用已加载页面：不重载、不白屏；布局落定后快速复核高度（旧回调已被新 token 作废）。
+        // 复用已加载页面：不重载、不白屏；已加载完成的实例确保可见（兜底：极端情况下
+        // onPageFinished 未触发时不能永久隐藏）；布局落定后快速复核高度（旧回调已被新 token 作废）。
+        if (session.loaded) view.visibility = android.view.View.VISIBLE
         view.post {
             if (view.tag === session && session.token === token) {
                 measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)

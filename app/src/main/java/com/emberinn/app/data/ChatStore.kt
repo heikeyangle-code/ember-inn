@@ -35,13 +35,25 @@ class ChatStore(private val context: Context) {
 
     /** 进程级共享缓存：Home/Session/Chat 三个 ViewModel 各自 new ChatStore，缓存必须共用。 */
     companion object {
+        private val sessionsLock = Any()
         private var sessionsCache: List<SessionRecord>? = null
-        private val messagesCache = mutableMapOf<String, List<JsonElement>>()
+        private val messagesCache = LinkedHashMap<String, List<JsonElement>>()
         private val metadataCache = mutableMapOf<String, JsonObject>()
 
         /** 文件写盘统一走单线程后台队列，调用线程（含 UI）不再整文件同步重写。 */
         private val ioExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
             Thread(r, "chat-store-io").apply { isDaemon = true }
+        }
+
+        /** 原子写盘：先写 .tmp 再 rename，进程被杀/IO 中断不会留下半截文件（jsonl 一行损坏即整会话不可读）。 */
+        private fun atomicWrite(file: File, content: String) {
+            val tmp = File(file.parentFile, file.name + ".tmp")
+            tmp.writeText(content)
+            if (!tmp.renameTo(file)) {
+                file.delete()
+                tmp.copyTo(file, overwrite = true)
+                tmp.delete()
+            }
         }
 
         private fun cacheMessages(sessionId: String, list: List<JsonElement>) {
@@ -66,21 +78,21 @@ class ChatStore(private val context: Context) {
 
     fun get(id: String): SessionRecord? = list().firstOrNull { it.id == id }
 
-    fun list(): List<SessionRecord> {
+    fun list(): List<SessionRecord> = synchronized(sessionsLock) {
         sessionsCache?.let { return it }
         val loaded = sessionsDir.listFiles { f -> f.extension == "json" }
             ?.mapNotNull { f -> runCatching { json.decodeFromString<SessionRecord>(f.readText()) }.getOrNull() }
             ?.sortedWith(compareByDescending<SessionRecord> { it.pinned }.thenByDescending { it.updatedAt })
             ?: emptyList()
         sessionsCache = loaded
-        return loaded
+        loaded
     }
 
     fun recent(limit: Int): List<SessionRecord> = list().take(limit)
 
     fun upsert(record: SessionRecord) {
-        File(sessionsDir, "${record.id}.json").writeText(json.encodeToString(SessionRecord.serializer(), record))
-        sessionsCache = null
+        atomicWrite(File(sessionsDir, "${record.id}.json"), json.encodeToString(SessionRecord.serializer(), record))
+        synchronized(sessionsLock) { sessionsCache = null }
     }
 
     /**
@@ -110,20 +122,20 @@ class ChatStore(private val context: Context) {
             put("character_name", JsonPrimitive("unused"))
         }
         val file = File(chatsDir, "$sessionId.json")
-        ioExecutor.execute { file.writeText(json.encodeToString(JsonObject.serializer(), header)) }
+        ioExecutor.execute { atomicWrite(file, json.encodeToString(JsonObject.serializer(), header)) }
     }
 
     private fun writeMessages(sessionId: String, content: String) {
         clearMessagesCache(sessionId)
         val file = File(chatsDir, "$sessionId.jsonl")
-        ioExecutor.execute { file.writeText(content) }
+        ioExecutor.execute { atomicWrite(file, content) }
     }
 
     /** 消息列表写盘：内存缓存先更新，序列化+写盘在后台队列执行（调用线程不再整表导出）。 */
     private fun writeMessages(sessionId: String, list: List<JsonElement>) {
         cacheMessages(sessionId, list)
         val file = File(chatsDir, "$sessionId.jsonl")
-        ioExecutor.execute { file.writeText(ChatJsonl.export(list)) }
+        ioExecutor.execute { atomicWrite(file, ChatJsonl.export(list)) }
     }
 
     /** 等待所有排队写盘完成（导出/书签等直接读文件前调用，保证拿到最新内容）。 */
@@ -135,9 +147,19 @@ class ChatStore(private val context: Context) {
         synchronized(messagesCache) { messagesCache[sessionId]?.let { return it } }
         val file = File(chatsDir, "$sessionId.jsonl")
         if (!file.exists()) return emptyList()
-        val list = ChatJsonl.import(file.readText())
+        val text = file.readText()
+        // 容错导入：任一行损坏（历史版本非原子写盘残留的半截行）跳过该行，不丢整个会话
+        val list = runCatching { ChatJsonl.import(text) }.getOrElse {
+            text.lineSequence()
+                .filter { it.isNotBlank() }
+                .mapNotNull { line -> runCatching { json.parseToJsonElement(line) }.getOrNull() }
+                .toList()
+        }
         synchronized(messagesCache) {
-            if (messagesCache.size > 32) messagesCache.clear()
+            // LRU 驱逐：淘汰最久未写入的会话，不再全清（频繁切会话不抖动）
+            while (messagesCache.size >= 48) {
+                messagesCache.remove(messagesCache.keys.first())
+            }
             cacheMessages(sessionId, list)
         }
         return list
@@ -888,7 +910,9 @@ class ChatStore(private val context: Context) {
         return removedMessages.size
     }
 
-    /** /addswipe：给最后一条 AI 消息追加手动变体；返回新 swipe_id 字符串（失败返回 ""）。 */
+    /** /addswipe：给最后一条 AI 消息追加手动变体；返回新 swipe_id 字符串（失败返回 ""）。
+     *  官方 addSwipeCallback：swipes/swipe_info 恒追加；仅 switch=true 时先 syncMesToSwipe（把当前
+     *  mes/extra 回写进旧 swipe 槽位）再切换 swipe_id/mes/extra——switch=false 时 swipe_id 保持原值不动。 */
     fun addSwipeManual(sessionId: String, text: String, switchTo: Boolean): String {
         val list = messages(sessionId).toMutableList()
         if (list.isEmpty() || text.isBlank()) return ""
@@ -909,7 +933,7 @@ class ChatStore(private val context: Context) {
                 "swipe_id" to JsonPrimitive(0),
             ))
         }
-        val updated = list[idx].jsonObject
+        var updated = list[idx].jsonObject
         val swipes = swipesOf(updated).toMutableList()
         val swipeInfo = swipeInfoOf(updated).toMutableList()
         val now = java.time.Instant.now().toString()
@@ -921,6 +945,8 @@ class ChatStore(private val context: Context) {
             put(
                 "extra",
                 buildJsonObject {
+                    // 官方 swipe_info.extra.bias = extractMessageBias(value)（空串也写入）
+                    put("bias", JsonPrimitive(com.emberinn.engine.prompt.BiasEngine.extractMessageBias(text)))
                     put("gen_id", JsonPrimitive(System.currentTimeMillis()))
                     put("api", JsonPrimitive("manual"))
                     put("model", JsonPrimitive("slash command"))
@@ -928,27 +954,33 @@ class ChatStore(private val context: Context) {
             )
         }
         val newId = swipes.lastIndex
-        var newObj = JsonObject(updated + mapOf(
-            "swipes" to JsonArray(swipes.map { JsonPrimitive(it) }),
-            "swipe_info" to JsonArray(swipeInfo.map { it }),
-            "swipe_id" to JsonPrimitive(newId),
-        ))
         if (switchTo) {
-            newObj = JsonObject(
-                newObj +
-                    mapOf(
-                        "mes" to JsonPrimitive(text),
-                        "send_date" to JsonPrimitive(now),
-                        "extra" to JsonObject(
-                            ((updated["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()).apply {
-                                put("gen_id", JsonPrimitive(System.currentTimeMillis()))
-                                put("api", JsonPrimitive("manual"))
-                                put("model", JsonPrimitive("slash command"))
-                            },
-                        ),
-                    ),
+            // 官方 syncMesToSwipe：切换前把当前 mes/extra 回写进旧 swipe 槽位（保留 ad-hoc 修改）
+            val curId = currentSwipeId(updated).coerceIn(0, swipes.lastIndex)
+            if (curId != newId) {
+                swipes[curId] = updated["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+                val curInfo = swipeInfo.getOrNull(curId)?.toMutableMap() ?: mutableMapOf()
+                curInfo["send_date"] = updated["send_date"] ?: JsonNull
+                curInfo["gen_started"] = updated["gen_started"] ?: JsonNull
+                curInfo["gen_finished"] = updated["gen_finished"] ?: JsonNull
+                curInfo["extra"] = updated["extra"] ?: JsonObject(emptyMap())
+                swipeInfo[curId] = JsonObject(curInfo)
+            }
+            // 官方：swipe_id=新值、mes=swipes[newId]、extra=clone(swipe_info[newId].extra)
+            val newExtra = swipeInfo[newId]["extra"]?.let { it as? JsonObject } ?: JsonObject(emptyMap())
+            updated = JsonObject(
+                updated + mapOf(
+                    "swipe_id" to JsonPrimitive(newId),
+                    "mes" to JsonPrimitive(text),
+                    "extra" to newExtra,
+                ),
             )
         }
+        // switch=false：swipe_id 保持原值，mes 不动（官方不切换显示）
+        val newObj = JsonObject(updated + mapOf(
+            "swipes" to JsonArray(swipes.map { JsonPrimitive(it) }),
+            "swipe_info" to JsonArray(swipeInfo.map { it }),
+        ))
         list[idx] = newObj
         save(sessionId, list)
         return newId.toString()
