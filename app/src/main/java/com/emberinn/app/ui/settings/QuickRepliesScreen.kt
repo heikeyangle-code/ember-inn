@@ -44,7 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.QuickReplyStore
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.slash.QuickReplySlot
 
@@ -188,12 +188,12 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                     draftPreventAutoExecute = slot.preventAutoExecute
                                 }
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
                             }
                             IconButton(onClick = {
                                 persist(slots.filterNot { it.label == slot.label })
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
                             EmberSwitch(
                                 checked = slot.enabled,
@@ -215,7 +215,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                     draftAutomationId = ""
                     draftPreventAutoExecute = false
                 },
-                icon = PhosphorIcons.Plus,
+                icon = FaIcons.Plus,
                 expandWidth = true,
                 modifier = Modifier.padding(top = 8.dp),
             )

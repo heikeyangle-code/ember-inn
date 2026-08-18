@@ -7,7 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -115,7 +115,7 @@ fun ProviderListScreen(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text("搜索提供商") },
-            leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
+            leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
@@ -184,7 +184,7 @@ private fun ProfileChip(
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                 Icon(
-                    PhosphorIcons.Close,
+                    FaIcons.XMark,
                     contentDescription = "删除连接",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(14.dp),
@@ -257,7 +257,7 @@ private fun ProviderCard(
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -323,7 +323,7 @@ fun ProviderDetailScreen(
             trailing = if (existing != null) {
                 {
                     IconButton(onClick = { confirmDelete = true }) {
-                        Icon(PhosphorIcons.Delete, contentDescription = "删除连接")
+                        Icon(FaIcons.TrashCan, contentDescription = "删除连接")
                     }
                 }
             } else null,
@@ -441,7 +441,7 @@ fun ProviderDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(4.dp))
-            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
             }
@@ -1241,7 +1241,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text("搜索模型") },
-                leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
+                leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -1328,7 +1328,7 @@ private fun TopBar(
     ) {
         // 返回按钮在左上角，但留足上下间距
         IconButton(onClick = onBack) {
-            Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+            Icon(FaIcons.ArrowLeft, contentDescription = "返回")
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)

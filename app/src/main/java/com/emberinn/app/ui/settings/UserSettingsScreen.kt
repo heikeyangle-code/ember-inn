@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 
 /**
  * 用户设置（官方 div_user_settings 移植）：
@@ -73,12 +73,12 @@ fun UserSettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 item {
-                    UserNavCard("外观与主题", "主题模式 · 预设 · 氛围滤镜 · 圆角字体", PhosphorIcons.PaintBrush, onOpenAppearance)
+                    UserNavCard("外观与主题", "主题模式 · 预设 · 氛围滤镜 · 圆角字体", FaIcons.Paintbrush, onOpenAppearance)
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("排版", "字号 · 行距", PhosphorIcons.FileText, onOpenTypography) }
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "Markdown · 气泡", PhosphorIcons.Eye, onOpenRender) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("排版", "字号 · 行距", FaIcons.FileLines, onOpenTypography) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "Markdown · 气泡", FaIcons.Eye, onOpenRender) }
                     }
                 }
                 item {
@@ -189,8 +189,8 @@ fun UserSettingsScreen(
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("数据与隐私", "导出 · 清除", PhosphorIcons.Folder, onOpenData) }
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("关于", "版本 · 许可", PhosphorIcons.Star, onOpenAbout) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("数据与隐私", "导出 · 清除", FaIcons.Folder, onOpenData) }
+                        Box(modifier = Modifier.weight(1f)) { UserNavCard("关于", "版本 · 许可", FaIcons.Star, onOpenAbout) }
                     }
                 }
             }

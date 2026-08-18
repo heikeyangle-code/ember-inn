@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 
 private data class ExtensionEntry(
     val title: String,
@@ -54,16 +54,16 @@ fun ExtensionsHubScreen(
     onOpenData: () -> Unit,
 ) {
     val entries = listOf(
-        ExtensionEntry("翻译 · 图像 · 向量服务", "第三方服务 Key 与开关", PhosphorIcons.Translate, onOpenServices),
-        ExtensionEntry("语音朗读 TTS", "系统 TTS · 自动朗读", PhosphorIcons.SpeakerHigh, onOpenVoice),
-        ExtensionEntry("快捷回复", "一键执行斜杠命令组", PhosphorIcons.Lightning, onOpenQuickReplies),
-        ExtensionEntry("向量记忆", "数据银行 · 长期记忆", PhosphorIcons.ChartBar, onOpenMemory),
-        ExtensionEntry("图像说明", "本地模型为图片生成描述", PhosphorIcons.ImageSquare, onOpenCaption),
-        ExtensionEntry("表情分类", "角色立绘表情切换", PhosphorIcons.MaskHappy, onOpenExpression),
-        ExtensionEntry("正则脚本", "输入/输出文本正则替换", PhosphorIcons.GitBranch, onOpenRegex),
-        ExtensionEntry("互动模式", "扩展互动配置", PhosphorIcons.Sparkle, onOpenInteractive),
-        ExtensionEntry("作者注", "固定注入提示词与深度", PhosphorIcons.Edit, onOpenAuthorsNote),
-        ExtensionEntry("数据管理", "导出 · 备份 · 清除", PhosphorIcons.Folder, onOpenData),
+        ExtensionEntry("翻译 · 图像 · 向量服务", "第三方服务 Key 与开关", FaIcons.Language, onOpenServices),
+        ExtensionEntry("语音朗读 TTS", "系统 TTS · 自动朗读", FaIcons.VolumeHigh, onOpenVoice),
+        ExtensionEntry("快捷回复", "一键执行斜杠命令组", FaIcons.Brain, onOpenQuickReplies),
+        ExtensionEntry("向量记忆", "数据银行 · 长期记忆", FaIcons.Database, onOpenMemory),
+        ExtensionEntry("图像说明", "本地模型为图片生成描述", FaIcons.Image, onOpenCaption),
+        ExtensionEntry("表情分类", "角色立绘表情切换", FaIcons.FaceSmile, onOpenExpression),
+        ExtensionEntry("正则脚本", "输入/输出文本正则替换", FaIcons.CodeBranch, onOpenRegex),
+        ExtensionEntry("互动模式", "扩展互动配置", FaIcons.WandMagicSparkles, onOpenInteractive),
+        ExtensionEntry("作者注", "固定注入提示词与深度", FaIcons.Pencil, onOpenAuthorsNote),
+        ExtensionEntry("数据管理", "导出 · 备份 · 清除", FaIcons.Folder, onOpenData),
     )
 
     SettingsGlassPage { settingsSky ->
@@ -112,7 +112,7 @@ private fun ExtensionCard(entry: ExtensionEntry) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
     }
 }

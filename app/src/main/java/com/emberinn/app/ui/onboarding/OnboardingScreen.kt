@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.glassEdgeHighlight
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 
 /**
  * 首启欢迎页：品牌情绪优先——全屏氛围渐变 + 环境光斑 + 发光品牌标记，
@@ -155,7 +155,7 @@ fun OnboardingScreen(
                 Spacer(Modifier.height(40.dp))
                 OnboardingActionCard(
                     primary = true,
-                    icon = PhosphorIcons.Folder,
+                    icon = FaIcons.Folder,
                     title = "导入角色卡",
                     subtitle = "支持 PNG / JSON / CHARX · 从本地文件开始",
                     onClick = onImport,
@@ -164,7 +164,7 @@ fun OnboardingScreen(
                 Spacer(Modifier.height(12.dp))
                 OnboardingActionCard(
                     primary = false,
-                    icon = PhosphorIcons.Send,
+                    icon = FaIcons.PaperPlane,
                     title = "直接开始聊天",
                     subtitle = "暂不导入，先进酒馆看看",
                     onClick = onDirectChat,
@@ -260,7 +260,7 @@ private fun OnboardingActionCard(
                 )
             }
             Icon(
-                PhosphorIcons.CaretRight,
+                FaIcons.ChevronRight,
                 contentDescription = null,
                 tint = if (primary) theme.onPrimary.copy(alpha = 0.85f) else theme.outline,
                 modifier = Modifier.size(20.dp),

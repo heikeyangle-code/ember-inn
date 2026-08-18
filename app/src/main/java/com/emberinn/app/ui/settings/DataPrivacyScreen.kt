@@ -1,7 +1,7 @@
 package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.edgeSwipeBack
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -88,7 +88,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             DataRow(
-                icon = PhosphorIcons.FileText,
+                icon = FaIcons.FileLines,
                 title = "导出全部数据（备份）",
                 subtitle = "角色卡 / 聊天记录 / 会话 / 头像 / 提供商配置 → 一个 zip",
                 enabled = !exporting,
@@ -96,14 +96,14 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                 onClick = { exportLauncher.launch("EmberInn-备份-${System.currentTimeMillis().toString().takeLast(10)}.zip") },
             )
             DataRow(
-                icon = PhosphorIcons.Folder,
+                icon = FaIcons.Folder,
                 title = "数据存储位置",
                 subtitle = context.filesDir.absolutePath + "\n数据仅保存在本机，不上传任何服务器",
                 enabled = false,
                 onClick = {},
             )
             DataRow(
-                icon = PhosphorIcons.Delete,
+                icon = FaIcons.TrashCan,
                 title = "清除全部数据",
                 subtitle = "删除所有角色、聊天、会话与提供商配置，不可撤销",
                 danger = true,
@@ -111,7 +111,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             )
             // 设置快照（官方 user.js 设置快照语义：命名保存/恢复/删除 SharedPreferences + 提供商档案）
             DataRow(
-                icon = PhosphorIcons.FileText,
+                icon = FaIcons.FileLines,
                 title = "设置快照",
                 subtitle = "保存/恢复设置与提供商配置（不含聊天数据）；恢复后重启 App 完全生效",
                 trailing = "新建",
@@ -140,7 +140,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                             snapshots = SettingsSnapshotStore.list(context)
                             Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
                         }) {
-                            Icon(PhosphorIcons.Delete, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

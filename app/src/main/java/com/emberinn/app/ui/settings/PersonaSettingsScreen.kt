@@ -48,7 +48,7 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import java.io.File
 
 /** 官方 persona_description_positions（下拉值）。 */
@@ -118,7 +118,7 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
                 sky = settingsSky,
                 trailing = {
                     IconButton(onClick = { editNew = true; editTarget = null }) {
-                        Icon(PhosphorIcons.Plus, contentDescription = "新建人设")
+                        Icon(FaIcons.Plus, contentDescription = "新建人设")
                     }
                 },
             )
@@ -251,7 +251,7 @@ private fun PersonaCard(
                         .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(PhosphorIcons.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                    Icon(FaIcons.User, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -280,7 +280,7 @@ private fun PersonaCard(
             }
             Box {
                 IconButton(onClick = { menu = true }) {
-                    Icon(PhosphorIcons.DotsThreeVertical, contentDescription = "更多", modifier = Modifier.size(18.dp))
+                    Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(18.dp))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("编辑") }, onClick = { menu = false; onEdit() })
@@ -343,7 +343,7 @@ private fun PersonaEditDialog(initial: Persona?, onDismiss: () -> Unit, onSave: 
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
-                            Icon(PhosphorIcons.CaretDown, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Icon(FaIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(14.dp))
                         }
                     }
                     DropdownMenu(expanded = positionMenu, onDismissRequest = { positionMenu = false }) {

@@ -14,7 +14,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -186,14 +186,14 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                                 modifier = Modifier.weight(1f).clickable { editingEntryIdx = i },
                             )
                             IconButton(onClick = { editingEntryIdx = i }) {
-                                Icon(PhosphorIcons.Edit, contentDescription = "编辑条目")
+                                Icon(FaIcons.Pencil, contentDescription = "编辑条目")
                             }
                             IconButton(onClick = {
                                 editingDrafts = editingDrafts.filterIndexed { j, _ -> j != i }
                                 worldStore.saveDrafts(currentEditing, w.displayName, editingDrafts)
                                 worlds = worldStore.list()
                             }) {
-                                Icon(PhosphorIcons.Delete, contentDescription = "删除条目", tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除条目", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -218,13 +218,13 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                             editingWorld = w.name
                             editingDrafts = worldStore.drafts(w.name)
                         }) {
-                            Icon(PhosphorIcons.Edit, contentDescription = "编辑世界条目")
+                            Icon(FaIcons.Pencil, contentDescription = "编辑世界条目")
                         }
                         IconButton(onClick = {
                             exportTarget = w.name
                             exportLauncher.launch("${w.name}.json")
                         }) {
-                            Icon(PhosphorIcons.FileText, contentDescription = "导出世界")
+                            Icon(FaIcons.FileLines, contentDescription = "导出世界")
                         }
                         IconButton(onClick = {
                             worldStore.delete(w.name)
@@ -232,7 +232,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                             globalSelect = globalSelect - w.name
                             WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
                         }) {
-                            Icon(PhosphorIcons.Delete, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

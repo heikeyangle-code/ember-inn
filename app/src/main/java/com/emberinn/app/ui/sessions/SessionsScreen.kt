@@ -10,7 +10,7 @@ import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.theme.LocalThemePreset
 
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -202,7 +202,7 @@ fun SessionsScreen(
         }
 
         EmberGlassFab(
-            icon = PhosphorIcons.Plus,
+            icon = FaIcons.Plus,
             contentDescription = "新建对话",
             onClick = { EmberHaptics.select(haptic); showNewSheet = true },
             sky = sky,
@@ -343,13 +343,13 @@ fun SessionsScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                SheetRow(PhosphorIcons.Star, if (session.pinned) "取消置顶" else "置顶") {
+                SheetRow(FaIcons.Star, if (session.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(session); menuSession = null
                 }
-                SheetRow(PhosphorIcons.Share, "导出聊天（JSONL）") {
+                SheetRow(FaIcons.FileExport, "导出聊天（JSONL）") {
                     exportLauncher.launch("${session.name}-${timeStamp(session.updatedAt)}.jsonl")
                 }
-                SheetRow(PhosphorIcons.Delete, "删除会话", danger = true) {
+                SheetRow(FaIcons.TrashCan, "删除会话", danger = true) {
                     deleteTarget = session; menuSession = null
                 }
             }
@@ -452,7 +452,7 @@ private fun SessionRow(
                         if (session.pinned) {
                             Spacer(Modifier.width(6.dp))
                             Icon(
-                                PhosphorIcons.Star,
+                                FaIcons.Star,
                                 contentDescription = "置顶",
                                 tint = seed ?: MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp),
@@ -475,7 +475,7 @@ private fun SessionRow(
                     color = MaterialTheme.colorScheme.outline,
                 )
                 IconButton(onClick = onMenu, modifier = Modifier.size(28.dp)) {
-                    Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
+                    Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -545,7 +545,7 @@ private fun NewChatSheet(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
             HorizontalDivider()
-            SheetRow(PhosphorIcons.Person, "AI 对话", subtitle = "不用角色卡，直接聊", onClick = { onPick(null) })
+            SheetRow(FaIcons.User, "AI 对话", subtitle = "不用角色卡，直接聊", onClick = { onPick(null) })
             if (characters.isNotEmpty()) {
                 Text(
                     text = "选择一个角色",
@@ -574,7 +574,7 @@ private fun NewChatSheet(
                 }
             }
             HorizontalDivider(modifier = Modifier.padding(top = 10.dp))
-            SheetRow(PhosphorIcons.Plus, "新建群聊", subtitle = "勾选已有角色，按 APPEND/SWAP 轮流生成", onClick = onGroup)
+            SheetRow(FaIcons.Plus, "新建群聊", subtitle = "勾选已有角色，按 APPEND/SWAP 轮流生成", onClick = onGroup)
         }
     }
 }
@@ -644,7 +644,7 @@ private fun EmptySessions(onNew: () -> Unit) {
         body = "新建一个对话，或去角色页点一张角色卡开始",
         actionLabel = "新建对话",
         onAction = onNew,
-        icon = PhosphorIcons.List,
+        icon = FaIcons.ListUl,
         modifier = Modifier.fillMaxSize().padding(32.dp),
     )
 }

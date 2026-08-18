@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 
 /** 颜色字段（README UI 质感升级）：大色块（彩色阴影 + 白边内描边）+ 标签 + hex 等宽预览 + 编辑按钮 + hex 输入。
  *  整行可点开选色盘；选色盘支持 #RRGGBB / #AARRGGBB / 3 位简写。
@@ -85,7 +85,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                 )
             }
             Icon(
-                PhosphorIcons.Edit,
+                FaIcons.Pencil,
                 contentDescription = "选色",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp).padding(end = 4.dp),

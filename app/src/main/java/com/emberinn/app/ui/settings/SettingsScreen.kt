@@ -1,6 +1,6 @@
 package com.emberinn.app.ui.settings
 
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import com.emberinn.app.ui.components.edgeSwipeBack
@@ -281,14 +281,14 @@ private fun SettingsHome(
 
     // 官方 8 分区（顺序对照官方 index.html 顶部抽屉栏）
     val sections = listOf(
-        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", PhosphorIcons.Settings, onOpenAiResponse),
-        OfficialSection("API 连接", providerSummary, PhosphorIcons.Link, onOpenProviders),
-        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", PhosphorIcons.Edit, onOpenFormatting),
-        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", PhosphorIcons.Book, onOpenWorldInfo),
-        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", PhosphorIcons.User, onOpenUserSettings),
-        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", PhosphorIcons.ImageSquare, onOpenBackgrounds),
-        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", PhosphorIcons.Sparkle, onOpenExtensionsHub),
-        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", PhosphorIcons.Person, onOpenPersonas),
+        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", FaIcons.Gear, onOpenAiResponse),
+        OfficialSection("API 连接", providerSummary, FaIcons.Link, onOpenProviders),
+        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", FaIcons.Pencil, onOpenFormatting),
+        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", FaIcons.BookOpen, onOpenWorldInfo),
+        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", FaIcons.User, onOpenUserSettings),
+        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", FaIcons.Image, onOpenBackgrounds),
+        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", FaIcons.WandMagicSparkles, onOpenExtensionsHub),
+        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", FaIcons.User, onOpenPersonas),
     )
 
     val visibleSections = remember(sections, query, providerSummary) {
@@ -330,11 +330,11 @@ private fun SettingsHome(
                     value = query,
                     onValueChange = { query = it },
                     placeholder = { Text("搜索设置") },
-                    leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
+                    leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(PhosphorIcons.Close, contentDescription = "清除")
+                                Icon(FaIcons.XMark, contentDescription = "清除")
                             }
                         }
                     },
@@ -386,7 +386,7 @@ private fun OfficialSectionCard(section: OfficialSection) {
                 )
             }
             Icon(
-                PhosphorIcons.CaretRight,
+                FaIcons.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
@@ -505,7 +505,7 @@ fun SettingsTopBar(
         ) {
             // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
             IconButton(onClick = onBack) {
-                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+                Icon(FaIcons.ArrowLeft, contentDescription = "返回")
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)

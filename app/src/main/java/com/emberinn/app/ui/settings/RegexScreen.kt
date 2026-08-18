@@ -38,7 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.regex.RegexPipelineScript
 
@@ -172,12 +172,12 @@ fun RegexScreen(onBack: () -> Unit) {
                                 draftDisabled = script.disabled
                                 draftPlacement = script.placement
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
                             }
                             IconButton(onClick = {
                                 persist(scripts.filterIndexed { i, _ -> i != index })
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
                             EmberSwitch(
                                 checked = !script.disabled,
@@ -289,13 +289,13 @@ fun RegexScreen(onBack: () -> Unit) {
                                 draftDisabled = script.disabled
                                 draftPlacement = script.placement
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Edit, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
                             }
                             IconButton(onClick = {
                                 val list = presetSets[activePreset].orEmpty().filterIndexed { j, _ -> j != i }
                                 savePresetSetsState(presetSets + (activePreset to list))
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(PhosphorIcons.Delete, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
                             }
                             EmberSwitch(
                                 checked = !script.disabled,

@@ -26,7 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.material3.Icon
 
 /** 作者注释全局默认（官方 authors-note.js extension_settings.note）。 */
@@ -116,7 +116,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                     IconButton(onClick = {
                         prefs = prefs.copy(charaNotes = prefs.charaNotes - name)
                     }) {
-                        Icon(PhosphorIcons.Delete, contentDescription = "删除角色备注", modifier = Modifier.size(16.dp))
+                        Icon(FaIcons.TrashCan, contentDescription = "删除角色备注", modifier = Modifier.size(16.dp))
                     }
                 }
             }

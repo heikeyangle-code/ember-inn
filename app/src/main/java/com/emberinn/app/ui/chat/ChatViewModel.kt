@@ -2053,13 +2053,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
     }
 
-    /** 官方 option_start_new_chat：为当前角色/群开一个新聊天文件（旧聊天保留在会话列表）。 */
+    /** 官方 RossAscends-mods.js humanizedDateTime：`yyyy-MM-dd@HHh mms sms msms`。 */
+    private fun humanizedDateTime(now: Long = System.currentTimeMillis()): String {
+        val t = java.time.OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(now), java.time.ZoneId.systemDefault())
+        return "%04d-%02d-%02d@%02dh%02dm%02ds%03dms".format(
+            t.year, t.monthValue, t.dayOfMonth, t.hour, t.minute, t.second, t.nano / 1_000_000,
+        )
+    }
+
+    /** 官方 doNewChat（script.js:10558-10586）：新聊天文件命名 `{角色名} - {humanizedDateTime()}`，
+     * 群聊走 createNewGroupChat（同样时间命名）；旧聊天保留。 */
     fun startNewChat(): com.emberinn.app.data.SessionRecord? {
         val src = chatStore.get(sessionId) ?: return null
+        val displayName = (group?.name ?: character?.name ?: src.name).ifBlank { src.name }
         val record = com.emberinn.app.data.SessionRecord(
             id = java.util.UUID.randomUUID().toString(),
             characterId = src.characterId,
-            name = src.name,
+            name = "$displayName - ${humanizedDateTime()}",
             groupId = src.groupId,
         )
         chatStore.upsert(record)
@@ -2072,6 +2082,64 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val mainChat = chatStore.metadata(sessionId)["main_chat"]?.jsonPrimitive?.contentOrNull
             ?: return null
         return chatStore.list().firstOrNull { it.id != src.id && it.name == mainChat && it.characterId == src.characterId }
+    }
+
+    /** 官方 past chats 条目（displayChats：文件名 / 消息数 / 预览 / 末条时间）。 */
+    data class PastChatEntry(
+        val record: com.emberinn.app.data.SessionRecord,
+        val messageCount: Int,
+        val preview: String?,
+        val lastDate: Long,
+        val isCurrent: Boolean,
+    )
+
+    /** 官方 displayPastChats + displayChats：同角色/群的聊天文件列表，按末条时间倒序，支持搜索过滤。 */
+    fun pastChats(query: String = ""): List<PastChatEntry> {
+        val src = chatStore.get(sessionId) ?: return emptyList()
+        val q = query.trim()
+        return chatStore.list()
+            .filter { it.characterId == src.characterId && it.groupId == src.groupId }
+            .filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
+            .map { r ->
+                PastChatEntry(
+                    record = r,
+                    messageCount = chatStore.messages(r.id).size,
+                    preview = chatStore.lastMessage(r.id)?.take(80),
+                    lastDate = chatStore.lastMessageDate(r.id),
+                    isCurrent = r.id == sessionId,
+                )
+            }
+            .sortedByDescending { it.lastDate }
+    }
+
+    /** 官方 renameChatFile。 */
+    fun renamePastChat(id: String, newName: String) {
+        val safe = newName.trim()
+        if (safe.isNotBlank()) chatStore.renameSession(id, safe)
+    }
+
+    /** 当前会话 id（Past Chats 删除当前聊天时判断跳转）。 */
+    val currentSessionId: String get() = sessionId
+
+    /** 官方 delChat（PastChat_cross）：删除聊天文件；返回删除后剩余的 past chats。 */
+    fun deletePastChat(id: String) {
+        chatStore.delete(id)
+    }
+
+    /** 官方 "Download chat as plain text document"。 */
+    fun exportChatPlainText(id: String): String? = chatStore.exportPlainText(id)
+
+    /** 官方 dialogue_del_mes_ok：从勾选消息起（含）全部删除 + 明细降序清理 + 记忆触发。 */
+    fun truncateFrom(index: Int) {
+        if (_isStreaming.value) return
+        val removed = chatStore.truncateFrom(sessionId, index)
+        if (removed.isEmpty()) return
+        // 官方：for (let i = chat.length-1; i >= this_del_mes; i--) deleteItemizedPromptForMessage(i)
+        for (i in (index + removed.size - 1) downTo index) {
+            ItemizationStore.deleteMessage(getApplication<Application>().filesDir, sessionId, i)
+        }
+        refreshMessages()
+        memoryService.maybeAutoSummarize(sessionId)
     }
 
     /** 编辑消息（官方 updateMessage：getRegexedString(isEdit) → extractMessageBias → substituteParams → 清/写 extra.bias）。 */
@@ -2523,7 +2591,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 导出聊天原始 JSONL（官方聊天文件格式，可直接进酒馆）。 */
-    fun exportJsonl(): String? = chatStore.exportJsonl(sessionId)
+    fun exportJsonl(id: String = sessionId): String? = chatStore.exportJsonl(id)
 
     // ---- 群聊调度（P2-9）：官方 GroupScheduler 选人 + GroupCharacterCardsEngine 合并 + 顺序生成 ----
 

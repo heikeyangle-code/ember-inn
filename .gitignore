@@ -14,3 +14,4 @@
 !debug.keystore
 scripts/diff/vendor/node_modules/
 **/.kotlin/
+.fa-cache/

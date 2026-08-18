@@ -35,7 +35,7 @@ import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import java.io.File
 
 /** 表情精灵管理（对齐官方 extensions/expressions：角色精灵文件 + 选择设置）。 */
@@ -123,7 +123,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         EmberPrimaryButton(
                             label = "导入精灵图片（PNG/JPG/WebP）",
                             onClick = { picker.launch("image/*") },
-                            icon = PhosphorIcons.Plus,
+                            icon = FaIcons.Plus,
                             expandWidth = true,
                         )
                     }
@@ -138,7 +138,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                             store.deleteSprite(selectedName, sprite.path)
                             sprites = store.sprites(selectedName)
                         }) {
-                            Icon(PhosphorIcons.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

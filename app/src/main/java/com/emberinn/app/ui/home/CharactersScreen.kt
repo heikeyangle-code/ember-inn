@@ -11,7 +11,7 @@ import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.theme.LocalVibe
 
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import android.content.Context
 import android.net.Uri
@@ -287,11 +287,11 @@ fun CharactersScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(PhosphorIcons.Folder, "从文件导入（PNG / JSON / CharX）") {
+                MenuRow(FaIcons.Folder, "从文件导入（PNG / JSON / CharX）") {
                     showImportSheet = false
                     importLauncher.launch(arrayOf("*/*"))
                 }
-                MenuRow(PhosphorIcons.Share, "从 URL 导入") {
+                MenuRow(FaIcons.Download, "从 URL 导入") {
                     showImportSheet = false
                     urlDraft = ""
                     showUrlImport = true
@@ -351,20 +351,20 @@ fun CharactersScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(PhosphorIcons.Star, if (record.pinned) "取消置顶" else "置顶") {
+                MenuRow(FaIcons.Star, if (record.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(record); menuRecord = null
                 }
-                MenuRow(PhosphorIcons.Plus, "新会话") {
+                MenuRow(FaIcons.Plus, "新会话") {
                     onOpenChat(vm.newSession(record.id, record.name)); menuRecord = null
                 }
-                MenuRow(PhosphorIcons.Edit, "查看 / 编辑详情") {
+                MenuRow(FaIcons.Pencil, "查看 / 编辑详情") {
                     menuRecord = null
                     onOpenDetail(record)
                 }
-                MenuRow(PhosphorIcons.Share, "导出 JSON") {
+                MenuRow(FaIcons.FileExport, "导出 JSON") {
                     exportLauncher.launch("${record.name}.json")
                 }
-                MenuRow(PhosphorIcons.Delete, "删除角色", danger = true) {
+                MenuRow(FaIcons.TrashCan, "删除角色", danger = true) {
                     deleteTarget = record; menuRecord = null
                 }
             }
@@ -445,7 +445,7 @@ private fun SearchResultsColumn(
             EmberEmptyState(
                 title = "没有找到「$query」",
                 body = "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
-                icon = PhosphorIcons.Search,
+                icon = FaIcons.MagnifyingGlass,
                 modifier = Modifier.fillMaxSize().padding(32.dp),
             )
         } else {
@@ -577,7 +577,7 @@ private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
                 Text(hit.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -630,7 +630,7 @@ private fun HomeTopBar(
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = { Text("搜索角色 / 会话 / 世界书 / 设置") },
-                leadingIcon = { Icon(PhosphorIcons.Search, contentDescription = null) },
+                leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -668,7 +668,7 @@ private fun GlassFab(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(PhosphorIcons.Plus, contentDescription = "导入角色卡", tint = MaterialTheme.colorScheme.primary)
+        Icon(FaIcons.Plus, contentDescription = "导入角色卡", tint = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -846,10 +846,10 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                             modifier = Modifier.weight(1f),
                         )
                         if (record.pinned) {
-                            Icon(PhosphorIcons.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                            Icon(FaIcons.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         }
                         IconButton(onClick = onMenu, modifier = Modifier.size(24.dp)) {
-                            Icon(PhosphorIcons.MoreVert, contentDescription = "更多", modifier = Modifier.size(16.dp))
+                            Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(16.dp))
                         }
                     }
                     Text(
@@ -887,7 +887,7 @@ private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
         onAction = onImport,
         secondaryLabel = "直接开始聊天",
         onSecondary = onDirectChat,
-        icon = PhosphorIcons.Person,
+        icon = FaIcons.User,
         modifier = Modifier.fillMaxSize().padding(32.dp),
     )
 }

@@ -14,7 +14,7 @@ import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.glassEdgeHighlight
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
@@ -284,6 +284,18 @@ fun ChatScreen(
     // 以 send_date 为身份键，滑动/刷新不串行；流式结束后 finalized 行回到折叠（官方重新渲染重置）。
     val reasoningExpandedMap = remember { mutableStateMapOf<String, Boolean>() }
     var menuMessageIndex by remember { mutableStateOf<MsgTarget?>(null) }
+    // 官方 openMessageDelete 删除模式：每条消息出现勾选框，勾选一条 → 从该条截断到末尾（this_del_mes）
+    var deleteMode by remember { mutableStateOf(false) }
+    var deleteCheckIndex by remember { mutableStateOf<Int?>(null) }
+    // 官方 displayPastChats：管理聊天文件弹层（同角色/群全部聊天）
+    var showPastChats by remember { mutableStateOf(false) }
+    var pastChatsQuery by remember { mutableStateOf("") }
+    var renameChatTarget by remember { mutableStateOf<Pair<String, String>?>(null) } // id to name
+    var renameChatDraft by remember { mutableStateOf("") }
+    var deleteChatTarget by remember { mutableStateOf<Pair<String, String>?>(null) } // id to name
+    var pendingExportText by remember { mutableStateOf<String?>(null) }
+    var pendingExportTextName by remember { mutableStateOf("") }
+    var pendingExportJsonl by remember { mutableStateOf<Pair<String, String>?>(null) } // id to name
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -364,13 +376,16 @@ fun ChatScreen(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         uri?.let { u ->
-            val text = vm.exportJsonl()
+            val pending = pendingExportJsonl
+            val text = pending?.let { vm.exportJsonl(it.first) } ?: vm.exportJsonl()
+            val exportName = pending?.second ?: name
+            pendingExportJsonl = null
             if (text == null) {
                 Toast.makeText(context, "这条会话还没有消息，无内容可导出", Toast.LENGTH_SHORT).show()
             } else {
                 runCatching {
                     context.contentResolver.openOutputStream(u)?.use { it.write(text.toByteArray()) }
-                    Toast.makeText(context, "已导出：$name.jsonl", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "已导出：$exportName.jsonl", Toast.LENGTH_SHORT).show()
                 }.onFailure { e ->
                     Toast.makeText(context, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -382,6 +397,22 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let { vm.setChatBackground(it) }
+    }
+
+    // 官方 past chats 行内 fa-file-lines：Download chat as plain text document
+    val exportChatTextLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) {
+            val text = pendingExportText
+            if (text != null) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                    Toast.makeText(context, "已导出：$pendingExportTextName.txt", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        pendingExportText = null
     }
 
     var embedTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
@@ -449,20 +480,20 @@ fun ChatScreen(
                     modifier = Modifier.padding(top = 2.dp),
                 )
                 Spacer(Modifier.height(10.dp))
-                AttachSheetRow(PhosphorIcons.Folder, "从文件选择…", "图片 / 视频 / 音频", enabled = true) {
+                AttachSheetRow(FaIcons.Folder, "从文件选择…", "图片 / 视频 / 音频", enabled = true) {
                     showAttachOptions = false
                     mediaPicker.launch(arrayOf("image/*", "video/*", "audio/*"))
                 }
-                AttachSheetRow(PhosphorIcons.Link, "从 URL 添加…", "粘贴图片 / 媒体链接", enabled = true) {
+                AttachSheetRow(FaIcons.Link, "从 URL 添加…", "粘贴图片 / 媒体链接", enabled = true) {
                     showAttachOptions = false
                     showUrlAttachmentDialog = true
                 }
-                AttachSheetRow(PhosphorIcons.ImageSquare, "AI 图像生成", "用当前模型生成图片", enabled = true) {
+                AttachSheetRow(FaIcons.Image, "AI 图像生成", "用当前模型生成图片", enabled = true) {
                     showAttachOptions = false
                     showImageDialog = true
                 }
                 AttachSheetRow(
-                    PhosphorIcons.Sparkle,
+                    FaIcons.WandMagicSparkles,
                     "图片描述",
                     if (pendingMedia.any { it.type == "image" }) "为已选图片生成描述并发送" else "先添加图片后可用",
                     enabled = pendingMedia.any { it.type == "image" },
@@ -470,7 +501,7 @@ fun ChatScreen(
                     showAttachOptions = false
                     vm.startCaptionFlow()
                 }
-                AttachSheetRow(PhosphorIcons.Mic, "语音输入", "开发中", enabled = false) {}
+                AttachSheetRow(FaIcons.Microphone, "语音输入", "开发中", enabled = false) {}
             }
         }
     }
@@ -833,7 +864,11 @@ fun ChatScreen(
                                 },
                                 onClassifyExpression = { t, cb -> vm.classifyExpression(t, cb) },
                                 classifyEnabled = true,
-                                onLongPress = { menuMessageIndex = MsgTarget(item.index, el) },
+                                deleteCheck = if (deleteMode) deleteCheckIndex == item.index else null,
+                                onDeleteCheck = if (deleteMode) ({
+                                    deleteCheckIndex = if (deleteCheckIndex == item.index) null else item.index
+                                }) else null,
+                                onLongPress = { if (!deleteMode) menuMessageIndex = MsgTarget(item.index, el) },
                             )
                         }
                         ChatItem.Streaming -> {
@@ -891,7 +926,37 @@ fun ChatScreen(
                 }
             }
 
-            ChatInputBar(
+            // 官方 #dialogue_del_mes（Delete/Cancel）：删除模式时输入栏替换为确认条
+            if (deleteMode) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 2.dp) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            if (deleteCheckIndex == null) "点选一条消息：从该条起全部删除"
+                            else "将从第 ${deleteCheckIndex!! + 1} 条起全部删除",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { deleteMode = false; deleteCheckIndex = null }) { Text("取消") }
+                        TextButton(
+                            enabled = deleteCheckIndex != null,
+                            onClick = {
+                                deleteCheckIndex?.let { vm.truncateFrom(it) }
+                                deleteMode = false
+                                deleteCheckIndex = null
+                                followBottom = true
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                        ) { Text("删除") }
+                    }
+                }
+            } else {
+                ChatInputBar(
                 accent = accent,
                 input = input,
                 impersonating = isImpersonating,
@@ -939,7 +1004,8 @@ fun ChatScreen(
                             Modifier.background(MaterialTheme.colorScheme.surface)
                         },
                     ),
-            )
+                )
+            }
         }
 
         ChatTopBar(
@@ -1081,28 +1147,28 @@ fun ChatScreen(
                     )
                     HorizontalDivider()
                     // ── 官方 extraMesButtons 顺序：翻译 → 生成图片 → 朗读 → Prompt → 隐藏 → 媒体样式 → 嵌入 ──
-                    MenuRow(PhosphorIcons.Translate, "翻译这条消息") {
+                    MenuRow(FaIcons.Language, "翻译这条消息") {
                         vm.translateMessage(index)
                         menuMessageIndex = null
                     }
                     if (text.isNotBlank()) {
-                        MenuRow(PhosphorIcons.PaintBrush, "生成图片（用这条消息作提示）") {
+                        MenuRow(FaIcons.Paintbrush, "生成图片（用这条消息作提示）") {
                             menuMessageIndex = null
                             vm.generateImageForMessage(index)
                         }
                     }
-                    MenuRow(PhosphorIcons.Megaphone, "朗读这条消息") {
+                    MenuRow(FaIcons.Bullhorn, "朗读这条消息") {
                         vm.narrateMessage(index)
                         menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
+                    MenuRow(FaIcons.SquarePollHorizontal, "提示词分节明细（官方 Prompt Itemization）") {
                         tokenStatsIndex = MsgTarget(index, el)
                         menuMessageIndex = null
                     }
                     if (!isRealSystem) {
                         val hidden = isSystemMsg
                         MenuRow(
-                            if (hidden) PhosphorIcons.EyeSlash else PhosphorIcons.Eye,
+                            if (hidden) FaIcons.EyeSlash else FaIcons.Eye,
                             if (hidden) "取消隐藏（恢复参与提示词）" else "隐藏（不进提示词）",
                         ) {
                             vm.hideMessage(index, !hidden)
@@ -1110,12 +1176,12 @@ fun ChatScreen(
                         }
                     }
                     if (mediaOfMsg.isNotEmpty()) {
-                        MenuRow(PhosphorIcons.ImageSquare, "切换媒体显示样式（列表/图库）") {
+                        MenuRow(FaIcons.Image, "切换媒体显示样式（列表/图库）") {
                             vm.setMediaDisplay(index)
                             menuMessageIndex = null
                         }
                     }
-                    MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {
+                    MenuRow(FaIcons.Plus, "嵌入附件（Embed）") {
                         menuMessageIndex = null
                         embedTargetIndex = MsgTarget(index, el)
                         embedPicker.launch(arrayOf("*/*"))
@@ -1123,79 +1189,79 @@ fun ChatScreen(
                     // ── 官方编辑模式按钮（mes_edit_*）：上移/下移/创建副本 ──
                     MenuSectionLabel("消息结构（官方编辑模式）")
                     if (index > 0) {
-                        MenuRow(PhosphorIcons.CaretUp, "上移一条") {
+                        MenuRow(FaIcons.ChevronUp, "上移一条") {
                             vm.moveMessage(index, -1)
                             menuMessageIndex = null
                         }
                     }
                     if (index < messages.lastIndex) {
-                        MenuRow(PhosphorIcons.CaretDown, "下移一条") {
+                        MenuRow(FaIcons.ChevronDown, "下移一条") {
                             vm.moveMessage(index, 1)
                             menuMessageIndex = null
                         }
                     }
-                    MenuRow(PhosphorIcons.Copy, "创建副本（插到本条之后）") {
+                    MenuRow(FaIcons.Copy, "创建副本（插到本条之后）") {
                         vm.duplicateMessage(index)
                         menuMessageIndex = null
                     }
                     // ── 存档（官方 mes_create_bookmark / mes_create_branch）──
                     MenuSectionLabel("存档")
-                    MenuRow(PhosphorIcons.Flag, "创建书签（存档到此）") {
+                    MenuRow(FaIcons.Flag, "创建书签（存档到此）") {
                         menuMessageIndex = null
                         bookmarkDraftName = vm.defaultBookmarkName()
                         showBookmarkDialog = true
                     }
-                    MenuRow(PhosphorIcons.GitBranch, "创建分支（Branch）") {
+                    MenuRow(FaIcons.CodeBranch, "创建分支（Branch）") {
                         menuMessageIndex = null
                         vm.createBranch(index)?.let { onSwitchSession(it) }
                     }
                     // ── 生成（官方 options 级操作：regenerate/impersonate/continue/swipe）──
                     if (!isUserMsg && !isSystemMsg) {
                         MenuSectionLabel("生成")
-                        MenuRow(PhosphorIcons.User, "冒充（让模型替你说）") {
+                        MenuRow(FaIcons.User, "冒充（让模型替你说）") {
                             vm.impersonate(); menuMessageIndex = null
                         }
                         if (index == lastAiIndex) {
-                            MenuRow(PhosphorIcons.Refresh, "重新生成") {
+                            MenuRow(FaIcons.Repeat, "重新生成") {
                                 vm.regenerate(); menuMessageIndex = null
                             }
-                            MenuRow(PhosphorIcons.ArrowRight, "继续生成") {
+                            MenuRow(FaIcons.ArrowRight, "继续生成") {
                                 vm.continueGeneration(); menuMessageIndex = null
                             }
                             // 官方 swipe：任何 AI 消息都能生成变体（AI 消息落盘即带 swipes，恒显示入口）
-                            MenuRow(PhosphorIcons.CaretRight, "生成新回复（变体）") {
+                            MenuRow(FaIcons.ChevronRight, "生成新回复（变体）") {
                                 vm.generateSwipe(); menuMessageIndex = null
                             }
                         }
                     }
                     if (swipeCount >= 1 && !isSystemMsg) {
                         MenuSectionLabel("回复变体（Swipes）")
-                        MenuRow(PhosphorIcons.CaretLeft, "上一个回复") {
+                        MenuRow(FaIcons.ChevronLeft, "上一个回复") {
                             vm.swipeLeft(index); menuMessageIndex = null
                         }
-                        MenuRow(PhosphorIcons.CaretRight, "下一个回复") {
+                        MenuRow(FaIcons.ChevronRight, "下一个回复") {
                             vm.swipeRight(index); menuMessageIndex = null
                         }
-                        MenuRow(PhosphorIcons.BookmarkSimple, "变体列表") {
+                        MenuRow(FaIcons.Bookmark, "变体列表") {
                             swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
                         }
                         if (swipeCount > 1) {
-                            MenuRow(PhosphorIcons.Delete, "删除当前回复", danger = true) {
+                            MenuRow(FaIcons.TrashCan, "删除当前回复", danger = true) {
                                 deleteSwipeTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                             }
                         }
                     }
                     // ── 官方常驻按钮：copy（剪贴板）/ edit / delete ──
                     MenuSectionLabel("操作")
-                    MenuRow(PhosphorIcons.Copy, "复制文本") {
+                    MenuRow(FaIcons.Copy, "复制文本") {
                         clipboard.setText(AnnotatedString(text))
                         Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                         menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
+                    MenuRow(FaIcons.Pencil, "编辑这条消息") {
                         editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
                     }
-                    MenuRow(PhosphorIcons.Delete, "删除这条消息", danger = true) {
+                    MenuRow(FaIcons.TrashCan, "删除这条消息", danger = true) {
                         deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                     }
                 }
@@ -1329,7 +1395,7 @@ fun ChatScreen(
                 HorizontalDivider()
                 // ── 官方 #options 顶部组：作者注释 / CFG / logprobs ──
                 MenuSectionLabel("写作工具（官方 options）")
-                MenuRow(PhosphorIcons.FileText, "作者注释") {
+                MenuRow(FaIcons.FileLines, "作者注释") {
                     showMore = false
                     val draft = vm.authorsNoteDraft()
                     anPrompt = draft.prompt
@@ -1343,83 +1409,84 @@ fun ChatScreen(
                     charaNotePosition = charaDraft?.position ?: 0
                     showAuthorsNote = true
                 }
-                MenuRow(PhosphorIcons.Scales, "CFG Scale（引导缩放）") {
+                MenuRow(FaIcons.ScaleBalanced, "CFG Scale（引导缩放）") {
                     showMore = false
                     showCfgSheet = true
                 }
-                MenuRow(PhosphorIcons.ChartBar, "Token 概率（logprobs）") {
+                MenuRow(FaIcons.ChartPie, "Token 概率（logprobs）") {
                     showMore = false
                     showLogprobsSheet = true
                 }
                 // ── 官方检查点组：back_to_main / new_bookmark / convert_to_group ──
                 MenuSectionLabel("检查点与分支")
                 parentSession?.let { parent ->
-                    MenuRow(PhosphorIcons.ArrowLeft, "回到父聊天（${parent.name}）") {
+                    MenuRow(FaIcons.ArrowLeft, "回到父聊天（${parent.name}）") {
                         showMore = false
                         onSwitchSession(parent)
                     }
                 }
                 // 官方 options 弹层 option_new_bookmark：在当前位置存检查点（分支聊天）
-                MenuRow(PhosphorIcons.Flag, "保存检查点（书签）") {
+                MenuRow(FaIcons.Flag, "保存检查点（书签）") {
                     showMore = false
                     bookmarkDraftName = vm.defaultBookmarkName()
                     showBookmarkDialog = true
                 }
-                MenuRow(PhosphorIcons.BookmarkSimple, "书签列表") {
+                MenuRow(FaIcons.Bookmark, "书签列表") {
                     showMore = false
                     showBookmarksSheet = true
                 }
                 if (vm.character != null && vm.group == null) {
-                    MenuRow(PhosphorIcons.UsersThree, "转换为群聊") {
+                    MenuRow(FaIcons.PeopleArrows, "转换为群聊") {
                         showMore = false
                         showConvertGroupConfirm = true
                     }
                 }
                 // ── 官方聊天管理组：start_new_chat / close_chat / select_chat ──
                 MenuSectionLabel("聊天管理")
-                MenuRow(PhosphorIcons.ChatCircleDots, "开始新聊天（旧的保留在会话列表）") {
+                MenuRow(FaIcons.Comments, "开始新聊天（旧的保留在会话列表）") {
                     showMore = false
                     vm.startNewChat()?.let(onSwitchSession)
                 }
-                MenuRow(PhosphorIcons.List, "管理聊天文件（会话列表）") {
+                MenuRow(FaIcons.AddressBook, "管理聊天文件（Past Chats）") {
                     showMore = false
-                    onBack()
+                    showPastChats = true
                 }
                 // ── 官方生成组：delete_mes / regenerate / impersonate / continue ──
                 MenuSectionLabel("生成")
-                MenuRow(PhosphorIcons.Refresh, "重新生成（最后一条 AI 回复）") {
+                MenuRow(FaIcons.Repeat, "重新生成（最后一条 AI 回复）") {
                     showMore = false
                     vm.regenerate()
                 }
-                MenuRow(PhosphorIcons.User, "冒充（让模型替你说）") {
+                MenuRow(FaIcons.User, "冒充（让模型替你说）") {
                     showMore = false
                     vm.impersonate()
                 }
-                MenuRow(PhosphorIcons.ArrowRight, "继续生成") {
+                MenuRow(FaIcons.ArrowRight, "继续生成") {
                     showMore = false
                     vm.continueGeneration()
                 }
-                MenuRow(PhosphorIcons.Delete, "删除消息（清空本聊天）", danger = true) {
+                MenuRow(FaIcons.TrashCan, "删除消息（勾选一条，从该条起删除）", danger = true) {
                     showMore = false
-                    showClearConfirm = true
+                    deleteMode = true
+                    deleteCheckIndex = null
                 }
                 // ── App 扩展（官方无此入口，移动端便捷项）──
                 MenuSectionLabel("更多")
-                MenuRow(PhosphorIcons.ImageSquare, "聊天背景") {
+                MenuRow(FaIcons.Image, "聊天背景") {
                     showMore = false
                     backgroundPicker.launch(arrayOf("image/*"))
                 }
                 if (chatBackground != null) {
-                    MenuRow(PhosphorIcons.Close, "清除聊天背景") {
+                    MenuRow(FaIcons.XMark, "清除聊天背景") {
                         showMore = false
                         vm.clearChatBackground()
                     }
                 }
-                MenuRow(PhosphorIcons.Search, "数据银行（向量检索）") {
+                MenuRow(FaIcons.MagnifyingGlass, "数据银行（向量检索）") {
                     showMore = false
                     showDataBank = true
                 }
-                MenuRow(PhosphorIcons.ChartBar, "提示词预览（dryRun）") {
+                MenuRow(FaIcons.Flask, "提示词预览（dryRun）") {
                     showMore = false
                     showPromptPreview = true
                     vm.previewPrompt()
@@ -1431,7 +1498,7 @@ fun ChatScreen(
                         .clickable { vm.setShowThoughtsQuick(!showThoughtsNow) }
                         .padding(horizontal = 20.dp, vertical = 6.dp),
                 ) {
-                    Icon(PhosphorIcons.Lightning, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(FaIcons.Brain, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.size(12.dp))
                     Text(
                         "显示思考过程（show_thoughts）",
@@ -1441,37 +1508,147 @@ fun ChatScreen(
                     EmberSwitch(checked = showThoughtsNow, onCheckedChange = { vm.setShowThoughtsQuick(it) })
                 }
                 if (vm.group != null) {
-                    MenuRow(PhosphorIcons.UsersThree, "群聊设置") {
+                    MenuRow(FaIcons.Users, "群聊设置") {
                         showMore = false
                         groupMode = vm.group?.generationMode ?: GroupGenerationMode.APPEND
                         groupStrategy = vm.group?.activationStrategy ?: "natural"
                         showGroupSettings = true
                     }
                 }
-                MenuRow(PhosphorIcons.Person, "人设") {
+                MenuRow(FaIcons.User, "人设") {
                     showMore = false
                     showPersonaPicker = true
                 }
                 if (vm.character != null) {
-                    MenuRow(PhosphorIcons.Info, "角色详情") {
+                    MenuRow(FaIcons.CircleInfo, "角色详情") {
                         showMore = false
                         showCharacterInfo = true
                     }
                 }
-                MenuRow(PhosphorIcons.DownloadSimple, "导出聊天（JSONL）") {
+                MenuRow(FaIcons.Download, "导出聊天（JSONL）") {
                     showMore = false
                     exportChatLauncher.launch("$currentName-${System.currentTimeMillis().toString().takeLast(8)}.jsonl")
                 }
-                MenuRow(PhosphorIcons.Sparkle, "记忆总结（立即）") {
+                MenuRow(FaIcons.WandMagicSparkles, "记忆总结（立即）") {
                     showMore = false
                     vm.forceMemorySummary()
                 }
-                MenuRow(PhosphorIcons.Book, "外置世界（本会话）") {
+                MenuRow(FaIcons.BookOpen, "外置世界（本会话）") {
                     showMore = false
                     showWorldPicker = true
                 }
             }
         }
+    }
+
+    // 官方 displayPastChats（#select_chat_popup）：同角色/群聊天文件列表 + 搜索 +
+    // 行内 改名(fa-pencil) / 导出JSONL(fa-file-export) / 导出txt(fa-file-lines) / 删除(fa-skull)，当前聊天高亮。
+    if (showPastChats) {
+        val entries = remember(showPastChats, pastChatsQuery, messages) { vm.pastChats(pastChatsQuery) }
+        EmberBottomSheet(onDismissRequest = { showPastChats = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        "管理聊天文件",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    // 官方 newChatFromManageScreenButton：弹层内直接开新聊天
+                    TextButton(onClick = {
+                        showPastChats = false
+                        vm.startNewChat()?.let(onSwitchSession)
+                    }) {
+                        Icon(FaIcons.Comments, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.size(4.dp))
+                        Text("开始新聊天")
+                    }
+                }
+                // 官方 #select_chat_search
+                EmberTextField(
+                    value = pastChatsQuery,
+                    onValueChange = { pastChatsQuery = it },
+                    singleLine = true,
+                    placeholder = { Text("搜索聊天文件…") },
+                    leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                )
+                LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 420.dp)) {
+                    itemsIndexed(entries, key = { _, e -> e.record.id }) { _, e ->
+                        PastChatRow(
+                            entry = e,
+                            onClick = {
+                                showPastChats = false
+                                if (!e.isCurrent) onSwitchSession(e.record)
+                            },
+                            onRename = { renameChatTarget = e.record.id to e.record.name; renameChatDraft = e.record.name },
+                            onExportJsonl = {
+                                pendingExportJsonl = e.record.id to e.record.name
+                                exportChatLauncher.launch("${e.record.name}.jsonl")
+                            },
+                            onExportText = {
+                                val text = vm.exportChatPlainText(e.record.id)
+                                if (text == null) {
+                                    Toast.makeText(context, "这条会话还没有消息，无内容可导出", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    pendingExportText = text
+                                    pendingExportTextName = e.record.name
+                                    exportChatTextLauncher.launch("${e.record.name}.txt")
+                                }
+                            },
+                            onDelete = { deleteChatTarget = e.record.id to e.record.name },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    renameChatTarget?.let { (id, oldName) ->
+        AlertDialog(
+            onDismissRequest = { renameChatTarget = null },
+            title = { Text("重命名聊天文件") },
+            text = {
+                EmberTextField(
+                    value = renameChatDraft,
+                    onValueChange = { renameChatDraft = it },
+                    singleLine = true,
+                    label = { Text(oldName) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.renamePastChat(id, renameChatDraft)
+                    renameChatTarget = null
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { renameChatTarget = null }) { Text("取消") } },
+        )
+    }
+
+    deleteChatTarget?.let { (id, name) ->
+        AlertDialog(
+            onDismissRequest = { deleteChatTarget = null },
+            title = { Text("删除聊天文件") },
+            text = { Text("确定删除「$name」吗？此操作不可恢复。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.deletePastChat(id)
+                        deleteChatTarget = null
+                        if (id == vm.currentSessionId) onBack()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { deleteChatTarget = null }) { Text("取消") } },
+        )
     }
 
     if (showCfgSheet) {
@@ -1814,7 +1991,7 @@ fun ChatScreen(
                             modifier = Modifier.size(32.dp),
                         ) {
                             Icon(
-                                PhosphorIcons.Star,
+                                FaIcons.Star,
                                 contentDescription = "设为人设默认",
                                 modifier = Modifier.size(16.dp),
                                 tint = if (defaultPersona?.id == p.id) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
@@ -1825,7 +2002,7 @@ fun ChatScreen(
                             modifier = Modifier.size(32.dp),
                         ) {
                             Icon(
-                                PhosphorIcons.Copy,
+                                FaIcons.Copy,
                                 contentDescription = "复制人设",
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.outline,
@@ -1844,10 +2021,10 @@ fun ChatScreen(
                             personaDraftConnectChar = p.connections.any { it.type == "character" && it.id == vm.characterId }
                             personaDraftConnectGroup = p.connections.any { it.type == "group" && it.id == vm.group?.id }
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(PhosphorIcons.Edit, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                            Icon(FaIcons.Pencil, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
                         }
                         IconButton(onClick = { vm.deletePersona(p.id) }, modifier = Modifier.size(32.dp)) {
-                            Icon(PhosphorIcons.Delete, contentDescription = "删除人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -2167,7 +2344,7 @@ fun ChatScreen(
                         IconButton(onClick = {
                             vm.deleteBookmark(name)
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(PhosphorIcons.Delete, contentDescription = "删除书签", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除书签", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -2628,7 +2805,6 @@ fun ChatScreen(
         )
     }
 }
-
 @Composable
 private fun ChatTopBar(
     name: String,
@@ -2654,7 +2830,7 @@ private fun ChatTopBar(
         ) {
             // 返回按钮在左上角（配合边缘滑动返回），留足上下间距避免贴最高处
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+                Icon(FaIcons.ArrowLeft, contentDescription = "返回")
             }
             Spacer(Modifier.size(6.dp))
             RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
@@ -2670,13 +2846,13 @@ private fun ChatTopBar(
                 )
             }
             IconButton(onClick = onAuthorsNote, modifier = Modifier.size(44.dp)) {
-                Icon(PhosphorIcons.FileText, contentDescription = "作者注释")
+                Icon(FaIcons.FileLines, contentDescription = "作者注释")
             }
             IconButton(onClick = onPersona, modifier = Modifier.size(44.dp)) {
-                Icon(PhosphorIcons.Person, contentDescription = "人设")
+                Icon(FaIcons.User, contentDescription = "人设")
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
-                Icon(PhosphorIcons.MoreVert, contentDescription = "更多")
+                Icon(FaIcons.Bars, contentDescription = "更多")
             }
         }
     }
@@ -2786,6 +2962,86 @@ private fun MessageRow(
     onMore: () -> Unit = {},
     onBookmark: () -> Unit = {},
     /** LLM 表情分类回调（官方 getExpressionLabel LLM 分支；null=不支持）。 */
+    onClassifyExpression: ((String, (String?) -> Unit) -> Unit)? = null,
+    classifyEnabled: Boolean = false,
+    /** 官方删除模式（del_checkbox）：非 null 时行首显示勾选框，单选，勾中即 this_del_mes。 */
+    deleteCheck: Boolean? = null,
+    onDeleteCheck: (() -> Unit)? = null,
+    onLongPress: () -> Unit,
+) {
+    val context = LocalContext.current
+    if (deleteCheck != null && onDeleteCheck != null) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            androidx.compose.material3.Checkbox(
+                checked = deleteCheck,
+                onCheckedChange = { onDeleteCheck() },
+                modifier = Modifier.padding(start = 2.dp, top = 6.dp),
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                MessageRowContent(
+                    modifier = Modifier,
+                    isUser = isUser, isSystem = isSystem, text = text, media = media,
+                    mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
+                    reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
+                    name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
+                    tokenCount = tokenCount, accent = accent, dateLabel = dateLabel, showActions = false,
+                    swipeCount = 0, curSwipe = curSwipe, isPrevSameSender = isPrevSameSender, aiBubble = aiBubble,
+                    onImageToggle = onImageToggle, onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight,
+                    onSwipePicker = onSwipePicker, onEdit = onEdit, onMore = onMore, onBookmark = onBookmark,
+                    onClassifyExpression = onClassifyExpression, classifyEnabled = classifyEnabled,
+                    onLongPress = onLongPress,
+                )
+            }
+        }
+        return
+    }
+    MessageRowContent(
+        modifier = modifier,
+        isUser = isUser, isSystem = isSystem, text = text, media = media,
+        mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
+        reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
+        name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
+        tokenCount = tokenCount, accent = accent, dateLabel = dateLabel, showActions = showActions,
+        swipeCount = swipeCount, curSwipe = curSwipe, isPrevSameSender = isPrevSameSender, aiBubble = aiBubble,
+        onImageToggle = onImageToggle, onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight,
+        onSwipePicker = onSwipePicker, onEdit = onEdit, onMore = onMore, onBookmark = onBookmark,
+        onClassifyExpression = onClassifyExpression, classifyEnabled = classifyEnabled,
+        onLongPress = onLongPress,
+    )
+}
+
+@Composable
+private fun MessageRowContent(
+    modifier: Modifier = Modifier,
+    isUser: Boolean,
+    isSystem: Boolean = false,
+    text: String,
+    media: ChatMedia,
+    mediaDisplay: String? = null,
+    mediaIndex: Int? = null,
+    onMediaIndexChange: (Int) -> Unit = {},
+    reasoning: String?,
+    reasoningExpanded: Boolean = false,
+    onReasoningToggle: () -> Unit = {},
+    name: String,
+    time: String,
+    avatarPath: String?,
+    spritePath: String? = null,
+    tokenCount: String? = null,
+    accent: Color,
+    dateLabel: String?,
+    showActions: Boolean,
+    swipeCount: Int = 0,
+    curSwipe: Int = 0,
+    isPrevSameSender: Boolean = true,
+    aiBubble: Boolean = false,
+    onImageToggle: () -> Unit = {},
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    onSwipePicker: () -> Unit = {},
+    onEdit: () -> Unit = {},
+    onMore: () -> Unit = {},
+    onBookmark: () -> Unit = {},
     onClassifyExpression: ((String, (String?) -> Unit) -> Unit)? = null,
     classifyEnabled: Boolean = false,
     onLongPress: () -> Unit,
@@ -2916,7 +3172,7 @@ private fun MessageRow(
                 if (isSystem && name != SYSTEM_USER_NAME) {
                     Spacer(Modifier.size(5.dp))
                     Icon(
-                        PhosphorIcons.EyeSlash,
+                        FaIcons.EyeSlash,
                         contentDescription = "此消息对 AI 不可见",
                         tint = emColor.copy(alpha = 0.85f),
                         modifier = Modifier.size(12.dp),
@@ -2939,11 +3195,11 @@ private fun MessageRow(
                 if (showActions) {
                     Spacer(Modifier.weight(1f))
                     // 官方 mes_buttons 常驻三项：⋯ 更多 / flag 书签 / pencil 编辑；复制/删除/变体等进 ⋯ 菜单
-                    MessageActionIcon(PhosphorIcons.DotsThreeVertical, "更多操作", onMore)
+                    MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
                     Spacer(Modifier.size(6.dp))
-                    MessageActionIcon(PhosphorIcons.Flag, "创建书签（存档到此）", onBookmark)
+                    MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
                     Spacer(Modifier.size(6.dp))
-                    MessageActionIcon(PhosphorIcons.Edit, "编辑", onEdit)
+                    MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
                 }
             }
             // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
@@ -3029,7 +3285,7 @@ private fun MessageRow(
                         modifier = Modifier.size(26.dp),
                     ) {
                         Icon(
-                            PhosphorIcons.CaretLeft,
+                            FaIcons.ChevronLeft,
                             contentDescription = "上一个回复",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
@@ -3050,7 +3306,7 @@ private fun MessageRow(
                         modifier = Modifier.size(26.dp),
                     ) {
                         Icon(
-                            PhosphorIcons.CaretRight,
+                            FaIcons.ChevronRight,
                             contentDescription = "下一个回复",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
@@ -3403,7 +3659,7 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
                 modifier = Modifier.weight(1f, fill = false),
             )
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-                Icon(PhosphorIcons.Close, contentDescription = "移除附件", modifier = Modifier.size(14.dp))
+                Icon(FaIcons.XMark, contentDescription = "移除附件", modifier = Modifier.size(14.dp))
             }
         }
     }
@@ -5271,6 +5527,82 @@ private fun MenuSectionLabel(title: String) {
     )
 }
 
+/**
+ * 官方 past_chat_template：文件名 + 消息数(💬) + 预览 + 日期；当前聊天高亮；
+ * 行内操作 改名(fa-pencil) / 导出JSONL(fa-file-export) / 导出txt(fa-file-lines) / 删除(fa-skull)。
+ */
+@Composable
+private fun PastChatRow(
+    entry: com.emberinn.app.ui.chat.ChatViewModel.PastChatEntry,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+    onExportJsonl: () -> Unit,
+    onExportText: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val dateText = remember(entry.lastDate) {
+        if (entry.lastDate <= 0) "" else java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(entry.lastDate))
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                FaIcons.Comments,
+                contentDescription = null,
+                tint = if (entry.isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                entry.record.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (entry.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (entry.isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (entry.isCurrent) {
+                Text("当前", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.size(8.dp))
+            }
+            // 行内操作（官方 past_chat_template 右侧按钮组）
+            androidx.compose.material3.IconButton(onClick = onRename, modifier = Modifier.size(30.dp)) {
+                Icon(FaIcons.Pencil, contentDescription = "重命名", modifier = Modifier.size(14.dp))
+            }
+            androidx.compose.material3.IconButton(onClick = onExportJsonl, modifier = Modifier.size(30.dp)) {
+                Icon(FaIcons.FileExport, contentDescription = "导出 JSONL", modifier = Modifier.size(14.dp))
+            }
+            androidx.compose.material3.IconButton(onClick = onExportText, modifier = Modifier.size(30.dp)) {
+                Icon(FaIcons.FileLines, contentDescription = "导出纯文本", modifier = Modifier.size(14.dp))
+            }
+            androidx.compose.material3.IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                Icon(FaIcons.Skull, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(14.dp))
+            }
+        }
+        entry.preview?.let { preview ->
+            Text(
+                preview,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Row {
+            Text(
+                "${entry.messageCount} 💬  $dateText",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun ChatInputBar(
     accent: Color,
@@ -5456,7 +5788,7 @@ private fun ChatInputBar(
             ) {
             EmberInputIcon(
                 onClick = onAttach,
-                icon = PhosphorIcons.Plus,
+                icon = FaIcons.Plus,
                 contentDescription = "附件与工具",
             )
             EmberTextField(
@@ -5485,13 +5817,13 @@ private fun ChatInputBar(
                 // 官方 rightSendForm：impersonate(user-secret) + continue(arrow-right) + send(paper-plane)
                 EmberInputIcon(
                     onClick = onQuickImpersonate,
-                    icon = PhosphorIcons.User,
+                    icon = FaIcons.UserSecret,
                     contentDescription = "冒充用户发言",
                 )
                 if (canQuickContinue) {
                     EmberInputIcon(
                         onClick = onQuickContinue,
-                        icon = PhosphorIcons.ArrowRight,
+                        icon = FaIcons.ArrowRight,
                         contentDescription = "继续生成",
                     )
                 }
@@ -5507,7 +5839,7 @@ private fun ChatInputBar(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.error),
                     ) {
-                        Icon(PhosphorIcons.Stop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(18.dp))
+                        Icon(FaIcons.Square, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -5530,7 +5862,7 @@ private fun QuickReplyChip(label: String, onClick: () -> Unit, modifier: Modifie
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
         ) {
             Icon(
-                PhosphorIcons.Send,
+                FaIcons.PaperPlane,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(13.dp),
@@ -5595,7 +5927,7 @@ private fun AttachSheetRow(
         }
         if (enabled) {
             Icon(
-                PhosphorIcons.CaretRight,
+                FaIcons.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(16.dp),
@@ -5636,7 +5968,7 @@ private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) 
                 ),
         ) {
             Icon(
-                PhosphorIcons.Send,
+                FaIcons.PaperPlane,
                 contentDescription = "发送",
                 tint = if (canSend) onAccent else MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.size(18.dp),
@@ -5651,7 +5983,7 @@ private fun EmptyChat(name: String, accent: Color) {
         title = "和 ${name.ifBlank { "TA" }} 打个招呼吧",
         body = "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
         accent = accent,
-        icon = PhosphorIcons.Book,
+        icon = FaIcons.BookOpen,
         modifier = Modifier.fillMaxWidth().padding(top = 72.dp, bottom = 24.dp),
     )
 }

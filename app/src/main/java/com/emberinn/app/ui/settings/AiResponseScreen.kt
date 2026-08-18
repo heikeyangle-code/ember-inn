@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 
 /**
  * AI 响应配置（官方 left-nav-panel #ai_response_configuration 移植）：
@@ -109,7 +109,7 @@ fun AiResponseScreen(
                                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(PhosphorIcons.Link, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(21.dp))
+                                Icon(FaIcons.Link, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(21.dp))
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -126,7 +126,7 @@ fun AiResponseScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            Icon(PhosphorIcons.CaretRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -147,7 +147,7 @@ fun AiResponseScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.weight(1f),
                                     )
-                                    Icon(PhosphorIcons.CaretDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(FaIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             DropdownMenu(expanded = presetMenu, onDismissRequest = { presetMenu = false }) {
@@ -162,7 +162,7 @@ fun AiResponseScreen(
                                 }
                             }
                         }
-                        TextButtonRow(text = "管理全部预设（上下文 / 指导 / 系统提示 / 推理）", icon = PhosphorIcons.Folder, onClick = onOpenPresets)
+                        TextButtonRow(text = "管理全部预设（上下文 / 指导 / 系统提示 / 推理）", icon = FaIcons.Folder, onClick = onOpenPresets)
                     }
                 }
                 item {
@@ -227,7 +227,7 @@ fun AiResponseScreen(
                             }
                             EmberSwitch(checked = sampler.stream, onCheckedChange = vm::setStreaming)
                         }
-                        TextButtonRow(text = "Prompt Manager（提示词编排）", icon = PhosphorIcons.List, onClick = onOpenPromptManager)
+                        TextButtonRow(text = "Prompt Manager（提示词编排）", icon = FaIcons.ListUl, onClick = onOpenPromptManager)
                         if (message != null) {
                             Text(
                                 message!!,

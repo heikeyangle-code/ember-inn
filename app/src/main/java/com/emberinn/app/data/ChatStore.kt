@@ -1080,6 +1080,39 @@ class ChatStore(private val context: Context) {
         return index + 1
     }
 
+    /**
+     * 官方 dialogue_del_mes_ok（script.js:11662-11668）：删除模式勾选某条后
+     * `chat.length = this_del_mes` —— 从该条起（含）全部截断删除。返回被删消息供清理明细。
+     */
+    fun truncateFrom(sessionId: String, index: Int): List<JsonElement> {
+        val list = messages(sessionId)
+        if (index !in list.indices) return emptyList()
+        val removed = list.subList(index, list.size)
+        writeMessages(sessionId, list.subList(0, index))
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+        deleteMediaFiles(removed)
+        return removed
+    }
+
+    /** 官方 past chats 列表：按最后一条消息时间倒序（官方 sortMoments desc）。 */
+    fun lastMessageDate(sessionId: String): Long {
+        val last = messages(sessionId).lastOrNull() ?: return 0L
+        return last.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull
+            ?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() } ?: 0L
+    }
+
+    /** 官方 "Download chat as plain text document"（fa-file-lines）：每条消息一行 `名字: 内容`。 */
+    fun exportPlainText(sessionId: String): String? {
+        val list = messages(sessionId)
+        if (list.isEmpty()) return null
+        return list.joinToString("\n\n") { el ->
+            val obj = el.jsonObject
+            val name = obj["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            val mes = obj["mes"]?.jsonPrimitive?.contentOrNull ?: ""
+            "$name: $mes"
+        }
+    }
+
     /** 会话列表预览：最后一条消息文本（无消息返回 null）。 */
     fun lastMessage(sessionId: String): String? {
         val list = messages(sessionId)

@@ -1,6 +1,6 @@
 package com.emberinn.app.ui
 
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -44,9 +44,9 @@ import com.emberinn.engine.card.CardFormat
 private data class TabSpec(val label: String, val icon: ImageVector)
 
 private val Tabs = listOf(
-    TabSpec("角色", PhosphorIcons.Person),
-    TabSpec("聊天", PhosphorIcons.List),
-    TabSpec("设置", PhosphorIcons.Settings),
+    TabSpec("角色", FaIcons.User),
+    TabSpec("聊天", FaIcons.ListUl),
+    TabSpec("设置", FaIcons.Gear),
 )
 
 @Composable

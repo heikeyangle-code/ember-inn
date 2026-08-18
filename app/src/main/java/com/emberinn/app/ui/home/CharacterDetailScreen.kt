@@ -86,7 +86,7 @@ import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.data.WorldStore
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.settings.AppearancePrefs
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.skydoves.cloudy.cloudy
@@ -265,7 +265,7 @@ fun CharacterDetailScreen(
                     .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(PhosphorIcons.ArrowLeft, contentDescription = "返回")
+                    Icon(FaIcons.ArrowLeft, contentDescription = "返回")
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -282,12 +282,12 @@ fun CharacterDetailScreen(
                 }
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(PhosphorIcons.DotsThreeVertical, contentDescription = "更多")
+                        Icon(FaIcons.EllipsisVertical, contentDescription = "更多")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("开始聊天") },
-                            leadingIcon = { Icon(PhosphorIcons.Send, contentDescription = null) },
+                            leadingIcon = { Icon(FaIcons.PaperPlane, contentDescription = null) },
                             onClick = {
                                 showMenu = false
                                 onOpenChat(vm.openOrResume(record.id, fields.name.ifBlank { record.name }))
@@ -295,7 +295,7 @@ fun CharacterDetailScreen(
                         )
                         DropdownMenuItem(
                             text = { Text("导出 JSON") },
-                            leadingIcon = { Icon(PhosphorIcons.Share, contentDescription = null) },
+                            leadingIcon = { Icon(FaIcons.ShareNodes, contentDescription = null) },
                             onClick = {
                                 showMenu = false
                                 exportLauncher.launch("${fields.name.ifBlank { record.name }}.json")
@@ -303,7 +303,7 @@ fun CharacterDetailScreen(
                         )
                         DropdownMenuItem(
                             text = { Text(if (record.pinned) "取消置顶" else "置顶") },
-                            leadingIcon = { Icon(PhosphorIcons.Star, contentDescription = null) },
+                            leadingIcon = { Icon(FaIcons.Star, contentDescription = null) },
                             onClick = {
                                 showMenu = false
                                 vm.togglePin(record)
@@ -311,7 +311,7 @@ fun CharacterDetailScreen(
                         )
                         DropdownMenuItem(
                             text = { Text("删除角色", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(PhosphorIcons.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(FaIcons.TrashCan, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 showMenu = false
                                 confirmDelete = true
@@ -548,7 +548,7 @@ fun CharacterDetailScreen(
                                 )
                             }
                             Icon(
-                                if (modelOverrideExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                if (modelOverrideExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outline,
                             )
@@ -595,7 +595,7 @@ fun CharacterDetailScreen(
                                 )
                             }
                             Icon(
-                                if (themeRecipeExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                if (themeRecipeExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outline,
                             )
@@ -685,7 +685,7 @@ fun CharacterDetailScreen(
                                 )
                             }
                             Icon(
-                                if (worldBookExpanded) PhosphorIcons.CaretUp else PhosphorIcons.CaretDown,
+                                if (worldBookExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outline,
                             )
@@ -1334,7 +1334,7 @@ private fun FieldRow(label: String, value: String, onClick: () -> Unit) {
                 color = if (value.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Icon(PhosphorIcons.Edit, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+        Icon(FaIcons.Pencil, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
     }
     HorizontalDivider()
 }
@@ -1349,10 +1349,10 @@ private fun GreetingRow(text: String, onEdit: () -> Unit, onDelete: () -> Unit) 
             Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-            Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-            Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
         }
     }
     HorizontalDivider()
@@ -1421,7 +1421,7 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(PhosphorIcons.Edit, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(FaIcons.Pencil, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
             EmberSwitch(checked = entry.enabled, onCheckedChange = { onToggle() })
         }
@@ -1811,7 +1811,7 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(PhosphorIcons.Edit, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(FaIcons.Pencil, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
             EmberSwitch(checked = !script.disabled, onCheckedChange = { onToggle() })
         }
@@ -2013,10 +2013,10 @@ private fun SimpleEditRow(
             )
         }
         IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
-            Icon(PhosphorIcons.Edit, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
-            Icon(PhosphorIcons.Delete, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
         }
     }
     HorizontalDivider()

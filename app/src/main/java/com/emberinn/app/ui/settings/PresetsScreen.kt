@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.icons.PhosphorIcons
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.prompt.PresetApplyEngine
