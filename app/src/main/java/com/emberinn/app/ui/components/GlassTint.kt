@@ -42,6 +42,9 @@ object EmberGlassDefaults {
  *   现在恒定先铺“背景色+tint”底漆（与 cloudy 到位后的观感一致，静态
  *   背景的模糊≈原色），位图到位后无缝覆盖，全程不跳。
  * - 用户关闭“背景模糊”时用同一底漆，开关切换也不跳变。
+ * - blurEnabled=false：滚动中临时退回底漆。cloudy 每帧对背后内容做全屏
+ *   RenderEffect 模糊，列表滚动时是最大的 GPU 卡点；底漆与静态背景的
+ *   模糊观感几乎一致，停稳后自动恢复真模糊，肉眼无感。
  * - atTop：发丝高光画上缘（悬浮卡/输入栏）还是下缘（顶栏）。
  */
 @Composable
@@ -49,6 +52,7 @@ fun Modifier.emberGlass(
     sky: Sky?,
     atTop: Boolean,
     tintAlpha: Float = EmberGlassDefaults.BAR_TINT,
+    blurEnabled: Boolean = true,
 ): Modifier {
     if (sky == null) return this
     val context = LocalContext.current
@@ -61,7 +65,7 @@ fun Modifier.emberGlass(
         .glassEdgeHighlight(dark = dark, atTop = atTop)
         .then(baseCoat)
         .then(
-            if (AppearancePrefs.backgroundBlur(context)) {
+            if (AppearancePrefs.backgroundBlur(context) && blurEnabled) {
                 Modifier.cloudy(
                     sky = sky,
                     radius = AppearancePrefs.blurStrength(context).coerceAtLeast(EmberGlassDefaults.MIN_RADIUS),

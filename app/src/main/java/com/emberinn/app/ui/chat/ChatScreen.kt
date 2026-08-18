@@ -93,6 +93,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -367,6 +368,11 @@ fun ChatScreen(
     var deleteSwipeTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var swipePickerIndex by remember { mutableStateOf<MsgTarget?>(null) }
     val listState = rememberLazyListState()
+    // 滚动中（含惯性滑动）临时关掉顶栏/输入栏的实时模糊：cloudy 每帧全屏 RenderEffect
+    // 是聊天滚动掉帧的最大 GPU 卡点；停稳后自动恢复，底漆观感与静态模糊几乎一致
+    val glassBlurActive by remember {
+        derivedStateOf { !listState.isScrollInProgress }
+    }
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
@@ -1060,7 +1066,7 @@ fun ChatScreen(
                 slashCommands = slashCommands,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .emberGlass(sky = sky, atTop = true),
+                    .emberGlass(sky = sky, atTop = true, blurEnabled = glassBlurActive),
                 )
             }
         }
@@ -1077,7 +1083,7 @@ fun ChatScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .onSizeChanged { topBarHeight = it.height }
-                .emberGlass(sky = sky, atTop = false),
+                .emberGlass(sky = sky, atTop = false, blurEnabled = glassBlurActive),
         )
 
     }

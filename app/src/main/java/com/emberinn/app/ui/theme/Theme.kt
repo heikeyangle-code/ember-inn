@@ -9,6 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -31,10 +32,23 @@ fun EmberInnTheme(
     fontFamily: FontFamily = FontFamily.Default,
     content: @Composable () -> Unit,
 ) {
+    // 完整 scheme 覆盖的主题（酒馆官方=官方绝对色）没有浅色模式：浅/深都按官方深色渲染，
+    // 且不做任何滤镜后处理（官方色值逐值还原，滤镜会破坏精确性）。
+    // remember 键控：无关重组（外观修订号等状态变化）不再重建 scheme、
+    // 也不再因 ColorScheme 实例变化把全 App 的取色读者整批打失效（staticCompositionLocal 特性）。
+    val official = preset.schemeBackground != null
+    val colorScheme = remember(preset, vibe, darkTheme) {
+        if (official) {
+            preset.darkScheme()
+        } else if (darkTheme) {
+            preset.darkScheme().vibed(vibe, dark = true)
+        } else {
+            preset.lightScheme().vibed(vibe, dark = false)
+        }
+    }
     CompositionLocalProvider(LocalVibe provides vibe, LocalThemePreset provides preset) {
         MaterialTheme(
-            // 完整 scheme 覆盖的主题（酒馆官方=官方绝对色）没有浅色模式：浅/深都按官方深色渲染
-            colorScheme = if (preset.schemeBackground != null || darkTheme) preset.darkScheme(vibe) else preset.lightScheme(vibe),
+            colorScheme = colorScheme,
             typography = typographyWith(fontFamily),
             shapes = shapes,
             content = content,
@@ -87,26 +101,26 @@ private fun typographyWith(fontFamily: FontFamily): Typography {
     )
 }
 
-private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
-    // 视觉氛围：降饱和强度 + 冷暖偏移来自 vibe（默认标准 = 0，取色原样输出）
-    val bg = tinted(lightBg, vibe.warmth)
-    val primary = desaturate(darken(seed, 0.04f), vibe.desaturateLight)
+private fun ThemePreset.lightScheme(): ColorScheme {
+    // 强化：主色加深 0.10（旧 0.04 几乎等于没压，白底上偏飘），容器色留更多色度
+    val bg = lightBg
+    val primary = darken(seed, 0.10f)
     val onBackground = darken(lightBg, 0.86f)
     val onSurface = onBackground
-    val secondary = desaturate(darken(this.secondary, 0.03f), vibe.desaturateLight)
-    val tertiary = desaturate(darken(this.tertiary, 0.03f), vibe.desaturateLight)
+    val secondary = darken(this.secondary, 0.03f)
+    val tertiary = darken(this.tertiary, 0.03f)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
-        primaryContainer = lighten(seed, 0.72f),
+        primaryContainer = lighten(seed, 0.68f),
         onPrimaryContainer = darken(seed, 0.52f),
         secondary = secondary,
         onSecondary = readableOn(secondary),
-        secondaryContainer = lighten(this.secondary, 0.74f),
+        secondaryContainer = lighten(this.secondary, 0.70f),
         onSecondaryContainer = darken(this.secondary, 0.50f),
         tertiary = tertiary,
         onTertiary = readableOn(tertiary),
-        tertiaryContainer = lighten(this.tertiary, 0.76f),
+        tertiaryContainer = lighten(this.tertiary, 0.72f),
         onTertiaryContainer = darken(this.tertiary, 0.46f),
         background = bg,
         onBackground = onBackground,
@@ -124,44 +138,87 @@ private fun ThemePreset.lightScheme(vibe: VibePreset): ColorScheme {
     )
 }
 
-private fun ThemePreset.darkScheme(vibe: VibePreset): ColorScheme {
-    val bg = schemeBackground?.let { tinted(it, vibe.warmth) } ?: tinted(darkBg, vibe.warmth)
-    // 官方主题（完整 scheme 覆盖）色值绝对精确、不经过降饱和；其余主题的 scheme* 只是显式化的派生值，仍跟随视觉氛围
-    val officialOverride = schemeBackground != null
-    fun accent(scheme: Color?, auto: Color): Color =
-        if (scheme != null && !officialOverride) desaturate(scheme, vibe.desaturateDark) else scheme ?: auto
-    val primary = accent(schemePrimary, desaturate(lighten(seed, 0.30f), vibe.desaturateDark))
-    val onBackground = schemeOnBackground ?: lighten(darkBg, 0.82f)
+private fun ThemePreset.darkScheme(): ColorScheme {
+    // 强化：正文/次要文字提亮（0.82→0.86 / 0.34→0.38），深色下对比度更足，摆脱发灰的“low”感
+    val bg = schemeBackground ?: darkBg
+    val primary = schemePrimary ?: lighten(seed, 0.30f)
+    val onBackground = schemeOnBackground ?: lighten(darkBg, 0.86f)
     val onSurface = schemeOnSurface ?: onBackground
-    val secondary = accent(schemeSecondary, desaturate(lighten(this.secondary, 0.24f), vibe.desaturateDark))
-    val tertiary = accent(schemeTertiary, desaturate(lighten(this.tertiary, 0.24f), vibe.desaturateDark))
+    val secondary = schemeSecondary ?: lighten(this.secondary, 0.24f)
+    val tertiary = schemeTertiary ?: lighten(this.tertiary, 0.24f)
     val surface = schemeSurface ?: lighten(bg, 0.035f)
     return darkColorScheme(
         primary = primary,
         onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
-        primaryContainer = if (schemePrimary != null) darken(primary, 0.45f) else darken(seed, 0.45f),
-        onPrimaryContainer = if (schemePrimary != null) lighten(primary, 0.72f) else lighten(seed, 0.72f),
+        primaryContainer = darken(primary, 0.45f),
+        onPrimaryContainer = lighten(primary, 0.72f),
         secondary = secondary,
         onSecondary = if (schemeSecondary != null) readableOn(secondary) else darken(this.secondary, 0.52f),
-        secondaryContainer = if (schemeSecondary != null) darken(secondary, 0.45f) else darken(this.secondary, 0.45f),
-        onSecondaryContainer = if (schemeSecondary != null) lighten(secondary, 0.68f) else lighten(this.secondary, 0.68f),
+        secondaryContainer = darken(secondary, 0.45f),
+        onSecondaryContainer = lighten(secondary, 0.68f),
         tertiary = tertiary,
         onTertiary = if (schemeTertiary != null) readableOn(tertiary) else darken(this.tertiary, 0.52f),
-        tertiaryContainer = if (schemeTertiary != null) darken(tertiary, 0.45f) else darken(this.tertiary, 0.45f),
-        onTertiaryContainer = if (schemeTertiary != null) lighten(tertiary, 0.68f) else lighten(this.tertiary, 0.68f),
+        tertiaryContainer = darken(tertiary, 0.45f),
+        onTertiaryContainer = lighten(tertiary, 0.68f),
         background = bg,
         onBackground = onBackground,
         surface = surface,
         onSurface = onSurface,
         surfaceVariant = lighten(bg, 0.14f),
-        onSurfaceVariant = lighten(darkBg, 0.60f),
-        outline = lighten(darkBg, 0.34f),
+        onSurfaceVariant = lighten(darkBg, 0.62f),
+        outline = lighten(darkBg, 0.38f),
         outlineVariant = lighten(bg, 0.10f),
         surfaceContainerLowest = darken(bg, 0.02f),
         surfaceContainerLow = lighten(bg, 0.055f),
         surfaceContainer = lighten(bg, 0.09f),
         surfaceContainerHigh = lighten(bg, 0.125f),
         surfaceContainerHighest = lighten(bg, 0.16f),
+    )
+}
+
+/**
+ * 视觉氛围滤镜：整盘 scheme 后处理。旧实现把滤镜洒在 3 个强调色 + 底色上，
+ * 其余 30+ 配色角色（容器/文字/描边）全部漏网——拖滑杆几乎看不出变化，
+ * 这就是“自定义不生效”的根因。现在所有色角色统一过一遍“冷暖偏移 + 降饱和”，
+ * 拖动即时可见；错误色/反色等语义色保留原样，官方主题整体豁免（绝对色值）。
+ */
+private fun ColorScheme.vibed(vibe: VibePreset, dark: Boolean): ColorScheme {
+    if (vibe.id == "standard") return this
+    val desat = if (dark) vibe.desaturateDark else vibe.desaturateLight
+    val warmth = vibe.warmth
+    if (desat <= 0f && warmth == 0f) return this
+    fun f(c: Color): Color {
+        var out = if (warmth != 0f) tinted(c, warmth) else c
+        if (desat > 0f) out = desaturate(out, desat)
+        return out
+    }
+    return copy(
+        primary = f(primary),
+        onPrimary = f(onPrimary),
+        primaryContainer = f(primaryContainer),
+        onPrimaryContainer = f(onPrimaryContainer),
+        secondary = f(secondary),
+        onSecondary = f(onSecondary),
+        secondaryContainer = f(secondaryContainer),
+        onSecondaryContainer = f(onSecondaryContainer),
+        tertiary = f(tertiary),
+        onTertiary = f(onTertiary),
+        tertiaryContainer = f(tertiaryContainer),
+        onTertiaryContainer = f(onTertiaryContainer),
+        background = f(background),
+        onBackground = f(onBackground),
+        surface = f(surface),
+        onSurface = f(onSurface),
+        surfaceVariant = f(surfaceVariant),
+        onSurfaceVariant = f(onSurfaceVariant),
+        surfaceTint = f(primary),
+        outline = f(outline),
+        outlineVariant = f(outlineVariant),
+        surfaceContainerLowest = f(surfaceContainerLowest),
+        surfaceContainerLow = f(surfaceContainerLow),
+        surfaceContainer = f(surfaceContainer),
+        surfaceContainerHigh = f(surfaceContainerHigh),
+        surfaceContainerHighest = f(surfaceContainerHighest),
     )
 }
 

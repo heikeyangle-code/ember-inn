@@ -156,12 +156,10 @@ fun AppearanceScreen(
                                 FilterChip(
                                     selected = vibe.id == p.id,
                                     onClick = {
+                                        // 只更新状态，持久化由 MainActivity 的 onVibeChanged 统一负责（修复双重写盘）
                                         if (p.id == "custom") {
-                                            val resolved = VibePrefs.resolve(vibeContext).copy(id = "custom")
-                                            VibePrefs.save(vibeContext, resolved)
-                                            onVibeChanged(resolved)
+                                            onVibeChanged(VibePrefs.resolve(vibeContext).copy(id = "custom"))
                                         } else {
-                                            VibePrefs.save(vibeContext, p)
                                             onVibeChanged(p)
                                         }
                                     },
@@ -169,26 +167,50 @@ fun AppearanceScreen(
                                 )
                             }
                         }
+                        // 实时色板预览：读当前主题 scheme，拖滑杆/换滤镜立即在此可见（也整页可见）
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.padding(top = 12.dp),
+                        ) {
+                            listOf(
+                                "底色" to MaterialTheme.colorScheme.background,
+                                "卡片" to MaterialTheme.colorScheme.surfaceContainer,
+                                "主色" to MaterialTheme.colorScheme.primary,
+                                "次色" to MaterialTheme.colorScheme.secondary,
+                                "点缀" to MaterialTheme.colorScheme.tertiary,
+                            ).forEach { (label, c) ->
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(11.dp))
+                                            .background(c),
+                                    )
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 3.dp),
+                                    )
+                                }
+                            }
+                        }
                         if (vibe.id == "custom") {
                             SliderRow(
                                 label = "降饱和",
-                                hint = "0 = 取色原样，0.5 = 接近灰",
+                                hint = "作用于全部配色（0 = 原样，0.5 = 接近灰）",
                                 value = vibe.desaturateLight,
                                 range = 0f..0.5f,
                             ) { v ->
-                                val next = VibePreset("custom", "自定义", "手动调节三项参数", v, v, vibe.warmth, vibe.glow)
-                                VibePrefs.save(vibeContext, next)
-                                onVibeChanged(next)
+                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", v, v, vibe.warmth, vibe.glow))
                             }
                             SliderRow(
                                 label = "冷暖",
-                                hint = "左冷右暖",
+                                hint = "左冷右暖，作用于全部配色",
                                 value = vibe.warmth,
                                 range = -0.25f..0.25f,
                             ) { v ->
-                                val next = VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, v, vibe.glow)
-                                VibePrefs.save(vibeContext, next)
-                                onVibeChanged(next)
+                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, v, vibe.glow))
                             }
                             SliderRow(
                                 label = "光效",
@@ -196,9 +218,7 @@ fun AppearanceScreen(
                                 value = vibe.glow,
                                 range = 0f..1f,
                             ) { v ->
-                                val next = VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, vibe.warmth, v)
-                                VibePrefs.save(vibeContext, next)
-                                onVibeChanged(next)
+                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, vibe.warmth, v))
                             }
                         }
                     }
