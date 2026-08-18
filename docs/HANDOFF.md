@@ -209,7 +209,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图替换该 PNG。
 
 ### 4.5 主题系统 ✅（全局层）
-ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成 M3 ColorScheme；MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）已接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）；官方字段 st*/scheme* 填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…），其余 10 套色板派生；🟡 MeshGradient 氛围背景未做（README 可选）。
+ThemePreset（seed/secondary/tertiary + 纸色/夜色）→ Theme.kt 自动生成 M3 ColorScheme；MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）已接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）；官方字段 st*/scheme* 填官方真值（#DCDCD2/#919191/#BCE7CF/#E18A24/#171717…），其余 17 套色板派生（11 套基础 + 熔金/靛夜/琥珀/黛山/深海/胶片/霓虹 7 套艺术向，各自带形状/间距/动效性格）；🟡 MeshGradient 氛围背景未做（README 可选）。
 
 ### 4.5.5 图标系统 ✅
 全 App 图标 = **Font Awesome 6 Solid**（512 viewport viewBox，与酒馆官方前端同库同形），内置 88 枚 `app/src/main/java/com/emberinn/app/ui/icons/FaIcons.kt`（scripts/gen-fa-icons.mjs 从 Font Awesome 官方 SVG 生成，增图先加清单再重跑脚本；SVG 缓存 .fa-cache/）。material-icons-core/extended 与旧 Phosphor 已移除。规范：默认 onSurfaceVariant、激活 primary、警示 error。
