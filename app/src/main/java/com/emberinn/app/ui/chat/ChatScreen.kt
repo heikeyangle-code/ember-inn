@@ -114,6 +114,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
@@ -3344,51 +3345,61 @@ private fun MessageRowContent(
                 )
             }
             // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
-            // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示
+            // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。
+            // 整条收进低对比胶囊：控件簇有归属感，不再裸浮在正文下方
             if (!isSystem && (swipeCount >= 1 || showActions)) {
-                Spacer(Modifier.size(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (swipeCount >= 1) {
-                        IconButton(
-                            onClick = onSwipeLeft,
-                            modifier = Modifier.size(26.dp),
-                        ) {
-                            Icon(
-                                FaIcons.ChevronLeft,
-                                contentDescription = "上一个回复",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp),
+                Spacer(Modifier.size(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.42f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                    ) {
+                        if (swipeCount >= 1) {
+                            IconButton(
+                                onClick = onSwipeLeft,
+                                modifier = Modifier.size(26.dp),
+                            ) {
+                                Icon(
+                                    FaIcons.ChevronLeft,
+                                    contentDescription = "上一个回复",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                            // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
+                            Text(
+                                text = "${curSwipe + 1}/${swipeCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable(onClick = onSwipePicker)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
                             )
+                            IconButton(
+                                onClick = onSwipeRight,
+                                modifier = Modifier.size(26.dp),
+                            ) {
+                                Icon(
+                                    FaIcons.ChevronRight,
+                                    contentDescription = "下一个回复",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
                         }
-                        // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
-                        Text(
-                            text = "${curSwipe + 1}/${swipeCount}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable(onClick = onSwipePicker)
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                        )
-                        IconButton(
-                            onClick = onSwipeRight,
-                            modifier = Modifier.size(26.dp),
-                        ) {
-                            Icon(
-                                FaIcons.ChevronRight,
-                                contentDescription = "下一个回复",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp),
-                            )
+                        if (showActions) {
+                            if (swipeCount >= 1) Spacer(Modifier.size(4.dp))
+                            MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
+                            Spacer(Modifier.size(6.dp))
+                            MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
+                            Spacer(Modifier.size(6.dp))
+                            MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
                         }
-                    }
-                    if (showActions) {
-                        Spacer(Modifier.size(6.dp))
-                        MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
-                        Spacer(Modifier.size(6.dp))
-                        MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
-                        Spacer(Modifier.size(6.dp))
-                        MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
                     }
                 }
             }
@@ -5814,6 +5825,13 @@ private fun ChatInputBar(
         modifier = modifier,
     ) {
         Column {
+            // 发丝线：消息区/输入区分界，低对比不抢内容（与胶囊描边同一透明度量级）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
+            )
             // README 状态可见：上下文占比 + 世界书命中常驻输入栏顶部（不占消息区）
             if (!isStreaming && (contextUsage != null || worldHitsCount > 0)) {
                 Row(
@@ -5944,15 +5962,37 @@ private fun ChatInputBar(
             }
             Row(
                 verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
+            // 左侧工具簇：+ 附件为通用入口（中性 tonal）；冒充/继续是生成类操作，
+            // 用 accent tonal 与附件区分，语义一眼可辨
             EmberInputIcon(
                 onClick = onAttach,
                 icon = FaIcons.Plus,
                 contentDescription = "附件与工具",
             )
+            if (!isStreaming) {
+                // 官方 rightSendForm：impersonate(user-secret) + continue(arrow-right)
+                EmberInputIcon(
+                    onClick = onQuickImpersonate,
+                    icon = FaIcons.UserSecret,
+                    contentDescription = "冒充用户发言",
+                    tint = accent,
+                    container = accent.copy(alpha = 0.14f),
+                )
+                if (canQuickContinue) {
+                    EmberInputIcon(
+                        onClick = onQuickContinue,
+                        icon = FaIcons.ArrowRight,
+                        contentDescription = "继续生成",
+                        tint = accent,
+                        container = accent.copy(alpha = 0.14f),
+                    )
+                }
+            }
             EmberTextField(
                 value = if (impersonating) impersonationClean else input,
                 onValueChange = if (impersonating) { _ -> } else onInputChange,
@@ -5976,19 +6016,6 @@ private fun ChatInputBar(
                     .heightIn(min = 44.dp, max = 160.dp),
             )
             if (!isStreaming) {
-                // 官方 rightSendForm：impersonate(user-secret) + continue(arrow-right) + send(paper-plane)
-                EmberInputIcon(
-                    onClick = onQuickImpersonate,
-                    icon = FaIcons.UserSecret,
-                    contentDescription = "冒充用户发言",
-                )
-                if (canQuickContinue) {
-                    EmberInputIcon(
-                        onClick = onQuickContinue,
-                        icon = FaIcons.ArrowRight,
-                        contentDescription = "继续生成",
-                    )
-                }
                 val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
                 ChatSendButton(accent = accent, canSend = canSend, onSend = onSend)
             } else {
@@ -6102,6 +6129,12 @@ private fun AttachSheetRow(
 @Composable
 private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) {
     val onAccent = if (accent.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else Color.White
+    // 对角渐变替代纯色：深色主色亮端在上、浅色主色暗端在下，光照方向与停止钮/发丝线一致
+    val sendBrush = if (accent.luminance() > 0.5f) {
+        Brush.linearGradient(listOf(accent, lerp(accent, Color.Black, 0.18f)))
+    } else {
+        Brush.linearGradient(listOf(lerp(accent, Color.White, 0.22f), accent))
+    }
     IconButton(
         onClick = onSend,
         enabled = canSend,
@@ -6126,7 +6159,8 @@ private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) 
                 )
                 .clip(CircleShape)
                 .background(
-                    if (canSend) accent else MaterialTheme.colorScheme.surfaceContainerHighest,
+                    if (canSend) sendBrush
+                    else SolidColor(MaterialTheme.colorScheme.surfaceContainerHighest),
                 ),
         ) {
             Icon(
