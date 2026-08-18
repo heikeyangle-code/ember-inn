@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.sessions
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberMenuRow as SheetRow
 import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
@@ -597,40 +598,6 @@ private fun CharacterAvatar(character: CharacterRecord) {
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.secondary,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SheetRow(
-    icon: ImageVector,
-    label: String,
-    subtitle: String? = null,
-    danger: Boolean = false,
-    onClick: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                label,
-                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            )
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
