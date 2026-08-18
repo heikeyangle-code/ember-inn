@@ -47,6 +47,7 @@ import com.emberinn.app.ui.settings.GlobalRegexPrefs
 import com.emberinn.app.ui.settings.MemoryPrefs
 import com.emberinn.app.ui.settings.AuthorsNotePrefsStore
 import com.emberinn.app.ui.settings.CharaNoteData
+import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.emberinn.app.ui.settings.ServicesPrefs
 import com.emberinn.app.ui.settings.VoicePrefs
@@ -214,8 +215,36 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 streamingReasoningBuffer.clear()
             }
         }
-        text?.let { _streamingText.value = _streamingText.value + it }
+        text?.let {
+            _streamingText.value = _streamingText.value + it
+            // 官方 onProgressStreaming(L3616)：冒充流式每 tick 先 cleanUpMessage(isImpersonate) + 定界符补齐
+            // 再写 send_textarea——输入框里是清洗后的文本，不是裸流（否则名字残留/未闭合引号先闪现再消失）
+            if (_isImpersonating.value) {
+                _impersonationDraft.value = cleanImpersonationText(_streamingText.value, isFinal = false)
+            }
+        }
         reasoning?.let { _streamingReasoning.value = _streamingReasoning.value + it }
+    }
+
+    /** 冒充流式输入框显示（官方 script.js:3600-3618 语义：clean(isImpersonate) + balance 后进 textarea）。 */
+    private val _impersonationDraft = MutableStateFlow("")
+    val impersonationDraft: StateFlow<String> = _impersonationDraft
+
+    /** 官方冒充显示管线：cleanUpMessage(isImpersonate=true)（去用户名前缀/collapseNewlines/trimSpaces）
+     *  + charsToBalance（* " ``` ~~~ 奇数补齐，isFinal 不补）。 */
+    private fun cleanImpersonationText(raw: String, isFinal: Boolean): String {
+        val behavior = BehaviorPrefs.load(getApplication())
+        val cleaned = CleanUpMessageEngine.clean(
+            getMessage = raw,
+            config = CleanUpConfig(
+                isImpersonate = true,
+                name1 = currentUserName,
+                name2 = currentCharName,
+                collapseNewlines = RenderPrefs.collapseNewlines(getApplication()),
+                trimSpaces = behavior.trimSpaces,
+            ),
+        )
+        return DisplayPipeline.balanceStreamingDelimiters(cleaned, isFinal = isFinal)
     }
 
     /** 最近一次生成的完整思考过程（生成完保留，UI 折叠展示；新请求时清空）。 */
@@ -1792,12 +1821,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
         if (partial.isNotBlank()) {
             when {
-                wasImpersonating -> _impersonated.value = partial
+                // 官方 abort：textarea 保留的是最后一个 tick 已清洗的文本（onProgressStreaming 每 tick 清洗），
+                // 因此停止路径同样过 clean 管线，不落裸流
+                wasImpersonating -> _impersonated.value = cleanImpersonationText(partial, isFinal = true)
                 wasSwipe -> appendGeneratedSwipe(partial)
                 wasContinue -> {
                     // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
+                    // 官方追加目标是 chat 的最后一条（continue 允许最后一条是用户消息）
                     val after = chatStore.messages(sessionId).toMutableList()
-                    val aiIdx = after.indexOfLast { !isUser(it) }
+                    val aiIdx = after.lastIndex
                     if (aiIdx >= 0) {
                         val profile = chatRepository.profile()
                         chatStore.appendToCurrentSwipe(
@@ -1820,15 +1852,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         generatingSwipe = false
     }
 
-    /** 重新生成（官方 option_regenerate）：只对最后一条 AI 生效——先删掉它，再按剩余历史重新请求。 */
+    /** 重新生成（官方 option_regenerate / script.js:4340-4353）：最后一条是用户消息时"do nothing"
+     *  ——不删任何消息，直接对其重新生成 AI 回复；最后一条非用户（AI/系统）才删掉再生成。 */
     fun regenerate() {
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
-        if (isUser(last) || isSystemMsg(last)) {
-            _notice.value = "（最后一条不是可重新生成的 AI 回复。）"
-            return
-        }
         // 先检查配置再删回复：未配置时绝不丢最后一条 AI 回复
         _notice.value = null
         if (!isProviderConfigured()) {
@@ -1836,8 +1865,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             _notice.value = "（未配置模型，请先选一个模型再重新生成。）"
             return
         }
-        chatStore.removeAt(sessionId, msgs.lastIndex)
-        refreshMessages()
+        // 官方 script.js:4346：lastMessage.is_user → 什么都不删，照常生成（对用户最后一句重新要一条 AI 回复）
+        if (!isUser(last)) {
+            chatStore.removeAt(sessionId, msgs.lastIndex)
+            refreshMessages()
+        }
         if (group != null) {
             startGroupTurn(type = "regenerate")
         } else {
@@ -1854,15 +1886,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (_isStreaming.value) return
         val msgs = chatStore.messages(sessionId)
         val last = msgs.lastOrNull() ?: return
-        if (isUser(last)) {
-            // 不再静默失败：最后一条是用户消息时明确提示，否则点“继续”毫无反应
-            _notice.value = "（最后一条是你发的消息，先让对方回复或发送后再继续。）"
-            return
-        }
-        if (isSystemMsg(last)) {
-            _notice.value = "（最后一条是系统/隐藏消息，不能继续生成。）"
-            return
-        }
+        // 官方 option_continue / script.js:5026：最后一条是用户消息时不警告不拒绝——照样续写，
+        // 仅 modifyLastPromptLine 省略角色名追加（引擎 nudge 泛化，cyclePrompt 取实际最后一条文本）
         val lastText = textOf(last)
         _notice.value = null
         if (!isProviderConfigured()) {
@@ -2765,6 +2790,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _isStreaming.value = true
         _generationEpoch.value++
         _isImpersonating.value = impersonation
+        // 官方 onStartStreaming(L3570)：冒充开始即清空输入框——旧草稿不保留，空结果时输入框也是空的
+        if (impersonation) _impersonationDraft.value = ""
         streamContinueMode = continueMode
         generatingSwipe = swipeMode
         pendingGroupGenId = groupGenId
@@ -3261,9 +3288,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
             continueMode && reply.isNotBlank() -> {
                 // 对齐官方 saveReply(type='continue')：lastMessage.mes += getMessage，紧贴追加不插换行
+                // 官方追加目标是 chat 最后一条（continue 允许最后一条是用户消息，脚本无 is_user 拦截）
                 if (_streamingReasoning.value.isNotBlank()) _lastReasoning.value = _streamingReasoning.value
                 val after = chatStore.messages(sessionId).toMutableList()
-                val aiIdx = after.indexOfLast { !isUser(it) }
+                val aiIdx = after.lastIndex
                 if (aiIdx >= 0) {
                     val profile = chatRepository.profile()
                     // 官方：generation_started 时长守恒（now - (prevFinished - prevStarted)）
@@ -3288,7 +3316,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     // 官方 saveReply('continue')：message_token_count_enabled 时刷新合并后 token_count
                     if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
                         val msgs = chatStore.messages(sessionId)
-                        val idx = msgs.indexOfLast { !isUser(it) }
+                        val idx = msgs.lastIndex
                         if (idx >= 0) {
                             val text = msgs[idx].jsonObject["mes"]?.jsonPrimitive?.contentOrNull.orEmpty()
                             val count = runCatching {
@@ -3530,11 +3558,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return v.jsonPrimitive.let { it.booleanOrNull ?: (it.content == "true") }
     }
 
-    /** 最后一条是否为可继续的 AI 消息（非用户、非系统；官方 coreChat 语义）。 */
+    /** 是否可继续生成（官方 option_continue：无 is_user 拦截，最后一条是用户消息时照样续写）。 */
     fun canContinueGeneration(): Boolean {
-        val msgs = chatStore.messages(sessionId)
-        val last = msgs.lastOrNull() ?: return false
-        return !isUser(last) && !isSystemMsg(last)
+        return chatStore.messages(sessionId).isNotEmpty()
     }
 
     private fun textOf(el: JsonElement): String =

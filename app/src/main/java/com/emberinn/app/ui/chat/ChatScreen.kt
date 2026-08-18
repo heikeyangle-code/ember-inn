@@ -540,6 +540,10 @@ fun ChatScreen(
             vm.consumeImpersonation()
         }
     }
+    // 官方 onStartStreaming(script.js:3570)：冒充开始即清空输入框——旧草稿不保留（流式期间显示清洗后的草稿流）
+    LaunchedEffect(isImpersonating) {
+        if (isImpersonating) input = ""
+    }
 
     // /setinput：官方 setinput 把文本写进输入框（用户可改可发）
     LaunchedEffect(inputDraft) {
@@ -891,7 +895,7 @@ fun ChatScreen(
                 accent = accent,
                 input = input,
                 impersonating = isImpersonating,
-                streamingText = vm.streamingText,
+                impersonationDraft = vm.impersonationDraft,
                 onInputChange = { input = it },
                 pendingMedia = pendingMedia,
                 pendingDisplay = pendingDisplay,
@@ -5226,11 +5230,12 @@ private fun ChatInputBar(
     onAttach: () -> Unit,
     slashCommands: List<Pair<String, String>> = emptyList(),
     impersonating: Boolean = false,
-    streamingText: kotlinx.coroutines.flow.StateFlow<String> = kotlinx.coroutines.flow.MutableStateFlow(""),
+    impersonationDraft: kotlinx.coroutines.flow.StateFlow<String> = kotlinx.coroutines.flow.MutableStateFlow(""),
     modifier: Modifier = Modifier,
 ) {
-    // 官方冒充：流式正文实时写输入框（聊天区不显示）
-    val streamingDraft by streamingText.collectAsState()
+    // 官方冒充：流式正文实时写输入框（聊天区不显示）；
+    // 每 tick 先过 clean(isImpersonate)+定界符补齐（官方 onProgressStreaming L3616），输入框不显示裸流
+    val impersonationClean by impersonationDraft.collectAsState()
     // 斜杠补全：输入以 / 开头且第一个词未完成时，按已输入字母过滤（前缀优先，其次包含），最多 12 条
     val slashMatches = remember(input, slashCommands) {
         val show = input.startsWith("/") && input.length > 1 && !input.substring(1).contains(' ')
@@ -5390,7 +5395,7 @@ private fun ChatInputBar(
                 contentDescription = "附件与工具",
             )
             EmberTextField(
-                value = if (impersonating) streamingDraft else input,
+                value = if (impersonating) impersonationClean else input,
                 onValueChange = if (impersonating) { _ -> } else onInputChange,
                 placeholder = {
                     Text(
