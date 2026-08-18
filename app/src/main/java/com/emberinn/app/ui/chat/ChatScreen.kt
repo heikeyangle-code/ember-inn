@@ -4590,17 +4590,19 @@ private fun buildMessageSegments(
         }
         appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
     }
-    var cursor = 0
-    for (r in carveWebElementRanges(content)) {
-        if (htmlEnabled) {
-            appendFenced(content.substring(cursor, r.first))
-            out += ChatSegment(SegmentKind.WebHtml, content.substring(r.first, r.last + 1))
-        } else {
-            appendFenced(content.substring(cursor, r.last + 1))
-        }
-        cursor = r.last + 1
+    val ranges = if (htmlEnabled) carveWebElementRanges(content) else emptyList()
+    if (ranges.isEmpty()) {
+        appendFenced(content)
+        return out
     }
-    appendFenced(content.substring(cursor))
+    // 官方 messageFormatting 语义：整条消息 innerHTML 进同一个 .mes_text DOM，
+    // <style>/<script> 全局作用于本条消息。分段渲染不能把 style 和它作用的 div 拆进
+    // 两个独立 WebView（iframe 沙箱互不可见 → 角色卡状态栏样式全丢、脚本找不到元素，
+    // 只剩裸文字）。因此：首个 Web 元素之前 / 末个之后的纯文字保持原生，
+    // 首元素起点→末元素终点整段合成一个 WebHtml（中间的零星文字跟着进 DOM，与官方一致）。
+    appendFenced(content.substring(0, ranges.first().first))
+    out += ChatSegment(SegmentKind.WebHtml, content.substring(ranges.first().first, ranges.last().last + 1))
+    appendFenced(content.substring(ranges.last().last + 1))
     return out
 }
 
