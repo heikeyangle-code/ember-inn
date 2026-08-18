@@ -241,16 +241,23 @@ class LlmClient(
     ): StreamSession {
         val request = buildRequest(provider, profile, messages, stream = true, options = options)
         val call = http.newCall(request)
+        // 流正常结束后（[DONE]/stream_end/EOF 收尾）再抛的连接异常不算错误：
+        // 部分网关发完 [DONE] 直接 RST 断连，读线程继续读会抛 IOException → 误报“请求中断”；
+        // 工具循环已开下一轮时上层 streamActive=true，误报还会把新一轮整轮复位（假 API 报错根因）
+        val completed = java.util.concurrent.atomic.AtomicBoolean(false)
+        val onDoneOnce = {
+            if (completed.compareAndSet(false, true)) onDone()
+        }
         Thread {
             try {
                 call.execute().use { response ->
                     if (!response.isSuccessful) {
                         error("HTTP ${response.code}: ${response.body?.string().orEmpty()}")
                     }
-                    executeStream(response, provider.protocol, onDelta, onDone, onReasoning, onToolCalls, onLogprobs)
+                    executeStream(response, provider.protocol, onDelta, onDoneOnce, onReasoning, onToolCalls, onLogprobs)
                 }
             } catch (e: Exception) {
-                if (!call.isCanceled()) onError?.invoke(e)
+                if (!call.isCanceled() && !completed.get()) onError?.invoke(e)
             }
         }.start()
         return StreamSession(call)

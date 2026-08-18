@@ -3117,7 +3117,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             _notice.value = if (e is ContextBudgetException) {
                                 "（${e.message}）"
                             } else {
-                                "（请求中断，请检查网络或 API Key 后重试。）"
+                                // 官方 showSendMessageError：toastr 直接展示后端错误原文（HTTP 状态/body），
+                                // 不再只给泛化文案——用户无法区分欠费/限流/鉴权问题
+                                val msg = e.message?.trim().orEmpty()
+                                if (msg.isNotBlank()) "（生成失败：${msg.take(160)}）"
+                                else "（请求中断，请检查网络或 API Key 后重试。）"
                             }
                         } else {
                             finalizeStream(streamContinueMode)
