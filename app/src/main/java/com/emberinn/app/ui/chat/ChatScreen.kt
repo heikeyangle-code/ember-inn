@@ -96,12 +96,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -212,6 +214,8 @@ private data class ChatItemDerived(
     val isUser: Boolean,
     val isSystem: Boolean,
     val text: String,
+    /** 本条消息自己的思考（官方 reasoning 扩展：逐条存 extra.reasoning，各自渲染折叠块）。 */
+    val reasoning: String?,
     val media: List<MediaAttachment>,
     val mediaDisplay: String?,
     val mediaIndex: Int?,
@@ -266,6 +270,8 @@ fun ChatScreen(
     val defaultPersona by vm.defaultPersona.collectAsState()
     val bookmarks by vm.bookmarks.collectAsState()
     val dataBank by vm.dataBank.collectAsState()
+    val displayRevision by vm.displayRevision.collectAsState()
+    val generationEpoch by vm.generationEpoch.collectAsState()
 
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
@@ -274,13 +280,16 @@ fun ChatScreen(
     LaunchedEffect(isStreaming) {
         if (isStreaming) reasoningExpanded = false
     }
-    var menuMessageIndex by remember { mutableStateOf<Int?>(null) }
+    // 官方 reasoning 扩展：每条消息的 Thoughts 块各自独立展开/折叠（DOM 级状态、默认折叠、不落盘）。
+    // 以 send_date 为身份键，滑动/刷新不串行；流式结束后 finalized 行回到折叠（官方重新渲染重置）。
+    val reasoningExpandedMap = remember { mutableStateMapOf<String, Boolean>() }
+    var menuMessageIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showConvertGroupConfirm by remember { mutableStateOf(false) }
     var showLogprobsSheet by remember { mutableStateOf(false) }
-    var tokenStatsIndex by remember { mutableStateOf<Int?>(null) }
+    var tokenStatsIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var showMore by remember { mutableStateOf(false) }
     var showCfgSheet by remember { mutableStateOf(false) }
     var showPromptPreview by remember { mutableStateOf(false) }
@@ -339,11 +348,11 @@ fun ChatScreen(
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
     var groupStrategy by rememberSaveable { mutableStateOf(vm.group?.activationStrategy ?: "natural") }
     var imagePrompt by remember { mutableStateOf("") }
-    var editIndex by remember { mutableStateOf<Int?>(null) }
+    var editIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var editDraft by remember { mutableStateOf("") }
-    var deleteTargetIndex by remember { mutableStateOf<Int?>(null) }
-    var deleteSwipeTargetIndex by remember { mutableStateOf<Int?>(null) }
-    var swipePickerIndex by remember { mutableStateOf<Int?>(null) }
+    var deleteTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
+    var deleteSwipeTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
+    var swipePickerIndex by remember { mutableStateOf<MsgTarget?>(null) }
     val listState = rememberLazyListState()
     // 输入框斜杠补全用的命令清单（App 消息类 + 引擎纯函数，含中文描述）
     val slashCommands = remember { vm.slashCommandList() }
@@ -375,10 +384,12 @@ fun ChatScreen(
         uri?.let { vm.setChatBackground(it) }
     }
 
-    var embedTargetIndex by remember { mutableStateOf<Int?>(null) }
+    var embedTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     val embedPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val idx = embedTargetIndex
+        val target = embedTargetIndex
         embedTargetIndex = null
+        // 文件选择器期间消息列表可能刷新：按身份重定位（失配放弃，防附件挂到别的消息）
+        val idx = target?.resolve(messages)
         if (uri != null && idx != null) vm.addMediaToMessage(idx, uri, null)
     }
 
@@ -580,8 +591,18 @@ fun ChatScreen(
             }
         }
     }
+    // 官方 generate() 开头 scrollLock = false：任何生成类型（发送/继续/重生成/变体/冒充/群聊轮次）
+    // 开始时恢复自动贴底跟随——用户上滑看历史时点重新生成，官方会回到最新并跟随。
+    LaunchedEffect(generationEpoch) {
+        if (generationEpoch > 0) followBottom = true
+    }
+    // 显示设置（encode_tags/正则/行为）变更即时生效：DisplayCacheVersion bump → VM 清缓存 + 全表行重算
+    LaunchedEffect(Unit) {
+        snapshotFlow { com.emberinn.app.data.DisplayCacheVersion.version }.drop(1).collect {
+            vm.onDisplaySettingsChanged()
+        }
+    }
 
-    // 流式显示：120ms 节流（官方 streaming_fps=30 是上限不是目标；每 tick 全量解析的成本远高于 30fps 的收益）。
     val sky = rememberSky()
     val keyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
@@ -708,13 +729,16 @@ fun ChatScreen(
                     when (item) {
                         is ChatItem.Message -> {
                             val el = item.element
-                            // 派生字段只随消息元素变化重算：流式 tick 不再为历史消息反复解析 JSON/读缓存
-                            val derived = remember(el) {
+                            // 派生字段随消息元素或显示管线修订号变化重算：流式 tick 不重算历史行；
+                            // displayRevision 变化（列表刷新/显示设置变更）后立即取新显示文本，修复改设置后残留旧文本
+                            val derived = remember(el, displayRevision) {
                                 val user = isUser(el)
                                 ChatItemDerived(
                                     isUser = user,
                                     isSystem = isSystem(el),
                                     text = vm.displayTextOf(item.index),
+                                    reasoning = (el.jsonObject["extra"] as? JsonObject)
+                                        ?.get("reasoning")?.jsonPrimitive?.contentOrNull,
                                     media = mediaOf(el),
                                     mediaDisplay = extraDisplayOf(el),
                                     mediaIndex = extraIndexOf(el),
@@ -747,6 +771,17 @@ fun ChatScreen(
                                     if (prev == cur) null else cur
                                 }
                             }
+                            // 官方 reasoning 扩展：每条 AI 消息各自渲染 Thoughts 块（extra.reasoning 逐条落盘）；
+                            // 最后一条 AI 在落盘刷新落地前一帧用内存 lastReasoning 兜底；show_thoughts 关闭时全部隐藏。
+                            val reasoningSrc = if (!isUserMsg && !isSystemMsg && showThoughtsNow) {
+                                derived.reasoning ?: if (item.index == lastAiIndex) lastReasoning else null
+                            } else null
+                            val reasoningDisplay = remember(reasoningSrc, displayRevision) {
+                                reasoningSrc?.takeIf { it.isNotBlank() }?.let { vm.displayReasoningText(it) }
+                            }
+                            val reasoningKey = remember(el) {
+                                el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull ?: "idx-${item.index}"
+                            }
                             MessageRow(
                                 modifier = Modifier,
                                 isUser = isUserMsg,
@@ -756,9 +791,11 @@ fun ChatScreen(
                                 mediaDisplay = derived.mediaDisplay,
                                 mediaIndex = derived.mediaIndex,
                                 onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
-                                reasoning = if (!isStreaming && !isUserMsg && item.index == lastAiIndex) lastReasoning?.let { vm.displayReasoningText(it) } else null,
-                                reasoningExpanded = reasoningExpanded,
-                                onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
+                                reasoning = reasoningDisplay,
+                                reasoningExpanded = reasoningExpandedMap[reasoningKey] == true,
+                                onReasoningToggle = {
+                                    reasoningExpandedMap[reasoningKey] = !(reasoningExpandedMap[reasoningKey] == true)
+                                },
                                 name = derived.name,
                                 time = derived.time,
                                 dateLabel = dateLabel,
@@ -781,55 +818,33 @@ fun ChatScreen(
                                 isPrevSameSender = isPrevSameSender,
                                 onSwipeLeft = { vm.swipeLeft(item.index) },
                                 onSwipeRight = { vm.swipeRight(item.index) },
-                                onEdit = { editIndex = item.index; editDraft = text },
-                                onMore = { menuMessageIndex = item.index },
+                                onEdit = { editIndex = MsgTarget(item.index, el); editDraft = text },
+                                onMore = { menuMessageIndex = MsgTarget(item.index, el) },
                                 onBookmark = {
                                     bookmarkDraftName = vm.defaultBookmarkName()
                                     showBookmarkDialog = true
                                 },
                                 onClassifyExpression = { t, cb -> vm.classifyExpression(t, cb) },
                                 classifyEnabled = true,
-                                onLongPress = { menuMessageIndex = item.index },
+                                onLongPress = { menuMessageIndex = MsgTarget(item.index, el) },
                             )
                         }
                         ChatItem.Streaming -> {
-                            // 流式状态只在“流式这一行”订阅：每 token 更新不会让整棵消息列表重组
+                            // 流式状态只在“流式这一行”订阅：每 token 更新不会让整棵消息列表重组。
+                            // VM 已按官方 streaming_fps≈30 单层节流（33ms 一帧），这里直接消费，不再叠 UI 节流
+                            // （此前 100ms+120ms 双层叠加 ~220ms 一帧，是流式视觉卡顿主因）。
                             val st by vm.streamingText.collectAsState()
                             val sr by vm.streamingReasoning.collectAsState()
-                            var displayStreaming by remember { mutableStateOf("") }
-                            var lastTextNanos by remember { mutableLongStateOf(0L) }
-                            LaunchedEffect(st) {
-                                val now = System.nanoTime()
-                                if (now - lastTextNanos >= 120_000_000L) {
-                                    displayStreaming = st
-                                    lastTextNanos = now
-                                }
-                            }
-                            var displayReasoning by remember { mutableStateOf("") }
-                            var lastReasoningNanos by remember { mutableLongStateOf(0L) }
-                            LaunchedEffect(sr) {
-                                val now = System.nanoTime()
-                                if (now - lastReasoningNanos >= 120_000_000L) {
-                                    displayReasoning = sr
-                                    lastReasoningNanos = now
-                                }
-                            }
-                            LaunchedEffect(isStreaming) {
-                                if (!isStreaming) {
-                                    displayStreaming = st
-                                    displayReasoning = sr
-                                }
-                            }
                             // 思考流式同正文：定界符补齐 + fixMarkdown + encode_tags（官方 messageFormatting 每 tick）
-                            val reasoningDisplay = remember(displayReasoning, isStreaming) {
-                                val balanced = DisplayPipeline.balanceStreamingDelimiters(displayReasoning, isFinal = !isStreaming)
+                            val reasoningDisplay = remember(sr, isStreaming) {
+                                val balanced = DisplayPipeline.balanceStreamingDelimiters(sr, isFinal = !isStreaming)
                                 val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
                                 if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
                             }
                             // 官方 messageFormatting 每 tick：定界符补齐（onProgressStreaming）+ fixMarkdown(forDisplay=true)
                             // + encode_tags（auto_fix_generated_markdown 默认开）——流式中也必须跑，否则未闭合 ** 会露符号
-                            val streamingDisplay = remember(displayStreaming, isStreaming) {
-                                val balanced = DisplayPipeline.balanceStreamingDelimiters(displayStreaming, isFinal = !isStreaming)
+                            val streamingDisplay = remember(st, isStreaming) {
+                                val balanced = DisplayPipeline.balanceStreamingDelimiters(st, isFinal = !isStreaming)
                                 val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
                                 if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
                             }
@@ -1040,9 +1055,11 @@ fun ChatScreen(
         }
     }
 
-    menuMessageIndex?.let { index ->
-        val el = messages.getOrNull(index)
-        if (el != null) {
+    menuMessageIndex?.let { target ->
+        // 打开菜单期间列表可能被刷新（翻译/变体等异步完成）：按身份重定位，漂移则关菜单不误操作
+        val index = target.resolve(messages)
+        val el = index?.let { messages.getOrNull(it) }
+        if (index != null && el != null) {
             val text = textOf(el)
             val isUserMsg = isUser(el)
             EmberBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
@@ -1060,7 +1077,7 @@ fun ChatScreen(
                         menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.Edit, "编辑这条消息") {
-                        editIndex = index; editDraft = text; menuMessageIndex = null
+                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.Megaphone, "朗读这条消息") {
                         vm.narrateMessage(index)
@@ -1078,7 +1095,7 @@ fun ChatScreen(
                     }
                     MenuRow(PhosphorIcons.Plus, "嵌入附件（Embed）") {
                         menuMessageIndex = null
-                        embedTargetIndex = index
+                        embedTargetIndex = MsgTarget(index, el)
                         embedPicker.launch(arrayOf("*/*"))
                     }
                     val mediaOfMsg = mediaOf(el)
@@ -1089,7 +1106,7 @@ fun ChatScreen(
                         }
                     }
                     MenuRow(PhosphorIcons.ChartBar, "提示词分节明细（官方 Prompt Itemization）") {
-                        tokenStatsIndex = index
+                        tokenStatsIndex = MsgTarget(index, el)
                         menuMessageIndex = null
                     }
                     MenuRow(PhosphorIcons.Flag, "创建书签（存档到此）") {
@@ -1140,19 +1157,22 @@ fun ChatScreen(
                             vm.swipeRight(index); menuMessageIndex = null
                         }
                         MenuRow(PhosphorIcons.List, "变体列表") {
-                            swipePickerIndex = index; menuMessageIndex = null
+                            swipePickerIndex = MsgTarget(index, el); menuMessageIndex = null
                         }
                         if (swipeCount > 1) {
                             MenuRow(PhosphorIcons.Delete, "删除当前回复", danger = true) {
-                                deleteSwipeTargetIndex = index; menuMessageIndex = null
+                                deleteSwipeTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                             }
                         }
                     }
                     MenuRow(PhosphorIcons.Delete, "删除这条消息", danger = true) {
-                        deleteTargetIndex = index; menuMessageIndex = null
+                        deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
                     }
                 }
             }
+        } else {
+            // 目标消息已被删除：收起菜单（组合期不写状态，用副作用清理）
+            LaunchedEffect(target) { menuMessageIndex = null }
         }
     }
 
@@ -1173,70 +1193,90 @@ fun ChatScreen(
         )
     }
 
-    deleteTargetIndex?.let { index ->
-        AlertDialog(
-            onDismissRequest = { deleteTargetIndex = null },
-            title = { Text("删除这条消息？") },
-            text = { Text("删除后不可恢复。") },
-            confirmButton = {
-                TextButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                    vm.deleteMessage(index)
-                    deleteTargetIndex = null
-                    Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteTargetIndex = null }) { Text("取消") }
-            },
-        )
+    deleteTargetIndex?.let { target ->
+        val index = target.resolve(messages)
+        if (index != null) {
+            AlertDialog(
+                onDismissRequest = { deleteTargetIndex = null },
+                title = { Text("删除这条消息？") },
+                text = { Text("删除后不可恢复。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                        val cur = target.resolve(messages)
+                        if (cur != null) vm.deleteMessage(cur)
+                        deleteTargetIndex = null
+                        Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
+                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteTargetIndex = null }) { Text("取消") }
+                },
+            )
+        } else {
+            LaunchedEffect(target) { deleteTargetIndex = null }
+        }
     }
 
-    deleteSwipeTargetIndex?.let { index ->
-        val el = messages.getOrNull(index)
+    deleteSwipeTargetIndex?.let { target ->
+        val index = target.resolve(messages)
+        val el = index?.let { messages.getOrNull(it) }
         val cur = if (el != null) vm.currentSwipeOf(el) + 1 else 0
-        AlertDialog(
-            onDismissRequest = { deleteSwipeTargetIndex = null },
-            title = { Text("删除这个回复？") },
-            text = { Text("将删除该消息的第 $cur 个回复变体，删除后不可恢复。") },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (el != null) {
-                        vm.deleteSwipe(index, vm.currentSwipeOf(el))
-                        Toast.makeText(context, "已删除该回复", Toast.LENGTH_SHORT).show()
-                    }
-                    deleteSwipeTargetIndex = null
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteSwipeTargetIndex = null }) { Text("取消") }
-            },
-        )
+        if (index != null && el != null) {
+            AlertDialog(
+                onDismissRequest = { deleteSwipeTargetIndex = null },
+                title = { Text("删除这个回复？") },
+                text = { Text("将删除该消息的第 $cur 个回复变体，删除后不可恢复。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val rIdx = target.resolve(messages)
+                        val rEl = rIdx?.let { messages.getOrNull(it) }
+                        if (rIdx != null && rEl != null) {
+                            vm.deleteSwipe(rIdx, vm.currentSwipeOf(rEl))
+                            Toast.makeText(context, "已删除该回复", Toast.LENGTH_SHORT).show()
+                        }
+                        deleteSwipeTargetIndex = null
+                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteSwipeTargetIndex = null }) { Text("取消") }
+                },
+            )
+        } else {
+            LaunchedEffect(target) { deleteSwipeTargetIndex = null }
+        }
     }
 
-    editIndex?.let { index ->
-        AlertDialog(
-            onDismissRequest = { editIndex = null },
-            title = { Text("编辑消息") },
-            text = {
-                EmberTextField(
-                    value = editDraft,
-                    onValueChange = { editDraft = it },
-                    minLines = 3,
-                    maxLines = 8,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.editMessage(index, editDraft)
-                    editIndex = null
-                }) { Text("保存") }
-            },
-            dismissButton = {
-                TextButton(onClick = { editIndex = null }) { Text("取消") }
-            },
-        )
+    editIndex?.let { target ->
+        val index = target.resolve(messages)
+        if (index != null) {
+            AlertDialog(
+                onDismissRequest = { editIndex = null },
+                title = { Text("编辑消息") },
+                text = {
+                    EmberTextField(
+                        value = editDraft,
+                        onValueChange = { editDraft = it },
+                        minLines = 3,
+                        maxLines = 8,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        // 保存前重定位：弹层打开期间列表刷新则按身份找回，失配放弃（防写错消息）
+                        val cur = target.resolve(messages)
+                        if (cur != null) vm.editMessage(cur, editDraft)
+                        editIndex = null
+                    }) { Text("保存") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { editIndex = null }) { Text("取消") }
+                },
+            )
+        } else {
+            LaunchedEffect(target) { editIndex = null }
+        }
     }
 
     vm.character?.let { character ->
@@ -2147,7 +2187,11 @@ fun ChatScreen(
         )
     }
 
-    tokenStatsIndex?.let { index ->
+    val tokenStatsResolved = tokenStatsIndex?.let { it.resolve(messages) }
+    if (tokenStatsIndex != null && tokenStatsResolved == null) {
+        LaunchedEffect(tokenStatsIndex) { tokenStatsIndex = null }
+    }
+    tokenStatsResolved?.let { index ->
         // 官方 itemized-prompts.js promptItemize：按消息索引显示该次总装的分节明细。
         val entry = vm.itemizationFor(index)
         val prev = vm.itemizations().lastOrNull { it.messageIndex < index }
@@ -2355,7 +2399,11 @@ fun ChatScreen(
         }
     }
 
-    swipePickerIndex?.let { index ->
+    val swipePickerResolved = swipePickerIndex?.let { it.resolve(messages) }
+    if (swipePickerIndex != null && swipePickerResolved == null) {
+        LaunchedEffect(swipePickerIndex) { swipePickerIndex = null }
+    }
+    swipePickerResolved?.let { index ->
         val currentEl = messages.getOrNull(index)
         val variants = vm.swipeVariantsOf(index)
         if (variants.isNotEmpty() && currentEl != null) {
@@ -2374,7 +2422,8 @@ fun ChatScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth().clickable {
-                                vm.swipeToVariant(index, i)
+                                val cur = swipePickerIndex?.resolve(messages) ?: index
+                                vm.swipeToVariant(cur, i)
                                 swipePickerIndex = null
                             }.padding(horizontal = 20.dp, vertical = 8.dp),
                         ) {
@@ -5554,6 +5603,28 @@ private fun promptSectionLabel(key: String): String = when (key) {
 private fun isUser(el: JsonElement): Boolean {
     val v = el.jsonObject["is_user"] ?: return false
     return v.jsonPrimitive.let { it.booleanOrNull ?: (it.content == "true") }
+}
+
+/**
+ * 消息操作目标（索引漂移防护）：弹层/异步操作期间消息列表可能被结构性刷新
+ * （翻译完成、变体替换、隐藏、书签等触发 refreshMessages），裸 index 会漂移到别的消息上。
+ * 绑定打开时刻的消息身份（send_date），消费时重新定位：先按 index 快速校验，失配再按
+ * send_date 全表扫描；都找不到（消息已删除）返回 null，调用方放弃操作而非写错对象。
+ */
+private class MsgTarget(val index: Int, el: JsonElement) {
+    private val sendDate: String? = el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull
+
+    fun resolve(messages: List<JsonElement>): Int? {
+        if (index in messages.indices) {
+            val cur = messages[index].jsonObject
+            if (cur["send_date"]?.jsonPrimitive?.contentOrNull == sendDate) return index
+        }
+        if (sendDate != null) {
+            val byDate = messages.indexOfFirst { it.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull == sendDate }
+            if (byDate >= 0) return byDate
+        }
+        return null
+    }
 }
 
 private fun textOf(el: JsonElement): String {

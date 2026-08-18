@@ -147,9 +147,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 显示文本缓存：displayTextOf 只在消息刷新时算一次，组合期不再读盘/跑正则（性能）。
-     *  设置（encode_tags/正则/允许列表）变更时 DisplayCacheVersion.bump()，这里整体失效即时生效。 */
-    private val displayCache = mutableMapOf<Int, String>()
+     *  设置（encode_tags/正则/允许列表）变更时 DisplayCacheVersion.bump()，这里整体失效即时生效。
+     *  缓存条目绑定消息身份（send_date）：结构变更（swipe/翻译/删除）后同 index 指向不同消息时自动失效，
+     *  防止显示错条内容（索引漂移）。 */
+    private data class DisplayCacheEntry(val sendDate: String?, val text: String)
+    private val displayCache = mutableMapOf<Int, DisplayCacheEntry>()
     private var displayCacheVersion = -1
+
+    /** 显示管线修订号：消息列表每次替换 / DisplayCacheVersion 失效时 +1。
+     *  ChatScreen 的 derived remember 以此为 key，缓存失效后历史行立即重算（修复改设置后显示旧文本）。 */
+    private val _displayRevision = MutableStateFlow(0)
+    val displayRevision: StateFlow<Int> = _displayRevision
     /** 最近一次真实发送（非预览）的总装明细，落盘时写进 ItemizationStore（官方 itemizedPrompts）。 */
     private var pendingItemization: ItemizationEntry? = null
 
@@ -163,9 +171,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _showThoughts = MutableStateFlow(chatRepository.profile()?.sampler?.showThoughts != false)
     val showThoughts: StateFlow<Boolean> = _showThoughts
 
-    // 流式节流缓冲：SSE 每 token 只追加进 StringBuilder，每 100ms 才写一次 StateFlow。
-    // 之前每 token 直接写 StateFlow，流式行每 token 重组（思考时 ReasoningCard 也在行内），
-    // 加上每帧的呼吸光标动画，思考流式时滑动被拖死。现在状态写入从每秒几十次降到 ~10 次。
+    // 流式节流缓冲（对齐官方 Stopwatch(1000/streaming_fps)≈33ms 单层节流）：SSE 每 token 只追加进
+    // StringBuilder，每 ~33ms 才写一次 StateFlow。官方每 tick 全量重算 messageFormatting 也只受
+    // streaming_fps 上限约束；此前 100ms+UI 120ms 双层叠加 ~220ms 一帧导致流式视觉卡顿。
     private val streamingTextBuffer = StringBuilder()
     private val streamingReasoningBuffer = StringBuilder()
     private var streamingFlusher: kotlinx.coroutines.Job? = null
@@ -184,7 +192,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (streamingFlusher?.isActive == true) return
         streamingFlusher = viewModelScope.launch {
             while (true) {
-                delay(100)
+                delay(33)
                 flushStreamingBuffers()
                 if (!streamActive && streamingTextBuffer.isEmpty() && streamingReasoningBuffer.isEmpty()) break
             }
@@ -230,6 +238,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming
+
+    /** 生成纪元：每次进入 startStream（发送/继续/重生成/变体/冒充/群聊轮次）+1。
+     *  官方 generate() 开头 scrollLock = false——所有生成类型开始时恢复自动贴底跟随，UI 以此对齐。 */
+    private val _generationEpoch = MutableStateFlow(0)
+    val generationEpoch: StateFlow<Int> = _generationEpoch
 
     /** 冒充生成中（官方 type=impersonate：结果进输入框，不落历史）。 */
     private val _isImpersonating = MutableStateFlow(false)
@@ -604,12 +617,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     fun displayTextOf(index: Int): String {
-        if (displayCacheVersion != DisplayCacheVersion.version) {
-            displayCache.clear()
-            displayCacheVersion = DisplayCacheVersion.version
-        }
-        displayCache[index]?.let { return it }
+        syncDisplayVersion()
         val el = _messages.value.getOrNull(index)?.jsonObject ?: return ""
+        val sendDate = el["send_date"]?.jsonPrimitive?.contentOrNull
+        // 身份校验：同 index 但消息已换（结构变更漂移）→ 视为未命中重算
+        displayCache[index]?.takeIf { it.sendDate == sendDate }?.let { return it.text }
         val extra = el["extra"] as? JsonObject
         val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
             ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
@@ -670,7 +682,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
         }
         val out = result.text
-        displayCache[index] = out
+        displayCache[index] = DisplayCacheEntry(sendDate, out)
         return out
     }
 
@@ -2751,6 +2763,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _contextUsage.value = null
         _logprobs.value = null
         _isStreaming.value = true
+        _generationEpoch.value++
         _isImpersonating.value = impersonation
         streamContinueMode = continueMode
         generatingSwipe = swipeMode
@@ -3458,11 +3471,26 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)
         displayCache.clear()
+        _displayRevision.value++
     }
 
     /** 仅“末尾追加”后的轻量刷新：旧消息索引不变，显示缓存仍有效，不全表失效。 */
     private fun refreshMessagesAppendOnly() {
         _messages.value = chatStore.messages(sessionId)
+        _displayRevision.value++
+    }
+
+    /** 显示设置（encode_tags/正则/行为）变更时由 ChatScreen 的版本监听调用：清缓存并让全表行重算。 */
+    fun onDisplaySettingsChanged() {
+        syncDisplayVersion()
+    }
+
+    private fun syncDisplayVersion() {
+        if (displayCacheVersion != DisplayCacheVersion.version) {
+            displayCache.clear()
+            displayCacheVersion = DisplayCacheVersion.version
+            _displayRevision.value++
+        }
     }
 
     /** 世界书命中面板行（README 状态面板：名字/关键词/常驻/位置/token）。 */
