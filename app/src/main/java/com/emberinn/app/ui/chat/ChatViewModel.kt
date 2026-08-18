@@ -1600,6 +1600,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 用户主动停止标记（官方 stopGeneration：群聊整批终止，不推进下一位发言人）。 */
     @Volatile
     private var userStopped = false
+
+    /** 单轮流式完成闩锁：网络层双 [DONE]/message_stop 拆块等会让 onDone 触发两次，
+     *  handleStreamDone 必须只收尾一次——第二次会走 "!streamActive → onFinished()" 早退分支，
+     *  把群聊下一位成员推进两次，产生重复消息（每次翻倍）。startStream 开新流时复位。 */
+    @Volatile private var streamDoneHandled = false
     private var currentCharName = "Assistant"
     private var currentUserName = "User"
     val userName: String get() = currentUserName
@@ -2799,6 +2804,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             scopedRegexAvatar = step.speaker.id,
             groupGenId = groupGenId,
             onFinished = {
+                // 双保险：上一位的收尾已启动新流（自动续写/下一位）时绝不再推进——
+                // 重复推进会产生两条并行流各自落盘，消息成倍重复
+                if (_isStreaming.value) return@startStream
                 val msgs = chatStore.messages(sessionId)
                 // 官方 generateGroupWrapper：每人生成后按 shouldAutoContinue 自动续写（power_user.auto_continue，默认关）
                 val lastAi = msgs.lastOrNull { !isUser(it) && !isSystemMsg(it) }
@@ -2968,6 +2976,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         pendingGroupGenId = groupGenId
         streamActive = true
         userStopped = false
+        streamDoneHandled = false
         firstDeltaAt = null
         // 注意：singleAutoContinueRuns 不在此重置——自动续写链经 continueGeneration(fromAutoContinue=true)
         // 继承计数，5 次上限才真正生效；重置只发生在用户手动入口（send/regenerate/impersonate/generateSwipe）
@@ -3256,6 +3265,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * 否则落盘 + 自动续写（官方 triggerAutoContinue；群聊走 runGroupStep）。
      */
     private fun handleStreamDone(continueMode: Boolean, onFinished: (() -> Unit)?) {
+        // 幂等闩锁：同一轮流式的 onDone 只处理一次（双 [DONE]/结束事件拆块会重复触发）
+        if (streamDoneHandled) return
+        streamDoneHandled = true
         flushStreamingBuffers()
         if (!streamActive) {
             // 用户主动停止（官方 stopGeneration：群聊整批终止，不推进下一位发言人）

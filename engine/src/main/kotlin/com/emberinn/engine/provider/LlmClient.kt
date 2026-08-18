@@ -268,6 +268,15 @@ class LlmClient(
         val source = response.body?.source() ?: return
         val sb = StringBuilder()
         var finished = false
+        // onDone 只发一次：部分 OpenAI 兼容网关会发两个 [DONE]，textgen 会 stream_end+[DONE] 混发，
+        // Anthropic 的 message_stop 也可能拆成多块——重复触发会让上层把群聊下一位成员推进两次（消息重复落盘）
+        var doneEmitted = false
+        fun emitDone() {
+            if (!doneEmitted) {
+                doneEmitted = true
+                onDone()
+            }
+        }
         val toolAccumulator = ToolCallAccumulator()
         var lastToolSnapshot = ""
         while (true) {
@@ -280,13 +289,13 @@ class LlmClient(
                 if (dataText == null) continue
                 if (dataText == "[DONE]") {
                     finished = true
-                    onDone()
+                    emitDone()
                     continue
                 }
                 // Anthropic 结束事件（event: message_stop 或 data type=message_stop）
                 if (protocol == "anthropic" && raw.contains("message_stop")) {
                     finished = true
-                    onDone()
+                    emitDone()
                     continue
                 }
                 // NovelAI / Kobold SSE：data: {"token":"...",...}，无结束事件，流关闭收尾
@@ -312,7 +321,7 @@ class LlmClient(
                             }
                             "stream_end" -> {
                                 finished = true
-                                onDone()
+                                emitDone()
                             }
                         }
                     } catch (e: Exception) {
@@ -353,7 +362,7 @@ class LlmClient(
                 }
             }
         }
-        if (!finished) onDone()
+        if (!finished) emitDone()
     }
 
     /** 从 SSE 事件文本里取 data: 负载（多行按官方 EventSource 语义用 \n 连接）。 */
