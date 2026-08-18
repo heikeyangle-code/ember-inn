@@ -47,8 +47,8 @@ data class ThemePreset(
     val gem: Color? = null,
     /** 金属工艺色：古金/旧银/青铜——主题卡描边与装饰细节（null=不启用）。 */
     val metal: Color? = null,
-    /** 底材纹理配方：六图元（织纹/布点/排线/交叉排线/纤维/颗粒）任意组合，各主题自由定制。 */
-    val texture: TextureSpec = TextureSpec(),
+    /** 画布配方（画板级自由度）：色域泼彩 + 定向渐变 + 六图元纹理三层任意组合。 */
+    val backdrop: BackdropSpec = BackdropSpec(),
     /** 天空氛围色：深色模式页面顶部极淡渐变天色——红月、烟雾战场（null=不启用）。 */
     val auraTop: Color? = null,
     /** 浅色模式天空氛围：象牙晨光、绯色薄暮等（null=浅色不画天空）。 */
@@ -85,7 +85,10 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.1f,
         gem = Color(0xFFE8604F),
         metal = Color(0xFFAEB2B6),
-        texture = TextureSpec(fiber = 1f, stipple = 0.4f, grain = 0.25f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFF2A3A40), 0.75f, 0.08f, 0.7f, 0.10f)),
+            texture = TextureSpec(fiber = 1f, stipple = 0.4f, grain = 0.25f),
+        ),
         auraTop = Color(0xFF1B2224),
         auraTopLight = Color(0xFFE2E8E4),
     ),
@@ -113,10 +116,13 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF35C98F),
         schemeSecondary = Color(0xFF8FA8A0),
         schemeTertiary = Color(0xFFC9AC70),
-        // 瓷器：釉面光滑是身份——全场唯一无纹理的彩色主题，天青夜做顶光
+        // 瓷器：釉面光滑是身份——无纹理，但青釉在底部积出窑变釉泪
         contrast = 1.05f,
         gem = Color(0xFF3FC48C),
         metal = Color(0xFFC9AC70),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFF3FA88C), 0.5f, 0.95f, 0.8f, 0.12f)),
+        ),
         auraTop = Color(0xFF183038),
         auraTopLight = Color(0xFFEBDCC0),
     ),
@@ -142,11 +148,17 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFF5B04A),
         schemeSecondary = Color(0xFF8B9BB0),
         schemeTertiary = Color(0xFF6E93C4),
-        // 透纳海景油画：画布织纹 + 海盐颗粒，黄铜器件 + 深海夜幕天，灯塔琥珀是宝石
+        // 透纳海景油画：海是底下的深青色域 + 灯塔琥珀光在右上，画布织纹 + 海盐颗粒
         contrast = 1.2f,
         gem = Color(0xFFF0B04C),
         metal = Color(0xFFB8935A),
-        texture = TextureSpec(weave = 0.85f, grain = 0.4f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFF16303A), 0.2f, 0.85f, 0.9f, 0.32f),
+                wash(Color(0xFFE8A85C), 0.85f, 0.12f, 0.45f, 0.12f),
+            ),
+            texture = TextureSpec(weave = 0.85f, grain = 0.4f),
+        ),
         auraTop = Color(0xFF16263D),
         auraTopLight = Color(0xFFEBE1D0),
     ),
@@ -178,7 +190,10 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.25f,
         gem = Color(0xFFC43A2B),
         metal = Color(0xFFD8CFC5),
-        texture = TextureSpec(hatch = 0.9f, crossHatch = 0.45f, hatchAngle = 60f, stipple = 0.3f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFF8A2620), 0.15f, 0.85f, 0.6f, 0.12f)),
+            texture = TextureSpec(hatch = 0.9f, crossHatch = 0.45f, hatchAngle = 60f, stipple = 0.3f),
+        ),
         auraTop = Color(0xFF2A1214),
     ),
     ThemePreset(
@@ -205,10 +220,16 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF8E90FF),
         schemeSecondary = Color(0xFF5AC8D8),
         schemeTertiary = Color(0xFFB587FF),
-        // 玻璃器：通体光滑无纹理（第二无纹主题，紫蓝与青瓷区分），高反差 + 紫蓝夜天
+        // 玻璃器：通体光滑无纹理，但紫与青两色琉璃在画布上对撞（窑火的两个极端）
         contrast = 1.3f,
         gem = Color(0xFFB587FF),
         metal = Color(0xFF5AC8D8),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFF6B5B9E), 0.5f, 0.06f, 0.8f, 0.14f),
+                wash(Color(0xFF2E7A9E), 0.85f, 0.9f, 0.7f, 0.12f),
+            ),
+        ),
         auraTop = Color(0xFF1B1435),
         auraTopLight = Color(0xFFE2DCEC),
     ),
@@ -236,7 +257,9 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemeTertiary = Color(0xFFA6ABB5),
         // 石墨素描：铅笔排线 30° + 交叉 + 炭粉颗粒，全场唯一无宝石无金属（极简即身份），高反差黑白
         contrast = 1.2f,
-        texture = TextureSpec(hatch = 0.55f, crossHatch = 0.3f, hatchAngle = 30f, grain = 0.6f),
+        backdrop = BackdropSpec(
+            texture = TextureSpec(hatch = 0.55f, crossHatch = 0.3f, hatchAngle = 30f, grain = 0.6f),
+        ),
         auraTop = Color(0xFF1E1E22),
         auraTopLight = Color(0xFFE9E9E7),
     ),
@@ -298,7 +321,10 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.05f,
         gem = Color(0xFFD8B955),
         metal = Color(0xFF9DAD8A),
-        texture = TextureSpec(fiber = 0.8f, stipple = 0.35f, grain = 0.2f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFF3E6B4A), 0.8f, 0.9f, 0.7f, 0.10f)),
+            texture = TextureSpec(fiber = 0.8f, stipple = 0.35f, grain = 0.2f),
+        ),
         auraTop = Color(0xFF182518),
         auraTopLight = Color(0xFFE0E8DA),
     ),
@@ -324,11 +350,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFAB86EE),
         schemeSecondary = Color(0xFFC2A2D2),
         schemeTertiary = Color(0xFFF0A172),
-        // 暮霭水彩：暮尘布点 + 水彩颗粒，落日橙宝石 + 淡紫银金属，紫暮天做顶
+        // 暮霭水彩：紫→橙的黄昏渐变从天铺下（暮色是渐变做的），暮尘布点 + 水彩颗粒
         contrast = 1.15f,
         gem = Color(0xFFF0A172),
         metal = Color(0xFFC2A2D2),
-        texture = TextureSpec(stipple = 0.6f, grain = 0.45f),
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color(0xFF6B4B8F), Color(0xFFE8946A)), 0f, 0.18f),
+            texture = TextureSpec(stipple = 0.6f, grain = 0.45f),
+        ),
         auraTop = Color(0xFF231733),
         auraTopLight = Color(0xFFF0DCC6),
     ),
@@ -360,7 +389,13 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 0.9f,
         gem = Color(0xFFC9AC77),
         metal = Color(0xFF9FB4C8),
-        texture = TextureSpec(stipple = 0.7f, grain = 0.5f, intensity = 0.8f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFF8FA3B0), 0.25f, 0.3f, 0.8f, 0.12f),
+                wash(Color(0xFFB8C4CC), 0.75f, 0.65f, 0.7f, 0.10f),
+            ),
+            texture = TextureSpec(stipple = 0.7f, grain = 0.5f, intensity = 0.8f),
+        ),
         auraTop = Color(0xFF1D2A38),
         auraTopLight = Color(0xFFEFE6D0),
     ),
@@ -392,7 +427,10 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.05f,
         gem = Color(0xFFF08AA9),
         metal = Color(0xFFCFACA8),
-        texture = TextureSpec(stipple = 0.5f, fiber = 0.3f, scale = 1.5f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFFE88AA8), 0.5f, 0.08f, 0.9f, 0.14f)),
+            texture = TextureSpec(stipple = 0.5f, fiber = 0.3f, scale = 1.5f),
+        ),
         auraTop = Color(0xFF2A1626),
         auraTopLight = Color(0xFFF2DFD8),
     ),
@@ -422,11 +460,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFF5A55C),
         schemeSecondary = Color(0xFF96A8BC),
         schemeTertiary = Color(0xFFE07058),
-        // 电影感：粗画布织纹（大尺）+ 胶片颗粒——影院画幅的颗粒底
+        // 电影感：teal→orange 对角撞色渐变（电影调色的两极）铺满画布，粗织纹 + 胶片颗粒
         contrast = 1.15f,
         gem = Color(0xFFD0542E),
         metal = Color(0xFFDFAE62),
-        texture = TextureSpec(weave = 1f, grain = 0.45f, scale = 1.35f),
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color(0xFF1E5A6B), Color(0xFFD8703A)), 135f, 0.22f),
+            texture = TextureSpec(weave = 1f, grain = 0.45f, scale = 1.35f),
+        ),
         auraTop = Color(0xFF22303C),
         auraTopLight = Color(0xFFF2D9A6),
     ),
@@ -455,11 +496,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF97A5FF),
         schemeSecondary = Color(0xFF7386C0),
         schemeTertiary = Color(0xFF9ADCEA),
-        // 星夜：星尘布点（随机疏密）+ 微颗粒——梵高星点的夜空底
+        // 星夜：靛蓝夜幕渐变从天垂下（夜空是渐变做的），星尘布点 + 微颗粒
         contrast = 1.15f,
         gem = Color(0xFF7FD8EA),
         metal = Color(0xFFAEB6D8),
-        texture = TextureSpec(stipple = 0.65f, grain = 0.3f, scale = 1.3f),
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color(0xFF2B3B8F), Color.Transparent), 0f, 0.28f),
+            texture = TextureSpec(stipple = 0.65f, grain = 0.3f, scale = 1.3f),
+        ),
         auraTop = Color(0xFF141B3D),
         auraTopLight = Color(0xFFD8DCF0),
     ),
@@ -488,11 +532,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFDFA05A),
         schemeSecondary = Color(0xFFB59070),
         schemeTertiary = Color(0xFFCB6E58),
-        // 旧世油画：老画布粗织纹（大尺）+ 龟裂颗粒——伦勃朗底子的年龄感
+        // 旧世油画：琥珀色光从画布底部透上来（伦勃朗的底光），老画布粗织纹 + 龟裂颗粒
         contrast = 1.2f,
         gem = Color(0xFF8A3B2E),
         metal = Color(0xFFC89A58),
-        texture = TextureSpec(weave = 0.95f, grain = 0.3f, scale = 1.5f),
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color.Transparent, Color(0xFFB87A2E)), 0f, 0.20f),
+            texture = TextureSpec(weave = 0.95f, grain = 0.3f, scale = 1.5f),
+        ),
         auraTop = Color(0xFF2A1C0E),
         auraTopLight = Color(0xFFF0DEB6),
     ),
@@ -521,11 +568,17 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF8FB2AE),
         schemeSecondary = Color(0xFF97A0A6),
         schemeTertiary = Color(0xFFB3A584),
-        // 黛山：宣纸纤维最重（草筋横陈）+ 雾尘——生宣吸水的毛边感
+        // 黛山：两片雾色域浮在画布上下（山岚），宣纸纤维最重（草筋横陈）+ 雾尘
         contrast = 1.05f,
         gem = Color(0xFFB3A584),
         metal = Color(0xFF9FAAA6),
-        texture = TextureSpec(fiber = 1f, stipple = 0.3f, intensity = 0.9f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFF5A6A66), 0.2f, 0.15f, 0.7f, 0.10f),
+                wash(Color(0xFF7A8A84), 0.8f, 0.85f, 0.6f, 0.08f),
+            ),
+            texture = TextureSpec(fiber = 1f, stipple = 0.3f, intensity = 0.9f),
+        ),
         auraTop = Color(0xFF1E2626),
         auraTopLight = Color(0xFFDCE3DF),
     ),
@@ -557,8 +610,12 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.25f,
         gem = Color(0xFF4FE0D0),
         metal = Color(0xFFB8C8CC),
-        // 深海：浮游生物光斑（稀疏大点）+ 悬浮微粒——水柱里的浮游层
-        texture = TextureSpec(stipple = 0.4f, grain = 0.25f, scale = 1.8f),
+        // 深海：海水越深越黑（渐变从底往上压暗）+ 一柱浮游青光斜插，浮游光斑 + 悬浮微粒
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color.Transparent, Color(0xFF0E5A70)), 0f, 0.30f),
+            washes = listOf(wash(Color(0xFF4FE0D0), 0.5f, 0.35f, 0.45f, 0.10f)),
+            texture = TextureSpec(stipple = 0.4f, grain = 0.25f, scale = 1.8f),
+        ),
         auraTop = Color(0xFF0A2430),
         auraTopLight = Color(0xFFC6DEE4),
     ),
@@ -587,11 +644,17 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFD2A274),
         schemeSecondary = Color(0xFF9AA4A8),
         schemeTertiary = Color(0xFFC4837A),
-        // 胶片：银盐颗粒全场最重 + 相纸微尘——Kodak Portra 的感光颗粒
+        // 胶片：暖橙与冷青两片色域对角分置（褪色照片的偏色），银盐颗粒全场最重
         contrast = 1.1f,
         gem = Color(0xFFC46B5A),
         metal = Color(0xFFA8A8A0),
-        texture = TextureSpec(grain = 1f, stipple = 0.3f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFFC98A5A), 0.15f, 0.85f, 0.7f, 0.10f),
+                wash(Color(0xFF5A7A8A), 0.85f, 0.15f, 0.7f, 0.08f),
+            ),
+            texture = TextureSpec(grain = 1f, stipple = 0.3f),
+        ),
         auraTop = Color(0xFF23262B),
         auraTopLight = Color(0xFFEAD8C2),
     ),
@@ -623,6 +686,13 @@ val ThemePresets: List<ThemePreset> = listOf(
         contrast = 1.3f,
         gem = Color(0xFFFF5FB8),
         metal = Color(0xFF46C0DC),
+        // 霓虹：品红/青两片霓虹在画布对角互撞（湿路面上的倒影），无纹理=湿玻璃
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFFE84B9A), 0.15f, 0.85f, 0.75f, 0.20f),
+                wash(Color(0xFF4BE0E8), 0.85f, 0.15f, 0.75f, 0.20f),
+            ),
+        ),
         auraTop = Color(0xFF1A1024),
         auraTopLight = Color(0xFFE8D8EE),
     ),
@@ -653,11 +723,17 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFD4A94F),
         schemeSecondary = Color(0xFFADAE9F),
         schemeTertiary = Color(0xFFC4574A),
-        // 巴洛克王座厅：宫廷粗织挂毯（大尺）+ 金粉颗粒——鲁本斯画布的浮华
+        // 巴洛克王座厅：王座后的暗青烟雾（底）+ 顶部金色天光（顶）——鲁本斯画面的空气透视
         contrast = 1.3f,
         gem = Color(0xFFD0342C),
         metal = Color(0xFFC9A24B),
-        texture = TextureSpec(weave = 1f, grain = 0.35f, scale = 1.6f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFFC9A24B), 0.5f, 0.05f, 0.9f, 0.16f),
+                wash(Color(0xFF16333A), 0.5f, 0.95f, 0.9f, 0.30f),
+            ),
+            texture = TextureSpec(weave = 1f, grain = 0.35f, scale = 1.6f),
+        ),
         auraTop = Color(0xFF16333A),
         auraTopLight = Color(0xFFE8CE8E),
     ),
@@ -688,11 +764,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFD9DDE2),
         schemeSecondary = Color(0xFF7C8B9A),
         schemeTertiary = Color(0xFFB4433A),
-        // 大理石圣殿：云纹长纤维（大尺缓弯）+ 石粉颗粒——米开朗基罗的大理石肌理
+        // 大理石圣殿：一柱神圣白光从穹顶洒下（顶部白光域），云纹纤维 + 石粉颗粒
         contrast = 1.25f,
         gem = Color(0xFFB4362B),
         metal = Color(0xFFB8BEC6),
-        texture = TextureSpec(fiber = 0.55f, grain = 0.4f, scale = 1.6f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFFF2EFE6), 0.5f, 0.02f, 0.7f, 0.14f)),
+            texture = TextureSpec(fiber = 0.55f, grain = 0.4f, scale = 1.6f),
+        ),
         auraTop = Color(0xFF1F2C3E),
         auraTopLight = Color(0xFFE9E4D2),
     ),
@@ -723,11 +802,17 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFE05238),
         schemeSecondary = Color(0xFFA88C5C),
         schemeTertiary = Color(0xFFD9C79E),
-        // 赤月：血月浮尘（布点+颗粒，暖色底上如炭火余烬飘浮）
+        // 赤月：血月本体挂在画布顶部（红月色域）+ 地平线余烬（底部暖红），血月浮尘
         contrast = 1.35f,
         gem = Color(0xFFE04A30),
         metal = Color(0xFFDCC9A0),
-        texture = TextureSpec(stipple = 0.7f, grain = 0.35f, scale = 1.4f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFFE04A30), 0.5f, 0.08f, 0.5f, 0.28f),
+                wash(Color(0xFF8A3020), 0.5f, 0.95f, 0.8f, 0.15f),
+            ),
+            texture = TextureSpec(stipple = 0.7f, grain = 0.35f, scale = 1.4f),
+        ),
         auraTop = Color(0xFF4A0F0C),
         auraTopLight = Color(0xFFF2C4A0),
     ),
@@ -757,11 +842,18 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFE6E1CF),
         schemeSecondary = Color(0xFFABAFA5),
         schemeTertiary = Color(0xFFC04A4A),
-        // 哥特线稿：蚀刻排线 + 交叉 + 布点三件套（铜版画明暗全工艺）——多雷插画的线密度
+        // 哥特线稿：底部一片微弱白光（玫瑰墓园的寒光）+ 极淡血红（立剑下的血泊），
+        // 蚀刻排线 + 交叉 + 布点三件套（铜版画明暗全工艺）——多雷插画的线密度
         contrast = 1.45f,
         gem = Color(0xFFC0262E),
         metal = Color(0xFFB9BDB3),
-        texture = TextureSpec(hatch = 1f, crossHatch = 0.5f, stipple = 0.55f),
+        backdrop = BackdropSpec(
+            washes = listOf(
+                wash(Color(0xFFD8D4C8), 0.5f, 0.95f, 0.6f, 0.08f),
+                wash(Color(0xFF8A1F26), 0.5f, 0.5f, 0.4f, 0.06f),
+            ),
+            texture = TextureSpec(hatch = 1f, crossHatch = 0.5f, stipple = 0.55f),
+        ),
         auraTop = Color(0xFF111C15),
         auraTopLight = Color(0xFFE6E0CE),
     ),
@@ -791,11 +883,15 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFF6B90DC),
         schemeSecondary = Color(0xFFD5D1BF),
         schemeTertiary = Color(0xFFD04434),
-        // 复古奇幻插画：布点 + 15° 排线 + 交叉（浅角斜线如海风）——版画教科书的组合
+        // 复古奇幻插画：钴蓝海从底部涨上来（渐变）+ 一片海面天光，15° 海风排线 + 交叉 + 布点
         contrast = 1.25f,
         gem = Color(0xFFCE3222),
         metal = Color(0xFF9C8A62),
-        texture = TextureSpec(stipple = 0.55f, hatch = 0.8f, crossHatch = 0.35f, hatchAngle = 15f),
+        backdrop = BackdropSpec(
+            gradient = CanvasGradient(listOf(Color.Transparent, Color(0xFF1A4A8F)), 0f, 0.25f),
+            washes = listOf(wash(Color(0xFF7FB8D8), 0.3f, 0.2f, 0.5f, 0.10f)),
+            texture = TextureSpec(stipple = 0.55f, hatch = 0.8f, crossHatch = 0.35f, hatchAngle = 15f),
+        ),
         auraTop = Color(0xFF1A2C55),
         auraTopLight = Color(0xFFC9D6EA),
     ),
@@ -828,11 +924,14 @@ val ThemePresets: List<ThemePreset> = listOf(
         schemePrimary = Color(0xFFC9A24B),
         schemeSecondary = Color(0xFFA89A7E),
         schemeTertiary = Color(0xFF7E9CC4),
-        // 旧羊皮纸：草筋纤维 + 羊皮颗粒 + 尘点——中世纪手抄本的皮纸底
+        // 旧羊皮纸：一盏烛灯悬在画布上方（烛光色域），草筋纤维 + 羊皮颗粒 + 尘点
         contrast = 1.25f,
         gem = Color(0xFFC01F28),
         metal = Color(0xFF9C8A62),
-        texture = TextureSpec(fiber = 0.7f, grain = 0.45f, stipple = 0.3f),
+        backdrop = BackdropSpec(
+            washes = listOf(wash(Color(0xFFD8A85C), 0.5f, 0.25f, 0.6f, 0.14f)),
+            texture = TextureSpec(fiber = 0.7f, grain = 0.45f, stipple = 0.3f),
+        ),
         auraTop = Color(0xFF2A1C0E),
         auraTopLight = Color(0xFFEBD9A8),
     ),

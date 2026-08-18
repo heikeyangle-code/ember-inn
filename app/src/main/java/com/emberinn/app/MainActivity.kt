@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
             var vibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
-            var textureOverride by remember { mutableStateOf(com.emberinn.app.ui.theme.TexturePrefs.resolve(this)) }
+            var textureOverride by remember { mutableStateOf(com.emberinn.app.ui.theme.BackdropPrefs.resolve(this)) }
             var appearanceRev by remember { mutableIntStateOf(0) }
             remember(appearanceRev) { Unit }
             val recipe by ThemeState.recipe.collectAsState()
@@ -86,8 +86,8 @@ class MainActivity : ComponentActivity() {
                         tertiary = seed,
                         lightBg = Color(0xFFF7F2E8),
                         darkBg = Color(0xFF171513),
-                        // 角色取色主题沿用全局预设的底材纹理与天空氛围，只换配色不换"画材"
-                        texture = preset.texture,
+                        // 角色取色主题沿用全局预设的画布与天空氛围，只换配色不换"画材"
+                        backdrop = preset.backdrop,
                         auraTop = preset.auraTop,
                         auraTopLight = preset.auraTopLight,
                     )
@@ -134,9 +134,9 @@ class MainActivity : ComponentActivity() {
                 else -> FontFamily.Default
             }
             EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, vibe = vibe, shapes = shapes, fontFamily = fontFamily) {
-                // 底材纹理全局覆盖：设置→外观自定义（null = 跟随主题预设）
+                // 画布全局覆盖：设置→外观自定义（null = 跟随主题预设）
                 androidx.compose.runtime.CompositionLocalProvider(
-                    com.emberinn.app.ui.theme.LocalTextureOverride provides textureOverride,
+                    com.emberinn.app.ui.theme.LocalBackdropOverride provides textureOverride,
                 ) {
                 MainScreen(
                     themeMode = mode,
@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
                         VibePrefs.save(this, newVibe)
                     },
                     onTextureChanged = {
-                        textureOverride = com.emberinn.app.ui.theme.TexturePrefs.resolve(this)
+                        textureOverride = com.emberinn.app.ui.theme.BackdropPrefs.resolve(this)
                         appearanceRev++
                     },
                     onAppearanceChanged = { appearanceRev++ },

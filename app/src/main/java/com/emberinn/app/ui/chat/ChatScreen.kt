@@ -19,7 +19,7 @@ import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
-import com.emberinn.app.ui.theme.themeTexture
+import com.emberinn.app.ui.theme.canvasBackdrop
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -749,11 +749,11 @@ fun ChatScreen(
                         1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
                     ),
                 )
-                // 主题底材（TextureSpec 六图元配方）：画在背景之上、内容之下；
-                // 用户在设置里自定义的纹理（LocalTextureOverride）优先于主题预设
+                // 主题画布（色域泼彩 + 定向渐变 + 六图元纹理）：画在背景之上、内容之下；
+                // 用户在设置里自定义的画布（LocalBackdropOverride）优先于主题预设
                 .then(
-                    Modifier.themeTexture(
-                        com.emberinn.app.ui.theme.resolveTexture(artPreset),
+                    Modifier.canvasBackdrop(
+                        com.emberinn.app.ui.theme.resolveBackdrop(artPreset),
                         darkBg,
                     ),
                 ),

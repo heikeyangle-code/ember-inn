@@ -18,7 +18,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * 底材纹理配方：六种图元自由组合，任意密度/角度/缩放——不再是 3 选 1 的死模板。
+ * 纹理层配方：六种图元自由组合，任意密度/角度/缩放——画布的"底子"。
  * - weave     经纬织纹（油画布）：主线+错位辅线两级，逐段微抖动，织物不是坐标纸
  * - stipple   布点（铜版画 stipple）：随机散点
  * - hatch     定向排线（hatching）：可调角度的平行短排线，带抖动
@@ -46,10 +46,59 @@ data class TextureSpec(
 }
 
 /**
- * 主题艺术底材引擎：drawWithCache 缓存段按 TextureSpec 预生成全部图元（固定随机种子不闪烁），
- * 绘制期只做最多 7 次批量 drawPoints（Points/Lines），滚动/重组零重算。
+ * 色域：一个径向色斑（水彩湿画/光晕/撞色泼彩）。
+ * x/y 为画布相对位置（0-1），radius 为占画布长边的比例，alpha 为浓度。
  */
-fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWithCache {
+data class ColorWash(
+    val color: Color,
+    val x: Float,
+    val y: Float,
+    val radius: Float = 0.55f,
+    val alpha: Float = 0.2f,
+)
+
+/** 便捷构造（主题预设用）。 */
+fun wash(color: Color, x: Float, y: Float, radius: Float = 0.55f, alpha: Float = 0.2f) =
+    ColorWash(color, x, y, radius, alpha)
+
+/** 随机泼彩：按选中色板散布色域（"重掷布局"用，种子固定则不闪）。 */
+fun randomWashes(colors: List<Color>, strength: Float, seed: Int): List<ColorWash> {
+    val rand = Random(seed)
+    return colors.map { c ->
+        ColorWash(
+            color = c,
+            x = 0.08f + rand.nextFloat() * 0.84f,
+            y = 0.08f + rand.nextFloat() * 0.84f,
+            radius = 0.35f + rand.nextFloat() * 0.45f,
+            alpha = strength * (0.6f + rand.nextFloat() * 0.4f),
+        )
+    }
+}
+
+/** 定向渐变层：日落/夜幕/霓虹——angle 0=首色在顶部，90=首色在左侧，任意角度。 */
+data class CanvasGradient(
+    val colors: List<Color>,
+    val angle: Float = 0f,
+    val alpha: Float = 0.25f,
+)
+
+/**
+ * 画布配方（画板级自由度）：色域泼彩 + 定向渐变 + 六图元纹理，三层任意组合。
+ * 绘制顺序 = 色域 → 渐变 → 纹理 → 内容：像先铺底色再上肌理的作画顺序。
+ */
+data class BackdropSpec(
+    val washes: List<ColorWash> = emptyList(),
+    val gradient: CanvasGradient? = null,
+    val texture: TextureSpec = TextureSpec(),
+) {
+    val active: Boolean get() = washes.isNotEmpty() || (gradient != null && gradient.alpha > 0f) || texture.active
+}
+
+/**
+ * 纹理图元引擎：drawWithCache 按配方预生成全部图元（固定随机种子不闪烁），
+ * 绘制期只做批量 drawPoints（Points/Lines），滚动/重组零重算。
+ */
+private fun Modifier.textureLayer(spec: TextureSpec, dark: Boolean): Modifier = drawWithCache {
     if (!spec.active) return@drawWithCache onDrawWithContent { drawContent() }
     val base = spec.tint ?: (if (dark) Color.White else Color.Black)
     val k = spec.intensity.coerceIn(0f, 3f)
@@ -59,7 +108,6 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
     val rand = Random(31 * spec.hashCode() + w.toInt() * 7 + h.toInt() * 13 + (if (dark) 1 else 2))
     val area = w * h
 
-    // ---- 各图层：图元集 + alpha（绘制顺序 = 叠加层次） ----
     var weaveA = 0f; var weaveMain: List<Offset> = emptyList(); var weaveSub: List<Offset> = emptyList()
     var stippleA = 0f; var stipplePts: List<Offset> = emptyList()
     var hatchA = 0f; var hatchSegs: List<Offset> = emptyList()
@@ -113,7 +161,7 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
         stipplePts = pts
     }
 
-    // 排线：定向平行短线（默认 45°），第二组交叉——铜版画明暗肌理
+    // 排线：定向平行短线（默认 45°），带抖动——铜版画明暗肌理
     if (spec.hatch > 0f) {
         hatchA = 0.032f * k
         val gap = (9.dp.toPx() / (0.4f + spec.hatch * 0.6f)) * s
@@ -121,7 +169,6 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
         val rad = Math.toRadians(spec.hatchAngle.toDouble())
         val dx = cos(rad).toFloat(); val dy = sin(rad).toFloat()
         val list = ArrayList<Offset>(4096)
-        // 覆盖旋转后的包围盒：沿法向扫描
         val diag = (w + h)
         var t = -diag
         while (t < diag) {
@@ -168,7 +215,7 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
         crossSegs = list
     }
 
-    // 纤维：微弯长丝（宣纸草筋/大理石云纹）——随机方向 4 段折线，段间缓转
+    // 纤维：微弯长丝（宣纸草筋/大理石云纹）——随机方向多段折线，段间缓转
     if (spec.fiber > 0f) {
         fiberA = 0.042f * k
         val n = (area / 5200f * spec.fiber).toInt().coerceIn(16, 2600)
@@ -207,7 +254,6 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
     val ha = hatchA; val ca = crossA; val fa = fiberA; val ga = grainA
     val sw = 1.dp.toPx()
     onDrawWithContent {
-        // 纹理画在内容之下：底材是"画布"，卡片/文字浮于其上
         if (gp.isNotEmpty()) drawPoints(gp, PointMode.Points, base.copy(alpha = ga), strokeWidth = sw)
         if (ws.isNotEmpty()) drawPoints(ws, PointMode.Lines, base.copy(alpha = wsa), strokeWidth = sw)
         if (wm.isNotEmpty()) drawPoints(wm, PointMode.Lines, base.copy(alpha = wa), strokeWidth = sw)
@@ -219,15 +265,75 @@ fun Modifier.themeTexture(spec: TextureSpec, dark: Boolean): Modifier = drawWith
     }
 }
 
-/** 全局纹理覆盖（设置→外观自定义；null=跟随主题预设）。 */
-val LocalTextureOverride = staticCompositionLocalOf<TextureSpec?> { null }
+/**
+ * 画布引擎：色域泼彩（软边径向渐变）→ 定向渐变 → 纹理图元，画在内容之下。
+ * 色域/渐变在浅色模式自动收敛（×0.8/×0.85），深色全浓度——同一配方深浅都成立。
+ */
+fun Modifier.canvasBackdrop(spec: BackdropSpec, dark: Boolean): Modifier {
+    val washLayer = if (spec.washes.isEmpty()) Modifier else Modifier.drawWithCache {
+        val w = size.width
+        val h = size.height
+        val dim = maxOf(w, h)
+        val mod = if (dark) 1f else 0.8f
+        val brushes = spec.washes.map { wash ->
+            val a = (wash.alpha * mod).coerceIn(0f, 1f)
+            val center = Offset(wash.x * w, wash.y * h)
+            val radius = (wash.radius * dim).coerceAtLeast(1f)
+            wash to Brush.radialGradient(
+                colors = listOf(
+                    wash.color.copy(alpha = a),
+                    wash.color.copy(alpha = a * 0.45f),
+                    Color.Transparent,
+                ),
+                center = center,
+                radius = radius,
+            )
+        }
+        onDrawWithContent {
+            brushes.forEach { (wsh, brush) ->
+                drawRect(brush = brush, alpha = 1f)
+            }
+            drawContent()
+        }
+    }
+    val gradientLayer = spec.gradient?.takeIf { it.alpha > 0f && it.colors.size >= 2 }?.let { g ->
+        Modifier.drawWithCache {
+            val w = size.width
+            val h = size.height
+            val mod = if (dark) 1f else 0.85f
+            val a = (g.alpha * mod).coerceIn(0f, 1f)
+            val rad = Math.toRadians(g.angle.toDouble())
+            val dx = sin(rad).toFloat()
+            val dy = cos(rad).toFloat()
+            val half = maxOf(w, h) * 0.75f
+            val cx = w / 2f
+            val cy = h / 2f
+            val brush = Brush.linearGradient(
+                colors = g.colors.map { c -> c.copy(alpha = c.alpha * a) },
+                start = Offset(cx - dx * half, cy - dy * half),
+                end = Offset(cx + dx * half, cy + dy * half),
+            )
+            onDrawWithContent {
+                drawRect(brush = brush)
+                drawContent()
+            }
+        }
+    } ?: Modifier
+    return this
+        .then(washLayer)
+        .then(gradientLayer)
+        .then(if (spec.texture.active) Modifier.textureLayer(spec.texture, dark) else Modifier)
+}
 
-/** 生效纹理：用户全局覆盖 > 主题预设。 */
+/** 全局画布覆盖（设置→外观自定义；null=跟随主题预设）。 */
+val LocalBackdropOverride = staticCompositionLocalOf<BackdropSpec?> { null }
+
+/** 生效画布：用户全局覆盖 > 主题预设。 */
 @Composable
-fun resolveTexture(preset: ThemePreset): TextureSpec = LocalTextureOverride.current ?: preset.texture
+fun resolveBackdrop(preset: ThemePreset): BackdropSpec = LocalBackdropOverride.current ?: preset.backdrop
 
 /**
- * 页面艺术底：底色 + 顶部天空氛围（深色 auraTop / 浅色 auraTopLight，极淡渐变）+ 主题底材纹理。
+ * 页面艺术底：底色 + 顶部天空氛围（深色 auraTop / 浅色 auraTopLight）+ 画布三层（色域/渐变/纹理）。
  * 官方主题与未启用艺术扩展的主题全部退化为纯底色，行为与旧实现一致。
  */
 @Composable
@@ -236,14 +342,13 @@ fun Modifier.emberBackdrop(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.background.luminance() < 0.5f
     val aura = if (dark) preset.auraTop else preset.auraTopLight
-    val texture = resolveTexture(preset)
+    val backdrop = resolveBackdrop(preset)
     return this
         .background(scheme.background)
         .then(
             if (aura != null) {
                 Modifier.background(
                     Brush.verticalGradient(
-                        // 0.82/0.86 → 0.76/0.80：天空氛围更可感（尤其浅色，别再惨白）
                         0f to lerp(aura, scheme.background, if (dark) 0.76f else 0.80f),
                         0.5f to scheme.background,
                     ),
@@ -252,5 +357,61 @@ fun Modifier.emberBackdrop(): Modifier {
                 Modifier
             },
         )
-        .then(if (texture.active) Modifier.themeTexture(texture, dark) else Modifier)
+        .then(if (backdrop.active) Modifier.canvasBackdrop(backdrop, dark) else Modifier)
 }
+
+/** 效果库：一键画布配方（设置→外观直接套用，套用后仍可在自定义里继续改）。 */
+val BackdropLibrary: List<Pair<String, BackdropSpec>> = listOf(
+    "落日熔金" to BackdropSpec(
+        gradient = CanvasGradient(listOf(Color(0xFF2E8B9A), Color(0xFFE8804A)), 135f, 0.22f),
+        texture = TextureSpec(grain = 0.35f),
+    ),
+    "霓虹雨夜" to BackdropSpec(
+        washes = listOf(
+            wash(Color(0xFFE84B9A), 0.15f, 0.85f, 0.75f, 0.20f),
+            wash(Color(0xFF4BE0E8), 0.85f, 0.15f, 0.75f, 0.20f),
+        ),
+    ),
+    "水彩粉彩" to BackdropSpec(
+        washes = listOf(
+            wash(Color(0xFFE88AA8), 0.2f, 0.2f, 0.6f, 0.16f),
+            wash(Color(0xFF8FB8E8), 0.8f, 0.3f, 0.65f, 0.14f),
+            wash(Color(0xFFB89AE8), 0.5f, 0.8f, 0.6f, 0.15f),
+        ),
+        texture = TextureSpec(fiber = 0.5f),
+    ),
+    "星穹夜幕" to BackdropSpec(
+        gradient = CanvasGradient(listOf(Color(0xFF2B3B8F), Color.Transparent), 0f, 0.30f),
+        texture = TextureSpec(stipple = 0.6f, grain = 0.25f, scale = 1.4f),
+    ),
+    "大理石云纹" to BackdropSpec(
+        washes = listOf(
+            wash(Color(0xFFE8E4DA), 0.3f, 0.3f, 0.7f, 0.20f),
+            wash(Color(0xFFB8B4AA), 0.7f, 0.6f, 0.6f, 0.14f),
+        ),
+        texture = TextureSpec(fiber = 0.55f, grain = 0.3f, scale = 1.6f),
+    ),
+    "火山余烬" to BackdropSpec(
+        gradient = CanvasGradient(listOf(Color.Transparent, Color(0xFF8A2E1F)), 0f, 0.30f),
+        texture = TextureSpec(stipple = 0.5f, grain = 0.4f, scale = 1.3f),
+    ),
+    "极光垂帘" to BackdropSpec(
+        gradient = CanvasGradient(listOf(Color(0xFF3ED8A0), Color(0xFF7B5AD8)), 115f, 0.22f),
+        washes = listOf(wash(Color(0xFF3ED8A0), 0.25f, 0.1f, 0.5f, 0.18f)),
+        texture = TextureSpec(grain = 0.2f),
+    ),
+    "晨雾海面" to BackdropSpec(
+        washes = listOf(
+            wash(Color(0xFF8FA3B0), 0.25f, 0.3f, 0.8f, 0.12f),
+            wash(Color(0xFFC9D4D8), 0.7f, 0.6f, 0.7f, 0.12f),
+        ),
+        texture = TextureSpec(stipple = 0.5f, grain = 0.3f),
+    ),
+    "羊皮古卷" to BackdropSpec(
+        washes = listOf(wash(Color(0xFFD8A85C), 0.5f, 0.3f, 0.6f, 0.14f)),
+        texture = TextureSpec(fiber = 0.7f, grain = 0.4f, stipple = 0.25f),
+    ),
+    "素白画布" to BackdropSpec(
+        texture = TextureSpec(weave = 0.8f, grain = 0.2f),
+    ),
+)

@@ -1,6 +1,15 @@
 package com.emberinn.app.ui.theme
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 /** 主题偏好（模式 + 预设主题），SharedPreferences 持久化，后续可迁 DataStore。 */
 object ThemePrefs {
@@ -66,54 +75,108 @@ object VibePrefs {
     }
 }
 
-/** 底材纹理偏好：跟随主题预设（默认）或全局自定义配方（六图元自由组合），同一份 ember_theme 首选项。 */
-object TexturePrefs {
+/** 画布偏好：跟随主题预设（默认）或全局自定义配方（色域+渐变+纹理三层），同一份 ember_theme 首选项。
+ *  完整 BackdropSpec 序列化为 JSON 存 SharedPreferences（色值走 ARGB Long 往返）。 */
+object BackdropPrefs {
 
     private const val NAME = "ember_theme"
-    private const val KEY_CUSTOM = "texture_custom"
-    private const val KEY_WEAVE = "texture_weave"
-    private const val KEY_STIPPLE = "texture_stipple"
-    private const val KEY_HATCH = "texture_hatch"
-    private const val KEY_CROSS = "texture_cross"
-    private const val KEY_ANGLE = "texture_angle"
-    private const val KEY_FIBER = "texture_fiber"
-    private const val KEY_GRAIN = "texture_grain"
-    private const val KEY_SCALE = "texture_scale"
-    private const val KEY_INTENSITY = "texture_intensity"
+    private const val KEY_CUSTOM = "backdrop_custom"
+    private const val KEY_SPEC = "backdrop_spec_json"
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     private fun prefs(context: Context) = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
 
-    /** 是否启用全局自定义纹理（false = 跟随主题预设）。 */
+    /** 是否启用全局自定义画布（false = 跟随主题预设）。 */
     fun custom(context: Context): Boolean = prefs(context).getBoolean(KEY_CUSTOM, false)
 
-    /** 读自定义配方（未启用时返回值无意义，仅作编辑初值）。 */
-    fun spec(context: Context): TextureSpec = TextureSpec(
-        weave = prefs(context).getFloat(KEY_WEAVE, 0f),
-        stipple = prefs(context).getFloat(KEY_STIPPLE, 0.4f),
-        hatch = prefs(context).getFloat(KEY_HATCH, 0f),
-        crossHatch = prefs(context).getFloat(KEY_CROSS, 0f),
-        hatchAngle = prefs(context).getFloat(KEY_ANGLE, 45f),
-        fiber = prefs(context).getFloat(KEY_FIBER, 0f),
-        grain = prefs(context).getFloat(KEY_GRAIN, 0.3f),
-        scale = prefs(context).getFloat(KEY_SCALE, 1f),
-        intensity = prefs(context).getFloat(KEY_INTENSITY, 1f),
-    )
+    /** 读自定义配方（未启用时返回值无意义，仅作编辑初值；解析失败回退默认）。 */
+    fun spec(context: Context): BackdropSpec = try {
+        val raw = prefs(context).getString(KEY_SPEC, null) ?: return BackdropSpec()
+        parse(json.parseToJsonElement(raw).jsonObject)
+    } catch (_: Exception) {
+        BackdropSpec()
+    }
 
-    /** 生效纹理：未启用自定义 = null（各处 resolveTexture 回退主题预设）。 */
-    fun resolve(context: Context): TextureSpec? = if (custom(context)) spec(context) else null
+    /** 生效画布：未启用自定义 = null（各处 resolveBackdrop 回退主题预设）。 */
+    fun resolve(context: Context): BackdropSpec? = if (custom(context)) spec(context) else null
 
-    fun saveCustom(context: Context, custom: Boolean, spec: TextureSpec) {
+    fun saveCustom(context: Context, custom: Boolean, spec: BackdropSpec) {
+        val payload = buildJsonObject {
+            put("washes", kotlinx.serialization.json.JsonArray(spec.washes.map { w ->
+                buildJsonObject {
+                    put("c", w.color.toArgb().toLong())
+                    put("x", w.x)
+                    put("y", w.y)
+                    put("r", w.radius)
+                    put("a", w.alpha)
+                }
+            }))
+            spec.gradient?.let { g ->
+                put("grad", buildJsonObject {
+                    put("c", kotlinx.serialization.json.JsonArray(g.colors.map { c -> kotlinx.serialization.json.JsonPrimitive(c.toArgb().toLong()) }))
+                    put("ang", g.angle)
+                    put("a", g.alpha)
+                })
+            }
+            put("tex", buildJsonObject {
+                put("weave", spec.texture.weave)
+                put("stipple", spec.texture.stipple)
+                put("hatch", spec.texture.hatch)
+                put("cross", spec.texture.crossHatch)
+                put("angle", spec.texture.hatchAngle)
+                put("fiber", spec.texture.fiber)
+                put("grain", spec.texture.grain)
+                put("scale", spec.texture.scale)
+                put("intensity", spec.texture.intensity)
+            })
+        }
         prefs(context).edit()
             .putBoolean(KEY_CUSTOM, custom)
-            .putFloat(KEY_WEAVE, spec.weave)
-            .putFloat(KEY_STIPPLE, spec.stipple)
-            .putFloat(KEY_HATCH, spec.hatch)
-            .putFloat(KEY_CROSS, spec.crossHatch)
-            .putFloat(KEY_ANGLE, spec.hatchAngle)
-            .putFloat(KEY_FIBER, spec.fiber)
-            .putFloat(KEY_GRAIN, spec.grain)
-            .putFloat(KEY_SCALE, spec.scale)
-            .putFloat(KEY_INTENSITY, spec.intensity)
+            .putString(KEY_SPEC, payload.toString())
             .apply()
     }
+
+    private fun parse(root: kotlinx.serialization.json.JsonObject): BackdropSpec {
+        val washes = root["washes"]?.jsonArrayOrNull()?.mapNotNull { el ->
+            val o = el.jsonObjectOrNull() ?: return@mapNotNull null
+            ColorWash(
+                color = Color(o["c"]?.jsonPrimitiveOrNull()?.longOrNull ?: 0L),
+                x = o["x"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0.5f,
+                y = o["y"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0.5f,
+                radius = o["r"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0.55f,
+                alpha = o["a"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0.2f,
+            )
+        } ?: emptyList()
+        val gradient = root["grad"]?.jsonObjectOrNull()?.let { g ->
+            CanvasGradient(
+                colors = g["c"]?.jsonArrayOrNull()?.mapNotNull { c ->
+                    c.jsonPrimitiveOrNull()?.longOrNull?.let { Color(it) }
+                } ?: emptyList(),
+                angle = g["ang"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+                alpha = g["a"]?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            )
+        }
+        val t = root["tex"]?.jsonObjectOrNull()
+        val texture = TextureSpec(
+            weave = t?.get("weave")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            stipple = t?.get("stipple")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            hatch = t?.get("hatch")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            crossHatch = t?.get("cross")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            hatchAngle = t?.get("angle")?.jsonPrimitiveOrNull()?.floatOrNull ?: 45f,
+            fiber = t?.get("fiber")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            grain = t?.get("grain")?.jsonPrimitiveOrNull()?.floatOrNull ?: 0f,
+            scale = t?.get("scale")?.jsonPrimitiveOrNull()?.floatOrNull ?: 1f,
+            intensity = t?.get("intensity")?.jsonPrimitiveOrNull()?.floatOrNull ?: 1f,
+        )
+        return BackdropSpec(washes = washes, gradient = gradient, texture = texture)
+    }
+
+    private fun kotlinx.serialization.json.JsonElement.jsonObjectOrNull(): kotlinx.serialization.json.JsonObject? =
+        try { jsonObject } catch (_: Exception) { null }
+
+    private fun kotlinx.serialization.json.JsonElement.jsonArrayOrNull(): kotlinx.serialization.json.JsonArray? =
+        try { jsonArray } catch (_: Exception) { null }
+
+    private fun kotlinx.serialization.json.JsonElement.jsonPrimitiveOrNull(): kotlinx.serialization.json.JsonPrimitive? =
+        try { jsonPrimitive } catch (_: Exception) { null }
 }

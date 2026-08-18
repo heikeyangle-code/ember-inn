@@ -54,18 +54,31 @@ import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
-import com.emberinn.app.ui.theme.TexturePrefs
+import com.emberinn.app.ui.theme.BackdropPrefs
+import com.emberinn.app.ui.theme.BackdropSpec
+import com.emberinn.app.ui.theme.BackdropLibrary
+import com.emberinn.app.ui.theme.CanvasGradient
 import com.emberinn.app.ui.theme.TextureSpec
 import com.emberinn.app.ui.theme.VibePrefs
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
-import com.emberinn.app.ui.theme.themeTexture
-import com.emberinn.app.ui.theme.LocalTextureOverride
+import com.emberinn.app.ui.theme.canvasBackdrop
+import com.emberinn.app.ui.theme.randomWashes
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.ui.settings.AppearancePrefs
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.height
 import kotlinx.coroutines.launch
+
+/** 画布调色盘：十二色（覆盖主题宝石/天空/海色的常用色域）。 */
+private val CanvasPalette = listOf(
+    Color(0xFFD9382B), Color(0xFFE8804A), Color(0xFFE8C24B), Color(0xFF8FA65A),
+    Color(0xFF3E9B78), Color(0xFF4FA8C9), Color(0xFF2E5A9E), Color(0xFF5B4B9E),
+    Color(0xFF9E4B8F), Color(0xFFE86FA0), Color(0xFFE8E2D6), Color(0xFF2B2B2E),
+)
 
 /** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
 @Composable
@@ -236,12 +249,13 @@ fun AppearanceScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val textureContext = LocalContext.current
-                var textureCustom by remember { mutableStateOf(TexturePrefs.custom(textureContext)) }
-                var textureSpec by remember { mutableStateOf(TexturePrefs.spec(textureContext)) }
-                fun pushTexture(custom: Boolean, spec: TextureSpec) {
+                var textureCustom by remember { mutableStateOf(BackdropPrefs.custom(textureContext)) }
+                var backdropSpec by remember { mutableStateOf(BackdropPrefs.spec(textureContext)) }
+                var washSeed by remember { mutableStateOf((1000..99999).random()) }
+                fun pushBackdrop(custom: Boolean, spec: BackdropSpec) {
                     textureCustom = custom
-                    textureSpec = spec
-                    TexturePrefs.saveCustom(textureContext, custom, spec)
+                    backdropSpec = spec
+                    BackdropPrefs.saveCustom(textureContext, custom, spec)
                     onTextureChanged()
                 }
                 val textureDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -251,9 +265,9 @@ fun AppearanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("底材纹理", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("画布底材", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            "画在什么上：六种图元自由组合，全部页面与聊天底通用",
+                            "占面积最大的底子，像画板一样自由：泼彩撞色 + 定向渐变 + 纹理图元，全部页面与聊天底通用",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -264,44 +278,118 @@ fun AppearanceScreen(
                         ) {
                             FilterChip(
                                 selected = !textureCustom,
-                                onClick = { pushTexture(false, textureSpec) },
+                                onClick = { pushBackdrop(false, backdropSpec) },
                                 label = { Text("跟随主题") },
                             )
                             FilterChip(
                                 selected = textureCustom,
-                                onClick = { pushTexture(true, textureSpec) },
+                                onClick = { pushBackdrop(true, backdropSpec) },
                                 label = { Text("自定义") },
                             )
                         }
-                        // 实时预览：跟随主题 = 当前主题配方；自定义 = 编辑中的 spec（拖动立即可见）
-                        val previewSpec = if (textureCustom) textureSpec else themePreset.texture
+                        // 效果库：一键套用完整配方（色域+渐变+纹理），套用后进自定义继续改
+                        Text("效果库", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            BackdropLibrary.forEach { (name, libSpec) ->
+                                FilterChip(
+                                    selected = false,
+                                    onClick = { pushBackdrop(true, libSpec) },
+                                    label = { Text(name) },
+                                )
+                            }
+                        }
+                        // 实时预览：跟随主题 = 当前主题配方；自定义 = 编辑中的配方（拖动立即可见）
+                        val previewSpec = if (textureCustom) backdropSpec else themePreset.backdrop
                         Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceContainer,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
-                                .height(84.dp),
+                                .height(96.dp),
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .then(Modifier.themeTexture(previewSpec, textureDark)),
+                                    .then(Modifier.canvasBackdrop(previewSpec, textureDark)),
                             )
                         }
                         if (textureCustom) {
-                            SliderRow(label = "织纹", hint = "经纬交织的画布底", value = textureSpec.weave, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(weave = v)) }
-                            SliderRow(label = "布点", hint = "随机散点，尘埃/星屑", value = textureSpec.stipple, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(stipple = v)) }
-                            SliderRow(label = "排线", hint = "定向平行短线，刀刻/铅笔", value = textureSpec.hatch, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(hatch = v)) }
-                            SliderRow(label = "交叉排线", hint = "第二方向排线，铜版画明暗", value = textureSpec.crossHatch, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(crossHatch = v)) }
-                            SliderRow(label = "纤维", hint = "微弯长丝，宣纸草筋/云纹", value = textureSpec.fiber, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(fiber = v)) }
-                            SliderRow(label = "颗粒", hint = "细密噪点，胶片感光粒", value = textureSpec.grain, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(grain = v)) }
-                            SliderRow(label = "排线角度", hint = "排线与交叉排线的方向", value = textureSpec.hatchAngle, range = 0f..180f) { v -> pushTexture(true, textureSpec.copy(hatchAngle = v)) }
-                            SliderRow(label = "图元大小", hint = ">1 更大更疏，<1 更细更密", value = textureSpec.scale, range = 0.5f..2.5f) { v -> pushTexture(true, textureSpec.copy(scale = v)) }
-                            SliderRow(label = "整体强度", hint = "所有层透明度同乘", value = textureSpec.intensity, range = 0.2f..2f) { v -> pushTexture(true, textureSpec.copy(intensity = v)) }
+                            // ---- 定向渐变层 ----
+                            val grad = backdropSpec.gradient
+                            val gradStart = grad?.colors?.firstOrNull() ?: CanvasPalette[0]
+                            val gradEnd = grad?.colors?.lastOrNull() ?: CanvasPalette[6]
+                            Text("定向渐变", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("起色（渐变起点）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            SwatchPalette(CanvasPalette, setOf(gradStart)) { c ->
+                                pushBackdrop(true, backdropSpec.copy(gradient = (grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)).copy(colors = listOf(c, gradEnd))))
+                            }
+                            Text("终色（渐变终点）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            SwatchPalette(CanvasPalette, setOf(gradEnd)) { c ->
+                                pushBackdrop(true, backdropSpec.copy(gradient = (grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)).copy(colors = listOf(gradStart, c))))
+                            }
+                            SliderRow(label = "渐变强度", hint = "0 = 关闭；两端颜色的过渡浓度", value = grad?.alpha ?: 0f, range = 0f..0.6f) { v ->
+                                val base = grad ?: CanvasGradient(listOf(gradStart, gradEnd))
+                                pushBackdrop(true, backdropSpec.copy(gradient = if (v <= 0.01f) null else base.copy(alpha = v)))
+                            }
+                            SliderRow(label = "渐变角度", hint = "0 = 自上而下，90 = 从左到右", value = grad?.angle ?: 0f, range = 0f..360f) { v ->
+                                val base = grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)
+                                pushBackdrop(true, backdropSpec.copy(gradient = base.copy(angle = v)))
+                            }
+                            // ---- 色域泼彩层 ----
+                            val washColors = backdropSpec.washes.map { it.color }
+                            val washMax = backdropSpec.washes.maxOfOrNull { it.alpha } ?: 0f
+                            Text("色域泼彩", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "点色即泼彩（可多选，撞色随意），重掷换布局",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            SwatchPalette(CanvasPalette, washColors.toSet()) { c ->
+                                val remaining = backdropSpec.washes.filterNot { it.color == c }
+                                val strength = washMax.takeIf { it > 0f } ?: 0.2f
+                                val added = if (remaining.size == backdropSpec.washes.size) randomWashes(listOf(c), strength, washSeed) else emptyList()
+                                pushBackdrop(true, backdropSpec.copy(washes = remaining + added))
+                            }
+                            SliderRow(label = "泼彩浓度", hint = "所有色域的浓度上限", value = washMax, range = 0f..0.5f) { v ->
+                                pushBackdrop(true, backdropSpec.copy(washes = backdropSpec.washes.map { it.copy(alpha = if (washMax > 0f) it.alpha * (v / washMax) else v) }))
+                            }
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(top = 4.dp),
+                            ) {
+                                FilterChip(
+                                    selected = false,
+                                    onClick = {
+                                        washSeed += 1
+                                        val strength = washMax.takeIf { it > 0f } ?: 0.2f
+                                        pushBackdrop(true, backdropSpec.copy(washes = randomWashes(washColors, strength, washSeed)))
+                                    },
+                                    label = { Text("重掷布局") },
+                                )
+                            }
+                            // ---- 纹理图元层 ----
+                            fun pushTex(t: TextureSpec) = pushBackdrop(true, backdropSpec.copy(texture = t))
+                            val tex = backdropSpec.texture
+                            Text("纹理图元", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            SliderRow(label = "织纹", hint = "经纬交织的画布底", value = tex.weave, range = 0f..1f) { v -> pushTex(tex.copy(weave = v)) }
+                            SliderRow(label = "布点", hint = "随机散点，尘埃/星屑", value = tex.stipple, range = 0f..1f) { v -> pushTex(tex.copy(stipple = v)) }
+                            SliderRow(label = "排线", hint = "定向平行短线，刀刻/铅笔", value = tex.hatch, range = 0f..1f) { v -> pushTex(tex.copy(hatch = v)) }
+                            SliderRow(label = "交叉排线", hint = "第二方向排线，铜版画明暗", value = tex.crossHatch, range = 0f..1f) { v -> pushTex(tex.copy(crossHatch = v)) }
+                            SliderRow(label = "纤维", hint = "微弯长丝，宣纸草筋/云纹", value = tex.fiber, range = 0f..1f) { v -> pushTex(tex.copy(fiber = v)) }
+                            SliderRow(label = "颗粒", hint = "细密噪点，胶片感光粒", value = tex.grain, range = 0f..1f) { v -> pushTex(tex.copy(grain = v)) }
+                            SliderRow(label = "排线角度", hint = "排线与交叉排线的方向", value = tex.hatchAngle, range = 0f..180f) { v -> pushTex(tex.copy(hatchAngle = v)) }
+                            SliderRow(label = "图元大小", hint = ">1 更大更疏，<1 更细更密", value = tex.scale, range = 0.5f..2.5f) { v -> pushTex(tex.copy(scale = v)) }
+                            SliderRow(label = "整体强度", hint = "所有层透明度同乘", value = tex.intensity, range = 0.2f..2f) { v -> pushTex(tex.copy(intensity = v)) }
                         } else {
                             Text(
-                                "跟随主题：每套预设自带专属配方（织纹/蚀刻/纤维/颗粒组合），换主题即换底材",
+                                "跟随主题：每套预设自带专属画布（泼彩/渐变/纹理组合），换主题即换底材",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp),
@@ -565,6 +653,37 @@ private fun SliderRow(
         }
         Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         EmberSlider(value = value, onValueChange = onChange, valueRange = range)
+    }
+}
+
+/** 色板：点击选色（单选/多选由 selected 集合与调用方决定，选中画主题色描边圈）。 */
+@Composable
+private fun SwatchPalette(
+    colors: List<Color>,
+    selected: Set<Color>,
+    onToggle: (Color) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(vertical = 4.dp),
+    ) {
+        colors.forEach { c ->
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(c)
+                    .then(
+                        if (c in selected) {
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        } else {
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        },
+                    )
+                    .clickable { onToggle(c) },
+            )
+        }
     }
 }
 
