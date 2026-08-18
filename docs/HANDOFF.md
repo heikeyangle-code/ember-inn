@@ -195,7 +195,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - ❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，P2）——注：assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4），此 ❌ 作废。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
-会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话）；新会话名对齐官方 chat 文件名规则——同角色已有会话时带 humanizedDateTime 后缀（角色卡菜单与聊天菜单 startNewChat 统一，修复与老会话同名不可区分）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
+会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话，会话名=角色名）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
 
 ### 4.4 设置 ✅（README 规格）
 - 数据与隐私：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明 + 清除全部数据（二次确认）；首启引导（欢迎页 + 导入角色卡/直接开始/跳过）。
