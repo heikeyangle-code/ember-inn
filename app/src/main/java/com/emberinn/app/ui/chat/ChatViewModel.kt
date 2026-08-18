@@ -3321,6 +3321,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      * depth+1 重新 Generate('normal')（startStream 重新总装，工具历史进提示词）。
      */
     private fun maybeContinueToolLoop(continueMode: Boolean, onFinished: (() -> Unit)?): Boolean {
+        // 冒充/变体流不进工具循环（官方 impersonate/swipe 类型无工具递归）：
+        // 冒充文本会被 appendAiReply 落盘成 AI 消息，随后 finalizeStream 又把同段文本
+        // 填进输入框——屏幕与输入框双重显示；快照也须清掉，不残留到下一轮流误触发
+        if (_isImpersonating.value || generatingSwipe) {
+            pendingToolCalls = null
+            return false
+        }
         val snapshot = pendingToolCalls ?: return false
         pendingToolCalls = null
         // 无真实工具调用的快照（网络层空快照兜底/异常流）不进工具循环：
