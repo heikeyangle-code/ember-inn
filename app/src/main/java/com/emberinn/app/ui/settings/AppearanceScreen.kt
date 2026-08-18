@@ -54,11 +54,17 @@ import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.theme.ThemeMode
 import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
+import com.emberinn.app.ui.theme.TexturePrefs
+import com.emberinn.app.ui.theme.TextureSpec
 import com.emberinn.app.ui.theme.VibePrefs
 import com.emberinn.app.ui.theme.VibePreset
 import com.emberinn.app.ui.theme.VibePresets
+import com.emberinn.app.ui.theme.themeTexture
+import com.emberinn.app.ui.theme.LocalTextureOverride
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.ui.settings.AppearancePrefs
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.layout.height
 import kotlinx.coroutines.launch
 
 /** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
@@ -68,6 +74,7 @@ fun AppearanceScreen(
     themePreset: ThemePreset,
     vibe: VibePreset,
     onVibeChanged: (VibePreset) -> Unit,
+    onTextureChanged: () -> Unit = {},
     onAppearanceChanged: () -> Unit = {},
     onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
@@ -223,6 +230,82 @@ fun AppearanceScreen(
                             ) { v ->
                                 onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, vibe.warmth, v))
                             }
+                        }
+                    }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val textureContext = LocalContext.current
+                var textureCustom by remember { mutableStateOf(TexturePrefs.custom(textureContext)) }
+                var textureSpec by remember { mutableStateOf(TexturePrefs.spec(textureContext)) }
+                fun pushTexture(custom: Boolean, spec: TextureSpec) {
+                    textureCustom = custom
+                    textureSpec = spec
+                    TexturePrefs.saveCustom(textureContext, custom, spec)
+                    onTextureChanged()
+                }
+                val textureDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("底材纹理", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "画在什么上：六种图元自由组合，全部页面与聊天底通用",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        ) {
+                            FilterChip(
+                                selected = !textureCustom,
+                                onClick = { pushTexture(false, textureSpec) },
+                                label = { Text("跟随主题") },
+                            )
+                            FilterChip(
+                                selected = textureCustom,
+                                onClick = { pushTexture(true, textureSpec) },
+                                label = { Text("自定义") },
+                            )
+                        }
+                        // 实时预览：跟随主题 = 当前主题配方；自定义 = 编辑中的 spec（拖动立即可见）
+                        val previewSpec = if (textureCustom) textureSpec else themePreset.texture
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .height(84.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(Modifier.themeTexture(previewSpec, textureDark)),
+                            )
+                        }
+                        if (textureCustom) {
+                            SliderRow(label = "织纹", hint = "经纬交织的画布底", value = textureSpec.weave, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(weave = v)) }
+                            SliderRow(label = "布点", hint = "随机散点，尘埃/星屑", value = textureSpec.stipple, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(stipple = v)) }
+                            SliderRow(label = "排线", hint = "定向平行短线，刀刻/铅笔", value = textureSpec.hatch, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(hatch = v)) }
+                            SliderRow(label = "交叉排线", hint = "第二方向排线，铜版画明暗", value = textureSpec.crossHatch, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(crossHatch = v)) }
+                            SliderRow(label = "纤维", hint = "微弯长丝，宣纸草筋/云纹", value = textureSpec.fiber, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(fiber = v)) }
+                            SliderRow(label = "颗粒", hint = "细密噪点，胶片感光粒", value = textureSpec.grain, range = 0f..1f) { v -> pushTexture(true, textureSpec.copy(grain = v)) }
+                            SliderRow(label = "排线角度", hint = "排线与交叉排线的方向", value = textureSpec.hatchAngle, range = 0f..180f) { v -> pushTexture(true, textureSpec.copy(hatchAngle = v)) }
+                            SliderRow(label = "图元大小", hint = ">1 更大更疏，<1 更细更密", value = textureSpec.scale, range = 0.5f..2.5f) { v -> pushTexture(true, textureSpec.copy(scale = v)) }
+                            SliderRow(label = "整体强度", hint = "所有层透明度同乘", value = textureSpec.intensity, range = 0.2f..2f) { v -> pushTexture(true, textureSpec.copy(intensity = v)) }
+                        } else {
+                            Text(
+                                "跟随主题：每套预设自带专属配方（织纹/蚀刻/纤维/颗粒组合），换主题即换底材",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
                         }
                     }
                 }

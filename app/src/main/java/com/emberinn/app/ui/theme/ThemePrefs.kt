@@ -65,3 +65,55 @@ object VibePrefs {
         e.apply()
     }
 }
+
+/** 底材纹理偏好：跟随主题预设（默认）或全局自定义配方（六图元自由组合），同一份 ember_theme 首选项。 */
+object TexturePrefs {
+
+    private const val NAME = "ember_theme"
+    private const val KEY_CUSTOM = "texture_custom"
+    private const val KEY_WEAVE = "texture_weave"
+    private const val KEY_STIPPLE = "texture_stipple"
+    private const val KEY_HATCH = "texture_hatch"
+    private const val KEY_CROSS = "texture_cross"
+    private const val KEY_ANGLE = "texture_angle"
+    private const val KEY_FIBER = "texture_fiber"
+    private const val KEY_GRAIN = "texture_grain"
+    private const val KEY_SCALE = "texture_scale"
+    private const val KEY_INTENSITY = "texture_intensity"
+
+    private fun prefs(context: Context) = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+
+    /** 是否启用全局自定义纹理（false = 跟随主题预设）。 */
+    fun custom(context: Context): Boolean = prefs(context).getBoolean(KEY_CUSTOM, false)
+
+    /** 读自定义配方（未启用时返回值无意义，仅作编辑初值）。 */
+    fun spec(context: Context): TextureSpec = TextureSpec(
+        weave = prefs(context).getFloat(KEY_WEAVE, 0f),
+        stipple = prefs(context).getFloat(KEY_STIPPLE, 0.4f),
+        hatch = prefs(context).getFloat(KEY_HATCH, 0f),
+        crossHatch = prefs(context).getFloat(KEY_CROSS, 0f),
+        hatchAngle = prefs(context).getFloat(KEY_ANGLE, 45f),
+        fiber = prefs(context).getFloat(KEY_FIBER, 0f),
+        grain = prefs(context).getFloat(KEY_GRAIN, 0.3f),
+        scale = prefs(context).getFloat(KEY_SCALE, 1f),
+        intensity = prefs(context).getFloat(KEY_INTENSITY, 1f),
+    )
+
+    /** 生效纹理：未启用自定义 = null（各处 resolveTexture 回退主题预设）。 */
+    fun resolve(context: Context): TextureSpec? = if (custom(context)) spec(context) else null
+
+    fun saveCustom(context: Context, custom: Boolean, spec: TextureSpec) {
+        prefs(context).edit()
+            .putBoolean(KEY_CUSTOM, custom)
+            .putFloat(KEY_WEAVE, spec.weave)
+            .putFloat(KEY_STIPPLE, spec.stipple)
+            .putFloat(KEY_HATCH, spec.hatch)
+            .putFloat(KEY_CROSS, spec.crossHatch)
+            .putFloat(KEY_ANGLE, spec.hatchAngle)
+            .putFloat(KEY_FIBER, spec.fiber)
+            .putFloat(KEY_GRAIN, spec.grain)
+            .putFloat(KEY_SCALE, spec.scale)
+            .putFloat(KEY_INTENSITY, spec.intensity)
+            .apply()
+    }
+}

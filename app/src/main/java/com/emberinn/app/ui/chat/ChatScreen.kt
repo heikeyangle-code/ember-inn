@@ -734,7 +734,7 @@ fun ChatScreen(
         val darkBg = isDarkThemeSurface()
         // 顶部天空：深色=红月/雾战场，浅色=象牙晨光/绯薄暮（浅色也有画面，不再惨白）
         val skyColor = (if (darkBg) artPreset.auraTop else artPreset.auraTopLight)
-            ?.let { lerp(it, MaterialTheme.colorScheme.background, 0.80f) }
+            ?.let { lerp(it, MaterialTheme.colorScheme.background, if (darkBg) 0.76f else 0.80f) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -749,19 +749,19 @@ fun ChatScreen(
                         1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
                     ),
                 )
-                // 主题底材（油画布/蚀刻/宣纸）：画在背景之上、内容之下
+                // 主题底材（TextureSpec 六图元配方）：画在背景之上、内容之下；
+                // 用户在设置里自定义的纹理（LocalTextureOverride）优先于主题预设
                 .then(
-                    if (artPreset.texture != "none") {
-                        Modifier.themeTexture(artPreset.texture, darkBg)
-                    } else {
-                        Modifier
-                    },
+                    Modifier.themeTexture(
+                        com.emberinn.app.ui.theme.resolveTexture(artPreset),
+                        darkBg,
+                    ),
                 ),
         ) {
-            // 左下角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）；
+            // 角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）；
             // 艺术主题的宝石色在此点亮——红宝石余烬、星尘青光（浅色也画，更收敛）
             val glowColor = artPreset.gem ?: accent
-            val glowAlpha = if (darkBg) 0.09f else 0.06f
+            val glowAlpha = if (darkBg) 0.13f else 0.09f
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -773,6 +773,24 @@ fun ChatScreen(
                         ),
                     ),
             )
+            // 顶部金属色微光（右上角）：gem 之外的第二氛围光源——古金月色/冷银月光/青铜暮色，
+            // 与左下宝石光形成对角呼应；有 metal 的主题才画，官方主题自然退化
+            artPreset.metal?.let { metalColor ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(300.dp)
+                        .offset(x = 110.dp, y = (-130).dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    metalColor.copy(alpha = if (darkBg) 0.10f else 0.07f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                        ),
+                )
+            }
         // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 外层氛围渐变兜底。
         // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
         val glassOn = AppearancePrefs.chatBgAvatarGlass(context)

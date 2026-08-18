@@ -114,35 +114,38 @@ private fun ThemePreset.lightScheme(): ColorScheme {
     val tertiary = darken(this.tertiary, 0.03f)
     // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 白纸与卡片层次拉开，光影更戏剧
     val c = contrast.coerceIn(0.6f, 1.6f)
-    // 画布着色（官方主题豁免）：纸底往 seed 色相轻移，卡片是"着色画布上的层次"而非灰阶——
+    // 画布着色（官方主题豁免）：纸底往 seed 色相移，卡片是"着色画布上的层次"而非灰阶——
     // 古典油画的浅色从来不是白纸，是象牙白/大理石的暖底，这是浅色不扁平的关键
-    val canvas = if (isOfficialTheme) bg else lerp(bg, seed, 0.05f)
+    val canvas = if (isOfficialTheme) bg else lerp(bg, seed, 0.10f)
+    // 容器阶梯直接向 seed 色相染色（旧实现向灰阶文字色靠，24 套主题的卡片全是灰的）：
+    // 主题感从"点点缀"变"整面画布"——卡片/顶栏/输入栏/气泡全走这条阶梯
+    fun layer(f: Float): Color = if (isOfficialTheme) lerp(canvas, onSurface, f) else lerp(canvas, seed, f)
     return lightColorScheme(
         primary = primary,
         onPrimary = readableOn(primary),
-        primaryContainer = lighten(seed, 0.68f),
+        primaryContainer = lighten(seed, 0.62f),
         onPrimaryContainer = darken(seed, 0.52f),
         secondary = secondary,
         onSecondary = readableOn(secondary),
-        secondaryContainer = lighten(this.secondary, 0.70f),
+        secondaryContainer = lighten(this.secondary, 0.68f),
         onSecondaryContainer = darken(this.secondary, 0.50f),
         tertiary = tertiary,
         onTertiary = readableOn(tertiary),
-        tertiaryContainer = lighten(this.tertiary, 0.72f),
+        tertiaryContainer = lighten(this.tertiary, 0.70f),
         onTertiaryContainer = darken(this.tertiary, 0.46f),
         background = bg,
         onBackground = onBackground,
         surface = bg,
         onSurface = onSurface,
-        surfaceVariant = lerp(canvas, onSurface, 0.10f * c),
+        surfaceVariant = layer(0.06f * c),
         onSurfaceVariant = darken(lightBg, 0.60f),
         outline = darken(lightBg, 0.42f),
-        outlineVariant = lerp(canvas, onSurface, 0.16f * c),
-        surfaceContainerLowest = darken(canvas, 0.03f * c),
-        surfaceContainerLow = lerp(canvas, onSurface, 0.045f * c),
-        surfaceContainer = lerp(canvas, onSurface, 0.075f * c),
-        surfaceContainerHigh = lerp(canvas, onSurface, 0.11f * c),
-        surfaceContainerHighest = lerp(canvas, onSurface, 0.15f * c),
+        outlineVariant = layer(0.10f * c),
+        surfaceContainerLowest = darken(canvas, 0.025f * c),
+        surfaceContainerLow = layer(0.055f * c),
+        surfaceContainer = layer(0.09f * c),
+        surfaceContainerHigh = layer(0.135f * c),
+        surfaceContainerHighest = layer(0.18f * c),
     )
 }
 
@@ -158,8 +161,8 @@ private fun ThemePreset.darkScheme(): ColorScheme {
     // 明暗对照（chiaroscuro）：contrast 缩放容器阶梯——>1 夜色更沉、卡片浮得更亮
     val c = contrast.coerceIn(0.6f, 1.6f)
     // 提亮带色相（官方主题豁免）：向白提亮改为向"主色调白"提亮——卡片像被主题光照射
-    // （火光反射在铠甲上、月光洒在大理石上），不再是死灰浮层
-    val lift = if (isOfficialTheme) Color.White else lerp(Color.White, primary, 0.30f)
+    // （火光反射在铠甲上、月光洒在大理石上），不再是死灰浮层；0.30→0.45 主题光更浓
+    val lift = if (isOfficialTheme) Color.White else lerp(Color.White, primary, 0.45f)
     return darkColorScheme(
         primary = primary,
         onPrimary = if (schemePrimary != null) readableOn(primary) else darken(seed, 0.55f),
@@ -177,15 +180,15 @@ private fun ThemePreset.darkScheme(): ColorScheme {
         onBackground = onBackground,
         surface = surface,
         onSurface = onSurface,
-        surfaceVariant = lerp(bg, lift, 0.14f * c),
+        surfaceVariant = lerp(bg, lift, 0.16f * c),
         onSurfaceVariant = lighten(darkBg, 0.62f),
         outline = lighten(darkBg, 0.38f),
-        outlineVariant = lerp(bg, lift, 0.10f * c),
-        surfaceContainerLowest = darken(bg, 0.02f * c),
-        surfaceContainerLow = lerp(bg, lift, 0.055f * c),
-        surfaceContainer = lerp(bg, lift, 0.09f * c),
-        surfaceContainerHigh = lerp(bg, lift, 0.125f * c),
-        surfaceContainerHighest = lerp(bg, lift, 0.16f * c),
+        outlineVariant = lerp(bg, lift, 0.12f * c),
+        surfaceContainerLowest = darken(bg, 0.025f * c),
+        surfaceContainerLow = lerp(bg, lift, 0.075f * c),
+        surfaceContainer = lerp(bg, lift, 0.115f * c),
+        surfaceContainerHigh = lerp(bg, lift, 0.16f * c),
+        surfaceContainerHighest = lerp(bg, lift, 0.205f * c),
     )
 }
 

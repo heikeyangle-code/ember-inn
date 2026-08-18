@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
             var vibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
+            var textureOverride by remember { mutableStateOf(com.emberinn.app.ui.theme.TexturePrefs.resolve(this)) }
             var appearanceRev by remember { mutableIntStateOf(0) }
             remember(appearanceRev) { Unit }
             val recipe by ThemeState.recipe.collectAsState()
@@ -85,6 +86,10 @@ class MainActivity : ComponentActivity() {
                         tertiary = seed,
                         lightBg = Color(0xFFF7F2E8),
                         darkBg = Color(0xFF171513),
+                        // 角色取色主题沿用全局预设的底材纹理与天空氛围，只换配色不换"画材"
+                        texture = preset.texture,
+                        auraTop = preset.auraTop,
+                        auraTopLight = preset.auraTopLight,
                     )
                 } else {
                     preset
@@ -129,6 +134,10 @@ class MainActivity : ComponentActivity() {
                 else -> FontFamily.Default
             }
             EmberInnTheme(darkTheme = darkTheme, preset = effectivePreset, vibe = vibe, shapes = shapes, fontFamily = fontFamily) {
+                // 底材纹理全局覆盖：设置→外观自定义（null = 跟随主题预设）
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.emberinn.app.ui.theme.LocalTextureOverride provides textureOverride,
+                ) {
                 MainScreen(
                     themeMode = mode,
                     themePreset = preset,
@@ -137,6 +146,10 @@ class MainActivity : ComponentActivity() {
                         vibe = newVibe
                         VibePrefs.save(this, newVibe)
                     },
+                    onTextureChanged = {
+                        textureOverride = com.emberinn.app.ui.theme.TexturePrefs.resolve(this)
+                        appearanceRev++
+                    },
                     onAppearanceChanged = { appearanceRev++ },
                     onThemeChanged = { newMode: ThemeMode, newPreset: ThemePreset ->
                         mode = newMode
@@ -144,6 +157,7 @@ class MainActivity : ComponentActivity() {
                         ThemePrefs.save(this, newMode, newPreset)
                     },
                 )
+                }
             }
         }
     }
