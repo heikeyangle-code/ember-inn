@@ -4077,7 +4077,14 @@ private enum class SegmentKind { Native, WebHtml, Interactive, Mermaid }
 private class ChatSegment(val kind: SegmentKind, val raw: String, val display: String? = null)
 
 private val ANY_FENCE = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
-private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
+private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*[ \\t]*\\n([\\s\\S]*?)```")
+
+/** 围栏内的结构性 HTML 标签（网页/卡片成分）：围栏含任意一个即按 HTML 围栏渲染成卡片。
+ *  Tavern Helper 代码渲染器语义：HTML 围栏整体替换为 iframe，不要求首尾都是 <>。 */
+private val STRUCTURAL_HTML_TAG = Regex(
+    "<(?:html|head|body|div|style|script|table|center|section|article|form|details|svg|canvas|iframe|video|audio|marquee|template|input|button|select)\\b",
+    RegexOption.IGNORE_CASE,
+)
 private val MERMAID_FENCE = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
 
 /** HTML 围栏判定：与 embedInteractiveBlocks 同一套正则，避免分段器与 iframe 转换器不一致。
@@ -4086,7 +4093,10 @@ private fun isHtmlFence(raw: String): Boolean {
     if (!raw.startsWith("```")) return false
     val m = INTERACTIVE_FENCE.find(raw) ?: return false
     val inner = m.groupValues[1].trim()
-    return (inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)
+    if (inner.startsWith("<") || inner.contains("<body", ignoreCase = true)) return true
+    // Tavern Helper 语义：围栏内出现结构性 HTML 标签即按卡片渲染。旧判定还要求结尾是 >，
+    // “HTML 卡片 + 结尾一句说明文字”这类输出被降级成普通代码块、把源码当文字显示（用户报告的降级）。
+    return STRUCTURAL_HTML_TAG.containsMatchIn(inner)
 }
 
 /** 完整 HTML 文档判定：以 <!doctype html 开头，或以 <html> 开头且带结构标记。
@@ -4101,6 +4111,20 @@ private fun isFullHtmlDocument(html: String): Boolean {
     return t.contains("</html>", ignoreCase = true) ||
         t.contains("<head", ignoreCase = true) ||
         t.contains("<body", ignoreCase = true)
+}
+
+/** 围栏外首个“完整网页文档”起点（<!doctype 或带闭合结构的 <html）：0=文档在开头（调用方已整段处理），
+ *  -1=没有。用于“前缀文字 + 完整网页”消息的拆分——文档起点前的文字走原生，其后整段走 Web。 */
+private fun fullDocumentStartOutsideFences(content: String): Int {
+    val fences = ANY_FENCE.findAll(content).map { it.range }.toList()
+    fun outside(i: Int) = fences.none { i in it }
+    val doctype = Regex("(?i)<!doctype\\s+html").findAll(content)
+        .map { it.range.first }.filter { it > 0 && outside(it) }.minOrNull()
+    val htmlTag = Regex("(?i)<html\\b").findAll(content)
+        .map { it.range.first }
+        .filter { pos -> pos > 0 && outside(pos) && content.substring(pos).contains(Regex("(?i)</html\\s*>|<body\\b")) }
+        .minOrNull()
+    return listOfNotNull(doctype, htmlTag).minOrNull() ?: -1
 }
 
 private fun appendTextSegment(
@@ -4127,7 +4151,7 @@ private fun appendTextSegment(
  *  行内 Web 标签（button/input/span[属性]/font face-size/ruby/bdi/bdo 等）无法与原生文本混排，
  *  仍按 12.6 登记整段走 Web；a/img 已原生转换，不进此清单。 */
 private val WEB_BLOCK_TAG = Regex(
-    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe|tr|td|th|tbody|thead|tfoot|caption|col|colgroup)(?=[\\s/>])" +
+    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe|tr|td|th|tbody|thead|tfoot|caption|col|colgroup|html|head|body)(?=[\\s/>])" +
         "|<(div|p)(?=[\\s/>])(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
         "|<font(?=[\\s/>])(?=[^>]*\\s(?:face|size)=)",
     RegexOption.IGNORE_CASE,
@@ -4192,6 +4216,31 @@ private fun buildMessageSegments(
     // 每段再套独立页面 → 网页永远渲染不出来（用户报告的多轮“渲染空白”根因之一）。
     if (htmlEnabled && isFullHtmlDocument(content)) {
         return listOf(ChatSegment(SegmentKind.WebHtml, content))
+    }
+    // 前缀文字 + 完整网页（“给你做了个页面：”+ <!DOCTYPE …）：从文档起点切开，
+    // 前缀走原生、文档整段走 Web。不切的话整页落进 appendTextSegment 被剥壳成纯文字（降级）。
+    if (htmlEnabled) {
+        val docStart = fullDocumentStartOutsideFences(content)
+        if (docStart > 0) {
+            val out = mutableListOf<ChatSegment>()
+            fun prefixFenced(text: String) {
+                var last = 0
+                for (m in ANY_FENCE.findAll(text)) {
+                    appendTextSegment(out, text.substring(last, m.range.first), isSystem, htmlEnabled)
+                    val raw = m.value
+                    out += when {
+                        isHtmlFence(raw) -> ChatSegment(SegmentKind.Interactive, raw)
+                        MERMAID_FENCE.containsMatchIn(raw) -> ChatSegment(SegmentKind.Mermaid, raw)
+                        else -> ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
+                    }
+                    last = m.range.last + 1
+                }
+                appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
+            }
+            prefixFenced(content.substring(0, docStart))
+            out += ChatSegment(SegmentKind.WebHtml, content.substring(docStart))
+            return out
+        }
     }
     val out = mutableListOf<ChatSegment>()
     fun appendFenced(text: String) {
@@ -4937,13 +4986,13 @@ private fun WebViewHtml(
  *  非交互代码块保留为 <pre><code>；围栏外的纯文本转义后按 pre-wrap 显示（保留换行）。
  *  安全提示：交互代码块等同于执行任意脚本，与第 178 轮 JS 全开同等级，已在 HANDOFF 登记。 */
 private fun embedInteractiveBlocks(raw: String, interactive: Boolean): String {
-    val fence = Regex("```[a-zA-Z]*\\n([\\s\\S]*?)```")
+    val fence = INTERACTIVE_FENCE
     val out = StringBuilder()
     var last = 0
     for (m in fence.findAll(raw)) {
         out.append(embedPlainText(raw.substring(last, m.range.first)))
         val inner = m.groupValues[1].trim()
-        if ((inner.startsWith("<") && inner.endsWith(">")) || inner.contains("<body", ignoreCase = true)) {
+        if (inner.startsWith("<") || inner.contains("<body", ignoreCase = true) || STRUCTURAL_HTML_TAG.containsMatchIn(inner)) {
             val escaped = inner
                 .replace("&", "&amp;")
                 .replace("\"", "&quot;")
