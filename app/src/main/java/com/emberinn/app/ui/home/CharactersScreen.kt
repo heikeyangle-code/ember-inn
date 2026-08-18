@@ -5,6 +5,7 @@ package com.emberinn.app.ui.home
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberMenuRow
 import com.emberinn.app.ui.components.EmberSectionHeader
+import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberGlassDefaults
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.components.glassEdgeHighlight
@@ -70,15 +71,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
@@ -839,18 +846,107 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
     }
 }
 
+/**
+ * 无角色卡空状态（完全重做）：三张虚线“空卡位”扇面呼应欢迎页的品牌视觉，
+ * 中央主位留给“+”入驻引导；下方一句话 + 主 CTA + 弱化的次行动 + 格式说明。
+ */
 @Composable
 private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
-    EmberEmptyState(
-        title = "欢迎来到余烬酒馆",
-        body = "导入第一张角色卡，开始你的故事",
-        actionLabel = "导入角色卡",
-        onAction = onImport,
-        secondaryLabel = "直接开始聊天",
-        onSecondary = onDirectChat,
-        icon = FaIcons.User,
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-    )
+    val theme = MaterialTheme.colorScheme
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+    ) {
+        // 空舞台：三个虚线卡位（中央主位带 + 强调）
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxWidth().height(176.dp),
+        ) {
+            EmptySlotCard(rotation = -14f, offsetX = (-58).dp, alpha = 0.38f)
+            EmptySlotCard(rotation = 14f, offsetX = 58.dp, alpha = 0.38f)
+            // 中央主位最后绘制（叠放最上层）
+            EmptySlotCard(rotation = 0f, offsetX = 0.dp, alpha = 1f, hero = true)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "还没有角色入驻",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "导入 SillyTavern 角色卡，开始你的第一个故事",
+            style = MaterialTheme.typography.bodyMedium,
+            color = theme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(22.dp))
+        EmberPrimaryButton(
+            label = "导入角色卡",
+            icon = FaIcons.FileImport,
+            onClick = onImport,
+            expandWidth = true,
+        )
+        Spacer(Modifier.height(6.dp))
+        TextButton(onClick = onDirectChat) {
+            Text(
+                "暂不导入，先和 AI 聊聊",
+                style = MaterialTheme.typography.labelLarge,
+                color = theme.primary,
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "支持 PNG · JSON · CharX · BYAF · YAML",
+            style = MaterialTheme.typography.labelSmall,
+            color = theme.onSurfaceVariant.copy(alpha = 0.75f),
+        )
+    }
+}
+
+/** 虚线空卡位：dash 圆角描边 + 极淡底色；主位加号图标与主色描边。 */
+@Composable
+private fun EmptySlotCard(
+    rotation: Float,
+    offsetX: androidx.compose.ui.unit.Dp,
+    alpha: Float,
+    hero: Boolean = false,
+) {
+    val theme = MaterialTheme.colorScheme
+    val strokeColor = if (hero) theme.primary.copy(alpha = 0.55f) else theme.outlineVariant.copy(alpha = 0.9f)
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .offset(x = offsetX)
+            .rotate(rotation)
+            .size(width = 88.dp, height = 122.dp)
+            .alpha(alpha)
+            .clip(shape)
+            .background(
+                if (hero) theme.primary.copy(alpha = 0.07f)
+                else theme.surfaceContainerHigh.copy(alpha = 0.45f),
+            )
+            .drawBehind {
+                drawRoundRect(
+                    color = strokeColor,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx()),
+                    style = Stroke(
+                        width = 1.6.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 6f)),
+                    ),
+                )
+            },
+    ) {
+        if (hero) {
+            Icon(FaIcons.Plus, contentDescription = null, tint = theme.primary.copy(alpha = 0.85f), modifier = Modifier.size(26.dp))
+        } else {
+            Icon(FaIcons.User, contentDescription = null, tint = theme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
+        }
+    }
 }
 
 private fun displayName(context: Context, uri: Uri): String? = runCatching {

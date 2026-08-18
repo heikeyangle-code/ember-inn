@@ -7,9 +7,10 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -270,8 +269,9 @@ fun MainScreen(
 }
 
 /**
- * 自绘底部导航（替换默认 M3 NavigationBar）：发丝顶线 + 胶囊指示容器 +
- * 选中态图标/文字主色提亮，未选中低对比。观感对齐商业 App 底栏。
+ * 自绘底部导航（替换默认 M3 NavigationBar）：发丝顶线 + 低投影表面 +
+ * “胶囊图标在上 / 小字标签在下”的经典结构（比横排胶囊+文字更安静，
+ * 不抢内容）。选中态主色提亮，未选中低对比。
  */
 @Composable
 private fun EmberBottomNav(
@@ -279,58 +279,62 @@ private fun EmberBottomNav(
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    androidx.compose.foundation.layout.Column {
-        androidx.compose.foundation.layout.Box(
+    Column {
+        // 发丝顶线：宽=屏宽、高=1dp。
+        // 注意不能用 fillMaxSize()：它会把最小高度锁成全屏高，height(1.dp) 被 coerce 失效，
+        // 底栏因此撑满整屏、Scaffold 内容被 innerPadding 顶出屏幕 → 主界面白屏（已修复）。
+        Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .height(1.dp)
                 .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
         )
-        androidx.compose.material3.Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
-            shadowElevation = 8.dp,
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 3.dp,
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(top = 10.dp, bottom = 8.dp),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 tabs.forEachIndexed { index, tab ->
                     val active = selected == index
-                    val iconTint = if (active) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
-                    val labelColor = if (active) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
+                    val pillAlpha by animateFloatAsState(
+                        targetValue = if (active) 1f else 0f,
+                        animationSpec = tween(180),
+                        label = "navPill",
+                    )
+                    val tint = if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(14.dp))
                             .clickable { onSelect(index) }
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 2.dp),
                     ) {
-                        // 胶囊指示容器：仅选中态显示（alpha 动画过渡）
+                        // 胶囊指示容器：仅选中态淡入
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(width = 52.dp, height = 30.dp)
+                                .size(width = 56.dp, height = 30.dp)
                                 .clip(RoundedCornerShape(999.dp))
                                 .background(
-                                    if (active) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                                    else Color.Transparent,
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f * pillAlpha),
                                 ),
                         ) {
-                            Icon(tab.icon, contentDescription = tab.label, tint = iconTint, modifier = Modifier.size(20.dp))
+                            Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(19.dp))
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.height(3.dp))
                         Text(
                             tab.label,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                            color = labelColor,
+                            color = tint,
                         )
                     }
                 }

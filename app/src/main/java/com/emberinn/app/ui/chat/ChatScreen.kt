@@ -5,7 +5,6 @@ package com.emberinn.app.ui.chat
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.emberGlass
-import com.emberinn.app.ui.components.EmberGlassDefaults
 
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.ExpressionStore
@@ -5926,7 +5925,7 @@ private fun ChatInputBar(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
             // 左侧工具簇：+ 附件为通用入口（中性 tonal）；冒充/继续是生成类操作，
-            // 用 accent tonal 与附件区分，语义一眼可辨
+            // 幽灵态纯图标（无彩色容器）——一排圆钮太抢输入框，降噪后层次更清楚
             EmberInputIcon(
                 onClick = onAttach,
                 icon = FaIcons.Plus,
@@ -5938,16 +5937,16 @@ private fun ChatInputBar(
                     onClick = onQuickImpersonate,
                     icon = FaIcons.UserSecret,
                     contentDescription = "冒充用户发言",
-                    tint = accent,
-                    container = accent.copy(alpha = 0.14f),
+                    tint = accent.copy(alpha = 0.85f),
+                    ghost = true,
                 )
                 if (canQuickContinue) {
                     EmberInputIcon(
                         onClick = onQuickContinue,
                         icon = FaIcons.ArrowRight,
                         contentDescription = "继续生成",
-                        tint = accent,
-                        container = accent.copy(alpha = 0.14f),
+                        tint = accent.copy(alpha = 0.85f),
+                        ghost = true,
                     )
                 }
             }

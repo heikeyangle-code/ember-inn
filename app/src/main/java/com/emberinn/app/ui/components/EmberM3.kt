@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -46,18 +47,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.settings.AppearancePrefs
+import com.skydoves.cloudy.Sky
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.theme.LocalVibe
-import com.skydoves.cloudy.Sky
-import com.skydoves.cloudy.cloudy
 
 /**
  * README UI 质感升级：高级输入框（全局替换 OutlinedTextField）。
@@ -182,7 +180,7 @@ object EmberTextFieldDefaults {
 
 /**
  * README 浮层玻璃：玻璃悬浮按钮（首页导入卡 / 聊天列表新建会话共用）。
- * 静态背板模糊 + 边缘高光 + 彩色阴影；关闭背景模糊时退回纯色容器。
+ * 统一走 emberGlass（毛玻璃 + 边缘高光一处定义）；关闭背景模糊时退回纯色容器。
  */
 @Composable
 fun EmberGlassFab(
@@ -190,10 +188,8 @@ fun EmberGlassFab(
     contentDescription: String?,
     onClick: () -> Unit,
     sky: Sky,
-    dark: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val fabContext = LocalContext.current
     Box(
         modifier = modifier
             .size(56.dp)
@@ -204,14 +200,7 @@ fun EmberGlassFab(
                 alpha = 0.18f + 0.12f * LocalVibe.current.glow,
             )
             .clip(RoundedCornerShape(18.dp))
-            .glassEdgeHighlight(dark = dark, atTop = true)
-            .then(
-                if (AppearancePrefs.backgroundBlur(fabContext)) {
-                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.52f))
-                } else {
-                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                },
-            )
+            .emberGlass(sky = sky, atTop = true, tintAlpha = EmberGlassDefaults.FAB_TINT)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -264,19 +253,36 @@ fun EmberInputIcon(
     enabled: Boolean = true,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     container: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f),
+    ghost: Boolean = false,
 ) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        modifier = modifier.size(40.dp),
-        enabled = enabled,
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = container,
-            contentColor = tint,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.28f),
-            disabledContentColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
-    ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+    if (ghost) {
+        // 幽灵态：无容器纯图标（输入栏左侧工具簇降噪用，不再一排彩色圆钮抢输入框）
+        IconButton(
+            onClick = onClick,
+            modifier = modifier.size(40.dp),
+            enabled = enabled,
+        ) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = if (enabled) tint else MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.size(19.dp),
+            )
+        }
+    } else {
+        FilledTonalIconButton(
+            onClick = onClick,
+            modifier = modifier.size(40.dp),
+            enabled = enabled,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = container,
+                contentColor = tint,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.28f),
+                disabledContentColor = MaterialTheme.colorScheme.outlineVariant,
+            ),
+        ) {
+            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+        }
     }
 }
 
