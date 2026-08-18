@@ -4,15 +4,13 @@ package com.emberinn.app.ui.sessions
 
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as SheetRow
-import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
-import com.emberinn.app.ui.components.glassEdgeHighlight
+import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.theme.LocalThemePreset
 
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.settings.AppearancePrefs
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,7 +67,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -77,7 +74,6 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.components.EmberTextField
-import com.skydoves.cloudy.cloudy
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberBottomSheet
@@ -141,7 +137,6 @@ fun SessionsScreen(
     }
 
     val sky = rememberSky()
-    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize()) {
         // 静态背景层：聊天列表毛玻璃顶栏的静态模糊源（列表滚动不触发整屏重捕）
         Box(
@@ -156,14 +151,7 @@ fun SessionsScreen(
                 shadowElevation = 1.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .glassEdgeHighlight(dark = glassDark, atTop = false)
-                    .then(
-                        if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
-                        } else {
-                            Modifier.background(MaterialTheme.colorScheme.surface)
-                        },
-                    ),
+                    .emberGlass(sky = sky, atTop = false),
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp)) {
                     Text(
@@ -207,7 +195,6 @@ fun SessionsScreen(
             contentDescription = "新建对话",
             onClick = { EmberHaptics.select(haptic); showNewSheet = true },
             sky = sky,
-            dark = glassDark,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         )
     }

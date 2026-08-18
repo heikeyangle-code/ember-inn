@@ -4,8 +4,7 @@ import com.emberinn.app.ui.icons.FaIcons
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import com.emberinn.app.ui.components.edgeSwipeBack
-import com.emberinn.app.ui.components.glassTint
-import com.emberinn.app.ui.components.glassEdgeHighlight
+import com.emberinn.app.ui.components.emberGlass
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.skydoves.cloudy.cloudy
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.theme.ThemeMode
@@ -480,28 +478,12 @@ fun SettingsTopBar(
     trailing: (@Composable () -> Unit)? = null,
     sky: com.skydoves.cloudy.Sky? = null,
 ) {
-    val topBarContext = LocalContext.current
-    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
         color = if (sky != null) MaterialTheme.colorScheme.surface.copy(alpha = 0.16f) else Color.Transparent,
         shadowElevation = if (sky != null) 1.dp else 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            .then(
-                if (sky != null) {
-                    Modifier
-                        .glassEdgeHighlight(dark = glassDark, atTop = false)
-                        .then(
-                            if (AppearancePrefs.backgroundBlur(topBarContext)) {
-                                Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(topBarContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
-                            } else {
-                                Modifier.background(MaterialTheme.colorScheme.surface)
-                            },
-                        )
-                } else {
-                    Modifier
-                },
-            ),
+            .emberGlass(sky = sky, atTop = false),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

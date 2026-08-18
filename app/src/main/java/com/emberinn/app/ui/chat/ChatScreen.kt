@@ -4,7 +4,8 @@ package com.emberinn.app.ui.chat
 
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
-import com.emberinn.app.ui.components.glassTint
+import com.emberinn.app.ui.components.emberGlass
+import com.emberinn.app.ui.components.EmberGlassDefaults
 
 import com.emberinn.app.data.DisplayPipeline
 import com.emberinn.app.data.ExpressionStore
@@ -14,7 +15,6 @@ import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.app.ui.components.edgeSwipeBack
-import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
@@ -23,7 +23,6 @@ import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
-import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import android.net.Uri
@@ -713,8 +712,6 @@ fun ChatScreen(
     val rowDensity = AppearancePrefs.density(context)
     val rowImmersiveActions = AppearancePrefs.immersiveActions(context)
     val rowBubbleStyle = AppearancePrefs.bubbleStyle(context)
-    // 玻璃边缘高光用到的深浅判断（同屏只有顶栏/输入栏两处玻璃，正文区保持干净）
-    val glassDark = isDarkThemeSurface()
     var topBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
 
@@ -1064,14 +1061,7 @@ fun ChatScreen(
                 slashCommands = slashCommands,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .glassEdgeHighlight(dark = glassDark, atTop = true)
-                    .then(
-                        if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
-                        } else {
-                            Modifier.background(MaterialTheme.colorScheme.surface)
-                        },
-                    ),
+                    .emberGlass(sky = sky, atTop = true),
                 )
             }
         }
@@ -1088,14 +1078,7 @@ fun ChatScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .onSizeChanged { topBarHeight = it.height }
-                .glassEdgeHighlight(dark = glassDark, atTop = false)
-                .then(
-                    if (AppearancePrefs.backgroundBlur(context)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.38f))
-                    } else {
-                        Modifier.background(MaterialTheme.colorScheme.surface)
-                    },
-                ),
+                .emberGlass(sky = sky, atTop = false),
         )
 
     }

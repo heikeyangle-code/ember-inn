@@ -3,9 +3,8 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.emberShadow
-import com.emberinn.app.ui.components.glassEdgeHighlight
+import com.emberinn.app.ui.components.emberGlass
 
 import android.content.Intent
 import android.widget.Toast
@@ -65,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -85,11 +83,9 @@ import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.data.WorldStore
 import com.emberinn.app.ui.components.edgeSwipeBack
-import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
-import com.skydoves.cloudy.cloudy
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberSlider
@@ -232,7 +228,6 @@ fun CharacterDetailScreen(
     // 返回手势：系统返回/预测性返回也回到上一层，而不是退出 App
     BackHandler(onBack = onBack)
     val sky = rememberSky()
-    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize().edgeSwipeBack(onBack = onBack)) {
         // 静态背景层：顶栏毛玻璃的静态模糊源（列表滚动不触发整屏重捕）
         Box(
@@ -249,14 +244,7 @@ fun CharacterDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .glassEdgeHighlight(dark = glassDark, atTop = false)
-                    .then(
-                        if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.42f))
-                        } else {
-                            Modifier.background(MaterialTheme.colorScheme.surface)
-                        },
-                    ),
+                    .emberGlass(sky = sky, atTop = false),
             ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

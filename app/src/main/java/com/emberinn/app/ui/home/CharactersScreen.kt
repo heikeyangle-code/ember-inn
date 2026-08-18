@@ -5,7 +5,8 @@ package com.emberinn.app.ui.home
 import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.app.ui.components.EmberMenuRow
 import com.emberinn.app.ui.components.EmberSectionHeader
-import com.emberinn.app.ui.components.glassTint
+import com.emberinn.app.ui.components.EmberGlassDefaults
+import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
@@ -14,7 +15,6 @@ import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.theme.LocalVibe
 
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.settings.AppearancePrefs
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -91,7 +91,6 @@ import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.card.CardFormat
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
-import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import java.io.File
@@ -120,8 +119,6 @@ fun CharactersScreen(
 
     // README 首页：毛玻璃顶栏（Cloudy 背板模糊，正文区干净）
     val sky = rememberSky()
-    // 玻璃边缘高光深浅判断（首页只有顶栏一处真玻璃 + AI 对话玻璃渐变卡）
-    val glassDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val density = LocalDensity.current
     var topBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
@@ -200,7 +197,6 @@ fun CharactersScreen(
                 onOpenSettings = onOpenSettings,
                 onOpenWorldInfo = { worldHit = it },
                 sky = sky,
-                glassDark = glassDark,
             )
         } else if (characters.isEmpty()) {
             EmptyHome(
@@ -260,21 +256,13 @@ fun CharactersScreen(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .onSizeChanged { topBarHeight = it.height }
-                    .glassEdgeHighlight(dark = glassDark, atTop = false)
-                    .then(
-                        if (AppearancePrefs.backgroundBlur(context)) {
-                            Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(context).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.45f))
-                        } else {
-                            Modifier.background(MaterialTheme.colorScheme.surface)
-                        },
-                    ),
+                    .emberGlass(sky = sky, atTop = false),
             )
         }
 
         GlassFab(
             onClick = { EmberHaptics.select(haptic); showImportSheet = true },
             sky = sky,
-            dark = glassDark,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
         )
     }
@@ -422,9 +410,7 @@ private fun SearchResultsColumn(
     onOpenSettings: (String?) -> Unit,
     onOpenWorldInfo: (WorldInfoHit) -> Unit,
     sky: com.skydoves.cloudy.Sky,
-    glassDark: Boolean,
 ) {
-    val searchContext = LocalContext.current
     Column(modifier = Modifier.fillMaxSize()) {
         HomeTopBar(
             query = query,
@@ -432,14 +418,7 @@ private fun SearchResultsColumn(
             glass = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .glassEdgeHighlight(dark = glassDark, atTop = false)
-                .then(
-                    if (AppearancePrefs.backgroundBlur(searchContext)) {
-                        Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(searchContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.45f))
-                    } else {
-                        Modifier.background(MaterialTheme.colorScheme.surface)
-                    },
-                ),
+                .emberGlass(sky = sky, atTop = false),
         )
         val isEmpty = results.characters.isEmpty() && results.sessions.isEmpty() &&
             results.worldInfo.isEmpty() && results.settings.isEmpty()
@@ -645,10 +624,8 @@ private fun HomeTopBar(
 private fun GlassFab(
     onClick: () -> Unit,
     sky: com.skydoves.cloudy.Sky,
-    dark: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val fabContext = LocalContext.current
     Box(
         modifier = modifier
             .size(56.dp)
@@ -659,14 +636,7 @@ private fun GlassFab(
                 alpha = 0.18f + 0.12f * LocalVibe.current.glow,
             )
             .clip(RoundedCornerShape(18.dp))
-            .glassEdgeHighlight(dark = dark, atTop = true)
-            .then(
-                if (AppearancePrefs.backgroundBlur(fabContext)) {
-                    Modifier.cloudy(sky = sky, radius = AppearancePrefs.blurStrength(fabContext).coerceAtLeast(1), tint = glassTint().copy(alpha = 0.52f))
-                } else {
-                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                },
-            )
+            .emberGlass(sky = sky, atTop = true, tintAlpha = EmberGlassDefaults.FAB_TINT)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

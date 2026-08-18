@@ -1,12 +1,16 @@
 package com.emberinn.app.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
+import com.skydoves.cloudy.Sky
+import com.skydoves.cloudy.cloudy
 
 /** 玻璃色调（官方 --SmartThemeBlurTintColor）：
  *  用户设置 stBlurTint > 当前主题预设 stBlurTint（酒馆官方 #171717）> M3 surface。
@@ -19,4 +23,43 @@ fun glassTint(base: Color = MaterialTheme.colorScheme.surface): Color {
     return parseHexColor(AppearancePrefs.stBlurTint(context))
         ?: (if (dark) stTheme.stBlurTint else null)
         ?: base
+}
+
+/** 全局玻璃默认参数：顶栏/输入栏统一 tint 透明度，模糊半径下限，
+ *  保证“内容从栏下滚过”时模糊可感知（之前各处 0.38-0.52 不一、观感像纯色）。 */
+object EmberGlassDefaults {
+    const val BAR_TINT = 0.40f
+    const val FAB_TINT = 0.50f
+    const val MIN_RADIUS = 14
+}
+
+/**
+ * 全局统一玻璃表面：毛玻璃 + 发丝边缘高光一处定义，替换各屏散落的
+ * “glassEdgeHighlight + cloudy/background”三件套。
+ * - sky = null：该面不做玻璃（保持调用方自己的背景），直接原样返回；
+ * - 用户关闭“背景模糊”时退回纯色 surface，发丝高光仍保留，两种模式切换不跳变。
+ * - atTop：发丝高光画上缘（悬浮卡/输入栏）还是下缘（顶栏）。
+ */
+@Composable
+fun Modifier.emberGlass(
+    sky: Sky?,
+    atTop: Boolean,
+    tintAlpha: Float = EmberGlassDefaults.BAR_TINT,
+): Modifier {
+    if (sky == null) return this
+    val context = LocalContext.current
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return this
+        .glassEdgeHighlight(dark = dark, atTop = atTop)
+        .then(
+            if (AppearancePrefs.backgroundBlur(context)) {
+                Modifier.cloudy(
+                    sky = sky,
+                    radius = AppearancePrefs.blurStrength(context).coerceAtLeast(EmberGlassDefaults.MIN_RADIUS),
+                    tint = glassTint().copy(alpha = tintAlpha),
+                )
+            } else {
+                Modifier.background(MaterialTheme.colorScheme.surface)
+            },
+        )
 }
