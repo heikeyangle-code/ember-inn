@@ -3,6 +3,7 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.glassTint
 
 import com.emberinn.app.data.DisplayPipeline
@@ -5660,32 +5661,6 @@ private fun MessageActionIcon(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(15.dp))
-    }
-}
-
-@Composable
-private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, danger: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick, enabled = enabled)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = when {
-            danger -> MaterialTheme.colorScheme.error
-            enabled -> MaterialTheme.colorScheme.onSurfaceVariant
-            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-        })
-        Spacer(Modifier.size(12.dp))
-        Text(
-            label,
-            color = when {
-                danger -> MaterialTheme.colorScheme.error
-                enabled -> MaterialTheme.colorScheme.onSurface
-                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-            },
-        )
     }
 }
 

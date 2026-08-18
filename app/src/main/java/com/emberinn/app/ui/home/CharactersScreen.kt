@@ -3,6 +3,8 @@
 package com.emberinn.app.ui.home
 
 import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.components.EmberMenuRow
+import com.emberinn.app.ui.components.EmberSectionHeader
 import com.emberinn.app.ui.components.glassTint
 import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.components.EmberHaptics
@@ -218,7 +220,7 @@ fun CharactersScreen(
                 }
                 if (recentSessions.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text("最近聊过", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        EmberSectionHeader("最近聊过")
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -235,7 +237,7 @@ fun CharactersScreen(
                 }
                 if (filtered.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text("我的角色", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        EmberSectionHeader("我的角色")
                     }
                     items(filtered, key = { it.id }) { record ->
                         CharacterCard(
@@ -287,11 +289,11 @@ fun CharactersScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(FaIcons.Folder, "从文件导入（PNG / JSON / CharX）") {
+                EmberMenuRow(FaIcons.Folder, "从文件导入", "PNG / JSON / CharX") {
                     showImportSheet = false
                     importLauncher.launch(arrayOf("*/*"))
                 }
-                MenuRow(FaIcons.Download, "从 URL 导入") {
+                EmberMenuRow(FaIcons.Download, "从 URL 导入", "角色卡直链自动识别格式") {
                     showImportSheet = false
                     urlDraft = ""
                     showUrlImport = true
@@ -351,20 +353,20 @@ fun CharactersScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                MenuRow(FaIcons.Star, if (record.pinned) "取消置顶" else "置顶") {
+                EmberMenuRow(FaIcons.Star, if (record.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(record); menuRecord = null
                 }
-                MenuRow(FaIcons.Plus, "新会话") {
+                EmberMenuRow(FaIcons.Plus, "新会话") {
                     onOpenChat(vm.newSession(record.id, record.name)); menuRecord = null
                 }
-                MenuRow(FaIcons.Pencil, "查看 / 编辑详情") {
+                EmberMenuRow(FaIcons.Pencil, "查看 / 编辑详情") {
                     menuRecord = null
                     onOpenDetail(record)
                 }
-                MenuRow(FaIcons.FileExport, "导出 JSON") {
+                EmberMenuRow(FaIcons.FileExport, "导出 JSON") {
                     exportLauncher.launch("${record.name}.json")
                 }
-                MenuRow(FaIcons.TrashCan, "删除角色", danger = true) {
+                EmberMenuRow(FaIcons.TrashCan, "删除角色", danger = true) {
                     deleteTarget = record; menuRecord = null
                 }
             }
@@ -802,6 +804,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
             ),
         shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
     ) {
         Box {
             Column {
@@ -863,18 +866,6 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, danger: Boolean = false, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.size(12.dp))
-        Text(label, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
     }
 }
 

@@ -229,11 +229,12 @@ private data class QuickAction(
     val onClick: () -> Unit,
 )
 
-/** 官方移动端 8 分区抽屉顺序（index.html #top-settings-holder）。 */
+/** 官方移动端 8 分区抽屉顺序（index.html #top-settings-holder）；hue 为该分区图标块的专属色调。 */
 private data class OfficialSection(
     val title: String,
     val subtitle: String,
     val icon: ImageVector,
+    val hue: Color,
     val onClick: () -> Unit,
 )
 
@@ -279,16 +280,18 @@ private fun SettingsHome(
         }
     } ?: "未配置"
 
-    // 官方 8 分区（顺序对照官方 index.html 顶部抽屉栏）
+    // 官方 8 分区（顺序对照官方 index.html 顶部抽屉栏）；图标块按分区配色，
+    // 页面不再一水灰——每张卡自带身份色（低饱和 tint，克制不花哨）
+    val sectionHue = MaterialTheme.colorScheme
     val sections = listOf(
-        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", FaIcons.Gear, onOpenAiResponse),
-        OfficialSection("API 连接", providerSummary, FaIcons.Link, onOpenProviders),
-        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", FaIcons.Pencil, onOpenFormatting),
-        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", FaIcons.BookOpen, onOpenWorldInfo),
-        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", FaIcons.User, onOpenUserSettings),
-        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", FaIcons.Image, onOpenBackgrounds),
-        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", FaIcons.WandMagicSparkles, onOpenExtensionsHub),
-        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", FaIcons.User, onOpenPersonas),
+        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", FaIcons.Gear, sectionHue.primary) { onOpenAiResponse() },
+        OfficialSection("API 连接", providerSummary, FaIcons.Link, sectionHue.tertiary) { onOpenProviders() },
+        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", FaIcons.Pencil, sectionHue.secondary) { onOpenFormatting() },
+        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", FaIcons.BookOpen, Color(0xFF43A047)) { onOpenWorldInfo() },
+        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", FaIcons.User, sectionHue.primary) { onOpenUserSettings() },
+        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", FaIcons.Image, Color(0xFF8E24AA)) { onOpenBackgrounds() },
+        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", FaIcons.WandMagicSparkles, Color(0xFFFB8C00)) { onOpenExtensionsHub() },
+        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", FaIcons.User, sectionHue.secondary) { onOpenPersonas() },
     )
 
     val visibleSections = remember(sections, query, providerSummary) {
@@ -362,15 +365,16 @@ private fun OfficialSectionCard(section: OfficialSection) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
+            // 分区身份色图标块：色调低饱和混合（14% tint），图标取分区色
             Box(
                 modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                    .background(section.hue.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     section.icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = section.hue,
                     modifier = Modifier.size(21.dp),
                 )
             }
@@ -388,7 +392,7 @@ private fun OfficialSectionCard(section: OfficialSection) {
             Icon(
                 FaIcons.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp),
             )
         }

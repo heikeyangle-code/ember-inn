@@ -7,21 +7,28 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,9 +38,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
@@ -220,32 +230,11 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            Column {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    thickness = 0.5.dp,
-                )
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                    tonalElevation = 0.dp,
-                ) {
-                    Tabs.forEachIndexed { index, tab ->
-                        NavigationBarItem(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        )
-                    }
-                }
-            }
+            EmberBottomNav(
+                tabs = Tabs,
+                selected = selectedTab,
+                onSelect = { selectedTab = it },
+            )
         },
     ) { innerPadding ->
         Box(
@@ -276,6 +265,76 @@ fun MainScreen(
                 settingsDeepLink = settingsDeepLink,
                 onSettingsDeepLinkConsumed = { settingsDeepLink = null },
             )
+        }
+    }
+}
+
+/**
+ * 自绘底部导航（替换默认 M3 NavigationBar）：发丝顶线 + 胶囊指示容器 +
+ * 选中态图标/文字主色提亮，未选中低对比。观感对齐商业 App 底栏。
+ */
+@Composable
+private fun EmberBottomNav(
+    tabs: List<TabSpec>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+        )
+        androidx.compose.material3.Surface(
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+            shadowElevation = 8.dp,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(top = 10.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    val active = selected == index
+                    val iconTint = if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                    val labelColor = if (active) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { onSelect(index) }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        // 胶囊指示容器：仅选中态显示（alpha 动画过渡）
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(width = 52.dp, height = 30.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(
+                                    if (active) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                    else Color.Transparent,
+                                ),
+                        ) {
+                            Icon(tab.icon, contentDescription = tab.label, tint = iconTint, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            tab.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                            color = labelColor,
+                        )
+                    }
+                }
+            }
         }
     }
 }

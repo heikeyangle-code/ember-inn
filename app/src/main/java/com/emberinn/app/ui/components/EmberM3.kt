@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.theme.LocalVibe
 import com.skydoves.cloudy.Sky
 import com.skydoves.cloudy.cloudy
@@ -406,5 +407,114 @@ fun EmberSecondaryButton(
                 color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * 全局统一菜单行（底部弹层/下拉菜单共用）：图标进 tonal 圆角块 + 主文案 + 可选副文案 +
+ * 可选尾部徽记/箭头，危险行整行 error 化。替换各屏裸“图标+文字”的 MenuRow/SheetRow，
+ * 消除同一 App 里两套弹层菜单语言。
+ */
+@Composable
+fun EmberMenuRow(
+    icon: ImageVector,
+    label: String,
+    subtitle: String? = null,
+    danger: Boolean = false,
+    enabled: Boolean = true,
+    showChevron: Boolean = false,
+    iconTint: Color? = null,
+    iconContainer: Color? = null,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val tint = when {
+        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        danger -> MaterialTheme.colorScheme.error
+        iconTint != null -> iconTint
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val container = when {
+        !enabled -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.20f)
+        danger -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+        iconContainer != null -> iconContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(container),
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(17.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = when {
+                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    danger -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
+            )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                )
+            }
+        }
+        if (showChevron) {
+            Icon(
+                FaIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
+}
+
+/**
+ * 全局统一分区标题：accent 竖条锚点 + 标题 + 可选计数/动作，替换列表里裸 Text 标题
+ * （“最近聊过/我的角色”等），给内容分区一个稳定的视觉锚。
+ */
+@Composable
+fun EmberSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.fillMaxWidth().padding(vertical = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 4.dp, height = 16.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        trailing?.invoke()
     }
 }
