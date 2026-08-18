@@ -104,7 +104,10 @@ private fun typographyWith(fontFamily: FontFamily): Typography {
 private fun ThemePreset.lightScheme(): ColorScheme {
     // 强化：主色加深 0.10（旧 0.04 几乎等于没压，白底上偏飘），容器色留更多色度
     val bg = lightBg
-    val primary = darken(seed, 0.10f)
+    // 自适应加深：黄/橙等高亮度 seed 固定 darken 0.10 在纸色上对比不足（实测可低到 2.6:1），
+    // 逐级加深直到 WCAG AA 4.5:1，上限 0.45 保住色相——所有主题浅色主色统一达标
+    val primary = readablePrimaryOn(bg)
+
     val onBackground = darken(lightBg, 0.86f)
     val onSurface = onBackground
     val secondary = darken(this.secondary, 0.03f)
@@ -232,6 +235,26 @@ private fun darken(color: Color, fraction: Float): Color = lerp(color, Color.Bla
 
 private fun readableOn(color: Color): Color =
     if (color.luminance() > 0.5f) Color(0xFF221A16) else Color.White
+
+/** WCAG 对比度（前景/背景均可，返回 ≥1 的比值）。 */
+private fun contrastRatio(a: Color, b: Color): Float {
+    val la = a.luminance()
+    val lb = b.luminance()
+    val hi = maxOf(la, lb)
+    val lo = minOf(la, lb)
+    return ((hi + 0.05f) / (lo + 0.05f))
+}
+
+/** 浅色主色自适应加深：从 darken 0.10 起步，不足 AA 4.5:1 就再加深，上限 0.45 保色相。 */
+private fun ThemePreset.readablePrimaryOn(bg: Color): Color {
+    var step = 0.10f
+    var color = darken(seed, step)
+    while (contrastRatio(color, bg) < 4.5f && step < 0.45f) {
+        step += 0.05f
+        color = darken(seed, step)
+    }
+    return color
+}
 
 /** 冷暖偏移：>0 偏暖黄，<0 偏冷蓝，幅度由 vibe.warmth 决定（默认 0 = 不偏移）。 */
 private fun tinted(color: Color, warmth: Float): Color {
