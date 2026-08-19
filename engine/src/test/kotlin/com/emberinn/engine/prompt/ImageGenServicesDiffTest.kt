@@ -170,6 +170,83 @@ class ImageGenServicesDiffTest {
                     )
                     assertEquals("case $id", expected, actual)
                 }
+                "falai-server" -> {
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val width = args["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val height = args["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val steps = args["steps"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val scale = args["scale"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
+                    val seedEl = args["seed"]
+                    val seed: Long? = if (seedEl == null || seedEl is JsonNull) null else seedEl.jsonPrimitive.content.toLongOrNull()
+                    val actual = ImageGenRequestEngine.falaiServerBody(prompt, width, height, steps, scale, seed)
+                    assertEquals("case $id", expected, actual)
+                }
+                "google-client" -> {
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val aspectRatio = args["aspectRatio"]?.jsonPrimitive?.content ?: ""
+                    val neg = args["negativePrompt"]?.jsonPrimitive?.content ?: ""
+                    val model = args["model"]?.jsonPrimitive?.content ?: ""
+                    val enhanceEl = args["enhance"]
+                    val enhance = if (enhanceEl == null || enhanceEl is JsonNull) null else enhanceEl.jsonPrimitive.content.toBooleanStrictOrNull()
+                    val api = args["api"]?.let { if (it is JsonNull) null else it.jsonPrimitive.contentOrNull }
+                    val seedEl = args["seed"]
+                    val seed: Long? = if (seedEl == null || seedEl is JsonNull) null else seedEl.jsonPrimitive.content.toLongOrNull()
+                    val vAuth = args["vertexAuthMode"]?.let { if (it is JsonNull) null else it.jsonPrimitive.contentOrNull }
+                    val vRegion = args["vertexRegion"]?.let { if (it is JsonNull) null else it.jsonPrimitive.contentOrNull }
+                    val vProj = args["vertexProject"]?.let { if (it is JsonNull) null else it.jsonPrimitive.contentOrNull }
+                    val actual = ImageGenRequestEngine.googleClientBody(
+                        prompt, aspectRatio, neg, model, enhance, api, seed, vAuth, vRegion, vProj,
+                    )
+                    assertEquals("case $id", expected, actual)
+                }
+                "zai" -> {
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val model = args["model"]?.jsonPrimitive?.content ?: ""
+                    val quality = args["quality"]?.let { if (it is JsonNull) null else it.jsonPrimitive.contentOrNull }
+                    val width = args["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val height = args["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val actual = ImageGenRequestEngine.zaiClientBody(prompt, model, quality, width, height)
+                    assertEquals("case $id", expected, actual)
+                }
+                "openrouter" -> {
+                    val model = args["model"]?.jsonPrimitive?.content ?: ""
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val aspectRatio = args["aspectRatio"]?.jsonPrimitive?.content ?: ""
+                    val actual = ImageGenRequestEngine.openRouterBody(model, prompt, aspectRatio)
+                    assertEquals("case $id", expected, actual)
+                }
+                "workersai-client" -> {
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val neg = args["negativePrompt"]?.jsonPrimitive?.content ?: ""
+                    val model = args["model"]?.jsonPrimitive?.content ?: ""
+                    val width = args["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val height = args["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val steps = args["steps"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val scale = args["scale"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
+                    val seedEl = args["seed"]
+                    val seed: Long? = if (seedEl == null || seedEl is JsonNull) null else seedEl.jsonPrimitive.content.toLongOrNull()
+                    val accountId = args["accountId"]?.jsonPrimitive?.content ?: ""
+                    val actual = ImageGenRequestEngine.workersAiClientBody(
+                        prompt, neg, model, width, height, steps, scale, seed, accountId,
+                    )
+                    assertEquals("case $id", expected, actual)
+                }
+                "comfy-replace" -> {
+                    val workflow = args["workflow"]?.jsonPrimitive?.content ?: ""
+                    val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
+                    val neg = args["negativePrompt"]?.jsonPrimitive?.content ?: ""
+                    val seed = args["seed"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                    val model = args["model"]?.jsonPrimitive?.content ?: ""
+                    val steps = args["steps"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val scale = args["scale"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val width = args["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val height = args["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val actual = ImageGenRequestEngine.replaceComfyWorkflow(
+                        workflow, prompt, neg, seed, model, steps, scale, width, height,
+                    )
+                    val expectedResult = expected.jsonObject["result"]?.jsonPrimitive?.content
+                    assertEquals("case $id", expectedResult, actual)
+                }
                 else -> error("unknown kind: $kind")
             }
         }

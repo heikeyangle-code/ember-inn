@@ -510,18 +510,108 @@ add('xai-grok-imagine-2k', 'xai',
     { prompt: 'huge', model: 'grok-imagine-image-pro', aspectRatio: '1:1', resolution: '2k' },
     xaiBody('huge', 'grok-imagine-image-pro', '1:1', '2k'));
 
-// ============ 第三批：图生 LLM 后端（extras 可差分，其余 App 直连厂商登记） ============
+// ============ 第三批：图生 LLM 后端 5 个 + comfy 纯函数 ============
 // 官方函数逐字摘自 SillyTavern 1.18.0 release 8172dcd：
-//   public/scripts/extensions/stable-diffusion/index.js generateExtrasImage L3524-L3550 body 字段集合
+//   stable-diffusion.js falai.post L1643-L1651（服务端加工后 requestBody）
+//   index.js generateGoogleImage L4610-L4623（客户端 fetch('/api/google/generate-image') body，非 veo 分支）
+//   index.js generateZaiImage L4688-L4699（客户端 image 分支 body，不含 round/clamp while 预处理）
+//   index.js generateOpenRouterImage L4722-L4730（客户端 body）
+//   index.js generateWorkersAIImage L4745-L4755（客户端 JSON body，服务端另翻译为 Cloudflare form）
+//   index.js generateComfyImageCommon L4231-L4261（纯函数占位符替换核心段）
 //
-// 边界（不差分，登记）：
-// - google：App 直连 Vertex AI predict body（{instances, parameters}） vs 官方 ST 服务端 google.js L432-L500
-//   转发到 Vertex AI predict 的 requestBody 字段集合（含 isVertex/isDeprecated/getConfigValue 分支），
-//   两者字段映射关系属服务端实现，App 简化按准则 2 字段对照登记（待补救：引擎层提取 ST→vertex 映射 + 差分）。
-// - falai/zai/openrouter/workersai：App 直连厂商 REST API body vs 官方 ST 服务端转发 body（不同源），
-//   厂商 API 字段集合与 ST 转发 body 字段集合不同，按准则 2 字段对照登记。
-// - drawthings：macOS only，App 返回 null，登记不实现。
-// - comfy_runpod：workflow 字符串替换（replaceComfyWorkflow）纯函数可差分，登记待补救。
+// 注：google 服务端 google.js /generate-image 再做 isVertex/isDeprecated/getConfigValue 映射
+//   → {instances:[{prompt}],parameters:{...}}，该映射属服务端实现，此处差分客户端 body；
+//   zai 有 while(w*h>2^21) 多值递减（while 不纯），此处差分最终 "WxH" 字段形态；
+//   workersai 服务端翻译为 Cloudflare form，此处差分客户端 JSON body；
+//   drawthings：macOS only，登记不实现（App 返回 null）。
+
+// ---------- 官方 FalAI 服务端 requestBody（stable-diffusion.js falai.post L1643-L1651 逐字摘） ----------
+function falaiServerBody(prompt, width, height, steps, guidance, seed) {
+    return {
+        prompt: prompt,
+        image_size: { 'width': clamp(width, 256, 1440), 'height': clamp(height, 256, 1440) },
+        num_inference_steps: clamp(steps, 1, 50),
+        seed: seed ?? null,
+        guidance_scale: clamp(guidance, 1.5, 5),
+        enable_safety_checker: false,
+        safety_tolerance: 6,
+    };
+}
+
+// ---------- 官方 Google 客户端 body（index.js generateGoogleImage L4610-L4623 逐字摘，非 veo） ----------
+// aspect_ratio = getClosestAspectRatio(w,h,'google') 结果由调用方计算后传入（纯函数）。
+// seed < 0 省略，enhance=undefined 省略，api 空字符串省略，vertex* 空省略。
+function googleClientBody(prompt, aspectRatio, negativePrompt, model, enhance, api, seed,
+                          vertexAuthMode, vertexRegion, vertexProject) {
+    const body = {
+        prompt: prompt,
+        aspect_ratio: aspectRatio,
+        negative_prompt: negativePrompt,
+        model: model,
+    };
+    if (enhance !== undefined) body.enhance = enhance;
+    if (String(api || '').trim() !== '') body.api = api;
+    if (seed >= 0) body.seed = seed;
+    if (String(vertexAuthMode || '').trim() !== '') body.vertexai_auth_mode = vertexAuthMode;
+    if (String(vertexRegion || '').trim() !== '') body.vertexai_region = vertexRegion;
+    if (String(vertexProject || '').trim() !== '') body.vertexai_express_project_id = vertexProject;
+    return body;
+}
+
+// ---------- 官方 ZAI 客户端 image 分支 body（index.js generateZaiImage L4688-L4699 逐字摘，不含 while 预处理） ----------
+// quality = '' → String('').trim()='' → falsy → 省略
+function zaiClientBody(prompt, model, quality, width, height) {
+    const body = {
+        prompt: prompt,
+        model: model,
+        size: `${width}x${height}`,
+    };
+    if (String(quality || '').trim() !== '') body.quality = quality;
+    return body;
+}
+
+// ---------- 官方 OpenRouter 客户端 body（index.js generateOpenRouterImage L4722-L4730 逐字摘） ----------
+function openRouterBody(model, prompt, aspectRatio) {
+    return {
+        model: model,
+        prompt: prompt,
+        aspect_ratio: aspectRatio,
+    };
+}
+
+// ---------- 官方 WorkersAI 客户端 JSON body（index.js generateWorkersAIImage L4745-L4755 逐字摘） ----------
+function workersAiClientBody(prompt, negativePrompt, model, width, height, steps, scale, seed, accountId) {
+    const body = {
+        prompt: prompt,
+        negative_prompt: negativePrompt,
+        model: model,
+        width: width,
+        height: height,
+        steps: steps,
+        scale: scale,
+        account_id: accountId,
+    };
+    if (seed >= 0) body.seed = seed;
+    return body;
+}
+
+// ---------- 官方 Comfy 占位符替换（generateComfyImageCommon L4231-L4261 纯函数核心段） ----------
+// 官方用 '"%xxx%"' 作占位符（含外引号），JSON.stringify(str) = '"str"' → 替换后得到 "str"。
+// 为对齐 App 模板简化写法（%xxx% 无外引号），这里用 '%xxx%' 当占位符：
+//   JSON.stringify(str) = '"str"' 替换 "%prompt%" → 得到 "str"，与官方最终效果一致。
+function replaceComfyWorkflow(workflow, prompt, negativePrompt, seed, model, steps, scale, width, height) {
+    const jsonStr = x => JSON.stringify(x);
+    const modelVal = model || 'v1-5-pruned-emaonly.safetensors';
+    return workflow
+        .replaceAll('%prompt%', jsonStr(prompt))
+        .replaceAll('%negative_prompt%', jsonStr(negativePrompt))
+        .replaceAll('%seed%', jsonStr(seed))
+        .replaceAll('%steps%', String(steps))
+        .replaceAll('%scale%', String(scale))
+        .replaceAll('%width%', String(width))
+        .replaceAll('%height%', String(height))
+        .replaceAll('%model%', jsonStr(modelVal));
+}
 
 // ---------- 官方 Extras body 构造（index.js generateExtrasImage L3524-L3550 逐字摘） ----------
 // body: JSON.stringify({ ... })；这里只保留对象字面量（fixture 不关心 JSON 序列化字符串而关心结构）。
@@ -571,6 +661,88 @@ add('extras-seed-zero', 'extras',
       width: 512, height: 512, restoreFaces: false, enableHr: false, hordeKarras: false,
       hrUpscaler: 'Latent', hrScale: 1.0, denoisingStrength: 0.7, hrSecondPassSteps: 0, seed: 0 },
     extrasBody('y', '', 'DDIM', 10, 7.0, 512, 512, false, false, false, 'Latent', 1.0, 0.7, 0, 0));
+
+// ============ FalAI server cases ============
+// 重点锁：image_size 嵌套对象、seed=null（seed ?? null 语义）、clamp 边界、num() 数字语义 3.0→3
+add('falai-server-defaults', 'falai-server',
+    { prompt: 'a cat', width: 1024, height: 1024, steps: 30, scale: 3.0, seed: 42 },
+    falaiServerBody('a cat', 1024, 1024, 30, 3.0, 42));
+add('falai-server-seed-null', 'falai-server',
+    // seed undefined → null（JS null 序列化保留）
+    { prompt: 'x', width: 512, height: 512, steps: 20, scale: 2.0, seed: undefined },
+    falaiServerBody('x', 512, 512, 20, 2.0, undefined));
+add('falai-server-clamp-bounds', 'falai-server',
+    // steps=0 → 1；scale=10 → 5；width=10 → 256；height=9999 → 1440
+    { prompt: 'clamp', width: 10, height: 9999, steps: 0, scale: 10, seed: -1 },
+    falaiServerBody('clamp', 10, 9999, 0, 10, -1));
+
+// ============ Google client cases ============
+add('google-client-full-vertex', 'google-client',
+    // vertex 全字段：enhance=true, api=vertexai, seed=42, vertex* 全非空
+    { prompt: 'a cat', aspectRatio: '1:1', negativePrompt: 'blurry', model: 'imagegeneration@005',
+      enhance: true, api: 'vertexai', seed: 42,
+      vertexAuthMode: 'express', vertexRegion: 'us-central1', vertexProject: 'my-proj' },
+    googleClientBody('a cat', '1:1', 'blurry', 'imagegeneration@005',
+        true, 'vertexai', 42, 'express', 'us-central1', 'my-proj'));
+add('google-client-minimal-makersuite', 'google-client',
+    // makersuite 最简：enhance=undefined 省略、api='' 省略、seed=-1 <0 省略、vertex* 空省略
+    { prompt: 'portrait', aspectRatio: '16:9', negativePrompt: '', model: 'imagen-3.0-generate-002',
+      enhance: undefined, api: '', seed: -1,
+      vertexAuthMode: '', vertexRegion: '', vertexProject: '' },
+    googleClientBody('portrait', '16:9', '', 'imagen-3.0-generate-002',
+        undefined, '', -1, '', '', ''));
+
+// ============ ZAI cases ============
+add('zai-with-quality', 'zai',
+    // quality='hd' → 传
+    { prompt: 'a cat', model: 'cogview-3', quality: 'hd', width: 1024, height: 1024 },
+    zaiClientBody('a cat', 'cogview-3', 'hd', 1024, 1024));
+add('zai-no-quality-empty', 'zai',
+    // quality='' → 省略；size 模板字符串 512x768
+    { prompt: 'x', model: 'glm-image-4', quality: '', width: 512, height: 768 },
+    zaiClientBody('x', 'glm-image-4', '', 512, 768));
+
+// ============ OpenRouter cases ============
+add('openrouter-defaults', 'openrouter',
+    // aspect_ratio 取 stability 集合
+    { model: 'flux-pro', prompt: 'a cat', aspectRatio: '1:1' },
+    openRouterBody('flux-pro', 'a cat', '1:1'));
+add('openrouter-wide', 'openrouter',
+    { model: 'recraft-v3', prompt: 'wide', aspectRatio: '16:9' },
+    openRouterBody('recraft-v3', 'wide', '16:9'));
+
+// ============ WorkersAI client cases ============
+add('workersai-client-with-seed', 'workersai-client',
+    { prompt: 'a cat', negativePrompt: 'blurry', model: 'flux-1-dev',
+      width: 1024, height: 1024, steps: 4, scale: 3.5, seed: 77, accountId: 'acct123' },
+    workersAiClientBody('a cat', 'blurry', 'flux-1-dev', 1024, 1024, 4, 3.5, 77, 'acct123'));
+add('workersai-client-no-seed', 'workersai-client',
+    // seed<0 → 省略
+    { prompt: 'x', negativePrompt: '', model: 'stable-diffusion-xl-base-1.0',
+      width: 768, height: 1024, steps: 20, scale: 7.0, seed: -1, accountId: 'myacct' },
+    workersAiClientBody('x', '', 'stable-diffusion-xl-base-1.0', 768, 1024, 20, 7.0, -1, 'myacct'));
+
+// ============ Comfy replaceComfyWorkflow cases ============
+// 占位符语法：官方为 '"%xxx%"'（含周围双引号），Kotlin 简化模板用 '%xxx%'（无额外引号）。
+// 语义对齐：JSON.stringify(str) = '"值"' 拼到模板 "%prompt%" → 最终替换结果一致。
+const TMPL_SIMPLE = '{"prompt":%prompt%,"neg":%negative_prompt%,"seed":%seed%,"steps":%steps%,"scale":%scale%,"width":%width%,"height":%height%,"model":%model%}';
+add('comfy-replace-simple', 'comfy-replace',
+    { workflow: TMPL_SIMPLE, prompt: 'a cat', negativePrompt: 'blurry', seed: 42,
+      model: 'v1-5.safetensors', steps: 20, scale: 7, width: 512, height: 512 },
+    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'a cat', 'blurry', 42,
+        'v1-5.safetensors', 20, 7, 512, 512) });
+add('comfy-replace-empty-model-default', 'comfy-replace',
+    // model 空字符串 → 'v1-5-pruned-emaonly.safetensors'；seed 数字打桩
+    { workflow: TMPL_SIMPLE, prompt: 'hello', negativePrompt: '', seed: 1000,
+      model: '', steps: 10, scale: 10, width: 1024, height: 768 },
+    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'hello', '', 1000,
+        '', 10, 10, 1024, 768) });
+add('comfy-replace-quote-escape', 'comfy-replace',
+    // prompt 含引号需 JSON.stringify 转义
+    { workflow: TMPL_SIMPLE, prompt: 'say "hi"', negativePrompt: "don't", seed: 0,
+      model: 'flux.safetensors', steps: 1, scale: 1, width: 64, height: 64 },
+    { result: replaceComfyWorkflow(TMPL_SIMPLE, 'say "hi"', "don't", 0,
+        'flux.safetensors', 1, 1, 64, 64) });
 
 writeFileSync(outFile, JSON.stringify({ cases }, null, 2) + '\n');
 console.log(`imagegen-services fixtures: ${cases.length} cases -> ${outFile}`);

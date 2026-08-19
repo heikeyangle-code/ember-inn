@@ -400,6 +400,141 @@ object ImageGenRequestEngine {
         if (seed >= 0) put("seed", JsonPrimitive(seed))
     }
 
+    // ========== 第三批：LLM 后端 5 个 + comfy replaceComfyWorkflow（差分脚本 imagegen-services-official.mjs 第三批） ==========
+
+    /**
+     * 官方 FalAI 服务端 requestBody（stable-diffusion.js falai.post L1643-L1651 逐字摘）。
+     * body = { prompt, image_size: { width, height }, num_inference_steps, seed: seed ?? null,
+     *   guidance_scale, enable_safety_checker: false, safety_tolerance: 6 }
+     * steps 1..50 clamp；guidance 1.5..5 clamp；width/height 256..1440 clamp。
+     * 注：App 直连 rest.fal.ai（同步），官方走 queue.fal.run（异步），URL/轮询属接线差异——body 一致。
+     */
+    fun falaiServerBody(
+        prompt: String, width: Int, height: Int, steps: Int, scale: Double, seed: Long?,
+    ): JsonObject = buildJsonObject {
+        put("prompt", JsonPrimitive(prompt))
+        put("image_size", buildJsonObject {
+            put("width", JsonPrimitive(width.coerceIn(256, 1440)))
+            put("height", JsonPrimitive(height.coerceIn(256, 1440)))
+        })
+        put("num_inference_steps", JsonPrimitive(steps.coerceIn(1, 50)))
+        put("seed", seed?.let { JsonPrimitive(it) } ?: JsonNull)
+        put("guidance_scale", num(scale.coerceIn(1.5, 5.0)))
+        put("enable_safety_checker", JsonPrimitive(false))
+        put("safety_tolerance", JsonPrimitive(6))
+    }
+
+    /**
+     * 官方 Google 客户端 body（index.js generateGoogleImage L4610-L4623 逐字摘，非 veo 分支）。
+     * body = { prompt, aspect_ratio: getClosestAspectRatio(w,h,'google'), negative_prompt, model,
+     *   enhance, api, seed: seed>=0?seed:undefined, vertexai_auth_mode, vertexai_region, vertexai_express_project_id }
+     * aspectRatio 取 google 集合 ['1:1','16:9','9:16','4:3','3:4'] 最小差。
+     * 注：服务端 google.js /generate-image 再加工成 {instances, parameters}，此处仅对齐客户端发 ST 代理的 body
+     * （即 fetch('/api/google/generate-image') 时 JSON.stringify 的对象字面量）。
+     */
+    fun googleClientBody(
+        prompt: String, aspectRatio: String, negativePrompt: String, model: String,
+        enhance: Boolean?, api: String?, seed: Long?,
+        vertexAuthMode: String?, vertexRegion: String?, vertexProject: String?,
+    ): JsonObject = buildJsonObject {
+        put("prompt", JsonPrimitive(prompt))
+        put("aspect_ratio", JsonPrimitive(aspectRatio))
+        put("negative_prompt", JsonPrimitive(negativePrompt))
+        put("model", JsonPrimitive(model))
+        if (enhance != null) put("enhance", JsonPrimitive(enhance))
+        if (!api.isNullOrBlank()) put("api", JsonPrimitive(api))
+        if (seed != null && seed >= 0) put("seed", JsonPrimitive(seed))
+        if (!vertexAuthMode.isNullOrBlank()) put("vertexai_auth_mode", JsonPrimitive(vertexAuthMode))
+        if (!vertexRegion.isNullOrBlank()) put("vertexai_region", JsonPrimitive(vertexRegion))
+        if (!vertexProject.isNullOrBlank()) put("vertexai_express_project_id", JsonPrimitive(vertexProject))
+    }
+
+    /**
+     * 官方 ZAI 客户端 image 分支 body（index.js generateZaiImage L4688-L4699 逐字摘）。
+     * body = { prompt, model, quality, size: "${width}x${height}" }
+     * width/height 预处理：round(multiple=16 倍数) → clamp 512..2048；若非 glm-image，再 while(w*h>2^21) 减 multiple。
+     * 因预处理不纯（while 调 Math.round/clamp），此处仅差分最终字段值集合形态：size 必须为 "WxH"，quality 空字符串省略。
+     */
+    fun zaiClientBody(
+        prompt: String, model: String, quality: String?, width: Int, height: Int,
+    ): JsonObject = buildJsonObject {
+        put("prompt", JsonPrimitive(prompt))
+        put("model", JsonPrimitive(model))
+        if (!quality.isNullOrBlank()) put("quality", JsonPrimitive(quality))
+        put("size", JsonPrimitive("${width}x${height}"))
+    }
+
+    /**
+     * 官方 OpenRouter 客户端 body（index.js generateOpenRouterImage L4722-L4730 逐字摘）。
+     * body = { model, prompt, aspect_ratio: getClosestAspectRatio(w,h,'stability') }
+     * aspectRatio 取 stability 集合（9 项，同 Stability 后端）。
+     */
+    fun openRouterBody(model: String, prompt: String, aspectRatio: String): JsonObject = buildJsonObject {
+        put("model", JsonPrimitive(model))
+        put("prompt", JsonPrimitive(prompt))
+        put("aspect_ratio", JsonPrimitive(aspectRatio))
+    }
+
+    /**
+     * 官方 WorkersAI 客户端 body（index.js generateWorkersAIImage L4745-L4755 逐字摘）。
+     * body = { prompt, negative_prompt, model, width, height, steps, scale, seed: seed>=0?seed:undefined, account_id }
+     * 注：服务端 workersai.post('/generate') 走表单 form-urlencoded（prompt/negative_prompt 键）——此处仅对齐
+     * 客户端 fetch('/api/sd/workersai/generate') JSON body；实际 App 直连 Cloudflare 按厂商 form 契约，
+     * 两者不同源但可差分同一份 client body 字段（App 接线翻译为 Cloudflare form）。
+     */
+    fun workersAiClientBody(
+        prompt: String, negativePrompt: String, model: String,
+        width: Int, height: Int, steps: Int, scale: Double, seed: Long?, accountId: String,
+    ): JsonObject = buildJsonObject {
+        put("prompt", JsonPrimitive(prompt))
+        put("negative_prompt", JsonPrimitive(negativePrompt))
+        put("model", JsonPrimitive(model))
+        put("width", JsonPrimitive(width))
+        put("height", JsonPrimitive(height))
+        put("steps", JsonPrimitive(steps))
+        put("scale", num(scale))
+        if (seed != null && seed >= 0) put("seed", JsonPrimitive(seed))
+        put("account_id", JsonPrimitive(accountId))
+    }
+
+    /**
+     * 官方 Comfy replaceComfyWorkflow 纯函数（对齐 generateComfyImageCommon 占位符替换核心段，
+     * index.js L4231-L4261 逐字摘简化版）：
+     *   workflow
+     *     .replaceAll('"%prompt%"', JSON.stringify(prompt))
+     *     .replaceAll('"%negative_prompt%"', JSON.stringify(negativePrompt))
+     *     .replaceAll('"%seed%"', JSON.stringify(seed))
+     *     .replaceAll('"%steps%"', String(steps))
+     *     .replaceAll('"%scale%"', String(scale))
+     *     .replaceAll('"%width%"', String(width))
+     *     .replaceAll('"%height%"', String(height))
+     *     .replaceAll('"%model%"', JSON.stringify(model))
+     * JSON.stringify(x) 对字符串输出 "含转义的引号包值"：JSON.stringify("hello") = '"hello"'
+     *   → Kotlin 等价 JSONObject().put("v",x).toString() 去掉外层 {"v": }
+     * seed < 0 用 randomSeed 模拟（差分打桩为常量）。
+     *
+     * 注：官方还有 %denoise%/%clip_skip% 等，但 comfy_runpod 的 placeholders = [steps,scale,width,height]
+     * （官方 generateComfyRunPodImage L4326-L4329），所以此处仅覆盖这 8 个占位符。
+     */
+    fun replaceComfyWorkflow(
+        workflow: String,
+        prompt: String, negativePrompt: String, randomSeed: Long,
+        model: String, steps: Int, scale: Int, width: Int, height: Int,
+    ): String {
+        val jsonStr = { s: String -> buildJsonObject { put("v", JsonPrimitive(s)) }.toString()
+            .removePrefix("{\"v\":").removeSuffix("}") }
+        val modelVal = model.ifBlank { "v1-5-pruned-emaonly.safetensors" }
+        return workflow
+            .replace("%prompt%", jsonStr(prompt))
+            .replace("%negative_prompt%", jsonStr(negativePrompt))
+            .replace("%seed%", randomSeed.toString())
+            .replace("%model%", jsonStr(modelVal))
+            .replace("%steps%", steps.toString())
+            .replace("%scale%", scale.toString())
+            .replace("%width%", width.toString())
+            .replace("%height%", height.toString())
+    }
+
     // ---------- helpers ----------
 
     /** JSON.stringify 数字语义：整数值不带小数点（7.0 → 7）。 */

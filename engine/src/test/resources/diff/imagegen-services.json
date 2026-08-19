@@ -906,6 +906,292 @@
         "hr_second_pass_steps": 0,
         "seed": 0
       }
+    },
+    {
+      "id": "044-falai-server-defaults",
+      "kind": "falai-server",
+      "args": {
+        "prompt": "a cat",
+        "width": 1024,
+        "height": 1024,
+        "steps": 30,
+        "scale": 3,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "a cat",
+        "image_size": {
+          "width": 1024,
+          "height": 1024
+        },
+        "num_inference_steps": 30,
+        "seed": 42,
+        "guidance_scale": 3,
+        "enable_safety_checker": false,
+        "safety_tolerance": 6
+      }
+    },
+    {
+      "id": "045-falai-server-seed-null",
+      "kind": "falai-server",
+      "args": {
+        "prompt": "x",
+        "width": 512,
+        "height": 512,
+        "steps": 20,
+        "scale": 2
+      },
+      "expected": {
+        "prompt": "x",
+        "image_size": {
+          "width": 512,
+          "height": 512
+        },
+        "num_inference_steps": 20,
+        "seed": null,
+        "guidance_scale": 2,
+        "enable_safety_checker": false,
+        "safety_tolerance": 6
+      }
+    },
+    {
+      "id": "046-falai-server-clamp-bounds",
+      "kind": "falai-server",
+      "args": {
+        "prompt": "clamp",
+        "width": 10,
+        "height": 9999,
+        "steps": 0,
+        "scale": 10,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "clamp",
+        "image_size": {
+          "width": 256,
+          "height": 1440
+        },
+        "num_inference_steps": 1,
+        "seed": -1,
+        "guidance_scale": 5,
+        "enable_safety_checker": false,
+        "safety_tolerance": 6
+      }
+    },
+    {
+      "id": "047-google-client-full-vertex",
+      "kind": "google-client",
+      "args": {
+        "prompt": "a cat",
+        "aspectRatio": "1:1",
+        "negativePrompt": "blurry",
+        "model": "imagegeneration@005",
+        "enhance": true,
+        "api": "vertexai",
+        "seed": 42,
+        "vertexAuthMode": "express",
+        "vertexRegion": "us-central1",
+        "vertexProject": "my-proj"
+      },
+      "expected": {
+        "prompt": "a cat",
+        "aspect_ratio": "1:1",
+        "negative_prompt": "blurry",
+        "model": "imagegeneration@005",
+        "enhance": true,
+        "api": "vertexai",
+        "seed": 42,
+        "vertexai_auth_mode": "express",
+        "vertexai_region": "us-central1",
+        "vertexai_express_project_id": "my-proj"
+      }
+    },
+    {
+      "id": "048-google-client-minimal-makersuite",
+      "kind": "google-client",
+      "args": {
+        "prompt": "portrait",
+        "aspectRatio": "16:9",
+        "negativePrompt": "",
+        "model": "imagen-3.0-generate-002",
+        "api": "",
+        "seed": -1,
+        "vertexAuthMode": "",
+        "vertexRegion": "",
+        "vertexProject": ""
+      },
+      "expected": {
+        "prompt": "portrait",
+        "aspect_ratio": "16:9",
+        "negative_prompt": "",
+        "model": "imagen-3.0-generate-002"
+      }
+    },
+    {
+      "id": "049-zai-with-quality",
+      "kind": "zai",
+      "args": {
+        "prompt": "a cat",
+        "model": "cogview-3",
+        "quality": "hd",
+        "width": 1024,
+        "height": 1024
+      },
+      "expected": {
+        "prompt": "a cat",
+        "model": "cogview-3",
+        "size": "1024x1024",
+        "quality": "hd"
+      }
+    },
+    {
+      "id": "050-zai-no-quality-empty",
+      "kind": "zai",
+      "args": {
+        "prompt": "x",
+        "model": "glm-image-4",
+        "quality": "",
+        "width": 512,
+        "height": 768
+      },
+      "expected": {
+        "prompt": "x",
+        "model": "glm-image-4",
+        "size": "512x768"
+      }
+    },
+    {
+      "id": "051-openrouter-defaults",
+      "kind": "openrouter",
+      "args": {
+        "model": "flux-pro",
+        "prompt": "a cat",
+        "aspectRatio": "1:1"
+      },
+      "expected": {
+        "model": "flux-pro",
+        "prompt": "a cat",
+        "aspect_ratio": "1:1"
+      }
+    },
+    {
+      "id": "052-openrouter-wide",
+      "kind": "openrouter",
+      "args": {
+        "model": "recraft-v3",
+        "prompt": "wide",
+        "aspectRatio": "16:9"
+      },
+      "expected": {
+        "model": "recraft-v3",
+        "prompt": "wide",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "053-workersai-client-with-seed",
+      "kind": "workersai-client",
+      "args": {
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "model": "flux-1-dev",
+        "width": 1024,
+        "height": 1024,
+        "steps": 4,
+        "scale": 3.5,
+        "seed": 77,
+        "accountId": "acct123"
+      },
+      "expected": {
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "model": "flux-1-dev",
+        "width": 1024,
+        "height": 1024,
+        "steps": 4,
+        "scale": 3.5,
+        "account_id": "acct123",
+        "seed": 77
+      }
+    },
+    {
+      "id": "054-workersai-client-no-seed",
+      "kind": "workersai-client",
+      "args": {
+        "prompt": "x",
+        "negativePrompt": "",
+        "model": "stable-diffusion-xl-base-1.0",
+        "width": 768,
+        "height": 1024,
+        "steps": 20,
+        "scale": 7,
+        "seed": -1,
+        "accountId": "myacct"
+      },
+      "expected": {
+        "prompt": "x",
+        "negative_prompt": "",
+        "model": "stable-diffusion-xl-base-1.0",
+        "width": 768,
+        "height": 1024,
+        "steps": 20,
+        "scale": 7,
+        "account_id": "myacct"
+      }
+    },
+    {
+      "id": "055-comfy-replace-simple",
+      "kind": "comfy-replace",
+      "args": {
+        "workflow": "{\"prompt\":%prompt%,\"neg\":%negative_prompt%,\"seed\":%seed%,\"steps\":%steps%,\"scale\":%scale%,\"width\":%width%,\"height\":%height%,\"model\":%model%}",
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "seed": 42,
+        "model": "v1-5.safetensors",
+        "steps": 20,
+        "scale": 7,
+        "width": 512,
+        "height": 512
+      },
+      "expected": {
+        "result": "{\"prompt\":\"a cat\",\"neg\":\"blurry\",\"seed\":42,\"steps\":20,\"scale\":7,\"width\":512,\"height\":512,\"model\":\"v1-5.safetensors\"}"
+      }
+    },
+    {
+      "id": "056-comfy-replace-empty-model-default",
+      "kind": "comfy-replace",
+      "args": {
+        "workflow": "{\"prompt\":%prompt%,\"neg\":%negative_prompt%,\"seed\":%seed%,\"steps\":%steps%,\"scale\":%scale%,\"width\":%width%,\"height\":%height%,\"model\":%model%}",
+        "prompt": "hello",
+        "negativePrompt": "",
+        "seed": 1000,
+        "model": "",
+        "steps": 10,
+        "scale": 10,
+        "width": 1024,
+        "height": 768
+      },
+      "expected": {
+        "result": "{\"prompt\":\"hello\",\"neg\":\"\",\"seed\":1000,\"steps\":10,\"scale\":10,\"width\":1024,\"height\":768,\"model\":\"v1-5-pruned-emaonly.safetensors\"}"
+      }
+    },
+    {
+      "id": "057-comfy-replace-quote-escape",
+      "kind": "comfy-replace",
+      "args": {
+        "workflow": "{\"prompt\":%prompt%,\"neg\":%negative_prompt%,\"seed\":%seed%,\"steps\":%steps%,\"scale\":%scale%,\"width\":%width%,\"height\":%height%,\"model\":%model%}",
+        "prompt": "say \"hi\"",
+        "negativePrompt": "don't",
+        "seed": 0,
+        "model": "flux.safetensors",
+        "steps": 1,
+        "scale": 1,
+        "width": 64,
+        "height": 64
+      },
+      "expected": {
+        "result": "{\"prompt\":\"say \\\"hi\\\"\",\"neg\":\"don't\",\"seed\":0,\"steps\":1,\"scale\":1,\"width\":64,\"height\":64,\"model\":\"flux.safetensors\"}"
+      }
     }
   ]
 }
