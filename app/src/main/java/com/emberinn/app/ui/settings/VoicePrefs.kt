@@ -22,6 +22,11 @@ object VoicePrefs {
         val skipTags: Boolean,
         val applyRegex: Boolean,
         val regexPattern: String,
+        /** 外部 TTS 后端 id（"system" = Android 系统 TTS，对齐官方 extension_settings.tts.provider）。 */
+        val ttsProvider: String,
+        val ttsEndpoint: String,
+        val ttsApiKey: String,
+        val ttsModel: String,
     )
 
     fun read(context: Context): Values = Values(
@@ -35,6 +40,10 @@ object VoicePrefs {
         skipTags = skipTags(context),
         applyRegex = applyRegex(context),
         regexPattern = regexPattern(context),
+        ttsProvider = ttsProvider(context),
+        ttsEndpoint = ttsEndpoint(context),
+        ttsApiKey = ttsApiKey(context),
+        ttsModel = ttsModel(context),
     )
 
     fun enabled(context: Context): Boolean =
@@ -67,6 +76,28 @@ object VoicePrefs {
 
     fun regexPattern(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_regex_pattern", "") ?: ""
+
+    /** 外部 TTS 后端 id（"system" = Android 系统 TTS）。 */
+    fun ttsProvider(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_provider", "system") ?: "system"
+
+    fun ttsEndpoint(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_endpoint", "") ?: ""
+
+    fun ttsApiKey(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_api_key", "") ?: ""
+
+    fun ttsModel(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("tts_model", "") ?: ""
+
+    fun saveTtsProvider(context: Context, provider: String, endpoint: String, apiKey: String, model: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("tts_provider", provider)
+            .putString("tts_endpoint", endpoint)
+            .putString("tts_api_key", apiKey)
+            .putString("tts_model", model)
+            .apply()
+    }
 
     fun save(
         context: Context,

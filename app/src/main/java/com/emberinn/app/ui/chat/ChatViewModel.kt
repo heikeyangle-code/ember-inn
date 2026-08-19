@@ -1262,9 +1262,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             applyRegex = voice.applyRegex,
             regexPattern = voice.regexPattern,
         )
-        val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
-        if (!ok && cleaned.isNotBlank()) {
-            _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+        // speak 现为 suspend（支持外部 HTTP 后端 MediaPlayer 播放）：协程发起
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
+            if (!ok && cleaned.isNotBlank()) {
+                _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+            }
         }
     }
 
