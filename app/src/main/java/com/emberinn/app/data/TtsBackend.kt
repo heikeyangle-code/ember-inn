@@ -4,7 +4,7 @@ import android.content.Context
 import com.emberinn.app.ui.settings.VoicePrefs
 
 /**
- * 官方 TTS 扩展 Provider 抽象（public/scripts/extensions/tts/*.js 各 XxxTtsProvider 类）。
+ * 官方 TTS 扩展 Provider 抽象（public/scripts/extensions/tts／ 各 XxxTtsProvider 类）。
  * - getVoices：对齐官方 getVoice(s)，返回该后端可用声音清单（含 lang/preview_url）。
  * - generateTts：对齐官方 generateTts + fetchTtsGeneration，返回音频原始字节（失败 null）。
  * Android 系统 TTS 不走本接口（TtsReader 直连 TextToSpeech），仅外部 HTTP 后端实现。

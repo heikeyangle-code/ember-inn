@@ -42,19 +42,43 @@ class TranslateClient {
         val target = ServicesPrefs.translateTargetLanguage(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
-        runCatching {
-            when (provider) {
-                "libre" -> libre(text, target, apiKey, url)
-                "google" -> google(text, target)
-                "lingva" -> lingva(text, target, url)
-                "deepl" -> deepl(text, target, apiKey, url)
-                "deeplx" -> deeplx(text, target, url)
-                "oneringtranslator" -> onering(text, target, url)
-                "bing" -> bing(text, target)
-                "yandex" -> yandex(text, target)
-                else -> null
-            }
-        }.getOrNull()
+        runCatching { dispatch(text, target, provider, apiKey, url) }.getOrNull()
+    }
+
+    /**
+     * 官方 translateIncomingMessageReasoning：把 AI 消息的 reasoning（思考）译为目标语言，
+     * 结果写入 message.extra.reasoning_display_text。与 [translate] 同走 provider 分发，
+     * 但 targetLang 由调用方显式指定（用于 reasoning 单独指定目标语 / 复用 mes 译文流程）。
+     */
+    suspend fun translateReasoning(
+        context: Context,
+        text: String,
+        targetLang: String,
+    ): String? = withContext(Dispatchers.IO) {
+        if (text.isBlank() || targetLang.isBlank()) return@withContext null
+        val provider = ServicesPrefs.translateProvider(context)
+        val apiKey = ServicesPrefs.translateApiKey(context)
+        val url = ServicesPrefs.translateUrl(context)
+        runCatching { dispatch(text, targetLang, provider, apiKey, url) }.getOrNull()
+    }
+
+    /** 8 家 provider 的统一分发（translate / translateReasoning 共用）。 */
+    private fun dispatch(
+        text: String,
+        target: String,
+        provider: String,
+        apiKey: String,
+        url: String,
+    ): String? = when (provider) {
+        "libre" -> libre(text, target, apiKey, url)
+        "google" -> google(text, target)
+        "lingva" -> lingva(text, target, url)
+        "deepl" -> deepl(text, target, apiKey, url)
+        "deeplx" -> deeplx(text, target, url)
+        "oneringtranslator" -> onering(text, target, url)
+        "bing" -> bing(text, target)
+        "yandex" -> yandex(text, target)
+        else -> null
     }
 
     // ---- Libre（官方：JSON {q, source:'auto', target, format:'text', api_key} → translatedText）----

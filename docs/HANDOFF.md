@@ -29,12 +29,12 @@ flowchart LR
 
 ### 0.2 版本基线
 
-- 基线 = SillyTavern release `8172dcd`（1.18.0），源码 `/data/data/com.termux/files/home/sillytavern-ref`；全部“已对齐/已差分/已实现”结论与 fixture 均以此为准。
+- 基线 = SillyTavern release `8172dcd`（1.18.0），源码 `/root/sillytavern-ref`；全部“已对齐/已差分/已实现”结论与 fixture 均以此为准。
 - 官方更新流程（不可跳过）：①更新 ref 到新 release 并记录 commit；②重跑全部 `scripts/diff/*.mjs` 重新生成 fixture，红/变的就是差异，逐个对照移植；③新功能按“先穷举 case → 差分 → 实现”流程；④`./gradlew :engine:test` 全量 + App 等 CI；⑤更新 0.2 基线、第 2 节组/例数、第 5 节完成度与相关模块状态。
 
 ## 1. 项目与常用命令
 
-- 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `~/ember-inn`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `~/sillytavern-ref`（release 8172dcd / 1.18.0）。
+- 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `/workspace`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `/root/sillytavern-ref`（release 8172dcd / 1.18.0）。
 - 引擎测试与 App Kotlin 编译本机均可跑（Java 21 + Gradle 9.7 + Android SDK，当前 **378 测全绿**）；完整 APK 组装/签名走 CI。
 
 ```sh
@@ -192,7 +192,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - 滑动切回复全链：数据模型对齐官方 jsonl（swipe_id/swipes[]/swipe_info[]；ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；AI 气泡横滑（右=下一个/越界生成新变体，左=上一个）；计数条 n/N + 箭头；长按菜单变体列表 ModalBottomSheet；导出 jsonl 可直接进酒馆；世界书扫描按官方 prepareMessages（swipe 在 coreChat.pop 之后扫描，App dropLast(1) 等价）。
 - 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）；世界书命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
 - 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）；逐条滚动零磁盘 IO——displayTextOf 组合期的全局设置/宏环境/正则脚本收敛 ensureDisplayCtx 缓存（随 DisplayCacheVersion/会话身份失效），usable 下标随消息表实例缓存，ExpressionPrefs 进程级缓存（旧实现每条消息进视口都读盘，逐条卡顿根因）。
-- ❌ Claude 冒充的 assistant_impersonation 设置（默认空串，影响为 0，P2）——注：assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4），此 ❌ 作废。
+- ✅ assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4）——旧 ❌ 登记作废已修正。
 
 ### 4.3.5 聊天 Tab（会话列表）✅
 会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话，会话名=角色名）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
@@ -414,3 +414,75 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 - push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
 - 沙箱会话重置会丢 GitHub 凭证（gh auth/token）：push 失败先查 `gh auth status`，缺凭证就 `gh auth login` 或临时 PAT，不要反复盲推。
 - 删除类操作先确认；大改动保持小步提交。
+
+## 9. 扩展生态移植记录（2026-08-19 批次）
+
+本批次对照 `/root/sillytavern-ref`（release 8172dcd / 1.18.0）全量补全官方扩展功能，`./gradlew :engine:test :app:compileDebugKotlin` 全过。HANDOFF 旧版多处过时登记已修正（路径、❌ 标错、过时 ✅）。
+
+### 9.1 TTS 扩展 27 个外部后端 ✅
+原状：仅 Android 系统 TTS（`TtsReader.kt`）。补全 1:1 对照官方 `tts/*.js` 的 `fetchTtsGeneration`：
+- [TtsBackend.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackend.kt)：`TtsBackend` 接口（`getVoices`/`generateTts` 返回字节）+ `TtsBackendRegistry`（init 触发 27 后端注册）+ `TtsVoice` 数据类。
+- [TtsBackendsCloud.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsCloud.kt)：11 云端后端——elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate。逐字段对照官方请求体（含 minimax/volcengine 的 hex `data.audio` 解码、google-native 的 base64 `audioContent` 解码、google-translate 的 ≤200 字符分段）。
+- [TtsBackendsLocal1.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsLocal1.kt)：8 本地后端——alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/kokoro。alltalk 走 V1/V2 双段（POST 取 output_file_url → GET 取字节）；chatterbox 走 predefined/clone 双模式；gpt-sovits-v2 含 `replaceSpeaker` 正则。
+- [TtsBackendsLocal2.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsLocal2.kt)：8 本地后端——kokoro-worker/sbvits2/silerotts/speecht5/tts-webui/vits/xtts/openai-compatible。sbvits2/vits 保留官方 form-urlencoded/query string 传输；tts-webui 含 chatterbox 16 字段 params；xtts 走 `/set_tts_settings` 分离 speed/temperature。
+- [TtsReader.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsReader.kt)：改造支持外部后端（MediaPlayer 播放字节落盘）+ Android 系统 TTS 回退；`speak` 改 suspend。
+- [VoicePrefs.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/VoicePrefs.kt)：扩展 `tts_provider`/`tts_endpoint`/`tts_api_key`/`tts_model` 字段。
+- [ChatViewModel.kt#L1265](file:///workspace/app/src/main/java/com/emberinn/app/ui/chat/ChatViewModel.kt#L1265)：`narrateText` 协程化。
+
+### 9.2 图生扩展 17 个后端补全 ✅
+原状：6 后端（auto/sdcpp/novel/openai/horde/comfy）。补全对照官方 `stable-diffusion/index.js` 的 `generateXxxImage`：
+- [ImageGenBackendsCloud.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ImageGenBackendsCloud.kt)：9 云端后端——togetherai/pollinations/stability/aimlapi/chutes/electronhub/nanogpt/bfl/xai。逐字段对照官方 `stable-diffusion.js` 路由（BFL 异步轮询 `/get_result` 至 Ready；pollinations 用 `gen.pollinations.ai`；chutes 用 `image.chutes.ai` 直返字节）。
+- [ImageGenBackendsLlm.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ImageGenBackendsLlm.kt)：8 LLM 厂商后端——google/zai/openrouter/workersai/falai/extras/drawthings(comfyrunpod)。drawthings 仅 macOS 跳过返回 null；comfyrunpod 走 RunPod serverless `/run` + `/status` 轮询；google 走 Vertex AI predict。
+
+### 9.3 attachments 扩展 ✅
+原状：仅 VectorRag 引用。补全对照官方 `attachments/index.js`（data bank 三源 CRUD）：
+- [AttachmentsService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/AttachmentsService.kt)：`getAttachments`/`getAttachmentByField`/`listAttachmentsJson`/`getAttachmentText`/`addAttachment`/`updateAttachment`/`deleteAttachment`/`disableAttachment`/`enableAttachment`，三源（global/character/chat）落盘 `filesDir/attachments/{source}/`，disabled 列表存 BehaviorPrefs。
+- [BehaviorPrefs.kt#L27](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/BehaviorPrefs.kt#L27)：加 `disabledAttachments`/`saveDisabledAttachments`。
+
+### 9.4 gallery 扩展 ✅
+原状：仅消息内 LIST↔GALLERY 切换。补全对照官方 `gallery/index.js`（853 行）：
+- [GalleryService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/GalleryService.kt)：`getGalleryItems`/`getGalleryFolders`/`deleteGalleryItem`/`getThumbnail`（视频用 `MediaMetadataRetriever`）/`setSortOrder`/`getSortOrder`/`updateGalleryFolder`/`restoreGalleryFolder`/`getGalleryItemsJson`。四排序（NAME/DATE/SIZE 升降）+ 视频缩略图 maxSide=225。
+
+### 9.5 assets 扩展 ✅
+原状：仅 CharX 资源提取。补全对照官方 `assets/index.js`（598 行）+ `endpoints/assets.js`：
+- [AssetsService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/AssetsService.kt)：5 类型（extension/character/ambient/bgm/blip）+ `validateAssetFileName`（正则+UNSAFE+非点开头）+ `buildAssetList`/`buildAssetListForType`/`isAssetInstalled`（三分支）+ `installAsset`（OkHttp 下载→temp→移入）+ `deleteAsset`/`currentAssets`/`ensureFoldersExist`。
+
+### 9.6 quick-reply 多预设 ✅
+原状：单预设 `filesDir/quick-replies.json`。补全对照官方 `quick-reply/index.js` L55-L103：
+- [QuickReplyStore.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/QuickReplyStore.kt)：多预设 `filesDir/quick-replies-presets/{name}.json` + 激活切换 + 增删改查 + 单预设迁移（旧 `quick-replies.json` → default preset）+ kotlinx→org.json 持久化。公共 API 不变，ChatViewModel/Screen 零改动。
+
+### 9.7 translate reasoning 自动翻译 ✅
+原状：8 家 + mes 自动翻译。补全对照官方 `translate/index.js` L192-L247：
+- [TranslateClient.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TranslateClient.kt)：加 `translateReasoning(context, text, targetLang)`，写 `extra.reasoning_display_text`。
+- ChatViewModel.translateIncoming：reasoning 分支调新方法。
+
+### 9.8 regex preset manager UI ✅
+原状：引擎 1:1。补全对照官方 `regex/index.js` L167-L189：
+- [RegexScreen.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/RegexScreen.kt)：加"应用此预设集"按钮，调 `GlobalRegexPrefs.saveActivePresetSet`，ChatScreen 版本监听即时重算 + Toast 确认。
+
+### 9.9 expressions WebLLM ✅
+原状：LLM 分类。补全对照官方 `expressions/index.js` L514-L599：
+- [ExpressionStore.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ExpressionStore.kt)：加 `source` 字段（local/extras/main/webllm/none）+ `shouldFallbackToLlm()`。webllm 走 LLM 回退（Android 无 WebLLM/transformers.js）。
+
+### 9.10 caption 边缘 ✅
+原状：multimodal + sendCaptionedMessage。补全对照官方 `caption/index.js`：
+- [CaptionPrefs.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/CaptionPrefs.kt)：加 `sourceUrl`（local/extras/horde 代理基址）。
+- [ChatRepository.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ChatRepository.kt)：加 `captionImageBySource(source, dataUrl, base64, prompt)`，4 来源路由——multimodal/local/extras/horde（local=`{url}/api/extra/caption`、extras=`{url}/api/caption`、horde=`{url}/api/horde/caption-image`）。
+- ChatViewModel：加 `captionExistingMessage(messageId, mediaIndex)`（已有消息补字幕）。
+- [CaptionScreen.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/CaptionScreen.kt)：加 Local/Extras/Horde chips + sourceUrl 输入框。
+
+### 9.11 斜杠命令补全 ✅
+原状：~36 命令。补全对照官方 `slash-commands.js` 与 `extensions/*/*.js`：
+- [SlashRegistry.kt](file:///workspace/engine/src/main/kotlin/com/emberinn/engine/slash/SlashRegistry.kt)：加 `/summarize` / `/db*`（8 个） / `/listGallery` / `/installAsset`/`/deleteAsset` / `/vectorize`/`/index`/`/vectorize-faiss` / `/imagine` / `/caption`（含 mesId/index/quiet 命名参数） / `/qr` / `/expression` / `/world`（sub=get/list/enable/disable） / `/member`。App 端经 ChatViewModel 桥接到具体服务。
+
+### 9.12 编译验证
+`mise exec java@17.0.2 gradle@9.7.0 -- gradle :engine:test :app:compileDebugKotlin` → **BUILD SUCCESSFUL**，378 引擎测全过 + App Kotlin 编译全过。沙箱用 android-34 platform 临时编译（compileSdk=37 在恢复后需本地 Android SDK 37 验证）。
+
+### 9.13 仍待做（用户决策延期或不影响兼容）
+- 图生 ADetailer / 样式库 / prompt templates / Comfy workflow 编辑器（图生后端已全接，这些是图生配套 UI 工具）
+- expressions WebLLM 真本地模型（Android 无 transformers.js，当前回退 LLM 等价）
+- Room/DataStore 迁移（仍用 SharedPreferences）
+- MeshGradient 氛围背景（README 可选）
+- 字体文件下载、风格档位映射
+- Custom CSS + Moving UI（用户决策延期，依赖 DOM 1:1 不可行）
+- 第三方扩展市场/插件体系（远期）

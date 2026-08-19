@@ -31,12 +31,14 @@ import com.emberinn.engine.prompt.StoppingStringsConfig
 import com.emberinn.engine.prompt.StoppingStringsEngine
 import com.emberinn.engine.macros.MacroEnv
 import com.emberinn.engine.regex.RegexPipelineScript
+import com.emberinn.app.ui.settings.CaptionPrefs
 import com.emberinn.app.ui.settings.KoboldSettingsStore
 import com.emberinn.app.ui.settings.NovelSettingsStore
 import com.emberinn.app.ui.settings.PresetPrefsStore
 import com.emberinn.app.ui.settings.PresetSettingsStore
 import com.emberinn.app.ui.settings.TextgenSettingsStore
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -49,6 +51,11 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 /**
  * 真实模型对话仓库：连接档案 → 历史消息 → LlmClient（OpenAI 兼容）。
@@ -225,6 +232,47 @@ class ChatRepository(private val context: Context) {
             ),
         )
         client.chatCompletions(provider, profile, messages)
+    }
+
+    private val httpCaptionClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
+    private val captionJsonMedia = "application/json; charset=utf-8".toMediaType()
+
+    /**
+     * 官方 caption doCaptionRequest：按 source 路由——
+     * local → {sourceUrl}/api/extra/caption，extras → {sourceUrl}/api/caption，
+     * horde → {sourceUrl}/api/horde/caption-image（均 POST {image: base64} → {caption}）；
+     * multimodal → [captionImage]（用当前模型视觉请求）。sourceUrl 空 → null（未配置代理）。
+     */
+    suspend fun captionImageBySource(
+        source: String,
+        dataUrl: String,
+        base64: String,
+        prompt: String,
+    ): String? = withContext(Dispatchers.IO) {
+        when (source) {
+            "multimodal" -> captionImage(dataUrl, prompt)
+            "local" -> captionHttpPost(base64, CaptionPrefs.load(context).sourceUrl, "/api/extra/caption")
+            "extras" -> captionHttpPost(base64, CaptionPrefs.load(context).sourceUrl, "/api/caption")
+            "horde" -> captionHttpPost(base64, CaptionPrefs.load(context).sourceUrl, "/api/horde/caption-image")
+            else -> null
+        }
+    }
+
+    private fun captionHttpPost(base64: String, baseUrl: String, path: String): String? {
+        if (baseUrl.isBlank()) return null
+        val endpoint = baseUrl.trimEnd('/') + path
+        val payload = JSONObject().put("image", base64).toString()
+        val request = Request.Builder().url(endpoint)
+            .post(payload.toRequestBody(captionJsonMedia))
+            .header("Bypass-Tunnel-Reminder", "bypass")
+            .build()
+        httpCaptionClient.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            return JSONObject(resp.body?.string().orEmpty()).optString("caption").ifBlank { null }
+        }
     }
 
     /**

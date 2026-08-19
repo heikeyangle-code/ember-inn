@@ -107,6 +107,7 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.contentOrNull
@@ -610,10 +611,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index)?.jsonObject ?: return
         val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        val targetLang = ServicesPrefs.translateTargetLanguage(getApplication())
         viewModelScope.launch(Dispatchers.IO) {
             val translated = translateClient.translate(getApplication(), text)
+            // 官方 translateIncomingMessageReasoning：reasoning 译文写 extra.reasoning_display_text。
+            // 流式完成落盘后调用（见 appendAiReply/appendGeneratedSwipe 后的 translateIncoming(lastAi, rawReasoning)）。
             val reasoningTranslated = if (!reasoning.isNullOrBlank()) {
-                translateClient.translate(getApplication(), reasoning)
+                translateClient.translateReasoning(getApplication(), reasoning, targetLang)
             } else {
                 null
             }
@@ -2551,9 +2555,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 if (!file.exists()) error("图片文件不存在")
                 val mime = mimeForCaption(image.url)
                 val dataUrl = "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(file.readBytes())
+                val base64 = dataUrl.substringAfter("base64,")
                 val rawPrompt = promptOverride?.takeIf { it.isNotBlank() } ?: s.prompt
                 val prompt = MacroEngine.substitute(rawPrompt, MacroEnv(user = currentUserName, char = currentCharName))
-                val caption = chatRepository.captionImage(dataUrl, prompt) ?: error("描述生成失败")
+                val caption = chatRepository.captionImageBySource(s.source, dataUrl, base64, prompt) ?: error("描述生成失败")
                 if (caption.isBlank()) error("描述生成失败")
                 val rawTemplate = if (s.template.contains("{{caption}}", ignoreCase = true)) {
                     s.template
@@ -2589,6 +2594,64 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _pendingMedia.value = _pendingMedia.value.filterNot { it.url == image.url }
         refreshMessages()
         startStream(history = chatStore.messages(sessionId))
+    }
+
+    /**
+     * 官方 caption captionExistingMessage：给已有消息第 [mediaIndex] 张图片补字幕（mes 空→写 mes；
+     * 否则 media.title=字幕、append_title）。source 路由见 [com.emberinn.app.data.ChatRepository.captionImageBySource]。
+     */
+    fun captionExistingMessage(messageId: Int, mediaIndex: Int = 0) {
+        if (_isStreaming.value) {
+            _notice.value = "（正在生成中，请稍后再试。）"
+            return
+        }
+        val msgs = chatStore.messages(sessionId)
+        val el = msgs.getOrNull(messageId)?.jsonObject ?: run {
+            _notice.value = "（找不到该消息。）"
+            return
+        }
+        val extra = el["extra"] as? JsonObject
+        val media = extra?.get("media") as? JsonArray
+        if (media.isNullOrEmpty()) {
+            _notice.value = "（该消息没有可补字幕的图片。）"
+            return
+        }
+        val mi = mediaIndex.coerceIn(0, media.lastIndex)
+        val entry = media.getOrNull(mi)?.jsonObject
+        val url = entry?.get("url")?.jsonPrimitive?.contentOrNull
+        val type = entry?.get("type")?.jsonPrimitive?.contentOrNull
+        if (url.isNullOrBlank() || type == "audio") {
+            _notice.value = "（该消息没有可补字幕的图片。）"
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val file = java.io.File(url)
+                if (!file.exists()) error("图片文件不存在")
+                val s = CaptionPrefs.load(getApplication())
+                val mime = mimeForCaption(url)
+                val dataUrl = "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(file.readBytes())
+                val base64 = dataUrl.substringAfter("base64,")
+                val prompt = MacroEngine.substitute(s.prompt, MacroEnv(user = currentUserName, char = currentCharName))
+                val caption = chatRepository.captionImageBySource(s.source, dataUrl, base64, prompt) ?: error("描述生成失败")
+                if (caption.isBlank()) error("描述生成失败")
+                val rawTemplate = if (s.template.contains("{{caption}}", ignoreCase = true)) {
+                    s.template
+                } else {
+                    s.template + " {{caption}}"
+                }
+                val substituted = MacroEngine.substitute(rawTemplate, MacroEnv(user = currentUserName, char = currentCharName))
+                val wrapped = substituted.replace("{{caption}}", caption.trim())
+                val mes = el["mes"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
+                val mesIfBlank = if (mes.isEmpty()) wrapped else null
+                withContext(Dispatchers.Main) {
+                    chatStore.captionExistingMedia(sessionId, messageId, mi, wrapped, mesIfBlank)
+                    refreshMessages()
+                }
+            }.onFailure { e ->
+                _notice.value = "（图片描述失败：${e.message ?: "未知错误"}）"
+            }
+        }
     }
 
     private fun mimeForCaption(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
@@ -3697,7 +3760,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      */
     fun classifyExpression(text: String, onResult: (String?) -> Unit) {
         val prefs = com.emberinn.app.ui.settings.ExpressionPrefs.load(getApplication())
-        if (prefs.api != com.emberinn.engine.expression.ExpressionApi.LLM || text.isBlank()) {
+        // 官方 expressions.api=webllm：用本地 transformers.js 分类。Android 无 WebLLM，回退 LLM 分类 + 日志。
+        val webllmFallback = com.emberinn.app.data.ExpressionStore(getApplication()).shouldFallbackToLlm()
+        if (webllmFallback) {
+            android.util.Log.w("ExpressionStore", "WebLLM 本地分类在 Android 不可用，回退 LLM 分类")
+        }
+        val useLlm = prefs.api == com.emberinn.engine.expression.ExpressionApi.LLM || webllmFallback
+        if (!useLlm || text.isBlank()) {
             onResult(null)
             return
         }

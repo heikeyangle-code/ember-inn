@@ -897,6 +897,47 @@ class ChatStore(private val context: Context) {
         save(sessionId, list)
     }
 
+    /**
+     * 官方 caption captionExistingMessage：给已有消息第 [mediaIndex] 张图片补字幕。
+     * mes 为空且 [mesIfBlank] 非空 → mes=字幕、extra.inline_image=false、media.captioned=true；
+     * mes 非空 → media.title=字幕、append_title=true、captioned=true、extra.inline_image=true。
+     */
+    fun captionExistingMedia(
+        sessionId: String,
+        at: Int,
+        mediaIndex: Int,
+        title: String,
+        mesIfBlank: String?,
+    ) {
+        val list = messages(sessionId).toMutableList()
+        val idx = at.coerceIn(0, list.lastIndex)
+        val obj = list[idx].jsonObject.toMutableMap()
+        val extra = (obj["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val mediaArr = (extra["media"] as? JsonArray)?.toMutableList()
+        if (mediaArr.isNullOrEmpty()) {
+            save(sessionId, list)
+            return
+        }
+        val mi = mediaIndex.coerceIn(0, mediaArr.lastIndex)
+        val entry = (mediaArr[mi] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        entry["title"] = JsonPrimitive(title)
+        entry["captioned"] = JsonPrimitive(true)
+        val mes = obj["mes"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
+        if (mes.isEmpty() && mesIfBlank != null) {
+            extra["inline_image"] = JsonPrimitive(false)
+            obj["mes"] = JsonPrimitive(mesIfBlank)
+            entry.remove("append_title")
+        } else {
+            extra["inline_image"] = JsonPrimitive(true)
+            entry["append_title"] = JsonPrimitive(true)
+        }
+        mediaArr[mi] = JsonObject(entry)
+        extra["media"] = JsonArray(mediaArr)
+        obj["extra"] = JsonObject(extra)
+        list[idx] = JsonObject(obj)
+        save(sessionId, list)
+    }
+
     /** /delname：删除指定名字的全部消息；返回删除条数。 */
     fun deleteMessagesByName(sessionId: String, name: String): Int {
         if (name.isBlank()) return 0
