@@ -1,0 +1,240 @@
+{
+  "source": "getStoppingStrings/getCustomStoppingStrings/getInstructStoppingSequences",
+  "cases": [
+    {
+      "id": "custom-empty",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": ""
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "custom-array",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": "[\"a\",\"b\",\"\"]"
+        }
+      },
+      "expected": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "custom-non-array",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": "{\"a\":1}"
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "custom-invalid",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": "bad"
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "custom-ephemeral",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": "[\"a\"]",
+          "ephemeral": [
+            "b",
+            "c"
+          ]
+        }
+      },
+      "expected": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    {
+      "id": "custom-limit",
+      "args": {
+        "body": {
+          "method": "custom",
+          "customRaw": "[\"a\",\"b\",\"c\"]",
+          "limit": 2
+        }
+      },
+      "expected": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "get-openai-only-custom",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "openai",
+          "customRaw": "[\"x\"]",
+          "namesAsStopStrings": true,
+          "instructEnabled": true
+        }
+      },
+      "expected": [
+        "x"
+      ]
+    },
+    {
+      "id": "get-names",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "name1": "Alice",
+          "name2": "Bob",
+          "namesAsStopStrings": true
+        }
+      },
+      "expected": [
+        "\nAlice:",
+        "\n***"
+      ]
+    },
+    {
+      "id": "get-impersonate",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "isImpersonate": true,
+          "name1": "Alice",
+          "name2": "Bob"
+        }
+      },
+      "expected": [
+        "\nBob:",
+        "\nAlice:",
+        "\n***"
+      ]
+    },
+    {
+      "id": "get-continue-last-user",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "isContinue": true,
+          "chatLastIsUser": true,
+          "name1": "Alice",
+          "name2": "Bob"
+        }
+      },
+      "expected": [
+        "\nAlice:",
+        "\nBob:",
+        "\n***"
+      ]
+    },
+    {
+      "id": "get-group-members",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "name1": "Alice",
+          "name2": "Bob",
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a",
+                "b",
+                "c"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob"
+            },
+            {
+              "avatar": "c",
+              "name": "Carol"
+            }
+          ]
+        }
+      },
+      "expected": [
+        "\nAlice:",
+        "\nCarol:",
+        "\n***"
+      ]
+    },
+    {
+      "id": "get-instruct-and-custom",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "instructEnabled": true,
+          "instructStopSequence": "<|end|>",
+          "instructOutputSequence": "### Response:",
+          "customRaw": "[\"CUSTOM\"]",
+          "singleLine": false
+        }
+      },
+      "expected": [
+        "\nUser:",
+        "\n<|end|>",
+        "\n### Response:",
+        "\n***",
+        "CUSTOM"
+      ]
+    },
+    {
+      "id": "get-single-line-dedup",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "singleLine": true,
+          "customRaw": "[\"\\n\",\"A\"]",
+          "chatStart": "A"
+        }
+      },
+      "expected": [
+        "\n",
+        "\nUser:",
+        "\nA",
+        "\n***",
+        "A"
+      ]
+    },
+    {
+      "id": "get-no-names",
+      "args": {
+        "body": {
+          "method": "get",
+          "api": "kobold",
+          "namesAsStopStrings": false
+        }
+      },
+      "expected": [
+        "\n***"
+      ]
+    }
+  ]
+}

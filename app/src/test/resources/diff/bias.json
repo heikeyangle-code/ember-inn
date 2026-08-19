@@ -1,0 +1,254 @@
+{
+  "source": "extractMessageBias/getBiasStrings/removeMacros",
+  "cases": [
+    {
+      "id": "bias-none",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "hello world"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "bias-simple",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "before {{bias hello}} after"
+        }
+      },
+      "expected": " "
+    },
+    {
+      "id": "bias-quoted",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "{{bias \"hello world\"}}"
+        }
+      },
+      "expected": " hello world"
+    },
+    {
+      "id": "bias-single-quoted",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "{{bias 'single quoted'}}"
+        }
+      },
+      "expected": " single quoted"
+    },
+    {
+      "id": "bias-multiple",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "{{bias a}} and {{bias b}}"
+        }
+      },
+      "expected": "  "
+    },
+    {
+      "id": "bias-unclosed",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "{{bias broken"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "bias-empty-tag",
+      "args": {
+        "body": {
+          "method": "bias",
+          "text": "{{bias}}"
+        }
+      },
+      "expected": " [object Object]"
+    },
+    {
+      "id": "remove-macros-basic",
+      "args": {
+        "body": {
+          "method": "removeMacros",
+          "text": "a {{foo}} b"
+        }
+      },
+      "expected": "a  b"
+    },
+    {
+      "id": "remove-macros-multi",
+      "args": {
+        "body": {
+          "method": "removeMacros",
+          "text": "{{a}}{{b}} tail"
+        }
+      },
+      "expected": "tail"
+    },
+    {
+      "id": "remove-macros-null",
+      "args": {
+        "body": {
+          "method": "removeMacros",
+          "text": null
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "get-impersonate",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "x",
+          "type": "impersonate",
+          "userPromptBias": "U"
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "",
+        "isUserPromptBias": false
+      }
+    },
+    {
+      "id": "get-continue",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "x",
+          "type": "continue",
+          "userPromptBias": "U"
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "",
+        "isUserPromptBias": false
+      }
+    },
+    {
+      "id": "get-message-bias",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "{{bias B}} text",
+          "type": "normal",
+          "userPromptBias": "U"
+        }
+      },
+      "expected": {
+        "messageBias": " ",
+        "promptBias": " ",
+        "isUserPromptBias": false
+      }
+    },
+    {
+      "id": "get-user-prompt-bias",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "text",
+          "type": "normal",
+          "userPromptBias": "U"
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "U",
+        "isUserPromptBias": true
+      }
+    },
+    {
+      "id": "get-chat-bias",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "",
+          "type": "normal",
+          "userPromptBias": "U",
+          "chat": [
+            {
+              "is_user": false,
+              "extra": {
+                "type": "narrator",
+                "bias": "N"
+              }
+            },
+            {
+              "is_user": true,
+              "extra": {
+                "bias": "C"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "C",
+        "isUserPromptBias": false
+      }
+    },
+    {
+      "id": "get-swipe-skip-last",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "",
+          "type": "swipe",
+          "userPromptBias": "U",
+          "chat": [
+            {
+              "is_user": true,
+              "extra": {
+                "bias": "LAST"
+              }
+            },
+            {
+              "is_user": true,
+              "extra": {
+                "bias": "PREV"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "LAST",
+        "isUserPromptBias": false
+      }
+    },
+    {
+      "id": "get-empty-bias-chat",
+      "args": {
+        "body": {
+          "method": "get",
+          "textareaText": "",
+          "type": "normal",
+          "userPromptBias": "U",
+          "chat": [
+            {
+              "is_user": true,
+              "extra": {
+                "bias": "   "
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "messageBias": "",
+        "promptBias": "U",
+        "isUserPromptBias": true
+      }
+    }
+  ]
+}

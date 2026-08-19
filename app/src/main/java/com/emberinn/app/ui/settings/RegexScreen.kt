@@ -239,6 +239,16 @@ fun RegexScreen(onBack: () -> Unit) {
                         )
                     }
                 }
+                // 官方 RegexPresetManager.applyPreset + change 事件：显式“应用”按钮把选中预设集设为激活，
+                // bump DisplayCacheVersion → ChatScreen 版本监听即时用新预设重算消息显示。
+                Button(
+                    enabled = activePreset.isNotBlank(),
+                    onClick = {
+                        GlobalRegexPrefs.saveActivePresetSet(context, activePreset)
+                        Toast.makeText(context, "已应用预设：$activePreset", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) { Text("应用此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）") }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

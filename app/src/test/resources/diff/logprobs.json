@@ -1,0 +1,529 @@
+{
+  "cases": [
+    {
+      "id": "001-chat-empty-content",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "002-chat-missing-content",
+      "kind": "chat",
+      "args": {
+        "data": {}
+      },
+      "expected": null
+    },
+    {
+      "id": "003-chat-null",
+      "kind": "chat",
+      "args": {
+        "data": null
+      },
+      "expected": null
+    },
+    {
+      "id": "004-chat-chosen-in-top",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": [
+            {
+              "token": "a",
+              "logprob": -1,
+              "top_logprobs": [
+                {
+                  "token": "a",
+                  "logprob": -1
+                },
+                {
+                  "token": "b",
+                  "logprob": -2
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ],
+            [
+              "b",
+              -2
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "005-chat-chosen-not-in-top",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": [
+            {
+              "token": "a",
+              "logprob": -1,
+              "top_logprobs": [
+                {
+                  "token": "b",
+                  "logprob": -2
+                },
+                {
+                  "token": "c",
+                  "logprob": -3
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "b",
+              -2
+            ],
+            [
+              "c",
+              -3
+            ],
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "006-chat-no-top",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": [
+            {
+              "token": "a",
+              "logprob": -1
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "007-chat-empty-top",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": [
+            {
+              "token": "a",
+              "logprob": -1,
+              "top_logprobs": []
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "008-chat-multi",
+      "kind": "chat",
+      "args": {
+        "data": {
+          "content": [
+            {
+              "token": "Hello",
+              "logprob": -0.1,
+              "top_logprobs": [
+                {
+                  "token": "Hello",
+                  "logprob": -0.1
+                },
+                {
+                  "token": "Hi",
+                  "logprob": -1.2
+                }
+              ]
+            },
+            {
+              "token": " world",
+              "logprob": -0.3,
+              "top_logprobs": [
+                {
+                  "token": " world",
+                  "logprob": -0.3
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "Hello",
+          "topLogprobs": [
+            [
+              "Hello",
+              -0.1
+            ],
+            [
+              "Hi",
+              -1.2
+            ]
+          ]
+        },
+        {
+          "token": " world",
+          "topLogprobs": [
+            [
+              " world",
+              -0.3
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "009-text-basic",
+      "kind": "text",
+      "args": {
+        "data": {
+          "tokens": [
+            "a",
+            "b"
+          ],
+          "token_logprobs": [
+            -0.1,
+            -0.2
+          ],
+          "top_logprobs": [
+            {
+              "a": -0.1,
+              "c": -2
+            },
+            {
+              "b": -0.2,
+              "d": -3
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -0.1
+            ],
+            [
+              "c",
+              -2
+            ]
+          ]
+        },
+        {
+          "token": "b",
+          "topLogprobs": [
+            [
+              "b",
+              -0.2
+            ],
+            [
+              "d",
+              -3
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "010-text-chosen-absent",
+      "kind": "text",
+      "args": {
+        "data": {
+          "tokens": [
+            "x"
+          ],
+          "token_logprobs": [
+            -0.5
+          ],
+          "top_logprobs": [
+            {
+              "y": -1
+            }
+          ]
+        }
+      },
+      "expected": [
+        {
+          "token": "x",
+          "topLogprobs": [
+            [
+              "y",
+              -1
+            ],
+            [
+              "x",
+              -0.5
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "011-text-no-top",
+      "kind": "text",
+      "args": {
+        "data": {
+          "tokens": [
+            "x"
+          ],
+          "token_logprobs": [
+            -0.5
+          ],
+          "top_logprobs": []
+        }
+      },
+      "expected": [
+        {
+          "token": "x",
+          "topLogprobs": [
+            [
+              "x",
+              -0.5
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "012-text-empty-tokens",
+      "kind": "text",
+      "args": {
+        "data": {
+          "tokens": [],
+          "token_logprobs": [],
+          "top_logprobs": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "013-text-null",
+      "kind": "text",
+      "args": {
+        "data": null
+      },
+      "expected": null
+    },
+    {
+      "id": "014-combined-aimlapi-chat",
+      "kind": "combined",
+      "args": {
+        "data": {
+          "choices": [
+            {
+              "logprobs": {
+                "content": [
+                  {
+                    "token": "a",
+                    "logprob": -1
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "source": "aimlapi",
+        "models": []
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "015-combined-aimlapi-text",
+      "kind": "combined",
+      "args": {
+        "data": {
+          "choices": [
+            {
+              "logprobs": {
+                "tokens": [
+                  "a"
+                ],
+                "token_logprobs": [
+                  -1
+                ],
+                "top_logprobs": []
+              }
+            }
+          ]
+        },
+        "source": "aimlapi",
+        "models": []
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "016-combined-openai-chat",
+      "kind": "combined",
+      "args": {
+        "data": {
+          "choices": [
+            {
+              "logprobs": {
+                "content": [
+                  {
+                    "token": "a",
+                    "logprob": -1
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "source": "openai",
+        "models": []
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "017-combined-openai-text-model",
+      "kind": "combined",
+      "args": {
+        "data": {
+          "choices": [
+            {
+              "logprobs": {
+                "tokens": [
+                  "a"
+                ],
+                "token_logprobs": [
+                  -1
+                ],
+                "top_logprobs": []
+              }
+            }
+          ]
+        },
+        "source": "openai",
+        "models": [
+          "davinci"
+        ]
+      },
+      "expected": [
+        {
+          "token": "a",
+          "topLogprobs": [
+            [
+              "a",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "018-combined-openai-no-choices",
+      "kind": "combined",
+      "args": {
+        "data": {},
+        "source": "openai",
+        "models": []
+      },
+      "expected": null
+    },
+    {
+      "id": "019-combined-null-data",
+      "kind": "combined",
+      "args": {
+        "data": null,
+        "source": "openai",
+        "models": []
+      },
+      "expected": null
+    },
+    {
+      "id": "020-combined-unsupported-source",
+      "kind": "combined",
+      "args": {
+        "data": {
+          "choices": [
+            {
+              "logprobs": {
+                "content": []
+              }
+            }
+          ]
+        },
+        "source": "mistral",
+        "models": []
+      },
+      "expected": null
+    }
+  ]
+}

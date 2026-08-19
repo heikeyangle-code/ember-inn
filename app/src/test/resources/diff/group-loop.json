@@ -1,0 +1,238 @@
+{
+  "source": "group-chats.js + script.js 群聊循环纯逻辑",
+  "cases": [
+    {
+      "id": "continue-disabled",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello",
+          "settings": {
+            "enabled": false,
+            "target_length": 100,
+            "allow_chat_completions": true
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "continue-short",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hi",
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": true
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "continue-true",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello world",
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": true
+          },
+          "lastMessageTokens": 50
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "continue-target-hit",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello world",
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": true
+          },
+          "lastMessageTokens": 120
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "continue-impersonate",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello world",
+          "isImpersonate": true,
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": true
+          },
+          "lastMessageTokens": 50
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "continue-user-input",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello world",
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": true
+          },
+          "userInputEmpty": false,
+          "lastMessageTokens": 50
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "continue-openai-off",
+      "args": {
+        "body": {
+          "method": "continue",
+          "messageChunk": "hello world",
+          "settings": {
+            "enabled": true,
+            "target_length": 100,
+            "allow_chat_completions": false
+          },
+          "lastMessageTokens": 50,
+          "isOpenAi": true
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "plan-normal",
+      "args": {
+        "body": {
+          "method": "plan",
+          "type": "normal",
+          "activatedMembers": [
+            "a",
+            "b",
+            "c"
+          ],
+          "showQueue": true
+        }
+      },
+      "expected": {
+        "plan": [
+          {
+            "avatar": "a",
+            "generateType": "normal",
+            "queue": 1
+          },
+          {
+            "avatar": "b",
+            "generateType": "normal",
+            "queue": 2
+          },
+          {
+            "avatar": "c",
+            "generateType": "normal",
+            "queue": 3
+          }
+        ],
+        "queueOrder": [
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "c",
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "id": "plan-continue",
+      "args": {
+        "body": {
+          "method": "plan",
+          "type": "continue",
+          "activatedMembers": [
+            "a",
+            "b"
+          ],
+          "showQueue": false
+        }
+      },
+      "expected": {
+        "plan": [
+          {
+            "avatar": "a",
+            "generateType": "continue",
+            "queue": null
+          },
+          {
+            "avatar": "b",
+            "generateType": "continue",
+            "queue": null
+          }
+        ],
+        "queueOrder": []
+      }
+    },
+    {
+      "id": "plan-impersonate",
+      "args": {
+        "body": {
+          "method": "plan",
+          "type": "impersonate",
+          "activatedMembers": [
+            "b"
+          ],
+          "showQueue": true
+        }
+      },
+      "expected": {
+        "plan": [
+          {
+            "avatar": "b",
+            "generateType": "impersonate",
+            "queue": 1
+          }
+        ],
+        "queueOrder": [
+          [
+            "b",
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "plan-empty",
+      "args": {
+        "body": {
+          "method": "plan",
+          "type": "quiet",
+          "activatedMembers": [],
+          "showQueue": true
+        }
+      },
+      "expected": {
+        "plan": [],
+        "queueOrder": []
+      }
+    }
+  ]
+}

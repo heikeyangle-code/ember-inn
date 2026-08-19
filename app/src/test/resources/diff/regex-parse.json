@@ -1,0 +1,128 @@
+{
+  "source": "world-info.js parseRegexFromString",
+  "cases": [
+    {
+      "id": "basic-i",
+      "args": {
+        "input": "/abc/i"
+      },
+      "expected": {
+        "source": "abc",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "basic-m",
+      "args": {
+        "input": "/a b/m"
+      },
+      "expected": {
+        "source": "a b",
+        "flags": "m"
+      }
+    },
+    {
+      "id": "basic-s",
+      "args": {
+        "input": "/x.y/s"
+      },
+      "expected": {
+        "source": "x.y",
+        "flags": "s"
+      }
+    },
+    {
+      "id": "combined",
+      "args": {
+        "input": "/foo/ims"
+      },
+      "expected": {
+        "source": "foo",
+        "flags": "ims"
+      }
+    },
+    {
+      "id": "no-flags",
+      "args": {
+        "input": "/plain/"
+      },
+      "expected": {
+        "source": "plain",
+        "flags": ""
+      }
+    },
+    {
+      "id": "invalid-no-close",
+      "args": {
+        "input": "/abc"
+      },
+      "expected": null
+    },
+    {
+      "id": "unescaped-slash",
+      "args": {
+        "input": "/a/b/i"
+      },
+      "expected": null
+    },
+    {
+      "id": "escaped-slash",
+      "args": {
+        "input": "/a\\/b/i"
+      },
+      "expected": {
+        "source": "a\\/b",
+        "flags": "i"
+      }
+    },
+    {
+      "id": "empty-pattern",
+      "args": {
+        "input": "//"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-x-invalid",
+      "args": {
+        "input": "/abc/x"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-X-invalid",
+      "args": {
+        "input": "/abc/X"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-A-invalid",
+      "args": {
+        "input": "/abc/A"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-J-invalid",
+      "args": {
+        "input": "/abc/J"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-U-invalid",
+      "args": {
+        "input": "/abc/U"
+      },
+      "expected": null
+    },
+    {
+      "id": "flags-dup-invalid",
+      "args": {
+        "input": "/abc/gg"
+      },
+      "expected": null
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.data.TtsBackendRegistry
+import com.emberinn.app.data.TtsReader
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberSlider
@@ -33,6 +35,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 /**
  * 语音页：TTS 设置，字段对齐官方 tts 扩展（settings.html）。
@@ -59,11 +63,25 @@ fun VoiceScreen(onBack: () -> Unit) {
     var skipTags by rememberSaveable { mutableStateOf(VoicePrefs.skipTags(context)) }
     var applyRegex by rememberSaveable { mutableStateOf(VoicePrefs.applyRegex(context)) }
     var regexPattern by rememberSaveable { mutableStateOf(VoicePrefs.regexPattern(context)) }
+    var ttsProvider by rememberSaveable { mutableStateOf(VoicePrefs.ttsProvider(context)) }
+    var ttsEndpoint by rememberSaveable { mutableStateOf(VoicePrefs.ttsEndpoint(context)) }
+    var ttsApiKey by rememberSaveable { mutableStateOf(VoicePrefs.ttsApiKey(context)) }
+    var ttsModel by rememberSaveable { mutableStateOf(VoicePrefs.ttsModel(context)) }
+    var keyVisible by rememberSaveable { mutableStateOf(false) }
+    // 异步加载的外部后端 voice 清单（按当前 provider 刷新）
+    var externalVoices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var voicesLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     fun save() = VoicePrefs.save(
         context, enabled, voice, rate, autoGeneration, narrateUser,
         narrateByParagraphs, skipCodeblocks, skipTags, applyRegex, regexPattern,
     )
+
+    fun saveProvider(p: String, ep: String, key: String, model: String) {
+        ttsProvider = p; ttsEndpoint = ep; ttsApiKey = key; ttsModel = model
+        VoicePrefs.saveTtsProvider(context, p, ep, key, model)
+    }
 
     // Android 系统 TTS 引擎：异步初始化后枚举本机声音，页面销毁时释放
     var ready by remember { mutableStateOf(false) }
@@ -211,6 +229,94 @@ fun VoiceScreen(onBack: () -> Unit) {
                 }
             }
 
+            // 在线 TTS 提供商（27 后端，对照官方 tts/settings.html 的 provider 选项 + TtsBackendRegistry 注册表）
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) {
+                Column {
+                    Text(
+                        "在线 TTS 提供商",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    Text(
+                        "对照官方 TTS 扩展 27 个后端；选择后聊天朗读将走该后端（系统 TTS 仅用于本页试听）",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    ProviderPickerRow(
+                        current = ttsProvider,
+                        options = listOf("system" to "系统 TTS（Android 本机）") +
+                            TtsBackendRegistry.all().map { it.id to it.displayName },
+                        onChange = { newP ->
+                            val backend = TtsBackendRegistry.get(newP)
+                            val ep = backend?.defaultEndpoint?.ifBlank { ttsEndpoint } ?: ttsEndpoint
+                            saveProvider(newP, ep, ttsApiKey, ttsModel)
+                            // 切换后端时异步加载该后端 voice 列表
+                            if (backend != null) {
+                                voicesLoading = true
+                                scope.launch {
+                                    val vs = runCatching { backend.getVoices(context) }.getOrDefault(emptyList())
+                                    externalVoices = vs.map { v -> v.id }
+                                    voicesLoading = false
+                                }
+                            } else {
+                                externalVoices = emptyList()
+                            }
+                        },
+                    )
+                    val backend = TtsBackendRegistry.get(ttsProvider)
+                    if (backend != null) {
+                        if (backend.defaultEndpoint.isNotBlank()) {
+                            EmberTextField(
+                                value = ttsEndpoint,
+                                onValueChange = { saveProvider(ttsProvider, it, ttsApiKey, ttsModel) },
+                                label = { Text("端点（默认 ${backend.defaultEndpoint}）") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            )
+                        }
+                        if (backend.requiresApiKey) {
+                            KeyRow(
+                                value = ttsApiKey,
+                                visible = keyVisible,
+                                onVisibleChange = { keyVisible = it },
+                                onValueChange = { saveProvider(ttsProvider, ttsEndpoint, it, ttsModel) },
+                                label = "API Key",
+                            )
+                        }
+                        EmberTextField(
+                            value = ttsModel,
+                            onValueChange = { saveProvider(ttsProvider, ttsEndpoint, ttsApiKey, it) },
+                            label = { Text("模型 / 语音名（按后端要求）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        if (voicesLoading) {
+                            Text(
+                                "正在加载语音列表…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            )
+                        } else if (externalVoices.isNotEmpty()) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            VoicePickerRow(
+                                current = voice,
+                                voices = externalVoices,
+                                enabled = true,
+                                onChange = { voice = it; save() },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+            }
+
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -308,5 +414,69 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         EmberSwitch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun ProviderPickerRow(
+    current: String,
+    options: List<Pair<String, String>>,
+    onChange: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val label = options.firstOrNull { it.first == current }?.second ?: current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = { expanded = true })
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+    ) {
+        Text("提供商", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (id, name) ->
+                DropdownMenuItem(
+                    text = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    onClick = { onChange(id); expanded = false },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyRow(
+    value: String,
+    visible: Boolean,
+    onVisibleChange: (Boolean) -> Unit,
+    onValueChange: (String) -> Unit,
+    label: String,
+) {
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = { onVisibleChange(!visible) }) {
+                Text(if (visible) "隐藏" else "显示")
+            }
+        }
+        EmberTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            singleLine = true,
+            visualTransformation = if (visible) androidx.compose.ui.text.input.VisualTransformation.None
+                else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

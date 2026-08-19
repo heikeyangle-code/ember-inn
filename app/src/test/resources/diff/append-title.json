@@ -1,0 +1,79 @@
+{
+  "source": "append_title titles",
+  "cases": [
+    {
+      "id": "no-titles",
+      "args": {
+        "body": {
+          "mes": "hello",
+          "extra": {}
+        }
+      },
+      "expected": "hello"
+    },
+    {
+      "id": "message-title",
+      "args": {
+        "body": {
+          "mes": "hello",
+          "extra": {
+            "append_title": true,
+            "title": "这是猫"
+          }
+        }
+      },
+      "expected": "hello\n\n这是猫"
+    },
+    {
+      "id": "media-title",
+      "args": {
+        "body": {
+          "mes": "hello",
+          "extra": {
+            "media": [
+              {
+                "title": "图1",
+                "append_title": true
+              },
+              {
+                "title": "图2"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "hello\n\n图1"
+    },
+    {
+      "id": "combined",
+      "args": {
+        "body": {
+          "mes": "hello",
+          "extra": {
+            "append_title": true,
+            "title": "消息标题",
+            "media": [
+              {
+                "title": "图1",
+                "append_title": true
+              }
+            ]
+          }
+        }
+      },
+      "expected": "hello\n\n消息标题\n\n图1"
+    },
+    {
+      "id": "no-append-flag",
+      "args": {
+        "body": {
+          "mes": "hello",
+          "extra": {
+            "title": "不追加"
+          }
+        }
+      },
+      "expected": "hello"
+    }
+  ]
+}

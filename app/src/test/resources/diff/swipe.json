@@ -1,0 +1,514 @@
+{
+  "source": "swipe/generatedTextFiltered/extractMultiSwipes",
+  "cases": [
+    {
+      "id": "allowed-basic",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": [
+            {}
+          ]
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "allowed-empty-chat",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": []
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "allowed-disabled",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": [
+            {}
+          ],
+          "swipesEnabled": false
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "allowed-hidden",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": [
+            {}
+          ],
+          "swipesHidden": true
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "allowed-generating",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": [
+            {}
+          ],
+          "isGenerating": true
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "allowed-mid-swipe",
+      "args": {
+        "body": {
+          "method": "allowed",
+          "chat": [
+            {}
+          ],
+          "midSwipe": true
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "swipeable-ai-last",
+      "args": {
+        "body": {
+          "method": "swipeable",
+          "messageId": 0,
+          "chat": [
+            {
+              "is_user": false
+            }
+          ],
+          "message": {
+            "is_user": false,
+            "swipes": [
+              ""
+            ],
+            "swipe_id": 0,
+            "swipe_info": [
+              {
+                "extra": {}
+              }
+            ]
+          }
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "swipeable-user",
+      "args": {
+        "body": {
+          "method": "swipeable",
+          "messageId": 0,
+          "chat": [
+            {
+              "is_user": true
+            }
+          ],
+          "message": {
+            "is_user": true
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "swipeable-small-sys",
+      "args": {
+        "body": {
+          "method": "swipeable",
+          "messageId": 0,
+          "chat": [
+            {
+              "extra": {
+                "isSmallSys": true
+              }
+            }
+          ],
+          "message": {
+            "extra": {
+              "isSmallSys": true
+            }
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "swipeable-not-last",
+      "args": {
+        "body": {
+          "method": "swipeable",
+          "messageId": 0,
+          "chat": [
+            {},
+            {}
+          ],
+          "message": {
+            "is_user": false,
+            "swipes": [
+              ""
+            ],
+            "swipe_id": 0,
+            "swipe_info": [
+              {
+                "extra": {}
+              }
+            ]
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "swipeable-disabled",
+      "args": {
+        "body": {
+          "method": "swipeable",
+          "messageId": 0,
+          "chat": [
+            {
+              "extra": {
+                "swipeable": false
+              }
+            }
+          ],
+          "message": {
+            "extra": {
+              "swipeable": false
+            },
+            "swipes": [
+              ""
+            ],
+            "swipe_id": 0,
+            "swipe_info": [
+              {
+                "extra": {}
+              }
+            ]
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "overswipe-explicit",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 0,
+          "message": {
+            "extra": {
+              "overswipe_behavior": "custom"
+            }
+          }
+        }
+      },
+      "expected": "custom"
+    },
+    {
+      "id": "overswipe-disabled",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 0,
+          "message": {
+            "extra": {
+              "swipeable": false
+            }
+          }
+        }
+      },
+      "expected": "none"
+    },
+    {
+      "id": "overswipe-small-sys",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 0,
+          "message": {
+            "extra": {
+              "isSmallSys": true
+            }
+          }
+        }
+      },
+      "expected": "none"
+    },
+    {
+      "id": "overswipe-pristine-greeting",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 0,
+          "message": {
+            "is_user": false
+          }
+        }
+      },
+      "expected": "pristine_greeting"
+    },
+    {
+      "id": "overswipe-regenerate",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 3,
+          "message": {
+            "is_user": false
+          }
+        }
+      },
+      "expected": "regenerate"
+    },
+    {
+      "id": "overswipe-loop-user",
+      "args": {
+        "body": {
+          "method": "overswipe",
+          "messageId": 2,
+          "message": {
+            "is_user": true
+          }
+        }
+      },
+      "expected": "loop"
+    },
+    {
+      "id": "ensure-initializes",
+      "args": {
+        "body": {
+          "method": "ensure",
+          "message": {
+            "mes": "hi"
+          }
+        }
+      },
+      "expected": {
+        "updated": true,
+        "message": {
+          "mes": "hi",
+          "swipes": [
+            "hi"
+          ],
+          "swipe_id": 0,
+          "swipe_info": [
+            {
+              "extra": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ensure-user-skip",
+      "args": {
+        "body": {
+          "method": "ensure",
+          "message": {
+            "mes": "hi",
+            "is_user": true
+          }
+        }
+      },
+      "expected": {
+        "updated": false,
+        "message": {
+          "mes": "hi",
+          "is_user": true
+        }
+      }
+    },
+    {
+      "id": "ensure-valid-noop",
+      "args": {
+        "body": {
+          "method": "ensure",
+          "message": {
+            "mes": "hi",
+            "swipes": [
+              "hi"
+            ],
+            "swipe_id": 0,
+            "swipe_info": [
+              {}
+            ]
+          }
+        }
+      },
+      "expected": {
+        "updated": false,
+        "message": {
+          "mes": "hi",
+          "swipes": [
+            "hi"
+          ],
+          "swipe_id": 0,
+          "swipe_info": [
+            {}
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtered-empty",
+      "args": {
+        "body": {
+          "method": "filtered",
+          "text": "  "
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "filtered-too-short",
+      "args": {
+        "body": {
+          "method": "filtered",
+          "text": "abc",
+          "minimumLength": 5
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "filtered-blacklist",
+      "args": {
+        "body": {
+          "method": "filtered",
+          "text": "bad word here",
+          "blacklist": [
+            "bad"
+          ],
+          "threshold": 1
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "filtered-blacklist-threshold",
+      "args": {
+        "body": {
+          "method": "filtered",
+          "text": "bad bad",
+          "blacklist": [
+            "bad"
+          ],
+          "threshold": 2
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "filtered-clean",
+      "args": {
+        "body": {
+          "method": "filtered",
+          "text": "good text",
+          "minimumLength": 3,
+          "blacklist": [
+            "bad"
+          ],
+          "threshold": 1
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "multi-openai",
+      "args": {
+        "body": {
+          "method": "multi",
+          "mainApi": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "a"
+                }
+              },
+              {
+                "message": {
+                  "content": "b"
+                }
+              },
+              {
+                "text": "c"
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "id": "multi-openai-single",
+      "args": {
+        "body": {
+          "method": "multi",
+          "mainApi": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "a"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "multi-llamacpp",
+      "args": {
+        "body": {
+          "method": "multi",
+          "mainApi": "textgenerationwebui",
+          "textgenType": "llamacpp",
+          "data": [
+            {
+              "content": "a"
+            },
+            {
+              "content": "b"
+            }
+          ]
+        }
+      },
+      "expected": [
+        "b"
+      ]
+    },
+    {
+      "id": "multi-skip-type",
+      "args": {
+        "body": {
+          "method": "multi",
+          "type": "continue",
+          "mainApi": "openai",
+          "data": {
+            "choices": [
+              {},
+              {}
+            ]
+          }
+        }
+      },
+      "expected": []
+    }
+  ]
+}

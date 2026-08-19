@@ -1,0 +1,413 @@
+{
+  "generated": "2026-08-18T10:42:56.339Z",
+  "source": "sillytavern-ref",
+  "cases": [
+    {
+      "id": "world_to_character_book",
+      "fn": "toCharacterBook",
+      "args": {
+        "name": "测试世界",
+        "entries": [
+          {
+            "uid": 0,
+            "key": [
+              "钥匙",
+              "door"
+            ],
+            "keysecondary": [
+              "锁"
+            ],
+            "comment": "大门口",
+            "content": "一扇木门。",
+            "constant": false,
+            "selective": true,
+            "selectiveLogic": 3,
+            "order": 100,
+            "position": 0,
+            "disable": false,
+            "excludeRecursion": false,
+            "probability": 50,
+            "useProbability": true,
+            "depth": 2,
+            "outletName": "",
+            "group": "g",
+            "groupOverride": true,
+            "groupWeight": 200,
+            "preventRecursion": true,
+            "delayUntilRecursion": true,
+            "scanDepth": 3,
+            "matchWholeWords": true,
+            "useGroupScoring": true,
+            "caseSensitive": false,
+            "role": 0,
+            "sticky": 2,
+            "cooldown": 3,
+            "delay": 1,
+            "matchPersonaDescription": true,
+            "matchScenario": false,
+            "triggers": [
+              "normal"
+            ],
+            "ignoreBudget": true,
+            "extensions": {
+              "my_custom": "x"
+            }
+          },
+          {
+            "uid": 1,
+            "key": [
+              "暗门"
+            ],
+            "content": "隐藏通道",
+            "order": 50
+          }
+        ]
+      },
+      "expected": {
+        "entries": [
+          {
+            "id": 0,
+            "keys": [
+              "钥匙",
+              "door"
+            ],
+            "secondary_keys": [
+              "锁"
+            ],
+            "comment": "大门口",
+            "content": "一扇木门。",
+            "constant": false,
+            "selective": true,
+            "insertion_order": 100,
+            "enabled": true,
+            "position": "before_char",
+            "use_regex": true,
+            "extensions": {
+              "my_custom": "x",
+              "position": 0,
+              "exclude_recursion": false,
+              "probability": 50,
+              "useProbability": true,
+              "depth": 2,
+              "selectiveLogic": 3,
+              "outlet_name": "",
+              "group": "g",
+              "group_override": true,
+              "group_weight": 200,
+              "prevent_recursion": true,
+              "delay_until_recursion": true,
+              "scan_depth": 3,
+              "match_whole_words": true,
+              "use_group_scoring": true,
+              "case_sensitive": false,
+              "automation_id": "",
+              "role": 0,
+              "vectorized": false,
+              "sticky": 2,
+              "cooldown": 3,
+              "delay": 1,
+              "match_persona_description": true,
+              "match_character_description": false,
+              "match_character_personality": false,
+              "match_character_depth_prompt": false,
+              "match_scenario": false,
+              "match_creator_notes": false,
+              "triggers": [
+                "normal"
+              ],
+              "ignore_budget": true
+            }
+          },
+          {
+            "id": 1,
+            "keys": [
+              "暗门"
+            ],
+            "content": "隐藏通道",
+            "insertion_order": 50,
+            "enabled": true,
+            "position": "after_char",
+            "use_regex": true,
+            "extensions": {
+              "probability": null,
+              "useProbability": false,
+              "depth": 4,
+              "selectiveLogic": 0,
+              "outlet_name": "",
+              "group": "",
+              "group_override": false,
+              "group_weight": null,
+              "prevent_recursion": false,
+              "delay_until_recursion": false,
+              "scan_depth": null,
+              "match_whole_words": null,
+              "use_group_scoring": false,
+              "case_sensitive": null,
+              "automation_id": "",
+              "role": 0,
+              "vectorized": false,
+              "sticky": null,
+              "cooldown": null,
+              "delay": null,
+              "match_persona_description": false,
+              "match_character_description": false,
+              "match_character_personality": false,
+              "match_character_depth_prompt": false,
+              "match_scenario": false,
+              "match_creator_notes": false,
+              "triggers": [],
+              "ignore_budget": false
+            }
+          }
+        ],
+        "name": "测试世界"
+      }
+    },
+    {
+      "id": "character_book_to_world",
+      "fn": "toWorldEntries",
+      "args": {
+        "characterBook": {
+          "entries": [
+            {
+              "id": 7,
+              "keys": [
+                "巷子"
+              ],
+              "secondary_keys": [
+                "夜里"
+              ],
+              "comment": "地点",
+              "content": "潮湿的小巷。",
+              "constant": true,
+              "selective": true,
+              "insertion_order": 10,
+              "enabled": true,
+              "position": "after_char",
+              "use_regex": true,
+              "extensions": {
+                "position": 1,
+                "exclude_recursion": true,
+                "probability": 30,
+                "useProbability": true,
+                "depth": 3,
+                "selectiveLogic": 0,
+                "group": "scene",
+                "group_override": false,
+                "group_weight": 150,
+                "prevent_recursion": false,
+                "delay_until_recursion": true,
+                "scan_depth": 2,
+                "match_whole_words": true,
+                "use_group_scoring": true,
+                "case_sensitive": false,
+                "role": 1,
+                "vectorized": false,
+                "sticky": 5,
+                "cooldown": null,
+                "delay": null,
+                "match_persona_description": true,
+                "triggers": [
+                  "normal"
+                ],
+                "ignore_budget": true,
+                "custom": "keep"
+              }
+            },
+            {
+              "id": 8,
+              "keys": [
+                "深处"
+              ],
+              "content": "尽头"
+            }
+          ],
+          "extensions": {}
+        }
+      },
+      "expected": {
+        "entries": {
+          "7": {
+            "key": [
+              "巷子"
+            ],
+            "keysecondary": [
+              "夜里"
+            ],
+            "comment": "地点",
+            "content": "潮湿的小巷。",
+            "constant": true,
+            "vectorized": false,
+            "selective": true,
+            "selectiveLogic": 0,
+            "addMemo": true,
+            "order": 10,
+            "position": 1,
+            "disable": false,
+            "ignoreBudget": true,
+            "excludeRecursion": true,
+            "preventRecursion": false,
+            "matchPersonaDescription": true,
+            "matchCharacterDescription": false,
+            "matchCharacterPersonality": false,
+            "matchCharacterDepthPrompt": false,
+            "matchScenario": false,
+            "matchCreatorNotes": false,
+            "delayUntilRecursion": true,
+            "probability": 30,
+            "useProbability": true,
+            "depth": 3,
+            "outletName": "",
+            "group": "scene",
+            "groupOverride": false,
+            "groupWeight": 150,
+            "scanDepth": 2,
+            "caseSensitive": false,
+            "matchWholeWords": true,
+            "useGroupScoring": true,
+            "automationId": "",
+            "role": 1,
+            "sticky": 5,
+            "cooldown": null,
+            "delay": null,
+            "triggers": [
+              "normal"
+            ],
+            "uid": 7,
+            "displayIndex": 0,
+            "extensions": {
+              "position": 1,
+              "exclude_recursion": true,
+              "probability": 30,
+              "useProbability": true,
+              "depth": 3,
+              "selectiveLogic": 0,
+              "group": "scene",
+              "group_override": false,
+              "group_weight": 150,
+              "prevent_recursion": false,
+              "delay_until_recursion": true,
+              "scan_depth": 2,
+              "match_whole_words": true,
+              "use_group_scoring": true,
+              "case_sensitive": false,
+              "role": 1,
+              "vectorized": false,
+              "sticky": 5,
+              "cooldown": null,
+              "delay": null,
+              "match_persona_description": true,
+              "triggers": [
+                "normal"
+              ],
+              "ignore_budget": true,
+              "custom": "keep"
+            }
+          },
+          "8": {
+            "key": [
+              "深处"
+            ],
+            "keysecondary": [],
+            "comment": "",
+            "content": "尽头",
+            "constant": false,
+            "vectorized": false,
+            "selective": false,
+            "selectiveLogic": 0,
+            "addMemo": false,
+            "position": 1,
+            "disable": true,
+            "ignoreBudget": false,
+            "excludeRecursion": false,
+            "preventRecursion": false,
+            "matchPersonaDescription": false,
+            "matchCharacterDescription": false,
+            "matchCharacterPersonality": false,
+            "matchCharacterDepthPrompt": false,
+            "matchScenario": false,
+            "matchCreatorNotes": false,
+            "delayUntilRecursion": false,
+            "probability": 100,
+            "useProbability": true,
+            "depth": 4,
+            "outletName": "",
+            "group": "",
+            "groupOverride": false,
+            "groupWeight": 100,
+            "scanDepth": null,
+            "caseSensitive": null,
+            "matchWholeWords": null,
+            "useGroupScoring": null,
+            "automationId": "",
+            "role": 0,
+            "sticky": null,
+            "cooldown": null,
+            "delay": null,
+            "triggers": [],
+            "uid": 8,
+            "displayIndex": 1,
+            "extensions": {}
+          }
+        },
+        "originalData": {
+          "entries": [
+            {
+              "id": 7,
+              "keys": [
+                "巷子"
+              ],
+              "secondary_keys": [
+                "夜里"
+              ],
+              "comment": "地点",
+              "content": "潮湿的小巷。",
+              "constant": true,
+              "selective": true,
+              "insertion_order": 10,
+              "enabled": true,
+              "position": "after_char",
+              "use_regex": true,
+              "extensions": {
+                "position": 1,
+                "exclude_recursion": true,
+                "probability": 30,
+                "useProbability": true,
+                "depth": 3,
+                "selectiveLogic": 0,
+                "group": "scene",
+                "group_override": false,
+                "group_weight": 150,
+                "prevent_recursion": false,
+                "delay_until_recursion": true,
+                "scan_depth": 2,
+                "match_whole_words": true,
+                "use_group_scoring": true,
+                "case_sensitive": false,
+                "role": 1,
+                "vectorized": false,
+                "sticky": 5,
+                "cooldown": null,
+                "delay": null,
+                "match_persona_description": true,
+                "triggers": [
+                  "normal"
+                ],
+                "ignore_budget": true,
+                "custom": "keep"
+              }
+            },
+            {
+              "id": 8,
+              "keys": [
+                "深处"
+              ],
+              "content": "尽头"
+            }
+          ],
+          "extensions": {}
+        }
+      }
+    }
+  ]
+}

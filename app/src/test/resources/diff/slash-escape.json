@@ -1,0 +1,443 @@
+{
+  "source": "SlashCommandParser testSymbol",
+  "cases": [
+    {
+      "id": "loose-pipe",
+      "args": {
+        "body": {
+          "text": "abc | def",
+          "index": 4,
+          "sequence": "|",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "loose-escaped",
+      "args": {
+        "body": {
+          "text": "abc \\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-plain",
+      "args": {
+        "body": {
+          "text": "abc | def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-one-escape",
+      "args": {
+        "body": {
+          "text": "abc \\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-two-escape",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-three-escape",
+      "args": {
+        "body": {
+          "text": "abc \\\\\\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-jumped",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 5,
+          "sequence": "|",
+          "strict": true,
+          "jumped": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "closure-start",
+      "args": {
+        "body": {
+          "text": "abc {:",
+          "index": 4,
+          "sequence": "{:",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "closure-escaped",
+      "args": {
+        "body": {
+          "text": "abc \\{:",
+          "index": 4,
+          "sequence": "{:",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "offset-pipe",
+      "args": {
+        "body": {
+          "text": "a | b",
+          "index": 2,
+          "sequence": "|",
+          "strict": true,
+          "offset": 1
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 2,
+        "jumped": false
+      }
+    },
+    {
+      "id": "loose-not-found",
+      "args": {
+        "body": {
+          "text": "abc",
+          "index": 0,
+          "sequence": "|",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 0,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-offset-not-found",
+      "args": {
+        "body": {
+          "text": "a | b",
+          "index": 2,
+          "sequence": ":",
+          "strict": true,
+          "offset": 1
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 2,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-many-backslashes",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "loose-closure-end",
+      "args": {
+        "body": {
+          "text": "abc :}",
+          "index": 4,
+          "sequence": ":}",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-closure-end",
+      "args": {
+        "body": {
+          "text": "abc :}",
+          "index": 4,
+          "sequence": ":}",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-closure-end-escaped",
+      "args": {
+        "body": {
+          "text": "abc \\:}",
+          "index": 4,
+          "sequence": ":}",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "loose-quote",
+      "args": {
+        "body": {
+          "text": "abc \"def\"",
+          "index": 4,
+          "sequence": "\"",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-quote",
+      "args": {
+        "body": {
+          "text": "abc \"def\"",
+          "index": 4,
+          "sequence": "\"",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-quote-escaped",
+      "args": {
+        "body": {
+          "text": "abc \\\"def",
+          "index": 4,
+          "sequence": "\"",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-quote-two-escapes",
+      "args": {
+        "body": {
+          "text": "abc \\\\\"def",
+          "index": 4,
+          "sequence": "\"",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "loose-list-open",
+      "args": {
+        "body": {
+          "text": "abc [x]",
+          "index": 4,
+          "sequence": "[",
+          "strict": false
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 4,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-list-close",
+      "args": {
+        "body": {
+          "text": "abc [x]",
+          "index": 7,
+          "sequence": "]",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 7,
+        "jumped": false
+      }
+    },
+    {
+      "id": "strict-list-close-escaped",
+      "args": {
+        "body": {
+          "text": "abc [x\\]",
+          "index": 6,
+          "sequence": "]",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 7,
+        "jumped": true
+      }
+    },
+    {
+      "id": "loose-pipe-jumped",
+      "args": {
+        "body": {
+          "text": "abc \\| def",
+          "index": 5,
+          "sequence": "|",
+          "strict": false,
+          "jumped": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-pipe-four-escapes",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 4,
+          "sequence": "|",
+          "strict": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "strict-pipe-four-escapes-jumped",
+      "args": {
+        "body": {
+          "text": "abc \\\\| def",
+          "index": 5,
+          "sequence": "|",
+          "strict": true,
+          "jumped": true
+        }
+      },
+      "expected": {
+        "found": false,
+        "index": 5,
+        "jumped": true
+      }
+    },
+    {
+      "id": "loose-pipe-escaped-offset",
+      "args": {
+        "body": {
+          "text": "a \\| b",
+          "index": 2,
+          "sequence": "|",
+          "strict": false,
+          "offset": 1
+        }
+      },
+      "expected": {
+        "found": true,
+        "index": 2,
+        "jumped": false
+      }
+    }
+  ]
+}

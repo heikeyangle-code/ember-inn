@@ -481,6 +481,51 @@ object SlashRegistry : SlashCommandResolver {
                 },
             ),
         )
+
+        // ---- 扩展高价值命令（官方 extensions/* 注册；App 端通过 ChatViewModel 桥接到具体服务，引擎占位 stub）----
+
+        // memory 扩展：立即触发摘要（官方 /summarize）
+        register(SlashCommandDef("summarize", description = "立即触发一次 memory 摘要", callback = { _, _ -> "OK:summarize" }))
+
+        // attachments/databank 扩展（官方 /db 系列：数据银行附件 CRUD）
+        register(SlashCommandDef("db", description = "数据银行附件操作（sub=get/list/add/update/disable/enable/delete）", callback = { inv, _ -> "OK:db:${inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"}" }))
+        register(SlashCommandDef("db-list", description = "列出数据银行附件", callback = { _, _ -> "OK:db-list" }))
+        register(SlashCommandDef("db-get", description = "读取数据银行附件（name=）", callback = { inv, _ -> "OK:db-get:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+        register(SlashCommandDef("db-add", description = "添加数据银行附件（name=/url=）", callback = { inv, _ -> "OK:db-add:${inv.namedArgs["name"] ?: ""}" }))
+        register(SlashCommandDef("db-update", description = "更新数据银行附件（name=/url=）", callback = { inv, _ -> "OK:db-update:${inv.namedArgs["name"] ?: ""}" }))
+        register(SlashCommandDef("db-disable", description = "禁用数据银行附件（name=）", callback = { inv, _ -> "OK:db-disable:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+        register(SlashCommandDef("db-enable", description = "启用数据银行附件（name=）", callback = { inv, _ -> "OK:db-enable:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+        register(SlashCommandDef("db-delete", description = "删除数据银行附件（name=）", callback = { inv, _ -> "OK:db-delete:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+
+        // gallery 扩展（官方 /listGallery）
+        register(SlashCommandDef("listGallery", description = "列出会话内图片画廊", callback = { _, _ -> "OK:listGallery" }))
+
+        // assets 扩展（官方 /installAsset、/deleteAsset）
+        register(SlashCommandDef("installAsset", description = "安装资源（url=）", callback = { inv, _ -> "OK:installAsset:${inv.namedArgs["url"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+        register(SlashCommandDef("deleteAsset", description = "删除资源（name=）", callback = { inv, _ -> "OK:deleteAsset:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+
+        // vectors 扩展（官方 /vectorize、/index、/vectorize-faiss）
+        register(SlashCommandDef("vectorize", description = "向量化当前会话/数据银行（source=chat/files）", callback = { inv, _ -> "OK:vectorize:${inv.namedArgs["source"] ?: "chat"}" }))
+        register(SlashCommandDef("index", description = "向量索引别名（同 /vectorize）", callback = { inv, _ -> "OK:vectorize:${inv.namedArgs["source"] ?: "chat"}" }))
+        register(SlashCommandDef("vectorize-faiss", description = "用 FAISS 向量化（离线索引）", callback = { _, _ -> "OK:vectorize-faiss" }))
+
+        // stable-diffusion 扩展（官方 /imagine）
+        register(SlashCommandDef("imagine", description = "文生图（prompt 用无名参数）", rawQuotes = true, callback = { inv, _ -> "OK:imagine:${inv.unnamedArgs.joinToString(" ")}" }))
+
+        // caption 扩展（官方 /caption；mesId/index/quiet 命名参数）
+        register(SlashCommandDef("caption", description = "给图片生成描述（mesId=/index=/quiet= 可选；缺省待选图）", rawQuotes = true, callback = { inv, _ -> "OK:caption:mesId=${inv.namedArgs["mesId"] ?: inv.namedArgs["id"] ?: ""}:index=${inv.namedArgs["index"] ?: "0"}:quiet=${inv.namedArgs["quiet"] ?: "false"}:${inv.unnamedArgs.joinToString(" ")}" }))
+
+        // quick-reply 扩展（官方 /qr）
+        register(SlashCommandDef("qr", description = "Quick Reply：设置/执行快捷回复（name=）", rawQuotes = true, callback = { inv, _ -> "OK:qr:${inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+
+        // expressions 扩展（官方 /expression：set/force 等）
+        register(SlashCommandDef("expression", description = "设置/读取表情精灵（set=标签；缺省读取当前）", callback = { inv, _ -> "OK:expression:${inv.namedArgs["set"] ?: inv.unnamedArgs.firstOrNull() ?: ""}" }))
+
+        // worldinfo 扩展（官方 /world：get/list/enable/disable 子命令）
+        register(SlashCommandDef("world", description = "世界书操作（sub=get/list/enable/disable；name=）", callback = { inv, _ -> "OK:world:${inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"}:${inv.namedArgs["name"] ?: ""}" }))
+
+        // 群聊成员（官方 /member）
+        register(SlashCommandDef("member", description = "群聊成员操作（sub=add/remove/list；name=）", callback = { inv, _ -> "OK:member:${inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"}:${inv.namedArgs["name"] ?: ""}" }))
     }
 
     /** 官方 /if NUMBER 类型操作数的解析器等价：数值串转 Double，否则保持字符串。 */

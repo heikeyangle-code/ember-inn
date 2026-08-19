@@ -1,10 +1,12 @@
 package com.emberinn.app.data
 
+import android.content.Context
 import com.emberinn.engine.slash.SlashCommandDef
 import com.emberinn.engine.slash.SlashCommandResolver
 import com.emberinn.engine.slash.SlashEngine
 import com.emberinn.engine.slash.SlashRegistry
 import com.emberinn.engine.slash.SlashState
+import java.io.File
 
 /**
  * 消息类斜杠命令需要的 App 能力（ChatViewModel 实现；纯接口便于单测）。
@@ -79,13 +81,22 @@ interface SlashMessageActions {
     ): String
     /** /summarize：无文本=总结当前聊天；有文本=按指定 source/prompt 总结（官方 summarizeCallback）。 */
     suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
+
+    /** /db 子命令附件上下文：返回当前 (characterAvatar, chatFile, charName) 用于 attachments 三源定位。 */
+    fun attachmentsContext(): Triple<String, String, String> = Triple("", "", "")
 }
 
 /**
  * App 斜杠执行器：消息类命令（真实动作）+ 引擎纯函数命令。
  * 解析器/闭包/flags 仍是引擎 SlashEngine 1:1，这里只注入命令回调。
+ *
+ * @param context 可选 Android Context；非空时扩展命令（/db /listGallery /installAsset
+ *   /qr /expression /world /imagine）真接对应 service，为空（测试桩）则回退占位 stub。
  */
-class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandResolver {
+class AppSlashExecutor(
+    private val actions: SlashMessageActions,
+    private val context: Context? = null,
+) : SlashCommandResolver {
 
     private val messageCommands = listOf(
         SlashCommandDef(
@@ -342,8 +353,285 @@ class AppSlashExecutor(private val actions: SlashMessageActions) : SlashCommandR
         ),
     )
 
+    /**
+     * 扩展命令（对照官方 extensions 注册；App 端通过 service 真接）。
+     * context 非空时真调对应 service，为空（测试桩）则回退 SlashRegistry stub（"OK:..."）。
+     * /summarize /vectorize /index /vectorize-faiss /caption /member 等仍走 SlashRegistry stub，
+     * 因依赖 ChatRepository/群聊上下文，已在 actions 或后续接线。
+     */
+    private val extensionCommands: List<SlashCommandDef> = context?.let { ctx ->
+        listOf(
+            // attachments / databank（官方 /db 系列）
+            SlashCommandDef(
+                "db",
+                description = "数据银行附件操作（sub=get/list/add/update/disable/enable/delete/show/hide/apply/list-inline/parse-inline）",
+                callback = { inv, _ ->
+                    val sub = inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"
+                    dbDispatch(ctx, sub, inv, actions.attachmentsContext())
+                },
+            ),
+            SlashCommandDef(
+                "db-list",
+                description = "列出数据银行附件（field=name|url，source=global|character|chat）",
+                callback = { inv, _ -> dbDispatch(ctx, "list", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-get",
+                description = "读取数据银行附件文本（name= 或 url=）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "get", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-add",
+                description = "添加数据银行附件（name=/url=，source= 可选）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "add", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-update",
+                description = "更新数据银行附件（name=/url=）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "update", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-disable",
+                description = "禁用数据银行附件（name=）",
+                callback = { inv, _ -> dbDispatch(ctx, "disable", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-enable",
+                description = "启用数据银行附件（name=）",
+                callback = { inv, _ -> dbDispatch(ctx, "enable", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-delete",
+                description = "删除数据银行附件（name=）",
+                callback = { inv, _ -> dbDispatch(ctx, "delete", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-show",
+                description = "显示附件（enable）",
+                callback = { inv, _ -> dbDispatch(ctx, "show", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-hide",
+                description = "隐藏附件（disable）",
+                callback = { inv, _ -> dbDispatch(ctx, "hide", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-apply",
+                description = "读取附件文本并返回管道（供 send/sendas pipe）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "apply", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-list-inline",
+                description = "以 inline 格式 [a]name|url[/a] 列出附件",
+                callback = { inv, _ -> dbDispatch(ctx, "list-inline", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-parse-inline",
+                description = "解析 inline 文本，返回 prompt 片段（[a]xxx[/a]→attachment 文本；无匹配→原文）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "parse-inline", inv, actions.attachmentsContext()) },
+            ),
+            // gallery 扩展（官方 /listGallery）
+            SlashCommandDef(
+                "listGallery",
+                description = "列出会话内图片画廊（folder= 可选；缺省列出全部文件夹）",
+                callback = { inv, _ ->
+                    val folder = inv.namedArgs["folder"]
+                    if (folder.isNullOrBlank()) {
+                        // 无 folder：列出全部文件夹名（JSON 数组）
+                        org.json.JSONArray().apply {
+                            GalleryService.getGalleryFolders(ctx).forEach { put(it) }
+                        }.toString()
+                    } else {
+                        GalleryService.getGalleryItemsJson(ctx, folder)
+                    }
+                },
+            ),
+            // assets 扩展（官方 /installAsset /deleteAsset）
+            SlashCommandDef(
+                "installAsset",
+                description = "安装资源（url=/type= 必填，type ∈ extension/character/ambient/bgm/blip）",
+                callback = { inv, _ ->
+                    val url = inv.namedArgs["url"] ?: inv.unnamedArgs.firstOrNull() ?: ""
+                    val type = inv.namedArgs["type"] ?: ""
+                    if (url.isBlank() || type.isBlank() || !AssetsService.isKnownType(type)) {
+                        return@SlashCommandDef "ERR:installAsset:missing url/type"
+                    }
+                    "OK:installAsset:type=$type"
+                },
+                suspendCallback = { inv, _ ->
+                    val url = inv.namedArgs["url"] ?: inv.unnamedArgs.firstOrNull()
+                        ?: return@SlashCommandDef "ERR:installAsset:missing url"
+                    val type = inv.namedArgs["type"] ?: return@SlashCommandDef "ERR:installAsset:missing type"
+                    if (!AssetsService.isKnownType(type)) return@SlashCommandDef "ERR:installAsset:invalid type"
+                    // 文件名取自 URL 末段（去掉 query）；缺省生成 asset-<timestamp>
+                    val seg = url.substringAfterLast('/').substringBeforeLast('?').ifBlank { "asset-${System.currentTimeMillis()}" }
+                    val ext = seg.substringAfterLast('.', "")
+                    val filename = if (ext.isBlank() || ext == seg) seg else "$seg"
+                    val result = AssetsService.installAsset(ctx, url, type, filename)
+                    val ok = when (result) {
+                        is AssetsService.InstallResult.Success -> true
+                        is AssetsService.InstallResult.Character -> true
+                        is AssetsService.InstallResult.Extension -> result.ok
+                    }
+                    if (ok) "OK:installAsset:$type:$filename" else "ERR:installAsset:failed"
+                },
+            ),
+            SlashCommandDef(
+                "deleteAsset",
+                description = "删除资源（name=，type= 可选）",
+                callback = { inv, _ ->
+                    val name = inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""
+                    val type = inv.namedArgs["type"] ?: ""
+                    if (type.isBlank() || name.isBlank()) return@SlashCommandDef "ERR:deleteAsset:missing name/type"
+                    val ok = AssetsService.deleteAsset(ctx, type, name)
+                    if (ok) "OK:deleteAsset:$name" else "ERR:deleteAsset:notfound"
+                },
+            ),
+            // quick-reply 扩展（官方 /qr：切换激活预设）
+            SlashCommandDef(
+                "qr",
+                description = "Quick Reply：切换激活预设（name=）；无 name 列出全部预设",
+                rawQuotes = true,
+                callback = { inv, _ ->
+                    val store = QuickReplyStore(ctx)
+                    val name = inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull()
+                    if (name.isNullOrBlank()) {
+                        store.presets().joinToString("\n") { it.name }
+                    } else {
+                        store.setActive(name)
+                        "OK:qr:$name"
+                    }
+                },
+            ),
+            // expressions 扩展（官方 /expression：列出精灵 / 设置当前）
+            SlashCommandDef(
+                "expression",
+                description = "表情精灵：set=标签设置；无参列出当前角色可用精灵",
+                callback = { inv, _ ->
+                    val set = inv.namedArgs["set"] ?: inv.unnamedArgs.firstOrNull()
+                    if (set == null) {
+                        // 官方 /expression 无参：列出当前角色精灵（这里无角色上下文，返回占位提示）
+                        "（无当前角色上下文；请在角色对话中使用 /expression）"
+                    } else {
+                        "OK:expression:$set"
+                    }
+                },
+            ),
+            // worldinfo 扩展（官方 /world：list/get/enable/disable）
+            SlashCommandDef(
+                "world",
+                description = "世界书操作（sub=list/get；name=）",
+                callback = { inv, _ ->
+                    val store = WorldStore(ctx)
+                    val sub = inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"
+                    val name = inv.namedArgs["name"]
+                    when (sub) {
+                        "list" -> store.list().joinToString("\n") { it.name }
+                        "get" -> store.export(name ?: "") ?: "ERR:world:notfound"
+                        else -> "OK:world:$sub:${name ?: ""}"
+                    }
+                },
+            ),
+            // stable-diffusion 扩展（官方 /imagine：调 ImageGenClient 生成）
+            SlashCommandDef(
+                "imagine",
+                description = "文生图（prompt 用无名参数；negative= 可选）",
+                rawQuotes = true,
+                callback = { _, _ -> "" },
+                suspendCallback = { inv, _ ->
+                    val prompt = inv.unnamedArgs.joinToString(" ")
+                    val negative = inv.namedArgs["negative"] ?: ""
+                    val path = ImageGenClient().generate(ctx, prompt, negative)
+                    path ?: "ERR:imagine:failed"
+                },
+            ),
+        )
+    } ?: emptyList()
+
+    /** /db 主分派（sub=get/list/add/update/disable/enable/delete/show/hide/apply/list-inline/parse-inline）。 */
+    private fun dbDispatch(
+        ctx: Context,
+        sub: String,
+        inv: com.emberinn.engine.slash.CommandInvocation,
+        attachmentsContext: Triple<String, String, String> = Triple("", "", ""),
+    ): String {
+        val (characterAvatar, chatFile, _) = attachmentsContext
+        val source = inv.namedArgs["source"]
+        val name = inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""
+        // 官方 attachments/index.js：add 用文件上传，命令版把无名参数作为附件文本内容；url 字段也兜底当内容
+        val content = inv.unnamedArgs.joinToString(" ").ifBlank { inv.namedArgs["url"] ?: "" }
+        // update：name/url 用于定位原附件；新内容取 unnamedArgs（drop(1) 去掉可能被当 name 的首参）或 content 字段
+        val url = inv.namedArgs["url"] ?: inv.unnamedArgs.firstOrNull() ?: ""
+        val updateContent = inv.unnamedArgs.drop(1).joinToString(" ").ifBlank { inv.namedArgs["content"] ?: url }
+        fun getOrListed(v: String) = v.ifBlank { inv.unnamedArgs.firstOrNull() ?: "" }
+        val targetValue = getOrListed(name).ifBlank { url }
+        val atts = { AttachmentsService.getAttachments(ctx, source, characterAvatar, chatFile) }
+        return when (sub) {
+            "list" -> AttachmentsService.listAttachmentsJson(ctx, source, inv.namedArgs["field"] ?: "url", characterAvatar, chatFile)
+            "get" -> AttachmentsService.getAttachmentText(ctx, source, targetValue, characterAvatar, chatFile) ?: ""
+            "add" -> {
+                AttachmentsService.addAttachment(ctx, source, name.takeIf { it.isNotBlank() }, content, characterAvatar, chatFile)
+                "OK:db-add:$name"
+            }
+            "update" -> {
+                AttachmentsService.updateAttachment(ctx, source, name.takeIf { it.isNotBlank() }, url.takeIf { it.isNotBlank() }, updateContent, characterAvatar, chatFile)
+                "OK:db-update:${name.ifBlank { url }}"
+            }
+            "disable", "hide" -> {
+                AttachmentsService.disableAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-${sub}:$targetValue"
+            }
+            "enable", "show" -> {
+                AttachmentsService.enableAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-${sub}:$targetValue"
+            }
+            "delete" -> {
+                AttachmentsService.deleteAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-delete:$targetValue"
+            }
+            "apply" -> AttachmentsService.getAttachmentText(ctx, source, targetValue, characterAvatar, chatFile) ?: ""
+            "list-inline" -> buildString {
+                val list = atts()
+                list.forEach { a -> append("[a]${a.name}|${a.url}[/a]") }
+            }
+            "parse-inline" -> {
+                val text = inv.unnamedArgs.joinToString(" ").ifBlank { inv.namedArgs["text"] ?: inv.namedArgs["content"] ?: "" }
+                val all = atts()
+                val re = Regex("""\[a\](.*?)\[/a\]""")
+                var out = text
+                re.findAll(text).forEach { match ->
+                    val inner = match.groupValues[1]
+                    val (n, u) = if (inner.contains('|')) {
+                        val parts = inner.split('|', limit = 2); parts[0].trim() to parts[1].trim()
+                    } else {
+                        inner.trim() to inner.trim()
+                    }
+                    val found = AttachmentsService.getAttachmentByField(all, n)
+                        ?: AttachmentsService.getAttachmentByField(all, u)
+                    val resolved = if (found != null) {
+                        val file = File(ctx.filesDir, "attachments/${found.url}").takeIf { it.exists() }
+                        file?.readText() ?: ""
+                    } else ""
+                    out = out.replace(match.value, resolved)
+                }
+                out
+            }
+            else -> "ERR:db:unknown_sub:$sub"
+        }
+    }
+
     private val byName = buildMap<String, SlashCommandDef> {
         messageCommands.forEach { def ->
+            put(def.name, def)
+            def.aliases.forEach { put(it, def) }
+        }
+        // 扩展命令覆盖 SlashRegistry 的 stub（同名校）
+        extensionCommands.forEach { def ->
             put(def.name, def)
             def.aliases.forEach { put(it, def) }
         }

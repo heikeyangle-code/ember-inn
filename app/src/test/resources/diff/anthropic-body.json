@@ -1,0 +1,1037 @@
+{
+  "source": "chat-completions.js sendClaudeRequest requestBody（真 convertClaudeMessages）",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "sysprompt",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": true,
+          "messages": [
+            {
+              "role": "system",
+              "content": "你是助手"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "system": [
+            {
+              "type": "text",
+              "text": "你是助手"
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "thinking-adaptive",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "reasoningBudget": "low",
+          "include_reasoning": true
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "stream": false,
+          "thinking": {
+            "type": "adaptive"
+          },
+          "output_config": {
+            "effort": "low"
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "thinking-budget",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "reasoningBudget": 1024
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 1536,
+          "stop_sequences": [],
+          "stream": false,
+          "thinking": {
+            "type": "enabled",
+            "budget_tokens": 1024
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "no-sampling",
+      "args": {
+        "body": {
+          "model": "claude-opus-4-7",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "reasoningBudget": "low",
+          "include_reasoning": true
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-opus-4-7",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "stream": false,
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized"
+          },
+          "output_config": {
+            "effort": "low"
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "limited-sampling",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 0.9,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-4-5",
+          "max_tokens": 1536,
+          "stop_sequences": [],
+          "stream": false,
+          "thinking": {
+            "type": "enabled",
+            "budget_tokens": 1024
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "tools",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "auto"
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "tool_choice": {
+            "type": "auto"
+          },
+          "tools": [
+            {
+              "name": "get_weather",
+              "description": "d",
+              "input_schema": {
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07",
+          "tools-2024-05-16"
+        ]
+      }
+    },
+    {
+      "id": "web-search",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "enable_web_search": true
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 1536,
+          "stop_sequences": [],
+          "stream": false,
+          "tools": [
+            {
+              "type": "web_search_20250305",
+              "name": "web_search"
+            }
+          ],
+          "thinking": {
+            "type": "enabled",
+            "budget_tokens": 1024
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "verbosity",
+      "args": {
+        "body": {
+          "model": "claude-opus-4-6",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "verbosity": "low"
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-opus-4-6",
+          "max_tokens": 1536,
+          "stop_sequences": [],
+          "stream": false,
+          "thinking": {
+            "type": "enabled",
+            "budget_tokens": 1024
+          },
+          "output_config": {
+            "effort": "low"
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07",
+          "effort-2025-11-24"
+        ]
+      }
+    },
+    {
+      "id": "no-prefill-assistant-last",
+      "args": {
+        "body": {
+          "model": "claude-opus-4-6",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "assistant",
+              "content": "最后是助手"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "最后是助手"
+                }
+              ]
+            }
+          ],
+          "model": "claude-opus-4-6",
+          "max_tokens": 1536,
+          "stop_sequences": [],
+          "stream": false,
+          "thinking": {
+            "type": "enabled",
+            "budget_tokens": 1024
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "cache-enabled",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": true,
+          "messages": [
+            {
+              "role": "system",
+              "content": "缓存"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "enableSystemPromptCache": true,
+          "cachingAtDepth": 1
+        }
+      },
+      "expected": {
+        "body": {
+          "system": [
+            {
+              "type": "text",
+              "text": "缓存",
+              "cache_control": {
+                "type": "ephemeral",
+                "ttl": "5m"
+              }
+            }
+          ],
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07",
+          "prompt-caching-2024-07-31",
+          "extended-cache-ttl-2025-04-11"
+        ]
+      }
+    },
+    {
+      "id": "json-schema",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "json_schema": {
+            "name": "j",
+            "description": "json",
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "tools": [
+            {
+              "name": "j",
+              "description": "json",
+              "input_schema": {
+                "type": "object"
+              }
+            }
+          ],
+          "tool_choice": {
+            "type": "tool",
+            "name": "j"
+          }
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "prefill",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "assistant_prefill": "Sure, I will "
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sure, I will"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "media",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "看图"
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "data:image/png;base64,AAAA"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "看图"
+                },
+                {
+                  "type": "image",
+                  "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": "AAAA"
+                  }
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "name-prefix",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "name": "Alice",
+              "content": "hello"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Alice: hello"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "assistant-image-last",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "图"
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "data:image/png;base64,BBBB"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "图"
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "image",
+                  "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": "BBBB"
+                  }
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    },
+    {
+      "id": "tools-no-tools-conversion",
+      "args": {
+        "body": {
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false,
+          "stop": [],
+          "use_sysprompt": false,
+          "messages": [
+            {
+              "role": "user",
+              "content": "search"
+            },
+            {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "id": "tc1",
+                  "function": {
+                    "name": "f",
+                    "arguments": "{\"q\":1}"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "结果",
+              "tool_call_id": "tc1"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "search"
+                }
+              ]
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"q\":1}"
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "结果"
+                }
+              ]
+            }
+          ],
+          "model": "claude-sonnet-5",
+          "max_tokens": 512,
+          "stop_sequences": [],
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "stream": false
+        },
+        "betaHeaders": [
+          "output-128k-2025-02-19",
+          "context-1m-2025-08-07"
+        ]
+      }
+    }
+  ]
+}

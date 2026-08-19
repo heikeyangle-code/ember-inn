@@ -1,0 +1,259 @@
+{
+  "source": "sprites.js getSpritesPath/importRisuSprites",
+  "cases": [
+    {
+      "id": "path-simple",
+      "args": {
+        "body": {
+          "method": "path",
+          "name": "Alice"
+        }
+      },
+      "expected": "/chars/Alice"
+    },
+    {
+      "id": "path-subfolder",
+      "args": {
+        "body": {
+          "method": "path",
+          "name": "Alice/礼服",
+          "isSubfolder": true
+        }
+      },
+      "expected": "/chars/Alice/礼服"
+    },
+    {
+      "id": "path-invalid",
+      "args": {
+        "body": {
+          "method": "path",
+          "name": "a/b:c"
+        }
+      },
+      "expected": "/chars/abc"
+    },
+    {
+      "id": "risu-basic",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "name": "Alice",
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [
+                    [
+                      "happy",
+                      "SEA="
+                    ],
+                    [
+                      "sad",
+                      "U0FE"
+                    ]
+                  ],
+                  "emotions": [
+                    [
+                      "angry",
+                      "QU5H"
+                    ]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [
+          {
+            "spritesPath": "/chars/Alice",
+            "filename": "happy.png"
+          },
+          {
+            "spritesPath": "/chars/Alice",
+            "filename": "sad.png"
+          },
+          {
+            "spritesPath": "/chars/Alice",
+            "filename": "angry.png"
+          }
+        ],
+        "data": {
+          "data": {
+            "name": "Alice",
+            "extensions": {
+              "risuai": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "risu-duplicate",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "name": "Bob",
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [
+                    [
+                      "joy",
+                      "Sk9Z"
+                    ],
+                    [
+                      "joy",
+                      "Sk9Z"
+                    ]
+                  ],
+                  "emotions": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [
+          {
+            "spritesPath": "/chars/Bob",
+            "filename": "joy.png"
+          }
+        ],
+        "data": {
+          "data": {
+            "name": "Bob",
+            "extensions": {
+              "risuai": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "risu-empty",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "name": "Carol",
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [],
+                  "emotions": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [],
+        "data": {
+          "data": {
+            "name": "Carol",
+            "extensions": {
+              "risuai": {
+                "additionalAssets": [],
+                "emotions": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "risu-no-name",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [
+                    [
+                      "x",
+                      "WA=="
+                    ]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [],
+        "data": {
+          "data": {
+            "extensions": {
+              "risuai": {
+                "additionalAssets": [
+                  [
+                    "x",
+                    "WA=="
+                  ]
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "path-empty",
+      "args": {
+        "body": {
+          "method": "path",
+          "name": ""
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "risu-existing",
+      "args": {
+        "body": {
+          "method": "risu",
+          "data": {
+            "data": {
+              "name": "Bob",
+              "extensions": {
+                "risuai": {
+                  "additionalAssets": [
+                    [
+                      "joy",
+                      "Sk9Z"
+                    ]
+                  ],
+                  "emotions": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "expected": {
+        "writtenFiles": [
+          {
+            "spritesPath": "/chars/Bob",
+            "filename": "joy.png"
+          }
+        ],
+        "data": {
+          "data": {
+            "name": "Bob",
+            "extensions": {
+              "risuai": {}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1721 @@
+{
+  "source": "openai.js sortModelsBy/groupModelsByVendor",
+  "cases": [
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"no-meta\",\"a-model\",\"b-model\",\"z-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"no-meta\",\"a-model\",\"b-model\",\"z-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"z-model\",\"no-meta\",\"a-model\",\"b-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "openrouter",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"z-model\",\"no-meta\",\"a-model\",\"b-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"no-meta\",\"z-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "chutes",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"a-model\",\"b-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"no-meta\",\"a-model\",\"b-model\",\"z-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"no-meta\",\"a-model\",\"b-model\",\"z-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"z-model\",\"no-meta\",\"a-model\",\"b-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "nanogpt",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"c-model\",\"z-model\",\"no-meta\",\"a-model\",\"b-model\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "pricing.input",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "unknown",
+      "property": "pricing.output",
+      "input": [
+        {
+          "id": "b-model",
+          "name": "Beta Model",
+          "context_length": 1000,
+          "pricing": {
+            "prompt": 2.5,
+            "completion": 5
+          }
+        },
+        {
+          "id": "a-model",
+          "name": "Alpha Model",
+          "context_length": 2000,
+          "pricing": {
+            "prompt": 1,
+            "completion": 3
+          }
+        },
+        {
+          "id": "c-model",
+          "name": "Gamma",
+          "context_length": 500
+        },
+        {
+          "id": "z-model",
+          "pricing": {
+            "prompt": 10
+          }
+        },
+        {
+          "id": "no-meta"
+        }
+      ],
+      "expected": "[\"b-model\",\"a-model\",\"c-model\",\"z-model\",\"no-meta\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "m1",
+          "name": "Vendor B: model",
+          "tokens": 500,
+          "pricing": {
+            "input": 2,
+            "output": 4
+          }
+        },
+        {
+          "id": "m2",
+          "name": "Vendor A: model",
+          "tokens": 1000,
+          "pricing": {
+            "input": 1,
+            "output": 3
+          }
+        },
+        {
+          "id": "m3",
+          "name": "Vendor C: model",
+          "tokens": 100
+        }
+      ],
+      "expected": "[\"m2\",\"m1\",\"m3\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "m1",
+          "name": "Vendor B: model",
+          "tokens": 500,
+          "pricing": {
+            "input": 2,
+            "output": 4
+          }
+        },
+        {
+          "id": "m2",
+          "name": "Vendor A: model",
+          "tokens": 1000,
+          "pricing": {
+            "input": 1,
+            "output": 3
+          }
+        },
+        {
+          "id": "m3",
+          "name": "Vendor C: model",
+          "tokens": 100
+        }
+      ],
+      "expected": "[\"m2\",\"m1\",\"m3\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.prompt",
+      "input": [
+        {
+          "id": "m1",
+          "name": "Vendor B: model",
+          "tokens": 500,
+          "pricing": {
+            "input": 2,
+            "output": 4
+          }
+        },
+        {
+          "id": "m2",
+          "name": "Vendor A: model",
+          "tokens": 1000,
+          "pricing": {
+            "input": 1,
+            "output": 3
+          }
+        },
+        {
+          "id": "m3",
+          "name": "Vendor C: model",
+          "tokens": 100
+        }
+      ],
+      "expected": "[\"m3\",\"m2\",\"m1\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "electronhub",
+      "property": "pricing.completion",
+      "input": [
+        {
+          "id": "m1",
+          "name": "Vendor B: model",
+          "tokens": 500,
+          "pricing": {
+            "input": 2,
+            "output": 4
+          }
+        },
+        {
+          "id": "m2",
+          "name": "Vendor A: model",
+          "tokens": 1000,
+          "pricing": {
+            "input": 1,
+            "output": 3
+          }
+        },
+        {
+          "id": "m3",
+          "name": "Vendor C: model",
+          "tokens": 100
+        }
+      ],
+      "expected": "[\"m3\",\"m2\",\"m1\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "alphabetically",
+      "input": [
+        {
+          "id": "a1",
+          "info": {
+            "name": "Zeta",
+            "contextLength": 100,
+            "developer": "Dev B"
+          }
+        },
+        {
+          "id": "a2",
+          "info": {
+            "name": "Alpha",
+            "contextLength": 200,
+            "developer": "Dev A"
+          }
+        },
+        {
+          "id": "a3"
+        }
+      ],
+      "expected": "[\"a2\",\"a1\",\"a3\"]"
+    },
+    {
+      "kind": "sort",
+      "source": "aimlapi",
+      "property": "context_length",
+      "input": [
+        {
+          "id": "a1",
+          "info": {
+            "name": "Zeta",
+            "contextLength": 100,
+            "developer": "Dev B"
+          }
+        },
+        {
+          "id": "a2",
+          "info": {
+            "name": "Alpha",
+            "contextLength": 200,
+            "developer": "Dev A"
+          }
+        },
+        {
+          "id": "a3"
+        }
+      ],
+      "expected": "[\"a2\",\"a1\",\"a3\"]"
+    },
+    {
+      "kind": "group",
+      "source": "openrouter",
+      "input": [
+        {
+          "id": "anthropic/claude-x"
+        },
+        {
+          "id": "openai/gpt-y"
+        },
+        {
+          "id": "anthropic/claude-z"
+        }
+      ],
+      "expected": "{\"anthropic\":[\"anthropic/claude-x\",\"anthropic/claude-z\"],\"openai\":[\"openai/gpt-y\"]}"
+    },
+    {
+      "kind": "group",
+      "source": "chutes",
+      "input": [
+        {
+          "id": "deepseek/xx"
+        },
+        {
+          "id": "meta/yy"
+        }
+      ],
+      "expected": "{\"deepseek\":[\"deepseek/xx\"],\"meta\":[\"meta/yy\"]}"
+    },
+    {
+      "kind": "group",
+      "source": "electronhub",
+      "input": [
+        {
+          "id": "a",
+          "name": "Vendor One: Model"
+        },
+        {
+          "id": "b",
+          "name": "Vendor Two: Model"
+        },
+        {
+          "id": "c"
+        }
+      ],
+      "expected": "{\"Vendor One\":[\"a\"],\"Vendor Two\":[\"b\"],\"c\":[\"c\"]}"
+    },
+    {
+      "kind": "group",
+      "source": "nanogpt",
+      "input": [
+        {
+          "id": "OpenAI/gpt-x"
+        },
+        {
+          "id": "meta-llama"
+        },
+        {
+          "id": "gpt-4o"
+        }
+      ],
+      "expected": "{\"openai\":[\"OpenAI/gpt-x\"],\"meta\":[\"meta-llama\"],\"gpt\":[\"gpt-4o\"]}"
+    },
+    {
+      "kind": "group",
+      "source": "aimlapi",
+      "input": [
+        {
+          "id": "x",
+          "info": {
+            "developer": "Dev A"
+          }
+        },
+        {
+          "id": "y",
+          "info": {
+            "developer": "Dev B"
+          }
+        },
+        {
+          "id": "z"
+        }
+      ],
+      "expected": "{\"Dev A\":[\"x\"],\"Dev B\":[\"y\"],\"Other\":[\"z\"]}"
+    },
+    {
+      "kind": "group",
+      "source": "other",
+      "input": [
+        {
+          "id": "a"
+        },
+        {
+          "id": "b"
+        }
+      ],
+      "expected": "{\"\":[\"a\",\"b\"]}"
+    }
+  ]
+}

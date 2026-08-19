@@ -1,0 +1,75 @@
+{
+  "source": "core-macros.js outlet macro",
+  "cases": [
+    {
+      "id": "exists",
+      "args": {
+        "body": {
+          "key": "castle",
+          "prompts": {
+            "customWIOutlet_castle": {
+              "value": "王城情报"
+            }
+          }
+        }
+      },
+      "expected": "王城情报"
+    },
+    {
+      "id": "missing-key",
+      "args": {
+        "body": {
+          "key": "dungeon",
+          "prompts": {
+            "customWIOutlet_castle": {
+              "value": "王城情报"
+            }
+          }
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "empty-key",
+      "args": {
+        "body": {
+          "key": "",
+          "prompts": {
+            "customWIOutlet_": {
+              "value": "x"
+            }
+          }
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "null-value",
+      "args": {
+        "body": {
+          "key": "castle",
+          "prompts": {
+            "customWIOutlet_castle": {
+              "value": null
+            }
+          }
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "empty-value",
+      "args": {
+        "body": {
+          "key": "castle",
+          "prompts": {
+            "customWIOutlet_castle": {
+              "value": ""
+            }
+          }
+        }
+      },
+      "expected": ""
+    }
+  ]
+}

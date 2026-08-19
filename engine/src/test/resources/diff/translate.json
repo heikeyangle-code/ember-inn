@@ -1,0 +1,301 @@
+{
+  "generatedAt": "2026-08-19T19:35:26.762Z",
+  "source": "translate/index.js translateIncomingMessage / translateIncomingMessageReasoning + 8 provider body contracts",
+  "cases": [
+    {
+      "id": 0,
+      "name": "tra-msg-char-override",
+      "_tag": "msg",
+      "input": {
+        "mes": "{{char}} 你好",
+        "charName": "Alice",
+        "nameOverride": "小白"
+      },
+      "expected": {
+        "extra": {
+          "display_text": "小白 你好"
+        },
+        "textToTranslate": "小白 你好"
+      }
+    },
+    {
+      "id": 1,
+      "name": "tra-msg-no-override",
+      "_tag": "msg",
+      "input": {
+        "mes": "Hi {{char}}!",
+        "charName": "Alice",
+        "nameOverride": null
+      },
+      "expected": {
+        "extra": {
+          "display_text": "Hi Alice!"
+        },
+        "textToTranslate": "Hi Alice!"
+      }
+    },
+    {
+      "id": 2,
+      "name": "tra-msg-case-char",
+      "_tag": "msg",
+      "input": {
+        "mes": "{{Char}}",
+        "charName": "Bob",
+        "nameOverride": null
+      },
+      "expected": {
+        "extra": {
+          "display_text": "Bob"
+        },
+        "textToTranslate": "Bob"
+      }
+    },
+    {
+      "id": 3,
+      "name": "tra-msg-no-macro",
+      "_tag": "msg",
+      "input": {
+        "mes": "plain text",
+        "charName": "A",
+        "nameOverride": "B"
+      },
+      "expected": {
+        "extra": {
+          "display_text": "plain text"
+        },
+        "textToTranslate": "plain text"
+      }
+    },
+    {
+      "id": 4,
+      "name": "tra-msg-display-key",
+      "_tag": "key",
+      "input": {
+        "mes": "x",
+        "charName": "a",
+        "nameOverride": null
+      },
+      "expected": {
+        "display_key": "display_text",
+        "reasoning_key": "reasoning_display_text"
+      }
+    },
+    {
+      "id": 5,
+      "name": "tra-reasoning-char-override",
+      "_tag": "reasoning",
+      "input": {
+        "reasoning": "让我模拟{{char}}的语气来回复…",
+        "charName": "Alice",
+        "nameOverride": "小白"
+      },
+      "expected": {
+        "extra": {
+          "reasoning_display_text": "让我模拟小白的语气来回复…"
+        },
+        "textToTranslate": "让我模拟小白的语气来回复…"
+      }
+    },
+    {
+      "id": 6,
+      "name": "tra-reasoning-key-name",
+      "_tag": "reasoning",
+      "input": {
+        "reasoning": "r1",
+        "charName": "A",
+        "nameOverride": null
+      },
+      "expected": {
+        "extra": {
+          "reasoning_display_text": "r1"
+        },
+        "textToTranslate": "r1"
+      }
+    },
+    {
+      "id": 7,
+      "name": "tra-user-override-same",
+      "_tag": "msg",
+      "input": {
+        "mes": "{{char}}",
+        "charName": "Alice",
+        "nameOverride": "Alice"
+      },
+      "expected": {
+        "extra": {
+          "display_text": "Alice"
+        },
+        "textToTranslate": "Alice"
+      }
+    },
+    {
+      "id": 8,
+      "name": "tra-empty-text",
+      "_tag": "msg",
+      "input": {
+        "mes": "",
+        "charName": "A",
+        "nameOverride": null
+      },
+      "expected": {
+        "extra": {
+          "display_text": ""
+        },
+        "textToTranslate": ""
+      }
+    },
+    {
+      "id": 9,
+      "name": "tra-reasoning-empty",
+      "_tag": "reasoning",
+      "input": {
+        "reasoning": "",
+        "charName": "A",
+        "nameOverride": null
+      },
+      "expected": {
+        "extra": {
+          "reasoning_display_text": ""
+        },
+        "textToTranslate": ""
+      }
+    },
+    {
+      "id": 10,
+      "name": "tra-multiple-char-tokens",
+      "_tag": "msg",
+      "input": {
+        "mes": "{{char}}: I am {{char}}.",
+        "charName": "A",
+        "nameOverride": "B"
+      },
+      "expected": {
+        "extra": {
+          "display_text": "B: I am B."
+        },
+        "textToTranslate": "B: I am B."
+      }
+    },
+    {
+      "id": 11,
+      "name": "tra-prov-libre",
+      "_tag": "prov-libre",
+      "input": {
+        "text": "hi",
+        "target": "zh",
+        "apiKey": "k"
+      },
+      "expected": {
+        "q": "hi",
+        "source": "auto",
+        "target": "zh",
+        "format": "text",
+        "api_key": "k"
+      }
+    },
+    {
+      "id": 12,
+      "name": "tra-prov-google",
+      "_tag": "prov-google",
+      "input": {
+        "target": "pt-BR",
+        "text": "hi"
+      },
+      "expected": {
+        "url": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt&dt=t",
+        "formQ": "hi"
+      }
+    },
+    {
+      "id": 13,
+      "name": "tra-prov-lingva",
+      "_tag": "prov-lingva",
+      "input": {
+        "baseUrl": "https://lingva.example",
+        "text": "hi",
+        "target": "zh"
+      },
+      "expected": "https://lingva.example/api/v1/hi/zh/auto"
+    },
+    {
+      "id": 14,
+      "name": "tra-prov-deepl",
+      "_tag": "prov-deepl",
+      "input": {
+        "text": "hi",
+        "target": "ZH",
+        "apiKey": "dk"
+      },
+      "expected": {
+        "auth_key": "dk",
+        "text": [
+          "hi"
+        ],
+        "target_lang": "ZH"
+      }
+    },
+    {
+      "id": 15,
+      "name": "tra-prov-deeplx",
+      "_tag": "prov-deeplx",
+      "input": {
+        "text": "hi",
+        "target": "es",
+        "baseUrl": "http://localhost:1188"
+      },
+      "expected": {
+        "text": "hi",
+        "source_lang": "auto",
+        "target_lang": "es",
+        "url": "http://localhost:1188"
+      }
+    },
+    {
+      "id": 16,
+      "name": "tra-prov-onering-from",
+      "_tag": "prov-onering",
+      "input": {
+        "text": "hi",
+        "target": "zh",
+        "baseUrl": "http://onering.local",
+        "internalLang": "en",
+        "targetLang": "zh"
+      },
+      "expected": {
+        "text": "hi",
+        "from_lang": "en",
+        "to_lang": "zh",
+        "url": "http://onering.local/"
+      }
+    },
+    {
+      "id": 17,
+      "name": "tra-prov-onering-reverse",
+      "_tag": "prov-onering",
+      "input": {
+        "text": "你好",
+        "target": "en",
+        "baseUrl": "http://onering.local",
+        "internalLang": "en",
+        "targetLang": "zh"
+      },
+      "expected": {
+        "text": "你好",
+        "from_lang": "zh",
+        "to_lang": "en",
+        "url": "http://onering.local/"
+      }
+    },
+    {
+      "id": 18,
+      "name": "tra-prov-lingva-slash",
+      "_tag": "prov-lingva",
+      "input": {
+        "baseUrl": "https://lingva.example/",
+        "text": "hi there",
+        "target": "ja"
+      },
+      "expected": "https://lingva.example/api/v1/hi%20there/ja/auto"
+    }
+  ]
+}

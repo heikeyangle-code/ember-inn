@@ -1,0 +1,297 @@
+{
+  "source": "openai.js populateChatHistory",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "你好",
+              "name": "User",
+              "injected": false
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "name": "Char",
+              "injected": false
+            },
+            {
+              "role": "user",
+              "content": "{{char}}再说",
+              "name": "User",
+              "injected": false
+            }
+          ],
+          "new_chat_prompt": "【新会话】"
+        }
+      },
+      "expected": [
+        {
+          "name": "chatHistory",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【新会话】",
+              "identifier": "newMainChat"
+            },
+            {
+              "role": "user",
+              "content": "你好",
+              "identifier": "chatHistory-1"
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "identifier": "chatHistory-2"
+            },
+            {
+              "role": "user",
+              "content": "再说",
+              "identifier": "chatHistory-3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "empty-user-after-assistant",
+      "args": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "你好",
+              "name": "User",
+              "injected": false
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "name": "Char",
+              "injected": false
+            },
+            {
+              "role": "user",
+              "content": "{{char}}再说",
+              "name": "User",
+              "injected": false
+            },
+            {
+              "role": "assistant",
+              "content": "最后助手",
+              "name": "Char",
+              "injected": false
+            }
+          ],
+          "new_chat_prompt": "【新会话】",
+          "send_if_empty": "（空）"
+        }
+      },
+      "expected": [
+        {
+          "name": "chatHistory",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【新会话】",
+              "identifier": "newMainChat"
+            },
+            {
+              "role": "user",
+              "content": "你好",
+              "identifier": "chatHistory-1"
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "identifier": "chatHistory-2"
+            },
+            {
+              "role": "user",
+              "content": "再说",
+              "identifier": "chatHistory-3"
+            },
+            {
+              "role": "assistant",
+              "content": "最后助手",
+              "identifier": "chatHistory-4"
+            },
+            {
+              "role": "user",
+              "content": "（空）",
+              "identifier": "emptyUserMessageReplacement"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "continue-nudge",
+      "args": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "你好",
+              "name": "User",
+              "injected": false
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "name": "Char",
+              "injected": false
+            },
+            {
+              "role": "user",
+              "content": "{{char}}再说",
+              "name": "User",
+              "injected": false
+            }
+          ],
+          "new_chat_prompt": "【新会话】",
+          "type": "continue",
+          "cyclePrompt": "上一条",
+          "continue_nudge_prompt": "[继续：{{lastChatMessage}}]"
+        }
+      },
+      "expected": [
+        {
+          "name": "chatHistory",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【新会话】",
+              "identifier": "newMainChat"
+            },
+            {
+              "role": "user",
+              "content": "你好",
+              "identifier": "chatHistory-1"
+            },
+            {
+              "role": "assistant",
+              "content": "回应",
+              "identifier": "chatHistory-2"
+            }
+          ]
+        },
+        {
+          "name": "continueNudge",
+          "msgs": [
+            {
+              "role": "user",
+              "content": "再说",
+              "identifier": ""
+            },
+            {
+              "role": "system",
+              "content": "[继续：上一条]",
+              "identifier": "continueNudge"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "group-nudge",
+      "args": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "群聊",
+              "name": "A",
+              "injected": false
+            }
+          ],
+          "new_chat_prompt": "【新会话】",
+          "selected_group": true,
+          "new_group_chat_prompt": "【群聊】",
+          "groupNudgeContent": "【群聊提示】"
+        }
+      },
+      "expected": [
+        {
+          "name": "chatHistory",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【群聊】",
+              "identifier": "newMainChat"
+            },
+            {
+              "role": "user",
+              "content": "群聊",
+              "identifier": "chatHistory-1"
+            },
+            {
+              "role": "system",
+              "content": "【群聊提示】",
+              "identifier": "groupNudge"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "injected-message-skipped-for-continue",
+      "args": {
+        "body": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "注入的",
+              "name": "X",
+              "injected": true
+            },
+            {
+              "role": "assistant",
+              "content": "最后",
+              "name": "Char",
+              "injected": false
+            }
+          ],
+          "new_chat_prompt": "【新会话】",
+          "type": "continue",
+          "cyclePrompt": "C"
+        }
+      },
+      "expected": [
+        {
+          "name": "chatHistory",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【新会话】",
+              "identifier": "newMainChat"
+            },
+            {
+              "role": "user",
+              "content": "注入的",
+              "identifier": "chatHistory-1"
+            }
+          ]
+        },
+        {
+          "name": "continueNudge",
+          "msgs": [
+            {
+              "role": "assistant",
+              "content": "最后",
+              "identifier": ""
+            },
+            {
+              "role": "system",
+              "content": "[Continue your last message without repeating its original content.]",
+              "identifier": "continueNudge"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

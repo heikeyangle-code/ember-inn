@@ -77,6 +77,7 @@ import com.emberinn.engine.prompt.AutoContinueEngine
 import com.emberinn.engine.prompt.ExtensionPromptEngine
 import com.emberinn.engine.prompt.CleanUpConfig
 import com.emberinn.engine.prompt.CfgPromptEngine
+import com.emberinn.engine.prompt.CaptionEngine
 import com.emberinn.engine.prompt.CleanUpMessageEngine
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.CustomStoppingConfig
@@ -107,6 +108,7 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.contentOrNull
@@ -134,7 +136,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val translateClient = TranslateClient()
     private val imageGenClient = ImageGenClient()
     private val vectorRag = VectorRagService(application)
-    private val slashExecutor = AppSlashExecutor(this)
+    private val slashExecutor = AppSlashExecutor(this, getApplication())
     private val autoExecuteHandler = AutoExecuteHandler()
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))
@@ -610,10 +612,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index)?.jsonObject ?: return
         val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        // 官方：name2Override = message.name（AI 说话者的显示名，不是角色卡 char_name）
+        val nameOverride = el["name"]?.jsonPrimitive?.contentOrNull
+        val targetLang = ServicesPrefs.translateTargetLanguage(getApplication())
         viewModelScope.launch(Dispatchers.IO) {
-            val translated = translateClient.translate(getApplication(), text)
+            val translated = translateClient.translate(
+                getApplication(), text,
+                charName = currentCharName, nameOverride = nameOverride,
+            )
             val reasoningTranslated = if (!reasoning.isNullOrBlank()) {
-                translateClient.translate(getApplication(), reasoning)
+                translateClient.translateReasoning(
+                    getApplication(), reasoning, targetLang,
+                    charName = currentCharName, nameOverride = nameOverride,
+                )
             } else {
                 null
             }
@@ -638,7 +649,10 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val el = msgs.getOrNull(index)?.jsonObject ?: return
         val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val translated = translateClient.translate(getApplication(), text) ?: return@launch
+            val translated = translateClient.translate(
+                getApplication(), text,
+                charName = currentCharName, nameOverride = currentUserName,
+            ) ?: return@launch
             withContext(Dispatchers.Main) {
                 chatStore.setDisplayText(sessionId, index, displayText = translated, replaceMes = true)
                 refreshMessages()
@@ -790,9 +804,14 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 翻译指定消息（P1-6 执行层；结果放 notice）。 */
     fun translateMessage(index: Int) {
         val msgs = chatStore.messages(sessionId)
-        val text = msgs.getOrNull(index)?.jsonObject?.get("mes")?.jsonPrimitive?.contentOrNull ?: return
+        val el = msgs.getOrNull(index)?.jsonObject ?: return
+        val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        val nameOverride = el["name"]?.jsonPrimitive?.contentOrNull
         viewModelScope.launch(Dispatchers.IO) {
-            val result = translateClient.translate(getApplication(), text)
+            val result = translateClient.translate(
+                getApplication(), text,
+                charName = currentCharName, nameOverride = nameOverride,
+            )
             withContext(Dispatchers.Main) {
                 _notice.value = if (result.isNullOrBlank()) {
                     "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
@@ -1111,6 +1130,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     override fun chatName(): String = sessionName()
 
+    override fun attachmentsContext(): Triple<String, String, String> {
+        val avatar = character?.avatarPath?.takeIf { it.isNotBlank() } ?: (character?.id?.let { "$it.png" } ?: "")
+        val chat = chatStore.sessionFile(sessionId)
+        return Triple(avatar, chat, currentCharName)
+    }
+
     override fun setInput(text: String): String {
         _inputDraft.value = text
         return text
@@ -1262,9 +1287,12 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             applyRegex = voice.applyRegex,
             regexPattern = voice.regexPattern,
         )
-        val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
-        if (!ok && cleaned.isNotBlank()) {
-            _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+        // speak 现为 suspend（支持外部 HTTP 后端 MediaPlayer 播放）：协程发起
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = TtsReader.speak(getApplication(), cleaned, voice.voice, voice.rate, voice.narrateByParagraphs)
+            if (!ok && cleaned.isNotBlank()) {
+                _notice.value = "（语音引擎未就绪，请到 设置→语音 检查。）"
+            }
         }
     }
 
@@ -2500,8 +2528,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /**
-     * 官方 caption 扩展：入口。prompt_ask=true 先弹提示词输入，refine_mode=true 生成后弹确认编辑，
-     * 最终 sendCaptionedMessage 语义追加带 captioned 媒体的用户消息并触发回复。
+     * 官方 caption 扩展：入口。**prompt_ask 触发条件：!externalPrompt && settings.prompt_ask**
+     * （有外部 prompt 时官方不询问）。若 entry 为视频 → 官方 isVideoCaptioningAvailable 拦截失败提示。
+     * refine_mode=true 生成后弹确认编辑；最终 sendCaptionedMessage 语义追加带 captioned 媒体的用户消息并触发回复。
      */
     fun startCaptionFlow() {
         if (_isStreaming.value) {
@@ -2511,10 +2540,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val pending = _pendingMedia.value
         val image = pending.firstOrNull { it.type == "image" }
         if (image == null) {
-            _notice.value = "（请先添加一张图片，再点“生成描述并发送”。）"
+            val video = pending.firstOrNull { it.type == "video" }
+            if (video != null) {
+                _notice.value = "（当前设备不支持视频打字幕，请用图片。）"
+            } else {
+                _notice.value = "（请先添加一张图片，再点“生成描述并发送”。）"
+            }
             return
         }
         val s = CaptionPrefs.load(getApplication())
+        // 官方 captionMultimodal / onSelectImage(prompt)：prompt 参数即 external，已传 → prompt_ask 不触发
+        // startCaptionFlow 即官方 "点 caption 按钮" 场景，external=null
         if (s.promptAsk) {
             _captionPromptRequest.value = true
         } else {
@@ -2543,22 +2579,23 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val image = pending.firstOrNull { it.type == "image" } ?: return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
+                if (CaptionEngine.isVideo(image.url)) error("视频不支持打字幕，请用图片。")
                 val s = CaptionPrefs.load(getApplication())
                 val file = java.io.File(image.url)
                 if (!file.exists()) error("图片文件不存在")
                 val mime = mimeForCaption(image.url)
                 val dataUrl = "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(file.readBytes())
-                val rawPrompt = promptOverride?.takeIf { it.isNotBlank() } ?: s.prompt
+                val base64 = dataUrl.substringAfter("base64,")
+                val rawPrompt = CaptionEngine.resolvePrompt(promptOverride?.takeIf { it.isNotBlank() }, s.prompt)
                 val prompt = MacroEngine.substitute(rawPrompt, MacroEnv(user = currentUserName, char = currentCharName))
-                val caption = chatRepository.captionImage(dataUrl, prompt) ?: error("描述生成失败")
+                val caption = chatRepository.captionImageBySource(s.source, dataUrl, base64, prompt) ?: error("描述生成失败")
                 if (caption.isBlank()) error("描述生成失败")
-                val rawTemplate = if (s.template.contains("{{caption}}", ignoreCase = true)) {
-                    s.template
-                } else {
-                    s.template + " {{caption}}"
-                }
-                val substituted = MacroEngine.substitute(rawTemplate, MacroEnv(user = currentUserName, char = currentCharName))
-                val wrapped = substituted.replace("{{caption}}", caption.trim())
+                val wrapped = CaptionEngine.wrapCaptionTemplate(
+                    template = s.template,
+                    caption = caption.trim(),
+                    user = currentUserName,
+                    char = currentCharName,
+                )
                 if (s.refineMode) {
                     _captionDraft.value = CaptionDraft(wrapped, image)
                 } else {
@@ -2586,6 +2623,68 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _pendingMedia.value = _pendingMedia.value.filterNot { it.url == image.url }
         refreshMessages()
         startStream(history = chatStore.messages(sessionId))
+    }
+
+    /**
+     * 官方 caption captionExistingMessage：给已有消息第 [mediaIndex] 张图片补字幕（mes 空→写 mes；
+     * 否则 media.title=字幕、append_title）。source 路由见 [com.emberinn.app.data.ChatRepository.captionImageBySource]。
+     */
+    fun captionExistingMessage(messageId: Int, mediaIndex: Int = 0) {
+        if (_isStreaming.value) {
+            _notice.value = "（正在生成中，请稍后再试。）"
+            return
+        }
+        val msgs = chatStore.messages(sessionId)
+        val el = msgs.getOrNull(messageId)?.jsonObject ?: run {
+            _notice.value = "（找不到该消息。）"
+            return
+        }
+        val extra = el["extra"] as? JsonObject
+        val media = extra?.get("media") as? JsonArray
+        if (media.isNullOrEmpty()) {
+            _notice.value = "（该消息没有可补字幕的图片。）"
+            return
+        }
+        val mi = mediaIndex.coerceIn(0, media.lastIndex)
+        val entry = media.getOrNull(mi)?.jsonObject
+        val url = entry?.get("url")?.jsonPrimitive?.contentOrNull
+        val type = entry?.get("type")?.jsonPrimitive?.contentOrNull
+        if (url.isNullOrBlank() || type == "audio") {
+            _notice.value = "（该消息没有可补字幕的图片。）"
+            return
+        }
+        if (type == "video" || CaptionEngine.isVideo(url)) {
+            _notice.value = "（视频不支持打字幕，请用图片。）"
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val file = java.io.File(url)
+                if (!file.exists()) error("图片文件不存在")
+                val s = CaptionPrefs.load(getApplication())
+                val mime = mimeForCaption(url)
+                val dataUrl = "data:$mime;base64," + java.util.Base64.getEncoder().encodeToString(file.readBytes())
+                val base64 = dataUrl.substringAfter("base64,")
+                val rawPrompt = CaptionEngine.resolvePrompt(null, s.prompt)
+                val prompt = MacroEngine.substitute(rawPrompt, MacroEnv(user = currentUserName, char = currentCharName))
+                val caption = chatRepository.captionImageBySource(s.source, dataUrl, base64, prompt) ?: error("描述生成失败")
+                if (caption.isBlank()) error("描述生成失败")
+                val wrapped = CaptionEngine.wrapCaptionTemplate(
+                    template = s.template,
+                    caption = caption.trim(),
+                    user = currentUserName,
+                    char = currentCharName,
+                )
+                val mes = el["mes"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
+                val mesIfBlank = if (mes.isEmpty()) wrapped else null
+                withContext(Dispatchers.Main) {
+                    chatStore.captionExistingMedia(sessionId, messageId, mi, wrapped, mesIfBlank)
+                    refreshMessages()
+                }
+            }.onFailure { e ->
+                _notice.value = "（图片描述失败：${e.message ?: "未知错误"}）"
+            }
+        }
     }
 
     private fun mimeForCaption(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
@@ -3694,7 +3793,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      */
     fun classifyExpression(text: String, onResult: (String?) -> Unit) {
         val prefs = com.emberinn.app.ui.settings.ExpressionPrefs.load(getApplication())
-        if (prefs.api != com.emberinn.engine.expression.ExpressionApi.LLM || text.isBlank()) {
+        // 官方 expressions.api=webllm：用本地 transformers.js 分类。Android 无 WebLLM，回退 LLM 分类 + 日志。
+        val webllmFallback = com.emberinn.app.data.ExpressionStore(getApplication()).shouldFallbackToLlm()
+        if (webllmFallback) {
+            android.util.Log.w("ExpressionStore", "WebLLM 本地分类在 Android 不可用，回退 LLM 分类")
+        }
+        val useLlm = prefs.api == com.emberinn.engine.expression.ExpressionApi.LLM || webllmFallback
+        if (!useLlm || text.isBlank()) {
             onResult(null)
             return
         }

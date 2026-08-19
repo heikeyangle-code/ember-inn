@@ -1,6 +1,8 @@
 package com.emberinn.app.data
 
 import android.content.Context
+import com.emberinn.app.ui.settings.ExpressionPrefs
+import com.emberinn.engine.expression.ExpressionApi
 import com.emberinn.engine.expression.ExpressionEngine
 import com.emberinn.engine.expression.SpriteStorage
 import java.io.File
@@ -15,6 +17,22 @@ import kotlinx.serialization.json.jsonPrimitive
 class ExpressionStore(private val context: Context) {
 
     private val root = File(context.filesDir, "expressions").apply { mkdirs() }
+
+    /**
+     * 官方 expressions.api 映射为字符串 source（extras/main/webllm/none；local 对应官方 LOCAL）。
+     * 用于分类路由：Android 无 WebLLM/transformers.js，source=webllm 时回退 LLM 分类。
+     */
+    val source: String
+        get() = when (ExpressionPrefs.load(context).api) {
+            ExpressionApi.LOCAL -> "local"
+            ExpressionApi.EXTRAS -> "extras"
+            ExpressionApi.LLM -> "main"
+            ExpressionApi.WEBLLM -> "webllm"
+            ExpressionApi.NONE -> "none"
+        }
+
+    /** 官方 expressions getExpressionLabel WebLLM 分支在 Android 等价降级：回退 LLM 分类。 */
+    fun shouldFallbackToLlm(): Boolean = source == "webllm"
 
     companion object {
         /** 精灵目录列表缓存（对齐官方 spriteCache 全局缓存语义）：聊天列表滚动时每条 AI 消息

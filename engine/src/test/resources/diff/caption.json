@@ -1,0 +1,195 @@
+{
+  "generatedAt": "2026-08-19T19:29:33.972Z",
+  "source": "caption/index.js: PROMPT_DEFAULT + prompt resolve chain + wrapCaptionTemplate(poka-yoke) + isVideo captioningAvailable gate + captionMultimodal messages",
+  "cases": [
+    {
+      "id": 0,
+      "name": "cap-prompt-external-wins",
+      "_tag": "prompt",
+      "input": {
+        "external": "Say hi",
+        "sp": ""
+      },
+      "expected": "Say hi"
+    },
+    {
+      "id": 1,
+      "name": "cap-prompt-settings-fallback",
+      "_tag": "prompt",
+      "input": {
+        "external": null,
+        "sp": "Custom?"
+      },
+      "expected": "Custom?"
+    },
+    {
+      "id": 2,
+      "name": "cap-prompt-default",
+      "_tag": "prompt",
+      "input": {
+        "external": null,
+        "sp": ""
+      },
+      "expected": "What's in this image?"
+    },
+    {
+      "id": 3,
+      "name": "cap-prompt-empty-string-x",
+      "_tag": "prompt",
+      "input": {
+        "external": "",
+        "sp": ""
+      },
+      "expected": "What's in this image?"
+    },
+    {
+      "id": 4,
+      "name": "cap-prompt-external-empty-trumps",
+      "_tag": "prompt",
+      "input": {
+        "external": "",
+        "sp": "SP"
+      },
+      "expected": "SP"
+    },
+    {
+      "id": 5,
+      "name": "cap-prompt-all-three",
+      "_tag": "prompt",
+      "input": {
+        "external": "A",
+        "sp": "B"
+      },
+      "expected": "A"
+    },
+    {
+      "id": 6,
+      "name": "cap-wrap-standard",
+      "_tag": "wrap",
+      "input": {
+        "template": "[{{user}} sends {{char}} a picture that contains: {{caption}}]",
+        "caption": "a cat",
+        "user": "U",
+        "char": "C"
+      },
+      "expected": "[U sends C a picture that contains: a cat]"
+    },
+    {
+      "id": 7,
+      "name": "cap-wrap-poka-yoke",
+      "_tag": "wrap",
+      "input": {
+        "template": "Caption:",
+        "caption": "dog",
+        "user": "U",
+        "char": "C"
+      },
+      "expected": "Caption: dog"
+    },
+    {
+      "id": 8,
+      "name": "cap-wrap-case-insensitive-caption",
+      "_tag": "wrap",
+      "input": {
+        "template": "[{{CAPTION}}]",
+        "caption": "fish",
+        "user": "U",
+        "char": "C"
+      },
+      "expected": "[fish]"
+    },
+    {
+      "id": 9,
+      "name": "cap-wrap-user-char-macros",
+      "_tag": "wrap",
+      "input": {
+        "template": "{{user}}/{{char}}:{{caption}}",
+        "caption": "x",
+        "user": "Me",
+        "char": "Alice"
+      },
+      "expected": "Me/Alice:x"
+    },
+    {
+      "id": 10,
+      "name": "cap-wrap-caption-trim-not-trimmed",
+      "_tag": "wrap",
+      "input": {
+        "template": "{{caption}}",
+        "caption": "  hello  ",
+        "user": "U",
+        "char": "C"
+      },
+      "expected": "  hello  "
+    },
+    {
+      "id": 11,
+      "name": "cap-wrap-poka-empty-tpl",
+      "_tag": "wrap",
+      "input": {
+        "template": "",
+        "caption": "hi",
+        "user": "U",
+        "char": "C"
+      },
+      "expected": " hi"
+    },
+    {
+      "id": 12,
+      "name": "cap-mm-no-system",
+      "_tag": "mm",
+      "input": {
+        "prompt": "Describe",
+        "url": "data:image/png;base64,xx"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "Describe",
+          "images": [
+            "data:image/png;base64,xx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "cap-mm-default-prompt",
+      "_tag": "mm",
+      "input": {
+        "prompt": "What's in this image?",
+        "url": "data:image/jpeg;base64,yy"
+      },
+      "expected": [
+        {
+          "role": "user",
+          "content": "What's in this image?",
+          "images": [
+            "data:image/jpeg;base64,yy"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "cap-video-ext",
+      "_tag": "video",
+      "input": "selfie.mp4",
+      "expected": true
+    },
+    {
+      "id": 15,
+      "name": "cap-not-video-ext",
+      "_tag": "video",
+      "input": "cat.png",
+      "expected": false
+    },
+    {
+      "id": 16,
+      "name": "cap-video-webm-query",
+      "_tag": "video",
+      "input": "a.webm?x=1",
+      "expected": true
+    }
+  ]
+}

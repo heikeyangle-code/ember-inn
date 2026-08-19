@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -42,7 +43,7 @@ fun CaptionScreen(onBack: () -> Unit) {
             ) {
                 Text("图片描述", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Text(
-                    "对齐官方 caption 扩展：添加图片后，聊天输入区点“图片描述”生成描述并发送（sendCaptionedMessage 语义）。当前实现 source=multimodal（用当前模型）；extras/local/horde 未接。",
+                    "对齐官方 caption 扩展：添加图片后，聊天输入区点“图片描述”生成描述并发送（sendCaptionedMessage 语义）。multimodal 用当前模型；local/extras/horde 走 sourceUrl 代理端点。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
@@ -57,6 +58,21 @@ fun CaptionScreen(onBack: () -> Unit) {
                 Text("来源", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Row(modifier = Modifier.padding(vertical = 8.dp)) {
                     FilterChip(selected = s.source == "multimodal", onClick = { s = s.copy(source = "multimodal"); save() }, label = { Text("Multimodal") })
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(selected = s.source == "local", onClick = { s = s.copy(source = "local"); save() }, label = { Text("Local") })
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(selected = s.source == "extras", onClick = { s = s.copy(source = "extras"); save() }, label = { Text("Extras") })
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(selected = s.source == "horde", onClick = { s = s.copy(source = "horde"); save() }, label = { Text("Horde") })
+                }
+                if (s.source != "multimodal") {
+                    EmberTextField(
+                        value = s.sourceUrl,
+                        onValueChange = { s = s.copy(sourceUrl = it); save() },
+                        label = { Text("服务基址（sourceUrl，如 https://my-sillytavern.local）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    )
                 }
                 EmberTextField(
                     value = s.prompt,

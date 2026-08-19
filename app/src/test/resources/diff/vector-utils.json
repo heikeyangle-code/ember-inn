@@ -1,0 +1,138 @@
+{
+  "source": "utils.js splitRecursive/trimToEndSentence/trimToStartSentence",
+  "cases": [
+    {
+      "id": "split-3",
+      "fn": "splitRecursive",
+      "args": [
+        "Hello, world!",
+        3
+      ],
+      "expected": [
+        "Hel",
+        "lo,",
+        "wor",
+        "ld!"
+      ]
+    },
+    {
+      "id": "split-5-multiline",
+      "fn": "splitRecursive",
+      "args": [
+        "a\n\nbb\nccc dddd",
+        5
+      ],
+      "expected": [
+        "a\n\nbb",
+        "ccc",
+        "dddd"
+      ]
+    },
+    {
+      "id": "split-4-cjk",
+      "fn": "splitRecursive",
+      "args": [
+        "中文段落测试文本",
+        4
+      ],
+      "expected": [
+        "中文段落",
+        "测试文本"
+      ]
+    },
+    {
+      "id": "split-empty",
+      "fn": "splitRecursive",
+      "args": [
+        "",
+        3
+      ],
+      "expected": [
+        ""
+      ]
+    },
+    {
+      "id": "split-zero-length",
+      "fn": "splitRecursive",
+      "args": [
+        "abc",
+        0
+      ],
+      "expected": [
+        "abc"
+      ]
+    },
+    {
+      "id": "trim-end-basic",
+      "fn": "trimToEndSentence",
+      "args": [
+        "Hello, world! I am from"
+      ],
+      "expected": "Hello, world!"
+    },
+    {
+      "id": "trim-end-cjk",
+      "fn": "trimToEndSentence",
+      "args": [
+        "你好，世界。继续后面的字"
+      ],
+      "expected": "你好，世界。"
+    },
+    {
+      "id": "trim-end-emoji",
+      "fn": "trimToEndSentence",
+      "args": [
+        "前面的话😀后面还有字"
+      ],
+      "expected": "前面的话😀"
+    },
+    {
+      "id": "trim-end-empty",
+      "fn": "trimToEndSentence",
+      "args": [
+        ""
+      ],
+      "expected": ""
+    },
+    {
+      "id": "trim-end-no-punct",
+      "fn": "trimToEndSentence",
+      "args": [
+        "尾部没有标点"
+      ],
+      "expected": "尾部没有标点"
+    },
+    {
+      "id": "trim-start-basic",
+      "fn": "trimToStartSentence",
+      "args": [
+        "Hello. world"
+      ],
+      "expected": "world"
+    },
+    {
+      "id": "trim-start-newline",
+      "fn": "trimToStartSentence",
+      "args": [
+        "a!b?c\nd"
+      ],
+      "expected": "a!b?c\nd"
+    },
+    {
+      "id": "trim-start-empty",
+      "fn": "trimToStartSentence",
+      "args": [
+        ""
+      ],
+      "expected": ""
+    },
+    {
+      "id": "trim-start-no-punct",
+      "fn": "trimToStartSentence",
+      "args": [
+        "无标点直接返回"
+      ],
+      "expected": "无标点直接返回"
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "source": "shouldAutoContinue",
+  "cases": [
+    {
+      "id": "disabled",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": false
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "impersonate",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "isImpersonate": true,
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "send-press",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "isSendPress": true,
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "stopped",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "generationStopped": true,
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "target-zero",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 0,
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "openai-disallowed",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "allowChatCompletions": false,
+          "mainApi": "openai",
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "textarea-not-empty",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "textareaText": "draft",
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "short-chunk",
+      "args": {
+        "body": {
+          "messageChunk": "short",
+          "enabled": true,
+          "targetLength": 100,
+          "lastMessageText": "x"
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "no-last-message",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "already-long",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 10,
+          "lastMessageText": "hello world",
+          "tokenCounts": {
+            "hello world": 20
+          }
+        }
+      },
+      "expected": false
+    },
+    {
+      "id": "should-continue",
+      "args": {
+        "body": {
+          "messageChunk": "long enough text",
+          "enabled": true,
+          "targetLength": 100,
+          "lastMessageText": "hello world",
+          "tokenCounts": {
+            "hello world": 40
+          }
+        }
+      },
+      "expected": true
+    }
+  ]
+}

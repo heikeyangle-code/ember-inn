@@ -1,0 +1,373 @@
+{
+  "source": "openai.js media inlining capability",
+  "cases": [
+    {
+      "id": "openai-gpt4o",
+      "args": {
+        "body": {
+          "source": "openai",
+          "model": "gpt-4o",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "openai-gpt4turbo-preview",
+      "args": {
+        "body": {
+          "source": "openai",
+          "model": "gpt-4-turbo-preview",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "openai-o3-mini",
+      "args": {
+        "body": {
+          "source": "openai",
+          "model": "o3-mini",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "openai-gpt5",
+      "args": {
+        "body": {
+          "source": "openai",
+          "model": "gpt-5",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "openai-unknown",
+      "args": {
+        "body": {
+          "source": "openai",
+          "model": "deepseek-v4",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "azure-claude",
+      "args": {
+        "body": {
+          "source": "azure_openai",
+          "model": "claude-sonnet-4",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "claude-opus",
+      "args": {
+        "body": {
+          "source": "claude",
+          "model": "claude-opus-4",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "makersuite-gemini3",
+      "args": {
+        "body": {
+          "source": "makersuite",
+          "model": "gemini-3",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": true,
+        "audio": true
+      }
+    },
+    {
+      "id": "makersuite-gemma",
+      "args": {
+        "body": {
+          "source": "makersuite",
+          "model": "gemma-3-27b",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "vertex-gemini25",
+      "args": {
+        "body": {
+          "source": "vertexai",
+          "model": "gemini-2.5-flash",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": true,
+        "audio": true
+      }
+    },
+    {
+      "id": "openrouter-metadata-image",
+      "args": {
+        "body": {
+          "source": "openrouter",
+          "model": "custom-vl",
+          "modalities": {
+            "vision": true
+          }
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "openrouter-no-metadata",
+      "args": {
+        "body": {
+          "source": "openrouter",
+          "model": "custom-vl",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "custom-always",
+      "args": {
+        "body": {
+          "source": "custom",
+          "model": "anything",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": true
+      }
+    },
+    {
+      "id": "mistral-pixtral",
+      "args": {
+        "body": {
+          "source": "mistralai",
+          "model": "pixtral-12b",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "mistral-metadata",
+      "args": {
+        "body": {
+          "source": "mistralai",
+          "model": "custom-vl",
+          "modalities": {
+            "vision": true
+          }
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "cohere-aya",
+      "args": {
+        "body": {
+          "source": "cohere",
+          "model": "c4ai-aya-vision",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "xai-grok4",
+      "args": {
+        "body": {
+          "source": "xai",
+          "model": "grok-4",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "moonshot-kimi",
+      "args": {
+        "body": {
+          "source": "moonshot",
+          "model": "kimi-k2.5",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "moonshot-metadata",
+      "args": {
+        "body": {
+          "source": "moonshot",
+          "model": "custom-vl",
+          "modalities": {
+            "vision": true
+          }
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "zai-glm5v",
+      "args": {
+        "body": {
+          "source": "zai",
+          "model": "glm-5v-turbo",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": true,
+        "audio": false
+      }
+    },
+    {
+      "id": "siliconflow-qwen3vl",
+      "args": {
+        "body": {
+          "source": "siliconflow",
+          "model": "Qwen/Qwen3-VL-8B-Instruct",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "workers-metadata",
+      "args": {
+        "body": {
+          "source": "workers",
+          "model": "cf-vl",
+          "modalities": {
+            "vision": true
+          }
+        }
+      },
+      "expected": {
+        "image": true,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "workers-no-metadata",
+      "args": {
+        "body": {
+          "source": "workers",
+          "model": "cf-vl",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    },
+    {
+      "id": "unknown-source",
+      "args": {
+        "body": {
+          "source": "kobold",
+          "model": "x",
+          "modalities": {}
+        }
+      },
+      "expected": {
+        "image": false,
+        "video": false,
+        "audio": false
+      }
+    }
+  ]
+}

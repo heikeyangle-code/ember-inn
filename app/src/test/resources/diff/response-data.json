@@ -1,0 +1,533 @@
+{
+  "source": "extractMessageFromData/extractJsonFromData",
+  "cases": [
+    {
+      "id": "msg-string",
+      "args": {
+        "body": {
+          "method": "message",
+          "data": "plain text"
+        }
+      },
+      "expected": "plain text"
+    },
+    {
+      "id": "msg-kobold",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "kobold",
+          "data": {
+            "results": [
+              {
+                "text": "kobold text"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "kobold text"
+    },
+    {
+      "id": "msg-koboldhorde",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "koboldhorde",
+          "data": {
+            "text": "horde text"
+          }
+        }
+      },
+      "expected": "horde text"
+    },
+    {
+      "id": "msg-textgen-choice-text",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": {
+            "choices": [
+              {
+                "text": "choice text"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "choice text"
+    },
+    {
+      "id": "msg-textgen-choice-message",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "choice msg"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "choice msg"
+    },
+    {
+      "id": "msg-textgen-content",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": {
+            "content": "content field"
+          }
+        }
+      },
+      "expected": "content field"
+    },
+    {
+      "id": "msg-textgen-response",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": {
+            "response": "response field"
+          }
+        }
+      },
+      "expected": "response field"
+    },
+    {
+      "id": "msg-textgen-index",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": [
+            {
+              "content": "index field"
+            }
+          ]
+        }
+      },
+      "expected": "index field"
+    },
+    {
+      "id": "msg-textgen-missing",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "textgenerationwebui",
+          "data": {}
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "msg-novel",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "novel",
+          "data": {
+            "output": "novel text"
+          }
+        }
+      },
+      "expected": "novel text"
+    },
+    {
+      "id": "msg-openai-content-multi",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "content": [
+              {
+                "type": "text",
+                "text": "one"
+              },
+              {
+                "type": "image"
+              },
+              {
+                "type": "text",
+                "text": "two"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "one\n\ntwo"
+    },
+    {
+      "id": "msg-openai-content-empty",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "content": []
+          }
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "msg-openai-choice-message",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "assistant"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "assistant"
+    },
+    {
+      "id": "msg-openai-choice-text",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "choices": [
+              {
+                "text": "choice text"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "choice text"
+    },
+    {
+      "id": "msg-openai-data-text",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "text": "data text"
+          }
+        }
+      },
+      "expected": "data text"
+    },
+    {
+      "id": "msg-openai-message-content",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "message": {
+              "content": [
+                {
+                  "text": "part text"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expected": "part text"
+    },
+    {
+      "id": "msg-openai-tool-plan",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {
+            "message": {
+              "tool_plan": "plan text"
+            }
+          }
+        }
+      },
+      "expected": "plan text"
+    },
+    {
+      "id": "msg-openai-missing",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "openai",
+          "data": {}
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "msg-default",
+      "args": {
+        "body": {
+          "method": "message",
+          "activeApi": "unknown",
+          "data": {
+            "text": "ignored"
+          }
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "json-non-openai",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "kobold",
+          "data": {
+            "text": "x"
+          }
+        }
+      },
+      "expected": "{}"
+    },
+    {
+      "id": "json-openai-object",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "{\"a\":1}"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "{\"a\":1}"
+    },
+    {
+      "id": "json-openai-array",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "[1,2,3]"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "[1,2,3]"
+    },
+    {
+      "id": "json-openai-string",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "\"hi\""
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "\"hi\""
+    },
+    {
+      "id": "json-openai-invalid-raw",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "not json"
+                }
+              }
+            ]
+          },
+          "returnInvalidJson": true
+        }
+      },
+      "expected": "not json"
+    },
+    {
+      "id": "json-openai-invalid-default",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "openai",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "not json"
+                }
+              }
+            ]
+          },
+          "returnInvalidJson": false
+        }
+      },
+      "expected": "{}"
+    },
+    {
+      "id": "json-perplexity-valid",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "perplexity",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "{\"ok\":true}"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "{\"ok\":true}"
+    },
+    {
+      "id": "json-perplexity-invalid-raw",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "perplexity",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "bad"
+                }
+              }
+            ]
+          },
+          "returnInvalidJson": true
+        }
+      },
+      "expected": "bad"
+    },
+    {
+      "id": "json-claude-tool-object",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "claude",
+          "data": {
+            "content": [
+              {
+                "type": "text",
+                "text": "x"
+              },
+              {
+                "type": "tool_use",
+                "input": {
+                  "query": "q"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "{\"query\":\"q\"}"
+    },
+    {
+      "id": "json-claude-tool-array",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "claude",
+          "data": {
+            "content": [
+              {
+                "type": "tool_use",
+                "input": [
+                  1,
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "expected": "[1,2]"
+    },
+    {
+      "id": "json-claude-no-tool",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "claude",
+          "data": {
+            "content": [
+              {
+                "type": "text",
+                "text": "x"
+              }
+            ]
+          }
+        }
+      },
+      "expected": "{}"
+    },
+    {
+      "id": "json-groq-valid",
+      "args": {
+        "body": {
+          "method": "json",
+          "mainApi": "openai",
+          "chatCompletionSource": "groq",
+          "data": {
+            "choices": [
+              {
+                "message": {
+                  "content": "{\"x\":2}"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": "{\"x\":2}"
+    }
+  ]
+}

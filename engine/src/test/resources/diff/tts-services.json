@@ -1,0 +1,753 @@
+{
+  "cases": [
+    {
+      "id": "001-elevenlabs-defaults-turbo",
+      "kind": "elevenlabs",
+      "args": {
+        "settings": {
+          "stability": 0.75,
+          "similarity_boost": 0.75,
+          "style_exaggeration": 0,
+          "speaker_boost": true,
+          "speed": 1,
+          "model": "eleven_turbo_v2_5"
+        },
+        "text": "hello world",
+        "voiceId": "21m00Tcm4TlvDq8ikWAM"
+      },
+      "expected": {
+        "voiceId": "21m00Tcm4TlvDq8ikWAM",
+        "request": {
+          "model_id": "eleven_turbo_v2_5",
+          "text": "hello world",
+          "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.75,
+            "speed": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "002-elevenlabs-v3-extended-settings",
+      "kind": "elevenlabs",
+      "args": {
+        "settings": {
+          "stability": 0.75,
+          "similarity_boost": 0.75,
+          "style_exaggeration": 0.5,
+          "speaker_boost": false,
+          "speed": 1,
+          "model": "eleven_v3"
+        },
+        "text": "hi",
+        "voiceId": "vID"
+      },
+      "expected": {
+        "voiceId": "vID",
+        "request": {
+          "model_id": "eleven_v3",
+          "text": "hi",
+          "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.75,
+            "speed": 1,
+            "style": 0.5,
+            "use_speaker_boost": false
+          }
+        }
+      }
+    },
+    {
+      "id": "003-elevenlabs-multilingual-v2-extended",
+      "kind": "elevenlabs",
+      "args": {
+        "settings": {
+          "stability": 0.75,
+          "similarity_boost": 0.75,
+          "style_exaggeration": 0,
+          "speaker_boost": true,
+          "speed": 1,
+          "model": "eleven_multilingual_v2"
+        },
+        "text": "bonjour",
+        "voiceId": "v"
+      },
+      "expected": {
+        "voiceId": "v",
+        "request": {
+          "model_id": "eleven_multilingual_v2",
+          "text": "bonjour",
+          "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.75,
+            "speed": 1,
+            "style": 0,
+            "use_speaker_boost": true
+          }
+        }
+      }
+    },
+    {
+      "id": "004-elevenlabs-turbo-no-extended",
+      "kind": "elevenlabs",
+      "args": {
+        "settings": {
+          "stability": 0.75,
+          "similarity_boost": 0.75,
+          "style_exaggeration": 0,
+          "speaker_boost": true,
+          "speed": 1,
+          "model": "eleven_turbo_v2_5"
+        },
+        "text": "x",
+        "voiceId": "y"
+      },
+      "expected": {
+        "voiceId": "y",
+        "request": {
+          "model_id": "eleven_turbo_v2_5",
+          "text": "x",
+          "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.75,
+            "speed": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "005-elevenlabs-unicode-text",
+      "kind": "elevenlabs",
+      "args": {
+        "settings": {
+          "stability": 0.75,
+          "similarity_boost": 0.75,
+          "style_exaggeration": 0,
+          "speaker_boost": true,
+          "speed": 1,
+          "model": "eleven_turbo_v2_5"
+        },
+        "text": "你好，世界！",
+        "voiceId": "vid"
+      },
+      "expected": {
+        "voiceId": "vid",
+        "request": {
+          "model_id": "eleven_turbo_v2_5",
+          "text": "你好，世界！",
+          "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.75,
+            "speed": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "006-openai-defaults",
+      "kind": "openai",
+      "args": {
+        "settings": {
+          "model": "tts-1",
+          "speed": 1
+        },
+        "inputText": "hello",
+        "voiceId": "alloy",
+        "characterName": null,
+        "characterInstructions": ""
+      },
+      "expected": {
+        "text": "hello",
+        "voice": "alloy",
+        "model": "tts-1",
+        "speed": 1
+      }
+    },
+    {
+      "id": "007-openai-gpt4o-mini-with-instructions",
+      "kind": "openai",
+      "args": {
+        "settings": {
+          "model": "gpt-4o-mini-tts",
+          "speed": 1
+        },
+        "inputText": "hi",
+        "voiceId": "nova",
+        "characterName": "Alice",
+        "characterInstructions": "Speak cheerfully"
+      },
+      "expected": {
+        "text": "hi",
+        "voice": "nova",
+        "model": "gpt-4o-mini-tts",
+        "speed": 1,
+        "instructions": "Speak cheerfully"
+      }
+    },
+    {
+      "id": "008-openai-gpt4o-mini-no-character",
+      "kind": "openai",
+      "args": {
+        "settings": {
+          "model": "gpt-4o-mini-tts",
+          "speed": 1
+        },
+        "inputText": "hi",
+        "voiceId": "nova",
+        "characterName": null,
+        "characterInstructions": ""
+      },
+      "expected": {
+        "text": "hi",
+        "voice": "nova",
+        "model": "gpt-4o-mini-tts",
+        "speed": 1
+      }
+    },
+    {
+      "id": "009-openai-gpt4o-mini-blank-instructions",
+      "kind": "openai",
+      "args": {
+        "settings": {
+          "model": "gpt-4o-mini-tts",
+          "speed": 1
+        },
+        "inputText": "hi",
+        "voiceId": "nova",
+        "characterName": "Alice",
+        "characterInstructions": "   "
+      },
+      "expected": {
+        "text": "hi",
+        "voice": "nova",
+        "model": "gpt-4o-mini-tts",
+        "speed": 1
+      }
+    },
+    {
+      "id": "010-openai-tts-1hd-never-instructions",
+      "kind": "openai",
+      "args": {
+        "settings": {
+          "model": "tts-1-hd",
+          "speed": 2
+        },
+        "inputText": "x",
+        "voiceId": "echo",
+        "characterName": "Alice",
+        "characterInstructions": "should not appear"
+      },
+      "expected": {
+        "text": "x",
+        "voice": "echo",
+        "model": "tts-1-hd",
+        "speed": 2
+      }
+    },
+    {
+      "id": "011-edge-defaults",
+      "kind": "edge",
+      "args": {
+        "settings": {
+          "rate": 0
+        },
+        "inputText": "hello",
+        "voiceId": "en-US-AriaNeural"
+      },
+      "expected": {
+        "text": "hello",
+        "voice": "en-US-AriaNeural",
+        "rate": 0
+      }
+    },
+    {
+      "id": "012-edge-rate-positive",
+      "kind": "edge",
+      "args": {
+        "settings": {
+          "rate": 1.5
+        },
+        "inputText": "faster",
+        "voiceId": "zh-CN-XiaoxiaoNeural"
+      },
+      "expected": {
+        "text": "faster",
+        "voice": "zh-CN-XiaoxiaoNeural",
+        "rate": 1.5
+      }
+    },
+    {
+      "id": "013-azure-defaults",
+      "kind": "azure",
+      "args": {
+        "settings": {
+          "region": "westus"
+        },
+        "text": "hello",
+        "voiceId": "en-US-AriaNeural"
+      },
+      "expected": {
+        "text": "hello",
+        "voice": "en-US-AriaNeural",
+        "region": "westus"
+      }
+    },
+    {
+      "id": "014-azure-region-asia",
+      "kind": "azure",
+      "args": {
+        "settings": {
+          "region": "eastasia"
+        },
+        "text": "你好",
+        "voiceId": "zh-CN-XiaoxiaoNeural"
+      },
+      "expected": {
+        "text": "你好",
+        "voice": "zh-CN-XiaoxiaoNeural",
+        "region": "eastasia"
+      }
+    },
+    {
+      "id": "015-novel-short",
+      "kind": "novel",
+      "args": {
+        "settings": {},
+        "inputText": "hello world",
+        "voiceId": "Ligeia"
+      },
+      "expected": {
+        "text": "hello world",
+        "voice": "Ligeia"
+      }
+    },
+    {
+      "id": "016-novel-long-split",
+      "kind": "novel",
+      "args": {
+        "settings": {},
+        "inputText": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "voiceId": "Orea"
+      },
+      "expected": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "voice": "Orea"
+      }
+    },
+    {
+      "id": "017-novel-multichunk-delimiters",
+      "kind": "novel",
+      "args": {
+        "settings": {},
+        "inputText": "word1 word2 word3\nword4 word5",
+        "voiceId": "Lim"
+      },
+      "expected": {
+        "text": "word1 word2 word3\nword4 word5",
+        "voice": "Lim"
+      }
+    },
+    {
+      "id": "018-minimax-defaults-fallback",
+      "kind": "minimax",
+      "args": {
+        "settings": {
+          "apiHost": "https://api.minimax.io",
+          "model": "",
+          "speed": "",
+          "volume": "",
+          "pitch": "",
+          "audioSampleRate": "",
+          "bitrate": "",
+          "format": ""
+        },
+        "inputText": "hello",
+        "voiceId": "voice1",
+        "language": "en_US"
+      },
+      "expected": {
+        "text": "hello",
+        "voiceId": "voice1",
+        "apiHost": "https://api.minimax.io",
+        "model": "speech-02-hd",
+        "speed": 1,
+        "volume": 50,
+        "pitch": 0,
+        "audioSampleRate": 32000,
+        "bitrate": 128000,
+        "format": "mp3",
+        "language": "en_US"
+      }
+    },
+    {
+      "id": "019-minimax-clamp-speed",
+      "kind": "minimax",
+      "args": {
+        "settings": {
+          "apiHost": "https://api.minimax.io",
+          "model": "",
+          "speed": 10,
+          "volume": "",
+          "pitch": "",
+          "audioSampleRate": "",
+          "bitrate": "",
+          "format": ""
+        },
+        "inputText": "x",
+        "voiceId": "v",
+        "language": null
+      },
+      "expected": {
+        "text": "x",
+        "voiceId": "v",
+        "apiHost": "https://api.minimax.io",
+        "model": "speech-02-hd",
+        "speed": 2,
+        "volume": 50,
+        "pitch": 0,
+        "audioSampleRate": 32000,
+        "bitrate": 128000,
+        "format": "mp3",
+        "language": null
+      }
+    },
+    {
+      "id": "020-minimax-clamp-pitch-negative",
+      "kind": "minimax",
+      "args": {
+        "settings": {
+          "apiHost": "https://api.minimax.io",
+          "model": "",
+          "speed": "",
+          "volume": "",
+          "pitch": -500,
+          "audioSampleRate": "",
+          "bitrate": "",
+          "format": ""
+        },
+        "inputText": "x",
+        "voiceId": "v",
+        "language": "zh_CN"
+      },
+      "expected": {
+        "text": "x",
+        "voiceId": "v",
+        "apiHost": "https://api.minimax.io",
+        "model": "speech-02-hd",
+        "speed": 1,
+        "volume": 50,
+        "pitch": -100,
+        "audioSampleRate": 32000,
+        "bitrate": 128000,
+        "format": "mp3",
+        "language": "zh_CN"
+      }
+    },
+    {
+      "id": "021-minimax-explicit-model",
+      "kind": "minimax",
+      "args": {
+        "settings": {
+          "apiHost": "https://api.minimax.io",
+          "model": "speech-02-turbo",
+          "speed": "",
+          "volume": "",
+          "pitch": "",
+          "audioSampleRate": "",
+          "bitrate": "",
+          "format": ""
+        },
+        "inputText": "hi",
+        "voiceId": "v",
+        "language": "ja_JP"
+      },
+      "expected": {
+        "text": "hi",
+        "voiceId": "v",
+        "apiHost": "https://api.minimax.io",
+        "model": "speech-02-turbo",
+        "speed": 1,
+        "volume": 50,
+        "pitch": 0,
+        "audioSampleRate": 32000,
+        "bitrate": 128000,
+        "format": "mp3",
+        "language": "ja_JP"
+      }
+    },
+    {
+      "id": "022-volcengine-defaults",
+      "kind": "volcengine",
+      "args": {
+        "settings": {
+          "provider_endpoint": "https://openspeech.bytedance.com",
+          "resource_id": "volcservice_tts",
+          "speed": 1
+        },
+        "text": "hello",
+        "voiceSpeaker": "zh_female_xiaohe"
+      },
+      "expected": {
+        "provider_endpoint": "https://openspeech.bytedance.com",
+        "resource_id": "volcservice_tts",
+        "text": "hello",
+        "voice_speaker": "zh_female_xiaohe",
+        "speed": 1
+      }
+    },
+    {
+      "id": "023-volcengine-unicode",
+      "kind": "volcengine",
+      "args": {
+        "settings": {
+          "provider_endpoint": "https://x.com",
+          "resource_id": "rid",
+          "speed": 0.8
+        },
+        "text": "你好",
+        "voiceSpeaker": "saturn_zh_female_keainvsheng_tob"
+      },
+      "expected": {
+        "provider_endpoint": "https://x.com",
+        "resource_id": "rid",
+        "text": "你好",
+        "voice_speaker": "saturn_zh_female_keainvsheng_tob",
+        "speed": 0.8
+      }
+    },
+    {
+      "id": "024-chutes-defaults",
+      "kind": "chutes",
+      "args": {
+        "settings": {
+          "speed": 0
+        },
+        "text": "hello",
+        "voiceId": ""
+      },
+      "expected": {
+        "input": "hello",
+        "voice": "af_heart",
+        "speed": 1
+      }
+    },
+    {
+      "id": "025-chutes-explicit-voice",
+      "kind": "chutes",
+      "args": {
+        "settings": {
+          "speed": 1.5
+        },
+        "text": "hi",
+        "voiceId": "am_adam"
+      },
+      "expected": {
+        "input": "hi",
+        "voice": "am_adam",
+        "speed": 1.5
+      }
+    },
+    {
+      "id": "026-chutes-speed-zero-fallback",
+      "kind": "chutes",
+      "args": {
+        "settings": {
+          "speed": 0
+        },
+        "text": "x",
+        "voiceId": "af_heart"
+      },
+      "expected": {
+        "input": "x",
+        "voice": "af_heart",
+        "speed": 1
+      }
+    },
+    {
+      "id": "027-pollinations-defaults",
+      "kind": "pollinations",
+      "args": {
+        "settings": {
+          "model": "openai-audio"
+        },
+        "text": "hello",
+        "voiceId": "alloy"
+      },
+      "expected": {
+        "model": "openai-audio",
+        "text": "Say exactly this and nothing else:\nhello",
+        "voice": "alloy"
+      }
+    },
+    {
+      "id": "028-pollinations-long-split",
+      "kind": "pollinations",
+      "args": {
+        "settings": {
+          "model": "openai-audio"
+        },
+        "text": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+        "voiceId": "echo"
+      },
+      "expected": {
+        "model": "openai-audio",
+        "text": "Say exactly this and nothing else:\nyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+        "voice": "echo"
+      }
+    },
+    {
+      "id": "029-pollinations-prefix-semantic",
+      "kind": "pollinations",
+      "args": {
+        "settings": {
+          "model": "m"
+        },
+        "text": "say hi",
+        "voiceId": "v"
+      },
+      "expected": {
+        "model": "m",
+        "text": "Say exactly this and nothing else:\nsay hi",
+        "voice": "v"
+      }
+    },
+    {
+      "id": "030-google-native-no-reverse-proxy",
+      "kind": "google-native",
+      "args": {
+        "settings": {
+          "model": "en-US-Standard-A",
+          "apiType": "generate"
+        },
+        "text": "hello",
+        "voiceId": "en-US-Standard-A",
+        "oaiSettings": {
+          "reverse_proxy": "",
+          "proxy_password": "",
+          "vertexai_auth_mode": "auto",
+          "vertexai_region": "us-central1",
+          "vertexai_express_project_id": ""
+        }
+      },
+      "expected": {
+        "text": "hello",
+        "voice": "en-US-Standard-A",
+        "model": "en-US-Standard-A",
+        "api": "generate",
+        "reverse_proxy": "",
+        "proxy_password": "",
+        "vertexai_auth_mode": "auto",
+        "vertexai_region": "us-central1",
+        "vertexai_express_project_id": ""
+      }
+    },
+    {
+      "id": "031-google-native-with-reverse-proxy",
+      "kind": "google-native",
+      "args": {
+        "settings": {
+          "model": "en-US-Standard-A",
+          "apiType": "generate"
+        },
+        "text": "hi",
+        "voiceId": "v",
+        "oaiSettings": {
+          "reverse_proxy": "https://proxy.example.com/v1",
+          "proxy_password": "secret",
+          "vertexai_auth_mode": "express",
+          "vertexai_region": "global",
+          "vertexai_express_project_id": "my-proj"
+        }
+      },
+      "expected": {
+        "text": "hi",
+        "voice": "v",
+        "model": "en-US-Standard-A",
+        "api": "generate",
+        "reverse_proxy": "https://proxy.example.com/v1",
+        "proxy_password": "secret",
+        "vertexai_auth_mode": "express",
+        "vertexai_region": "global",
+        "vertexai_express_project_id": "my-proj"
+      }
+    },
+    {
+      "id": "032-google-native-invalid-reverse-proxy",
+      "kind": "google-native",
+      "args": {
+        "settings": {
+          "model": "en-US-Standard-A",
+          "apiType": "generate"
+        },
+        "text": "x",
+        "voiceId": "v",
+        "oaiSettings": {
+          "reverse_proxy": "not-a-url",
+          "proxy_password": "pw",
+          "vertexai_auth_mode": "auto",
+          "vertexai_region": "r",
+          "vertexai_express_project_id": "p"
+        }
+      },
+      "expected": {
+        "text": "x",
+        "voice": "v",
+        "model": "en-US-Standard-A",
+        "api": "generate",
+        "reverse_proxy": "",
+        "proxy_password": "",
+        "vertexai_auth_mode": "auto",
+        "vertexai_region": "r",
+        "vertexai_express_project_id": "p"
+      }
+    },
+    {
+      "id": "033-google-translate-short",
+      "kind": "google-translate",
+      "args": {
+        "settings": {},
+        "text": "hello world",
+        "voiceId": "en-US"
+      },
+      "expected": {
+        "text": [
+          "hello world"
+        ],
+        "voice": "en-US"
+      }
+    },
+    {
+      "id": "034-google-translate-split-200",
+      "kind": "google-translate",
+      "args": {
+        "settings": {},
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "voiceId": "zh-CN"
+      },
+      "expected": {
+        "text": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        "voice": "zh-CN"
+      }
+    },
+    {
+      "id": "035-google-translate-multiline-split",
+      "kind": "google-translate",
+      "args": {
+        "settings": {},
+        "text": "line1\n\nline2\nline3",
+        "voiceId": "ja-JP"
+      },
+      "expected": {
+        "text": [
+          "line1\n\nline2\nline3"
+        ],
+        "voice": "ja-JP"
+      }
+    }
+  ]
+}

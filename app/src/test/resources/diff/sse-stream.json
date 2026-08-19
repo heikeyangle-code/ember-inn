@@ -1,0 +1,576 @@
+{
+  "source": "sse-stream.js parseStreamData",
+  "cases": [
+    {
+      "id": "openai-delta",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": "hi"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": "h"
+                }
+              }
+            ]
+          },
+          "chunk": "h"
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": "i"
+                }
+              }
+            ]
+          },
+          "chunk": "i"
+        }
+      ]
+    },
+    {
+      "id": "openai-delta-null-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": null
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
+      "id": "openai-delta-empty-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": ""
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
+      "id": "openai-delta-null-delta",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": null
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Cannot read properties of null (reading 'text')"
+      }
+    },
+    {
+      "id": "openai-delta-missing-choices",
+      "args": {
+        "body": {
+          "json": {
+            "choices": []
+          }
+        }
+      },
+      "expected": {
+        "error": "Not a primary swipe"
+      }
+    },
+    {
+      "id": "anthropic-text",
+      "args": {
+        "body": {
+          "json": {
+            "delta": {
+              "text": "yo"
+            }
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "delta": {
+              "text": "y"
+            }
+          },
+          "chunk": "y"
+        },
+        {
+          "data": {
+            "delta": {
+              "text": "o"
+            }
+          },
+          "chunk": "o"
+        }
+      ]
+    },
+    {
+      "id": "anthropic-thinking",
+      "args": {
+        "body": {
+          "json": {
+            "delta": {
+              "thinking": "re"
+            }
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "delta": {
+              "thinking": "r"
+            }
+          },
+          "chunk": "r",
+          "reasoning": true
+        },
+        {
+          "data": {
+            "delta": {
+              "thinking": "e"
+            }
+          },
+          "chunk": "e",
+          "reasoning": true
+        }
+      ]
+    },
+    {
+      "id": "gemini-parts",
+      "args": {
+        "body": {
+          "json": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "text": "ab"
+                    },
+                    {
+                      "text": "cd"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "text": "a"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "a",
+          "reasoning": false
+        },
+        {
+          "data": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "text": "b\n\n"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "b\n\n",
+          "reasoning": false
+        },
+        {
+          "data": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "text": "c"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "c",
+          "reasoning": false
+        },
+        {
+          "data": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "text": "d"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "d",
+          "reasoning": false
+        }
+      ]
+    },
+    {
+      "id": "token",
+      "args": {
+        "body": {
+          "json": {
+            "token": "ab"
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "token": "a"
+          },
+          "chunk": "a"
+        },
+        {
+          "data": {
+            "token": "b"
+          },
+          "chunk": "b"
+        }
+      ]
+    },
+    {
+      "id": "content",
+      "args": {
+        "body": {
+          "json": {
+            "content": "cd",
+            "object": "completion"
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "content": "c",
+            "object": "completion"
+          },
+          "chunk": "c"
+        },
+        {
+          "data": {
+            "content": "d",
+            "object": "completion"
+          },
+          "chunk": "d"
+        }
+      ]
+    },
+    {
+      "id": "choices-text",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "text": "xy"
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "text": "x"
+              }
+            ]
+          },
+          "chunk": "x"
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "text": "y"
+              }
+            ]
+          },
+          "chunk": "y"
+        }
+      ]
+    },
+    {
+      "id": "gemini-tool-call",
+      "args": {
+        "body": {
+          "json": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "functionCall": {
+                        "name": "x"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "candidates": [
+              {
+                "index": 0,
+                "content": {
+                  "parts": [
+                    {
+                      "functionCall": {
+                        "name": "x"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": ""
+        }
+      ]
+    },
+    {
+      "id": "openai-delta-array-thinking",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "re"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "r"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "r",
+          "reasoning": true
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "thinking": [
+                        {
+                          "text": "e"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "chunk": "e",
+          "reasoning": true
+        }
+      ]
+    },
+    {
+      "id": "openai-delta-array-text",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "hi"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Unknown event data format"
+      }
+    },
+    {
+      "id": "openai-message-content",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "hi"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": [
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "h"
+                }
+              }
+            ]
+          },
+          "chunk": "h"
+        },
+        {
+          "data": {
+            "choices": [
+              {
+                "index": 0,
+                "message": {
+                  "content": "i"
+                }
+              }
+            ]
+          },
+          "chunk": "i"
+        }
+      ]
+    },
+    {
+      "id": "not-primary",
+      "args": {
+        "body": {
+          "json": {
+            "choices": [
+              {
+                "index": 1,
+                "delta": {
+                  "content": "x"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "Not a primary swipe"
+      }
+    }
+  ]
+}

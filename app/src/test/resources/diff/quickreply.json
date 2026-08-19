@@ -1,0 +1,534 @@
+{
+  "generatedAt": "2026-08-19T19:22:55.221Z",
+  "source": "quick-reply/index.js L55-L104 (migrateSet) + AutoExecuteHandler + QuickReplySettings visibleSetNames",
+  "cases": [
+    {
+      "id": 0,
+      "name": "qr-migrate-v1-version",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": 2
+    },
+    {
+      "id": 1,
+      "name": "qr-migrate-v1-set-fields",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": {
+        "disableSend": true,
+        "placeBeforeInput": false,
+        "injectInput": true
+      }
+    },
+    {
+      "id": 2,
+      "name": "qr-migrate-v1-slot0-id",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": 1
+    },
+    {
+      "id": 3,
+      "name": "qr-migrate-v1-slot0-fields",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": {
+        "id": 1,
+        "label": "hi",
+        "title": "greet",
+        "message": "/hello",
+        "isHidden": true,
+        "executeOnStartup": true,
+        "executeOnUser": false,
+        "executeOnAi": true,
+        "preventAutoExecute": true,
+        "automationId": "a1",
+        "placeBeforeInput": true,
+        "injectInput": true,
+        "disableSend": true
+      }
+    },
+    {
+      "id": 4,
+      "name": "qr-migrate-v1-slot1-defaults",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": {
+        "id": 2,
+        "label": "",
+        "title": "",
+        "message": "/bye",
+        "isHidden": false,
+        "executeOnStartup": false,
+        "executeOnUser": false,
+        "executeOnAi": false,
+        "preventAutoExecute": false,
+        "automationId": "",
+        "placeBeforeInput": false,
+        "injectInput": false,
+        "disableSend": false
+      }
+    },
+    {
+      "id": 5,
+      "name": "qr-migrate-v1-quickReplySlots-deleted",
+      "_tag": "migrateSet",
+      "input": {
+        "quickReplySlots": [
+          {
+            "mes": "/hello",
+            "label": "hi",
+            "title": "greet",
+            "hidden": true,
+            "autoExecute_appStartup": true,
+            "autoExecute_userMessage": false,
+            "autoExecute_botMessage": true,
+            "preventAutoExecute": true,
+            "automationId": "a1",
+            "placeBeforeInputEnabled": true,
+            "AutoInputInject": true,
+            "quickActionEnabled": true
+          },
+          {
+            "mes": "/bye"
+          }
+        ],
+        "quickActionEnabled": true,
+        "placeBeforeInputEnabled": false,
+        "AutoInputInject": true
+      },
+      "expected": null
+    },
+    {
+      "id": 6,
+      "name": "qr-migrate-v2-skip",
+      "_tag": "migrateSet",
+      "input": {
+        "version": 2,
+        "quickReplySlots": [
+          {
+            "mes": "/x",
+            "label": "x"
+          }
+        ],
+        "disableSend": true,
+        "qrList": [
+          {
+            "id": 5,
+            "label": "keep",
+            "message": "/keep"
+          }
+        ]
+      },
+      "expected": {
+        "version": 2,
+        "qrList0": {
+          "id": 5,
+          "label": "keep",
+          "message": "/keep"
+        },
+        "disableSend": true,
+        "quickReplySlots": [
+          {
+            "mes": "/x",
+            "label": "x"
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "name": "qr-visible-set-names",
+      "_tag": "visibleSetNames",
+      "input": {
+        "isEnabled": true,
+        "isCombined": false,
+        "config": {
+          "setList": [
+            {
+              "set": "A",
+              "isVisible": true
+            },
+            {
+              "set": "B",
+              "isVisible": false
+            },
+            {
+              "set": "C",
+              "isVisible": true
+            }
+          ]
+        }
+      },
+      "expected": [
+        "A",
+        "C"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "qr-visible-default-set",
+      "_tag": "visibleSetNames",
+      "input": {
+        "isEnabled": false,
+        "config": {
+          "setList": [
+            {
+              "set": "Default",
+              "isVisible": true
+            }
+          ]
+        }
+      },
+      "expected": [
+        "Default"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "qr-autoexec-visible-set",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "user",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "A"
+      },
+      "expected": true
+    },
+    {
+      "id": 10,
+      "name": "qr-autoexec-hidden-set",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "user",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "B"
+      },
+      "expected": false
+    },
+    {
+      "id": 11,
+      "name": "qr-autoexec-hidden-slot",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": true,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "startup",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "A"
+      },
+      "expected": false
+    },
+    {
+      "id": 12,
+      "name": "qr-autoexec-prevent",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": true,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "ai",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "A"
+      },
+      "expected": false
+    },
+    {
+      "id": 13,
+      "name": "qr-autoexec-disabled",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "user",
+        "settings": {
+          "isEnabled": false,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "A"
+      },
+      "expected": false
+    },
+    {
+      "id": 14,
+      "name": "qr-autoexec-combined",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "user",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": true,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "B"
+      },
+      "expected": true
+    },
+    {
+      "id": 15,
+      "name": "qr-autoexec-no-phase",
+      "_tag": "shouldAutoExecute",
+      "input": {
+        "slot": {
+          "isHidden": false,
+          "preventAutoExecute": false,
+          "executeOnStartup": true,
+          "executeOnUser": true,
+          "executeOnAi": true
+        },
+        "phase": "unknown",
+        "settings": {
+          "isEnabled": true,
+          "isCombined": false,
+          "config": {
+            "setList": [
+              {
+                "set": "A",
+                "isVisible": true
+              },
+              {
+                "set": "B",
+                "isVisible": false
+              }
+            ]
+          }
+        },
+        "setName": "A"
+      },
+      "expected": false
+    }
+  ]
+}

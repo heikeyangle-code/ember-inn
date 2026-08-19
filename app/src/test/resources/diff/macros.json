@@ -1,0 +1,1222 @@
+{
+  "generated": "2026-08-18T10:42:45.094Z",
+  "source": "sillytavern-ref tests/frontend/MacroEngine.e2e.js",
+  "cases": [
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle normal double-colon separated unnamed argument",
+      "input": "Reversed: {{reverse::abc}}!",
+      "expected": "Reversed: cba!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle (legacy) colon separated unnamed argument",
+      "input": "Reversed: {{reverse:abc}}!",
+      "expected": "Reversed: cba!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle (legacy) colon separated argument as only one, even with more separators (double colon)",
+      "input": "Reversed: {{reverse:abc::def}}!",
+      "expected": "Reversed: fed::cba!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle (legacy) colon separated argument as only one, even with more separators (single colon)",
+      "input": "Reversed: {{reverse:abc:def}}!",
+      "expected": "Reversed: fed:cba!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle (legacy) whitespace separated unnamed argument",
+      "input": "Values: {{roll 1d1}}!",
+      "expected": "Values: 1!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unnamed arguments :: should handle (legacy) whitespace separated unnamed argument as only one, even with more separators (space)",
+      "input": "Values: {{reverse abc def}}!",
+      "expected": "Values: fed cba!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Nested macros :: should resolve nested macros inside arguments inside-out",
+      "input": "Result: {{setvar::test::0}}{{reverse::{{addvar::test::100}}{{getvar::test}}}}{{setvar::test::0}}",
+      "expected": "Result: 001",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Nested macros :: should resolve nested macros across multiple arguments",
+      "input": "Result: {{setvar::addvname::test}}{{addvar::{{getvar::addvname}}::{{setvar::test::5}}{{getvar::test}}}}{{getvar::test}}",
+      "expected": "Result: 10",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unknown macros :: should keep unknown macro syntax but resolve nested macros inside it",
+      "input": "Test: {{unknown::{{newline}}}}",
+      "expected": "Test: {{unknown::\n}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Unknown macros :: should keep surrounding text inside unknown macros intact",
+      "input": "Test: {{unknown::my {{newline}} example}}",
+      "expected": "Test: {{unknown::my \n example}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Comment macro :: should remove single-line comments with simple body",
+      "input": "Hello{{// comment}}World",
+      "expected": "HelloWorld",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Comment macro :: should accept non-word characters immediately after //",
+      "input": "A{{//!@#$%^&*()_+}}B",
+      "expected": "AB",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Comment macro :: should ignore additional // sequences inside the comment body",
+      "input": "X{{//comment with // extra // slashes}}Y",
+      "expected": "XY",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Comment macro :: should support multi-line comment bodies",
+      "input": "Start{{// line one\nline two\nline three}}End",
+      "expected": "StartEnd",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Trim macro :: should trim content inside scoped trim macro",
+      "input": "{{trim}}  hello world  {{/trim}}",
+      "expected": "hello world",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Trim macro :: should trim leading whitespace in scoped trim",
+      "input": "{{trim}}\n\n  content{{/trim}}",
+      "expected": "content",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Trim macro :: should trim trailing whitespace in scoped trim",
+      "input": "{{trim}}content  \n\n{{/trim}}",
+      "expected": "content",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Trim macro :: should handle scoped trim with macros inside",
+      "input": "{{trim}}  Hello {{user}}  {{/trim}}",
+      "expected": "Hello User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Trim macro :: should handle nested scoped trim",
+      "input": "{{trim}}  outer {{trim}}  inner  {{/trim}} outer  {{/trim}}",
+      "expected": "outer inner outer",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Legacy compatibility :: should strip trim macro and surrounding newlines (legacy behavior)",
+      "input": "foo\n\n{{trim}}\n\nbar",
+      "expected": "foobar",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Legacy compatibility :: should handle multiple trim macros in a single string",
+      "input": "A\n\n{{trim}}\n\nB\n\n{{trim}}\n\nC",
+      "expected": "ABC",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Legacy compatibility :: should support legacy <USER> marker via pre-processing",
+      "input": "Hello <USER>!",
+      "expected": "Hello User!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Legacy compatibility :: should support legacy <BOT> and <CHAR> markers via pre-processing",
+      "input": "Bot: <BOT>, Char: <CHAR>.",
+      "expected": "Bot: Character, Char: Character.",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Legacy compatibility :: should support legacy <GROUP> and <CHARIFNOTGROUP> markers via pre-processing (non-group fallback)",
+      "input": "Group: <GROUP>, CharIfNotGroup: <CHARIFNOTGROUP>.",
+      "expected": "Group: Character, CharIfNotGroup: Character.",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single opening brace inside macro arguments",
+      "input": "Test§ {{reverse::my { test}}",
+      "expected": "Test§ tset { ym",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single closing brace inside macro arguments",
+      "input": "Test§ {{reverse::my } test}}",
+      "expected": "Test§ tset } ym",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should treat dangling macro start as text and still evaluate subsequent macro",
+      "input": "Test {{ hehe {{user}}",
+      "expected": "Test {{ hehe User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should ignore invalid macro start but still evaluate following valid macro",
+      "input": "Test {{&& hehe {{user}}",
+      "expected": "Test {{&& hehe User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single opening brace immediately before a macro",
+      "input": "{{{char}}",
+      "expected": "{Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single closing brace immediately after a macro",
+      "input": "{{char}}}",
+      "expected": "Character}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow single braces around a macro",
+      "input": "{{{char}}}",
+      "expected": "{Character}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double opening braces immediately before a macro",
+      "input": "{{{{char}}",
+      "expected": "{{Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double closing braces immediately after a macro",
+      "input": "{{char}}}}",
+      "expected": "Character}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should allow double braces around a macro",
+      "input": "{{{{char}}}}",
+      "expected": "{{Character}}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should resolve nested macro inside argument with surrounding braces",
+      "input": "Result: {{reverse::pre-{ {{user}} }-post}}",
+      "expected": "Result: tsop-} resU {-erp",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle adjacent macros with no separator",
+      "input": "{{char}}{{user}}",
+      "expected": "CharacterUser",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle macros separated only by surrounding braces",
+      "input": "{{char}}{ {{user}} }",
+      "expected": "Character{ User }",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle Windows newlines with braces near macros",
+      "input": "Line1 {{char}}\r\n{Line2}",
+      "expected": "Line1 Character\r\n{Line2}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should keep stray closing braces and still evaluate following macro",
+      "input": "Foo }} {{user}}",
+      "expected": "Foo }} User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Bracket handling around macros :: should handle stray closing braces before macros as plain text",
+      "input": "Foo {{user}} }}",
+      "expected": "Foo User }}",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return content when condition is truthy string",
+      "input": "{{if::hello::shown}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return empty when condition is empty string",
+      "input": "{{if::::hidden}}",
+      "expected": "",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return empty when condition is \"false\"",
+      "input": "{{if::false::hidden}}",
+      "expected": "",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return empty when condition is \"off\"",
+      "input": "{{if::off::hidden}}",
+      "expected": "",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return empty when condition is \"0\"",
+      "input": "{{if::0::hidden}}",
+      "expected": "",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return content when condition is \"true\"",
+      "input": "{{if::true::shown}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with literal values :: should return content when condition is \"1\"",
+      "input": "{{if::1::shown}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with macro name resolution :: should resolve macro name and return content when macro returns truthy",
+      "input": "{{if char}}Name: {{char}}{{/if}}",
+      "expected": "Name: Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with macro name resolution :: should resolve macro name and return empty when macro returns empty",
+      "input": "{{if noop}}should not show{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with macro name resolution :: should not resolve non-existent macro names (treat as literal)",
+      "input": "{{if::notamacro::shown}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with macro name resolution :: should resolve user macro and show content",
+      "input": "{{if user}}Hello {{user}}{{/if}}",
+      "expected": "Hello User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with nested macros in condition :: should evaluate nested macro in condition (truthy)",
+      "input": "{{setvar::flag::yes}}{{if {{getvar::flag}}}}shown{{/if}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with nested macros in condition :: should evaluate nested macro in condition (falsy)",
+      "input": "{{setvar::flag::}}{{if {{getvar::flag}}}}hidden{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with nested macros in condition :: should evaluate nested macro in condition (false string)",
+      "input": "{{setvar::flag::false}}{{if {{getvar::flag}}}}hidden{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should work with scoped content (truthy)",
+      "input": "{{if yes}}This is the content{{/if}}",
+      "expected": "This is the content",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should work with scoped content (falsy)",
+      "input": "{{if::}}This should not show{{/if}}[after]",
+      "expected": "[after]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should handle macros inside scoped content",
+      "input": "{{if yes}}Hello {{user}}!{{/if}}",
+      "expected": "Hello User!",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should handle nested if macros",
+      "input": "{{if yes}}outer{{if yes}}inner{{/if}}{{/if}}",
+      "expected": "outerinner",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should handle nested if with outer false",
+      "input": "{{if::}}outer{{if yes}}inner{{/if}}{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/scoped usage :: should handle nested if with inner false",
+      "input": "{{if yes}}outer{{if::}}inner{{/if}}end{{/if}}",
+      "expected": "outerend",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with space-separated condition :: should work with space-separated condition (truthy)",
+      "input": "{{if something}}content{{/if}}",
+      "expected": "content",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with space-separated condition :: should resolve macro name with space-separated syntax",
+      "input": "{{if char}}{{char}} exists{{/if}}",
+      "expected": "Character exists",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should return then-branch when condition is truthy",
+      "input": "{{if yes}}then{{else}}else{{/if}}",
+      "expected": "then",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should return else-branch when condition is falsy",
+      "input": "{{if::}}then{{else}}else{{/if}}",
+      "expected": "else",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should return else-branch when condition is \"false\"",
+      "input": "{{if::false}}yes{{else}}no{{/if}}",
+      "expected": "no",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle macros in both branches",
+      "input": "{{if yes}}Hello {{user}}{{else}}Goodbye {{char}}{{/if}}",
+      "expected": "Hello User",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle macros in else branch when falsy",
+      "input": "{{if::}}Hello {{user}}{{else}}Goodbye {{char}}{{/if}}",
+      "expected": "Goodbye Character",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle nested if-else in then-branch",
+      "input": "{{if yes}}outer-then{{if yes}}inner-then{{else}}inner-else{{/if}}{{else}}outer-else{{/if}}",
+      "expected": "outer-theninner-then",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle nested if-else in else-branch",
+      "input": "{{if::}}outer-then{{else}}outer-else{{if yes}}inner-then{{else}}inner-else{{/if}}{{/if}}",
+      "expected": "outer-elseinner-then",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle deeply nested if-else",
+      "input": "{{if::}}A{{else}}B{{if::}}C{{else}}D{{/if}}{{/if}}",
+      "expected": "BD",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should return empty else-branch if not provided",
+      "input": "{{if::}}content{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should trim whitespace from branches",
+      "input": "{{if yes}}  then  {{else}}  else  {{/if}}",
+      "expected": "then",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should trim newlines from branches",
+      "input": "{{if yes}}\n  then\n{{else}}\n  else\n{{/if}}",
+      "expected": "then",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should trim else branch when selected",
+      "input": "{{if::}}\n  then\n{{else}}\n  else\n{{/if}}",
+      "expected": "else",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should resolve macro name in condition with else branch",
+      "input": "{{if char}}Has char{{else}}No char{{/if}}",
+      "expected": "Has char",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with {{else}} branch :: should handle empty macro returning else branch",
+      "input": "{{if noop}}Has value{{else}}Empty{{/if}}",
+      "expected": "Empty",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should invert truthy condition to falsy",
+      "input": "{{if !yes}}shown{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should invert falsy condition to truthy",
+      "input": "{{if !false}}shown{{/if}}",
+      "expected": "shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should invert empty string to truthy",
+      "input": "{{if::!}}not shown{{else}}shown{{/if}}",
+      "expected": "not shown",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should work with ! prefix and macro name",
+      "input": "{{if !noop}}No value{{/if}}",
+      "expected": "No value",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should work with ! prefix and truthy macro",
+      "input": "{{if !char}}No char{{else}}Has char{{/if}}",
+      "expected": "Has char",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should work with ! prefix and nested macro",
+      "input": "{{setvar::emptyVar::}}{{if !{{getvar::emptyVar}}}}Empty var{{/if}}",
+      "expected": "Empty var",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should NOT invert when ! comes from resolved value",
+      "input": "{{setvar::bangVar::!hello}}{{if {{getvar::bangVar}}}}Has value{{else}}No value{{/if}}",
+      "expected": "Has value",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should work with else branch on inverted condition",
+      "input": "{{if !yes}}then{{else}}else{{/if}}",
+      "expected": "else",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/{{if}} conditional macro/with inverted condition (!) :: should work with separator syntax",
+      "input": "{{if::!something}}shown{{/if}}[end]",
+      "expected": "[end]",
+      "local": null,
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should get local variable with . shorthand",
+      "input": "{{.myvar}}",
+      "expected": "hello",
+      "local": {
+        "myvar": "hello"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should get global variable with $ shorthand",
+      "input": "{{$myvar}}",
+      "expected": "world",
+      "local": null,
+      "global": {
+        "myvar": "world"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should set local variable with = shorthand",
+      "input": "{{.myvar = test}}Value: {{.myvar}}",
+      "expected": "Value: test",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should increment local variable with ++ shorthand",
+      "input": "{{.counter++}}",
+      "expected": "6",
+      "local": {
+        "counter": "5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should decrement global variable with -- shorthand",
+      "input": "{{$counter--}}",
+      "expected": "9",
+      "local": null,
+      "global": {
+        "counter": "10"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should add to local variable with += shorthand",
+      "input": "{{.myvar += 3}}Then: {{.myvar}}",
+      "expected": "Then: 10",
+      "local": {
+        "myvar": "7"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should support nested macro in variable value",
+      "input": "{{.greeting = Hello {{user}}}}{{.greeting}}",
+      "expected": "Hello User",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle whitespace in variable shorthand",
+      "input": "{{ .myvar = spaced }}{{.myvar}}",
+      "expected": "spaced",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle variable name with hyphens",
+      "input": "{{.my-var}}",
+      "expected": "hyphenated",
+      "local": {
+        "my-var": "hyphenated"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle variable name with underscores",
+      "input": "{{.my_var}}",
+      "expected": "underscored",
+      "local": {
+        "my_var": "underscored"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return empty string for non-existent variable",
+      "input": "Value:[{{.nonexistent}}]",
+      "expected": "Value:[]",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should increment non-existent variable starting from 0",
+      "input": "{{.newcounter++}}",
+      "expected": "1",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle multiple variable operations in sequence",
+      "input": "{{.x = 5}}{{.x++}}{{.x += 10}}{{.x}}",
+      "expected": "616",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should subtract from local variable with -= shorthand",
+      "input": "{{.myvar -= 3}}Then: {{.myvar}}",
+      "expected": "Then: 7",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should subtract from global variable with -= shorthand",
+      "input": "{{$myvar -= 5}}{{$myvar}}",
+      "expected": "15",
+      "local": null,
+      "global": {
+        "myvar": "20"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return default value with || when variable is falsy (empty)",
+      "input": "{{.myvar || fallback}}",
+      "expected": "fallback",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return default value with || when variable is falsy (zero)",
+      "input": "{{.myvar || fallback}}",
+      "expected": "fallback",
+      "local": {
+        "myvar": "0"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return variable value with || when truthy",
+      "input": "{{.myvar || fallback}}",
+      "expected": "existing",
+      "local": {
+        "myvar": "existing"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return default value with || when variable does not exist",
+      "input": "{{.nonexistent || default}}",
+      "expected": "default",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return default value with ?? when variable does not exist",
+      "input": "{{.myvar ?? fallback}}",
+      "expected": "fallback",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return empty string with ?? when variable exists but is empty",
+      "input": "[{{.myvar ?? fallback}}]",
+      "expected": "[]",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return zero with ?? when variable exists and is zero",
+      "input": "{{.myvar ?? fallback}}",
+      "expected": "0",
+      "local": {
+        "myvar": "0"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return variable value with ?? when it exists",
+      "input": "{{.myvar ?? fallback}}",
+      "expected": "value",
+      "local": {
+        "myvar": "value"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should set and return default with ||= when variable is falsy",
+      "input": "{{.myvar ||= newval}}{{.myvar}}",
+      "expected": "newvalnewval",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should not set and return current with ||= when variable is truthy",
+      "input": "{{.myvar ||= newval}}{{.myvar}}",
+      "expected": "existingexisting",
+      "local": {
+        "myvar": "existing"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should set and return default with ||= when variable does not exist",
+      "input": "{{.myvar ||= created}}{{.myvar}}",
+      "expected": "createdcreated",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should set and return default with ??= when variable does not exist",
+      "input": "{{.myvar ??= created}}{{.myvar}}",
+      "expected": "createdcreated",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should not set and return current with ??= when variable exists but is empty",
+      "input": "[{{.myvar ??= newval}}][{{.myvar}}]",
+      "expected": "[][]",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should not set and return current with ??= when variable exists and is zero",
+      "input": "{{.myvar ??= newval}}{{.myvar}}",
+      "expected": "00",
+      "local": {
+        "myvar": "0"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable equals value with ==",
+      "input": "{{.myvar == hello}}",
+      "expected": "true",
+      "local": {
+        "myvar": "hello"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable does not equal value with ==",
+      "input": "{{.myvar == world}}",
+      "expected": "false",
+      "local": {
+        "myvar": "hello"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should compare empty variable correctly with ==",
+      "input": "{{.myvar ==}}",
+      "expected": "true",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should compare numeric value correctly with ==",
+      "input": "{{.myvar == 42}}",
+      "expected": "true",
+      "local": {
+        "myvar": "42"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable does not equal value with !=",
+      "input": "{{.myvar != world}}",
+      "expected": "true",
+      "local": {
+        "myvar": "hello"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable equals value with !=",
+      "input": "{{.myvar != hello}}",
+      "expected": "false",
+      "local": {
+        "myvar": "hello"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should compare empty variable correctly with !=",
+      "input": "{{.myvar !=}}",
+      "expected": "false",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should compare non-empty to empty with !=",
+      "input": "{{.myvar != }}",
+      "expected": "true",
+      "local": {
+        "myvar": "value"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should compare numeric value correctly with !=",
+      "input": "{{.myvar != 99}}",
+      "expected": "true",
+      "local": {
+        "myvar": "42"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable is greater than value with >",
+      "input": "{{.myvar > 5}}",
+      "expected": "true",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable is not greater than value with >",
+      "input": "{{.myvar > 10}}",
+      "expected": "false",
+      "local": {
+        "myvar": "5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable equals value with >",
+      "input": "{{.myvar > 10}}",
+      "expected": "false",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false for non-numeric values with >",
+      "input": "{{.myvar > 5}}",
+      "expected": "false",
+      "local": {
+        "myvar": "abc"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable is greater than value with >=",
+      "input": "{{.myvar >= 5}}",
+      "expected": "true",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable equals value with >=",
+      "input": "{{.myvar >= 10}}",
+      "expected": "true",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable is less than value with >=",
+      "input": "{{.myvar >= 10}}",
+      "expected": "false",
+      "local": {
+        "myvar": "5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable is less than value with <",
+      "input": "{{.myvar < 10}}",
+      "expected": "true",
+      "local": {
+        "myvar": "5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable is not less than value with <",
+      "input": "{{.myvar < 5}}",
+      "expected": "false",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable equals value with <",
+      "input": "{{.myvar < 10}}",
+      "expected": "false",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false for non-numeric values with <",
+      "input": "{{.myvar < 5}}",
+      "expected": "false",
+      "local": {
+        "myvar": "abc"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable is less than value with <=",
+      "input": "{{.myvar <= 10}}",
+      "expected": "true",
+      "local": {
+        "myvar": "5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return true when variable equals value with <=",
+      "input": "{{.myvar <= 10}}",
+      "expected": "true",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should return false when variable is greater than value with <=",
+      "input": "{{.myvar <= 5}}",
+      "expected": "false",
+      "local": {
+        "myvar": "10"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle negative numbers with > operator",
+      "input": "{{.myvar > -5}}",
+      "expected": "true",
+      "local": {
+        "myvar": "0"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle negative numbers with < operator",
+      "input": "{{.myvar < 0}}",
+      "expected": "true",
+      "local": {
+        "myvar": "-5"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle decimal numbers with >= operator",
+      "input": "{{.myvar >= 3.14}}",
+      "expected": "true",
+      "local": {
+        "myvar": "3.14"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle decimal numbers with <= operator",
+      "input": "{{.myvar <= 2.5}}",
+      "expected": "true",
+      "local": {
+        "myvar": "2.49"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should use || with global variable",
+      "input": "{{$myvar || globaldefault}}",
+      "expected": "globaldefault",
+      "local": null,
+      "global": {
+        "myvar": ""
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should use ?? with global variable",
+      "input": "{{$myvar ?? globaldefault}}",
+      "expected": "globaldefault",
+      "local": null,
+      "global": {}
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should use ||= with global variable",
+      "input": "{{$myvar ||= gset}}{{$myvar}}",
+      "expected": "gsetgset",
+      "local": null,
+      "global": {
+        "myvar": ""
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should use ??= with global variable",
+      "input": "{{$myvar ??= gcreated}}{{$myvar}}",
+      "expected": "gcreatedgcreated",
+      "local": null,
+      "global": {}
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should use == with global variable",
+      "input": "{{$myvar == test}}",
+      "expected": "true",
+      "local": null,
+      "global": {
+        "myvar": "test"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should support nested macro in || fallback value",
+      "input": "{{.myvar || Hello {{user}}}}",
+      "expected": "Hello User",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should support nested macro in ?? fallback value",
+      "input": "{{.myvar ?? Hello {{user}}}}",
+      "expected": "Hello User",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle whitespace with || operator",
+      "input": "{{ .myvar || spaced }}",
+      "expected": "spaced",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Shorthand Syntax :: should handle whitespace with ?? operator",
+      "input": "{{ .myvar ?? spaced }}",
+      "expected": "spaced",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should return true when local variable exists",
+      "input": "{{hasvar::myvar}}",
+      "expected": "true",
+      "local": {
+        "myvar": "value"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should return false when local variable does not exist",
+      "input": "{{hasvar::nonexistent}}",
+      "expected": "false",
+      "local": {},
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should return true when local variable exists but is empty",
+      "input": "{{hasvar::myvar}}",
+      "expected": "true",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should return true when global variable exists",
+      "input": "{{hasglobalvar::myvar}}",
+      "expected": "true",
+      "local": null,
+      "global": {
+        "myvar": "value"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should return false when global variable does not exist",
+      "input": "{{hasglobalvar::nonexistent}}",
+      "expected": "false",
+      "local": null,
+      "global": {}
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should delete local variable",
+      "input": "{{hasvar::myvar}}{{deletevar::myvar}}{{hasvar::myvar}}",
+      "expected": "truefalse",
+      "local": {
+        "myvar": "value"
+      },
+      "global": null
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should delete global variable",
+      "input": "{{hasglobalvar::myvar}}{{deleteglobalvar::myvar}}{{hasglobalvar::myvar}}",
+      "expected": "truefalse",
+      "local": null,
+      "global": {
+        "myvar": "value"
+      }
+    },
+    {
+      "id": "MacroEngine/Variable Macros (hasvar, deletevar) :: should use hasvar in if condition",
+      "input": "{{if {{hasvar::myvar}} == true}}exists{{else}}missing{{/if}}",
+      "expected": "exists",
+      "local": {
+        "myvar": ""
+      },
+      "global": null
+    }
+  ]
+}

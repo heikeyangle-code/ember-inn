@@ -1,0 +1,218 @@
+{
+  "source": "byaf.js getCharacterImages/getChatBackgrounds",
+  "cases": [
+    {
+      "id": "no-images-fallback",
+      "args": {
+        "files": {
+          "characters/a/char.json": "e30="
+        },
+        "character": {
+          "name": "A"
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": []
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "",
+            "image": "DEFAULT_AVATAR",
+            "label": ""
+          }
+        ],
+        "backgrounds": []
+      }
+    },
+    {
+      "id": "basic-images",
+      "args": {
+        "files": {
+          "characters/a/char.json": "e30=",
+          "characters/a/images/avatar.png": "QUFBQQ==",
+          "characters/a/images/alt.png": "QkJCQg=="
+        },
+        "character": {
+          "name": "A",
+          "images": [
+            {
+              "path": "images/avatar.png",
+              "label": "main"
+            },
+            {
+              "path": "images/alt.png",
+              "label": "alt"
+            }
+          ]
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": []
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "avatar.png",
+            "image": "AAAA",
+            "label": "main"
+          },
+          {
+            "filename": "alt.png",
+            "image": "BBBB",
+            "label": "alt"
+          }
+        ],
+        "backgrounds": []
+      }
+    },
+    {
+      "id": "image-parent-path",
+      "args": {
+        "files": {
+          "characters/a/char.json": "e30=",
+          "images/global.png": "QUFBQQ=="
+        },
+        "character": {
+          "name": "A",
+          "images": [
+            {
+              "path": "../../images/global.png",
+              "label": ""
+            }
+          ]
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": []
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "",
+            "image": "DEFAULT_AVATAR",
+            "label": ""
+          }
+        ],
+        "backgrounds": []
+      }
+    },
+    {
+      "id": "image-missing",
+      "args": {
+        "files": {
+          "characters/a/char.json": "e30="
+        },
+        "character": {
+          "name": "A",
+          "images": [
+            {
+              "path": "images/missing.png",
+              "label": "x"
+            }
+          ]
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": []
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "",
+            "image": "DEFAULT_AVATAR",
+            "label": ""
+          }
+        ],
+        "backgrounds": []
+      }
+    },
+    {
+      "id": "backgrounds-dedupe",
+      "args": {
+        "files": {
+          "bg1.png": "QkdBQQ==",
+          "bg2.png": "QkdBQQ==",
+          "bg3.png": "QkdCQg=="
+        },
+        "character": {
+          "name": "Name"
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": [
+          {
+            "backgroundImage": "bg1.png"
+          },
+          {
+            "backgroundImage": "bg2.png"
+          },
+          {
+            "backgroundImage": "bg3.png"
+          },
+          {}
+        ]
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "",
+            "image": "DEFAULT_AVATAR",
+            "label": ""
+          }
+        ],
+        "backgrounds": [
+          {
+            "name": "Name bg 1",
+            "data": "BGAA",
+            "paths": [
+              "bg1.png",
+              "bg2.png"
+            ]
+          },
+          {
+            "name": "Name bg 2",
+            "data": "BGBB",
+            "paths": [
+              "bg3.png"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "backgrounds-empty-and-missing",
+      "args": {
+        "files": {
+          "bg1.png": "QkdBQQ=="
+        },
+        "character": {
+          "name": "Name"
+        },
+        "characterPath": "characters/a/char.json",
+        "scenarios": [
+          {
+            "backgroundImage": "missing.png"
+          },
+          {},
+          {
+            "backgroundImage": "bg1.png"
+          }
+        ]
+      },
+      "expected": {
+        "images": [
+          {
+            "filename": "",
+            "image": "DEFAULT_AVATAR",
+            "label": ""
+          }
+        ],
+        "backgrounds": [
+          {
+            "name": "Name bg 1",
+            "data": "BGAA",
+            "paths": [
+              "bg1.png"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

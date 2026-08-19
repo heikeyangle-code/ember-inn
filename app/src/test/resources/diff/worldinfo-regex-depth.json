@@ -1,0 +1,405 @@
+{
+  "source": "world-info.js BUILDING PROMPT regexDepth",
+  "cases": [
+    {
+      "id": "pos-0-depth-null",
+      "args": {
+        "body": {
+          "position": 0,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-0-depth-2",
+      "args": {
+        "body": {
+          "position": 0,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-0-depth-0",
+      "args": {
+        "body": {
+          "position": 0,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-0-depth-neg1",
+      "args": {
+        "body": {
+          "position": 0,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-0-depth-100",
+      "args": {
+        "body": {
+          "position": 0,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-1-depth-null",
+      "args": {
+        "body": {
+          "position": 1,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-1-depth-2",
+      "args": {
+        "body": {
+          "position": 1,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-1-depth-0",
+      "args": {
+        "body": {
+          "position": 1,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-1-depth-neg1",
+      "args": {
+        "body": {
+          "position": 1,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-1-depth-100",
+      "args": {
+        "body": {
+          "position": 1,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-2-depth-null",
+      "args": {
+        "body": {
+          "position": 2,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-2-depth-2",
+      "args": {
+        "body": {
+          "position": 2,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-2-depth-0",
+      "args": {
+        "body": {
+          "position": 2,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-2-depth-neg1",
+      "args": {
+        "body": {
+          "position": 2,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-2-depth-100",
+      "args": {
+        "body": {
+          "position": 2,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-3-depth-null",
+      "args": {
+        "body": {
+          "position": 3,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-3-depth-2",
+      "args": {
+        "body": {
+          "position": 3,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-3-depth-0",
+      "args": {
+        "body": {
+          "position": 3,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-3-depth-neg1",
+      "args": {
+        "body": {
+          "position": 3,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-3-depth-100",
+      "args": {
+        "body": {
+          "position": 3,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-4-depth-null",
+      "args": {
+        "body": {
+          "position": 4,
+          "depth": null
+        }
+      },
+      "expected": 4
+    },
+    {
+      "id": "pos-4-depth-2",
+      "args": {
+        "body": {
+          "position": 4,
+          "depth": 2
+        }
+      },
+      "expected": 2
+    },
+    {
+      "id": "pos-4-depth-0",
+      "args": {
+        "body": {
+          "position": 4,
+          "depth": 0
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "pos-4-depth-neg1",
+      "args": {
+        "body": {
+          "position": 4,
+          "depth": -1
+        }
+      },
+      "expected": -1
+    },
+    {
+      "id": "pos-4-depth-100",
+      "args": {
+        "body": {
+          "position": 4,
+          "depth": 100
+        }
+      },
+      "expected": 100
+    },
+    {
+      "id": "pos-5-depth-null",
+      "args": {
+        "body": {
+          "position": 5,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-5-depth-2",
+      "args": {
+        "body": {
+          "position": 5,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-5-depth-0",
+      "args": {
+        "body": {
+          "position": 5,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-5-depth-neg1",
+      "args": {
+        "body": {
+          "position": 5,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-5-depth-100",
+      "args": {
+        "body": {
+          "position": 5,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-6-depth-null",
+      "args": {
+        "body": {
+          "position": 6,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-6-depth-2",
+      "args": {
+        "body": {
+          "position": 6,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-6-depth-0",
+      "args": {
+        "body": {
+          "position": 6,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-6-depth-neg1",
+      "args": {
+        "body": {
+          "position": 6,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-6-depth-100",
+      "args": {
+        "body": {
+          "position": 6,
+          "depth": 100
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-7-depth-null",
+      "args": {
+        "body": {
+          "position": 7,
+          "depth": null
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-7-depth-2",
+      "args": {
+        "body": {
+          "position": 7,
+          "depth": 2
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-7-depth-0",
+      "args": {
+        "body": {
+          "position": 7,
+          "depth": 0
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-7-depth-neg1",
+      "args": {
+        "body": {
+          "position": 7,
+          "depth": -1
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "pos-7-depth-100",
+      "args": {
+        "body": {
+          "position": 7,
+          "depth": 100
+        }
+      },
+      "expected": null
+    }
+  ]
+}

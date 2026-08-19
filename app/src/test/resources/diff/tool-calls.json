@@ -1,0 +1,340 @@
+{
+  "source": "ToolManager.parseToolCalls",
+  "cases": [
+    {
+      "id": "openai-single-tool-args-concat",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "choices": [
+                {
+                  "index": 0,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                          "name": "weather",
+                          "arguments": "{\"ci"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "choices": [
+                {
+                  "index": 0,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "function": {
+                          "arguments": "ty\":\"x\"}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "index": 0,
+            "id": "call_1",
+            "type": "function",
+            "function": {
+              "name": "weather",
+              "arguments": "{\"city\":\"x\"}"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "id": "openai-multi-choice",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "choices": [
+                {
+                  "index": 0,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "id": "a",
+                        "function": {
+                          "name": "f1"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "index": 1,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "id": "b",
+                        "function": {
+                          "name": "f2"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "index": 0,
+            "id": "a",
+            "function": {
+              "name": "f1"
+            }
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "id": "b",
+            "function": {
+              "name": "f2"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "id": "openai-signature-transfer",
+      "args": {
+        "body": {
+          "toolSignatures": {
+            "call_1": "SIG"
+          },
+          "chunks": [
+            {
+              "choices": [
+                {
+                  "index": 0,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "id": "call_1",
+                        "function": {
+                          "name": "f"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "index": 0,
+            "id": "call_1",
+            "function": {
+              "name": "f"
+            },
+            "signature": "SIG"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "cohere-tool-call",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "type": "tool-call-delta",
+              "index": 0,
+              "delta": {
+                "message": {
+                  "name": "tool",
+                  "arguments": "{}"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "name": "tool",
+            "arguments": "{}"
+          }
+        ]
+      ]
+    },
+    {
+      "id": "anthropic-tool-use",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "type": "content_block_start",
+              "index": 0,
+              "content_block": {
+                "type": "tool_use",
+                "id": "toolu_1",
+                "name": "search",
+                "input": {}
+              }
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "search",
+            "input": {}
+          }
+        ]
+      ]
+    },
+    {
+      "id": "anthropic-input-json-delta",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "type": "content_block_start",
+              "index": 0,
+              "content_block": {
+                "type": "tool_use",
+                "id": "toolu_1",
+                "name": "search"
+              }
+            },
+            {
+              "type": "input_json_delta",
+              "index": 0,
+              "delta": {
+                "type": "input_json_delta",
+                "partial_json": "{\"q\":\"a"
+              }
+            },
+            {
+              "type": "input_json_delta",
+              "index": 0,
+              "delta": {
+                "type": "input_json_delta",
+                "partial_json": "b\"}"
+              }
+            },
+            {
+              "type": "content_block_stop",
+              "index": 0
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "search",
+            "input": {
+              "q": "ab"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "id": "gemini-function-call",
+      "args": {
+        "body": {
+          "chunks": [
+            {
+              "candidates": [
+                {
+                  "content": {
+                    "parts": [
+                      {
+                        "functionCall": {
+                          "name": "g",
+                          "args": {
+                            "x": 1
+                          }
+                        },
+                        "thoughtSignature": "TS"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        [
+          {
+            "thoughtSignature": "TS",
+            "name": "g",
+            "args": {
+              "x": 1
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "id": "unsupported",
+      "args": {
+        "body": {
+          "supported": false,
+          "chunks": [
+            {
+              "choices": [
+                {
+                  "index": 0,
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "index": 0,
+                        "function": {
+                          "name": "f"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": []
+    }
+  ]
+}

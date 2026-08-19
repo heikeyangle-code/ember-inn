@@ -1,0 +1,2216 @@
+{
+  "generated": "2026-08-18T10:42:57.033Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "constant_and_keyword",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "recursive": false
+      },
+      "chat": [
+        "这里有钥匙"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "content": "常驻",
+          "constant": true,
+          "position": 0
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "钥匙"
+          ],
+          "content": "触发",
+          "position": 1
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "这里有钥匙"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "content": "常驻",
+            "constant": true,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "钥匙"
+            ],
+            "content": "触发",
+            "position": 1
+          }
+        ],
+        "expected": {
+          "before": "常驻",
+          "after": "触发",
+          "uids": [
+            2,
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "常驻",
+        "after": "触发",
+        "uids": [
+          2,
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "recursion",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "recursive": true
+      },
+      "chat": [
+        "线索"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "线索"
+          ],
+          "content": "暗门"
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "暗门"
+          ],
+          "content": "宝藏"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "线索"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "暗门"
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "暗门"
+            ],
+            "content": "宝藏"
+          }
+        ],
+        "expected": {
+          "before": "暗门\n宝藏",
+          "after": "",
+          "uids": [
+            1,
+            2
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "暗门\n宝藏",
+        "after": "",
+        "uids": [
+          1,
+          2
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "and_all_partial",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门和钥匙"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "keysecondary": [
+            "钥匙",
+            "锁"
+          ],
+          "selectiveLogic": 3,
+          "selective": true,
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门和钥匙"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "keysecondary": [
+              "钥匙",
+              "锁"
+            ],
+            "selectiveLogic": 3,
+            "selective": true,
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "and_all_full",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门 钥匙 锁"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "keysecondary": [
+            "钥匙",
+            "锁"
+          ],
+          "selectiveLogic": 3,
+          "selective": true,
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门 钥匙 锁"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "keysecondary": [
+              "钥匙",
+              "锁"
+            ],
+            "selectiveLogic": 3,
+            "selective": true,
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "budget_stops",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "a b"
+      ],
+      "maxContext": 10,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "a"
+          ],
+          "content": "aaaaaa"
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "b"
+          ],
+          "content": "bbbbbb"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "a"
+            ],
+            "content": "aaaaaa"
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "b"
+            ],
+            "content": "bbbbbb"
+          }
+        ],
+        "expected": {
+          "before": "aaaaaa",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "aaaaaa",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "min_activations",
+      "settings": {
+        "depth": 1,
+        "budget": 100,
+        "minActivations": 1
+      },
+      "chat": [
+        "第一句",
+        "钥匙"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "钥匙"
+          ],
+          "content": "找到了"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "第一句",
+          "钥匙"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "钥匙"
+            ],
+            "content": "找到了"
+          }
+        ],
+        "expected": {
+          "before": "找到了",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "找到了",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "group_override",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "A",
+          "group": "g",
+          "groupOverride": true
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 5,
+          "key": [
+            "门"
+          ],
+          "content": "B",
+          "group": "g",
+          "groupOverride": true
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "A",
+            "group": "g",
+            "groupOverride": true
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 5,
+            "key": [
+              "门"
+            ],
+            "content": "B",
+            "group": "g",
+            "groupOverride": true
+          }
+        ],
+        "expected": {
+          "before": "B",
+          "after": "",
+          "uids": [
+            2
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "B",
+        "after": "",
+        "uids": [
+          2
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "group_scoring",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "useGroupScoring": true
+      },
+      "chat": [
+        "a b"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a",
+            "b"
+          ],
+          "content": "高",
+          "group": "g",
+          "useGroupScoring": true
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "a"
+          ],
+          "content": "低",
+          "group": "g",
+          "useGroupScoring": true
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a",
+              "b"
+            ],
+            "content": "高",
+            "group": "g",
+            "useGroupScoring": true
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "a"
+            ],
+            "content": "低",
+            "group": "g",
+            "useGroupScoring": true
+          }
+        ],
+        "expected": {
+          "before": "高",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "高",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "char_filter_excluded",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "names": [
+              "柳春娘"
+            ],
+            "isExclude": true
+          }
+        }
+      ],
+      "charaName": "柳春娘",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "names": [
+                "柳春娘"
+              ],
+              "isExclude": true
+            }
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "char_filter_included",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "names": [
+              "柳春娘"
+            ],
+            "isExclude": true
+          }
+        }
+      ],
+      "charaName": "关东",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "names": [
+                "柳春娘"
+              ],
+              "isExclude": true
+            }
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "tag_filter_excluded",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "tags": [
+              "nsfw"
+            ],
+            "isExclude": true
+          }
+        }
+      ],
+      "charaName": "",
+      "tagKey": "c1",
+      "tagMap": {
+        "c1": [
+          "nsfw"
+        ]
+      },
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "tags": [
+                "nsfw"
+              ],
+              "isExclude": true
+            }
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "sticky_second_scan",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "x",
+        "y"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "粘住",
+          "sticky": 2
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "粘住",
+            "sticky": 2
+          }
+        ],
+        "expected": {
+          "before": "粘住",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "粘住",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "cooldown_second_scan",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "a",
+        "b"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "冷",
+          "cooldown": 3
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "冷",
+            "cooldown": 3
+          }
+        ],
+        "expected": {
+          "before": "冷",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "delay_suppressed",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "a"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "X",
+          "delay": 3
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "X",
+            "delay": 3
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "delay_until_recursion",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "recursive": true
+      },
+      "chat": [
+        "线索"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "线索"
+          ],
+          "content": "暗门"
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "暗门"
+          ],
+          "content": "宝藏",
+          "delayUntilRecursion": true
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "线索"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "暗门"
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "暗门"
+            ],
+            "content": "宝藏",
+            "delayUntilRecursion": true
+          }
+        ],
+        "expected": {
+          "before": "暗门\n宝藏",
+          "after": "",
+          "uids": [
+            1,
+            2
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "暗门\n宝藏",
+        "after": "",
+        "uids": [
+          1,
+          2
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "probability_fail",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "a"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "X",
+          "useProbability": true,
+          "probability": 1
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "X",
+            "useProbability": true,
+            "probability": 1
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "empty_chat_message_hole",
+      "settings": {
+        "depth": 3,
+        "budget": 100
+      },
+      "chat": [
+        "钥匙",
+        "",
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "\u0001\n\u0001门"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "钥匙",
+          "",
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "\u0001\n\u0001门"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "tag_filter_include_with_tag",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "tags": [
+              "nsfw"
+            ],
+            "isExclude": false
+          }
+        }
+      ],
+      "charaName": "",
+      "tagKey": "c1",
+      "tagMap": {
+        "c1": [
+          "nsfw"
+        ]
+      },
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "tags": [
+                "nsfw"
+              ],
+              "isExclude": false
+            }
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "tag_filter_include_empty_tags",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "门"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "门"
+          ],
+          "content": "X",
+          "characterFilter": {
+            "tags": [
+              "nsfw"
+            ],
+            "isExclude": false
+          }
+        }
+      ],
+      "charaName": "",
+      "tagKey": "c1",
+      "tagMap": {
+        "c1": []
+      },
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "门"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "门"
+            ],
+            "content": "X",
+            "characterFilter": {
+              "tags": [
+                "nsfw"
+              ],
+              "isExclude": false
+            }
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "probability_sticky_second",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "x",
+        "y"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "粘住",
+          "sticky": 2,
+          "useProbability": true,
+          "probability": 1
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        0.005,
+        99
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "粘住",
+            "sticky": 2,
+            "useProbability": true,
+            "probability": 1
+          }
+        ],
+        "expected": {
+          "before": "粘住",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "粘住",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "depth_zero",
+      "settings": {
+        "depth": 0,
+        "budget": 100
+      },
+      "chat": [
+        "钥匙"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "钥匙"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "钥匙"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "钥匙"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "case_sensitive_match",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "caseSensitive": true
+      },
+      "chat": [
+        "KEY"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "KEY"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "KEY"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "KEY"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "case_sensitive_miss",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "caseSensitive": true
+      },
+      "chat": [
+        "KEY"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "key"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "KEY"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "key"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "whole_word_match",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "matchWholeWords": true
+      },
+      "chat": [
+        "猫"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "猫"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "猫"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "猫"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "whole_word_miss",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "matchWholeWords": true
+      },
+      "chat": [
+        "猫粮"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "猫"
+          ],
+          "content": "X"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "猫粮"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "猫"
+            ],
+            "content": "X"
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "probability_pass",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "a"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "X",
+          "useProbability": true,
+          "probability": 100
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        0
+      ],
+      "first": {
+        "chat": [
+          "a"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "X",
+            "useProbability": true,
+            "probability": 100
+          }
+        ],
+        "expected": {
+          "before": "X",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "X",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "constant_disable",
+      "settings": {
+        "depth": 2,
+        "budget": 100
+      },
+      "chat": [
+        "钥匙"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "钥匙"
+          ],
+          "content": "X",
+          "constant": true,
+          "disable": true
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "钥匙"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "钥匙"
+            ],
+            "content": "X",
+            "constant": true,
+            "disable": true
+          }
+        ],
+        "expected": {
+          "before": "",
+          "after": "",
+          "uids": [],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "",
+        "after": "",
+        "uids": [],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "group_no_scoring_all",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "useGroupScoring": false
+      },
+      "chat": [
+        "a b"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "a"
+          ],
+          "content": "A",
+          "group": "g"
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "b"
+          ],
+          "content": "B",
+          "group": "g"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "a b"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "a"
+            ],
+            "content": "A",
+            "group": "g"
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "b"
+            ],
+            "content": "B",
+            "group": "g"
+          }
+        ],
+        "expected": {
+          "before": "A\nB",
+          "after": "",
+          "uids": [
+            2,
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "A\nB",
+        "after": "",
+        "uids": [
+          2,
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    },
+    {
+      "id": "recursion_steps_limit",
+      "settings": {
+        "depth": 2,
+        "budget": 100,
+        "recursive": true,
+        "maxRecursionSteps": 1
+      },
+      "chat": [
+        "线索"
+      ],
+      "maxContext": 100,
+      "entries": [
+        {
+          "uid": 1,
+          "world": "w",
+          "order": 1,
+          "key": [
+            "线索"
+          ],
+          "content": "暗门"
+        },
+        {
+          "uid": 2,
+          "world": "w",
+          "order": 2,
+          "key": [
+            "暗门"
+          ],
+          "content": "更深"
+        },
+        {
+          "uid": 3,
+          "world": "w",
+          "order": 3,
+          "key": [
+            "更深"
+          ],
+          "content": "宝藏"
+        }
+      ],
+      "charaName": "",
+      "tagKey": null,
+      "tagMap": {},
+      "random": [
+        99
+      ],
+      "first": {
+        "chat": [
+          "线索"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "world": "w",
+            "order": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "暗门"
+          },
+          {
+            "uid": 2,
+            "world": "w",
+            "order": 2,
+            "key": [
+              "暗门"
+            ],
+            "content": "更深"
+          },
+          {
+            "uid": 3,
+            "world": "w",
+            "order": 3,
+            "key": [
+              "更深"
+            ],
+            "content": "宝藏"
+          }
+        ],
+        "expected": {
+          "before": "暗门",
+          "after": "",
+          "uids": [
+            1
+          ],
+          "em": [],
+          "anBefore": [],
+          "anAfter": [],
+          "depth": []
+        }
+      },
+      "expected": {
+        "before": "暗门",
+        "after": "",
+        "uids": [
+          1
+        ],
+        "em": [],
+        "anBefore": [],
+        "anAfter": [],
+        "depth": []
+      }
+    }
+  ]
+}

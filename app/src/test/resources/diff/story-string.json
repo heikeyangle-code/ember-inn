@@ -1,0 +1,184 @@
+{
+  "source": "power-user.js renderStoryString（Handlebars noEscape）",
+  "cases": [
+    {
+      "id": "default-full",
+      "args": {
+        "template": "{{#if system}}{{system}}\n{{/if}}{{#if description}}{{description}}\n{{/if}}{{#if personality}}{{char}}'s personality: {{personality}}\n{{/if}}{{#if scenario}}Scenario: {{scenario}}\n{{/if}}{{#if persona}}{{persona}}\n{{/if}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "You are Alice.\nA curious explorer.\nAlice's personality: witty\nScenario: In a library.\nThe user is a librarian.\n"
+    },
+    {
+      "id": "default-empty",
+      "args": {
+        "template": "{{#if system}}{{system}}\n{{/if}}{{#if description}}{{description}}\n{{/if}}{{#if personality}}{{char}}'s personality: {{personality}}\n{{/if}}{{#if scenario}}Scenario: {{scenario}}\n{{/if}}{{#if persona}}{{persona}}\n{{/if}}",
+        "params": {
+          "system": "",
+          "description": "",
+          "personality": "",
+          "scenario": "",
+          "persona": "",
+          "char": "Alice",
+          "user": "Bob"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "unknown-field",
+      "args": {
+        "template": "Hi {{unknown}}!",
+        "params": {
+          "user": "Bob"
+        }
+      },
+      "expected": "Hi {{unknown}}!\n"
+    },
+    {
+      "id": "unknown-macro-kept-empty",
+      "args": {
+        "template": "{{random}} text",
+        "params": {}
+      },
+      "expected": "{{random}} text\n"
+    },
+    {
+      "id": "if-else",
+      "args": {
+        "template": "{{#if persona}}{{persona}}{{else}}no persona{{/if}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "The user is a librarian.\n"
+    },
+    {
+      "id": "nested-if",
+      "args": {
+        "template": "{{#if system}}{{#if description}}{{description}}{{/if}}{{/if}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "A curious explorer.\n"
+    },
+    {
+      "id": "user-char",
+      "args": {
+        "template": "{{user}} talks to {{char}}",
+        "params": {
+          "user": "Bob",
+          "char": "Alice"
+        }
+      },
+      "expected": "Bob talks to Alice\n"
+    },
+    {
+      "id": "leading-newlines",
+      "args": {
+        "template": "\n\n{{system}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "You are Alice.\n"
+    },
+    {
+      "id": "trailing-newline-added",
+      "args": {
+        "template": "{{system}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "You are Alice.\n"
+    },
+    {
+      "id": "wi-fields",
+      "args": {
+        "template": "{{wiBefore}}|{{wiAfter}}",
+        "params": {
+          "system": "You are Alice.",
+          "description": "A curious explorer.",
+          "personality": "witty",
+          "scenario": "In a library.",
+          "persona": "The user is a librarian.",
+          "char": "Alice",
+          "user": "Bob",
+          "wiBefore": "WI before",
+          "wiAfter": "WI after",
+          "mesExamples": "",
+          "anchorBefore": "",
+          "anchorAfter": ""
+        }
+      },
+      "expected": "WI before|WI after\n"
+    },
+    {
+      "id": "trim-unknown",
+      "args": {
+        "template": "a {{trim}} b",
+        "params": {}
+      },
+      "expected": "a {{trim}} b\n"
+    }
+  ]
+}

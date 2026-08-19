@@ -24,6 +24,24 @@ object BehaviorPrefs {
 
     private const val NAME = "ember_behavior"
 
+    /** 官方 extension_settings.disabled_attachments：被禁用的附件 URL 列表（attachments 扩展，index.js:168）。 */
+    fun disabledAttachments(context: Context): List<String> {
+        val p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+        val raw = p.getString("disabled_attachments", "[]") ?: "[]"
+        return runCatching {
+            val arr = org.json.JSONArray(raw)
+            (0 until arr.length()).map { arr.getString(it) }
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveDisabledAttachments(context: Context, urls: List<String>) {
+        val arr = org.json.JSONArray()
+        urls.forEach { arr.put(it) }
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("disabled_attachments", arr.toString())
+            .apply()
+    }
+
     fun load(context: Context): BehaviorSettings {
         val p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         return BehaviorSettings(

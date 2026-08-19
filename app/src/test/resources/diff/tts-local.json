@@ -1,0 +1,956 @@
+{
+  "cases": [
+    {
+      "id": "001-alltalk-defaults",
+      "kind": "alltalk",
+      "args": {
+        "settings": {
+          "server_version": "v2",
+          "language": "en",
+          "narrator_enabled": "false",
+          "at_narrator_text_not_inside": "narrator",
+          "narrator_voice_gen": "Please set a voice",
+          "rvc_character_voice": "Disabled",
+          "rvc_character_pitch": "0",
+          "rvc_narrator_voice": "Disabled",
+          "rvc_narrator_pitch": "0"
+        },
+        "inputText": "hello world",
+        "voiceId": "en_0"
+      },
+      "expected": {
+        "form": "text_input=hello+world&text_filtering=standard&character_voice_gen=en_0&narrator_enabled=false&narrator_voice_gen=Please+set+a+voice&text_not_inside=narrator&language=en&output_file_name=st_output&output_file_timestamp=true&autoplay=false&autoplay_volume=0.8"
+      }
+    },
+    {
+      "id": "002-alltalk-v1-no-rvc",
+      "kind": "alltalk",
+      "args": {
+        "settings": {
+          "server_version": "v1",
+          "language": "en",
+          "narrator_enabled": "false",
+          "at_narrator_text_not_inside": "narrator",
+          "narrator_voice_gen": "Please set a voice",
+          "rvc_character_voice": "Disabled",
+          "rvc_character_pitch": "0",
+          "rvc_narrator_voice": "Disabled",
+          "rvc_narrator_pitch": "0"
+        },
+        "inputText": "hi",
+        "voiceId": "v1voice"
+      },
+      "expected": {
+        "form": "text_input=hi&text_filtering=standard&character_voice_gen=v1voice&narrator_enabled=false&narrator_voice_gen=Please+set+a+voice&text_not_inside=narrator&language=en&output_file_name=st_output&output_file_timestamp=true&autoplay=false&autoplay_volume=0.8"
+      }
+    },
+    {
+      "id": "003-alltalk-v2-rvc-char",
+      "kind": "alltalk",
+      "args": {
+        "settings": {
+          "server_version": "v2",
+          "language": "en",
+          "narrator_enabled": "false",
+          "at_narrator_text_not_inside": "narrator",
+          "narrator_voice_gen": "Please set a voice",
+          "rvc_character_voice": "myrvc.wav",
+          "rvc_character_pitch": "-5",
+          "rvc_narrator_voice": "Disabled",
+          "rvc_narrator_pitch": "0"
+        },
+        "inputText": "space & special=+",
+        "voiceId": "en_0"
+      },
+      "expected": {
+        "form": "text_input=space+%26+special%3D%2B&text_filtering=standard&character_voice_gen=en_0&narrator_enabled=false&narrator_voice_gen=Please+set+a+voice&text_not_inside=narrator&language=en&output_file_name=st_output&output_file_timestamp=true&autoplay=false&autoplay_volume=0.8&rvccharacter_voice_gen=myrvc.wav&rvccharacter_pitch=-5"
+      }
+    },
+    {
+      "id": "004-alltalk-v2-rvc-both",
+      "kind": "alltalk",
+      "args": {
+        "settings": {
+          "server_version": "v2",
+          "language": "en",
+          "narrator_enabled": "false",
+          "at_narrator_text_not_inside": "narrator",
+          "narrator_voice_gen": "Please set a voice",
+          "rvc_character_voice": "char.wav",
+          "rvc_character_pitch": "3",
+          "rvc_narrator_voice": "nar.wav",
+          "rvc_narrator_pitch": "-2"
+        },
+        "inputText": "narrator test",
+        "voiceId": "voice1"
+      },
+      "expected": {
+        "form": "text_input=narrator+test&text_filtering=standard&character_voice_gen=voice1&narrator_enabled=false&narrator_voice_gen=Please+set+a+voice&text_not_inside=narrator&language=en&output_file_name=st_output&output_file_timestamp=true&autoplay=false&autoplay_volume=0.8&rvccharacter_voice_gen=char.wav&rvccharacter_pitch=3&rvcnarrator_voice_gen=nar.wav&rvcnarrator_pitch=-2"
+      }
+    },
+    {
+      "id": "005-chatterbox-predefined-defaults",
+      "kind": "chatterbox",
+      "args": {
+        "settings": {
+          "temperature": 0.8,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "seed": -1,
+          "speed_factor": 1,
+          "language": "en",
+          "split_text": true,
+          "chunk_size": 120,
+          "output_format": "wav",
+          "predefined_voice": "S1"
+        },
+        "inputText": "hello",
+        "voiceId": "S1"
+      },
+      "expected": {
+        "text": "hello",
+        "voice_mode": "predefined",
+        "temperature": 0.8,
+        "exaggeration": 0.5,
+        "cfg_weight": 0.5,
+        "seed": 0,
+        "speed_factor": 1,
+        "language": "en",
+        "split_text": true,
+        "chunk_size": 120,
+        "output_format": "wav",
+        "predefined_voice_id": "S1"
+      }
+    },
+    {
+      "id": "006-chatterbox-predefined-empty-fallback",
+      "kind": "chatterbox",
+      "args": {
+        "settings": {
+          "temperature": 0.8,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "seed": -1,
+          "speed_factor": 1,
+          "language": "en",
+          "split_text": true,
+          "chunk_size": 120,
+          "output_format": "wav",
+          "predefined_voice": "S1"
+        },
+        "inputText": "hi",
+        "voiceId": ""
+      },
+      "expected": {
+        "text": "hi",
+        "voice_mode": "predefined",
+        "temperature": 0.8,
+        "exaggeration": 0.5,
+        "cfg_weight": 0.5,
+        "seed": 0,
+        "speed_factor": 1,
+        "language": "en",
+        "split_text": true,
+        "chunk_size": 120,
+        "output_format": "wav",
+        "predefined_voice_id": "S1"
+      }
+    },
+    {
+      "id": "007-chatterbox-clone-ref",
+      "kind": "chatterbox",
+      "args": {
+        "settings": {
+          "temperature": 0.8,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "seed": -1,
+          "speed_factor": 1,
+          "language": "en",
+          "split_text": true,
+          "chunk_size": 120,
+          "output_format": "wav",
+          "predefined_voice": "S1"
+        },
+        "inputText": "clone this",
+        "voiceId": "ref_myfile.wav"
+      },
+      "expected": {
+        "text": "clone this",
+        "voice_mode": "clone",
+        "temperature": 0.8,
+        "exaggeration": 0.5,
+        "cfg_weight": 0.5,
+        "seed": 0,
+        "speed_factor": 1,
+        "language": "en",
+        "split_text": true,
+        "chunk_size": 120,
+        "output_format": "wav",
+        "reference_audio_filename": "myfile.wav"
+      }
+    },
+    {
+      "id": "008-chatterbox-seed-positive",
+      "kind": "chatterbox",
+      "args": {
+        "settings": {
+          "temperature": 0.8,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "seed": 42,
+          "speed_factor": 1,
+          "language": "en",
+          "split_text": true,
+          "chunk_size": 120,
+          "output_format": "wav",
+          "predefined_voice": "S1"
+        },
+        "inputText": "seeded",
+        "voiceId": "S2"
+      },
+      "expected": {
+        "text": "seeded",
+        "voice_mode": "predefined",
+        "temperature": 0.8,
+        "exaggeration": 0.5,
+        "cfg_weight": 0.5,
+        "seed": 42,
+        "speed_factor": 1,
+        "language": "en",
+        "split_text": true,
+        "chunk_size": 120,
+        "output_format": "wav",
+        "predefined_voice_id": "S2"
+      }
+    },
+    {
+      "id": "009-chatterbox-seed-zero-passes",
+      "kind": "chatterbox",
+      "args": {
+        "settings": {
+          "temperature": 0.8,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "seed": 0,
+          "speed_factor": 1,
+          "language": "en",
+          "split_text": true,
+          "chunk_size": 120,
+          "output_format": "wav",
+          "predefined_voice": "S1"
+        },
+        "inputText": "zero",
+        "voiceId": "S1"
+      },
+      "expected": {
+        "text": "zero",
+        "voice_mode": "predefined",
+        "temperature": 0.8,
+        "exaggeration": 0.5,
+        "cfg_weight": 0.5,
+        "seed": 0,
+        "speed_factor": 1,
+        "language": "en",
+        "split_text": true,
+        "chunk_size": 120,
+        "output_format": "wav",
+        "predefined_voice_id": "S1"
+      }
+    },
+    {
+      "id": "010-coqui-simple-model",
+      "kind": "coqui",
+      "args": {
+        "settings": {},
+        "inputText": "hello",
+        "voiceId": "tts_models/en/ljspeech/glow-tts"
+      },
+      "expected": {
+        "text": "hello",
+        "model_id": "tts_models/en/ljspeech/glow-tts",
+        "language_id": null,
+        "speaker_id": null
+      }
+    },
+    {
+      "id": "011-coqui-multilingual-language",
+      "kind": "coqui",
+      "args": {
+        "settings": {},
+        "inputText": "hola",
+        "voiceId": "tts_models/multilingual/multi-dataset/your_tts[2]"
+      },
+      "expected": {
+        "text": "hola",
+        "model_id": "tts_models/multilingual/multi-dataset/your_tts",
+        "language_id": 2,
+        "speaker_id": null
+      }
+    },
+    {
+      "id": "012-coqui-three-tokens-speaker",
+      "kind": "coqui",
+      "args": {
+        "settings": {},
+        "inputText": "hi",
+        "voiceId": "tts_models/en/ljspeech/tacotron2-DDC[1][5]"
+      },
+      "expected": {
+        "text": "hi",
+        "model_id": "tts_models/en/ljspeech/tacotron2-DDC",
+        "language_id": null,
+        "speaker_id": 5
+      }
+    },
+    {
+      "id": "013-coqui-quotes-stripped",
+      "kind": "coqui",
+      "args": {
+        "settings": {},
+        "inputText": "q",
+        "voiceId": "model\"with\"quotes[1]"
+      },
+      "expected": {
+        "text": "q",
+        "model_id": "modelwithquotes",
+        "language_id": null,
+        "speaker_id": 1
+      }
+    },
+    {
+      "id": "014-cosyvoice-defaults",
+      "kind": "cosyvoice",
+      "args": {
+        "settings": {
+          "streaming": false
+        },
+        "inputText": "hello",
+        "voiceId": "spk1"
+      },
+      "expected": {
+        "text": "hello",
+        "speaker": "spk1"
+      }
+    },
+    {
+      "id": "015-cosyvoice-streaming-true",
+      "kind": "cosyvoice",
+      "args": {
+        "settings": {
+          "streaming": true
+        },
+        "inputText": "stream",
+        "voiceId": "spk2"
+      },
+      "expected": {
+        "text": "stream",
+        "speaker": "spk2",
+        "streaming": 1
+      }
+    },
+    {
+      "id": "016-gsv-adapter-defaults",
+      "kind": "gpt-sovits-adapter",
+      "args": {
+        "settings": {
+          "text_lang": "zh",
+          "media_type": "auto"
+        },
+        "inputText": "你好",
+        "voiceId": "spk1"
+      },
+      "expected": {
+        "text": "你好",
+        "card_name": "",
+        "use_st_adapter": true,
+        "target_voice": "spk1",
+        "text_lang": "zh",
+        "text_split_method": "cut5",
+        "batch_size": 1,
+        "media_type": "auto",
+        "streaming_mode": "true"
+      }
+    },
+    {
+      "id": "017-gsv-adapter-en",
+      "kind": "gpt-sovits-adapter",
+      "args": {
+        "settings": {
+          "text_lang": "en",
+          "media_type": "wav"
+        },
+        "inputText": "hello",
+        "voiceId": "spk2"
+      },
+      "expected": {
+        "text": "hello",
+        "card_name": "",
+        "use_st_adapter": true,
+        "target_voice": "spk2",
+        "text_lang": "en",
+        "text_split_method": "cut5",
+        "batch_size": 1,
+        "media_type": "wav",
+        "streaming_mode": "true"
+      }
+    },
+    {
+      "id": "018-gsv-v2-defaults",
+      "kind": "gpt-sovits-v2",
+      "args": {
+        "settings": {
+          "text_lang": "zh",
+          "prompt_lang": "zh"
+        },
+        "inputText": "你好",
+        "voiceId": "speaker1"
+      },
+      "expected": {
+        "text": "你好",
+        "prompt_text": "speaker1",
+        "ref_audio_path": "./参考音频/speaker1.wav",
+        "text_lang": "zh",
+        "prompt_lang": "zh",
+        "text_split_method": "cut5",
+        "batch_size": 1,
+        "media_type": "ogg",
+        "streaming_mode": "true"
+      }
+    },
+    {
+      "id": "019-gsv-v2-bracket-stripped",
+      "kind": "gpt-sovits-v2",
+      "args": {
+        "settings": {
+          "text_lang": "zh",
+          "prompt_lang": "zh"
+        },
+        "inputText": "hi",
+        "voiceId": "Alice[protagonist]"
+      },
+      "expected": {
+        "text": "hi",
+        "prompt_text": "Alice",
+        "ref_audio_path": "./参考音频/Alice[protagonist].wav",
+        "text_lang": "zh",
+        "prompt_lang": "zh",
+        "text_split_method": "cut5",
+        "batch_size": 1,
+        "media_type": "ogg",
+        "streaming_mode": "true"
+      }
+    },
+    {
+      "id": "020-gsv-v2-en",
+      "kind": "gpt-sovits-v2",
+      "args": {
+        "settings": {
+          "text_lang": "en",
+          "prompt_lang": "en"
+        },
+        "inputText": "hello",
+        "voiceId": "Bob"
+      },
+      "expected": {
+        "text": "hello",
+        "prompt_text": "Bob",
+        "ref_audio_path": "./参考音频/Bob.wav",
+        "text_lang": "en",
+        "prompt_lang": "en",
+        "text_split_method": "cut5",
+        "batch_size": 1,
+        "media_type": "ogg",
+        "streaming_mode": "true"
+      }
+    },
+    {
+      "id": "021-gsvi-defaults",
+      "kind": "gsvi",
+      "args": {
+        "settings": {
+          "language": "多语种混合",
+          "batch_size": 10,
+          "speed": 1,
+          "top_k": 6,
+          "top_p": 0.85,
+          "temperature": 0.75,
+          "stream": false
+        },
+        "inputText": "你好",
+        "voiceId": "char1"
+      },
+      "expected": {
+        "query": "text=%E4%BD%A0%E5%A5%BD&cha_name=char1&text_language=%E5%A4%9A%E8%AF%AD%E7%A7%8D%E6%B7%B7%E5%90%88&batch_size=10&speed=1&top_k=6&top_p=0.85&temperature=0.75&stream=false"
+      }
+    },
+    {
+      "id": "022-gsvi-space-encoded",
+      "kind": "gsvi",
+      "args": {
+        "settings": {
+          "language": "多语种混合",
+          "batch_size": 10,
+          "speed": 1,
+          "top_k": 6,
+          "top_p": 0.85,
+          "temperature": 0.75,
+          "stream": false
+        },
+        "inputText": "hello world & special=+",
+        "voiceId": "char2"
+      },
+      "expected": {
+        "query": "text=hello+world+%26+special%3D%2B&cha_name=char2&text_language=%E5%A4%9A%E8%AF%AD%E7%A7%8D%E6%B7%B7%E5%90%88&batch_size=10&speed=1&top_k=6&top_p=0.85&temperature=0.75&stream=false"
+      }
+    },
+    {
+      "id": "023-sbvits2-defaults",
+      "kind": "sbvits2",
+      "args": {
+        "settings": {
+          "sdp_ratio": 0.2,
+          "noise": 0.6,
+          "noisew": 0.8,
+          "length": 1,
+          "language": "JP",
+          "auto_split": true,
+          "split_interval": 0.5,
+          "style_weight": 1,
+          "assist_text": "",
+          "reference_audio_path": ""
+        },
+        "inputText": "hello",
+        "voiceId": "0-0-Neutral"
+      },
+      "expected": {
+        "query": "text=hello&model_id=0&speaker_id=0&sdp_ratio=0.2&noise=0.6&noisew=0.8&length=1&language=JP&auto_split=true&split_interval=0.5&style=Neutral&style_weight=1"
+      }
+    },
+    {
+      "id": "024-sbvits2-br-replaced",
+      "kind": "sbvits2",
+      "args": {
+        "settings": {
+          "sdp_ratio": 0.2,
+          "noise": 0.6,
+          "noisew": 0.8,
+          "length": 1,
+          "language": "JP",
+          "auto_split": true,
+          "split_interval": 0.5,
+          "style_weight": 1,
+          "assist_text": "",
+          "reference_audio_path": ""
+        },
+        "inputText": "line1<br>line2",
+        "voiceId": "1-2-Happy"
+      },
+      "expected": {
+        "query": "text=line1%0Aline2&model_id=1&speaker_id=2&sdp_ratio=0.2&noise=0.6&noisew=0.8&length=1&language=JP&auto_split=true&split_interval=0.5&style=Happy&style_weight=1"
+      }
+    },
+    {
+      "id": "025-sbvits2-assist-and-ref",
+      "kind": "sbvits2",
+      "args": {
+        "settings": {
+          "sdp_ratio": 0.2,
+          "noise": 0.6,
+          "noisew": 0.8,
+          "length": 1,
+          "language": "JP",
+          "auto_split": true,
+          "split_interval": 0.5,
+          "style_weight": 1,
+          "assist_text": "context",
+          "reference_audio_path": "/path/ref.wav",
+          "assist_text_weight": 0.5
+        },
+        "inputText": "with assist",
+        "voiceId": "2-3-Angry"
+      },
+      "expected": {
+        "query": "text=with+assist&model_id=2&speaker_id=3&sdp_ratio=0.2&noise=0.6&noisew=0.8&length=1&language=JP&auto_split=true&split_interval=0.5&assist_text=context&assist_text_weight=0.5&style=Angry&style_weight=1&reference_audio_path=%2Fpath%2Fref.wav"
+      }
+    },
+    {
+      "id": "026-sbvits2-style-multi-dash",
+      "kind": "sbvits2",
+      "args": {
+        "settings": {
+          "sdp_ratio": 0.2,
+          "noise": 0.6,
+          "noisew": 0.8,
+          "length": 1,
+          "language": "JP",
+          "auto_split": true,
+          "split_interval": 0.5,
+          "style_weight": 1,
+          "assist_text": "",
+          "reference_audio_path": ""
+        },
+        "inputText": "multi",
+        "voiceId": "0-0-My-Style-Name"
+      },
+      "expected": {
+        "query": "text=multi&model_id=0&speaker_id=0&sdp_ratio=0.2&noise=0.6&noisew=0.8&length=1&language=JP&auto_split=true&split_interval=0.5&style=My-Style-Name&style_weight=1"
+      }
+    },
+    {
+      "id": "027-silero-defaults",
+      "kind": "silerotts",
+      "args": {
+        "settings": {},
+        "inputText": "привет",
+        "voiceId": "kseniya"
+      },
+      "expected": {
+        "text": "привет",
+        "speaker": "kseniya",
+        "session": "sillytavern"
+      }
+    },
+    {
+      "id": "028-silero-special-chars",
+      "kind": "silerotts",
+      "args": {
+        "settings": {},
+        "inputText": "a & b = c",
+        "voiceId": "aidar"
+      },
+      "expected": {
+        "text": "a & b = c",
+        "speaker": "aidar",
+        "session": "sillytavern"
+      }
+    },
+    {
+      "id": "029-speecht5-defaults",
+      "kind": "speecht5",
+      "args": {
+        "settings": {},
+        "inputText": "hello",
+        "voiceId": "p226",
+        "speakerData": "<2048-byte-base64-embedding>"
+      },
+      "expected": {
+        "text": "hello",
+        "speaker": "<2048-byte-base64-embedding>",
+        "model": "Xenova/speecht5_tts"
+      }
+    },
+    {
+      "id": "030-tts-webui-defaults",
+      "kind": "tts-webui",
+      "args": {
+        "settings": {
+          "model": "chatterbox",
+          "speed": 1,
+          "streaming": false,
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1
+        },
+        "inputText": "hello",
+        "voiceId": "voice1"
+      },
+      "expected": {
+        "model": "chatterbox",
+        "voice": "voice1",
+        "input": "hello",
+        "response_format": "wav",
+        "speed": 1,
+        "stream": false,
+        "params": {
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1
+        }
+      }
+    },
+    {
+      "id": "031-tts-webui-streaming-true",
+      "kind": "tts-webui",
+      "args": {
+        "settings": {
+          "model": "chatterbox",
+          "speed": 1,
+          "streaming": true,
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1
+        },
+        "inputText": "stream",
+        "voiceId": "voice2"
+      },
+      "expected": {
+        "model": "chatterbox",
+        "voice": "voice2",
+        "input": "stream",
+        "response_format": "wav",
+        "speed": 1,
+        "stream": true,
+        "params": {
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1
+        }
+      }
+    },
+    {
+      "id": "032-tts-webui-filters-unknown-keys",
+      "kind": "tts-webui",
+      "args": {
+        "settings": {
+          "model": "other-model",
+          "speed": 2,
+          "streaming": false,
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1,
+          "extra_field": "ignored"
+        },
+        "inputText": "filter",
+        "voiceId": "v3"
+      },
+      "expected": {
+        "model": "other-model",
+        "voice": "v3",
+        "input": "filter",
+        "response_format": "wav",
+        "speed": 2,
+        "stream": false,
+        "params": {
+          "desired_length": 80,
+          "max_length": 200,
+          "halve_first_chunk": true,
+          "exaggeration": 0.5,
+          "cfg_weight": 0.5,
+          "temperature": 0.8,
+          "device": "auto",
+          "dtype": "float32",
+          "cpu_offload": false,
+          "chunked": true,
+          "cache_voice": false,
+          "tokens_per_slice": 1000,
+          "remove_milliseconds": 45,
+          "remove_milliseconds_start": 25,
+          "chunk_overlap_method": "zero",
+          "seed": -1
+        }
+      }
+    },
+    {
+      "id": "033-vits-vits-defaults",
+      "kind": "vits",
+      "args": {
+        "settings": {
+          "streaming": false,
+          "format": "wav",
+          "lang": "auto",
+          "length": 1,
+          "noise": 0.33,
+          "noisew": 0.4,
+          "segment_size": 50,
+          "dim_emotion": 0,
+          "sdp_ratio": 0.2,
+          "emotion": 0,
+          "text_prompt": "",
+          "style_text": "",
+          "style_weight": 1
+        },
+        "inputText": "hello",
+        "voiceId": "VITS&0",
+        "forceNoStreaming": true
+      },
+      "expected": {
+        "form": "text=hello&id=0&format=wav&lang=auto&length=1&noise=0.33&noisew=0.4&segment_size=50",
+        "model_type": "vits"
+      }
+    },
+    {
+      "id": "034-vits-w2v2-emotion",
+      "kind": "vits",
+      "args": {
+        "settings": {
+          "streaming": false,
+          "format": "wav",
+          "lang": "auto",
+          "length": 1,
+          "noise": 0.33,
+          "noisew": 0.4,
+          "segment_size": 50,
+          "dim_emotion": 5,
+          "sdp_ratio": 0.2,
+          "emotion": 0,
+          "text_prompt": "",
+          "style_text": "",
+          "style_weight": 1
+        },
+        "inputText": "hi",
+        "voiceId": "W2V2-VITS&1",
+        "forceNoStreaming": true
+      },
+      "expected": {
+        "form": "text=hi&id=1&format=wav&lang=auto&length=1&noise=0.33&noisew=0.4&segment_size=50&emotion=5",
+        "model_type": "w2v2-vits"
+      }
+    },
+    {
+      "id": "035-vits-bert-full",
+      "kind": "vits",
+      "args": {
+        "settings": {
+          "streaming": false,
+          "format": "wav",
+          "lang": "auto",
+          "length": 1,
+          "noise": 0.33,
+          "noisew": 0.4,
+          "segment_size": 50,
+          "dim_emotion": 0,
+          "sdp_ratio": 0.3,
+          "emotion": 2,
+          "text_prompt": "happy",
+          "style_text": "sad",
+          "style_weight": 0.8
+        },
+        "inputText": "bert",
+        "voiceId": "BERT-VITS2&3",
+        "forceNoStreaming": true
+      },
+      "expected": {
+        "form": "text=bert&id=3&format=wav&lang=auto&length=1&noise=0.33&noisew=0.4&segment_size=50&sdp_ratio=0.3&emotion=2&text_prompt=happy&style_text=sad&style_weight=0.8",
+        "model_type": "bert-vits2"
+      }
+    },
+    {
+      "id": "036-vits-bert-no-style-text",
+      "kind": "vits",
+      "args": {
+        "settings": {
+          "streaming": false,
+          "format": "wav",
+          "lang": "auto",
+          "length": 1,
+          "noise": 0.33,
+          "noisew": 0.4,
+          "segment_size": 50,
+          "dim_emotion": 0,
+          "sdp_ratio": 0.2,
+          "emotion": 0,
+          "text_prompt": "p",
+          "style_text": "",
+          "style_weight": 1
+        },
+        "inputText": "x",
+        "voiceId": "BERT-VITS2&0",
+        "forceNoStreaming": true
+      },
+      "expected": {
+        "form": "text=x&id=0&format=wav&lang=auto&length=1&noise=0.33&noisew=0.4&segment_size=50&sdp_ratio=0.2&emotion=0&text_prompt=p",
+        "model_type": "bert-vits2"
+      }
+    },
+    {
+      "id": "037-xtts-defaults",
+      "kind": "xtts",
+      "args": {
+        "settings": {
+          "language": "en",
+          "streaming": false
+        },
+        "inputText": "hello",
+        "voiceId": "speaker1"
+      },
+      "expected": {
+        "text": "hello",
+        "speaker_wav": "speaker1",
+        "language": "en"
+      }
+    },
+    {
+      "id": "038-xtts-other-language",
+      "kind": "xtts",
+      "args": {
+        "settings": {
+          "language": "zh-cn",
+          "streaming": false
+        },
+        "inputText": "你好",
+        "voiceId": "spk2"
+      },
+      "expected": {
+        "text": "你好",
+        "speaker_wav": "spk2",
+        "language": "zh-cn"
+      }
+    }
+  ]
+}

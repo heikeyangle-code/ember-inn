@@ -1,0 +1,1125 @@
+{
+  "source": "chat-completions.js 特殊协议 requestBody（真 convert*Messages）",
+  "cases": [
+    {
+      "id": "mistral-basic",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false
+      }
+    },
+    {
+      "id": "mistral-names-example",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "system",
+              "name": "example_user",
+              "content": "hello"
+            },
+            {
+              "role": "system",
+              "name": "example_assistant",
+              "content": "world"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "names": {
+            "userName": "User",
+            "charName": "Char"
+          }
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "system",
+            "content": "User: hello"
+          },
+          {
+            "role": "system",
+            "content": "Char: world"
+          },
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false
+      }
+    },
+    {
+      "id": "mistral-tools",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "auto"
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "description": "d",
+              "parameters": {
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "auto"
+      }
+    },
+    {
+      "id": "mistral-json-schema",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "json_schema": {
+            "name": "j",
+            "description": "json",
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "j",
+            "description": "json",
+            "schema": {
+              "type": "object"
+            },
+            "strict": true
+          }
+        }
+      }
+    },
+    {
+      "id": "mistral-tool-messages",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "q"
+            },
+            {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "id": "call_1",
+                  "type": "function",
+                  "function": {
+                    "name": "f",
+                    "arguments": "{}"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "r",
+              "tool_call_id": "call_1"
+            },
+            {
+              "role": "user",
+              "content": "next"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "q\n\nnext"
+          },
+          {
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "id": "27d3f0eef",
+                "type": "function",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "r",
+            "tool_call_id": "27d3f0eef"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false
+      }
+    },
+    {
+      "id": "mistral-assistant-prefix",
+      "args": {
+        "provider": "mistral",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "assistant",
+              "content": "继续"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "model": "m",
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "继续"
+          }
+        ],
+        "temperature": 1,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "max_tokens": 512,
+        "stream": false
+      }
+    },
+    {
+      "id": "xai-basic",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "xai-effort-auto",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "reasoning_effort": "auto"
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "id": "xai-effort-high",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "reasoning_effort": "high"
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "reasoning_effort": "high"
+      }
+    },
+    {
+      "id": "xai-effort-medium",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "reasoning_effort": "medium"
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "id": "xai-tools",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required"
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "description": "d",
+              "parameters": {
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required"
+      }
+    },
+    {
+      "id": "xai-json-schema",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "json_schema": {
+            "name": "j",
+            "strict": false,
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "j",
+            "strict": false,
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "xai-names-example",
+      "args": {
+        "provider": "xai",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "system",
+              "name": "example_user",
+              "content": "hello"
+            },
+            {
+              "role": "system",
+              "name": "example_assistant",
+              "content": "world"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "names": {
+            "userName": "User",
+            "charName": "Char"
+          }
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "User: hello"
+          },
+          {
+            "role": "system",
+            "content": "Char: world"
+          },
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "ai21-basic",
+      "args": {
+        "provider": "ai21",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "max_tokens": 512,
+        "temperature": 1,
+        "top_p": 1,
+        "stream": false
+      }
+    },
+    {
+      "id": "ai21-json-schema",
+      "args": {
+        "provider": "ai21",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "json_schema": {
+            "name": "j",
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi\n\nJSON schema for the response:\n{\n    \"type\": \"object\"\n}"
+          }
+        ],
+        "model": "m",
+        "max_tokens": 512,
+        "temperature": 1,
+        "top_p": 1,
+        "stream": false,
+        "response_format": {
+          "type": "json_object"
+        }
+      }
+    },
+    {
+      "id": "ai21-tools",
+      "args": {
+        "provider": "ai21",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "max_tokens": 512,
+        "temperature": 1,
+        "top_p": 1,
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "description": "d",
+              "parameters": {
+                "type": "object"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai21-names-system",
+      "args": {
+        "provider": "ai21",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "system",
+              "name": "example_user",
+              "content": "hello"
+            },
+            {
+              "role": "system",
+              "name": "example_assistant",
+              "content": "world"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "names": {
+            "userName": "User",
+            "charName": "Char"
+          }
+        }
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "system",
+            "content": "User: hello\n\nChar: world"
+          },
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "m",
+        "max_tokens": 512,
+        "temperature": 1,
+        "top_p": 1,
+        "stream": false
+      }
+    },
+    {
+      "id": "cohere-basic",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": []
+      }
+    },
+    {
+      "id": "cohere-empty-messages",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "m",
+          "messages": [],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Let's get started."
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": []
+      }
+    },
+    {
+      "id": "cohere-safety-model",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "command-r-08-2024",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "command-r-08-2024",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": [],
+        "safety_mode": "OFF"
+      }
+    },
+    {
+      "id": "cohere-tools-schema",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "description": "d",
+                "parameters": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "$schema": "https://json-schema.org/draft/2020-12/schema"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "description": "d",
+              "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cohere-json-schema",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0,
+          "json_schema": {
+            "value": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": [],
+        "response_format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "id": "cohere-tool-calls-primer",
+      "args": {
+        "provider": "cohere",
+        "body": {
+          "model": "m",
+          "messages": [
+            {
+              "role": "user",
+              "content": "q"
+            },
+            {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "id": "c1",
+                  "function": {
+                    "name": "f",
+                    "arguments": "{}"
+                  }
+                }
+              ]
+            }
+          ],
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "frequency_penalty": 0,
+          "presence_penalty": 0
+        }
+      },
+      "expected": {
+        "stream": false,
+        "model": "m",
+        "messages": [
+          {
+            "role": "user",
+            "content": "q"
+          },
+          {
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "id": "c1",
+                "function": {
+                  "name": "f",
+                  "arguments": "{}"
+                }
+              }
+            ],
+            "content": "I'm going to call a tool for that: f"
+          }
+        ],
+        "temperature": 1,
+        "max_tokens": 512,
+        "p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+        "documents": [],
+        "tools": []
+      }
+    }
+  ]
+}
