@@ -1,0 +1,63 @@
+{
+  "source": "MacroEngine.js trimScopedContent",
+  "cases": [
+    {
+      "id": "plain",
+      "args": {
+        "content": "  你好  ",
+        "options": {}
+      },
+      "expected": "你好"
+    },
+    {
+      "id": "empty",
+      "args": {
+        "content": "",
+        "options": {}
+      },
+      "expected": ""
+    },
+    {
+      "id": "multiline-dedent",
+      "args": {
+        "content": "\n    行一\n    行二\n",
+        "options": {}
+      },
+      "expected": "行一\n行二"
+    },
+    {
+      "id": "mixed-indent",
+      "args": {
+        "content": "  a\n    b\n  c",
+        "options": {}
+      },
+      "expected": "a\n  b\nc"
+    },
+    {
+      "id": "no-indent",
+      "args": {
+        "content": "a\nb",
+        "options": {}
+      },
+      "expected": "a\nb"
+    },
+    {
+      "id": "no-dedent",
+      "args": {
+        "content": "  你好  ",
+        "options": {
+          "trimIndent": false
+        }
+      },
+      "expected": "你好"
+    },
+    {
+      "id": "blank-lines",
+      "args": {
+        "content": "\n\n  x\n\n",
+        "options": {}
+      },
+      "expected": "x"
+    }
+  ]
+}

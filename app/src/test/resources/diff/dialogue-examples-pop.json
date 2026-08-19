@@ -1,0 +1,159 @@
+{
+  "source": "openai.js populateDialogueExamples",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "new_example_chat_prompt": "【示例】",
+          "messageExamples": [
+            [
+              {
+                "name": "User",
+                "content": "示例A"
+              },
+              {
+                "name": "Char",
+                "content": "示例B"
+              }
+            ],
+            [
+              {
+                "name": "User",
+                "content": "示例C"
+              }
+            ]
+          ]
+        }
+      },
+      "expected": [
+        {
+          "name": "dialogueExamples",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【示例】",
+              "identifier": "newChat",
+              "name": null
+            },
+            {
+              "role": "system",
+              "content": "示例A",
+              "identifier": "dialogueExamples 0-0",
+              "name": "User"
+            },
+            {
+              "role": "system",
+              "content": "示例B",
+              "identifier": "dialogueExamples 0-1",
+              "name": "Char"
+            },
+            {
+              "role": "system",
+              "content": "【示例】",
+              "identifier": "newChat",
+              "name": null
+            },
+            {
+              "role": "system",
+              "content": "示例C",
+              "identifier": "dialogueExamples 1-0",
+              "name": "User"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "empty-examples",
+      "args": {
+        "body": {
+          "new_example_chat_prompt": "【示例】",
+          "messageExamples": []
+        }
+      },
+      "expected": [
+        {
+          "name": "dialogueExamples",
+          "msgs": []
+        }
+      ]
+    },
+    {
+      "id": "empty-dialogue",
+      "args": {
+        "body": {
+          "new_example_chat_prompt": "【示例】",
+          "messageExamples": [
+            []
+          ]
+        }
+      },
+      "expected": [
+        {
+          "name": "dialogueExamples",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【示例】",
+              "identifier": "newChat",
+              "name": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget-cuts-second-group",
+      "args": {
+        "body": {
+          "new_example_chat_prompt": "【示例】",
+          "budget": 12,
+          "messageExamples": [
+            [
+              {
+                "name": "User",
+                "content": "示例A"
+              },
+              {
+                "name": "Char",
+                "content": "示例B"
+              }
+            ],
+            [
+              {
+                "name": "User",
+                "content": "示例C"
+              }
+            ]
+          ]
+        }
+      },
+      "expected": [
+        {
+          "name": "dialogueExamples",
+          "msgs": [
+            {
+              "role": "system",
+              "content": "【示例】",
+              "identifier": "newChat",
+              "name": null
+            },
+            {
+              "role": "system",
+              "content": "示例A",
+              "identifier": "dialogueExamples 0-0",
+              "name": "User"
+            },
+            {
+              "role": "system",
+              "content": "示例B",
+              "identifier": "dialogueExamples 0-1",
+              "name": "Char"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

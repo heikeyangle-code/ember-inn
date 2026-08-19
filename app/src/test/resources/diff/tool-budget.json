@@ -1,0 +1,82 @@
+{
+  "source": "openai.js populateChatCompletion ToolManager 片段",
+  "cases": [
+    {
+      "id": "disabled",
+      "args": {
+        "body": {
+          "canPerform": false
+        }
+      },
+      "expected": {
+        "reserve": 0,
+        "toolMessage": null
+      }
+    },
+    {
+      "id": "enabled-basic",
+      "args": {
+        "body": {
+          "canPerform": true,
+          "toolData": {
+            "functions": [
+              {
+                "name": "getWeather"
+              }
+            ]
+          },
+          "tokenCount": 42
+        }
+      },
+      "expected": {
+        "reserve": 42,
+        "toolMessage": [
+          {
+            "role": "user",
+            "content": "{\"functions\":[{\"name\":\"getWeather\"}]}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "enabled-empty",
+      "args": {
+        "body": {
+          "canPerform": true,
+          "toolData": {},
+          "tokenCount": 5
+        }
+      },
+      "expected": {
+        "reserve": 5,
+        "toolMessage": [
+          {
+            "role": "user",
+            "content": "{}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "enabled-custom-count",
+      "args": {
+        "body": {
+          "canPerform": true,
+          "toolData": {
+            "functions": []
+          },
+          "tokenCount": 99
+        }
+      },
+      "expected": {
+        "reserve": 99,
+        "toolMessage": [
+          {
+            "role": "user",
+            "content": "{\"functions\":[]}"
+          }
+        ]
+      }
+    }
+  ]
+}

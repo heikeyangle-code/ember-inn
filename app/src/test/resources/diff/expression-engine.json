@@ -1,0 +1,491 @@
+{
+  "source": "expressions/index.js + sprites.js 纯逻辑",
+  "cases": [
+    {
+      "id": "label-simple",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "joy.png"
+        }
+      },
+      "expected": "joy"
+    },
+    {
+      "id": "label-suffix-dash",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "joy-1.png"
+        }
+      },
+      "expected": "joy"
+    },
+    {
+      "id": "label-suffix-dot",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "joy.expressive.png"
+        }
+      },
+      "expected": "joy"
+    },
+    {
+      "id": "label-no-ext",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "sad"
+        }
+      },
+      "expected": "sad"
+    },
+    {
+      "id": "label-unicode",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "微笑-1.png"
+        }
+      },
+      "expected": "微笑"
+    },
+    {
+      "id": "image-data",
+      "args": {
+        "body": {
+          "method": "imageData",
+          "sprite": {
+            "label": "joy",
+            "path": "/characters/Alice/joy.png?t=2026"
+          },
+          "customLabels": []
+        }
+      },
+      "expected": {
+        "expression": "joy",
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/Alice/joy.png?t=2026",
+        "type": "success"
+      }
+    },
+    {
+      "id": "image-data-custom",
+      "args": {
+        "body": {
+          "method": "imageData",
+          "sprite": {
+            "label": "cool",
+            "path": "/characters/Alice/cool-1.png"
+          },
+          "settings": {
+            "expressions": {
+              "custom": [
+                "cool"
+              ]
+            }
+          }
+        }
+      },
+      "expected": {
+        "expression": "cool",
+        "fileName": "cool-1.png",
+        "title": "cool-1",
+        "imageSrc": "/characters/Alice/cool-1.png",
+        "type": "success",
+        "isCustom": true
+      }
+    },
+    {
+      "id": "group-basic",
+      "args": {
+        "body": {
+          "method": "groupSprites",
+          "sprites": [
+            {
+              "label": "joy",
+              "path": "/characters/A/joy.png"
+            },
+            {
+              "label": "joy",
+              "path": "/characters/A/joy-2.png"
+            },
+            {
+              "label": "joy",
+              "path": "/characters/A/joy-1.png"
+            },
+            {
+              "label": "sad",
+              "path": "/characters/A/sad.png"
+            }
+          ],
+          "customLabels": []
+        }
+      },
+      "expected": [
+        {
+          "label": "joy",
+          "files": [
+            {
+              "expression": "joy",
+              "fileName": "joy.png",
+              "title": "joy",
+              "imageSrc": "/characters/A/joy.png",
+              "type": "success"
+            },
+            {
+              "expression": "joy",
+              "fileName": "joy-1.png",
+              "title": "joy-1",
+              "imageSrc": "/characters/A/joy-1.png",
+              "type": "additional"
+            },
+            {
+              "expression": "joy",
+              "fileName": "joy-2.png",
+              "title": "joy-2",
+              "imageSrc": "/characters/A/joy-2.png",
+              "type": "additional"
+            }
+          ]
+        },
+        {
+          "label": "sad",
+          "files": [
+            {
+              "expression": "sad",
+              "fileName": "sad.png",
+              "title": "sad",
+              "imageSrc": "/characters/A/sad.png",
+              "type": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "choose-default",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/A/joy.png"
+      }
+    },
+    {
+      "id": "choose-fallback",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "anger",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "happy",
+                "files": [
+                  {
+                    "fileName": "happy.png",
+                    "title": "happy",
+                    "imageSrc": "/characters/A/happy.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "fallback_expression": "happy",
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "happy.png",
+        "title": "happy",
+        "imageSrc": "/characters/A/happy.png"
+      }
+    },
+    {
+      "id": "choose-reset",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "#reset",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "choose-multiple-random",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "random": 0.1,
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  },
+                  {
+                    "fileName": "joy-2.png",
+                    "title": "joy-2",
+                    "imageSrc": "/characters/A/joy-2.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": true,
+              "rerollIfSame": false
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/A/joy.png"
+      }
+    },
+    {
+      "id": "choose-override",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "overrideFile": "joy-2.png",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  },
+                  {
+                    "fileName": "joy-2.png",
+                    "title": "joy-2",
+                    "imageSrc": "/characters/A/joy-2.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy-2.png",
+        "title": "joy-2",
+        "imageSrc": "/characters/A/joy-2.png"
+      }
+    },
+    {
+      "id": "choose-reroll-same",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "random": 0.9,
+          "prevSrc": "/characters/A/joy-2.png",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  },
+                  {
+                    "fileName": "joy-2.png",
+                    "title": "joy-2",
+                    "imageSrc": "/characters/A/joy-2.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": true,
+              "rerollIfSame": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/A/joy.png"
+      }
+    },
+    {
+      "id": "label-uppercase",
+      "args": {
+        "body": {
+          "method": "labelFromFilename",
+          "fileName": "JOY-1.PNG"
+        }
+      },
+      "expected": "joy"
+    },
+    {
+      "id": "group-empty",
+      "args": {
+        "body": {
+          "method": "groupSprites",
+          "sprites": [],
+          "customLabels": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "choose-no-cache",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "X",
+          "expression": "joy",
+          "spriteCache": {},
+          "settings": {
+            "expressions": {
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "choose-fallback-empty",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "anger",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "happy",
+                "files": []
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "fallback_expression": "happy",
+              "allowMultiple": false
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "choose-reroll-all-same",
+      "args": {
+        "body": {
+          "method": "choose",
+          "folderName": "A",
+          "expression": "joy",
+          "random": 0.5,
+          "prevSrc": "/characters/A/joy.png",
+          "spriteCache": {
+            "A": [
+              {
+                "label": "joy",
+                "files": [
+                  {
+                    "fileName": "joy.png",
+                    "title": "joy",
+                    "imageSrc": "/characters/A/joy.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "settings": {
+            "expressions": {
+              "allowMultiple": true,
+              "rerollIfSame": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "fileName": "joy.png",
+        "title": "joy",
+        "imageSrc": "/characters/A/joy.png"
+      }
+    }
+  ]
+}

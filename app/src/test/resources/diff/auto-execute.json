@@ -1,0 +1,307 @@
+{
+  "source": "AutoExecuteHandler.js handleWIActivation",
+  "cases": [
+    {
+      "id": "match-by-automation-id",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "automationId": "a1"
+          },
+          {
+            "uid": 2,
+            "automationId": "a2"
+          },
+          {
+            "uid": 3,
+            "automationId": null
+          }
+        ],
+        "config": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "x1"
+                  },
+                  {
+                    "automationId": "nope",
+                    "label": "x2"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "chatConfig": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a2",
+                    "label": "y2"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "charConfig": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "z1"
+                  },
+                  {
+                    "automationId": "",
+                    "label": "z3"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "presets": [
+          {
+            "name": "c0-s0",
+            "slots": [
+              {
+                "label": "x1",
+                "automationId": "a1"
+              },
+              {
+                "label": "x2",
+                "automationId": "nope"
+              }
+            ]
+          },
+          {
+            "name": "c1-s0",
+            "slots": [
+              {
+                "label": "y2",
+                "automationId": "a2"
+              }
+            ]
+          },
+          {
+            "name": "c2-s0",
+            "slots": [
+              {
+                "label": "z1",
+                "automationId": "a1"
+              },
+              {
+                "label": "z3",
+                "automationId": ""
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "automationId": "a1",
+          "label": "x1"
+        },
+        {
+          "automationId": "a2",
+          "label": "y2"
+        },
+        {
+          "automationId": "a1",
+          "label": "z1"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-across-configs",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "automationId": "a1"
+          }
+        ],
+        "config": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "g1"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "chatConfig": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "c1"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "charConfig": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "h1"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "presets": [
+          {
+            "name": "c0-s0",
+            "slots": [
+              {
+                "label": "g1",
+                "automationId": "a1"
+              }
+            ]
+          },
+          {
+            "name": "c1-s0",
+            "slots": [
+              {
+                "label": "c1",
+                "automationId": "a1"
+              }
+            ]
+          },
+          {
+            "name": "c2-s0",
+            "slots": [
+              {
+                "label": "h1",
+                "automationId": "a1"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "automationId": "a1",
+          "label": "g1"
+        },
+        {
+          "automationId": "a1",
+          "label": "c1"
+        },
+        {
+          "automationId": "a1",
+          "label": "h1"
+        }
+      ]
+    },
+    {
+      "id": "broken-link-skipped",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "automationId": "a1"
+          }
+        ],
+        "config": {
+          "setList": [
+            {
+              "set": null
+            },
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "ok"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "chatConfig": null,
+        "charConfig": null,
+        "presets": [
+          {
+            "name": "c0-s1",
+            "slots": [
+              {
+                "label": "ok",
+                "automationId": "a1"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "automationId": "a1",
+          "label": "ok"
+        }
+      ]
+    },
+    {
+      "id": "no-match-returns-empty",
+      "args": {
+        "entries": [
+          {
+            "uid": 1,
+            "automationId": "a9"
+          }
+        ],
+        "config": {
+          "setList": [
+            {
+              "set": {
+                "qrList": [
+                  {
+                    "automationId": "a1",
+                    "label": "x1"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "chatConfig": null,
+        "charConfig": null,
+        "presets": [
+          {
+            "name": "c0-s0",
+            "slots": [
+              {
+                "label": "x1",
+                "automationId": "a1"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    }
+  ]
+}

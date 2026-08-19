@@ -1,6 +1,6 @@
 # 差分矩阵（HANDOFF 附录；由 scripts/diff/*.mjs 生成 fixture，禁止手改）
 
-> HANDOFF 第 2 节引用。表内 97 行、例数合计 3040；scripts/diff/ 共 99 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史"85 组 / 1969 例"为旧口径，不再使用。
+> HANDOFF 第 2 节引用。表内 105 行、例数合计 3268；scripts/diff/ 共 103 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史"85 组 / 1969 例""101 行 / 3112 例"为旧口径，不再使用。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类。
@@ -110,3 +110,7 @@
 | 实际请求体（openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5，空 stop/温度 clamp/seed 边界） | chat-request-body-official.mjs | ChatRequestBodyDiffTest | 28 |
 | /preset Fuse.js 7.1 模糊回退 | preset-fuzzy-official.mjs | FusePresetDiffTest | 27 |
 | getTokenizerModel 映射 | tokenizer-model-official.mjs | TokenizerModelDiffTest | 37 |
+| Quick Reply v2 纯函数（migrateSetV1ToV2/visibleSetNames/shouldAutoExecute） | quickreply-official.mjs | QuickReplyDiffTest | 16 |
+| Caption 纯函数（PROMPT_DEFAULT 链/wrapCaptionTemplate/multimodalRequest/isVideo） | caption-official.mjs | CaptionDiffTest | 17 |
+| Translate 纯函数（substituteParams name2Override/display_text·reasoning_display_text key/8 provider body） | translate-official.mjs | TranslateDiffTest | 19 |
+| Gallery 排序字面值 + Assets 类型集 | gallery-assets-official.mjs | GalleryAssetsDiffTest（App 单测） | 5 |

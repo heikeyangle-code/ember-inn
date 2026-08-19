@@ -1,0 +1,521 @@
+{
+  "source": "presetCommandCallback (select name)",
+  "cases": [
+    {
+      "id": "exact",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "Default"
+      },
+      "expected": "Default"
+    },
+    {
+      "id": "exact-case",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "default"
+      },
+      "expected": "Default"
+    },
+    {
+      "id": "exact-case2",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "CLAUDE SONNET"
+      },
+      "expected": "Claude Sonnet"
+    },
+    {
+      "id": "exact-trim",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "  DeepSeek Chat  "
+      },
+      "expected": "DeepSeek Chat"
+    },
+    {
+      "id": "exact-later",
+      "args": {
+        "list": [
+          "A",
+          "B",
+          "C"
+        ],
+        "query": "c"
+      },
+      "expected": "C"
+    },
+    {
+      "id": "exact-first-of-dups",
+      "args": {
+        "list": [
+          "Same",
+          "Same"
+        ],
+        "query": "same"
+      },
+      "expected": "Same"
+    },
+    {
+      "id": "fuzzy-prefix",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "creat"
+      },
+      "expected": "Creative Writing"
+    },
+    {
+      "id": "fuzzy-typo",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "cluade"
+      },
+      "expected": "Claude Sonnet"
+    },
+    {
+      "id": "fuzzy-partial",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "sonnet"
+      },
+      "expected": "Claude Sonnet"
+    },
+    {
+      "id": "fuzzy-word",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "deep"
+      },
+      "expected": "DeepSeek Chat"
+    },
+    {
+      "id": "fuzzy-multiword",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "rp instruct"
+      },
+      "expected": "RP Instruct"
+    },
+    {
+      "id": "fuzzy-single-char",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "n"
+      },
+      "expected": "Narrator"
+    },
+    {
+      "id": "fuzzy-longer-than-item",
+      "args": {
+        "list": [
+          "ab"
+        ],
+        "query": "abcd"
+      },
+      "expected": "ab"
+    },
+    {
+      "id": "fuzzy-no-match",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "zzzzzz"
+      },
+      "expected": null
+    },
+    {
+      "id": "fuzzy-empty-query",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": ""
+      },
+      "expected": null
+    },
+    {
+      "id": "fuzzy-chinese",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "深夜"
+      },
+      "expected": "深夜电台"
+    },
+    {
+      "id": "fuzzy-chinese-typo",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "深夜电"
+      },
+      "expected": "深夜电台"
+    },
+    {
+      "id": "fuzzy-tie-stable",
+      "args": {
+        "list": [
+          "apple",
+          "apple pie"
+        ],
+        "query": "appl"
+      },
+      "expected": "apple"
+    },
+    {
+      "id": "fuzzy-case",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "GEMINI"
+      },
+      "expected": "Gemini 2.5 Pro"
+    },
+    {
+      "id": "chunk-exact",
+      "args": {
+        "list": [
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+      },
+      "expected": "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+    },
+    {
+      "id": "chunk-typo",
+      "args": {
+        "list": [
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characterz Long"
+      },
+      "expected": "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+    },
+    {
+      "id": "chunk-no-match",
+      "args": {
+        "list": [
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "this pattern is totally unrelated to the preset name here"
+      },
+      "expected": null
+    },
+    {
+      "id": "blank-entries",
+      "args": {
+        "list": [
+          "",
+          "   ",
+          "RP"
+        ],
+        "query": "rp"
+      },
+      "expected": "RP"
+    },
+    {
+      "id": "empty-list",
+      "args": {
+        "list": [],
+        "query": "anything"
+      },
+      "expected": null
+    },
+    {
+      "id": "blank-query",
+      "args": {
+        "list": [
+          "Default",
+          "Claude Sonnet",
+          "Creative Writing",
+          "RP Instruct",
+          "Narrator",
+          "Story Telling",
+          "Lorebook Heavy",
+          "Gemini 2.5 Pro",
+          "DeepSeek Chat",
+          "Novel",
+          "Char Card",
+          "Tavern RP",
+          "Test Preset",
+          "自定义预设",
+          "深夜电台",
+          "Long Pattern Name With Several Words To Test Chunking Over Thirty Two Characters Long"
+        ],
+        "query": "   "
+      },
+      "expected": null
+    },
+    {
+      "id": "norm-order",
+      "args": {
+        "list": [
+          "short",
+          "longer name here",
+          "long"
+        ],
+        "query": "lon"
+      },
+      "expected": "long"
+    },
+    {
+      "id": "fuse-internal-exact",
+      "args": {
+        "list": [
+          "Hello World"
+        ],
+        "query": "hello world"
+      },
+      "expected": "Hello World"
+    }
+  ]
+}

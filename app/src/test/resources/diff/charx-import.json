@@ -1,0 +1,449 @@
+{
+  "source": "src/charx.js CharXParser + characters.js importFromCharX",
+  "cases": [
+    {
+      "id": "v3-basic",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl1cbp5cuwAAALsAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsInNwZWNfdmVyc2lvbiI6IjMuMCIsImRhdGEiOnsibmFtZSI6Iua1i+ivlS/op5LoibI65ZCNIiwiZGVzY3JpcHRpb24iOiLmj4/ov7AiLCJleHRlbnNpb25zIjp7ImZhdiI6dHJ1ZSwidGFsa2F0aXZlbmVzcyI6MC43fX0sImNoYXQiOlsi5pen5Lya6K+dIl0sImpzb25fZGF0YSI6IngifVBLAQIUAAoAAAAAAGJVEl1cbp5cuwAAALsAAAAJAAAAAAAAAAAAAAAAAAAAAABjYXJkLmpzb25QSwUGAAAAAAEAAQA3AAAA4gAAAAAA"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "spec_version": "3.0",
+          "data": {
+            "name": "测试角色名",
+            "description": "描述",
+            "extensions": {
+              "fav": false,
+              "talkativeness": 0.7
+            }
+          },
+          "name": "测试角色名",
+          "description": "描述",
+          "talkativeness": 0.7,
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "测试角色名",
+        "persistSummary": null,
+        "persistFolder": null,
+        "parsedIcon": null,
+        "parsedAssets": []
+      }
+    },
+    {
+      "id": "v2-legacy",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl0RCzjW7wAAAO8AAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MiIsIm5hbWUiOiLml6fljaHlkI0iLCJkZXNjcmlwdGlvbiI6IuaXp+aPj+i/sCIsInBlcnNvbmFsaXR5Ijoi5oCn5qC8Iiwic2NlbmFyaW8iOiLlnLrmma8iLCJmaXJzdF9tZXMiOiLkvaDlpb0iLCJtZXNfZXhhbXBsZSI6IuekuuS+iyIsImNoYXQiOiLkvJror50iLCJmYXYiOnRydWUsInRhbGthdGl2ZW5lc3MiOjAuOCwiY3JlYXRvciI6IuS9nOiAhSIsInRhZ3MiOlsiYSIsImIiXX1QSwECFAAKAAAAAABiVRJdEQs41u8AAADvAAAACQAAAAAAAAAAAAAAAAAAAAAAY2FyZC5qc29uUEsFBgAAAAABAAEANwAAABYBAAAAAA=="
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v2",
+          "name": "旧卡名",
+          "description": "旧描述",
+          "personality": "性格",
+          "scenario": "场景",
+          "first_mes": "你好",
+          "mes_example": "示例",
+          "fav": false,
+          "talkativeness": 0.8,
+          "creator": "作者",
+          "tags": [
+            "a",
+            "b"
+          ],
+          "data": {
+            "extensions": {
+              "fav": false
+            }
+          },
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "旧卡名",
+        "persistSummary": null,
+        "persistFolder": null,
+        "parsedIcon": null,
+        "parsedAssets": []
+      }
+    },
+    {
+      "id": "with-assets",
+      "args": {
+        "body": {
+          "zipBase64": "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"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "资源卡",
+            "description": "带资源",
+            "extensions": {
+              "fav": false
+            },
+            "assets": [
+              {
+                "type": "icon",
+                "name": "main.png",
+                "ext": "png",
+                "uri": "embeded://icons/main.png"
+              },
+              {
+                "type": "emotion",
+                "name": "happy.png",
+                "ext": "png",
+                "uri": "embedded://sprites/happy.png"
+              },
+              {
+                "type": "background",
+                "name": "bg",
+                "ext": "jpg",
+                "uri": "__asset:bg/room.jpg"
+              },
+              {
+                "type": "expression",
+                "name": "sad.png",
+                "ext": "webp",
+                "uri": "embeded://sprites/sad.webp"
+              },
+              {
+                "type": "misc",
+                "name": "note.txt",
+                "ext": "txt",
+                "uri": "embeded://misc/note.txt"
+              },
+              {
+                "type": "emotion",
+                "name": "missing.png",
+                "ext": "png",
+                "uri": "embeded://sprites/missing.png"
+              }
+            ]
+          },
+          "name": "资源卡",
+          "description": "带资源",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "buffer:iVBORw0KGgo=",
+        "resultFileName": "资源卡",
+        "persistSummary": {
+          "sprites": 3,
+          "backgrounds": 1,
+          "misc": 0
+        },
+        "persistFolder": "资源卡",
+        "parsedIcon": {
+          "type": "icon",
+          "name": "main.png",
+          "ext": "png",
+          "zipPath": "icons/main.png",
+          "order": 0
+        },
+        "parsedAssets": [
+          {
+            "type": "emotion",
+            "name": "happy.png",
+            "ext": "png",
+            "zipPath": "sprites/happy.png",
+            "order": 1,
+            "storageCategory": "sprite",
+            "baseName": "happy"
+          },
+          {
+            "type": "background",
+            "name": "bg",
+            "ext": "jpg",
+            "zipPath": "bg/room.jpg",
+            "order": 2,
+            "storageCategory": "background",
+            "baseName": "bg"
+          },
+          {
+            "type": "expression",
+            "name": "sad.png",
+            "ext": "webp",
+            "zipPath": "sprites/sad.webp",
+            "order": 3,
+            "storageCategory": "sprite",
+            "baseName": "sad"
+          },
+          {
+            "type": "emotion",
+            "name": "missing.png",
+            "ext": "png",
+            "zipPath": "sprites/missing.png",
+            "order": 5,
+            "storageCategory": "sprite",
+            "baseName": "missing"
+          }
+        ]
+      }
+    },
+    {
+      "id": "nested-card-json",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl0AAAAAAAAAAAAAAAAFAAAAc29tZS9QSwMECgAAAAAAYlUSXQAAAAAAAAAAAAAAAAwAAABzb21lL2ZvbGRlci9QSwMECgAAAAAAYlUSXS8xPDxGAAAARgAAABUAAABzb21lL2ZvbGRlci9jYXJkLmpzb257InNwZWMiOiJjaGFyYV9jYXJkX3YzIiwiZGF0YSI6eyJuYW1lIjoi5bWM5aWX5Y2hIiwiZGVzY3JpcHRpb24iOiJkIn19UEsBAhQACgAAAAAAYlUSXQAAAAAAAAAAAAAAAAUAAAAAAAAAAAAQAAAAAAAAAHNvbWUvUEsBAhQACgAAAAAAYlUSXQAAAAAAAAAAAAAAAAwAAAAAAAAAAAAQAAAAIwAAAHNvbWUvZm9sZGVyL1BLAQIUAAoAAAAAAGJVEl0vMTw8RgAAAEYAAAAVAAAAAAAAAAAAAAAAAE0AAABzb21lL2ZvbGRlci9jYXJkLmpzb25QSwUGAAAAAAMAAwCwAAAAxgAAAAAA"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "嵌套卡",
+            "description": "d",
+            "extensions": {
+              "fav": false
+            }
+          },
+          "name": "嵌套卡",
+          "description": "d",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "嵌套卡",
+        "persistSummary": null,
+        "persistFolder": null,
+        "parsedIcon": null,
+        "parsedAssets": []
+      }
+    },
+    {
+      "id": "sfx-prefix",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl3mLBIvSQAAAEkAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsImRhdGEiOnsibmFtZSI6IuiHquino+WOi+WNoSIsImRlc2NyaXB0aW9uIjoiZCJ9fVBLAQIUAAoAAAAAAGJVEl3mLBIvSQAAAEkAAAAJAAAAAAAAAAAAAAAAAAAAAABjYXJkLmpzb25QSwUGAAAAAAEAAQA3AAAAcAAAAAAA",
+          "sfxPrefix": "SELF-EXTRACTING-HEADER!"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "自解压卡",
+            "description": "d",
+            "extensions": {
+              "fav": false
+            }
+          },
+          "name": "自解压卡",
+          "description": "d",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "自解压卡",
+        "persistSummary": null,
+        "persistFolder": null,
+        "parsedIcon": null,
+        "parsedAssets": []
+      }
+    },
+    {
+      "id": "ext-from-path",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl1wqB1HpAAAAKQAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsImRhdGEiOnsibmFtZSI6Iui3r+W+hOaJqeWxlSIsImV4dGVuc2lvbnMiOnsiZmF2IjpmYWxzZX0sImFzc2V0cyI6W3sidHlwZSI6ImVtb3Rpb24iLCJuYW1lIjoiaGFwcHkiLCJ1cmkiOiJlbWJlZGRlZDovL3Nwcml0ZXMvaGFwcHkucG5nIn1dfX1QSwMECgAAAAAAYlUSXQAAAAAAAAAAAAAAAAgAAABzcHJpdGVzL1BLAwQKAAAAAABiVRJdhqYQNgUAAAAFAAAAEQAAAHNwcml0ZXMvaGFwcHkucG5naGVsbG9QSwECFAAKAAAAAABiVRJdcKgdR6QAAACkAAAACQAAAAAAAAAAAAAAAAAAAAAAY2FyZC5qc29uUEsBAhQACgAAAAAAYlUSXQAAAAAAAAAAAAAAAAgAAAAAAAAAAAAQAAAAywAAAHNwcml0ZXMvUEsBAhQACgAAAAAAYlUSXYamEDYFAAAABQAAABEAAAAAAAAAAAAAAAAA8QAAAHNwcml0ZXMvaGFwcHkucG5nUEsFBgAAAAADAAMArAAAACUBAAAAAA=="
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "路径扩展",
+            "extensions": {
+              "fav": false
+            },
+            "assets": [
+              {
+                "type": "emotion",
+                "name": "happy",
+                "uri": "embedded://sprites/happy.png"
+              }
+            ]
+          },
+          "name": "路径扩展",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "路径扩展",
+        "persistSummary": {
+          "sprites": 1,
+          "backgrounds": 0,
+          "misc": 0
+        },
+        "persistFolder": "路径扩展",
+        "parsedIcon": null,
+        "parsedAssets": [
+          {
+            "type": "emotion",
+            "name": "happy",
+            "ext": "png",
+            "zipPath": "sprites/happy.png",
+            "order": 0,
+            "storageCategory": "sprite",
+            "baseName": "happy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "uri-uppercase",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl36oUZFqwAAAKsAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsImRhdGEiOnsibmFtZSI6IuWkp+WGmVVSSSIsImV4dGVuc2lvbnMiOnsiZmF2IjpmYWxzZX0sImFzc2V0cyI6W3sidHlwZSI6ImVtb3Rpb24iLCJuYW1lIjoic2FkIiwiZXh0Ijoid2VicCIsInVyaSI6IkVNQkVEREVEOi8vc3ByaXRlcy9zYWQud2VicCJ9XX19UEsDBAoAAAAAAGJVEl0AAAAAAAAAAAAAAAAIAAAAc3ByaXRlcy9QSwMECgAAAAAAYlUSXes2fp4EAAAABAAAABAAAABzcHJpdGVzL3NhZC53ZWJwd2VicFBLAQIUAAoAAAAAAGJVEl36oUZFqwAAAKsAAAAJAAAAAAAAAAAAAAAAAAAAAABjYXJkLmpzb25QSwECFAAKAAAAAABiVRJdAAAAAAAAAAAAAAAACAAAAAAAAAAAABAAAADSAAAAc3ByaXRlcy9QSwECFAAKAAAAAABiVRJd6zZ+ngQAAAAEAAAAEAAAAAAAAAAAAAAAAAD4AAAAc3ByaXRlcy9zYWQud2VicFBLBQYAAAAAAwADAKsAAAAqAQAAAAA="
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "大写URI",
+            "extensions": {
+              "fav": false
+            },
+            "assets": [
+              {
+                "type": "emotion",
+                "name": "sad",
+                "ext": "webp",
+                "uri": "EMBEDDED://sprites/sad.webp"
+              }
+            ]
+          },
+          "name": "大写URI",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "大写URI",
+        "persistSummary": {
+          "sprites": 1,
+          "backgrounds": 0,
+          "misc": 0
+        },
+        "persistFolder": "大写URI",
+        "parsedIcon": null,
+        "parsedAssets": [
+          {
+            "type": "emotion",
+            "name": "sad",
+            "ext": "webp",
+            "zipPath": "sprites/sad.webp",
+            "order": 0,
+            "storageCategory": "sprite",
+            "baseName": "sad"
+          }
+        ]
+      }
+    },
+    {
+      "id": "icon-first",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl224SQz7AAAAOwAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsImRhdGEiOnsibmFtZSI6IuWPjOWbvuaghyIsImV4dGVuc2lvbnMiOnsiZmF2IjpmYWxzZX0sImFzc2V0cyI6W3sidHlwZSI6Imljb24iLCJuYW1lIjoiYS5wbmciLCJleHQiOiJwbmciLCJ1cmkiOiJlbWJlZGVkOi8vaWNvbnMvYS5wbmcifSx7InR5cGUiOiJpY29uIiwibmFtZSI6ImIucG5nIiwiZXh0IjoicG5nIiwidXJpIjoiZW1iZWRlZDovL2ljb25zL2IucG5nIn1dfX1QSwMECgAAAAAAYlUSXQAAAAAAAAAAAAAAAAYAAABpY29ucy9QSwMECgAAAAAAYlUSXYue2dMBAAAAAQAAAAsAAABpY29ucy9hLnBuZ0FQSwMECgAAAAAAYlUSXTHP0EoBAAAAAQAAAAsAAABpY29ucy9iLnBuZ0JQSwECFAAKAAAAAABiVRJdtuEkM+wAAADsAAAACQAAAAAAAAAAAAAAAAAAAAAAY2FyZC5qc29uUEsBAhQACgAAAAAAYlUSXQAAAAAAAAAAAAAAAAYAAAAAAAAAAAAQAAAAEwEAAGljb25zL1BLAQIUAAoAAAAAAGJVEl2LntnTAQAAAAEAAAALAAAAAAAAAAAAAAAAADcBAABpY29ucy9hLnBuZ1BLAQIUAAoAAAAAAGJVEl0xz9BKAQAAAAEAAAALAAAAAAAAAAAAAAAAAGEBAABpY29ucy9iLnBuZ1BLBQYAAAAABAAEAN0AAACLAQAAAAA="
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "双图标",
+            "extensions": {
+              "fav": false
+            },
+            "assets": [
+              {
+                "type": "icon",
+                "name": "a.png",
+                "ext": "png",
+                "uri": "embeded://icons/a.png"
+              },
+              {
+                "type": "icon",
+                "name": "b.png",
+                "ext": "png",
+                "uri": "embeded://icons/b.png"
+              }
+            ]
+          },
+          "name": "双图标",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "buffer:QQ==",
+        "resultFileName": "双图标",
+        "persistSummary": null,
+        "persistFolder": null,
+        "parsedIcon": {
+          "type": "icon",
+          "name": "a.png",
+          "ext": "png",
+          "zipPath": "icons/a.png",
+          "order": 0
+        },
+        "parsedAssets": []
+      }
+    },
+    {
+      "id": "path-dot-prefix",
+      "args": {
+        "body": {
+          "zipBase64": "UEsDBAoAAAAAAGJVEl1ZAeN4qAAAAKgAAAAJAAAAY2FyZC5qc29ueyJzcGVjIjoiY2hhcmFfY2FyZF92MyIsImRhdGEiOnsibmFtZSI6IueCueWJjee8gCIsImV4dGVuc2lvbnMiOnsiZmF2IjpmYWxzZX0sImFzc2V0cyI6W3sidHlwZSI6ImJhY2tncm91bmQiLCJuYW1lIjoiYmciLCJleHQiOiJqcGciLCJ1cmkiOiJlbWJlZGVkOi8vLi9iZy9yb29tLmpwZyJ9XX19UEsDBAoAAAAAAGJVEl0AAAAAAAAAAAAAAAADAAAAYmcvUEsDBAoAAAAAAGJVEl03wc5tBAAAAAQAAAALAAAAYmcvcm9vbS5qcGdiYWNrUEsBAhQACgAAAAAAYlUSXVkB43ioAAAAqAAAAAkAAAAAAAAAAAAAAAAAAAAAAGNhcmQuanNvblBLAQIUAAoAAAAAAGJVEl0AAAAAAAAAAAAAAAADAAAAAAAAAAAAEAAAAM8AAABiZy9QSwECFAAKAAAAAABiVRJdN8HObQQAAAAEAAAACwAAAAAAAAAAAAAAAADwAAAAYmcvcm9vbS5qcGdQSwUGAAAAAAMAAwChAAAAHQEAAAAA"
+        }
+      },
+      "expected": {
+        "resultChar": {
+          "spec": "chara_card_v3",
+          "data": {
+            "name": "点前缀",
+            "extensions": {
+              "fav": false
+            },
+            "assets": [
+              {
+                "type": "background",
+                "name": "bg",
+                "ext": "jpg",
+                "uri": "embeded://./bg/room.jpg"
+              }
+            ]
+          },
+          "name": "点前缀",
+          "fav": false,
+          "create_date": "2026-08-08T00:00:00.000Z"
+        },
+        "resultAvatar": "avatar",
+        "resultFileName": "点前缀",
+        "persistSummary": {
+          "sprites": 0,
+          "backgrounds": 1,
+          "misc": 0
+        },
+        "persistFolder": "点前缀",
+        "parsedIcon": null,
+        "parsedAssets": [
+          {
+            "type": "background",
+            "name": "bg",
+            "ext": "jpg",
+            "zipPath": "bg/room.jpg",
+            "order": 0,
+            "storageCategory": "background",
+            "baseName": "bg"
+          }
+        ]
+      }
+    }
+  ]
+}

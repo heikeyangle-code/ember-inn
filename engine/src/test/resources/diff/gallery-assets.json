@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-08-19T19:45:28.480Z",
+  "source": "gallery/index.js SORT + assets/index.js KNOWN_TYPES",
+  "cases": [
+    {
+      "id": 0,
+      "name": "gal-sort-nameAsc",
+      "_tag": "gallery-sort",
+      "expected": {
+        "value": "nameAsc",
+        "field": "name",
+        "order": "asc"
+      }
+    },
+    {
+      "id": 1,
+      "name": "gal-sort-nameDesc",
+      "_tag": "gallery-sort",
+      "expected": {
+        "value": "nameDesc",
+        "field": "name",
+        "order": "desc"
+      }
+    },
+    {
+      "id": 2,
+      "name": "gal-sort-dateDesc",
+      "_tag": "gallery-sort",
+      "expected": {
+        "value": "dateDesc",
+        "field": "date",
+        "order": "desc"
+      }
+    },
+    {
+      "id": 3,
+      "name": "gal-sort-dateAsc",
+      "_tag": "gallery-sort",
+      "expected": {
+        "value": "dateAsc",
+        "field": "date",
+        "order": "asc"
+      }
+    },
+    {
+      "id": 4,
+      "name": "ass-types-5",
+      "_tag": "assets-types",
+      "expected": {
+        "types": [
+          "extension",
+          "character",
+          "ambient",
+          "bgm",
+          "blip"
+        ]
+      }
+    }
+  ]
+}

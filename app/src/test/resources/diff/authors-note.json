@@ -1,0 +1,357 @@
+{
+  "source": "authors-note.js + world-info.js ANWithWI",
+  "cases": [
+    {
+      "id": "resolve-defaults",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {},
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 1,
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-overrides",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "备注",
+            "interval": 3,
+            "position": 2,
+            "depth": 7,
+            "role": 2
+          },
+          "defaults": {
+            "default": "默认",
+            "defaultInterval": 1,
+            "defaultPosition": 1,
+            "defaultDepth": 4,
+            "defaultRole": 0
+          }
+        }
+      },
+      "expected": {
+        "prompt": "备注",
+        "interval": 3,
+        "position": 2,
+        "depth": 7,
+        "role": 2
+      }
+    },
+    {
+      "id": "resolve-partial-defaults",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P"
+          },
+          "defaults": {
+            "defaultInterval": 5,
+            "defaultPosition": 0,
+            "defaultDepth": 9,
+            "defaultRole": 1
+          }
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": 5,
+        "position": 0,
+        "depth": 9,
+        "role": 1
+      }
+    },
+    {
+      "id": "compose-empty",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": "note"
+        }
+      },
+      "expected": "note"
+    },
+    {
+      "id": "compose-top",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a",
+            "b"
+          ],
+          "bottom": [],
+          "original": "note"
+        }
+      },
+      "expected": "a\nb\nnote"
+    },
+    {
+      "id": "compose-both",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a"
+          ],
+          "bottom": [
+            "c",
+            "d"
+          ],
+          "original": "note"
+        }
+      },
+      "expected": "a\nnote\nc\nd"
+    },
+    {
+      "id": "compose-empty-original",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a"
+          ],
+          "bottom": [
+            "c"
+          ],
+          "original": ""
+        }
+      },
+      "expected": "a\n\nc"
+    },
+    {
+      "id": "resolve-all-fields-zero",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "",
+            "interval": 0,
+            "position": 0,
+            "depth": 0,
+            "role": 0
+          },
+          "defaults": {
+            "default": "默认",
+            "defaultInterval": 1,
+            "defaultPosition": 1,
+            "defaultDepth": 4,
+            "defaultRole": 0
+          }
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 0,
+        "position": 0,
+        "depth": 0,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-negative-values",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P",
+            "interval": -1,
+            "position": -2,
+            "depth": -3,
+            "role": -1
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": -1,
+        "position": -2,
+        "depth": -3,
+        "role": -1
+      }
+    },
+    {
+      "id": "resolve-huge-depth",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "prompt": "P",
+            "depth": 999999
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "P",
+        "interval": 1,
+        "position": 1,
+        "depth": 999999,
+        "role": 0
+      }
+    },
+    {
+      "id": "resolve-only-interval",
+      "args": {
+        "body": {
+          "method": "resolve",
+          "meta": {
+            "interval": 7
+          },
+          "defaults": {}
+        }
+      },
+      "expected": {
+        "prompt": "",
+        "interval": 7,
+        "position": 1,
+        "depth": 4,
+        "role": 0
+      }
+    },
+    {
+      "id": "compose-multi-newlines",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [
+            "a\nb"
+          ],
+          "bottom": [
+            "c\nd"
+          ],
+          "original": "note"
+        }
+      },
+      "expected": "a\nb\nnote\nc\nd"
+    },
+    {
+      "id": "compose-empty-all",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "compose-original-with-newlines",
+      "args": {
+        "body": {
+          "method": "compose",
+          "top": [],
+          "bottom": [],
+          "original": "\nnote\n"
+        }
+      },
+      "expected": "\nnote\n"
+    },
+    {
+      "id": "chara-replace",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 0
+          }
+        }
+      },
+      "expected": "角色备注"
+    },
+    {
+      "id": "chara-before",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 1
+          }
+        }
+      },
+      "expected": "角色备注\n聊天备注"
+    },
+    {
+      "id": "chara-after",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": true,
+            "position": 2
+          }
+        }
+      },
+      "expected": "聊天备注\n角色备注"
+    },
+    {
+      "id": "chara-disabled",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "角色备注",
+            "useChara": false,
+            "position": 0
+          }
+        }
+      },
+      "expected": "聊天备注"
+    },
+    {
+      "id": "chara-null",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": null
+        }
+      },
+      "expected": "聊天备注"
+    },
+    {
+      "id": "chara-empty-prompt",
+      "args": {
+        "body": {
+          "method": "chara",
+          "prompt": "聊天备注",
+          "chara": {
+            "name": "Char",
+            "prompt": "",
+            "useChara": true,
+            "position": 1
+          }
+        }
+      },
+      "expected": "\n聊天备注"
+    }
+  ]
+}

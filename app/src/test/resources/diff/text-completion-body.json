@@ -1,0 +1,237 @@
+{
+  "source": "chat-completions.js isTextCompletion requestBody（真 convertTextCompletionPrompt）",
+  "cases": [
+    {
+      "id": "basic",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [
+            {
+              "role": "system",
+              "content": "你是助手"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            },
+            {
+              "role": "assistant",
+              "content": "hello"
+            }
+          ],
+          "temperature": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+          "top_p": 1
+        }
+      },
+      "expected": {
+        "prompt": "System: 你是助手\nuser: hi\nassistant: hello\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "single-user",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [
+            {
+              "role": "user",
+              "content": "你好"
+            }
+          ],
+          "temperature": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+          "top_p": 1
+        }
+      },
+      "expected": {
+        "prompt": "user: 你好\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "names-example",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [
+            {
+              "role": "system",
+              "name": "example_user",
+              "content": "hello"
+            },
+            {
+              "role": "system",
+              "name": "example_assistant",
+              "content": "world"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "temperature": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+          "top_p": 1,
+          "names": {
+            "userName": "User",
+            "charName": "Char"
+          }
+        }
+      },
+      "expected": {
+        "prompt": "example_user: hello\nexample_assistant: world\nuser: hi\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "tool-messages",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [
+            {
+              "role": "user",
+              "content": "q"
+            },
+            {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "id": "c1",
+                  "function": {
+                    "name": "f",
+                    "arguments": "{}"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "r",
+              "tool_call_id": "c1"
+            },
+            {
+              "role": "user",
+              "content": "next"
+            }
+          ],
+          "temperature": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+          "top_p": 1
+        }
+      },
+      "expected": {
+        "prompt": "user: q\nassistant: undefined\ntool: r\nuser: next\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "empty-messages",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [],
+          "temperature": 1,
+          "max_tokens": 512,
+          "stream": false,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+          "top_p": 1
+        }
+      },
+      "expected": {
+        "prompt": "\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1
+      }
+    },
+    {
+      "id": "sampler-values",
+      "args": {
+        "body": {
+          "isTextCompletion": true,
+          "model": "gpt-3.5-turbo-instruct",
+          "messages": [
+            {
+              "role": "system",
+              "content": "你是助手"
+            },
+            {
+              "role": "user",
+              "content": "hi"
+            },
+            {
+              "role": "assistant",
+              "content": "hello"
+            }
+          ],
+          "temperature": 0.7,
+          "max_tokens": 2048,
+          "stream": true,
+          "presence_penalty": 0.5,
+          "frequency_penalty": 1.5,
+          "top_p": 0.9
+        }
+      },
+      "expected": {
+        "prompt": "System: 你是助手\nuser: hi\nassistant: hello\nassistant:",
+        "model": "gpt-3.5-turbo-instruct",
+        "temperature": 0.7,
+        "max_tokens": 2048,
+        "stream": true,
+        "presence_penalty": 0.5,
+        "frequency_penalty": 1.5,
+        "top_p": 0.9
+      }
+    }
+  ]
+}

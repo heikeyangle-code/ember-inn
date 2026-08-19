@@ -219,12 +219,14 @@ class ChatRepository(private val context: Context) {
         client.chatCompletions(provider, effective, messages, options)
     }
 
-    /** 官方 caption 扩展 multimodal：用当前提供商发视觉请求生成图片描述。 */
+    /**
+     * 官方 caption 扩展 multimodal：getMultimodalCaption(base64Img, prompt) — 官方不走固定 system，
+     * 直传当前提供商发视觉请求（[role:user, content:prompt, images:[dataUrl]]）。
+     */
     suspend fun captionImage(dataUrl: String, prompt: String): String? = withContext(Dispatchers.IO) {
         val profile = profile() ?: return@withContext null
         val provider = ProviderRegistry.get(profile.providerId) ?: return@withContext null
         val messages = listOf(
-            CompletionMessage(role = "system", content = "You are an image captioning assistant."),
             CompletionMessage(
                 role = "user",
                 content = prompt,

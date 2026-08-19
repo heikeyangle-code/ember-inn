@@ -1,0 +1,640 @@
+{
+  "source": "group-chats.js activate*",
+  "cases": [
+    {
+      "id": "list",
+      "args": {
+        "body": {
+          "method": "list",
+          "members": [
+            "b",
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "randoms": []
+        }
+      },
+      "expected": [
+        "b",
+        "a",
+        "c"
+      ]
+    },
+    {
+      "id": "impersonate",
+      "args": {
+        "body": {
+          "method": "impersonate",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "randoms": [
+            0.9
+          ]
+        }
+      },
+      "expected": [
+        "c"
+      ]
+    },
+    {
+      "id": "swipe-user-last",
+      "args": {
+        "body": {
+          "method": "swipe",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [
+            {
+              "is_user": true,
+              "name": "User",
+              "original_avatar": null
+            },
+            {
+              "is_user": false,
+              "name": "Alice",
+              "original_avatar": "a"
+            }
+          ],
+          "randoms": []
+        }
+      },
+      "expected": [
+        "a"
+      ]
+    },
+    {
+      "id": "swipe-no-last",
+      "args": {
+        "body": {
+          "method": "swipe",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [],
+          "randoms": [
+            0.2
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "swipe-system",
+      "args": {
+        "body": {
+          "method": "swipe",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [
+            {
+              "is_user": false,
+              "is_system": true,
+              "name": "Sys",
+              "original_avatar": null
+            },
+            {
+              "is_user": false,
+              "name": "Bob",
+              "original_avatar": "b"
+            }
+          ],
+          "randoms": []
+        }
+      },
+      "expected": [
+        "b"
+      ]
+    },
+    {
+      "id": "pooled-have-not-spoken",
+      "args": {
+        "body": {
+          "method": "pooled",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [
+            {
+              "is_user": false,
+              "name": "Alice",
+              "original_avatar": "a"
+            }
+          ],
+          "lastMessage": {
+            "is_user": false,
+            "name": "Alice",
+            "original_avatar": "a"
+          },
+          "isUserInput": false,
+          "randoms": [
+            0.8
+          ]
+        }
+      },
+      "expected": [
+        "c"
+      ]
+    },
+    {
+      "id": "pooled-all-spoken",
+      "args": {
+        "body": {
+          "method": "pooled",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [
+            {
+              "is_user": false,
+              "name": "Alice",
+              "original_avatar": "a"
+            },
+            {
+              "is_user": false,
+              "name": "Bob",
+              "original_avatar": "b"
+            },
+            {
+              "is_user": false,
+              "name": "Carol",
+              "original_avatar": "c"
+            }
+          ],
+          "lastMessage": {
+            "is_user": false,
+            "name": "Carol",
+            "original_avatar": "c"
+          },
+          "isUserInput": false,
+          "randoms": [
+            0.1
+          ]
+        }
+      },
+      "expected": [
+        "a"
+      ]
+    },
+    {
+      "id": "natural-mention",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "Hey Bob!",
+          "lastMessage": {
+            "is_user": true,
+            "name": "User",
+            "original_avatar": null
+          },
+          "allowSelfResponses": false,
+          "isUserInput": true,
+          "randoms": [
+            0.1,
+            0.2,
+            0.3,
+            0.9
+          ]
+        }
+      },
+      "expected": [
+        "b",
+        "c",
+        "a"
+      ]
+    },
+    {
+      "id": "natural-banned",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": {
+            "is_user": false,
+            "name": "Alice",
+            "original_avatar": "a"
+          },
+          "allowSelfResponses": false,
+          "isUserInput": false,
+          "randoms": [
+            0.1,
+            0.9,
+            0.9,
+            0.5
+          ]
+        }
+      },
+      "expected": [
+        "c"
+      ]
+    },
+    {
+      "id": "natural-allow-self",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": {
+            "is_user": false,
+            "name": "Alice",
+            "original_avatar": "a"
+          },
+          "allowSelfResponses": true,
+          "isUserInput": false,
+          "randoms": [
+            0.1,
+            0.1,
+            0.1,
+            0.9
+          ]
+        }
+      },
+      "expected": [
+        "c",
+        "a"
+      ]
+    },
+    {
+      "id": "list-empty",
+      "args": {
+        "body": {
+          "method": "list",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "randoms": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "natural-empty",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": null,
+          "allowSelfResponses": false,
+          "isUserInput": false,
+          "randoms": []
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "pooled-empty",
+      "args": {
+        "body": {
+          "method": "pooled",
+          "members": [],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "chat": [],
+          "lastMessage": null,
+          "isUserInput": false,
+          "randoms": [
+            0.5
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "swipe-all-system-allow",
+      "args": {
+        "body": {
+          "method": "swipe",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "allowSystem": true,
+          "chat": [
+            {
+              "is_user": false,
+              "is_system": true,
+              "name": "Sys",
+              "original_avatar": null
+            }
+          ],
+          "randoms": [
+            0.9
+          ]
+        }
+      },
+      "expected": []
+    },
+    {
+      "id": "natural-zero-random",
+      "args": {
+        "body": {
+          "method": "natural",
+          "members": [
+            "a",
+            "b",
+            "c"
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice",
+              "talkativeness": 0.8
+            },
+            {
+              "avatar": "b",
+              "name": "Bob",
+              "talkativeness": 0.2
+            },
+            {
+              "avatar": "c",
+              "name": "Carol",
+              "talkativeness": 0.5
+            }
+          ],
+          "input": "",
+          "lastMessage": null,
+          "allowSelfResponses": false,
+          "isUserInput": true,
+          "randoms": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "expected": [
+        "b",
+        "c",
+        "a"
+      ]
+    }
+  ]
+}

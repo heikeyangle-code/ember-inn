@@ -1,0 +1,448 @@
+{
+  "source": "script.js 工具循环决策 + tool-calling.js canPerformToolCalls",
+  "cases": [
+    {
+      "id": "streaming-recurse",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 2,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": true,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    },
+    {
+      "id": "streaming-stop-empty",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 0,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": true,
+        "shouldStopGeneration": true,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "streaming-stop-stealth",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageMes": "x",
+        "hasReasoning": false,
+        "streamingResult": "x",
+        "invocationCount": 0,
+        "stealthCalls": true
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": true,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "streaming-not-finished",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": false,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 2,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "streaming-no-toolcalls",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": false,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 2,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": true,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "nonstream-recurse",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": true,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    },
+    {
+      "id": "nonstream-stop-reasoning",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": true,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    },
+    {
+      "id": "impersonate-disabled",
+      "args": {
+        "dryRun": false,
+        "type": "impersonate",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "quiet-disabled",
+      "args": {
+        "dryRun": false,
+        "type": "quiet",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "continue-disabled",
+      "args": {
+        "dryRun": false,
+        "type": "continue",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "dryrun-disabled",
+      "args": {
+        "dryRun": true,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "unsupported-disabled",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": false,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "depth-limit",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 5,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": false,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": false,
+        "nextDepth": 5
+      }
+    },
+    {
+      "id": "swipe-no-delete",
+      "args": {
+        "dryRun": false,
+        "type": "swipe",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 3,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    },
+    {
+      "id": "ellipsis-mes-delete",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "...",
+        "hasReasoning": false,
+        "streamingResult": "...",
+        "invocationCount": 0,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": true,
+        "shouldStopGeneration": true,
+        "shouldRecurse": false,
+        "nextDepth": 0
+      }
+    },
+    {
+      "id": "normal-mes-keep",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": false,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": false,
+        "hasToolCalls": true,
+        "lastMessageMes": "hello",
+        "hasReasoning": false,
+        "streamingResult": "hello",
+        "invocationCount": 0,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    },
+    {
+      "id": "streaming-no-last-message",
+      "args": {
+        "dryRun": false,
+        "type": "normal",
+        "depth": 0,
+        "recurseLimit": 5,
+        "toolCallingSupported": true,
+        "isStreaming": true,
+        "isStreamFinished": true,
+        "isStreamWithToolCalls": true,
+        "hasToolCalls": true,
+        "lastMessageExists": false,
+        "lastMessageMes": "",
+        "hasReasoning": false,
+        "streamingResult": "",
+        "invocationCount": 2,
+        "stealthCalls": false
+      },
+      "expected": {
+        "canPerformToolCalls": true,
+        "shouldDeleteMessage": false,
+        "shouldStopGeneration": false,
+        "shouldRecurse": true,
+        "nextDepth": 1
+      }
+    }
+  ]
+}

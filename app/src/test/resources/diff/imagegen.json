@@ -1,0 +1,477 @@
+{
+  "cases": [
+    {
+      "id": "001-auto-defaults",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "a cat",
+        "negativePrompt": "blurry"
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "restore_faces": false,
+        "enable_hr": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 1
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 1,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false
+      }
+    },
+    {
+      "id": "002-auto-seed-vae-hr",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "Euler a",
+          "scheduler": "karras",
+          "steps": 28,
+          "scale": 9,
+          "width": 768,
+          "height": 512,
+          "restore_faces": true,
+          "enable_hr": true,
+          "hr_upscaler": "Latent",
+          "hr_scale": 2,
+          "denoising_strength": 0.5,
+          "hr_second_pass_steps": 15,
+          "seed": 42,
+          "clip_skip": 2,
+          "vae": "vae-ft-mse",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "portrait",
+        "negativePrompt": "lowres"
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "portrait",
+        "negative_prompt": "lowres",
+        "sampler_name": "Euler a",
+        "scheduler": "karras",
+        "steps": 28,
+        "cfg_scale": 9,
+        "width": 768,
+        "height": 512,
+        "restore_faces": true,
+        "enable_hr": true,
+        "hr_upscaler": "Latent",
+        "hr_scale": 2,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.5,
+        "hr_second_pass_steps": 15,
+        "seed": 42,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 2,
+          "sd_vae": "vae-ft-mse",
+          "forge_additional_modules": [
+            "vae-ft-mse"
+          ]
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 2,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false
+      }
+    },
+    {
+      "id": "003-auto-vae-placeholder",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "Automatic",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "x",
+        "negative_prompt": "",
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "restore_faces": false,
+        "enable_hr": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 1
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 1,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false
+      }
+    },
+    {
+      "id": "004-auto-vae-na",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "N/A",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "x",
+        "negative_prompt": "",
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "restore_faces": false,
+        "enable_hr": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 1
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 1,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false
+      }
+    },
+    {
+      "id": "005-auto-seed-minus-one",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "x",
+        "negative_prompt": "",
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "restore_faces": false,
+        "enable_hr": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 1
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 1,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false
+      }
+    },
+    {
+      "id": "006-sdcpp-defaults",
+      "kind": "sdcpp",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "a cat",
+        "negativePrompt": "blurry"
+      },
+      "expected": {
+        "url": "http://127.0.0.1:1234",
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "batch_size": 1,
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "clip_skip": 1
+      }
+    },
+    {
+      "id": "007-sdcpp-model-seed",
+      "kind": "sdcpp",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": 7,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "sd-turbo",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://127.0.0.1:1234",
+        "model": "sd-turbo",
+        "prompt": "x",
+        "negative_prompt": "",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "batch_size": 1,
+        "seed": 7,
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "clip_skip": 1
+      }
+    },
+    {
+      "id": "008-sdcpp-na-sampler-scheduler",
+      "kind": "sdcpp",
+      "args": {
+        "settings": {
+          "sampler": "N/A",
+          "scheduler": "N/A",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://127.0.0.1:1234",
+        "prompt": "x",
+        "negative_prompt": "",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "batch_size": 1,
+        "clip_skip": 1
+      }
+    },
+    {
+      "id": "009-sdcpp-no-clip",
+      "kind": "sdcpp",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://127.0.0.1:1234",
+        "prompt": "x",
+        "negative_prompt": "",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "batch_size": 1,
+        "sampler_name": "DDIM",
+        "scheduler": "normal"
+      }
+    },
+    {
+      "id": "010-sdcpp-blank-model",
+      "kind": "sdcpp",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": false
+        },
+        "prompt": "x",
+        "negativePrompt": ""
+      },
+      "expected": {
+        "url": "http://127.0.0.1:1234",
+        "prompt": "x",
+        "negative_prompt": "",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "batch_size": 1,
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "clip_skip": 1
+      }
+    }
+  ]
+}

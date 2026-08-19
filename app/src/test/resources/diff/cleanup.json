@@ -1,0 +1,676 @@
+{
+  "source": "cleanUpMessage/cleanGroupMessage/fixMarkdown",
+  "cases": [
+    {
+      "id": "fix-spaces",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "a * spaced * b",
+          "forDisplay": false
+        }
+      },
+      "expected": "a *spaced* b"
+    },
+    {
+      "id": "fix-underscore",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "x _ spaced _ y",
+          "forDisplay": false
+        }
+      },
+      "expected": "x _spaced_ y"
+    },
+    {
+      "id": "fix-mixed-pairs",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "one * a * two ** b ** three",
+          "forDisplay": false
+        }
+      },
+      "expected": "one *a* two **b** three"
+    },
+    {
+      "id": "fix-display-odd-star",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "line *",
+          "forDisplay": true
+        }
+      },
+      "expected": "line **"
+    },
+    {
+      "id": "fix-display-odd-quote",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "say \"hello",
+          "forDisplay": true
+        }
+      },
+      "expected": "say \"hello\""
+    },
+    {
+      "id": "fix-display-noop",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "**bold** *em*",
+          "forDisplay": true
+        }
+      },
+      "expected": "**bold** *em*"
+    },
+    {
+      "id": "group-disabled",
+      "args": {
+        "body": {
+          "method": "cleanGroup",
+          "text": "Alice: hi\\nBob: hello",
+          "disableGroupTrimming": true,
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a",
+                "b"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob"
+            }
+          ],
+          "name2": "Bob"
+        }
+      },
+      "expected": "Alice: hi\\nBob: hello"
+    },
+    {
+      "id": "group-cuts-earlier-member",
+      "args": {
+        "body": {
+          "method": "cleanGroup",
+          "text": "Alice: hi\\nBob: hello",
+          "disableGroupTrimming": false,
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a",
+                "b"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob"
+            }
+          ],
+          "name2": "Bob"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "group-keeps-current-speaker",
+      "args": {
+        "body": {
+          "method": "cleanGroup",
+          "text": "Bob: hello\\nAlice: hi",
+          "disableGroupTrimming": false,
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a",
+                "b"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob"
+            }
+          ],
+          "name2": "Bob"
+        }
+      },
+      "expected": "Bob: hello\\nAlice: hi"
+    },
+    {
+      "id": "group-no-match",
+      "args": {
+        "body": {
+          "method": "cleanGroup",
+          "text": "Just text",
+          "disableGroupTrimming": false,
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            }
+          ],
+          "name2": "Bob"
+        }
+      },
+      "expected": "Just text"
+    },
+    {
+      "id": "fix-display-odd-star-trailing",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "line *  ",
+          "forDisplay": true
+        }
+      },
+      "expected": "line **"
+    },
+    {
+      "id": "fix-display-odd-quote-trailing",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "say \"hello  ",
+          "forDisplay": true
+        }
+      },
+      "expected": "say \"hello\""
+    },
+    {
+      "id": "fix-display-double-star-spaced",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "a ** b ** c",
+          "forDisplay": false
+        }
+      },
+      "expected": "a **b** c"
+    },
+    {
+      "id": "fix-display-unicode",
+      "args": {
+        "body": {
+          "method": "fixMarkdown",
+          "text": "你 *好* 世界",
+          "forDisplay": false
+        }
+      },
+      "expected": "你 *好* 世界"
+    },
+    {
+      "id": "clean-endoftext",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "reply<|endoftext|>more"
+        }
+      },
+      "expected": "reply"
+    },
+    {
+      "id": "clean-trim-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: hello",
+          "name2": "Char"
+        }
+      },
+      "expected": "Char: hello"
+    },
+    {
+      "id": "clean-trim-name-off",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: hello",
+          "name2": "Char",
+          "trimNames": false
+        }
+      },
+      "expected": "Char: hello"
+    },
+    {
+      "id": "clean-wrong-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Wrong: hi",
+          "name2": "Char"
+        }
+      },
+      "expected": "Wrong: hi"
+    },
+    {
+      "id": "clean-unicode-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "小炭: 你好",
+          "name2": "小炭"
+        }
+      },
+      "expected": "小炭: 你好"
+    },
+    {
+      "id": "clean-instruct-output",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "### hello",
+          "instructEnabled": true,
+          "instructOutputSequence": "###"
+        }
+      },
+      "expected": "### hello"
+    },
+    {
+      "id": "clean-stop-suffix",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello STOP",
+          "stoppingStrings": [
+            "STOP"
+          ]
+        }
+      },
+      "expected": "hello"
+    },
+    {
+      "id": "clean-bias-not-impersonate",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "reply",
+          "userPromptBias": "Bias: ",
+          "isImpersonate": true,
+          "includeUserPromptBias": true
+        }
+      },
+      "expected": "reply"
+    },
+    {
+      "id": "clean-incomplete-off",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello. unfinished sen",
+          "displayIncompleteSentences": false
+        }
+      },
+      "expected": "hello. unfinished sen"
+    },
+    {
+      "id": "clean-incomplete-on",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello. unfinished sen",
+          "displayIncompleteSentences": true
+        }
+      },
+      "expected": "hello. unfinished sen"
+    },
+    {
+      "id": "clean-collapse-newlines",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "a\n\n\nb",
+          "collapseNewlines": true
+        }
+      },
+      "expected": "a\nb"
+    },
+    {
+      "id": "clean-trim-spaces",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  hello world  ",
+          "trimSpaces": true
+        }
+      },
+      "expected": "hello world"
+    },
+    {
+      "id": "clean-prompt-bias",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "reply",
+          "userPromptBias": "Bias: ",
+          "includeUserPromptBias": true
+        }
+      },
+      "expected": "Bias: reply"
+    },
+    {
+      "id": "clean-prompt-bias-impersonate",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "reply",
+          "userPromptBias": "Bias: ",
+          "isImpersonate": true,
+          "includeUserPromptBias": true
+        }
+      },
+      "expected": "reply"
+    },
+    {
+      "id": "clean-stopping-partial",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello world",
+          "stoppingStrings": [
+            "world"
+          ]
+        }
+      },
+      "expected": "hello"
+    },
+    {
+      "id": "clean-stopping-prefix-only",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello wor",
+          "stoppingStrings": [
+            "world"
+          ]
+        }
+      },
+      "expected": "hello"
+    },
+    {
+      "id": "clean-stopping-multiple",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "abc END",
+          "stoppingStrings": [
+            "X",
+            "END"
+          ]
+        }
+      },
+      "expected": "abc"
+    },
+    {
+      "id": "clean-collapse-newlines",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "a\\n\\n\\nb",
+          "collapseNewlines": true
+        }
+      },
+      "expected": "a\\n\\n\\nb"
+    },
+    {
+      "id": "clean-trailing-space-newline",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "a   \\nb\\t\\n"
+        }
+      },
+      "expected": "a   \\nb\\t\\n"
+    },
+    {
+      "id": "clean-wrong-name-start",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "User: oops\\nActual",
+          "name1": "User",
+          "allowName1Display": false
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "clean-wrong-name-inline",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Good text\\nUser: bad tail",
+          "name1": "User",
+          "allowName1Display": false
+        }
+      },
+      "expected": "Good text\\nUser: bad tail"
+    },
+    {
+      "id": "clean-wrong-name-impersonate",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: wrong",
+          "isImpersonate": true,
+          "name2": "Char",
+          "allowName2Display": false
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "clean-endoftext",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "keep this<|endoftext|>drop"
+        }
+      },
+      "expected": "keep this"
+    },
+    {
+      "id": "clean-instruct-stop",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "body<|stop|>tail",
+          "instructEnabled": true,
+          "mainApi": "kobold",
+          "instructStopSequence": "<|stop|>"
+        }
+      },
+      "expected": "body"
+    },
+    {
+      "id": "clean-instruct-input-sequence",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "body\\n### Instruction:\\ntail",
+          "instructEnabled": true,
+          "mainApi": "kobold",
+          "instructInputSequence": "### Instruction:"
+        }
+      },
+      "expected": "body\\n"
+    },
+    {
+      "id": "clean-instruct-sequences-as-stop",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "hello\\n### Response:\\nworld",
+          "instructEnabled": true,
+          "mainApi": "kobold",
+          "instructOutputSequence": "### Response:\\n",
+          "instructSequencesAsStopStrings": true
+        }
+      },
+      "expected": "hello\\nworld"
+    },
+    {
+      "id": "clean-group-integration",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Alice: hi\\nBob: hello",
+          "groupId": "g",
+          "groups": [
+            {
+              "id": "g",
+              "members": [
+                "a",
+                "b"
+              ]
+            }
+          ],
+          "characters": [
+            {
+              "avatar": "a",
+              "name": "Alice"
+            },
+            {
+              "avatar": "b",
+              "name": "Bob"
+            }
+          ],
+          "name2": "Bob"
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "clean-remove-char-name",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char: Hello there",
+          "name2": "Char",
+          "allowName2Display": false
+        }
+      },
+      "expected": "Hello there"
+    },
+    {
+      "id": "clean-trim-name-prefix",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Char:Hello",
+          "name2": "Char",
+          "allowName2Display": false,
+          "trimNames": true
+        }
+      },
+      "expected": "Hello"
+    },
+    {
+      "id": "clean-impersonate-trim",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  padded  ",
+          "isImpersonate": true
+        }
+      },
+      "expected": "padded"
+    },
+    {
+      "id": "clean-fix-markdown",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "a * spaced * b",
+          "autoFixMarkdown": true
+        }
+      },
+      "expected": "a *spaced* b"
+    },
+    {
+      "id": "clean-trim-sentence",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "Hello, world! I am from",
+          "trimSentences": true
+        }
+      },
+      "expected": "Hello, world!"
+    },
+    {
+      "id": "clean-trim-spaces",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  padded  ",
+          "trimSpaces": true
+        }
+      },
+      "expected": "padded"
+    },
+    {
+      "id": "clean-trim-spaces-reasoning",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  padded  ",
+          "trimSpaces": true,
+          "hasReasoningPrefix": true
+        }
+      },
+      "expected": "  padded"
+    },
+    {
+      "id": "clean-combo",
+      "args": {
+        "body": {
+          "method": "clean",
+          "text": "  Alice: bad\\nUser: final  ",
+          "name1": "User",
+          "allowName1Display": false,
+          "name2": "Char",
+          "allowName2Display": false,
+          "collapseNewlines": true,
+          "trimSpaces": true
+        }
+      },
+      "expected": "Alice: bad\\nUser: final"
+    }
+  ]
+}

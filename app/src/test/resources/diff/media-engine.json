@@ -1,0 +1,238 @@
+{
+  "source": "media 纯逻辑",
+  "cases": [
+    {
+      "id": "display-default",
+      "args": {
+        "body": {
+          "method": "display",
+          "mes": {}
+        }
+      },
+      "expected": "list"
+    },
+    {
+      "id": "display-gallery",
+      "args": {
+        "body": {
+          "method": "display",
+          "mes": {
+            "extra": {
+              "media_display": "gallery"
+            }
+          }
+        }
+      },
+      "expected": "gallery"
+    },
+    {
+      "id": "display-invalid",
+      "args": {
+        "body": {
+          "method": "display",
+          "mes": {
+            "extra": {
+              "media_display": "bogus"
+            }
+          }
+        }
+      },
+      "expected": "list"
+    },
+    {
+      "id": "display-power-user",
+      "args": {
+        "body": {
+          "method": "display",
+          "mes": {
+            "power_user_media_display": "gallery"
+          }
+        }
+      },
+      "expected": "gallery"
+    },
+    {
+      "id": "display-empty-string",
+      "args": {
+        "body": {
+          "method": "display",
+          "mes": {
+            "extra": {
+              "media_display": ""
+            }
+          }
+        }
+      },
+      "expected": "list"
+    },
+    {
+      "id": "index-no-media",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {}
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "index-valid",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2,
+                3
+              ],
+              "media_index": 1
+            }
+          }
+        }
+      },
+      "expected": 1
+    },
+    {
+      "id": "index-string",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2
+              ],
+              "media_index": "1"
+            }
+          }
+        }
+      },
+      "expected": "1"
+    },
+    {
+      "id": "index-negative",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2
+              ],
+              "media_index": -1
+            }
+          }
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "index-out-of-range",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2
+              ],
+              "media_index": 5
+            }
+          }
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "index-nan",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2
+              ],
+              "media_index": "abc"
+            }
+          }
+        }
+      },
+      "expected": 0
+    },
+    {
+      "id": "index-null",
+      "args": {
+        "body": {
+          "method": "index",
+          "mes": {
+            "extra": {
+              "media": [
+                1,
+                2
+              ],
+              "media_index": null
+            }
+          }
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "mime-image",
+      "args": {
+        "body": {
+          "method": "mime",
+          "mime": "image/png"
+        }
+      },
+      "expected": "image"
+    },
+    {
+      "id": "mime-video",
+      "args": {
+        "body": {
+          "method": "mime",
+          "mime": "video/mp4"
+        }
+      },
+      "expected": "video"
+    },
+    {
+      "id": "mime-audio",
+      "args": {
+        "body": {
+          "method": "mime",
+          "mime": "audio/mpeg"
+        }
+      },
+      "expected": "audio"
+    },
+    {
+      "id": "mime-text",
+      "args": {
+        "body": {
+          "method": "mime",
+          "mime": "text/plain"
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "mime-uppercase",
+      "args": {
+        "body": {
+          "method": "mime",
+          "mime": "IMAGE/png"
+        }
+      },
+      "expected": null
+    }
+  ]
+}

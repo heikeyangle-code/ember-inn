@@ -1,0 +1,155 @@
+{
+  "source": "chat-templates.js",
+  "cases": [
+    {
+      "kind": "derive",
+      "template": "",
+      "hash": "anything",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "derive",
+      "template": "   \n  ",
+      "hash": "x",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "derive",
+      "template": "<|im_start|>user",
+      "hash": "unknown-hash",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "derive",
+      "template": "<|im_start|>user\n<|im_start|>assistant\n<|im_end|>",
+      "hash": "unknown-hash",
+      "expected": "{\"context\":\"ChatML\",\"instruct\":\"ChatML\"}"
+    },
+    {
+      "kind": "derive",
+      "template": "a <|im_user|>user<|im_middle|> b <|im_assistant|>assistant<|im_middle|> c <|im_end|>",
+      "hash": "unknown-hash",
+      "expected": "{\"context\":\"Moonshot AI\",\"instruct\":\"Moonshot AI\"}"
+    },
+    {
+      "kind": "derive",
+      "template": "<|start|>user<|message|> <|start|>assistant<|channel|>final<|message|> <|end|>",
+      "hash": "unknown-hash",
+      "expected": "{\"context\":\"OpenAI Harmony\",\"instruct\":\"OpenAI Harmony\"}"
+    },
+    {
+      "kind": "derive",
+      "template": "partial <|im_start|>user only",
+      "hash": "unknown-hash",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "derive",
+      "template": "anything",
+      "hash": "e10ca381b1ccc5cf9db52e371f3b6651576caee0a630b452e2816b2d404d4b65",
+      "expected": "{\"context\":\"Llama 3 Instruct\",\"instruct\":\"Llama 3 Instruct\"}"
+    },
+    {
+      "kind": "derive",
+      "template": "",
+      "hash": "e10ca381b1ccc5cf9db52e371f3b6651576caee0a630b452e2816b2d404d4b65",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "derive",
+      "template": "<|im_start|>user",
+      "hash": "a4c9919cbbd4acdd51ccffe22da049264b1b73e59055fa58811a99efbd7c8146",
+      "expected": "{\"context\":\"OpenAI Harmony\",\"instruct\":\"OpenAI Harmony\"}"
+    },
+    {
+      "kind": "derive",
+      "template": "text",
+      "hash": "not-in-map",
+      "expected": "{\"context\":null,\"instruct\":null}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "no_connection",
+      "expected": "{\"result\":false,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":false,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":false,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":false,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":false,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":false,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":false,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":false,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":false,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":false,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":false,\"preset\":\"Alpaca\"},\"context_derived\":false,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Other\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\",\"instruct\":\"Other\"}},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"hash1\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"hash1\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"hash1\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"hash1\"}",
+      "status": "koboldcpp/ggml-model-x",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"hash1\":{\"context\":\"Default\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"hash1\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}",
+      "status": "koboldcpp/ggml-model-x",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Default\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{},\"chat_template_hash\":\"\"}}"
+    },
+    {
+      "kind": "bind",
+      "before": "{\"context\":{\"preset\":\"Custom\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Old\"}},\"chat_template_hash\":\"\"}",
+      "status": "model-a",
+      "expected": "{\"result\":true,\"after\":{\"context\":{\"preset\":\"Custom\"},\"instruct\":{\"enabled\":true,\"preset\":\"Alpaca\"},\"context_derived\":true,\"instruct_derived\":true,\"model_templates_mappings\":{\"model-a\":{\"context\":\"Custom\",\"instruct\":\"Alpaca\"}},\"chat_template_hash\":\"\"}}"
+    }
+  ]
+}

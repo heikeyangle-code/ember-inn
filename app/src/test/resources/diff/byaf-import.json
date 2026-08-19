@@ -1,0 +1,1127 @@
+{
+  "source": "characters.js importFromByaf",
+  "cases": [
+    {
+      "id": "full",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [
+                  "开场B"
+                ],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              },
+              {
+                "title": "场景B",
+                "narrative": "备选",
+                "firstMessages": [
+                  {
+                    "text": "开场B"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": [
+              {
+                "name": "/images/显示_名/显示_名_bg.png",
+                "paths": [
+                  "bg.png"
+                ],
+                "data": {
+                  "type": "Buffer",
+                  "data": [
+                    66,
+                    71,
+                    65
+                  ]
+                }
+              }
+            ]
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [
+                "开场B"
+              ],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/场景A - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[\"/images/显示_名/显示_名_bg.png\"],\"custom_background\":\"url(\\\"/images/%E6%98%BE%E7%A4%BA_%E5%90%8D/%E6%98%BE%E7%A4%BA_%E5%90%8D_bg.png\\\")\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          },
+          {
+            "filePath": "/chats/显示_名/场景B - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"备选\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[\"/images/显示_名/显示_名_bg.png\"],\"custom_background\":\"url(\\\"/images/%E6%98%BE%E7%A4%BA_%E5%90%8D/%E6%98%BE%E7%A4%BA_%E5%90%8D_bg.png\\\")\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场B\"}"
+          }
+        ],
+        "writtenBackgrounds": [
+          {
+            "filePath": "/images/显示_名/显示_名_bg.png",
+            "data": "QkdB"
+          }
+        ],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "preserved",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "preservedFileName": "keep.json",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": [
+              {
+                "name": "bg.png",
+                "paths": [
+                  "bg.png"
+                ],
+                "data": {
+                  "type": "Buffer",
+                  "data": [
+                    66,
+                    71,
+                    65
+                  ]
+                }
+              }
+            ]
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "keep.json",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms"
+          },
+          "fileName": "keep.json"
+        },
+        "writtenChats": [],
+        "writtenBackgrounds": [],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "no-scenarios",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "",
+                "first_mes": "",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "",
+              "first_mes": "",
+              "mes_example": "",
+              "tags": [],
+              "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": []
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "",
+              "first_mes": "",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "",
+            "first_mes": "",
+            "mes_example": "",
+            "tags": [],
+            "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [],
+        "writtenBackgrounds": [],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "alt-icons",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              },
+              {
+                "filename": "alt1.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    76,
+                    84,
+                    49
+                  ]
+                },
+                "label": "备选图标"
+              }
+            ],
+            "chatBackgrounds": []
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/场景A - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[],\"custom_background\":\"\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          }
+        ],
+        "writtenBackgrounds": [],
+        "writtenIcons": [
+          {
+            "filePath": "/chars/BYAF卡/备选图标.png",
+            "data": "QUxUMQ=="
+          }
+        ]
+      }
+    },
+    {
+      "id": "duplicate-bg",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              },
+              {
+                "title": "场景A2",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": [
+              {
+                "name": "/images/显示_名/显示_名_bg.png",
+                "paths": [
+                  "bg.png"
+                ],
+                "data": {
+                  "type": "Buffer",
+                  "data": [
+                    66,
+                    71,
+                    65
+                  ]
+                }
+              }
+            ]
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/场景A - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[\"/images/显示_名/显示_名_bg.png\"],\"custom_background\":\"url(\\\"/images/%E6%98%BE%E7%A4%BA_%E5%90%8D/%E6%98%BE%E7%A4%BA_%E5%90%8D_bg.png\\\")\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          },
+          {
+            "filePath": "/chats/显示_名/场景A2 - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[\"/images/显示_名/显示_名_bg.png\"],\"custom_background\":\"url(\\\"/images/%E6%98%BE%E7%A4%BA_%E5%90%8D/%E6%98%BE%E7%A4%BA_%E5%90%8D_bg.png\\\")\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          }
+        ],
+        "writtenBackgrounds": [
+          {
+            "filePath": "/images/显示_名/显示_名_bg.png",
+            "data": "QkdB"
+          }
+        ],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "bg-collision",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "exists": [
+            "/images/显示_名/显示_名_bg.png"
+          ],
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": [
+              {
+                "name": "/images/显示_名/显示_名_bg (1).png",
+                "paths": [
+                  "bg.png"
+                ],
+                "data": {
+                  "type": "Buffer",
+                  "data": [
+                    66,
+                    71,
+                    65
+                  ]
+                }
+              }
+            ]
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/场景A - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[\"/images/显示_名/显示_名_bg (1).png\"],\"custom_background\":\"url(\\\"/images/%E6%98%BE%E7%A4%BA_%E5%90%8D/%E6%98%BE%E7%A4%BA_%E5%90%8D_bg%20(1).png\\\")\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          }
+        ],
+        "writtenBackgrounds": [
+          {
+            "filePath": "/images/显示_名/显示_名_bg (1).png",
+            "data": "QkdB"
+          }
+        ],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "empty-title",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              }
+            ],
+            "chatBackgrounds": []
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "BYAF卡 - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/BYAF卡 - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[],\"custom_background\":\"\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          }
+        ],
+        "writtenBackgrounds": [],
+        "writtenIcons": []
+      }
+    },
+    {
+      "id": "duplicate-icons",
+      "args": {
+        "body": {
+          "userName": "用户",
+          "byafData": {
+            "card": {
+              "spec": "chara_card_v2",
+              "spec_version": "2.0",
+              "create_date": "2026-08-08T00:00:00.000Z",
+              "data": {
+                "name": "BYAF卡",
+                "description": "",
+                "personality": "",
+                "scenario": "故事",
+                "first_mes": "开场A",
+                "mes_example": "",
+                "creator_notes": "",
+                "system_prompt": "",
+                "post_history_instructions": "",
+                "alternate_greetings": [],
+                "tags": [],
+                "creator": "",
+                "character_version": "",
+                "extensions": {
+                  "display_name": "显示/名"
+                }
+              },
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "tags": [],
+              "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+            },
+            "character": {
+              "displayName": "显示/名",
+              "name": "BYAF卡"
+            },
+            "scenarios": [
+              {
+                "title": "场景A",
+                "narrative": "故事",
+                "firstMessages": [
+                  {
+                    "text": "开场A"
+                  }
+                ],
+                "messages": [],
+                "backgroundImage": "bg.png"
+              }
+            ],
+            "images": [
+              {
+                "filename": "avatar.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65,
+                    86,
+                    65,
+                    84,
+                    65,
+                    82
+                  ]
+                },
+                "label": "main"
+              },
+              {
+                "filename": "a.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    65
+                  ]
+                },
+                "label": "same"
+              },
+              {
+                "filename": "b.png",
+                "image": {
+                  "type": "Buffer",
+                  "data": [
+                    66
+                  ]
+                },
+                "label": "same"
+              }
+            ],
+            "chatBackgrounds": []
+          },
+          "user_name": "用户"
+        }
+      },
+      "expected": {
+        "fileName": "显示_名",
+        "writeCharacterResult": {
+          "avatar": "buffer:QVZBVEFS",
+          "card": {
+            "spec": "chara_card_v2",
+            "spec_version": "2.0",
+            "create_date": "2026-08-08T00:00:00.000Z",
+            "data": {
+              "name": "BYAF卡",
+              "description": "",
+              "personality": "",
+              "scenario": "故事",
+              "first_mes": "开场A",
+              "mes_example": "",
+              "creator_notes": "",
+              "system_prompt": "",
+              "post_history_instructions": "",
+              "alternate_greetings": [],
+              "tags": [],
+              "creator": "",
+              "character_version": "",
+              "extensions": {
+                "display_name": "显示/名"
+              }
+            },
+            "name": "BYAF卡",
+            "description": "",
+            "personality": "",
+            "scenario": "故事",
+            "first_mes": "开场A",
+            "mes_example": "",
+            "tags": [],
+            "chat": "场景A - 2026-08-08@00h00m00s000ms imported"
+          },
+          "fileName": "显示_名"
+        },
+        "writtenChats": [
+          {
+            "filePath": "/chats/显示_名/场景A - 2026-08-08@00h00m00s000ms imported.jsonl",
+            "content": "{\"user_name\":\"unused\",\"character_name\":\"unused\",\"chat_metadata\":{\"scenario\":\"故事\",\"mes_example\":\"\",\"system_prompt\":\"\",\"mes_examples_optional\":false,\"byaf_model_settings\":{\"model\":\"\",\"temperature\":1.2,\"top_k\":40,\"top_p\":0.9,\"min_p\":0.1,\"min_p_enabled\":true,\"repeat_penalty\":1.05,\"repeat_penalty_tokens\":256,\"by_prompt_template\":\"general\",\"grammar\":null},\"chat_backgrounds\":[],\"custom_background\":\"\"}}\n{\"name\":\"BYAF卡\",\"is_user\":false,\"send_date\":\"2026-08-08T00:00:00.000Z\",\"mes\":\"开场A\"}"
+          }
+        ],
+        "writtenBackgrounds": [],
+        "writtenIcons": [
+          {
+            "filePath": "/chars/BYAF卡/same.png",
+            "data": "QQ=="
+          },
+          {
+            "filePath": "/chars/BYAF卡/same (1).png",
+            "data": "Qg=="
+          }
+        ]
+      }
+    }
+  ]
+}

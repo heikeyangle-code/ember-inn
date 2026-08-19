@@ -1,0 +1,193 @@
+{
+  "source": "parseReasoningFromString/removeReasoningFromString/formatReasoning",
+  "cases": [
+    {
+      "id": "remove-disabled",
+      "args": {
+        "body": {
+          "method": "remove",
+          "text": "x<think>r</think>y",
+          "autoParse": false
+        }
+      },
+      "expected": "x<think>r</think>y"
+    },
+    {
+      "id": "remove-enabled-match",
+      "args": {
+        "body": {
+          "method": "remove",
+          "text": "x<think>r</think>y",
+          "autoParse": true
+        }
+      },
+      "expected": "x<think>r</think>y"
+    },
+    {
+      "id": "remove-enabled-no-match",
+      "args": {
+        "body": {
+          "method": "remove",
+          "text": "no reasoning",
+          "autoParse": true
+        }
+      },
+      "expected": "no reasoning"
+    },
+    {
+      "id": "parse-strict-match",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "<think>r</think>content",
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "r",
+        "content": "content"
+      }
+    },
+    {
+      "id": "parse-strict-leading-space",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "  <think>r</think>content",
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "r",
+        "content": "content"
+      }
+    },
+    {
+      "id": "parse-non-strict-middle",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "lead <think>r</think> tail",
+          "strict": false,
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "r",
+        "content": "lead  tail"
+      }
+    },
+    {
+      "id": "parse-strict-middle-fails",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "lead <think>r</think> tail",
+          "strict": true,
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "",
+        "content": "lead <think>r</think> tail"
+      }
+    },
+    {
+      "id": "parse-missing-template",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "x",
+          "prefix": "",
+          "suffix": ""
+        }
+      },
+      "expected": null
+    },
+    {
+      "id": "parse-trim-spaces",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "<think>  r  </think>  content  ",
+          "trimSpaces": true,
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "r",
+        "content": "content"
+      }
+    },
+    {
+      "id": "parse-no-trim-spaces",
+      "args": {
+        "body": {
+          "method": "parse",
+          "text": "<think>  r  </think>  content  ",
+          "trimSpaces": false,
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "reasoning": "  r  ",
+        "content": "  content  "
+      }
+    },
+    {
+      "id": "format-basic",
+      "args": {
+        "body": {
+          "method": "format",
+          "reasoning": "r",
+          "content": "c",
+          "prefix": "<think>",
+          "suffix": "</think>",
+          "separator": "\n"
+        }
+      },
+      "expected": {
+        "formatted": "<think>r</think>\nc",
+        "contentOnly": "c"
+      }
+    },
+    {
+      "id": "format-empty-reasoning",
+      "args": {
+        "body": {
+          "method": "format",
+          "reasoning": "",
+          "content": "c",
+          "prefix": "<think>",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "formatted": "c",
+        "contentOnly": "c"
+      }
+    },
+    {
+      "id": "format-missing-prefix",
+      "args": {
+        "body": {
+          "method": "format",
+          "reasoning": "r",
+          "content": "c",
+          "prefix": "",
+          "suffix": "</think>"
+        }
+      },
+      "expected": {
+        "formatted": "c",
+        "contentOnly": "c"
+      }
+    }
+  ]
+}

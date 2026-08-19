@@ -2,6 +2,7 @@ package com.emberinn.app.data
 
 import android.content.Context
 import com.emberinn.app.ui.settings.ServicesPrefs
+import com.emberinn.engine.prompt.TranslateEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -33,33 +34,45 @@ class TranslateClient {
     private val bingUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36 Edg/151.0.4129.59"
 
+    /**
+     * 官方 translateIncomingMessage / translateOutgoingMessage：**翻译前先 substituteParams(name2Override)**，
+     * 让 {{char}} / {{Char}} 先被 speaker 自己的显示名替换（角色卡/说话人名）。
+     *
+     * @param charName 角色卡 char_name（nameOverride 为空时 fallback）
+     * @param nameOverride 说话者显示名（AI 消息是 message.name；用户消息是 user_name）
+     */
     suspend fun translate(
         context: Context,
         text: String,
+        charName: String = "",
+        nameOverride: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext null
+        val prepared = TranslateEngine.substituteParamsNameOverride(text, charName, nameOverride)
         val provider = ServicesPrefs.translateProvider(context)
         val target = ServicesPrefs.translateTargetLanguage(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
-        runCatching { dispatch(text, target, provider, apiKey, url) }.getOrNull()
+        runCatching { dispatch(prepared, target, provider, apiKey, url) }.getOrNull()
     }
 
     /**
-     * 官方 translateIncomingMessageReasoning：把 AI 消息的 reasoning（思考）译为目标语言，
-     * 结果写入 message.extra.reasoning_display_text。与 [translate] 同走 provider 分发，
-     * 但 targetLang 由调用方显式指定（用于 reasoning 单独指定目标语 / 复用 mes 译文流程）。
+     * 官方 translateIncomingMessageReasoning：reasoning 也 substituteParams(name2Override)，
+     * 结果写入 message.extra.reasoning_display_text。targetLang 由调用方显式传。
      */
     suspend fun translateReasoning(
         context: Context,
         text: String,
         targetLang: String,
+        charName: String = "",
+        nameOverride: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (text.isBlank() || targetLang.isBlank()) return@withContext null
+        val prepared = TranslateEngine.substituteParamsNameOverride(text, charName, nameOverride)
         val provider = ServicesPrefs.translateProvider(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
-        runCatching { dispatch(text, targetLang, provider, apiKey, url) }.getOrNull()
+        runCatching { dispatch(prepared, targetLang, provider, apiKey, url) }.getOrNull()
     }
 
     /** 8 家 provider 的统一分发（translate / translateReasoning 共用）。 */
@@ -84,13 +97,9 @@ class TranslateClient {
     // ---- Libre（官方：JSON {q, source:'auto', target, format:'text', api_key} → translatedText）----
     private fun libre(text: String, target: String, apiKey: String, url: String): String? {
         val endpoint = url.ifBlank { "https://libretranslate.com/translate" }
-        val payload = JSONObject()
-            .put("q", text)
-            .put("source", "auto")
-            .put("target", libreLang(target))
-            .put("format", "text")
-            .apply { if (apiKey.isNotBlank()) put("api_key", apiKey) }
-            .toString()
+        val payload = JSONObject().apply {
+            TranslateEngine.libreBody(text, libreLang(target), apiKey.ifBlank { null }).forEach { (k, v) -> put(k, v) }
+        }.toString()
         val request = Request.Builder().url(endpoint).post(payload.toRequestBody(jsonMedia)).build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
@@ -100,9 +109,8 @@ class TranslateClient {
 
     // ---- Google（官方 google-translate-api-x：免费端点 client=gtx）----
     private fun google(text: String, target: String): String? {
-        val lang = if (target == "pt-BR") "pt" else target
-        val endpoint = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$lang&dt=t"
-        val body = FormBody.Builder().add("q", text).build()
+        val (endpoint, formKey) = TranslateEngine.googleEndpoint(target)
+        val body = FormBody.Builder().add(formKey, text).build()
         val request = Request.Builder().url(endpoint).post(body).build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
@@ -141,15 +149,15 @@ class TranslateClient {
         }
     }
 
-    // ---- Lingva（官方：GET {base}/auto/{lang}/{encodeURIComponent(text)} → translation）----
+    // ---- Lingva（官方 lingva 扩展：/api/v1/{text}/{target}/auto → translation）----
     private fun lingva(text: String, target: String, url: String): String? {
-        val base = url.ifBlank { "https://lingva.ml/api/v1" }.trimEnd('/')
+        val base = url.ifBlank { "https://lingva.ml" }
         val lang = when (target) {
             "zh-CN", "zh-TW" -> "zh"
             "pt-BR", "pt-PT" -> "pt"
             else -> target
         }
-        val endpoint = "$base/auto/$lang/${URLEncoder.encode(text, "UTF-8")}"
+        val endpoint = TranslateEngine.lingvaUrl(base, text, lang)
         val request = Request.Builder().url(endpoint).get().build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
@@ -186,7 +194,10 @@ class TranslateClient {
     private fun onering(text: String, target: String, url: String): String? {
         val base = url.ifBlank { "http://127.0.0.1:4990/translate" }
         val lang = if (target == "pt-BR" || target == "pt-PT") "pt" else target
-        val endpoint = "$base?text=${URLEncoder.encode(text, "UTF-8")}&from_lang=auto&to_lang=${URLEncoder.encode(lang, "UTF-8")}"
+        // 官方 translateProviderOneRing：from_lang = lang == internal_lang ? target_lang : internal_lang
+        // 这里 internalLang="en"、targetLang="zh"；实际 OneRing 行为多数实现 from_lang=auto 也可
+        val ob = TranslateEngine.oneringBody(text, lang, base, "en", "zh")
+        val endpoint = ob.url + "?text=${URLEncoder.encode(ob.text, "UTF-8")}&from_lang=${URLEncoder.encode(ob.from_lang, "UTF-8")}&to_lang=${URLEncoder.encode(ob.to_lang, "UTF-8")}"
         val request = Request.Builder().url(endpoint).get().build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null
@@ -198,11 +209,10 @@ class TranslateClient {
     private fun deeplx(text: String, target: String, url: String): String? {
         if (url.isBlank()) return null
         val lang = if (target == "zh" || target == "zh-CN" || target == "zh-TW") "ZH" else target
-        val payload = JSONObject()
-            .put("text", text)
-            .put("source_lang", "auto")
-            .put("target_lang", lang)
-            .toString()
+        val payload = JSONObject().apply {
+            val b = TranslateEngine.deeplxBody(text, lang, url)
+            put("text", b.text); put("source_lang", b.source_lang); put("target_lang", b.target_lang)
+        }.toString()
         val request = Request.Builder().url(url).post(payload.toRequestBody(jsonMedia)).build()
         client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) return null

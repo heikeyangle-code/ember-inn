@@ -1,0 +1,183 @@
+{
+  "source": "reasoning.js PromptReasoning.addToMessage",
+  "cases": [
+    {
+      "id": "disabled-nonprefix",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": false,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "正文",
+          "reasoning": "思考",
+          "isPrefix": false,
+          "duration": null
+        }
+      },
+      "expected": {
+        "first": "正文",
+        "second": null,
+        "counter": 0,
+        "prefixLength": -1,
+        "prefixIncomplete": false
+      }
+    },
+    {
+      "id": "disabled-prefix-still-injects",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": false,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "正文",
+          "reasoning": "思考",
+          "isPrefix": true,
+          "duration": 12
+        }
+      },
+      "expected": {
+        "first": "<think>思考</think>\n正文",
+        "second": null,
+        "counter": 1,
+        "prefixLength": 18,
+        "prefixIncomplete": false
+      }
+    },
+    {
+      "id": "enabled-content",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": true,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "正文",
+          "reasoning": "思考",
+          "isPrefix": false,
+          "duration": null
+        }
+      },
+      "expected": {
+        "first": "<think>思考</think>\n正文",
+        "second": null,
+        "counter": 1,
+        "prefixLength": -1,
+        "prefixIncomplete": false
+      }
+    },
+    {
+      "id": "enabled-prefix-only",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": true,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "",
+          "reasoning": "思考",
+          "isPrefix": true,
+          "duration": 7
+        }
+      },
+      "expected": {
+        "first": "<think>思考",
+        "second": null,
+        "counter": 1,
+        "prefixLength": 9,
+        "prefixIncomplete": true
+      }
+    },
+    {
+      "id": "max-additions-limit",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": true,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "一",
+          "reasoning": "r1",
+          "isPrefix": false,
+          "duration": null,
+          "secondContent": "二",
+          "secondReasoning": "r2",
+          "secondIsPrefix": false
+        }
+      },
+      "expected": {
+        "first": "<think>r1</think>\n一",
+        "second": "二",
+        "counter": 1,
+        "prefixLength": -1,
+        "prefixIncomplete": false
+      }
+    },
+    {
+      "id": "placeholder-skipped",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": true,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "正文",
+          "reasoning": "​",
+          "isPrefix": false,
+          "duration": null
+        }
+      },
+      "expected": {
+        "first": "正文",
+        "second": null,
+        "counter": 0,
+        "prefixLength": -1,
+        "prefixIncomplete": false
+      }
+    },
+    {
+      "id": "empty-reasoning-skipped",
+      "args": {
+        "body": {
+          "settings": {
+            "add_to_prompts": true,
+            "max_additions": 1,
+            "prefix": "<think>",
+            "suffix": "</think>",
+            "separator": "\n"
+          },
+          "content": "正文",
+          "reasoning": "",
+          "isPrefix": false,
+          "duration": null
+        }
+      },
+      "expected": {
+        "first": "正文",
+        "second": null,
+        "counter": 0,
+        "prefixLength": -1,
+        "prefixIncomplete": false
+      }
+    }
+  ]
+}

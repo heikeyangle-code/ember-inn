@@ -1,0 +1,153 @@
+{
+  "source": "sillytavern-ref tokenizers.js",
+  "cases": [
+    {
+      "model": "gpt-4o",
+      "key": "gpt-4o"
+    },
+    {
+      "model": "chatgpt-4o-latest",
+      "key": "gpt-4o"
+    },
+    {
+      "model": "gpt-4.1-mini",
+      "key": "gpt-4o"
+    },
+    {
+      "model": "gpt-4.5-preview",
+      "key": "gpt-4o"
+    },
+    {
+      "model": "gpt-4-32k",
+      "key": "gpt-4-32k"
+    },
+    {
+      "model": "gpt-4-turbo",
+      "key": "gpt-4"
+    },
+    {
+      "model": "gpt-3.5-turbo-0301",
+      "key": "gpt-3.5-turbo-0301"
+    },
+    {
+      "model": "gpt-3.5-turbo",
+      "key": "gpt-3.5-turbo"
+    },
+    {
+      "model": "gpt-3.5-turbo-instruct",
+      "key": "gpt-3.5-turbo"
+    },
+    {
+      "model": "text-davinci-003",
+      "key": "text-davinci-003"
+    },
+    {
+      "model": "o1",
+      "key": "o1"
+    },
+    {
+      "model": "o1-preview",
+      "key": "o1"
+    },
+    {
+      "model": "o1-mini-2024-09-12",
+      "key": "o1"
+    },
+    {
+      "model": "o3-mini",
+      "key": "o1"
+    },
+    {
+      "model": "o3",
+      "key": "o1"
+    },
+    {
+      "model": "o4-mini",
+      "key": "o1"
+    },
+    {
+      "model": "gpt-5",
+      "key": "o1"
+    },
+    {
+      "model": "gpt-5.2",
+      "key": "o1"
+    },
+    {
+      "model": "claude-sonnet-4-5",
+      "key": "claude"
+    },
+    {
+      "model": "claude-opus-4-1",
+      "key": "claude"
+    },
+    {
+      "model": "llama-3.3-70b",
+      "key": "llama3"
+    },
+    {
+      "model": "llama3-8b",
+      "key": "llama3"
+    },
+    {
+      "model": "llama-2-7b",
+      "key": "llama"
+    },
+    {
+      "model": "mistral-large-latest",
+      "key": "mistral"
+    },
+    {
+      "model": "yi-large",
+      "key": "yi"
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "key": "deepseek"
+    },
+    {
+      "model": "gemini-2.5-pro",
+      "key": "gemma"
+    },
+    {
+      "model": "gemma-3-27b",
+      "key": "gemma"
+    },
+    {
+      "model": "learnlm-1.5",
+      "key": "gemma"
+    },
+    {
+      "model": "jamba-large",
+      "key": "jamba"
+    },
+    {
+      "model": "qwen2.5-72b",
+      "key": "qwen2"
+    },
+    {
+      "model": "command-r-plus",
+      "key": "command-r"
+    },
+    {
+      "model": "command-a",
+      "key": "command-a"
+    },
+    {
+      "model": "nemo-12b",
+      "key": "nemo"
+    },
+    {
+      "model": "random-model-xyz",
+      "key": "gpt-3.5-turbo"
+    },
+    {
+      "model": "",
+      "key": "gpt-3.5-turbo"
+    },
+    {
+      "model": "gpt-3.5-turbo-16k",
+      "key": "gpt-3.5-turbo"
+    }
+  ]
+}

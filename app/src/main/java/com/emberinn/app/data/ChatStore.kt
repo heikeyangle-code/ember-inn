@@ -711,6 +711,9 @@ class ChatStore(private val context: Context) {
 
     fun sessionName(sessionId: String): String = get(sessionId)?.name ?: ""
 
+    /** 附件 chat 源的 chatFile 名（对应官方 session.file_name，用于按 chat 源隔离附件目录）。 */
+    fun sessionFile(sessionId: String): String = "$sessionId.jsonl"
+
     fun renameSession(sessionId: String, name: String) {
         get(sessionId)?.let { upsert(it.copy(name = name)) }
     }

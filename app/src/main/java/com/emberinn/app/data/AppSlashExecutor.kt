@@ -6,6 +6,7 @@ import com.emberinn.engine.slash.SlashCommandResolver
 import com.emberinn.engine.slash.SlashEngine
 import com.emberinn.engine.slash.SlashRegistry
 import com.emberinn.engine.slash.SlashState
+import java.io.File
 
 /**
  * 消息类斜杠命令需要的 App 能力（ChatViewModel 实现；纯接口便于单测）。
@@ -80,6 +81,9 @@ interface SlashMessageActions {
     ): String
     /** /summarize：无文本=总结当前聊天；有文本=按指定 source/prompt 总结（官方 summarizeCallback）。 */
     suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
+
+    /** /db 子命令附件上下文：返回当前 (characterAvatar, chatFile, charName) 用于 attachments 三源定位。 */
+    fun attachmentsContext(): Triple<String, String, String> = Triple("", "", "")
 }
 
 /**
@@ -360,49 +364,76 @@ class AppSlashExecutor(
             // attachments / databank（官方 /db 系列）
             SlashCommandDef(
                 "db",
-                description = "数据银行附件操作（sub=get/list/add/update/disable/enable/delete）",
+                description = "数据银行附件操作（sub=get/list/add/update/disable/enable/delete/show/hide/apply/list-inline/parse-inline）",
                 callback = { inv, _ ->
                     val sub = inv.namedArgs["sub"] ?: inv.unnamedArgs.firstOrNull() ?: "list"
-                    dbDispatch(ctx, sub, inv)
+                    dbDispatch(ctx, sub, inv, actions.attachmentsContext())
                 },
             ),
             SlashCommandDef(
                 "db-list",
                 description = "列出数据银行附件（field=name|url，source=global|character|chat）",
-                callback = { inv, _ -> dbDispatch(ctx, "list", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "list", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-get",
                 description = "读取数据银行附件文本（name= 或 url=）",
                 rawQuotes = true,
-                callback = { inv, _ -> dbDispatch(ctx, "get", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "get", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-add",
                 description = "添加数据银行附件（name=/url=，source= 可选）",
                 rawQuotes = true,
-                callback = { inv, _ -> dbDispatch(ctx, "add", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "add", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-update",
                 description = "更新数据银行附件（name=/url=）",
                 rawQuotes = true,
-                callback = { inv, _ -> dbDispatch(ctx, "update", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "update", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-disable",
                 description = "禁用数据银行附件（name=）",
-                callback = { inv, _ -> dbDispatch(ctx, "disable", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "disable", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-enable",
                 description = "启用数据银行附件（name=）",
-                callback = { inv, _ -> dbDispatch(ctx, "enable", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "enable", inv, actions.attachmentsContext()) },
             ),
             SlashCommandDef(
                 "db-delete",
                 description = "删除数据银行附件（name=）",
-                callback = { inv, _ -> dbDispatch(ctx, "delete", inv) },
+                callback = { inv, _ -> dbDispatch(ctx, "delete", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-show",
+                description = "显示附件（enable）",
+                callback = { inv, _ -> dbDispatch(ctx, "show", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-hide",
+                description = "隐藏附件（disable）",
+                callback = { inv, _ -> dbDispatch(ctx, "hide", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-apply",
+                description = "读取附件文本并返回管道（供 send/sendas pipe）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "apply", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-list-inline",
+                description = "以 inline 格式 [a]name|url[/a] 列出附件",
+                callback = { inv, _ -> dbDispatch(ctx, "list-inline", inv, actions.attachmentsContext()) },
+            ),
+            SlashCommandDef(
+                "db-parse-inline",
+                description = "解析 inline 文本，返回 prompt 片段（[a]xxx[/a]→attachment 文本；无匹配→原文）",
+                rawQuotes = true,
+                callback = { inv, _ -> dbDispatch(ctx, "parse-inline", inv, actions.attachmentsContext()) },
             ),
             // gallery 扩展（官方 /listGallery）
             SlashCommandDef(
@@ -522,8 +553,14 @@ class AppSlashExecutor(
         )
     } ?: emptyList()
 
-    /** /db 主分派（sub=get/list/add/update/disable/enable/delete）。 */
-    private fun dbDispatch(ctx: Context, sub: String, inv: com.emberinn.engine.slash.CommandInvocation): String {
+    /** /db 主分派（sub=get/list/add/update/disable/enable/delete/show/hide/apply/list-inline/parse-inline）。 */
+    private fun dbDispatch(
+        ctx: Context,
+        sub: String,
+        inv: com.emberinn.engine.slash.CommandInvocation,
+        attachmentsContext: Triple<String, String, String> = Triple("", "", ""),
+    ): String {
+        val (characterAvatar, chatFile, _) = attachmentsContext
         val source = inv.namedArgs["source"]
         val name = inv.namedArgs["name"] ?: inv.unnamedArgs.firstOrNull() ?: ""
         // 官方 attachments/index.js：add 用文件上传，命令版把无名参数作为附件文本内容；url 字段也兜底当内容
@@ -531,23 +568,58 @@ class AppSlashExecutor(
         // update：name/url 用于定位原附件；新内容取 unnamedArgs（drop(1) 去掉可能被当 name 的首参）或 content 字段
         val url = inv.namedArgs["url"] ?: inv.unnamedArgs.firstOrNull() ?: ""
         val updateContent = inv.unnamedArgs.drop(1).joinToString(" ").ifBlank { inv.namedArgs["content"] ?: url }
+        fun getOrListed(v: String) = v.ifBlank { inv.unnamedArgs.firstOrNull() ?: "" }
+        val targetValue = getOrListed(name).ifBlank { url }
+        val atts = { AttachmentsService.getAttachments(ctx, source, characterAvatar, chatFile) }
         return when (sub) {
-            "list" -> AttachmentsService.listAttachmentsJson(ctx, source)
-            "get" -> AttachmentsService.getAttachmentText(ctx, source, name) ?: ""
+            "list" -> AttachmentsService.listAttachmentsJson(ctx, source, inv.namedArgs["field"] ?: "url", characterAvatar, chatFile)
+            "get" -> AttachmentsService.getAttachmentText(ctx, source, targetValue, characterAvatar, chatFile) ?: ""
             "add" -> {
-                AttachmentsService.addAttachment(ctx, source, name, content); "OK:db-add:$name"
+                AttachmentsService.addAttachment(ctx, source, name.takeIf { it.isNotBlank() }, content, characterAvatar, chatFile)
+                "OK:db-add:$name"
             }
             "update" -> {
-                AttachmentsService.updateAttachment(ctx, source, name, url, updateContent); "OK:db-update:${name.ifBlank { url }}"
+                AttachmentsService.updateAttachment(ctx, source, name.takeIf { it.isNotBlank() }, url.takeIf { it.isNotBlank() }, updateContent, characterAvatar, chatFile)
+                "OK:db-update:${name.ifBlank { url }}"
             }
-            "disable" -> {
-                AttachmentsService.disableAttachment(ctx, source, name); "OK:db-disable:$name"
+            "disable", "hide" -> {
+                AttachmentsService.disableAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-${sub}:$targetValue"
             }
-            "enable" -> {
-                AttachmentsService.enableAttachment(ctx, source, name); "OK:db-enable:$name"
+            "enable", "show" -> {
+                AttachmentsService.enableAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-${sub}:$targetValue"
             }
             "delete" -> {
-                AttachmentsService.deleteAttachment(ctx, source, name); "OK:db-delete:$name"
+                AttachmentsService.deleteAttachment(ctx, source, targetValue, characterAvatar, chatFile)
+                "OK:db-delete:$targetValue"
+            }
+            "apply" -> AttachmentsService.getAttachmentText(ctx, source, targetValue, characterAvatar, chatFile) ?: ""
+            "list-inline" -> buildString {
+                val list = atts()
+                list.forEach { a -> append("[a]${a.name}|${a.url}[/a]") }
+            }
+            "parse-inline" -> {
+                val text = inv.unnamedArgs.joinToString(" ").ifBlank { inv.namedArgs["text"] ?: inv.namedArgs["content"] ?: "" }
+                val all = atts()
+                val re = Regex("""\[a\](.*?)\[/a\]""")
+                var out = text
+                re.findAll(text).forEach { match ->
+                    val inner = match.groupValues[1]
+                    val (n, u) = if (inner.contains('|')) {
+                        val parts = inner.split('|', limit = 2); parts[0].trim() to parts[1].trim()
+                    } else {
+                        inner.trim() to inner.trim()
+                    }
+                    val found = AttachmentsService.getAttachmentByField(all, n)
+                        ?: AttachmentsService.getAttachmentByField(all, u)
+                    val resolved = if (found != null) {
+                        val file = File(ctx.filesDir, "attachments/${found.url}").takeIf { it.exists() }
+                        file?.readText() ?: ""
+                    } else ""
+                    out = out.replace(match.value, resolved)
+                }
+                out
             }
             else -> "ERR:db:unknown_sub:$sub"
         }

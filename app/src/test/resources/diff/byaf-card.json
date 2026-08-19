@@ -1,0 +1,203 @@
+{
+  "source": "src/byaf.js getCharacterCard",
+  "cases": [
+    {
+      "id": "full",
+      "args": {
+        "body": {
+          "manifest": {
+            "author": {
+              "name": "作者",
+              "backyardURL": "https://by"
+            }
+          },
+          "character": {
+            "name": "角色A",
+            "displayName": "显示名",
+            "persona": "人设#{user}",
+            "isNSFW": true,
+            "loreItems": [
+              {
+                "key": "地点",
+                "value": "内容{character}"
+              }
+            ]
+          },
+          "scenarios": [
+            {
+              "narrative": "故事#{user}",
+              "firstMessages": [
+                {
+                  "text": "开场"
+                }
+              ],
+              "exampleMessages": [
+                {
+                  "text": "示例"
+                }
+              ],
+              "formattingInstructions": "指令{character}"
+            },
+            {
+              "narrative": "备选",
+              "firstMessages": [
+                {
+                  "text": "备选开场"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "角色A",
+          "description": "人设#{{user}}",
+          "personality": "",
+          "scenario": "故事#{{user}}",
+          "first_mes": "开场",
+          "mes_example": "<START>\n示例",
+          "creator_notes": "https://by",
+          "system_prompt": "指令{{char}}",
+          "post_history_instructions": "",
+          "alternate_greetings": [
+            "备选开场"
+          ],
+          "character_book": {
+            "entries": [
+              {
+                "keys": [
+                  "地点"
+                ],
+                "content": "内容{{char}}",
+                "extensions": {},
+                "enabled": true,
+                "insertion_order": 0
+              }
+            ],
+            "extensions": {}
+          },
+          "tags": [
+            "nsfw"
+          ],
+          "creator": "作者",
+          "character_version": "",
+          "extensions": {
+            "display_name": "显示名"
+          }
+        },
+        "create_date": "2026-08-08T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "string-nsfw",
+      "args": {
+        "body": {
+          "manifest": {
+            "author": {}
+          },
+          "character": {
+            "name": "N",
+            "isNSFW": "false"
+          },
+          "scenarios": [
+            {
+              "narrative": "S"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "N",
+          "description": "",
+          "personality": "",
+          "scenario": "S",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "alternate_greetings": [],
+          "tags": [
+            "nsfw"
+          ],
+          "creator": "",
+          "character_version": "",
+          "extensions": {}
+        },
+        "create_date": "2026-08-08T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "empty",
+      "args": {
+        "body": {
+          "manifest": {
+            "author": {}
+          },
+          "character": {
+            "name": ""
+          },
+          "scenarios": []
+        }
+      },
+      "expected": {
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "",
+          "description": "",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "alternate_greetings": [],
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "extensions": {}
+        },
+        "create_date": "2026-08-08T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "nulls",
+      "args": {
+        "body": {
+          "manifest": null,
+          "character": null,
+          "scenarios": null
+        }
+      },
+      "expected": {
+        "spec": "chara_card_v2",
+        "spec_version": "2.0",
+        "data": {
+          "name": "",
+          "description": "",
+          "personality": "",
+          "scenario": "",
+          "first_mes": "",
+          "mes_example": "",
+          "creator_notes": "",
+          "system_prompt": "",
+          "post_history_instructions": "",
+          "alternate_greetings": [],
+          "tags": [],
+          "creator": "",
+          "character_version": "",
+          "extensions": {}
+        },
+        "create_date": "2026-08-08T00:00:00.000Z"
+      }
+    }
+  ]
+}

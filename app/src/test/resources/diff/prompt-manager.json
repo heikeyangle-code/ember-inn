@@ -1,0 +1,394 @@
+[
+ {
+  "kind": "constructor",
+  "args": {},
+  "expected": "{\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "constructor",
+  "args": {
+   "identifier": "main"
+  },
+  "expected": "{\"identifier\":\"main\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "constructor",
+  "args": {
+   "identifier": "x",
+   "injection_order": 5,
+   "injection_trigger": [
+    "normal"
+   ]
+  },
+  "expected": "{\"identifier\":\"x\",\"extension\":false,\"injection_order\":5,\"injection_trigger\":[\"normal\"]}"
+ },
+ {
+  "kind": "constructor",
+  "args": {
+   "identifier": "y",
+   "extension": true,
+   "forbid_overrides": true,
+   "role": "user",
+   "content": "hi",
+   "system_prompt": false,
+   "position": "start",
+   "injection_depth": 3,
+   "injection_position": 1
+  },
+  "expected": "{\"identifier\":\"y\",\"role\":\"user\",\"content\":\"hi\",\"system_prompt\":false,\"position\":\"start\",\"injection_depth\":3,\"injection_position\":1,\"forbid_overrides\":true,\"extension\":true,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "trigger",
+  "prompt": null,
+  "type": "normal",
+  "expected": "true"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": "not-array"
+  },
+  "type": "normal",
+  "expected": "true"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": []
+  },
+  "type": "normal",
+  "expected": "true"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": [
+    "normal"
+   ]
+  },
+  "type": "normal",
+  "expected": "true"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": [
+    "normal"
+   ]
+  },
+  "type": "continue",
+  "expected": "false"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": [
+    "continue",
+    "quiet"
+   ]
+  },
+  "type": "quiet",
+  "expected": "true"
+ },
+ {
+  "kind": "trigger",
+  "prompt": {
+   "injection_trigger": [
+    "Normal"
+   ]
+  },
+  "type": "normal",
+  "expected": "false"
+ },
+ {
+  "kind": "prepare",
+  "content": "plain text",
+  "original": null,
+  "expected": "{\"identifier\":\"id1\",\"role\":\"system\",\"content\":\"plain text\",\"name\":\"N\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "prepare",
+  "content": "hi {{user}} / {{char}}",
+  "original": null,
+  "expected": "{\"identifier\":\"id1\",\"role\":\"system\",\"content\":\"hi User / Char\",\"name\":\"N\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "prepare",
+  "content": "orig={{original}}",
+  "original": "ORIG",
+  "expected": "{\"identifier\":\"id1\",\"role\":\"system\",\"content\":\"orig=ORIG\",\"name\":\"N\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "prepare",
+  "content": "no original {{original}}",
+  "original": null,
+  "expected": "{\"identifier\":\"id1\",\"role\":\"system\",\"content\":\"no original \",\"name\":\"N\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}"
+ },
+ {
+  "kind": "collection",
+  "order": [],
+  "type": "normal",
+  "expected": "[]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   }
+  ],
+  "type": "normal",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   }
+  ],
+  "type": "  NORMAL  ",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   }
+  ],
+  "type": "",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": false
+   }
+  ],
+  "type": "normal",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "unknown",
+    "enabled": true
+   }
+  ],
+  "type": "normal",
+  "expected": "[]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   },
+   {
+    "identifier": "custom",
+    "enabled": true
+   },
+   {
+    "identifier": "triggered",
+    "enabled": true
+   }
+  ],
+  "type": "normal",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"custom\",\"role\":\"user\",\"content\":\"C \",\"name\":\"Custom\",\"system_prompt\":false,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[\"normal\"]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   },
+   {
+    "identifier": "custom",
+    "enabled": true
+   },
+   {
+    "identifier": "triggered",
+    "enabled": true
+   }
+  ],
+  "type": "continue",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"triggered\",\"role\":\"system\",\"content\":\"T\",\"name\":\"T\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[\"continue\"]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": false
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": false
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": false
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": false
+   }
+  ],
+  "type": "normal",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "collection",
+  "order": [
+   {
+    "identifier": "main",
+    "enabled": true
+   },
+   {
+    "identifier": "worldInfoBefore",
+    "enabled": true
+   },
+   {
+    "identifier": "chatHistory",
+    "enabled": true
+   },
+   {
+    "identifier": "jailbreak",
+    "enabled": true
+   },
+   {
+    "identifier": "custom",
+    "enabled": true
+   }
+  ],
+  "type": "quiet",
+  "expected": "[{\"identifier\":\"main\",\"role\":\"system\",\"content\":\"M User\",\"name\":\"Main\",\"system_prompt\":true,\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"worldInfoBefore\",\"role\":\"system\",\"content\":\"WI\",\"name\":\"WI\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"chatHistory\",\"role\":\"system\",\"content\":\"\",\"name\":\"History\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]},{\"identifier\":\"jailbreak\",\"role\":\"system\",\"content\":\"JB\",\"name\":\"JB\",\"extension\":false,\"injection_order\":100,\"injection_trigger\":[]}]"
+ },
+ {
+  "kind": "order",
+  "character": null,
+  "list": [],
+  "expected": "[]"
+ },
+ {
+  "kind": "order",
+  "character": {
+   "id": "c1"
+  },
+  "list": [
+   {
+    "character_id": "c1",
+    "order": [
+     {
+      "identifier": "main"
+     }
+    ]
+   }
+  ],
+  "expected": "[{\"identifier\":\"main\"}]"
+ },
+ {
+  "kind": "order",
+  "character": {
+   "id": "5"
+  },
+  "list": [
+   {
+    "character_id": 5,
+    "order": [
+     {
+      "identifier": "a",
+      "enabled": false
+     }
+    ]
+   }
+  ],
+  "expected": "[{\"identifier\":\"a\",\"enabled\":false}]"
+ },
+ {
+  "kind": "order",
+  "character": {
+   "id": "c2"
+  },
+  "list": [
+   {
+    "character_id": "c1",
+    "order": [
+     {
+      "identifier": "main"
+     }
+    ]
+   }
+  ],
+  "expected": "[]"
+ }
+]

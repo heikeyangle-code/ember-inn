@@ -1,0 +1,795 @@
+{
+  "cases": [
+    {
+      "id": "001-no-cfg",
+      "args": {
+        "extensionSettings": {},
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "002-global-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global pos",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "003-chara-priority",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": {
+          "type": 1,
+          "value": 3
+        },
+        "prompt": {
+          "value": "chara pos",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "004-chat-priority",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_guidance_scale": 4,
+          "cfg_negative_prompt": "chat neg"
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 0,
+          "value": 4
+        },
+        "prompt": {
+          "value": "chat neg",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "005-chat-one-ignored",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_guidance_scale": 1,
+          "cfg_negative_prompt": "chat neg"
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "006-group-override-chara",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {
+          "cfg_groupchat_individual_chars": true
+        },
+        "selectedGroup": true,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": {
+          "type": 1,
+          "value": 3
+        },
+        "prompt": {
+          "value": "chara pos",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "007-selected-group-no-override",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": true,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "008-chara-scale-one",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 1
+              }
+            ]
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "009-chara-absent-name",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Bob",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "010-chat-prompt-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_guidance_scale": 2,
+          "cfg_negative_prompt": "chat neg"
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 0,
+          "value": 2
+        },
+        "prompt": {
+          "value": "chat neg",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "011-chat-positive",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_guidance_scale": 2,
+          "cfg_positive_prompt": "chat pos {{user}}"
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": {
+          "type": 0,
+          "value": 2
+        },
+        "prompt": {
+          "value": "chat pos Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "012-chara-prompt-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 1,
+          "value": 3
+        },
+        "prompt": {
+          "value": "chara neg",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "013-global-prompt-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "014-combine-all",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {
+          "cfg_guidance_scale": 2,
+          "cfg_negative_prompt": "chat neg",
+          "cfg_positive_prompt": "chat pos",
+          "cfg_prompt_combine": [
+            0,
+            1,
+            2
+          ],
+          "cfg_prompt_insertion_depth": 5
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": false
+      },
+      "expected": {
+        "guidance": {
+          "type": 0,
+          "value": 2
+        },
+        "prompt": {
+          "value": "chara pos\nchat pos",
+          "depth": 5
+        }
+      }
+    },
+    {
+      "id": "015-combine-chat-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_negative_prompt": "chat neg",
+          "cfg_prompt_combine": [
+            0
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice\nchat neg",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "016-combine-chara-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg",
+              "positive_prompt": "global pos"
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3,
+                "negative_prompt": "chara neg",
+                "positive_prompt": "chara pos"
+              }
+            ]
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_combine": [
+            1
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 1,
+          "value": 3
+        },
+        "prompt": {
+          "value": "chara neg",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "017-combine-global-only",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1,
+              "negative_prompt": "",
+              "positive_prompt": ""
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_combine": [
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": null,
+        "prompt": null
+      }
+    },
+    {
+      "id": "018-empty-prompts-filtered",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_negative_prompt": "",
+          "cfg_prompt_combine": [
+            0,
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "019-separator-json-newline",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_separator": "\"\\n\"",
+          "cfg_prompt_combine": [
+            0,
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "020-separator-json-tab",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_separator": "\"\\t\"",
+          "cfg_prompt_combine": [
+            0,
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "021-separator-invalid-json",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_separator": "not-json",
+          "cfg_prompt_combine": [
+            0,
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "022-separator-json-sentence",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_separator": "\" and then \"",
+          "cfg_prompt_combine": [
+            0,
+            2
+          ]
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "023-depth-zero",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {
+          "cfg_prompt_insertion_depth": 0
+        },
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 0
+        }
+      }
+    },
+    {
+      "id": "024-depth-default",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 2.5,
+              "negative_prompt": "global neg {{user}}",
+              "positive_prompt": "global pos"
+            }
+          }
+        },
+        "chatMetadata": {},
+        "selectedGroup": false,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 2,
+          "value": 2.5
+        },
+        "prompt": {
+          "value": "global neg Alice",
+          "depth": 1
+        }
+      }
+    },
+    {
+      "id": "025-chara-undefined-prompt",
+      "args": {
+        "extensionSettings": {
+          "cfg": {
+            "global": {
+              "guidance_scale": 1
+            },
+            "chara": [
+              {
+                "name": "Alice",
+                "guidance_scale": 3
+              }
+            ]
+          }
+        },
+        "chatMetadata": {
+          "cfg_groupchat_individual_chars": true
+        },
+        "selectedGroup": true,
+        "charaName": "Alice",
+        "isNegative": true
+      },
+      "expected": {
+        "guidance": {
+          "type": 1,
+          "value": 3
+        },
+        "prompt": {
+          "value": "",
+          "depth": 1
+        }
+      }
+    }
+  ]
+}

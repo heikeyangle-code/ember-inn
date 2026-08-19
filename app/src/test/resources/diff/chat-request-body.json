@@ -1,0 +1,2036 @@
+{
+  "source": "chat-completions.js OpenAI 兼容 requestBody 构造",
+  "cases": [
+    {
+      "id": "openai",
+      "args": {
+        "settings": {
+          "source": "openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "gpt-4o",
+        "type": "normal",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ]
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "openai-logprobs",
+      "args": {
+        "settings": {
+          "source": "openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": true,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ],
+        "logprobs": true,
+        "top_logprobs": 5
+      }
+    },
+    {
+      "id": "azure",
+      "args": {
+        "settings": {
+          "source": "azure_openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "openrouter",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": true,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": 7,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "stop": [
+          "END"
+        ],
+        "seed": 7,
+        "transforms": [
+          "middle-out"
+        ],
+        "plugins": [],
+        "reasoning": {
+          "exclude": false,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "provider": {
+          "allow_fallbacks": true,
+          "order": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ]
+        },
+        "route": "fallback",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "openrouter-auto",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": true,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "auto",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-5.5",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-5.5",
+        "max_completion_tokens": 512,
+        "stream": true,
+        "top_k": 40,
+        "plugins": [
+          {
+            "id": "web"
+          }
+        ],
+        "reasoning": {
+          "exclude": true,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "provider": {
+          "allow_fallbacks": true,
+          "order": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ]
+        },
+        "route": "fallback"
+      }
+    },
+    {
+      "id": "openrouter-fallback",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [],
+          "quantizations": [],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "stop": [
+          "END"
+        ],
+        "transforms": [
+          "middle-out"
+        ],
+        "plugins": [],
+        "reasoning": {
+          "exclude": true,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "route": "fallback",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "custom",
+      "args": {
+        "settings": {
+          "source": "custom",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": true,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "m",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ],
+        "logprobs": true,
+        "top_logprobs": 5
+      }
+    },
+    {
+      "id": "perplexity",
+      "args": {
+        "settings": {
+          "source": "perplexity",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "p",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "p",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "id": "groq",
+      "args": {
+        "settings": {
+          "source": "groq",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "llama",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "llama",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "deepseek",
+      "args": {
+        "settings": {
+          "source": "deepseek",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 0,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "deepseek",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "deepseek",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 2.220446049250313e-16,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "moonshot",
+      "args": {
+        "settings": {
+          "source": "moonshot",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": true,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "kimi-k2.6",
+        "type": "normal",
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "x",
+            "partial": true
+          }
+        ]
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "x",
+            "partial": true
+          }
+        ],
+        "model": "kimi-k2.6",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ],
+        "thinking": {
+          "type": "enabled"
+        }
+      }
+    },
+    {
+      "id": "moonshot-k2",
+      "args": {
+        "settings": {
+          "source": "moonshot",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "kimi-k2.5",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "kimi-k2.5",
+        "max_tokens": 512,
+        "stream": true,
+        "stop": [
+          "END"
+        ],
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "id": "zai",
+      "args": {
+        "settings": {
+          "source": "zai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "glm-5",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "glm-5",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ],
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    {
+      "id": "siliconflow",
+      "args": {
+        "settings": {
+          "source": "siliconflow",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "s",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "s",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "minimax",
+      "args": {
+        "settings": {
+          "source": "minimax",
+          "temp": 0,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "m",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "m",
+        "temperature": 2.220446049250313e-16,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "workers-ai",
+      "args": {
+        "settings": {
+          "source": "workers_ai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": 3,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 80,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "llama",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "llama",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 50,
+        "stop": [
+          "END"
+        ],
+        "seed": 3,
+        "repetition_penalty": 1.05
+      }
+    },
+    {
+      "id": "o1",
+      "args": {
+        "settings": {
+          "source": "openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "o1",
+        "type": "normal",
+        "messages": [
+          {
+            "role": "user",
+            "content": "x"
+          }
+        ]
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "x"
+          }
+        ],
+        "model": "o1",
+        "max_completion_tokens": 512,
+        "stream": false,
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "id": "gpt5",
+      "args": {
+        "settings": {
+          "source": "openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "gpt-5.5",
+        "type": "normal",
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ]
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "model": "gpt-5.5",
+        "max_completion_tokens": 512,
+        "stream": true,
+        "reasoning_effort": "low",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "openrouter-providers-empty",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [],
+          "quantizations": [],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "stop": [
+          "END"
+        ],
+        "transforms": [
+          "middle-out"
+        ],
+        "plugins": [],
+        "reasoning": {
+          "exclude": true,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "route": "fallback",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "openrouter-topk-zero",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 0,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 0,
+        "stop": [
+          "END"
+        ],
+        "transforms": [
+          "middle-out"
+        ],
+        "plugins": [],
+        "reasoning": {
+          "exclude": true,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "provider": {
+          "allow_fallbacks": true,
+          "order": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ]
+        },
+        "route": "fallback",
+        "verbosity": "normal"
+      }
+    },
+    {
+      "id": "openrouter-no-verbosity",
+      "args": {
+        "settings": {
+          "source": "openrouter",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "openai/gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "openai/gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "stop": [
+          "END"
+        ],
+        "transforms": [
+          "middle-out"
+        ],
+        "plugins": [],
+        "reasoning": {
+          "exclude": true,
+          "effort": "low"
+        },
+        "min_p": 0.1,
+        "top_a": 0.5,
+        "repetition_penalty": 1.05,
+        "provider": {
+          "allow_fallbacks": true,
+          "order": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ]
+        },
+        "route": "fallback"
+      }
+    },
+    {
+      "id": "minimax-temp-clamp-high",
+      "args": {
+        "settings": {
+          "source": "minimax",
+          "temp": 2.5,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "m",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "minimax-temp-clamp-low",
+      "args": {
+        "settings": {
+          "source": "minimax",
+          "temp": 0,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "m",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "m",
+        "temperature": 2.220446049250313e-16,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "workers-ai-seed-zero",
+      "args": {
+        "settings": {
+          "source": "workers_ai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": 0,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 10,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "llama",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "llama",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 10,
+        "stop": [
+          "END"
+        ],
+        "repetition_penalty": 1.05
+      }
+    },
+    {
+      "id": "custom-no-stop",
+      "args": {
+        "settings": {
+          "source": "custom",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "m",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "m",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": []
+      }
+    },
+    {
+      "id": "nonstream",
+      "args": {
+        "settings": {
+          "source": "openai",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": false,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "gpt-4o",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "gpt-4o",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": false,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ]
+      }
+    },
+    {
+      "id": "perplexity-reasoning-auto",
+      "args": {
+        "settings": {
+          "source": "perplexity",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "auto",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "p",
+        "type": "normal",
+        "messages": []
+      },
+      "expected": {
+        "messages": [],
+        "model": "p",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "top_k": 40,
+        "reasoning_effort": "auto"
+      }
+    },
+    {
+      "id": "moonshot-no-thinking",
+      "args": {
+        "settings": {
+          "source": "moonshot",
+          "temp": 1,
+          "freqPen": 0,
+          "presPen": 0,
+          "topP": 1,
+          "maxTokens": 512,
+          "stream": true,
+          "n": 1,
+          "userName": "U",
+          "charName": "C",
+          "groupNames": [],
+          "showThoughts": false,
+          "reasoningEffort": "low",
+          "enableWebSearch": false,
+          "requestImages": false,
+          "requestImageResolution": "auto",
+          "requestImageAspectRatio": "1:1",
+          "customPromptPostProcessing": "NONE",
+          "verbosity": "normal",
+          "seed": -1,
+          "requestTokenProbabilities": false,
+          "stopStrings": [
+            "END"
+          ],
+          "topK": 40,
+          "minP": 0.1,
+          "repetitionPenalty": 1.05,
+          "topA": 0.5,
+          "useFallback": true,
+          "provider": [
+            "a"
+          ],
+          "quantizations": [
+            "q4"
+          ],
+          "allowFallbacks": true,
+          "middleout": "on",
+          "nanogptProvider": "p",
+          "nanogptPaygOverride": "x",
+          "useSysprompt": true,
+          "zaiEndpoint": "z",
+          "siliconflowEndpoint": "s",
+          "minimaxEndpoint": "m",
+          "workersAiAccountId": "w"
+        },
+        "model": "kimi-k2.6",
+        "type": "normal",
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "x",
+            "partial": true
+          }
+        ]
+      },
+      "expected": {
+        "messages": [
+          {
+            "role": "assistant",
+            "content": "x",
+            "partial": true
+          }
+        ],
+        "model": "kimi-k2.6",
+        "temperature": 1,
+        "max_tokens": 512,
+        "stream": true,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_p": 1,
+        "stop": [
+          "END"
+        ],
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    }
+  ]
+}

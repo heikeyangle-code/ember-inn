@@ -1,0 +1,82 @@
+{
+  "source": "expressions sampleClassifyText",
+  "cases": [
+    {
+      "id": "plain",
+      "args": {
+        "body": {
+          "text": "Hello world! This is a test."
+        }
+      },
+      "expected": "Hello world! This is a test."
+    },
+    {
+      "id": "quotes-asterisks",
+      "args": {
+        "body": {
+          "text": "*\"Hello\"* world!"
+        }
+      },
+      "expected": "Hello world!"
+    },
+    {
+      "id": "short-no-punct",
+      "args": {
+        "body": {
+          "text": "just some words without punctuation"
+        }
+      },
+      "expected": "just some words without punctuation"
+    },
+    {
+      "id": "chinese",
+      "args": {
+        "body": {
+          "text": "你好！今天天气真好。"
+        }
+      },
+      "expected": "你好！今天天气真好。"
+    },
+    {
+      "id": "empty",
+      "args": {
+        "body": {
+          "text": ""
+        }
+      },
+      "expected": ""
+    },
+    {
+      "id": "long",
+      "args": {
+        "body": {
+          "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        }
+      },
+      "expected": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "id": "long-sentences",
+      "args": {
+        "body": {
+          "text": "First sentence. Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Middle words without punctuation Last sentence."
+        }
+      },
+      "expected": "First sentence."
+    },
+    {
+      "id": "llm",
+      "args": {
+        "body": {
+          "text": "*\"raw\"* text with quotes",
+          "settings": {
+            "expressions": {
+              "api": "llm"
+            }
+          }
+        }
+      },
+      "expected": "raw text with quotes"
+    }
+  ]
+}

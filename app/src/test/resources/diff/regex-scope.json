@@ -1,0 +1,175 @@
+{
+  "source": "regex/engine.js getRegexScripts+getScriptsByType",
+  "cases": [
+    {
+      "id": "all-allowed",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            },
+            {
+              "scriptName": "g2"
+            }
+          ],
+          "preset": [
+            {
+              "scriptName": "p1"
+            }
+          ],
+          "scoped": [
+            {
+              "scriptName": "s1"
+            }
+          ]
+        }
+      },
+      "expected": [
+        "g1",
+        "g2",
+        "p1",
+        "s1"
+      ]
+    },
+    {
+      "id": "allowed-only-scoped-and-preset-allowed",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            },
+            {
+              "scriptName": "g2"
+            }
+          ],
+          "preset": [
+            {
+              "scriptName": "p1"
+            }
+          ],
+          "scoped": [
+            {
+              "scriptName": "s1"
+            }
+          ],
+          "allowedOnly": true,
+          "scopedAllowed": [
+            "chara"
+          ],
+          "presetAllowed": [
+            "preset"
+          ]
+        }
+      },
+      "expected": [
+        "g1",
+        "g2",
+        "p1",
+        "s1"
+      ]
+    },
+    {
+      "id": "allowed-only-scoped-blocked",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            }
+          ],
+          "preset": [
+            {
+              "scriptName": "p1"
+            }
+          ],
+          "scoped": [
+            {
+              "scriptName": "s1"
+            }
+          ],
+          "allowedOnly": true,
+          "scopedAllowed": []
+        }
+      },
+      "expected": [
+        "g1"
+      ]
+    },
+    {
+      "id": "allowed-only-preset-blocked",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            }
+          ],
+          "preset": [
+            {
+              "scriptName": "p1"
+            }
+          ],
+          "scoped": [
+            {
+              "scriptName": "s1"
+            }
+          ],
+          "allowedOnly": true,
+          "presetAllowed": []
+        }
+      },
+      "expected": [
+        "g1"
+      ]
+    },
+    {
+      "id": "global-only",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            }
+          ]
+        }
+      },
+      "expected": [
+        "g1"
+      ]
+    },
+    {
+      "id": "empty-all",
+      "args": {
+        "body": {}
+      },
+      "expected": []
+    },
+    {
+      "id": "other-avatar",
+      "args": {
+        "body": {
+          "global": [
+            {
+              "scriptName": "g1"
+            }
+          ],
+          "scoped": [
+            {
+              "scriptName": "s1"
+            }
+          ],
+          "allowedOnly": true,
+          "scopedAllowed": [
+            "other"
+          ],
+          "presetAllowed": []
+        }
+      },
+      "expected": [
+        "g1"
+      ]
+    }
+  ]
+}

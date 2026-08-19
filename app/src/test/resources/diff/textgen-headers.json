@@ -1,0 +1,42 @@
+{
+  "generated": "2026-08-18T10:42:54.352Z",
+  "source": "sillytavern-ref release",
+  "cases": [
+    {
+      "id": "mancer_with_key",
+      "output": {
+        "X-API-KEY": "mancer-key",
+        "Authorization": "Bearer mancer-key"
+      }
+    },
+    {
+      "id": "mancer_without_key",
+      "output": {}
+    },
+    {
+      "id": "infermaticai_with_key",
+      "output": {
+        "Authorization": "Bearer infermatic-key"
+      }
+    },
+    {
+      "id": "infermaticai_without_key",
+      "output": {}
+    },
+    {
+      "id": "featherless_with_key",
+      "output": {
+        "HTTP-Referer": "https://sillytavern.app",
+        "X-Title": "SillyTavern",
+        "Authorization": "Bearer feather-key"
+      }
+    },
+    {
+      "id": "featherless_without_key",
+      "output": {
+        "HTTP-Referer": "https://sillytavern.app",
+        "X-Title": "SillyTavern"
+      }
+    }
+  ]
+}
