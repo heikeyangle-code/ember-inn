@@ -62,6 +62,7 @@
 - `cfg-prompt-official.mjs`：官方 CFG Scale 纯逻辑（getGuidanceScale 优先级/getCfgPrompt unshift 合并/getCustomSeparator JSON 回退/插入深度），打桩 substituteParams={{user}}→Alice；25 例。
 - `logprobs-official.mjs`：官方 Token 概率解析（parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs），20 例。
 - `imagegen-official.mjs`：官方 stable-diffusion 扩展 A1111/sdcpp 请求体（generateAutoImage/generateSdcppImage），10 例。
+- `imagegen-services-official.mjs`：官方 stable-diffusion services 后端服务端 body/URL 构造（togetherai/pollinations/chutes）；锁 Pollinations path=encodeURIComponent vs query=URLSearchParams 边界 + Chutes `||` 短路 0→默认；12 例。
 - `authors-note-official.mjs`：官方导演备注默认值 + ANWithWI。
 - `persona-engine-official.mjs`：官方人设纯逻辑（状态/临时锁/连接/解析）。
 - `group-loop-official.mjs`：官方群聊完整循环纯逻辑（自动续写/生成计划）。

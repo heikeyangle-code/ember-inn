@@ -3,7 +3,6 @@ package com.emberinn.app.data
 import android.content.Context
 import com.emberinn.app.ui.settings.ServicesPrefs
 import java.io.File
-import java.net.URLEncoder
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +58,7 @@ object ImageGenBackendsCloud {
     /**
      * TogetherAI（官方 src/endpoints/stable-diffusion.js together.post('/generate') 1:1，index.js L3460）：
      * POST https://api.together.xyz/v1/images/generations
-     * {prompt,negative_prompt,height,width,model,steps,n=1,seed}（seed 未配置则随机 0..10^7）
+     * 请求体由引擎层 ImageGenRequestEngine.togetherAiPayload 构造（差分 3 例）；
      * Header Authorization: Bearer apiKey → data[0].b64_json（缺失则下载 data[0].url 转 base64）。
      */
     private suspend fun generateTogetherAIImage(context: Context, prompt: String, negativePrompt: String): String? {
@@ -67,16 +66,15 @@ object ImageGenBackendsCloud {
         if (apiKey.isBlank()) return null
         val cfgSeed = ServicesPrefs.imageSeed(context)
         val seed: Long = if (cfgSeed >= 0) cfgSeed else kotlin.random.Random.nextLong(0, 10_000_000)
-        val payload = JSONObject()
-            .put("prompt", prompt)
-            .put("negative_prompt", negativePrompt)
-            .put("height", ServicesPrefs.imageHeight(context))
-            .put("width", ServicesPrefs.imageWidth(context))
-            .put("model", ServicesPrefs.imageModel(context))
-            .put("steps", ServicesPrefs.imageSteps(context))
-            .put("n", 1)
-            .put("seed", seed)
-            .toString()
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.togetherAiPayload(
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            model = ServicesPrefs.imageModel(context),
+            steps = ServicesPrefs.imageSteps(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            seed = seed,
+        ).toString()
         val request = Request.Builder()
             .url("https://api.together.xyz/v1/images/generations")
             .post(payload.toRequestBody(jsonMedia))
@@ -108,15 +106,18 @@ object ImageGenBackendsCloud {
         if (apiKey.isBlank()) return null
         val cfgSeed = ServicesPrefs.imageSeed(context)
         val seed: Long = if (cfgSeed >= 0) cfgSeed else kotlin.random.Random.nextLong(0, 10_000_000)
-        val encodedPrompt = URLEncoder.encode(prompt, "UTF-8")
-        // 官方：path = /image/{encodeURIComponent(prompt)}，query 走 URLSearchParams（model/negative_prompt/seed/width/height）
-        val qs = "?model=" + URLEncoder.encode(ServicesPrefs.imageModel(context), "UTF-8") +
-            "&negative_prompt=" + URLEncoder.encode(negativePrompt, "UTF-8") +
-            "&seed=" + seed +
-            "&width=" + ServicesPrefs.imageWidth(context) +
-            "&height=" + ServicesPrefs.imageHeight(context)
+        // URL 由引擎层 ImageGenRequestEngine.pollinationsUrl 构造（差分 6 例，锁 path encodeURIComponent / query URLSearchParams 边界）
+        val url = com.emberinn.engine.prompt.ImageGenRequestEngine.pollinationsUrl(
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            model = ServicesPrefs.imageModel(context),
+            seed = seed,
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            enhance = false,
+        )
         val request = Request.Builder()
-            .url("https://gen.pollinations.ai/image/$encodedPrompt$qs")
+            .url(url)
             .get()
             .header("Authorization", "Bearer $apiKey")
             .build()
@@ -133,7 +134,8 @@ object ImageGenBackendsCloud {
      * Stability AI（官方 src/endpoints/stable-diffusion.js stability.post('/generate') 1:1，index.js L3711）：
      * 按 model 选 endpoint（ultra/core/sd3，未知则 core），multipart form-data
      * {prompt,negative_prompt,aspect_ratio,output_format=png,seed?,style_preset?}（undefined 省略）
-     * Header Authorization: Bearer apiKey / Accept: image／；响应为图片原始字节（png）。
+     * 请求体由引擎层 [ImageGenRequestEngine.stabilityPayload] 构造（差分含 stabilityPayload + getClosestAspectRatio）；
+     * App 仅按 model 选 endpoint、转 multipart、发请求、保存 png 字节。
      * style_preset 无 ServicesPrefs 对应项，按官方 undefined 省略。
      */
     private suspend fun generateStabilityImage(context: Context, prompt: String, negativePrompt: String): String? {
@@ -148,13 +150,21 @@ object ImageGenBackendsCloud {
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
         val cfgSeed = ServicesPrefs.imageSeed(context)
-        val formBuilder = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("prompt", prompt.take(10000))
-            .addFormDataPart("negative_prompt", negativePrompt.take(10000))
-            .addFormDataPart("aspect_ratio", closestAspectRatio(width, height, "stability"))
-            .addFormDataPart("output_format", "png")
-        if (cfgSeed >= 0) formBuilder.addFormDataPart("seed", cfgSeed.toString())
+        // 引擎层构造（含 aspect_ratio = getClosestAspectRatio('stability')、slice(10000)、style_preset 省略、seed<0 省略）
+        val jsBody = com.emberinn.engine.prompt.ImageGenRequestEngine.stabilityPayload(
+            model = model,
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            width = width,
+            height = height,
+            seed = cfgSeed.toLong(),
+            stylePreset = null,
+        )
+        val payload = JSONObject(jsBody.toString()).getJSONObject("payload")
+        val formBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        for (key in payload.keys()) {
+            formBuilder.addFormDataPart(key, payload.getString(key))
+        }
         val request = Request.Builder()
             .url(apiUrl)
             .post(formBuilder.build())
@@ -170,9 +180,9 @@ object ImageGenBackendsCloud {
 
     /**
      * AIMLAPI（官方 src/endpoints/stable-diffusion.js aimlapi.post('/generate-image') 1:1，index.js L4176）：
-     * POST https://api.aimlapi.com/v1/images/generations，body 按 model 分支：
-     *  - SD/Flux/Recraft 类（flux/、stable、recraft-v3、triposr）：{prompt,model,steps,guidance,width,height,seed?}
-     *  - 其它（OpenAI 类）：{prompt,model,n=1,size}
+     * POST https://api.aimlapi.com/v1/images/generations
+     * 请求体由引擎层 [ImageGenRequestEngine.aimlapiBody] 构造（差分含 flux/stable/recraft-v3/triposr 分支、
+     * clamp 步数/CFG/尺寸、OpenAI 类 size=n=1、quality/style 省略）；
      * Header Authorization: Bearer apiKey + 官方 AIMLAPI_HEADERS（HTTP-Referer / X-Title）。
      * 响应 images[0] 或 data[0]，优先 b64_json/base64，否则下载 url 转 base64。
      * openai_quality / openai_style 无 ServicesPrefs 对应项，省略。
@@ -181,25 +191,24 @@ object ImageGenBackendsCloud {
         val apiKey = ServicesPrefs.imageApiKey(context)
         if (apiKey.isBlank()) return null
         val fullModel = ServicesPrefs.imageModel(context)
-        val model = fullModel.lowercase()
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
         val cfgSeed = ServicesPrefs.imageSeed(context)
-        val body = JSONObject().put("prompt", prompt).put("model", fullModel)
-        val isSdLike = model.startsWith("flux/") || model.startsWith("stable") || model == "recraft-v3" || model == "triposr"
-        if (isSdLike) {
-            body.put("steps", clamp(ServicesPrefs.imageSteps(context), 1, 50))
-            body.put("guidance", clamp(ServicesPrefs.imageScale(context), 1.5, 5.0))
-            body.put("width", clamp(width, 256, 1440))
-            body.put("height", clamp(height, 256, 1440))
-            if (cfgSeed >= 0) body.put("seed", cfgSeed)
-        } else {
-            body.put("n", 1)
-            body.put("size", "${width}x${height}")
-        }
+        // 引擎层构造（含 isSdLike 分支、clamp(1,50)/(1.5,5)/(256,1440)、seed>=0 才加、OpenAI 类 size/n=1）
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.aimlapiBody(
+            prompt = prompt,
+            model = fullModel,
+            steps = ServicesPrefs.imageSteps(context),
+            scale = ServicesPrefs.imageScale(context),
+            width = width,
+            height = height,
+            seed = cfgSeed.toLong(),
+            openaiQuality = null,
+            openaiStyle = null,
+        ).toString()
         val request = Request.Builder()
             .url("https://api.aimlapi.com/v1/images/generations")
-            .post(body.toString().toRequestBody(jsonMedia))
+            .post(payload.toRequestBody(jsonMedia))
             .header("Authorization", "Bearer $apiKey")
             .header("HTTP-Referer", "https://sillytavern.app")
             .header("X-Title", "SillyTavern")
@@ -223,21 +232,21 @@ object ImageGenBackendsCloud {
     /**
      * Chutes（官方 src/endpoints/stable-diffusion.js chutes.post('/generate') 1:1，index.js L4369）：
      * POST https://image.chutes.ai/generate
-     * {model,prompt,negative_prompt,guidance_scale,width,height,num_inference_steps}
+     * 请求体由引擎层 ImageGenRequestEngine.chutesPayload 构造（差分 3 例，锁 || 短路：0→默认）；
      * Header Authorization: Bearer apiKey；响应为图片原始字节 → base64。
      */
     private suspend fun generateChutesImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
         if (apiKey.isBlank()) return null
-        val payload = JSONObject()
-            .put("model", ServicesPrefs.imageModel(context))
-            .put("prompt", prompt)
-            .put("negative_prompt", negativePrompt)
-            .put("guidance_scale", ServicesPrefs.imageScale(context))
-            .put("width", ServicesPrefs.imageWidth(context))
-            .put("height", ServicesPrefs.imageHeight(context))
-            .put("num_inference_steps", ServicesPrefs.imageSteps(context))
-            .toString()
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.chutesPayload(
+            model = ServicesPrefs.imageModel(context),
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            guidanceScale = ServicesPrefs.imageScale(context),
+            width = ServicesPrefs.imageWidth(context),
+            height = ServicesPrefs.imageHeight(context),
+            steps = ServicesPrefs.imageSteps(context),
+        ).toString()
         val request = Request.Builder()
             .url("https://image.chutes.ai/generate")
             .post(payload.toRequestBody(jsonMedia))
@@ -253,7 +262,9 @@ object ImageGenBackendsCloud {
     /**
      * ElectronHub（官方 src/endpoints/stable-diffusion.js electronhub.post('/generate') 1:1，index.js L4400）：
      * POST https://api.electronhub.ai/v1/images/generations
-     * {model,prompt,response_format=b64_json,size?,quality?}（size 取 /v1/models/{model} 的 sizes 最近值，失败省略）
+     * 请求体由引擎层 [ImageGenRequestEngine.electronhubBody] 构造（差分含 response_format=b64_json、
+     * size/quality 空省略）；size 由 App 调 [electronhubClosestSize] 网络 GET /v1/models/{model}.sizes 后
+     * 调引擎层 [ImageGenRequestEngine.getClosestSize] 选最近（差分）。
      * Header Authorization: Bearer apiKey → data[0].b64_json。
      * electronhub_quality 无 ServicesPrefs 对应项，省略。
      */
@@ -261,15 +272,20 @@ object ImageGenBackendsCloud {
         val apiKey = ServicesPrefs.imageApiKey(context)
         if (apiKey.isBlank()) return null
         val model = ServicesPrefs.imageModel(context)
-        val body = JSONObject()
-            .put("model", model)
-            .put("prompt", prompt)
-            .put("response_format", "b64_json")
-        electronhubClosestSize(model, ServicesPrefs.imageWidth(context), ServicesPrefs.imageHeight(context))
-            ?.let { body.put("size", it) }
+        val width = ServicesPrefs.imageWidth(context)
+        val height = ServicesPrefs.imageHeight(context)
+        // App 仅做网络取 sizes，最近值匹配由引擎层 getClosestSize 差分保证
+        val sizes = electronhubFetchSizes(model)
+        val size = com.emberinn.engine.prompt.ImageGenRequestEngine.getClosestSize(width, height, sizes)
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.electronhubBody(
+            model = model,
+            prompt = prompt,
+            size = size,
+            quality = null,
+        ).toString()
         val request = Request.Builder()
             .url("https://api.electronhub.ai/v1/images/generations")
-            .post(body.toString().toRequestBody(jsonMedia))
+            .post(payload.toRequestBody(jsonMedia))
             .header("Authorization", "Bearer $apiKey")
             .build()
         client.newCall(request).execute().use { resp ->
@@ -284,7 +300,8 @@ object ImageGenBackendsCloud {
     /**
      * NanoGPT（官方 src/endpoints/stable-diffusion.js nanogpt.post('/generate') 1:1，直传 index.js L4431 客户端 body）：
      * POST https://nano-gpt.com/api/generate-image
-     * {model,prompt,negative_prompt,num_steps,scale,width,height,resolution,showExplicitContent=true,nImages=1}
+     * 请求体由引擎层 [ImageGenRequestEngine.nanogptBody] 构造（差分含 parseInt/parseFloat 语义、
+     * resolution 模板字符串、showExplicitContent=true、nImages=1）；
      * Header x-api-key: apiKey → data[0].b64_json。
      */
     private suspend fun generateNanoGPTImage(context: Context, prompt: String, negativePrompt: String): String? {
@@ -292,18 +309,15 @@ object ImageGenBackendsCloud {
         if (apiKey.isBlank()) return null
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
-        val payload = JSONObject()
-            .put("model", ServicesPrefs.imageModel(context))
-            .put("prompt", prompt)
-            .put("negative_prompt", negativePrompt)
-            .put("num_steps", ServicesPrefs.imageSteps(context))
-            .put("scale", ServicesPrefs.imageScale(context))
-            .put("width", width)
-            .put("height", height)
-            .put("resolution", "${width}x${height}")
-            .put("showExplicitContent", true)
-            .put("nImages", 1)
-            .toString()
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.nanogptBody(
+            model = ServicesPrefs.imageModel(context),
+            prompt = prompt,
+            negativePrompt = negativePrompt,
+            steps = ServicesPrefs.imageSteps(context).toDouble(),
+            scale = ServicesPrefs.imageScale(context),
+            width = width.toDouble(),
+            height = height.toDouble(),
+        ).toString()
         val request = Request.Builder()
             .url("https://nano-gpt.com/api/generate-image")
             .post(payload.toRequestBody(jsonMedia))
@@ -322,9 +336,9 @@ object ImageGenBackendsCloud {
      * BFL（官方 src/endpoints/stable-diffusion.js bfl.post('/generate') 1:1，异步轮询，index.js L4465）：
      * POST https://api.bfl.ml/v1/{model} → {id}；轮询 /v1/get_result?id= 每 2.5s 至 status=Ready，
      * 下载 result.sample → base64。Header x-key: apiKey。
-     * body 默认 {prompt,steps,guidance,width,height,prompt_upsampling,seed,safety_tolerance=6,output_format=jpeg}，
-     * model 后缀为 -ultra 时改用 aspect_ratio 并移除 steps/guidance/width/height/prompt_upsampling，
-     * 后缀 -pro-1.1 时移除 steps/guidance。
+     * 请求体由引擎层 [ImageGenRequestEngine.bflBody] 构造（差分含 -ultra / -pro-1.1 分支、
+     * clamp(1,50)/(1.5,5)/(256,1440)、seed=null JSON null、safety_tolerance=6、bflGetClosestAspectRatio）；
+     * App 仅做轮询与下载。
      */
     private suspend fun generateBflImage(context: Context, prompt: String, negativePrompt: String): String? {
         val apiKey = ServicesPrefs.imageApiKey(context)
@@ -333,28 +347,20 @@ object ImageGenBackendsCloud {
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
         val cfgSeed = ServicesPrefs.imageSeed(context)
-        val body = JSONObject()
-            .put("prompt", prompt)
-            .put("steps", clamp(ServicesPrefs.imageSteps(context), 1, 50))
-            .put("guidance", clamp(ServicesPrefs.imageScale(context), 1.5, 5.0))
-            .put("width", clamp(width, 256, 1440))
-            .put("height", clamp(height, 256, 1440))
-            .put("prompt_upsampling", false)
-            .put("seed", if (cfgSeed >= 0) cfgSeed else JSONObject.NULL)
-            .put("safety_tolerance", 6)
-            .put("output_format", "jpeg")
-        when {
-            model.endsWith("-ultra") -> {
-                body.put("aspect_ratio", bflAspectRatio(width, height))
-                body.remove("steps"); body.remove("guidance"); body.remove("width"); body.remove("height"); body.remove("prompt_upsampling")
-            }
-            model.endsWith("-pro-1.1") -> {
-                body.remove("steps"); body.remove("guidance")
-            }
-        }
+        val seed: Long? = if (cfgSeed >= 0) cfgSeed.toLong() else null
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.bflBody(
+            model = model,
+            prompt = prompt,
+            steps = ServicesPrefs.imageSteps(context),
+            scale = ServicesPrefs.imageScale(context),
+            width = width,
+            height = height,
+            promptUpsampling = false,
+            seed = seed,
+        ).toString()
         val request = Request.Builder()
             .url("https://api.bfl.ml/v1/$model")
-            .post(body.toString().toRequestBody(jsonMedia))
+            .post(payload.toRequestBody(jsonMedia))
             .header("x-key", apiKey)
             .build()
         val id = client.newCall(request).execute().use { resp ->
@@ -389,7 +395,9 @@ object ImageGenBackendsCloud {
     /**
      * xAI（官方 src/endpoints/stable-diffusion.js xai.post('/generate') 1:1，index.js L4498）：
      * POST https://api.x.ai/v1/images/generations {prompt,model,aspect_ratio?,resolution?,response_format=b64_json}
-     * （aspect_ratio/resolution 仅当 model 含 grok-imagine 时按宽高计算；resolution 阈值 1296*864 → 2k/1k）
+     * 请求体由引擎层 [ImageGenRequestEngine.xaiBody] 构造（差分含 aspect_ratio/resolution 省略、
+     * response_format=b64_json）；aspect_ratio/resolution 仅当 model 含 grok-imagine 时由
+     * [ImageGenRequestEngine.getClosestAspectRatio]('xai') 计算 + 阈值 1296*864 → 2k/1k（官方 index.js）。
      * Header Authorization: Bearer apiKey → data[0].b64_json（可能是 data:{mime};base64,{...}，解析 mime→ext）。
      */
     private suspend fun generateXAIImage(context: Context, prompt: String, negativePrompt: String): String? {
@@ -398,19 +406,22 @@ object ImageGenBackendsCloud {
         val model = ServicesPrefs.imageModel(context)
         val width = ServicesPrefs.imageWidth(context)
         val height = ServicesPrefs.imageHeight(context)
-        val body = JSONObject()
-            .put("prompt", prompt)
-            .put("model", model)
-            .put("response_format", "b64_json")
+        var aspectRatio: String? = null
+        var resolution: String? = null
         if (model.contains("grok-imagine")) {
             val resolutionThreshold = 1296 * 864
-            val use2k = (width * height) > resolutionThreshold
-            body.put("aspect_ratio", closestAspectRatio(width, height, "xai"))
-            body.put("resolution", if (use2k) "2k" else "1k")
+            aspectRatio = com.emberinn.engine.prompt.ImageGenRequestEngine.getClosestAspectRatio(width, height, "xai")
+            resolution = if ((width * height) > resolutionThreshold) "2k" else "1k"
         }
+        val payload = com.emberinn.engine.prompt.ImageGenRequestEngine.xaiBody(
+            prompt = prompt,
+            model = model,
+            aspectRatio = aspectRatio,
+            resolution = resolution,
+        ).toString()
         val request = Request.Builder()
             .url("https://api.x.ai/v1/images/generations")
-            .post(body.toString().toRequestBody(jsonMedia))
+            .post(payload.toRequestBody(jsonMedia))
             .header("Authorization", "Bearer $apiKey")
             .build()
         client.newCall(request).execute().use { resp ->
@@ -426,75 +437,21 @@ object ImageGenBackendsCloud {
         }
     }
 
-    // ---- helpers（对齐官方 index.js / stable-diffusion.js 工具函数）----
+    // ---- helpers（仅保留 App 层特有：网络 + 落盘；纯逻辑见引擎层 ImageGenRequestEngine）----
 
-    /** 官方 index.js getClosestAspectRatio（stability / xai 比例表 + 最近匹配）。 */
-    private fun closestAspectRatio(width: Int, height: Int, source: String): String {
-        val ratios: Map<String, Double> = when (source) {
-            "stability" -> linkedMapOf(
-                "16:9" to 16.0 / 9, "1:1" to 1.0, "21:9" to 21.0 / 9, "2:3" to 2.0 / 3,
-                "3:2" to 3.0 / 2, "4:5" to 4.0 / 5, "5:4" to 5.0 / 4, "9:16" to 9.0 / 16, "9:21" to 9.0 / 21,
-            )
-            "xai" -> linkedMapOf(
-                "1:1" to 1.0, "3:4" to 3.0 / 4, "4:3" to 4.0 / 3, "9:16" to 9.0 / 16, "16:9" to 16.0 / 9,
-                "2:3" to 2.0 / 3, "3:2" to 3.0 / 2, "9:19.5" to 9.0 / 19.5, "19.5:9" to 19.5 / 9,
-                "9:20" to 9.0 / 20, "20:9" to 20.0 / 9, "1:2" to 1.0 / 2, "2:1" to 2.0 / 1,
-            )
-            else -> linkedMapOf("1:1" to 1.0)
-        }
-        val aspect = width.toDouble() / height
-        var best = ratios.keys.first()
-        var minDiff = Math.abs(aspect - (ratios[best] ?: 1.0))
-        for (key in ratios.keys) {
-            val diff = Math.abs(aspect - (ratios[key] ?: 1.0))
-            if (diff < minDiff) { minDiff = diff; best = key }
-        }
-        return best
-    }
-
-    /** 官方 stable-diffusion.js bfl.post 内 getClosestAspectRatio（BFL ultra 用，比例范围 9:21..21:9）。 */
-    private fun bflAspectRatio(width: Int, height: Int): String {
-        val minAspect = 9.0 / 21
-        val maxAspect = 21.0 / 9
-        val current = width.toDouble() / height
-        fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
-        fun simplify(w: Int, h: Int): String {
-            val d = gcd(w.toLong(), h.toLong())
-            return "${w / d.toInt()}:${h / d.toInt()}"
-        }
-        return when {
-            current < minAspect -> simplify(width, Math.round(width / minAspect).toInt())
-            current > maxAspect -> simplify(Math.round(height * maxAspect).toInt(), height)
-            else -> simplify(width, height)
-        }
-    }
-
-    /** 官方 index.js getClosestSize（ElectronHub：取 /v1/models/{model}.sizes 最近值）。 */
-    private fun electronhubClosestSize(model: String, width: Int, height: Int): String? {
+    /**
+     * 取 ElectronHub 模型 sizes 数组（官方 index.js 调 /v1/models/{model}.sizes 的网络部分）；
+     * 最近值匹配由引擎层 [ImageGenRequestEngine.getClosestSize] 差分保证，App 不重复实现。
+     */
+    private fun electronhubFetchSizes(model: String): List<String> {
         val req = Request.Builder()
             .url("https://api.electronhub.ai/v1/models/${model.trimStart('/')}")
             .get().build()
-        val sizes: List<String> = client.newCall(req).execute().use { resp ->
+        return client.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) return@use emptyList()
             val arr = JSONObject(resp.body?.string().orEmpty()).optJSONArray("sizes") ?: return@use emptyList()
             (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
         }
-        if (sizes.isEmpty()) return null
-        val targetAspect = width.toDouble() / height
-        val targetRes = (width * height).toDouble()
-        var best: String? = null
-        var bestDiff = Double.POSITIVE_INFINITY
-        for (s in sizes) {
-            val parts = s.split("x")
-            if (parts.size != 2) continue
-            val sw = parts[0].toIntOrNull() ?: continue
-            val sh = parts[1].toIntOrNull() ?: continue
-            val aspectDiff = Math.abs((sw.toDouble() / sh) - targetAspect) / targetAspect
-            val resDiff = Math.abs((sw * sh).toDouble() - targetRes) / targetRes
-            val diff = aspectDiff + resDiff
-            if (diff < bestDiff) { bestDiff = diff; best = s }
-        }
-        return best
     }
 
     /** 官方 mime.extension 近似：Content-Type → 扩展名（默认 jpg）。 */
@@ -508,9 +465,6 @@ object ImageGenBackendsCloud {
             else -> "jpg"
         }
     }
-
-    private fun clamp(v: Int, min: Int, max: Int): Int = v.coerceIn(min, max)
-    private fun clamp(v: Double, min: Double, max: Double): Double = v.coerceIn(min, max)
 
     private fun saveBase64(context: Context, base64: String, ext: String): String =
         saveBytes(context, Base64.getDecoder().decode(base64), ext)

@@ -33,6 +33,28 @@ object ImageGenBackendsLlm {
 
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
+    /**
+     * 按 source 分派到对应 LLM 后端（对照官方 stable-diffusion/settings.html sd_source 选项）：
+     * google/zai/openrouter/workersai/falai/extras/drawthings + comfy 走 runpod_serverless 模式。
+     * 任一失败均返回 null；drawthings 官方为 macOS 应用，Android 端不可达，将返回 null。
+     */
+    suspend fun generate(context: Context, source: String, prompt: String, negativePrompt: String): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                when (source) {
+                    "google" -> generateGoogleImage(context, prompt, negativePrompt)
+                    "zai" -> generateZaiImage(context, prompt, negativePrompt)
+                    "openrouter" -> generateOpenRouterImage(context, prompt)
+                    "workersai" -> generateWorkersAIImage(context, prompt, negativePrompt)
+                    "falai" -> generateFalaiImage(context, prompt)
+                    "extras" -> generateExtrasImage(context, prompt, negativePrompt)
+                    "drawthings" -> generateDrawthingsImage(context, prompt, negativePrompt)
+                    "comfy_runpod" -> generateComfyRunPodImage(context, prompt, negativePrompt)
+                    else -> null
+                }
+            }.getOrNull()
+        }
+
     // ----------------------------------------------------------------- Google
     /**
      * Google Vertex AI（index.js L4570 generateGoogleImage，image 分支，非 veo）。
@@ -249,12 +271,13 @@ object ImageGenBackendsLlm {
 
     // ----------------------------------------------------------------- Extras
     /**
-     * Extras（index.js L3524 generateExtrasImage）。
-     * 官方 doExtrasFetch POST {apiUrl}/api/image，body {prompt, sampler, steps, scale, width, height,
-     * negative_prompt, restore_faces, enable_hr, karras, hr_upscaler, hr_scale, denoising_strength,
-     * hr_second_pass_steps, seed}，响应 {image: base64}（jpg）。
-     * 任务规格简化 body 为 {prompt, negative_prompt, steps, cfg, sampler, width, height}，
-     * 其中 "cfg" 对应源码实际字段名 scale（index.js L3537，取 imageScale）。响应优先取 b64_json，回退 image。
+     * Extras（index.js L3524 generateExtrasImage）。请求体构造由引擎层
+     * [com.emberinn.engine.prompt.ImageGenRequestEngine.extrasPayload] 1:1 实现（差分 4 例），
+     * App 仅负责 HTTP 接线与响应解析（准则 2）。
+     *
+     * 官方 doExtrasFetch POST {apiUrl}/api/image，body 见 extrasPayload；响应 {image: base64}（jpg）。
+     * horde_karras 官方默认 false（ServicesPrefs 无此字段，按官方默认 false 等价）。
+     * 响应优先取 b64_json，回退 image（jpg）。
      */
     suspend fun generateExtrasImage(
         context: Context,
@@ -264,18 +287,26 @@ object ImageGenBackendsLlm {
         runCatching {
             val apiUrl = ServicesPrefs.imageUrl(context)
             if (apiUrl.isBlank()) return@runCatching null
-            val payload = JSONObject()
-                .put("prompt", prompt)
-                .put("negative_prompt", negativePrompt)
-                .put("steps", ServicesPrefs.imageSteps(context))
-                .put("scale", ServicesPrefs.imageScale(context))
-                .put("sampler", ServicesPrefs.imageSampler(context))
-                .put("width", ServicesPrefs.imageWidth(context))
-                .put("height", ServicesPrefs.imageHeight(context))
-                .toString()
+            val jsBody = com.emberinn.engine.prompt.ImageGenRequestEngine.extrasPayload(
+                prompt = prompt,
+                negativePrompt = negativePrompt,
+                sampler = ServicesPrefs.imageSampler(context),
+                steps = ServicesPrefs.imageSteps(context),
+                scale = ServicesPrefs.imageScale(context),
+                width = ServicesPrefs.imageWidth(context),
+                height = ServicesPrefs.imageHeight(context),
+                restoreFaces = ServicesPrefs.imageRestoreFaces(context),
+                enableHr = ServicesPrefs.imageEnableHr(context),
+                hordeKarras = false,
+                hrUpscaler = ServicesPrefs.imageHrUpscaler(context),
+                hrScale = ServicesPrefs.imageHrScale(context),
+                denoisingStrength = ServicesPrefs.imageDenoisingStrength(context),
+                hrSecondPassSteps = ServicesPrefs.imageHrSecondPassSteps(context),
+                seed = ServicesPrefs.imageSeed(context),
+            )
             val request = Request.Builder()
                 .url(apiUrl.trimEnd('/') + "/api/image")
-                .post(payload.toRequestBody(jsonMedia))
+                .post(jsBody.toString().toRequestBody(jsonMedia))
                 .apply {
                     val key = ServicesPrefs.imageApiKey(context)
                     if (key.isNotBlank()) header("Authorization", "Bearer $key")

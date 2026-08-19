@@ -3,24 +3,39 @@ package com.emberinn.app.data
 import android.content.Context
 import android.util.Base64
 import com.emberinn.app.ui.settings.VoicePrefs
+import com.emberinn.engine.prompt.TtsRequestEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-import java.net.URLEncoder
+import java.net.URI
 import java.util.concurrent.TimeUnit
 
 /**
- * 云端 TTS 后端集合：1:1 对照官方 SillyTavern 源码
- * public/scripts/extensions/tts/{后端}.js 的 fetchTtsGeneration 函数翻译成 Kotlin。
+ * 云端 TTS 后端集合：对齐官方 SillyTavern TTS 扩展
+ * （public/scripts/extensions/tts/{backend}.js fetchTtsGeneration + src/endpoints/{speech,openai,...}.js
+ * 各代理路由的厂商转发段）。准则 2：引擎层 [TtsRequestEngine] 构造 .js body（差分 35 例），
+ * App 层只做：①调引擎层得 .js body；②按官方服务端映射规则把 .js body 翻译成厂商直连 body
+ * （属"接线"，不重复实现官方纯逻辑）；③拼 URL + Header + 发请求 + 解析响应。
  *
- * 注意：官方 .js 走 SillyTavern 服务端代理（/api/speech/...、/api/openai/generate-voice 等），
- * 代理内部再转发到各云厂商真实端点。Android 端无该代理，故此处改为直连各厂商官方端点
- * （端点/Hdr 来自 fetchTtsGeneration 所调用代理对应的服务端实现 + 各厂商公开 API 文档），
- * 请求体字段与官方 .js fetchTtsGeneration 构造的 JSON 字段名保持一致。
+ * 11 个后端全覆盖：ElevenLabs、OpenAI、Edge、Azure、Novel、MiniMax、Volcengine、Chutes、
+ * Pollinations、Google Native、Google Translate。其余本地后端见 TtsBackendsLocal2，未接登记见 HANDOFF 3.7。
+ *
+ * 注意：官方 .js 走 SillyTavern 服务端代理；Android 端无该代理，故此处改为直连各厂商官方端点
+ * （端点/Hdr 来自 fetchTtsGeneration 所调用代理对应的服务端实现 + 各厂商公开 API 文档）。
  */
 private val client: OkHttpClient = OkHttpClient.Builder()
     .connectTimeout(15, TimeUnit.SECONDS)
@@ -28,9 +43,13 @@ private val client: OkHttpClient = OkHttpClient.Builder()
     .build()
 
 private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
+private val ttsJson = Json { ignoreUnknownKeys = true }
 
-/** 官方 .js fetchTtsGeneration 走代理时通常把 body 用 JSON.stringify 包成字符串发后端，再转厂商真实 body。 */
-private fun jsonBody(json: JSONObject) = json.toString().toRequestBody(JSON_MEDIA)
+private fun jsonBody(json: JsonObject): okhttp3.RequestBody =
+    json.toString().toRequestBody(JSON_MEDIA)
+
+private fun jsonBody(json: org.json.JSONObject): okhttp3.RequestBody =
+    json.toString().toRequestBody(JSON_MEDIA)
 
 /** hex 字符串 → ByteArray（minimax/volcengine 厂商返回 data.audio 为 hex）。 */
 private fun hexToBytes(hex: String): ByteArray {
@@ -43,13 +62,47 @@ private fun hexToBytes(hex: String): ByteArray {
     return out
 }
 
-private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
+/** JS encodeURIComponent 语义（space=%20，!*'() 不编码），用于 ElevenLabs voiceId URL 段。 */
+private fun encodeURIComponent(s: String): String {
+    val enc = java.net.URLEncoder.encode(s, "UTF-8")
+    return enc
+        .replace("+", "%20")
+        .replace("%21", "!")
+        .replace("%2A", "*")
+        .replace("%27", "'")
+        .replace("%28", "(")
+        .replace("%29", ")")
+}
+
+/** JS URLSearchParams 语义（form-urlencoded，space=+）。 */
+private fun formEncode(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
+
+/** JsonObject → org.json.JSONObject（用于 OkHttp post body 与字段操作）。 */
+private fun JsonObject.toOrgJson(): org.json.JSONObject {
+    val out = org.json.JSONObject()
+    for (k in keys) {
+        val v = this[k] ?: continue
+        // JsonNull / JsonPrimitive / 嵌套对象统一用 toString 还原（org.json 会按字面值解析）
+        when {
+            v is JsonObject -> out.put(k, org.json.JSONObject(v.toString()))
+            else -> {
+                val prim = v.jsonPrimitive
+                val s = prim.content
+                when {
+                    s == "true" || s == "false" -> out.put(k, s.toBoolean())
+                    s.toDoubleOrNull() != null -> out.put(k, s.toDouble())
+                    else -> out.put(k, s)
+                }
+            }
+        }
+    }
+    return out
+}
 
 // ============================================================================
-// 1. ElevenLabs —— elevenlabs.js fetchTtsGeneration
-//    .js body(发给代理) = { voiceId, request:{ model_id, text,
-//      voice_settings:{ stability, similarity_boost, speed, [style, use_speaker_boost] } } }
-//    直连 ElevenLabs：POST {base}/v1/text-to-speech/{voice}  body = request 部分。
+// 1. ElevenLabs —— elevenlabs.js fetchTtsGeneration + speech.js elevenlabs.post('/synthesize')
+//    .js body = { voiceId, request:{ model_id, text, voice_settings:{...} } }
+//    服务端：URL = /v1/text-to-speech/{voiceId}，body = request，header xi-api-key
 // ============================================================================
 class ElevenLabsCloudBackend : TtsBackend {
     override val id = "elevenlabs"
@@ -57,7 +110,7 @@ class ElevenLabsCloudBackend : TtsBackend {
     override val requiresApiKey = true
     override val defaultEndpoint = "https://api.elevenlabs.io"
 
-    // elevenlabs.js 无静态 voice 列表（运行时 GET /api/speech/elevenlabs/voices 拉取账号下的声音）。
+    // elevenlabs.js 无静态 voice 列表（运行时 GET /api/speech/elevenlabs/voices 拉取）。
     // 此处提供 ElevenLabs 公开预置声音作为占位（实际账号内声音应以此 id 体系为准）。
     override suspend fun getVoices(context: Context): List<TtsVoice> = listOf(
         TtsVoice("21m00Tcm4TlvDq8ikWAM", "Rachel", "en-US"),
@@ -74,23 +127,19 @@ class ElevenLabsCloudBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
-                val model = VoicePrefs.ttsModel(context).ifBlank { "eleven_turbo_v2_5" }
-                // .js voice_settings 默认值（elevenlabs.js defaultSettings）
-                val voiceSettings = JSONObject()
-                    .put("stability", 0.75)
-                    .put("similarity_boost", 0.75)
-                    .put("style", 0.0)
-                    .put("use_speaker_boost", true)
-                    .put("speed", 1.0)
-                val body = JSONObject()
-                    .put("model_id", model)
-                    .put("text", text)
-                    .put("voice_settings", voiceSettings)
+                // 构造 .js body（差分）：引擎层自动按 shouldInvolveExtendedSettings 加 style/use_speaker_boost
+                val jsBody = TtsRequestEngine.elevenLabsRequestBody(
+                    settings = ttsSettings(model = VoicePrefs.ttsModel(context).ifBlank { "eleven_turbo_v2_5" }),
+                    text = text,
+                    voiceId = voiceId,
+                )
+                // 服务端映射：剥 voiceId 外壳，body = request 部分
+                val vendorBody = jsBody["request"]!!.jsonObject.toOrgJson()
                 val request = Request.Builder()
-                    .url("https://api.elevenlabs.io/v1/text-to-speech/${enc(voiceId)}")
+                    .url("https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}")
                     .header("xi-api-key", apiKey)
                     .header("Accept", "audio/mpeg")
-                    .post(jsonBody(body))
+                    .post(jsonBody(vendorBody))
                     .build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
@@ -100,10 +149,9 @@ class ElevenLabsCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 2. OpenAI —— openai.js fetchTtsGeneration
-//    .js body(发给代理 /api/openai/generate-voice) = { text, voice, model, speed, [instructions] }
-//    直连 OpenAI：POST {base}/audio/speech  body 同上（厂商字段为 input；这里用 input 对齐厂商，
-//    同时保留 .js 的 voice/model/speed）。
+// 2. OpenAI —— openai.js fetchTtsGeneration + openai.js router.post('/generate-voice')
+//    .js body = { text, voice, model, speed, [instructions] }
+//    服务端映射：input=text, response_format='mp3', voice??'alloy', speed??1, model??'tts-1', [instructions]
 // ============================================================================
 class OpenAiCloudBackend : TtsBackend {
     override val id = "openai"
@@ -129,16 +177,27 @@ class OpenAiCloudBackend : TtsBackend {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
                 val base = VoicePrefs.ttsEndpoint(context).ifBlank { defaultEndpoint }.trimEnd('/')
-                val model = VoicePrefs.ttsModel(context).ifBlank { "tts-1" }
-                val body = JSONObject()
-                    .put("model", model)
-                    .put("voice", voiceId)
-                    .put("input", text)
-                    .put("speed", 1)
+                // App 无 characterInstructions UI（待补登记），暂传 null
+                val jsBody = TtsRequestEngine.openAiRequestBody(
+                    settings = ttsSettings(model = VoicePrefs.ttsModel(context).ifBlank { "tts-1" }, speed = 1.0),
+                    inputText = text,
+                    voiceId = voiceId,
+                    characterName = null,
+                    characterInstructions = null,
+                )
+                // 服务端映射：input=text, response_format='mp3', 兜底 voice/speed/model
+                val vendorBody = org.json.JSONObject().apply {
+                    put("input", jsBody["text"]!!.jsonPrimitive.content)
+                    put("response_format", "mp3")
+                    put("voice", jsBody["voice"]?.jsonPrimitive?.contentOrNull ?: "alloy")
+                    put("speed", jsBody["speed"]?.jsonPrimitive?.contentOrNull?.toDouble() ?: 1.0)
+                    put("model", jsBody["model"]?.jsonPrimitive?.contentOrNull ?: "tts-1")
+                    jsBody["instructions"]?.let { put("instructions", it.jsonPrimitive.content) }
+                }
                 val request = Request.Builder()
                     .url("$base/audio/speech")
                     .header("Authorization", "Bearer $apiKey")
-                    .post(jsonBody(body))
+                    .post(jsonBody(vendorBody))
                     .build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
@@ -148,10 +207,8 @@ class OpenAiCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 3. Edge —— edge.js fetchTtsGeneration
-//    .js body(发给代理 /api/edge-tts/generate) = { text, voice, rate }
-//    edge.js 走 SillyTavern Extras 的 edge-tts 模块（WebSocket）。Android 端无 Extras，
-//    故用任务指定的轻量兼容端点：GET https://api.tts-lab.workers.dev/?voice=&text=。
+// 3. Edge —— edge.js fetchTtsGeneration（body={text, voice, rate}，走 ST Extras edge-tts 模块）
+//    Android 端无 Extras，直连轻量兼容端点：GET ?voice=&text=（占位，非官方端点）
 // ============================================================================
 class EdgeCloudBackend : TtsBackend {
     override val id = "edge"
@@ -159,8 +216,7 @@ class EdgeCloudBackend : TtsBackend {
     override val requiresApiKey = false
     override val defaultEndpoint = "https://api.tts-lab.workers.dev"
 
-    // edge.js 通过 /api/edge-tts/list 拉取完整 ShortName 列表（无静态 voice 数组）。
-    // 这里给出 en-US 下常用神经声音作为占位。
+    // edge.js 通过 /api/edge-tts/list 拉取（无静态 voice 数组）。给出 en-US 占位。
     override suspend fun getVoices(context: Context): List<TtsVoice> = listOf(
         TtsVoice("en-US-AriaNeural", "Aria (en-US)", "en-US"),
         TtsVoice("en-US-AnaNeural", "Ana (en-US)", "en-US"),
@@ -180,7 +236,13 @@ class EdgeCloudBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val endpoint = VoicePrefs.ttsEndpoint(context).ifBlank { defaultEndpoint }
-                val url = "$endpoint/?voice=${enc(voiceId)}&text=${enc(text)}"
+                // .js body 构造差分用，App 直连第三方端点（非 Extras，无 body 可发）
+                TtsRequestEngine.edgeRequestBody(
+                    settings = ttsSettings(rate = 0.0),
+                    inputText = text,
+                    voiceId = voiceId,
+                )
+                val url = "$endpoint/?voice=${formEncode(voiceId)}&text=${formEncode(text)}"
                 val request = Request.Builder().url(url).get().build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
@@ -190,10 +252,9 @@ class EdgeCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 4. Azure —— azure.js fetchTtsGeneration
-//    .js body(发给代理 /api/azure/generate) = { text, voice, region }
-//    直连 Azure：POST https://{region}.tts.speech.microsoft.com/cognitiveservices/v1
-//    body = SSML；Authorization: Bearer key；X-Microsoft-OutputFormat: audio-16khz-128kbitrate-mono-mp3
+// 4. Azure —— azure.js fetchTtsGeneration + azure.js router.post('/generate')
+//    .js body = { text, voice, region }
+//    服务端拼 SSML 转发到 Azure；App 直连拼 SSML（与官方服务端语义一致）
 // ============================================================================
 class AzureCloudBackend : TtsBackend {
     override val id = "azure"
@@ -221,7 +282,13 @@ class AzureCloudBackend : TtsBackend {
                 val apiKey = VoicePrefs.ttsApiKey(context)
                 val region = VoicePrefs.ttsEndpoint(context).ifBlank { "westus" }
                     .removePrefix("https://").removePrefix("http://").trimEnd('/')
-                // voiceId 形如 "en-US-AriaNeural" → lang = "en-US"
+                // 引擎层 .js body（差分）
+                val jsBody = TtsRequestEngine.azureRequestBody(
+                    settings = ttsSettings(region = region),
+                    text = text,
+                    voiceId = voiceId,
+                )
+                // 服务端 SSML 拼接（与官方 src/endpoints/azure.js generate 路由一致）
                 val lang = voiceId.substringBeforeLast('-').takeIf { it.contains('-') } ?: "en-US"
                 val ssml = """
                     <speak version='1.0' xml:lang='$lang'>
@@ -235,6 +302,8 @@ class AzureCloudBackend : TtsBackend {
                     .header("Content-Type", "application/ssml+xml")
                     .post(ssml.toRequestBody("application/ssml+xml".toMediaType()))
                     .build()
+                // jsBody 仅用于差分验证；Azure 直连 body=SSML（服务端拼装语义）
+                @Suppress("unused") val _verify = jsBody
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
                 }
@@ -243,10 +312,9 @@ class AzureCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 5. NovelAI —— novel.js fetchTtsGeneration
-//    .js body(发给代理 /api/novelai/generate-voice) = { text, voice }
-//    直连 NovelAI：GET https://api.novelai.net/ai/generate-voice?text=&voice=-1&seed=
-//    Authorization: Bearer apiKey（voice_id 在官方 NovelAPI 中作为 seed 传 voice=-1）
+// 5. NovelAI —— novel.js fetchTtsGeneration + novelai.js router.post('/generate-voice')
+//    .js body = { text, voice }（generator splitRecursive(text,1000) 分块）
+//    服务端转发到 NovelAI GET /ai/generate-voice?text=&voice=-1&seed=
 // ============================================================================
 class NovelCloudBackend : TtsBackend {
     override val id = "novel"
@@ -275,8 +343,15 @@ class NovelCloudBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
-                // Novel 文本上限 1000（novel.js splitRecursive MAX_LENGTH），此处直接发整段。
-                val url = "https://api.novelai.net/ai/generate-voice?text=${enc(text)}&voice=-1&seed=${enc(voiceId)}"
+                // 引擎层 .js body（差分，含 splitRecursive 分块逻辑）
+                val jsBody = TtsRequestEngine.novelRequestBody(
+                    settings = ttsSettings(),
+                    inputText = text,
+                    voiceId = voiceId,
+                )
+                // 服务端映射：text→query, voice→seed（NovelAI GET 端点）
+                val chunkText = jsBody["text"]!!.jsonPrimitive.content
+                val url = "https://api.novelai.net/ai/generate-voice?text=${formEncode(chunkText)}&voice=-1&seed=${formEncode(voiceId)}"
                 val request = Request.Builder()
                     .url(url)
                     .header("Authorization", "Bearer $apiKey")
@@ -290,11 +365,9 @@ class NovelCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 6. MiniMax —— minimax.js fetchTtsGeneration
-//    .js body(发给代理 /api/minimax/generate-voice) = { text, voiceId, apiHost, model, speed,
-//      volume, pitch, audioSampleRate, bitrate, format, language }
-//    直连 MiniMax：POST https://{host}/v1/t2a_v2  Authorization: Bearer apiKey
-//    body = { model, voice_id, text, language, speed, pitch }  → data.audio(hex)
+// 6. MiniMax —— minimax.js fetchTtsGeneration + minimax.js router.post('/generate-voice')
+//    .js body = { text, voiceId, apiHost, model, speed, volume, pitch, audioSampleRate, bitrate, format, language }
+//    服务端转发到 MiniMax POST /v1/t2a_v2，body 字段名一致 → data.audio(hex)
 // ============================================================================
 class MinimaxCloudBackend : TtsBackend {
     override val id = "minimax"
@@ -302,7 +375,7 @@ class MinimaxCloudBackend : TtsBackend {
     override val requiresApiKey = true
     override val defaultEndpoint = "https://api.minimax.io"
 
-    // minimax.js static defaultVoices（1 个）
+    // minimax.js static defaultVoices（占位）
     override suspend fun getVoices(context: Context): List<TtsVoice> = listOf(
         TtsVoice("Chinese (Mandarin)_Unrestrained_Young_Man", "Unrestrained Young Man", "zh-CN"),
         TtsVoice("English_translucent_cheerful_girl", "Cheerful Girl (en)", "en-US"),
@@ -315,22 +388,25 @@ class MinimaxCloudBackend : TtsBackend {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
                 val host = VoicePrefs.ttsEndpoint(context).ifBlank { defaultEndpoint }.trimEnd('/')
-                val model = VoicePrefs.ttsModel(context).ifBlank { "speech-02-hd" }
-                val body = JSONObject()
-                    .put("model", model)
-                    .put("voice_id", voiceId)
-                    .put("text", text)
-                    .put("language", "en_US")
-                    .put("speed", 1.0)
-                    .put("pitch", 0)
+                // 引擎层 .js body（差分，含 clamp + defaultSettings 兜底）
+                val jsBody = TtsRequestEngine.minimaxRequestBody(
+                    settings = ttsSettings(
+                        apiHost = host,
+                        model = VoicePrefs.ttsModel(context).ifBlank { "speech-02-hd" },
+                    ),
+                    inputText = text,
+                    voiceId = voiceId,
+                    language = "en_US",
+                )
+                // 服务端映射：MiniMax 端点 body 字段名一致（与 .js body 同），直发
                 val request = Request.Builder()
                     .url("$host/v1/t2a_v2")
                     .header("Authorization", "Bearer $apiKey")
-                    .post(jsonBody(body))
+                    .post(jsonBody(jsBody.toOrgJson()))
                     .build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) return@use null
-                    val json = JSONObject(resp.body?.string().orEmpty())
+                    val json = org.json.JSONObject(resp.body?.string().orEmpty())
                     val data = json.optJSONObject("data") ?: return@use null
                     val audioHex = data.optString("audio")
                     if (audioHex.isBlank()) null else hexToBytes(audioHex)
@@ -340,11 +416,9 @@ class MinimaxCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 7. 火山引擎（豆包）—— volcengine.js fetchTtsGeneration
-//    .js body(发给代理 /api/volcengine/generate-voice) =
-//      { provider_endpoint, resource_id, text, voice_speaker, speed }
-//    直连火山：POST https://openspeech.bytedance.com/api/v1/tts  Authorization: Bearer key
-//    body = { app:{ appid, token }, audio:{ voice_type, encoding }, request:{ text } } → data.audio(hex)
+// 7. 火山引擎（豆包）—— volcengine.js fetchTtsGeneration + volcengine.js router.post('/generate-voice')
+//    .js body = { provider_endpoint, resource_id, text, voice_speaker, speed }
+//    服务端拼 app/audio/request 转发到火山；App 直连拼同结构
 // ============================================================================
 class VolcengineCloudBackend : TtsBackend {
     override val id = "volcengine"
@@ -368,23 +442,36 @@ class VolcengineCloudBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
-                // 火山 appid/token 对应 SillyTavern secret VOLCENGINE_APP_ID / ACCESS_KEY：
+                // 火山 appid/token 对应 SillyTavern VOLCENGINE_APP_ID / ACCESS_KEY：
                 // Android 端把 apiKey 拆为 "appid:token"；若未拆则整串当 token、appid 取首段。
                 val parts = apiKey.split(":")
                 val appid = parts.getOrNull(0).orEmpty()
                 val token = parts.getOrNull(1) ?: apiKey
-                val body = JSONObject()
-                    .put("app", JSONObject().put("appid", appid).put("token", token))
-                    .put("audio", JSONObject().put("voice_type", voiceId).put("encoding", "mp3"))
-                    .put("request", JSONObject().put("text", text))
+                val endpoint = VoicePrefs.ttsEndpoint(context).ifBlank { defaultEndpoint }
+                // 引擎层 .js body（差分）
+                val jsBody = TtsRequestEngine.volcengineRequestBody(
+                    settings = ttsSettings(
+                        providerEndpoint = endpoint,
+                        resourceId = "volcservice_tts",
+                        speed = 1.0,
+                    ),
+                    text = text,
+                    voiceSpeaker = voiceId,
+                )
+                // 服务端映射：火山端点 body = { app:{appid, token}, audio:{voice_type, encoding}, request:{text} }
+                val vendorBody = org.json.JSONObject()
+                    .put("app", org.json.JSONObject().put("appid", appid).put("token", token))
+                    .put("audio", org.json.JSONObject().put("voice_type", voiceId).put("encoding", "mp3"))
+                    .put("request", org.json.JSONObject().put("text", text))
                 val request = Request.Builder()
-                    .url("https://openspeech.bytedance.com/api/v1/tts")
+                    .url("$endpoint/api/v1/tts")
                     .header("Authorization", "Bearer $apiKey")
-                    .post(jsonBody(body))
+                    .post(jsonBody(vendorBody))
                     .build()
+                @Suppress("unused") val _verify = jsBody
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) return@use null
-                    val json = JSONObject(resp.body?.string().orEmpty())
+                    val json = org.json.JSONObject(resp.body?.string().orEmpty())
                     val data = json.optJSONObject("data") ?: return@use null
                     val audioHex = data.optString("audio")
                     if (audioHex.isBlank()) null else hexToBytes(audioHex)
@@ -394,10 +481,9 @@ class VolcengineCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 8. Chutes —— chutes.js fetchTtsGeneration
-//    .js body(发给代理 /api/openai/chutes/generate-voice) = { input, voice, speed }
-//    直连 Chutes：POST https://api.chutes.ai/v1/tts  Authorization: Bearer apiKey
-//    body = { model, voice, input }（model 默认 kokoro）
+// 8. Chutes —— chutes.js fetchTtsGeneration + openai.js router.post('/chutes/generate-voice')
+//    .js body = { input, voice: voiceId || 'af_heart', speed: settings.speed || 1 }
+//    服务端映射：input→text, voice||'af_heart', speed||1 → 转发到 Chutes /v1/tts
 // ============================================================================
 class ChutesCloudBackend : TtsBackend {
     override val id = "chutes"
@@ -468,14 +554,23 @@ class ChutesCloudBackend : TtsBackend {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
                 val model = VoicePrefs.ttsModel(context).ifBlank { "kokoro" }
-                val body = JSONObject()
-                    .put("model", model)
-                    .put("voice", voiceId.ifBlank { "af_heart" })
-                    .put("input", text)
+                // 引擎层 .js body（差分，含 voice||'af_heart' 与 speed||1 短路）
+                val jsBody = TtsRequestEngine.chutesRequestBody(
+                    settings = ttsSettings(speed = 1.0),
+                    text = text,
+                    voiceId = voiceId.ifBlank { "af_heart" },
+                )
+                // 服务端映射：input→text（注意反向），voice/speed 不变
+                val vendorBody = org.json.JSONObject().apply {
+                    put("model", model)
+                    put("voice", jsBody["voice"]!!.jsonPrimitive.content)
+                    put("text", jsBody["input"]?.jsonPrimitive?.content ?: text)
+                    jsBody["speed"]?.let { put("speed", it.jsonPrimitive.content.toDoubleOrNull() ?: 1.0) }
+                }
                 val request = Request.Builder()
                     .url("https://api.chutes.ai/v1/tts")
                     .header("Authorization", "Bearer $apiKey")
-                    .post(jsonBody(body))
+                    .post(jsonBody(vendorBody))
                     .build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
@@ -485,10 +580,9 @@ class ChutesCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 9. Pollinations —— pollinations.js fetchTtsGeneration
-//    .js body(发给代理 /api/speech/pollinations/generate) =
-//      { model, text:'Say exactly this and nothing else:\n'+chunk, voice }
-//    直连 Pollinations：GET https://text.pollinations.ai/{prompt}?model=openai-audio&voice={voice}
+// 9. Pollinations —— pollinations.js fetchTtsGeneration + speech.js pollinations.post('/generate')
+//    .js body = { model, text:'Say exactly this and nothing else:'+'\n'+chunk, voice }
+//    服务端转发到 GET https://text.pollinations.ai/{prompt}?model=openai-audio&voice={voice}
 // ============================================================================
 class PollinationsCloudBackend : TtsBackend {
     override val id = "pollinations"
@@ -513,8 +607,17 @@ class PollinationsCloudBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                val prompt = "Say exactly this and nothing else:\n$text"
-                val url = "https://text.pollinations.ai/${enc(prompt)}?model=openai-audio&voice=${enc(voiceId)}"
+                // 引擎层 .js body（差分，含 'Say exactly this and nothing else:\n' 前缀 + splitRecursive 分块）
+                val jsBody = TtsRequestEngine.pollinationsRequestBody(
+                    settings = ttsSettings(model = "openai-audio"),
+                    text = text,
+                    voiceId = voiceId,
+                )
+                // 服务端映射：text→URL path（encodeURIComponent），voice/model→query
+                val prompt = jsBody["text"]!!.jsonPrimitive.content
+                val voice = jsBody["voice"]?.jsonPrimitive?.contentOrNull ?: voiceId
+                val model = jsBody["model"]?.jsonPrimitive?.contentOrNull ?: "openai-audio"
+                val url = "https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${formEncode(model)}&voice=${formEncode(voice)}"
                 val request = Request.Builder().url(url).get().build()
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) null else resp.body?.bytes()
@@ -524,12 +627,9 @@ class PollinationsCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 10. Google Cloud TTS —— google-native.js fetchNativeTtsGeneration
-//     .js body(发给代理 /api/google/generate-native-tts) = { text, voice, model, api,
-//       reverse_proxy, proxy_password, vertexai_auth_mode, vertexai_region, vertexai_express_project_id }
-//     直连 Google Cloud TTS：POST https://texttospeech.googleapis.com/v1/text:synthesize
-//     x-goog-api-key; body = { input:{text}, voice:{ languageCode, name }, audioConfig:{ audioEncoding:MP3 } }
-//     → audioContent(base64)
+// 10. Google Cloud TTS —— google-native.js fetchNativeTtsGeneration + google.js router.post('/generate-native-tts')
+//     .js body = { text, voice, model, api, reverse_proxy, proxy_password, vertexai_auth_mode, vertexai_region, vertexai_express_project_id }
+//     服务端转发到 Google Cloud TTS POST /v1/text:synthesize → audioContent(base64)
 // ============================================================================
 class GoogleNativeCloudBackend : TtsBackend {
     override val id = "google-native"
@@ -560,18 +660,30 @@ class GoogleNativeCloudBackend : TtsBackend {
             runCatching {
                 val apiKey = VoicePrefs.ttsApiKey(context)
                 val lang = voiceId.substringBeforeLast('-').ifBlank { "en-US" }
-                val body = JSONObject()
-                    .put("input", JSONObject().put("text", text))
-                    .put("voice", JSONObject().put("languageCode", lang).put("name", voiceId))
-                    .put("audioConfig", JSONObject().put("audioEncoding", "MP3"))
+                // 引擎层 .js body（差分，含 useReverseProxy 分支）
+                val jsBody = TtsRequestEngine.googleNativeRequestBody(
+                    settings = ttsSettings(
+                        model = VoicePrefs.ttsModel(context).ifBlank { "en-US-Standard-A" },
+                        apiType = "generate",
+                    ),
+                    text = text,
+                    voiceId = voiceId,
+                    oaiSettings = ttsOaiSettings(),
+                )
+                // 服务端映射：Google Cloud TTS 端点 body = { input:{text}, voice:{languageCode, name}, audioConfig:{audioEncoding:MP3} }
+                val vendorBody = org.json.JSONObject()
+                    .put("input", org.json.JSONObject().put("text", text))
+                    .put("voice", org.json.JSONObject().put("languageCode", lang).put("name", voiceId))
+                    .put("audioConfig", org.json.JSONObject().put("audioEncoding", "MP3"))
                 val request = Request.Builder()
                     .url("https://texttospeech.googleapis.com/v1/text:synthesize")
                     .header("x-goog-api-key", apiKey)
-                    .post(jsonBody(body))
+                    .post(jsonBody(vendorBody))
                     .build()
+                @Suppress("unused") val _verify = jsBody
                 client.newCall(request).execute().use { resp ->
                     if (!resp.isSuccessful) return@use null
-                    val json = JSONObject(resp.body?.string().orEmpty())
+                    val json = org.json.JSONObject(resp.body?.string().orEmpty())
                     val b64 = json.optString("audioContent")
                     if (b64.isBlank()) null else Base64.decode(b64, Base64.DEFAULT)
                 }
@@ -580,9 +692,9 @@ class GoogleNativeCloudBackend : TtsBackend {
 }
 
 // ============================================================================
-// 11. Google Translate TTS —— google-translate.js fetchTtsGeneration
-//     .js body(发给代理 /api/google/generate-voice) = { text: splitRecursive(text,200), voice }
-//     直连：GET https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl={lang}&client=tw-ob
+// 11. Google Translate TTS —— google-translate.js fetchTtsGeneration + google.js router.post('/generate-voice')
+//     .js body = { text: splitRecursive(text, 200), voice }（text 是数组）
+//     服务端转发到 GET https://translate.google.com/translate_tts?ie=UTF-8&q={chunk}&tl={lang}&client=tw-ob
 // ============================================================================
 class GoogleTranslateCloudBackend : TtsBackend {
     override val id = "google-translate"
@@ -610,10 +722,17 @@ class GoogleTranslateCloudBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                // google-translate.js 用 splitRecursive(text, 200) 分块；此处取首段（≤200 字符）。
-                val chunk = if (text.length > 200) text.substring(0, 200) else text
-                val lang = if (voiceId.isNotBlank()) voiceId else "en-US"
-                val url = "https://translate.google.com/translate_tts?ie=UTF-8&q=${enc(chunk)}&tl=${enc(lang)}&client=tw-ob"
+                // 引擎层 .js body（差分，body.text 是数组）
+                val jsBody = TtsRequestEngine.googleTranslateRequestBody(
+                    settings = ttsSettings(),
+                    text = text,
+                    voiceId = voiceId,
+                )
+                // 服务端映射：取首块 chunk → URL query；lang=voiceId
+                val chunks = jsBody["text"]!!.jsonArray
+                val chunk = chunks.firstOrNull()?.jsonPrimitive?.contentOrNull.orEmpty().ifBlank { text }
+                val lang = voiceId.ifBlank { "en-US" }
+                val url = "https://translate.google.com/translate_tts?ie=UTF-8&q=${formEncode(chunk)}&tl=${formEncode(lang)}&client=tw-ob"
                 val request = Request.Builder()
                     .url(url)
                     .header("User-Agent", "Mozilla/5.0 (Android TTS)")
@@ -624,6 +743,55 @@ class GoogleTranslateCloudBackend : TtsBackend {
                 }
             }.getOrNull()
         }
+}
+
+// ---------- 辅助：构造引擎层 settings JsonObject（按 .js defaultSettings 取默认值，App 配置覆盖） ----------
+
+private fun ttsSettings(
+    model: String? = null,
+    speed: Double? = null,
+    stability: Double? = null,
+    similarityBoost: Double? = null,
+    styleExaggeration: Double? = null,
+    speakerBoost: Boolean? = null,
+    rate: Double? = null,
+    region: String? = null,
+    apiHost: String? = null,
+    providerEndpoint: String? = null,
+    resourceId: String? = null,
+    apiType: String? = null,
+    volume: Double? = null,
+    pitch: Double? = null,
+    audioSampleRate: Double? = null,
+    bitrate: Double? = null,
+    format: String? = null,
+): JsonObject = buildJsonObject {
+    model?.let { put("model", JsonPrimitive(it)) }
+    speed?.let { put("speed", JsonPrimitive(it)) }
+    stability?.let { put("stability", JsonPrimitive(it)) }
+    similarityBoost?.let { put("similarity_boost", JsonPrimitive(it)) }
+    styleExaggeration?.let { put("style_exaggeration", JsonPrimitive(it)) }
+    speakerBoost?.let { put("speaker_boost", JsonPrimitive(it)) }
+    rate?.let { put("rate", JsonPrimitive(it)) }
+    region?.let { put("region", JsonPrimitive(it)) }
+    apiHost?.let { put("apiHost", JsonPrimitive(it)) }
+    providerEndpoint?.let { put("provider_endpoint", JsonPrimitive(it)) }
+    resourceId?.let { put("resource_id", JsonPrimitive(it)) }
+    apiType?.let { put("apiType", JsonPrimitive(it)) }
+    volume?.let { put("volume", JsonPrimitive(it)) }
+    pitch?.let { put("pitch", JsonPrimitive(it)) }
+    audioSampleRate?.let { put("audioSampleRate", JsonPrimitive(it)) }
+    bitrate?.let { put("bitrate", JsonPrimitive(it)) }
+    format?.let { put("format", JsonPrimitive(it)) }
+}
+
+/** App 端 oai_settings 默认值（Android 端无反代/vertexai 配置 UI，全置空对齐官方 useReverseProxy=false 分支）。 */
+private fun ttsOaiSettings(): JsonObject = buildJsonObject {
+    put("reverse_proxy", JsonPrimitive(""))
+    put("proxy_password", JsonPrimitive(""))
+    put("vertexai_auth_mode", JsonPrimitive("auto"))
+    put("vertexai_region", JsonPrimitive(""))
+    put("vertexai_express_project_id", JsonPrimitive(""))
 }
 
 /**

@@ -186,6 +186,16 @@ object ServicesPrefs {
             .apply()
     }
 
+    /** 官方 sd_comfy_type：standard / runpod_serverless（settings.html L230-233 默认 standard）。 */
+    fun comfyType(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_type", "standard") ?: "standard"
+
+    fun saveComfyType(context: Context, type: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("sd_comfy_type", type)
+            .apply()
+    }
+
     fun saveImageApiKey(context: Context, key: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("sd_api_key", key)

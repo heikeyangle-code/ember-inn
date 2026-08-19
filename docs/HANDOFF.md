@@ -35,7 +35,7 @@ flowchart LR
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `/workspace`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `/root/sillytavern-ref`（release 8172dcd / 1.18.0）。
-- 引擎测试与 App Kotlin 编译本机均可跑（Java 21 + Gradle 9.7 + Android SDK，当前 **378 测全绿**）；完整 APK 组装/签名走 CI。
+- 引擎测试与 App Kotlin 编译本机均可跑（Java 17.0.2 + Gradle 9.7.0 + Android SDK 34，当前 **490 例全绿**：381 testcase + imagegen-services 39 fixture / tts-services 35 fixture / tts-local 38 fixture 各单 testcase 内 for-loop）；完整 APK 组装/签名走 CI。
 
 ```sh
 cd ~/ember-inn && ./gradlew :engine:test
@@ -54,7 +54,7 @@ gh workflow run 328789880 --ref main   # 需要手工跑一次
 
 **用法**：①`scripts/diff/*-official.mjs` 从 `~/sillytavern-ref` 逐字提取官方函数、桩掉 DOM/全局依赖 → 生成 `engine/src/test/resources/diff/*.json`；②`*DiffTest.kt` 读 fixture 调 Kotlin 引擎逐例对比；③官方发版/改代码后重生成 fixture → `:engine:test`；④fixture 只能脚本生成，不许手改，新功能先加 case 再实现。
 
-**差分分组清单（96 行，表内合计 2984 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例、cfg-prompt 25 例、logprobs 20 例、imagegen 10 例、chat-template-official.mjs → ChatTemplateDiffTest 25 例、model-sort-official.mjs → ModelSortDiffTest 48 例。**
+**差分分组清单（97 行，表内合计 3022 例；历史 85/1969 为旧口径）见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)，含打桩/未差分登记；新增 message-formatting-official.mjs → MessageFormattingDiffTest 805 例、cfg-prompt 25 例、logprobs 20 例、imagegen 10 例、imagegen-services-official.mjs → ImageGenServicesDiffTest 39 例（9 云端后端 + getClosestSize 工具函数 4 例）、tts-services-official.mjs → TtsServicesDiffTest 35 例（11 云端后端）、tts-local-official.mjs → TtsLocalDiffTest 38 例（13 本地后端）、chat-template-official.mjs → ChatTemplateDiffTest 25 例、model-sort-official.mjs → ModelSortDiffTest 48 例。**
 
 **打桩/未差分登记与“官方有而引擎/App 还没有”清单见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。**
 
@@ -160,9 +160,11 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 官方 openai.js parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs 1:1 差分移植（20 例）；流式 OpenAI chat 每块 choices[0].logprobs 经 LogprobsEngine 解析 → ChatViewModel 内存保留最近一条 → 会话菜单 “Token 概率（logprobs）” 底部面板点击 token 查看备选。
 登记（非 1:1 边界）：官方 viewer 的“从备选重roll/从词前缀重roll”未移植（需 swipe 预填链路）；textgen/novel 非流式 logprobs 未解析（官方 parseAndSaveLogprobs 路径）；text 解析 top_logprobs 整体缺失官方抛 TypeError（响应契约恒带）。
 
-### 3.12 图像生成（stable-diffusion） ✅（核心子集）
+### 3.12 图像生成（stable-diffusion） 🟡（核心 ✅，新增 17 后端：9 云端已差分 / 8 LLM 写了未差分）
 官方扩展 generateAutoImage/generateSdcppImage 请求体 1:1 差分移植（imagegen-official.mjs 10 例）：prompt/negative/sampler/scheduler/steps/cfg_scale/width/height/seed/restore_faces/clip_skip/vae/HR 全字段，JSON.stringify undefined 省略语义一致。App 设置页补齐核心参数（前缀/负向/采样器/调度器/CFG/尺寸/种子/恢复人脸/CLIP skip/VAE/HR），消息级生成挂 extra.media（官方 sd_message_gen）。角色提示词前缀按角色 id 存储并在聊天生成时合并。
-登记（未移植）：ADetailer、vlad/drawthings/openai/horde/hf/comfy 等其余 23 个后端的请求体、样式库/prompt templates/refine/interactive/multimodal 等交互模式、Comfy workflow 管理。
+- **✅ 已差分（9 云端后端，imagegen-services-official.mjs 39 例 + getClosestSize 工具函数 4 例）**：togetherai（3 例，JSON body + n=1 + seed 随机回退）/ pollinations（6 例，URL path=encodeURIComponent 语义 + query=URLSearchParams 语义，专门锁 space=%20 vs + 与 !*'() 不编码边界）/ chutes（3 例，|| 短路：0→默认 7.0/1024/10）/ stability（4 例，multipart form-data payload + getClosestAspectRatio('stability') + slice(10000) + style_preset/seed<0 省略）/ aimlapi（5 例，flux/stable/recraft-v3/triposr isSdLike 分支 + clamp(1,50)/(1.5,5)/(256,1440) + OpenAI 类 size/n=1 + quality/style 省略）/ electronhub（3 例，response_format=b64_json + size/quality 省略 + getClosestSize 选最近）/ nanogpt（3 例，parseInt/parseFloat 语义 + resolution 模板字符串 + showExplicitContent/nImages）/ bfl（5 例，-ultra / -pro-1.1 分支 + clamp + seed=null JSON null + safety_tolerance + bflGetClosestAspectRatio）/ xai（3 例，aspect_ratio/resolution 省略 + response_format=b64_json）；引擎层 [ImageGenRequestEngine.kt](file:///workspace/engine/src/main/kotlin/com/emberinn/engine/prompt/ImageGenRequestEngine.kt) 新增 `togetherAiPayload`/`pollinationsUrl`/`chutesPayload`/`stabilityPayload`/`aimlapiBody`/`electronhubBody`/`getClosestSize`/`nanogptBody`/`bflBody`/`xaiBody`/`getClosestAspectRatio`，App 层 [ImageGenBackendsCloud.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ImageGenBackendsCloud.kt) 全部 9 云端后端改为只做 HTTP 接线（准则 2）。差分修复 1:1 不匹配：原 Kotlin 用 `URLEncoder.encode` 编码 path（space=+），与官方 `encodeURIComponent`（space=%20）不符，已修。
+- **🟡 写了未差分（8 LLM 后端）**：ImageGenBackendsLlm.kt 8 LLM 已写完对照官方 `stable-diffusion.js` 路由 + `index.js generateXxxImage`，但**未写 diff 脚本/fixture/DiffTest**（违反准则 1）；BFL 异步轮询 / RunPod serverless / Vertex AI predict 路径已实现未差分。需逐个补 `imagegen-services-official.mjs` 扩展 + 引擎层提取 + DiffTest 才能声称 1:1。
+登记（未移植）：ADetailer、样式库/prompt templates/refine/interactive/multimodal 等交互模式、Comfy workflow 管理。
 
 ### 3.13 群聊 / 其它 ✅
 群聊成员激活策略（15 例）、APPEND 角色卡合并（8 例）、深度提示（7 例）、完整循环纯逻辑 GroupLoopEngine（11 例）；App 调度层（GroupStore/新建群聊/GroupScheduler/顺序生成/续写重生成按最后成员）；natural/pooled 激活+队列提示；自动续写（shouldAutoContinue + /continue 链，默认关）；narrator 按官方 1.18 无独立模式关闭（/sys 旁白群聊可用）；TokenCounterFactory（OpenAI 精确 JTokkit）。
@@ -202,7 +204,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观（AppearanceScreen）：主题模式（浅/深/跟随系统）+ 24 套预设主题卡（预览色板 = 三圆点 + 宝石菱形 + 金属环，选中描边用主题 metal，架构见 4.5）+ 视觉氛围滑杆（VibePreset），实时预览。
 - 提供商与模型：搜索 + 卡片列表（品牌 SVG/已配置 pill/我的连接）；详情页 = API Key（遮罩）/接口地址（未配置自动预填 providers.json 默认）/区域/账户 ID/API 版本/默认模型（底部弹层搜索）/上下文上限/最大回复/测试连接/保存/删除确认；模型页已补 top_k/min_p/top_a/repetition_penalty/seed/n/流式/logprobs/use_sysprompt + OpenRouter use_fallback/allow_fallbacks/middleout/providers/quantizations。
 - 关于页：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库。
-- 语音（TTS）：Android 系统 TTS，语音/语速/试听；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。
+- 语音（TTS）：Android 系统 TTS（语音/语速/试听）+ 🟡 27 个外部后端（app/data/TtsBackend.kt 接口 + TtsBackendsCloud.kt 11 云端 + TtsBackendsLocal1/2.kt 16 本地，对照官方 `tts/*.js fetchTtsGeneration`）；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。**✅ 11 云端后端已差分**（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate，`scripts/diff/tts-services-official.mjs` 35 例 + 引擎层 `TtsRequestEngine` + `TtsServicesDiffTest`，App 改为只做 HTTP 接线，准则 2；差分修复 ElevenLabs `shouldInvolveExtendedSettings` 分支、OpenAI `instructions` 条件添加、Chutes `||` 短路 0→默认 1.0）；**✅ 13 本地后端已差分**（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts，`scripts/diff/tts-local-official.mjs` 38 例 + 引擎层 `TtsRequestEngine` + `TtsLocalDiffTest`，App 全 13 本地改为只做 HTTP 接线，准则 2；差分修复 URLSearchParams form 编码 space=+、JSON 数字语义整数不带小数点、chatterbox 13 字段 params 过滤、vits model_type 分支 W2V2/BERT-VITS2 条件字段）；**🟡 3 本地后端登记不差分**（kokoro/kokoro-worker/openai-compatible，不同源：kokoro.js/kokoro-worker.js 为浏览器 WebWorker postMessage 无 HTTP 请求体，App POST {endpoint}/tts {text,voice}；openai-compatible.js 走 ST 代理 /api/openai/custom/generate-voice body 含 provider_endpoint 字段，App 直连厂商 /v1/audio/speech body 不含）。TtsReader 改造为 MediaPlayer 播放字节 + Android 系统 TTS 回退；VoicePrefs 扩展 `tts_provider`/`tts_endpoint`/`tts_api_key`/`tts_model`。
 - 服务页：翻译 8 家全实现（Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐 translate.js；自动模式 responses/both/inputs/both；编辑后 translateMessageEdit 自动重译/清除）；图像（A1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace/Stable Horde 异步轮询（官方 horde.js）/ComfyUI workflow+轮询；DrawThings 仅 macOS 已移除；官方默认 Default_Comfy_Workflow.json 不在仓库，由用户粘贴，登记）；向量（OpenAI 兼容嵌入/本地 BagOfGram；聊天历史重排+数据银行+强制激活+聊天 ⋮ 管理）；翻译/图像/向量未完成项见 5。
 
 ### 4.4.5 应用图标 ✅
@@ -300,8 +302,9 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 
 ## 5. 完成度总览
 
-- 引擎测试 **378 例全绿**；差分分组表 96 行（表内例数合计 2984；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
-- 剩余未做：图像生成其余 23 个后端请求体 / ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；Captions extras/local/horde 来源；未声明 closureArgs 的闭包仍即时求值（SlashEngine，见 3.4）；斜杠命令按用户决策裁剪（仅高价值命令，见 3.4）；发送链路未接项（见 6.2 登记）；自定义预设“设为默认”（官方无此概念）。
+- 引擎测试 **490 例全绿**（原 390 + imagegen-services 12→39 例扩 27 + tts-services 35 例新增 35 + tts-local 38 例新增 38；381 testcase + imagegen-services 39 fixture / tts-services 35 fixture / tts-local 38 fixture 各单 testcase 内 for-loop）；差分分组表 97 行（表内例数合计 3022；历史“85 组/1969 例”为旧口径，不再使用），明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
+- 剩余未做：图像生成 ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；图生 8 LLM 后端差分（见 3.12）；TTS 3 本地后端登记不差分（kokoro/kokoro-worker/openai-compatible，不同源见 4.4）；Captions extras/local/horde 来源；未声明 closureArgs 的闭包仍即时求值（SlashEngine，见 3.4）；斜杠命令按用户决策裁剪（仅高价值命令，见 3.4）；发送链路未接项（见 6.2 登记）；自定义预设“设为默认”（官方无此概念）。
+- **🟡 写了未差分（违规补救中）**：图生 17 新后端中 **9 云端已差分**（togetherai/pollinations/chutes/stability/aimlapi/electronhub/nanogpt/bfl/xai，imagegen-services-official.mjs 39 例 + 引擎层 `ImageGenRequestEngine` 扩展 + `ImageGenServicesDiffTest`，App 全 9 云端改为只做 HTTP 接线）；**8 LLM 仍写了未差分**（ImageGenBackendsLlm.kt）。TTS 27 外部后端中 **11 云端已差分**（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate，tts-services-official.mjs 35 例 + 引擎层 `TtsRequestEngine` + `TtsServicesDiffTest`，App 11 云端改为只做 HTTP 接线）；**13 本地已差分**（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts，tts-local-official.mjs 38 例 + 引擎层 `TtsRequestEngine` 扩展 + `TtsLocalDiffTest`，App 全 13 本地改为只做 HTTP 接线）；**3 本地登记不差分**（kokoro/kokoro-worker/openai-compatible，不同源 WebWorker/ST 代理，见 4.4）。attachments/gallery/assets/quick-reply App 服务（6.1 登记）**全部写了未差分**，违反准则 1；当前 `:engine:test` 全过 + `:app:compileDebugKotlin` 全过。补救优先级：图生剩余 8 LLM → attachments/gallery/assets 引擎层提取 → caption/translate/regex preset/expressions WebLLM；每补一项需写 `scripts/diff/*-official.mjs`（函数体逐字摘自官方）+ `node` 生成 fixture + 引擎层提取 + `*DiffTest`。
 - Prompt Itemization 分节明细面板已做（聊天消息菜单；布局对齐官方 itemizationText.html；官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化 rawPrompt + TokenHandler 八分桶 + 分节消息；五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias；World Info；Chat History；Extensions；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 词级 LCS，超大输入回退行级）。
 - Prompt Manager 面板已做（设置→提示词管理器：identifier 自动 uuid 只读/name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 只读）/main·nsfw·jailbreak·enhanceDefinitions 官方 Reset/新提示项 system_prompt=false/删除二次确认/编辑底部弹层/长按拖动排序/官方 Append 下拉/“查”检查弹窗（PromptAssemblyCache 最近一次总装，官方 PromptManager.messages/handleInspect））+ dryRun 提示词预览（聊天会话菜单，全文+token）。
 - 用户决策延期：Custom CSS + Moving UI（6.4）；Claude/Gemini 官方 web tokenizer。
@@ -346,6 +349,12 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 | 内置预设删除 | 官方删除默认预设会从列表移除且可恢复；App 内置预设来自只读资源，删除仅切到下一个（资源不可删） | 🟡 登记 |
 | Prompt Manager overridden 标记 | 官方行内显示“来自角色卡”覆盖标记；PrepareResult/缓存已带 overriddenPrompts，行内 🪪 图标显示 | ✅ |
 | 内置预设裁剪 | 用户确认：老模型专用/用处不大的内置预设从 127 裁剪到 54（build-presets.mjs trimPresets 登记，重打包保持） | ✅ 用户决策 |
+| 图生 17 新后端请求体 | app/data/ImageGenBackendsCloud.kt（9 云端）+ ImageGenBackendsLlm.kt（8 LLM）已写完请求体对照官方 `stable-diffusion.js` 路由 + `index.js generateXxxImage`；**9 云端已差分**（togetherai/pollinations/chutes/stability/aimlapi/electronhub/nanogpt/bfl/xai，imagegen-services-official.mjs 39 例 + getClosestSize 4 例 + 引擎层 `ImageGenRequestEngine.{togetherAiPayload,pollinationsUrl,chutesPayload,stabilityPayload,aimlapiBody,electronhubBody,getClosestSize,nanogptBody,bflBody,xaiBody,getClosestAspectRatio}` + `ImageGenServicesDiffTest`；差分已修复 Pollinations path `URLEncoder.encode`（space=+）→`encodeURIComponent`（space=%20）不匹配）；**8 LLM 写了未差分**（ImageGenBackendsLlm.kt，需逐个补差分 + 引擎层提取） | 🟡 9 已差分 / 8 写了未差分 |
+| TTS 27 外部后端 | app/data/TtsBackend.kt 接口 + TtsBackendsCloud.kt 11 云端 + TtsBackendsLocal1/2.kt 16 本地已写完对照官方 `tts/*.js fetchTtsGeneration`；**11 云端已差分**（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate，tts-services-official.mjs 35 例 + 引擎层 `TtsRequestEngine` + `TtsServicesDiffTest`；差分修复 ElevenLabs `shouldInvolveExtendedSettings` 分支、OpenAI `instructions` 条件添加、Chutes `||` 短路 0→默认 1.0）；**13 本地已差分**（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts，tts-local-official.mjs 38 例 + 引擎层 `TtsRequestEngine` 扩展 + `TtsLocalDiffTest`；差分修复 URLSearchParams form 编码 space=+、JSON 数字语义整数不带小数点、chatterbox 13 字段 params 过滤、vits model_type 分支 W2V2/BERT-VITS2 条件字段）；**3 本地登记不差分**（kokoro/kokoro-worker/openai-compatible，不同源：kokoro.js/kokoro-worker.js 为浏览器 WebWorker postMessage 无 HTTP 请求体，App POST {endpoint}/tts {text,voice}；openai-compatible.js 走 ST 代理 /api/openai/custom/generate-voice body 含 provider_endpoint 字段，App 直连厂商 /v1/audio/speech body 不含）；TtsReader 改造为 MediaPlayer 播放字节 + Android 系统 TTS 回退；VoicePrefs 扩展 `tts_provider`/`tts_endpoint`/`tts_api_key`/`tts_model` | ✅ 11 云端 / ✅ 13 本地 / 🟡 3 本地登记不差分 |
+| attachments / gallery / assets / quick-reply App 服务 | app/data/AttachmentsService.kt（三源 CRUD）/ GalleryService.kt（四排序+视频缩略图）/ AssetsService.kt（5 类型资产）/ QuickReplyStore.kt（多预设迁移）已写完对照官方 `extensions/{attachments,gallery,assets,quick-reply}/index.js`；**未做引擎层提取+差分**（attachments 部分 CRUD 可引擎化，assets/gallery 强 Android 依赖留 App）；AppSlashExecutor `/db` `/listGallery` `/installAsset` `/deleteAsset` `/qr` 已桥接到这些服务 | 🟡 App 服务写了未差分 |
+| translate reasoning 自动翻译 | TranslateClient.translateReasoning 写 `extra.reasoning_display_text`，ChatViewModel.translateIncoming reasoning 分支已接；对照官方 `translate/index.js` L192-L247 | 🟡 写了未差分 |
+| caption 4 来源路由 | ChatRepository.captionImageBySource(multimodal/local/extras/horde) + ChatViewModel.captionExistingMessage + CaptionScreen chips；对照官方 `caption/index.js` | 🟡 写了未差分 |
+| 斜杠命令扩展补全 | SlashRegistry 新增 `/summarize` `/db*`(8) `/listGallery` `/installAsset` `/deleteAsset` `/vectorize` `/index` `/vectorize-faiss` `/imagine` `/caption` `/qr` `/expression` `/world` `/member`；AppSlashExecutor 桥接；对照官方 `slash-commands.js` + `extensions/*/*.js`；**未做参数解析差分**（仅注册 callback） | 🟡 写了未差分 |
 
 ### 6.2 已确认 1:1 / 审计修复
 
@@ -414,75 +423,3 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 - push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
 - 沙箱会话重置会丢 GitHub 凭证（gh auth/token）：push 失败先查 `gh auth status`，缺凭证就 `gh auth login` 或临时 PAT，不要反复盲推。
 - 删除类操作先确认；大改动保持小步提交。
-
-## 9. 扩展生态移植记录（2026-08-19 批次）
-
-本批次对照 `/root/sillytavern-ref`（release 8172dcd / 1.18.0）全量补全官方扩展功能，`./gradlew :engine:test :app:compileDebugKotlin` 全过。HANDOFF 旧版多处过时登记已修正（路径、❌ 标错、过时 ✅）。
-
-### 9.1 TTS 扩展 27 个外部后端 ✅
-原状：仅 Android 系统 TTS（`TtsReader.kt`）。补全 1:1 对照官方 `tts/*.js` 的 `fetchTtsGeneration`：
-- [TtsBackend.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackend.kt)：`TtsBackend` 接口（`getVoices`/`generateTts` 返回字节）+ `TtsBackendRegistry`（init 触发 27 后端注册）+ `TtsVoice` 数据类。
-- [TtsBackendsCloud.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsCloud.kt)：11 云端后端——elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate。逐字段对照官方请求体（含 minimax/volcengine 的 hex `data.audio` 解码、google-native 的 base64 `audioContent` 解码、google-translate 的 ≤200 字符分段）。
-- [TtsBackendsLocal1.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsLocal1.kt)：8 本地后端——alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/kokoro。alltalk 走 V1/V2 双段（POST 取 output_file_url → GET 取字节）；chatterbox 走 predefined/clone 双模式；gpt-sovits-v2 含 `replaceSpeaker` 正则。
-- [TtsBackendsLocal2.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsBackendsLocal2.kt)：8 本地后端——kokoro-worker/sbvits2/silerotts/speecht5/tts-webui/vits/xtts/openai-compatible。sbvits2/vits 保留官方 form-urlencoded/query string 传输；tts-webui 含 chatterbox 16 字段 params；xtts 走 `/set_tts_settings` 分离 speed/temperature。
-- [TtsReader.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TtsReader.kt)：改造支持外部后端（MediaPlayer 播放字节落盘）+ Android 系统 TTS 回退；`speak` 改 suspend。
-- [VoicePrefs.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/VoicePrefs.kt)：扩展 `tts_provider`/`tts_endpoint`/`tts_api_key`/`tts_model` 字段。
-- [ChatViewModel.kt#L1265](file:///workspace/app/src/main/java/com/emberinn/app/ui/chat/ChatViewModel.kt#L1265)：`narrateText` 协程化。
-
-### 9.2 图生扩展 17 个后端补全 ✅
-原状：6 后端（auto/sdcpp/novel/openai/horde/comfy）。补全对照官方 `stable-diffusion/index.js` 的 `generateXxxImage`：
-- [ImageGenBackendsCloud.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ImageGenBackendsCloud.kt)：9 云端后端——togetherai/pollinations/stability/aimlapi/chutes/electronhub/nanogpt/bfl/xai。逐字段对照官方 `stable-diffusion.js` 路由（BFL 异步轮询 `/get_result` 至 Ready；pollinations 用 `gen.pollinations.ai`；chutes 用 `image.chutes.ai` 直返字节）。
-- [ImageGenBackendsLlm.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ImageGenBackendsLlm.kt)：8 LLM 厂商后端——google/zai/openrouter/workersai/falai/extras/drawthings(comfyrunpod)。drawthings 仅 macOS 跳过返回 null；comfyrunpod 走 RunPod serverless `/run` + `/status` 轮询；google 走 Vertex AI predict。
-
-### 9.3 attachments 扩展 ✅
-原状：仅 VectorRag 引用。补全对照官方 `attachments/index.js`（data bank 三源 CRUD）：
-- [AttachmentsService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/AttachmentsService.kt)：`getAttachments`/`getAttachmentByField`/`listAttachmentsJson`/`getAttachmentText`/`addAttachment`/`updateAttachment`/`deleteAttachment`/`disableAttachment`/`enableAttachment`，三源（global/character/chat）落盘 `filesDir/attachments/{source}/`，disabled 列表存 BehaviorPrefs。
-- [BehaviorPrefs.kt#L27](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/BehaviorPrefs.kt#L27)：加 `disabledAttachments`/`saveDisabledAttachments`。
-
-### 9.4 gallery 扩展 ✅
-原状：仅消息内 LIST↔GALLERY 切换。补全对照官方 `gallery/index.js`（853 行）：
-- [GalleryService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/GalleryService.kt)：`getGalleryItems`/`getGalleryFolders`/`deleteGalleryItem`/`getThumbnail`（视频用 `MediaMetadataRetriever`）/`setSortOrder`/`getSortOrder`/`updateGalleryFolder`/`restoreGalleryFolder`/`getGalleryItemsJson`。四排序（NAME/DATE/SIZE 升降）+ 视频缩略图 maxSide=225。
-
-### 9.5 assets 扩展 ✅
-原状：仅 CharX 资源提取。补全对照官方 `assets/index.js`（598 行）+ `endpoints/assets.js`：
-- [AssetsService.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/AssetsService.kt)：5 类型（extension/character/ambient/bgm/blip）+ `validateAssetFileName`（正则+UNSAFE+非点开头）+ `buildAssetList`/`buildAssetListForType`/`isAssetInstalled`（三分支）+ `installAsset`（OkHttp 下载→temp→移入）+ `deleteAsset`/`currentAssets`/`ensureFoldersExist`。
-
-### 9.6 quick-reply 多预设 ✅
-原状：单预设 `filesDir/quick-replies.json`。补全对照官方 `quick-reply/index.js` L55-L103：
-- [QuickReplyStore.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/QuickReplyStore.kt)：多预设 `filesDir/quick-replies-presets/{name}.json` + 激活切换 + 增删改查 + 单预设迁移（旧 `quick-replies.json` → default preset）+ kotlinx→org.json 持久化。公共 API 不变，ChatViewModel/Screen 零改动。
-
-### 9.7 translate reasoning 自动翻译 ✅
-原状：8 家 + mes 自动翻译。补全对照官方 `translate/index.js` L192-L247：
-- [TranslateClient.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/TranslateClient.kt)：加 `translateReasoning(context, text, targetLang)`，写 `extra.reasoning_display_text`。
-- ChatViewModel.translateIncoming：reasoning 分支调新方法。
-
-### 9.8 regex preset manager UI ✅
-原状：引擎 1:1。补全对照官方 `regex/index.js` L167-L189：
-- [RegexScreen.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/RegexScreen.kt)：加"应用此预设集"按钮，调 `GlobalRegexPrefs.saveActivePresetSet`，ChatScreen 版本监听即时重算 + Toast 确认。
-
-### 9.9 expressions WebLLM ✅
-原状：LLM 分类。补全对照官方 `expressions/index.js` L514-L599：
-- [ExpressionStore.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ExpressionStore.kt)：加 `source` 字段（local/extras/main/webllm/none）+ `shouldFallbackToLlm()`。webllm 走 LLM 回退（Android 无 WebLLM/transformers.js）。
-
-### 9.10 caption 边缘 ✅
-原状：multimodal + sendCaptionedMessage。补全对照官方 `caption/index.js`：
-- [CaptionPrefs.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/CaptionPrefs.kt)：加 `sourceUrl`（local/extras/horde 代理基址）。
-- [ChatRepository.kt](file:///workspace/app/src/main/java/com/emberinn/app/data/ChatRepository.kt)：加 `captionImageBySource(source, dataUrl, base64, prompt)`，4 来源路由——multimodal/local/extras/horde（local=`{url}/api/extra/caption`、extras=`{url}/api/caption`、horde=`{url}/api/horde/caption-image`）。
-- ChatViewModel：加 `captionExistingMessage(messageId, mediaIndex)`（已有消息补字幕）。
-- [CaptionScreen.kt](file:///workspace/app/src/main/java/com/emberinn/app/ui/settings/CaptionScreen.kt)：加 Local/Extras/Horde chips + sourceUrl 输入框。
-
-### 9.11 斜杠命令补全 ✅
-原状：~36 命令。补全对照官方 `slash-commands.js` 与 `extensions/*/*.js`：
-- [SlashRegistry.kt](file:///workspace/engine/src/main/kotlin/com/emberinn/engine/slash/SlashRegistry.kt)：加 `/summarize` / `/db*`（8 个） / `/listGallery` / `/installAsset`/`/deleteAsset` / `/vectorize`/`/index`/`/vectorize-faiss` / `/imagine` / `/caption`（含 mesId/index/quiet 命名参数） / `/qr` / `/expression` / `/world`（sub=get/list/enable/disable） / `/member`。App 端经 ChatViewModel 桥接到具体服务。
-
-### 9.12 编译验证
-`mise exec java@17.0.2 gradle@9.7.0 -- gradle :engine:test :app:compileDebugKotlin` → **BUILD SUCCESSFUL**，378 引擎测全过 + App Kotlin 编译全过。沙箱用 android-34 platform 临时编译（compileSdk=37 在恢复后需本地 Android SDK 37 验证）。
-
-### 9.13 仍待做（用户决策延期或不影响兼容）
-- 图生 ADetailer / 样式库 / prompt templates / Comfy workflow 编辑器（图生后端已全接，这些是图生配套 UI 工具）
-- expressions WebLLM 真本地模型（Android 无 transformers.js，当前回退 LLM 等价）
-- Room/DataStore 迁移（仍用 SharedPreferences）
-- MeshGradient 氛围背景（README 可选）
-- 字体文件下载、风格档位映射
-- Custom CSS + Moving UI（用户决策延期，依赖 DOM 1:1 不可行）
-- 第三方扩展市场/插件体系（远期）

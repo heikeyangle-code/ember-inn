@@ -1,6 +1,6 @@
 # 差分矩阵（HANDOFF 附录；由 scripts/diff/*.mjs 生成 fixture，禁止手改）
 
-> HANDOFF 第 2 节引用。表内 96 行、例数合计 2984；scripts/diff/ 共 98 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
+> HANDOFF 第 2 节引用。表内 97 行、例数合计 3022；scripts/diff/ 共 99 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史“85 组 / 1969 例”为旧口径，不再使用。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类。
@@ -97,12 +97,15 @@
 | CFG Scale 纯逻辑（getGuidanceScale 优先级/getCfgPrompt unshift 合并/getCustomSeparator JSON 回退/插入深度；打桩 substituteParams={{user}}→Alice；charaCfg 缺失+群聊覆盖官方抛 TypeError 登记不生成用例） | cfg-prompt-official.mjs | CfgPromptDiffTest | 25 |
 | Token 概率解析（parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs source 分支；text 解析 top_logprobs 整体缺失官方抛 TypeError 登记） | logprobs-official.mjs | LogprobsDiffTest | 20 |
 | 图像生成请求体（generateAutoImage/generateSdcppImage payload；ADetailer/其余后端登记未移植） | imagegen-official.mjs | ImageGenDiffTest | 10 |
+| 图像生成 services 后端请求体（togetherai/pollinations/chutes/stability/aimlapi/electronhub/nanogpt/bfl/xai 9 云端 + getClosestSize 工具；Pollinations path encodeURIComponent vs URLEncoder + 边界、Chutes \|\| 短路、Stability multipart payload、BFL -ultra/-pro-1.1 分支、NanoGPT parseInt/parseFloat 语义） | imagegen-services-official.mjs | ImageGenServicesDiffTest | 39 |
+| TTS services 后端请求体（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate 11 云端；ElevenLabs shouldInvolveExtendedSettings 分支、OpenAI instructions 条件添加、Chutes \|\| 短路 0→默认 1.0、splitRecursive 分块） | tts-services-official.mjs | TtsServicesDiffTest | 35 |
+| TTS local 后端请求体（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts 13 本地；URLSearchParams form 编码 space=+、JSON 数字语义整数不带小数点、chatterbox 13 字段 params 过滤、vits model_type 分支 W2V2/BERT-VITS2 条件字段、speecht5 speaker 不透明入参值源不同、xtts processText 死代码不差分；kokoro/kokoro-worker/openai-compatible 3 个不同源登记不差分见行尾） | tts-local-official.mjs | TtsLocalDiffTest | 38 |
 
 **打桩/分支登记（防漏机制）**：差分脚本内任何打桩/未覆盖分支必须登记在本节 + 脚本头部；未登记即视为未完成。
 - prepare-messages：populationInjectionPrompts 用官方真函数；getExtensionPrompt(IN_CHAT) 已由 extension-prompt 19 例覆盖；工具调用历史/推理链/推理签名/媒体内联端到端 8 例；打桩见脚本头（registerFunctionToolsOpenAI 空对象→工具预算恒 1 token；setToolCalls tokens=JSON 长度/4；getChat content ?? ''；媒体仅 data: URL 内联）。in-chat order==100 规则由引擎单测锁。
 - SSE：运行时只有官方对拍的 SseChunkParser 一条路（逐字符、事件级 catch、[DONE]/message_stop 收尾、reasoning 独立通道）；旧 SseParser 已删（曾把 content:null 拼成 "null"）。
 - 仍绕过 fixture：prepareOpenAIMessages 的 chat→messages 构造循环由 fixture 直接注入消息对象绕过，Kotlin 侧由 App ChatPromptFactory 按官方同名逻辑实现（接线见 4.7）；extra.tool_invocations 已由 App 解析进 PromptMessage.toolInvocations。
-- 尚未差分（登记）：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 用 MockWebServer 锁行为，转换器已逐字差分）；斜杠完整 parser（依赖 DOM，testSymbol 已差分 27 例，其余源码对照+单测）；聊天重排/文件向量化主体（纯函数 splitRecursive/trim 已差分 14 例）；作用域宏配对（依赖 chevrotain CST，trimScopedContent 已差分 7 例）；WorldLoreMerger（App 多书合并为自有封装）。
+- 尚未差分（登记）：网络/路由层（Mistral/xAI/Cohere/AI21/OpenRouter 用 MockWebServer 锁行为，转换器已逐字差分）；斜杠完整 parser（依赖 DOM，testSymbol 已差分 27 例，其余源码对照+单测）；聊天重排/文件向量化主体（纯函数 splitRecursive/trim 已差分 14 例）；作用域宏配对（依赖 chevrotain CST，trimScopedContent 已差分 7 例）；WorldLoreMerger（App 多书合并为自有封装）；图生 8 LLM 后端（ImageGenBackendsLlm.kt 写了未差分，违反准则 1）；TTS 3 本地后端（kokoro/kokoro-worker/openai-compatible）不同源登记不差分（kokoro.js/kokoro-worker.js 为浏览器 WebWorker postMessage 无 HTTP 请求体，App POST {endpoint}/tts {text,voice}；openai-compatible.js 走 ST 代理 /api/openai/custom/generate-voice body 含 provider_endpoint 字段，App 直连厂商 /v1/audio/speech body 不含——见 HANDOFF 4.4）；attachments/gallery/assets/quick-reply App 服务（写了未差分，可引擎化的纯 CRUD 待提取）；caption/translate reasoning（写了未差分）；ElevenLabs history 复用/voice cloning/recognize 等非生成行为不差分。
 
 | 实际请求体（openai/azure/openrouter/custom/perplexity/groq/deepseek/moonshot/zai/siliconflow/minimax/workers_ai/o1/gpt-5，空 stop/温度 clamp/seed 边界） | chat-request-body-official.mjs | ChatRequestBodyDiffTest | 28 |
 | /preset Fuse.js 7.1 模糊回退 | preset-fuzzy-official.mjs | FusePresetDiffTest | 27 |

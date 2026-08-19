@@ -2,11 +2,18 @@ package com.emberinn.app.data
 
 import android.content.Context
 import com.emberinn.app.ui.settings.VoicePrefs
-import java.net.URLEncoder
+import com.emberinn.engine.prompt.TtsRequestEngine
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -14,8 +21,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 /**
- * 第一批本地 TTS 后端：1:1 对照官方 public/scripts/extensions/tts/{后端}.js 的 fetchTtsGeneration
- * （无 fetchTtsGeneration 者对照 generateTts 内联生成请求）翻译成 Kotlin。共用文件级 OkHttpClient
+ * 第一批本地 TTS 后端：准则 2——引擎层 [TtsRequestEngine] 构造 .js body（差分 38 例），
+ * App 层只做：①构建 settings JsonObject（含官方 defaultSettings + VoicePrefs 覆盖）；
+ * ②调引擎层得 body；③拼 URL + Header + 发请求 + 解析响应。共用文件级 OkHttpClient
  * （connect 15s / read 120s）；generateTts 失败统一返回 null。路由分发由 TtsBackendRegistry
  * （见 TtsBackend.kt）按 provider id 处理。
  *
@@ -23,8 +31,8 @@ import org.json.JSONObject
  * - alltalk.js 用 URLSearchParams（form-urlencoded）且返回 JSON {output_file_url}（非直接音频字节），
  *   忠实保留 form 方式 + 二次 GET 取音频；未强行改写成 JSON。
  * - gsvi.js fetchTtsGeneration 用 URLSearchParams 拼 GET URL（无 body），忠实保留。
- * - kokoro.js 为浏览器 WebWorker（无 fetchTtsGeneration、无 HTTP），按需求契约为 POST {endpoint}/tts
- *   {text,voice}（与 TtsBackendsLocal2.kt 的 kokoro-worker 同源处理思路）。
+ * - kokoro.js 为浏览器 WebWorker（无 fetchTtsGeneration、无 HTTP），与官方不同源——
+ *   按需求契约为 POST {endpoint}/tts {text,voice}（登记不差分，见 HANDOFF 4.4）。
  * - 默认端点取各 .js 的官方默认值（defaultSettings / constructor settings.provider_endpoint）。
  */
 
@@ -39,13 +47,30 @@ private val formMedia = "application/x-www-form-urlencoded; charset=utf-8".toMed
 private fun endpoint(context: Context, fallback: String): String =
     VoicePrefs.ttsEndpoint(context).trim().ifBlank { fallback }
 
-private fun enc(v: Any): String = URLEncoder.encode(v.toString(), "UTF-8")
+/** JsonObject → org.json.JSONObject（用于 OkHttp post body）。 */
+private fun JsonObject.toOrgJson(): org.json.JSONObject {
+    val out = org.json.JSONObject()
+    for (k in keys) {
+        val v = this[k] ?: continue
+        when {
+            v is JsonObject -> out.put(k, org.json.JSONObject(v.toString()))
+            else -> {
+                val prim = v.jsonPrimitive
+                val s = prim.content
+                when {
+                    s == "true" || s == "false" -> out.put(k, s.toBoolean())
+                    s.toDoubleOrNull() != null -> out.put(k, s.toDouble())
+                    else -> out.put(k, s)
+                }
+            }
+        }
+    }
+    return out
+}
 
 // 1) alltalk — alltalk.js fetchTtsGeneration：POST {endpoint}/api/tts-generate，
 //    Content-Type application/x-www-form-urlencoded + Cache-Control no-cache，
-//    body = URLSearchParams（text_input, text_filtering='standard', character_voice_gen=voiceId,
-//    narrator_enabled, narrator_voice_gen, text_not_inside, language, output_file_name='st_output',
-//    output_file_timestamp='true', autoplay='false', autoplay_volume='0.8'；V2 RVC 可选项省略）。
+//    body 由引擎层 [TtsRequestEngine.allTalkForm] 构造（form-urlencoded，与官方 URLSearchParams 一致）。
 //    返回 JSON {output_file_url}（V1 完整 URL / V2 相对路径），官方 generateTts 再 fetch 该 URL 取音频字节。
 //    官方默认 provider_endpoint=http://localhost:7851。
 class AllTalkTtsBackend : TtsBackend {
@@ -60,24 +85,23 @@ class AllTalkTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                // 官方 settings 默认值（constructor this.settings）
-                val params = listOf(
-                    "text_input" to text,
-                    "text_filtering" to "standard",
-                    "character_voice_gen" to voiceId,
-                    "narrator_enabled" to "false",
-                    "narrator_voice_gen" to "Please set a voice",
-                    "text_not_inside" to "narrator",
-                    "language" to "en",
-                    "output_file_name" to "st_output",
-                    "output_file_timestamp" to "true",
-                    "autoplay" to "false",
-                    "autoplay_volume" to "0.8",
-                )
-                val formBody = params.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
+                // 官方 defaultSettings（constructor this.settings）
+                val settings = buildJsonObject {
+                    put("server_version", JsonPrimitive("v2"))
+                    put("language", JsonPrimitive("en"))
+                    put("narrator_enabled", JsonPrimitive("false"))
+                    put("at_narrator_text_not_inside", JsonPrimitive("narrator"))
+                    put("narrator_voice_gen", JsonPrimitive("Please set a voice"))
+                    put("rvc_character_voice", JsonPrimitive("Disabled"))
+                    put("rvc_character_pitch", JsonPrimitive("0"))
+                    put("rvc_narrator_voice", JsonPrimitive("Disabled"))
+                    put("rvc_narrator_pitch", JsonPrimitive("0"))
+                }
+                val form = TtsRequestEngine.allTalkForm(settings, text, voiceId)
+                    .jsonObject["form"]!!.jsonPrimitive.content
                 val genReq = Request.Builder()
                     .url("$base/api/tts-generate")
-                    .post(formBody.toRequestBody(formMedia))
+                    .post(form.toRequestBody(formMedia))
                     .header("Cache-Control", "no-cache")
                     .build()
                 // V1 返回完整 URL；V2 返回相对路径 → 拼 endpoint
@@ -96,11 +120,9 @@ class AllTalkTtsBackend : TtsBackend {
 }
 
 // 2) chatterbox — chatterbox.js 无独立 fetchTtsGeneration（生成逻辑内联在 generateTts）：
-//    POST {endpoint}/tts，Content-Type application/json + Cache-Control no-cache，
-//    body = {text, voice_mode, temperature, exaggeration, cfg_weight, seed, speed_factor, language,
-//    split_text, chunk_size, output_format, predefined_voice_id | reference_audio_filename}。
-//    voiceId 以 'ref_' 前缀 → clone 模式（reference_audio_filename）；否则 predefined（predefined_voice_id）。
-//    seed 默认 -1 → 随机（官方 Math.floor(Math.random()*2147483648)）。返回音频字节（response 即音频）。
+//    POST {endpoint}/tts，Content-Type application/json + Cache-Control no-cache。
+//    body 由引擎层 [TtsRequestEngine.chatterboxBody] 构造。
+//    voiceId 以 'ref_' 前缀 → clone 模式；否则 predefined。seed 默认 -1 → 随机（App 传 Random）。
 //    官方默认 provider_endpoint=http://localhost:8004，predefined_voice='S1'。
 class ChatterboxTtsBackend : TtsBackend {
     override val id = "chatterbox"
@@ -116,29 +138,27 @@ class ChatterboxTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                val isRef = voiceId.startsWith("ref_")
-                val actual = if (isRef) voiceId.removePrefix("ref_") else voiceId
-                // 官方 settings 默认值（constructor this.settings）
-                val json = JSONObject()
-                    .put("text", text)
-                    .put("voice_mode", if (isRef) "clone" else "predefined")
-                    .put("temperature", 0.8)
-                    .put("exaggeration", 0.5)
-                    .put("cfg_weight", 0.5)
-                    .put("seed", Random.nextInt(0, 2147483647))
-                    .put("speed_factor", 1.0)
-                    .put("language", "en")
-                    .put("split_text", true)
-                    .put("chunk_size", 120)
-                    .put("output_format", "wav")
-                if (isRef) {
-                    json.put("reference_audio_filename", actual)
-                } else {
-                    json.put("predefined_voice_id", actual.ifBlank { "S1" })
+                // 官方 defaultSettings（constructor this.settings）
+                val settings = buildJsonObject {
+                    put("temperature", JsonPrimitive(0.8))
+                    put("exaggeration", JsonPrimitive(0.5))
+                    put("cfg_weight", JsonPrimitive(0.5))
+                    put("seed", JsonPrimitive(-1))
+                    put("speed_factor", JsonPrimitive(1.0))
+                    put("language", JsonPrimitive("en"))
+                    put("split_text", JsonPrimitive(true))
+                    put("chunk_size", JsonPrimitive(120))
+                    put("output_format", JsonPrimitive("wav"))
+                    put("predefined_voice", JsonPrimitive("S1"))
                 }
+                val body = TtsRequestEngine.chatterboxBody(
+                    settings, text, voiceId,
+                    // JS Math.floor(Math.random()*2147483648) → 0..2^31-1
+                    randomSeed = Random.nextLong(0, 2147483648L),
+                )
                 val request = Request.Builder()
                     .url("$base/tts")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .header("Cache-Control", "no-cache")
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
@@ -147,10 +167,9 @@ class ChatterboxTtsBackend : TtsBackend {
 }
 
 // 3) coqui — coqui.js 无独立 fetchTtsGeneration（生成逻辑内联在 generateTts），且走 ST Extras 代理
-//    /api/text-to-speech/coqui/generate-tts。body = {text, model_id, language_id, speaker_id}。
-//    voiceId 形如 'tts_models/.../model[lang][speaker]'：replaceAll(']','').replaceAll('"','').split('[')，
-//    tokens[0]=model_id；tokens[1] 若 model_id 含 'multilingual' 为 language 否则 speaker；tokens[2]=speaker。
-//    language/speaker 为 'none' → parseInt('none')=NaN → JSON null。返回音频字节。
+//    /api/text-to-speech/coqui/generate-tts。body 由引擎层 [TtsRequestEngine.coquiBody] 构造。
+//    voiceId 形如 'tts_models/.../model[lang][speaker]'：tokens 解析逻辑在引擎层。
+//    language/speaker 为 'none' → parseInt('none')=NaN → JSON null。
 //    注：coqui.js 无 provider_endpoint 默认（走 getApiUrl），此处用 Coqui API 常用端口作本地默认。
 class CoquiTtsBackend : TtsBackend {
     override val id = "coqui"
@@ -168,25 +187,11 @@ class CoquiTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                // 官方 voiceId 解析逻辑（generateTts 内）
-                val cleaned = voiceId.replace("]", "").replace("\"", "")
-                val tokens = cleaned.split("[")
-                val modelId = tokens[0]
-                var language = "none"
-                var speaker = "none"
-                if (tokens.size > 1) {
-                    val o = tokens[1]
-                    if (modelId.contains("multilingual")) language = o else speaker = o
-                }
-                if (tokens.size > 2) speaker = tokens[2]
-                val json = JSONObject()
-                    .put("text", text)
-                    .put("model_id", modelId)
-                    .put("language_id", language.toIntOrNull() ?: JSONObject.NULL)
-                    .put("speaker_id", speaker.toIntOrNull() ?: JSONObject.NULL)
+                // App 无 customVoices（官方 voiceMapDict）→ 恒等映射，传空 settings
+                val body = TtsRequestEngine.coquiBody(buildJsonObject {}, text, voiceId)
                 val request = Request.Builder()
                     .url("$base/api/text-to-speech/coqui/generate-tts")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .header("Cache-Control", "no-cache")
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
@@ -195,7 +200,7 @@ class CoquiTtsBackend : TtsBackend {
 }
 
 // 4) cosyvoice — cosyvoice.js fetchTtsGeneration：POST {endpoint}/（根路径），Content-Type application/json，
-//    body = {text, speaker: voiceId, [streaming:1]}。默认 streaming=false → 不带 streaming 字段。返回音频字节。
+//    body 由引擎层 [TtsRequestEngine.cosyVoiceBody] 构造。默认 streaming=false → 不带 streaming 字段。
 //    官方默认 provider_endpoint=http://localhost:9880（defaultSettings.provider_endpoint）。
 class CosyVoiceTtsBackend : TtsBackend {
     override val id = "cosyvoice"
@@ -209,12 +214,13 @@ class CosyVoiceTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                val json = JSONObject()
-                    .put("text", text)
-                    .put("speaker", voiceId)
+                val settings = buildJsonObject {
+                    put("streaming", JsonPrimitive(false))
+                }
+                val body = TtsRequestEngine.cosyVoiceBody(settings, text, voiceId)
                 val request = Request.Builder()
                     .url("$base/")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -222,9 +228,8 @@ class CosyVoiceTtsBackend : TtsBackend {
 }
 
 // 5) gpt-sovits-adapter — gpt-sovits-adapter.js fetchTtsGeneration：POST {endpoint}/（根路径），
-//    Content-Type application/json，body = {text, card_name, use_st_adapter:true, target_voice: voiceId,
-//    text_lang, text_split_method:'cut5', batch_size:1, media_type, streaming_mode:'true'}。
-//    card_name 官方取 getCharacters(false)，Android 无角色上下文 → 空串。返回音频字节。
+//    Content-Type application/json，body 由引擎层 [TtsRequestEngine.gptSoVitsAdapterBody] 构造。
+//    card_name 官方取 getCharacters(false)，Android 无角色上下文 → 空串（引擎层打桩）。
 //    官方默认 provider_endpoint=http://localhost:9881, text_lang='zh', media_type='auto'。
 class GptSoVitsAdapterTtsBackend : TtsBackend {
     override val id = "gpt-sovits-adapter"
@@ -238,19 +243,14 @@ class GptSoVitsAdapterTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                val json = JSONObject()
-                    .put("text", text)
-                    .put("card_name", "")
-                    .put("use_st_adapter", true)
-                    .put("target_voice", voiceId)
-                    .put("text_lang", "zh")
-                    .put("text_split_method", "cut5")
-                    .put("batch_size", 1)
-                    .put("media_type", "auto")
-                    .put("streaming_mode", "true")
+                val settings = buildJsonObject {
+                    put("text_lang", JsonPrimitive("zh"))
+                    put("media_type", JsonPrimitive("auto"))
+                }
+                val body = TtsRequestEngine.gptSoVitsAdapterBody(settings, text, voiceId)
                 val request = Request.Builder()
                     .url("$base/")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -258,9 +258,8 @@ class GptSoVitsAdapterTtsBackend : TtsBackend {
 }
 
 // 6) gpt-sovits-v2 — gpt-sovits-v2.js fetchTtsGeneration：POST {endpoint}/（根路径），
-//    Content-Type application/json，body = {text, prompt_text, ref_audio_path, text_lang, prompt_lang,
-//    text_split_method:'cut5', batch_size:1, media_type:'ogg', streaming_mode:'true'}。
-//    prompt_text = replaceSpeaker(voiceId)（去 [..]）；ref_audio_path = './参考音频/'+voiceId+'.wav'。
+//    Content-Type application/json，body 由引擎层 [TtsRequestEngine.gptSoVitsV2Body] 构造。
+//    prompt_text = replaceSpeaker(voiceId)（去 [..]）；ref_audio_path = './参考音频/'+voiceId+'.wav'（引擎层）。
 //    官方默认 provider_endpoint=http://localhost:9880, text_lang='zh', prompt_lang='zh'。
 class GptSoVitsV2TtsBackend : TtsBackend {
     override val id = "gpt-sovits-v2"
@@ -274,21 +273,14 @@ class GptSoVitsV2TtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                // 官方 replaceSpeaker：text.replace(/\[.*?\]/gu, '')
-                val promptText = voiceId.replace(Regex("""\[.*?\]"""), "")
-                val json = JSONObject()
-                    .put("text", text)
-                    .put("prompt_text", promptText)
-                    .put("ref_audio_path", "./参考音频/$voiceId.wav")
-                    .put("text_lang", "zh")
-                    .put("prompt_lang", "zh")
-                    .put("text_split_method", "cut5")
-                    .put("batch_size", 1)
-                    .put("media_type", "ogg")
-                    .put("streaming_mode", "true")
+                val settings = buildJsonObject {
+                    put("text_lang", JsonPrimitive("zh"))
+                    put("prompt_lang", JsonPrimitive("zh"))
+                }
+                val body = TtsRequestEngine.gptSoVitsV2Body(settings, text, voiceId)
                 val request = Request.Builder()
                     .url("$base/")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -296,8 +288,8 @@ class GptSoVitsV2TtsBackend : TtsBackend {
 }
 
 // 7) gsvi — gsvi.js fetchTtsGeneration：构造 GET URL ${endpoint}/tts?{query}（URLSearchParams，无 body），
-//    字段 text, cha_name=voiceId, text_language, batch_size, speed, top_k, top_p, temperature, stream。
-//    返回该 URL 字符串；官方 generateTts 再 fetch 取音频。此处直接 GET 该 URL 取字节。返回音频字节。
+//    query 由引擎层 [TtsRequestEngine.gsviQuery] 构造。返回该 URL 字符串；官方 generateTts 再 fetch 取音频。
+//    此处直接 GET 该 URL 取字节。
 //    官方默认 provider_endpoint=http://127.0.0.1:5000, language='多语种混合', speed=1, top_k=6, top_p=0.85,
 //    temperature=0.75, batch_size=10, stream=false。
 class GsviTtsBackend : TtsBackend {
@@ -312,18 +304,18 @@ class GsviTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                val params = listOf(
-                    "text" to text,
-                    "cha_name" to voiceId,
-                    "text_language" to "多语种混合",
-                    "batch_size" to 10,
-                    "speed" to 1,
-                    "top_k" to 6,
-                    "top_p" to 0.85,
-                    "temperature" to 0.75,
-                    "stream" to false,
-                )
-                val query = params.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
+                // 官方 defaultSettings
+                val settings = buildJsonObject {
+                    put("language", JsonPrimitive("多语种混合"))
+                    put("batch_size", JsonPrimitive(10))
+                    put("speed", JsonPrimitive(1))
+                    put("top_k", JsonPrimitive(6))
+                    put("top_p", JsonPrimitive(0.85))
+                    put("temperature", JsonPrimitive(0.75))
+                    put("stream", JsonPrimitive(false))
+                }
+                val query = TtsRequestEngine.gsviQuery(settings, text, voiceId)
+                    .jsonObject["query"]!!.jsonPrimitive.content
                 val request = Request.Builder()
                     .url("$base/tts?$query")
                     .get()
@@ -334,9 +326,9 @@ class GsviTtsBackend : TtsBackend {
 }
 
 // 8) kokoro — kokoro.js 为浏览器 WebWorker 实现（无 fetchTtsGeneration、无 HTTP 请求，generateTts 经
-//    worker.postMessage 发 {text, voice, speakingRate, requestId}）。Android 无 Worker；按需求契约为
-//    POST {endpoint}/tts，JSON {text, voice}。voice 默认 'af_heart'（settings.defaultVoice）。返回音频字节。
-//    注：kokoro.js 无 HTTP 端点默认，用 kokoro HTTP 服务常用端口作默认。
+//    worker.postMessage 发 {text, voice, speakingRate, requestId}）。Android 无 Worker；与官方不同源——
+//    按需求契约为 POST {endpoint}/tts，JSON {text, voice}（登记不差分，见 HANDOFF 4.4）。
+//    voice 默认 'af_heart'（settings.defaultVoice）。注：kokoro.js 无 HTTP 端点默认，用 kokoro HTTP 服务常用端口作默认。
 class KokoroTtsBackend : TtsBackend {
     override val id = "kokoro"
     override val displayName = "Kokoro"
@@ -378,12 +370,14 @@ class KokoroTtsBackend : TtsBackend {
         withContext(Dispatchers.IO) {
             runCatching {
                 val base = endpoint(context, defaultEndpoint).trimEnd('/')
-                val json = JSONObject()
+                // 与官方不同源（WebWorker vs HTTP），App 简化为 {text, voice} JSON body
+                val body = JSONObject()
                     .put("text", text)
                     .put("voice", voiceId.ifBlank { "af_heart" })
+                    .toString()
                 val request = Request.Builder()
                     .url("$base/tts")
-                    .post(json.toString().toRequestBody(jsonMedia))
+                    .post(body.toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()

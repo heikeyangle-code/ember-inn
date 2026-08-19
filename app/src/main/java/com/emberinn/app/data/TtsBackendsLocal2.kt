@@ -2,10 +2,16 @@ package com.emberinn.app.data
 
 import android.content.Context
 import com.emberinn.app.ui.settings.VoicePrefs
-import java.net.URLEncoder
+import com.emberinn.engine.prompt.TtsRequestEngine
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,12 +19,19 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 /**
- * 第二批本地 TTS 后端：1:1 对照官方 public/scripts/extensions/tts/{后端}.js 的 fetchTtsGeneration
- * 翻译成 Kotlin。共用文件级 OkHttpClient（connect 15s / read 120s）；generateTts 失败统一返回 null。
- * 路由分发由 TtsBackendRegistry（见 TtsBackend.kt）按 provider id 处理。
+ * 第二批本地 TTS 后端：准则 2——引擎层 [TtsRequestEngine] 构造 .js body（差分 38 例），
+ * App 层只做：①构建 settings JsonObject（含官方 defaultSettings + VoicePrefs 覆盖）；
+ * ②调引擎层得 body；③拼 URL + Header + 发请求 + 解析响应。共用文件级 OkHttpClient
+ * （connect 15s / read 120s）；generateTts 失败统一返回 null。路由分发由 TtsBackendRegistry
+ * （见 TtsBackend.kt）按 provider id 处理。
  *
- * 注：sbvits2 / vits 的官方 fetchTtsGeneration 用 URLSearchParams（query string / form-urlencoded），
- * 非 JSON body——此处忠实保留原传输方式（用 URLEncoder 构造），未强行改写成 JSON。
+ * 注：
+ * - sbvits2 / vits 的官方 fetchTtsGeneration 用 URLSearchParams（query string / form-urlencoded），
+ *   非 JSON body——引擎层 [TtsRequestEngine.sbvits2Query] / [TtsRequestEngine.vitsForm] 忠实保留
+ *   原传输方式（formEncode = URLEncoder.encode，与 JS URLSearchParams.toString 一致 space=+）。
+ * - kokoro-worker.js / openai-compatible.js 与官方不同源（WebWorker / ST 代理），登记不差分
+ *   （见 HANDOFF 4.4）；App 自有简化契约。
+ * - 默认端点取各 .js 的官方默认值（defaultSettings / constructor settings.provider_endpoint）。
  */
 
 private val client: OkHttpClient = OkHttpClient.Builder()
@@ -37,10 +50,30 @@ private fun model(context: Context, fallback: String): String =
 
 private fun apiKey(context: Context): String = VoicePrefs.ttsApiKey(context).trim()
 
-private fun enc(v: Any): String = URLEncoder.encode(v.toString(), "UTF-8")
+/** JsonObject → org.json.JSONObject（用于 OkHttp post body；递归一层嵌套对象）。 */
+private fun JsonObject.toOrgJson(): org.json.JSONObject {
+    val out = org.json.JSONObject()
+    for (k in keys) {
+        val v = this[k] ?: continue
+        when {
+            v is JsonObject -> out.put(k, org.json.JSONObject(v.toString()))
+            else -> {
+                val prim = v.jsonPrimitive
+                val s = prim.content
+                when {
+                    s == "true" || s == "false" -> out.put(k, s.toBoolean())
+                    s.toDoubleOrNull() != null -> out.put(k, s.toDouble())
+                    else -> out.put(k, s)
+                }
+            }
+        }
+    }
+    return out
+}
 
 // 1) kokoro-worker — 官方是 WebWorker（kokoro-worker.js，无 fetchTtsGeneration），generateTts 内部
-//    tts.generate(text,{voice,speed})；按需求简化为 POST {endpoint}/tts {text,voice,speaking_rate}。
+//    tts.generate(text,{voice,speed})；与官方不同源——按需求契约为 POST {endpoint}/tts
+//    {text,voice,speaking_rate}（登记不差分，见 HANDOFF 4.4）。
 class KokoroWorkerTtsBackend : TtsBackend {
     override val id = "kokoro-worker"
     override val displayName = "Kokoro (Worker)"
@@ -74,9 +107,8 @@ class KokoroWorkerTtsBackend : TtsBackend {
 }
 
 // 2) sbvits2 — sbvits2.js fetchTtsGeneration：POST {endpoint}/voice?{query}（URLSearchParams，无 body）。
-//    字段：text, model_id, speaker_id, sdp_ratio, noise, noisew, length, language, auto_split,
-//    split_interval, [assist_text, assist_text_weight], style, style_weight, [reference_audio_path]。
-//    voiceId 格式 model_id-speaker_id-style → split('-')。
+//    query 由引擎层 [TtsRequestEngine.sbvits2Query] 构造。voiceId 格式 model_id-speaker_id-style
+//    → split('-')，缺位为 "undefined"（对齐 JS 解构）。官方默认值（defaultSettings）传 settings。
 class SbVits2TtsBackend : TtsBackend {
     override val id = "sbvits2"
     override val displayName = "Style-Bert-VITS2"
@@ -87,49 +119,25 @@ class SbVits2TtsBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                // 官方：inputText.replaceAll('<br>', '\n')
-                val inputText = text.replace("<br>", "\n")
-                // 官方：const [model_id, speaker_id, ...rest] = voiceId.split('-'); style = rest.join('-')
-                val parts = voiceId.split("-")
-                val modelId = parts.getOrElse(0) { "0" }
-                val speakerId = parts.getOrElse(1) { "0" }
-                val style = if (parts.size > 2) parts.drop(2).joinToString("-") else "Neutral"
-                // 官方默认值（defaultSettings）
-                val sdpRatio = 0.2
-                val noise = 0.6
-                val noisew = 0.8
-                val length = 1
-                val language = "JP"
-                val autoSplit = true
-                val splitInterval = 0.5
-                val styleWeight = 1
-                val assistText = ""
-                val referenceAudioPath = ""
-
-                val params = mutableListOf<Pair<String, Any>>()
-                params += "text" to inputText
-                params += "model_id" to modelId
-                params += "speaker_id" to speakerId
-                params += "sdp_ratio" to sdpRatio
-                params += "noise" to noise
-                params += "noisew" to noisew
-                params += "length" to length
-                params += "language" to language
-                params += "auto_split" to autoSplit
-                params += "split_interval" to splitInterval
-                if (assistText.isNotEmpty()) {
-                    params += "assist_text" to assistText
-                    params += "assist_text_weight" to 1
+                val base = endpoint(context, defaultEndpoint).trimEnd('/')
+                // 官方 defaultSettings
+                val settings = buildJsonObject {
+                    put("sdp_ratio", JsonPrimitive(0.2))
+                    put("noise", JsonPrimitive(0.6))
+                    put("noisew", JsonPrimitive(0.8))
+                    put("length", JsonPrimitive(1))
+                    put("language", JsonPrimitive("JP"))
+                    put("auto_split", JsonPrimitive(true))
+                    put("split_interval", JsonPrimitive(0.5))
+                    put("style_weight", JsonPrimitive(1))
+                    put("assist_text", JsonPrimitive(""))
+                    put("reference_audio_path", JsonPrimitive(""))
                 }
-                params += "style" to style
-                params += "style_weight" to styleWeight
-                if (referenceAudioPath.isNotEmpty()) {
-                    params += "reference_audio_path" to referenceAudioPath
-                }
-                val query = params.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
+                val query = TtsRequestEngine.sbvits2Query(settings, text, voiceId)
+                    .jsonObject["query"]!!.jsonPrimitive.content
                 // 官方：fetch(url, {method:'POST', headers:{}}) — 无 body
                 val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/voice?" + query)
+                    .url("$base/voice?$query")
                     .post("".toRequestBody())
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
@@ -139,6 +147,7 @@ class SbVits2TtsBackend : TtsBackend {
 
 // 3) silerotts — silerotts.js fetchTtsGeneration：POST {endpoint}/generate，JSON
 //    {text, speaker: voiceId, session: 'sillytavern'}，Content-Type application/json + Cache-Control no-cache。
+//    body 由引擎层 [TtsRequestEngine.sileroBody] 构造（无 settings 依赖）。
 //    注：官方默认 endpoint = http://localhost:8001/tts（含 /tts），故完整 URL = .../tts/generate。
 class SileroTtsBackend : TtsBackend {
     override val id = "silerotts"
@@ -158,14 +167,11 @@ class SileroTtsBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                val body = JSONObject()
-                    .put("text", text)
-                    .put("speaker", voiceId)
-                    .put("session", "sillytavern")
-                    .toString()
+                val base = endpoint(context, defaultEndpoint).trimEnd('/')
+                val body = TtsRequestEngine.sileroBody(text, voiceId)
                 val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/generate")
-                    .post(body.toRequestBody(jsonMedia))
+                    .url("$base/generate")
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .header("Cache-Control", "no-cache")
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
@@ -174,9 +180,10 @@ class SileroTtsBackend : TtsBackend {
 }
 
 // 4) speecht5 — speecht5.js fetchTtsGeneration：官方走 ST 内部代理 /api/speech/synthesize，
-//    body {text, speaker: speaker.data, model: 'Xenova/speecht5_tts'}。speaker 字段实为 2048 字节说话人
-//    嵌入（base64），无内置默认 speaker；此处用 voiceId 作 speaker，model 取官方默认（可被 VoicePrefs.ttsModel 覆盖）。
-//    按需求独立部署采用 {endpoint}/tts 路径（官方 /api/speech/synthesize 仅 ST 服务端可用）。
+//    body {text, speaker: speaker.data, model: 'Xenova/speecht5_tts'}（model 官方硬编码，引擎层忠实保留）。
+//    speaker 字段实为 2048 字节说话人嵌入（base64），无内置默认 speaker；App 用 voiceId 作 speaker
+//    （值源不同但 body 字段集合一致，引擎层打桩）。按需求独立部署采用 {endpoint}/tts 路径
+//    （官方 /api/speech/synthesize 仅 ST 服务端可用）。
 class SpeechT5TtsBackend : TtsBackend {
     override val id = "speecht5"
     override val displayName = "SpeechT5"
@@ -192,14 +199,11 @@ class SpeechT5TtsBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                val body = JSONObject()
-                    .put("text", text)
-                    .put("speaker", voiceId)
-                    .put("model", model(context, "Xenova/speecht5_tts"))
-                    .toString()
+                val base = endpoint(context, defaultEndpoint).trimEnd('/')
+                val body = TtsRequestEngine.speechT5Body(text, voiceId)
                 val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/tts")
-                    .post(body.toRequestBody(jsonMedia))
+                    .url("$base/tts")
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -208,6 +212,8 @@ class SpeechT5TtsBackend : TtsBackend {
 
 // 5) tts-webui — tts-webui.js fetchTtsGeneration：直接 POST 到 settings.provider_endpoint（完整 URL），
 //    JSON {model, voice, input, response_format:'wav', speed, stream, params:{...chatterbox...}}。
+//    body 由引擎层 [TtsRequestEngine.ttsWebuiBody] 构造：从 settings 过滤 chatterboxParamKeys 16 项
+//    作为 params 子对象；speed 取 settings.speed，stream 取 settings.streaming。
 //    官方默认 endpoint = http://127.0.0.1:7778/v1/audio/speech。stream=false 返回完整音频字节。
 class TtsWebuiTtsBackend : TtsBackend {
     override val id = "tts-webui"
@@ -216,40 +222,36 @@ class TtsWebuiTtsBackend : TtsBackend {
 
     override suspend fun getVoices(context: Context): List<TtsVoice> = emptyList()
 
-    /** 官方 chatterbox 参数子对象（defaultSettings）。 */
-    private fun chatterboxParams(): JSONObject = JSONObject()
-        .put("desired_length", 80)
-        .put("max_length", 200)
-        .put("halve_first_chunk", true)
-        .put("exaggeration", 0.5)
-        .put("cfg_weight", 0.5)
-        .put("temperature", 0.8)
-        .put("device", "auto")
-        .put("dtype", "float32")
-        .put("cpu_offload", false)
-        .put("chunked", true)
-        .put("cache_voice", false)
-        .put("tokens_per_slice", 1000)
-        .put("remove_milliseconds", 45)
-        .put("remove_milliseconds_start", 25)
-        .put("chunk_overlap_method", "zero")
-        .put("seed", -1)
-
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                val body = JSONObject()
-                    .put("model", model(context, "chatterbox"))
-                    .put("voice", voiceId)
-                    .put("input", text)
-                    .put("response_format", "wav")
-                    .put("speed", 1)
-                    .put("stream", false)
-                    .put("params", chatterboxParams())
-                    .toString()
+                // 官方 defaultSettings（chatterbox 子对象 16 字段 + 顶层 model/speed/streaming）
+                val settings = buildJsonObject {
+                    put("model", JsonPrimitive(model(context, "chatterbox")))
+                    put("speed", JsonPrimitive(1))
+                    put("streaming", JsonPrimitive(false))
+                    // chatterbox 参数子对象（官方 defaultSettings 全字段）
+                    put("desired_length", JsonPrimitive(80))
+                    put("max_length", JsonPrimitive(200))
+                    put("halve_first_chunk", JsonPrimitive(true))
+                    put("exaggeration", JsonPrimitive(0.5))
+                    put("cfg_weight", JsonPrimitive(0.5))
+                    put("temperature", JsonPrimitive(0.8))
+                    put("device", JsonPrimitive("auto"))
+                    put("dtype", JsonPrimitive("float32"))
+                    put("cpu_offload", JsonPrimitive(false))
+                    put("chunked", JsonPrimitive(true))
+                    put("cache_voice", JsonPrimitive(false))
+                    put("tokens_per_slice", JsonPrimitive(1000))
+                    put("remove_milliseconds", JsonPrimitive(45))
+                    put("remove_milliseconds_start", JsonPrimitive(25))
+                    put("chunk_overlap_method", JsonPrimitive("zero"))
+                    put("seed", JsonPrimitive(-1))
+                }
+                val body = TtsRequestEngine.ttsWebuiBody(settings, text, voiceId)
                 val request = Request.Builder()
                     .url(endpoint(context, defaultEndpoint))
-                    .post(body.toRequestBody(jsonMedia))
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -259,6 +261,7 @@ class TtsWebuiTtsBackend : TtsBackend {
 // 6) vits — vits.js fetchTtsGeneration：POST {endpoint}/voice/{model_type 小写}，
 //    Content-Type application/x-www-form-urlencoded，body = URLSearchParams（text, id=speaker_id, format,
 //    lang, length, noise, noisew, segment_size + W2V2/BERT-VITS2 条件字段）。voiceId 格式 model_type&id。
+//    form 由引擎层 [TtsRequestEngine.vitsForm] 构造（forceNoStreaming=true 锁非流式分支，对齐 App 用法）。
 class VitsTtsBackend : TtsBackend {
     override val id = "vits"
     override val displayName = "VITS"
@@ -269,51 +272,28 @@ class VitsTtsBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                // 官方：const [model_type, speaker_id] = voiceId.split('&');
-                val amp = voiceId.split("&", limit = 2)
-                val modelType = if (amp.size == 2) amp[0] else "VITS"
-                val speakerId = if (amp.size == 2) amp[1] else voiceId
-                // 官方默认值（defaultSettings）
-                val format = "wav"
-                val lang = "auto"
-                val length = 1.0
-                val noise = 0.33
-                val noisew = 0.4
-                val segmentSize = 50
-                val dimEmotion = 0
-                val sdpRatio = 0.2
-                val emotion = 0
-                val textPrompt = ""
-                val styleText = ""
-                val styleWeight = 1
-
-                val params = mutableListOf<Pair<String, Any>>()
-                params += "text" to text
-                params += "id" to speakerId
-                // streaming=false → 走 format 分支
-                params += "format" to format
-                params += "lang" to lang
-                params += "length" to length
-                params += "noise" to noise
-                params += "noisew" to noisew
-                params += "segment_size" to segmentSize
-                // 官方：model_type 分支
-                when (modelType) {
-                    "W2V2-VITS" -> params += "emotion" to dimEmotion
-                    "BERT-VITS2" -> {
-                        params += "sdp_ratio" to sdpRatio
-                        params += "emotion" to emotion
-                        if (textPrompt.isNotEmpty()) params += "text_prompt" to textPrompt
-                        if (styleText.isNotEmpty()) {
-                            params += "style_text" to styleText
-                            params += "style_weight" to styleWeight
-                        }
-                    }
+                val base = endpoint(context, defaultEndpoint).trimEnd('/')
+                // 官方 defaultSettings
+                val settings = buildJsonObject {
+                    put("format", JsonPrimitive("wav"))
+                    put("lang", JsonPrimitive("auto"))
+                    put("length", JsonPrimitive(1.0))
+                    put("noise", JsonPrimitive(0.33))
+                    put("noisew", JsonPrimitive(0.4))
+                    put("segment_size", JsonPrimitive(50))
+                    put("dim_emotion", JsonPrimitive(0))
+                    put("sdp_ratio", JsonPrimitive(0.2))
+                    put("emotion", JsonPrimitive(0))
+                    put("text_prompt", JsonPrimitive(""))
+                    put("style_text", JsonPrimitive(""))
+                    put("style_weight", JsonPrimitive(1))
                 }
-                val formBody = params.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
+                val form = TtsRequestEngine.vitsForm(settings, text, voiceId, forceNoStreaming = true)
+                val formStr = form.jsonObject["form"]!!.jsonPrimitive.content
+                val modelType = form.jsonObject["model_type"]!!.jsonPrimitive.content
                 val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/voice/" + modelType.lowercase())
-                    .post(formBody.toRequestBody(formMedia))
+                    .url("$base/voice/$modelType")
+                    .post(formStr.toRequestBody(formMedia))
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
             }.getOrNull()
@@ -322,7 +302,9 @@ class VitsTtsBackend : TtsBackend {
 
 // 7) xtts — xtts.js fetchTtsGeneration（非流式）：POST {endpoint}/tts_to_audio/，JSON
 //    {text, speaker_wav: voiceId, language}，Content-Type application/json + Cache-Control no-cache。
-//    注：speed/temperature 在官方走单独的 /set_tts_settings 调用，不在 fetchTtsGeneration 请求体内。
+//    body 由引擎层 [TtsRequestEngine.xttsBody] 构造。
+//    注：speed/temperature 在官方走单独的 /set_tts_settings 调用，不在 fetchTtsGeneration 请求体内；
+//    processText 在 fetchTtsGeneration 不调用（死代码），引擎层与 App 均不调用。
 class XttsTtsBackend : TtsBackend {
     override val id = "xtts"
     override val displayName = "XTTS"
@@ -333,19 +315,14 @@ class XttsTtsBackend : TtsBackend {
     override suspend fun generateTts(context: Context, text: String, voiceId: String): ByteArray? =
         withContext(Dispatchers.IO) {
             runCatching {
-                // 官方 processText：省略号/引号/多点规整
-                val inputText = text
-                    .replace("…", "...")
-                    .replace(Regex("[\"“”‘’]"), "")
-                    .replace(Regex("\\.+"), ".")
-                val body = JSONObject()
-                    .put("text", inputText)
-                    .put("speaker_wav", voiceId)
-                    .put("language", "en")
-                    .toString()
+                val base = endpoint(context, defaultEndpoint).trimEnd('/')
+                val settings = buildJsonObject {
+                    put("language", JsonPrimitive("en"))
+                }
+                val body = TtsRequestEngine.xttsBody(settings, text, voiceId)
                 val request = Request.Builder()
-                    .url(endpoint(context, defaultEndpoint).trimEnd('/') + "/tts_to_audio/")
-                    .post(body.toRequestBody(jsonMedia))
+                    .url("$base/tts_to_audio/")
+                    .post(body.toString().toRequestBody(jsonMedia))
                     .header("Cache-Control", "no-cache")
                     .build()
                 client.newCall(request).execute().use { it.body?.bytes() }
@@ -357,6 +334,7 @@ class XttsTtsBackend : TtsBackend {
 //    /api/openai/custom/generate-voice，body {provider_endpoint, model, input, voice, response_format:'mp3', speed}。
 //    独立部署直接 POST 到 provider_endpoint（OpenAI 兼容 /v1/audio/speech 全 URL），body {model, input, voice,
 //    response_format, speed}；available_voices 官方硬编码 ['alloy','echo','fable','onyx','nova','shimmer']。
+//    与官方不同源（ST 代理 vs 直连厂商），登记不差分（见 HANDOFF 4.4）。
 class OpenAiCompatibleTtsBackend : TtsBackend {
     override val id = "openai-compatible"
     override val displayName = "OpenAI Compatible"

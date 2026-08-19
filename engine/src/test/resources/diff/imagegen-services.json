@@ -1,0 +1,911 @@
+{
+  "cases": [
+    {
+      "id": "001-together-defaults",
+      "kind": "together",
+      "args": {
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "model": "flux.1",
+        "steps": 4,
+        "width": 1024,
+        "height": 1024,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "height": 1024,
+        "width": 1024,
+        "model": "flux.1",
+        "steps": 4,
+        "n": 1,
+        "seed": 0
+      }
+    },
+    {
+      "id": "002-together-seed-positive",
+      "kind": "together",
+      "args": {
+        "prompt": "portrait",
+        "negativePrompt": "lowres",
+        "model": "flux.1-schnell",
+        "steps": 8,
+        "width": 768,
+        "height": 1024,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "portrait",
+        "negative_prompt": "lowres",
+        "height": 1024,
+        "width": 768,
+        "model": "flux.1-schnell",
+        "steps": 8,
+        "n": 1,
+        "seed": 42
+      }
+    },
+    {
+      "id": "003-together-seed-zero",
+      "kind": "together",
+      "args": {
+        "prompt": "x",
+        "negativePrompt": "",
+        "model": "m",
+        "steps": 1,
+        "width": 512,
+        "height": 512,
+        "seed": 0
+      },
+      "expected": {
+        "prompt": "x",
+        "negative_prompt": "",
+        "height": 512,
+        "width": 512,
+        "model": "m",
+        "steps": 1,
+        "n": 1,
+        "seed": 0
+      }
+    },
+    {
+      "id": "004-pollinations-defaults",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "model": "flux",
+        "seed": -1,
+        "enhance": false
+      },
+      "expected": "https://gen.pollinations.ai/image/a%20cat?model=flux&negative_prompt=blurry&seed=0&width=1024&height=1024"
+    },
+    {
+      "id": "005-pollinations-seed-positive",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "portrait",
+        "negativePrompt": "lowres",
+        "model": "flux-realism",
+        "seed": 7,
+        "width": 1024,
+        "height": 1024,
+        "enhance": false
+      },
+      "expected": "https://gen.pollinations.ai/image/portrait?model=flux-realism&negative_prompt=lowres&seed=7&width=1024&height=1024"
+    },
+    {
+      "id": "006-pollinations-space-in-prompt",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "a cat and dog",
+        "negativePrompt": "",
+        "model": "flux",
+        "seed": -1,
+        "width": 512,
+        "height": 512,
+        "enhance": false
+      },
+      "expected": "https://gen.pollinations.ai/image/a%20cat%20and%20dog?model=flux&negative_prompt=&seed=0&width=512&height=512"
+    },
+    {
+      "id": "007-pollinations-special-chars",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "hello!*'()",
+        "negativePrompt": "",
+        "model": "m",
+        "seed": 0,
+        "width": 512,
+        "height": 512,
+        "enhance": false
+      },
+      "expected": "https://gen.pollinations.ai/image/hello!*'()?model=m&negative_prompt=&seed=0&width=512&height=512"
+    },
+    {
+      "id": "008-pollinations-enhance-true",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "x",
+        "negativePrompt": "",
+        "model": "m",
+        "seed": 1,
+        "width": 512,
+        "height": 512,
+        "enhance": true
+      },
+      "expected": "https://gen.pollinations.ai/image/x?model=m&negative_prompt=&seed=1&width=512&height=512&enhance=true"
+    },
+    {
+      "id": "009-pollinations-unicode",
+      "kind": "pollinations",
+      "args": {
+        "prompt": "猫娘",
+        "negativePrompt": "犬",
+        "model": "flux",
+        "seed": -1,
+        "width": 1024,
+        "height": 1024,
+        "enhance": false
+      },
+      "expected": "https://gen.pollinations.ai/image/%E7%8C%AB%E5%A8%98?model=flux&negative_prompt=%E7%8A%AC&seed=0&width=1024&height=1024"
+    },
+    {
+      "id": "010-chutes-defaults",
+      "kind": "chutes",
+      "args": {
+        "model": "flux",
+        "prompt": "a cat",
+        "negativePrompt": "blurry"
+      },
+      "expected": {
+        "model": "flux",
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "guidance_scale": 7,
+        "width": 1024,
+        "height": 1024,
+        "num_inference_steps": 10
+      }
+    },
+    {
+      "id": "011-chutes-zero-fallback",
+      "kind": "chutes",
+      "args": {
+        "model": "flux",
+        "prompt": "x",
+        "negativePrompt": "",
+        "guidanceScale": 0,
+        "width": 0,
+        "height": 0,
+        "steps": 0
+      },
+      "expected": {
+        "model": "flux",
+        "prompt": "x",
+        "negative_prompt": "",
+        "guidance_scale": 7,
+        "width": 1024,
+        "height": 1024,
+        "num_inference_steps": 10
+      }
+    },
+    {
+      "id": "012-chutes-explicit-values",
+      "kind": "chutes",
+      "args": {
+        "model": "flux.1",
+        "prompt": "portrait",
+        "negativePrompt": "lowres",
+        "guidanceScale": 9.5,
+        "width": 768,
+        "height": 1024,
+        "steps": 20
+      },
+      "expected": {
+        "model": "flux.1",
+        "prompt": "portrait",
+        "negative_prompt": "lowres",
+        "guidance_scale": 9.5,
+        "width": 768,
+        "height": 1024,
+        "num_inference_steps": 20
+      }
+    },
+    {
+      "id": "013-stability-ultra-defaults",
+      "kind": "stability",
+      "args": {
+        "model": "stable-image-ultra",
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "width": 1024,
+        "height": 1024,
+        "seed": -1
+      },
+      "expected": {
+        "model": "stable-image-ultra",
+        "payload": {
+          "prompt": "a cat",
+          "negative_prompt": "blurry",
+          "aspect_ratio": "1:1",
+          "output_format": "png"
+        }
+      }
+    },
+    {
+      "id": "014-stability-core-with-seed",
+      "kind": "stability",
+      "args": {
+        "model": "stable-image-core",
+        "prompt": "portrait",
+        "negativePrompt": "lowres",
+        "width": 768,
+        "height": 1024,
+        "seed": 42
+      },
+      "expected": {
+        "model": "stable-image-core",
+        "payload": {
+          "prompt": "portrait",
+          "negative_prompt": "lowres",
+          "aspect_ratio": "4:5",
+          "seed": 42,
+          "output_format": "png"
+        }
+      }
+    },
+    {
+      "id": "015-stability-sd3-with-style",
+      "kind": "stability",
+      "args": {
+        "model": "stable-diffusion-3",
+        "prompt": "x",
+        "negativePrompt": "",
+        "width": 512,
+        "height": 512,
+        "seed": 0,
+        "stylePreset": "cinematic"
+      },
+      "expected": {
+        "model": "stable-diffusion-3",
+        "payload": {
+          "prompt": "x",
+          "negative_prompt": "",
+          "aspect_ratio": "1:1",
+          "seed": 0,
+          "style_preset": "cinematic",
+          "output_format": "png"
+        }
+      }
+    },
+    {
+      "id": "016-stability-aspect-16-9",
+      "kind": "stability",
+      "args": {
+        "model": "stable-image-ultra",
+        "prompt": "wide",
+        "negativePrompt": "",
+        "width": 1920,
+        "height": 1080,
+        "seed": -1
+      },
+      "expected": {
+        "model": "stable-image-ultra",
+        "payload": {
+          "prompt": "wide",
+          "negative_prompt": "",
+          "aspect_ratio": "16:9",
+          "output_format": "png"
+        }
+      }
+    },
+    {
+      "id": "017-aimlapi-flux-sdlike",
+      "kind": "aimlapi",
+      "args": {
+        "prompt": "a cat",
+        "model": "flux/1.1",
+        "steps": 4,
+        "scale": 3,
+        "width": 1024,
+        "height": 1024,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "a cat",
+        "model": "flux/1.1",
+        "steps": 4,
+        "guidance": 3,
+        "width": 1024,
+        "height": 1024
+      }
+    },
+    {
+      "id": "018-aimlapi-stable-prefix",
+      "kind": "aimlapi",
+      "args": {
+        "prompt": "x",
+        "model": "stable-diffusion-3",
+        "steps": 30,
+        "scale": 7,
+        "width": 768,
+        "height": 768,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "x",
+        "model": "stable-diffusion-3",
+        "steps": 30,
+        "guidance": 5,
+        "width": 768,
+        "height": 768,
+        "seed": 42
+      }
+    },
+    {
+      "id": "019-aimlapi-recraft-v3",
+      "kind": "aimlapi",
+      "args": {
+        "prompt": "y",
+        "model": "recraft-v3",
+        "steps": 25,
+        "scale": 5,
+        "width": 1024,
+        "height": 1024,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "y",
+        "model": "recraft-v3",
+        "steps": 25,
+        "guidance": 5,
+        "width": 1024,
+        "height": 1024
+      }
+    },
+    {
+      "id": "020-aimlapi-openai-like",
+      "kind": "aimlapi",
+      "args": {
+        "prompt": "z",
+        "model": "gpt-image-1",
+        "steps": 0,
+        "scale": 0,
+        "width": 1024,
+        "height": 1024,
+        "seed": -1,
+        "openaiQuality": "hd",
+        "openaiStyle": "vivid"
+      },
+      "expected": {
+        "prompt": "z",
+        "model": "gpt-image-1",
+        "n": 1,
+        "size": "1024x1024",
+        "quality": "hd",
+        "style": "vivid"
+      }
+    },
+    {
+      "id": "021-aimlapi-clamp-bounds",
+      "kind": "aimlapi",
+      "args": {
+        "prompt": "clamp",
+        "model": "flux/1",
+        "steps": 100,
+        "scale": 10,
+        "width": 10,
+        "height": 9999,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "clamp",
+        "model": "flux/1",
+        "steps": 50,
+        "guidance": 5,
+        "width": 256,
+        "height": 1440
+      }
+    },
+    {
+      "id": "022-getclosestsize-empty-sizes",
+      "kind": "getclosestsize",
+      "args": {
+        "width": 1024,
+        "height": 1024,
+        "sizes": []
+      },
+      "expected": {
+        "result": null
+      }
+    },
+    {
+      "id": "023-getclosestsize-single-match",
+      "kind": "getclosestsize",
+      "args": {
+        "width": 1024,
+        "height": 1024,
+        "sizes": [
+          "1024x1024"
+        ]
+      },
+      "expected": {
+        "result": "1024x1024"
+      }
+    },
+    {
+      "id": "024-getclosestsize-pick-closest",
+      "kind": "getclosestsize",
+      "args": {
+        "width": 1024,
+        "height": 1024,
+        "sizes": [
+          "512x512",
+          "1024x1024",
+          "2048x2048"
+        ]
+      },
+      "expected": {
+        "result": "1024x1024"
+      }
+    },
+    {
+      "id": "025-getclosestsize-aspect-priority",
+      "kind": "getclosestsize",
+      "args": {
+        "width": 768,
+        "height": 1024,
+        "sizes": [
+          "512x512",
+          "768x1024",
+          "1024x768"
+        ]
+      },
+      "expected": {
+        "result": "768x1024"
+      }
+    },
+    {
+      "id": "026-electronhub-with-size",
+      "kind": "electronhub",
+      "args": {
+        "model": "flux-1",
+        "prompt": "a cat",
+        "size": "1024x1024",
+        "quality": ""
+      },
+      "expected": {
+        "model": "flux-1",
+        "prompt": "a cat",
+        "response_format": "b64_json",
+        "size": "1024x1024"
+      }
+    },
+    {
+      "id": "027-electronhub-null-size",
+      "kind": "electronhub",
+      "args": {
+        "model": "m",
+        "prompt": "x",
+        "size": null,
+        "quality": ""
+      },
+      "expected": {
+        "model": "m",
+        "prompt": "x",
+        "response_format": "b64_json"
+      }
+    },
+    {
+      "id": "028-electronhub-with-quality",
+      "kind": "electronhub",
+      "args": {
+        "model": "m",
+        "prompt": "y",
+        "size": "768x768",
+        "quality": "hd"
+      },
+      "expected": {
+        "model": "m",
+        "prompt": "y",
+        "response_format": "b64_json",
+        "size": "768x768",
+        "quality": "hd"
+      }
+    },
+    {
+      "id": "029-nanogpt-defaults",
+      "kind": "nanogpt",
+      "args": {
+        "model": "dall-e-3",
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "steps": 4,
+        "scale": 3,
+        "width": 1024,
+        "height": 1024
+      },
+      "expected": {
+        "model": "dall-e-3",
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "num_steps": 4,
+        "scale": 3,
+        "width": 1024,
+        "height": 1024,
+        "resolution": "1024x1024",
+        "showExplicitContent": true,
+        "nImages": 1
+      }
+    },
+    {
+      "id": "030-nanogpt-parseInt-semantics",
+      "kind": "nanogpt",
+      "args": {
+        "model": "m",
+        "prompt": "x",
+        "negativePrompt": "",
+        "steps": 4.5,
+        "scale": 3.5,
+        "width": 512.7,
+        "height": 512.2
+      },
+      "expected": {
+        "model": "m",
+        "prompt": "x",
+        "negative_prompt": "",
+        "num_steps": 4,
+        "scale": 3.5,
+        "width": 512,
+        "height": 512,
+        "resolution": "512.7x512.2",
+        "showExplicitContent": true,
+        "nImages": 1
+      }
+    },
+    {
+      "id": "031-nanogpt-unicode",
+      "kind": "nanogpt",
+      "args": {
+        "model": "flux",
+        "prompt": "猫娘",
+        "negativePrompt": "犬",
+        "steps": 20,
+        "scale": 7,
+        "width": 768,
+        "height": 1024
+      },
+      "expected": {
+        "model": "flux",
+        "prompt": "猫娘",
+        "negative_prompt": "犬",
+        "num_steps": 20,
+        "scale": 7,
+        "width": 768,
+        "height": 1024,
+        "resolution": "768x1024",
+        "showExplicitContent": true,
+        "nImages": 1
+      }
+    },
+    {
+      "id": "032-bfl-defaults",
+      "kind": "bfl",
+      "args": {
+        "model": "flux-pro",
+        "prompt": "a cat",
+        "steps": 30,
+        "scale": 3,
+        "width": 1024,
+        "height": 1024,
+        "promptUpsampling": false,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "a cat",
+        "steps": 30,
+        "guidance": 3,
+        "width": 1024,
+        "height": 1024,
+        "prompt_upsampling": false,
+        "seed": 42,
+        "safety_tolerance": 6,
+        "output_format": "jpeg"
+      }
+    },
+    {
+      "id": "033-bfl-ultra-deletes-fields",
+      "kind": "bfl",
+      "args": {
+        "model": "flux-1.1-ultra",
+        "prompt": "wide",
+        "steps": 30,
+        "scale": 3,
+        "width": 1920,
+        "height": 1080,
+        "promptUpsampling": true,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "wide",
+        "seed": -1,
+        "safety_tolerance": 6,
+        "output_format": "jpeg",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "034-bfl-pro-1.1-deletes-steps-guidance",
+      "kind": "bfl",
+      "args": {
+        "model": "flux-pro-1.1",
+        "prompt": "x",
+        "steps": 30,
+        "scale": 3,
+        "width": 1024,
+        "height": 1024,
+        "promptUpsampling": true,
+        "seed": 0
+      },
+      "expected": {
+        "prompt": "x",
+        "width": 1024,
+        "height": 1024,
+        "prompt_upsampling": true,
+        "seed": 0,
+        "safety_tolerance": 6,
+        "output_format": "jpeg"
+      }
+    },
+    {
+      "id": "035-bfl-seed-null",
+      "kind": "bfl",
+      "args": {
+        "model": "flux-pro",
+        "prompt": "y",
+        "steps": 20,
+        "scale": 4,
+        "width": 768,
+        "height": 1024,
+        "promptUpsampling": false,
+        "seed": null
+      },
+      "expected": {
+        "prompt": "y",
+        "steps": 20,
+        "guidance": 4,
+        "width": 768,
+        "height": 1024,
+        "prompt_upsampling": false,
+        "seed": null,
+        "safety_tolerance": 6,
+        "output_format": "jpeg"
+      }
+    },
+    {
+      "id": "036-bfl-clamp-bounds",
+      "kind": "bfl",
+      "args": {
+        "model": "flux-pro",
+        "prompt": "clamp",
+        "steps": 100,
+        "scale": 10,
+        "width": 10,
+        "height": 9999,
+        "promptUpsampling": false,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "clamp",
+        "steps": 50,
+        "guidance": 5,
+        "width": 256,
+        "height": 1440,
+        "prompt_upsampling": false,
+        "seed": 42,
+        "safety_tolerance": 6,
+        "output_format": "jpeg"
+      }
+    },
+    {
+      "id": "037-xai-non-grok-no-aspect",
+      "kind": "xai",
+      "args": {
+        "prompt": "a cat",
+        "model": "grok-2-vision"
+      },
+      "expected": {
+        "prompt": "a cat",
+        "model": "grok-2-vision",
+        "response_format": "b64_json"
+      }
+    },
+    {
+      "id": "038-xai-grok-imagine-1k",
+      "kind": "xai",
+      "args": {
+        "prompt": "wide",
+        "model": "grok-imagine-image",
+        "aspectRatio": "16:9",
+        "resolution": "1k"
+      },
+      "expected": {
+        "prompt": "wide",
+        "model": "grok-imagine-image",
+        "aspect_ratio": "16:9",
+        "resolution": "1k",
+        "response_format": "b64_json"
+      }
+    },
+    {
+      "id": "039-xai-grok-imagine-2k",
+      "kind": "xai",
+      "args": {
+        "prompt": "huge",
+        "model": "grok-imagine-image-pro",
+        "aspectRatio": "1:1",
+        "resolution": "2k"
+      },
+      "expected": {
+        "prompt": "huge",
+        "model": "grok-imagine-image-pro",
+        "aspect_ratio": "1:1",
+        "resolution": "2k",
+        "response_format": "b64_json"
+      }
+    },
+    {
+      "id": "040-extras-defaults",
+      "kind": "extras",
+      "args": {
+        "prompt": "a cat",
+        "negativePrompt": "blurry",
+        "sampler": "DDIM",
+        "steps": 20,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "restoreFaces": false,
+        "enableHr": false,
+        "hordeKarras": false,
+        "hrUpscaler": "Latent",
+        "hrScale": 1,
+        "denoisingStrength": 0.7,
+        "hrSecondPassSteps": 0,
+        "seed": -1
+      },
+      "expected": {
+        "prompt": "a cat",
+        "sampler": "DDIM",
+        "steps": 20,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "negative_prompt": "blurry",
+        "restore_faces": false,
+        "enable_hr": false,
+        "karras": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0
+      }
+    },
+    {
+      "id": "041-extras-seed-positive",
+      "kind": "extras",
+      "args": {
+        "prompt": "portrait",
+        "negativePrompt": "lowres",
+        "sampler": "Euler a",
+        "steps": 30,
+        "scale": 5.5,
+        "width": 768,
+        "height": 1024,
+        "restoreFaces": true,
+        "enableHr": false,
+        "hordeKarras": false,
+        "hrUpscaler": "Latent",
+        "hrScale": 1,
+        "denoisingStrength": 0.7,
+        "hrSecondPassSteps": 0,
+        "seed": 42
+      },
+      "expected": {
+        "prompt": "portrait",
+        "sampler": "Euler a",
+        "steps": 30,
+        "scale": 5.5,
+        "width": 768,
+        "height": 1024,
+        "negative_prompt": "lowres",
+        "restore_faces": true,
+        "enable_hr": false,
+        "karras": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "seed": 42
+      }
+    },
+    {
+      "id": "042-extras-hr-enabled",
+      "kind": "extras",
+      "args": {
+        "prompt": "x",
+        "negativePrompt": "",
+        "sampler": "DPM++ 2M",
+        "steps": 25,
+        "scale": 6,
+        "width": 1024,
+        "height": 1024,
+        "restoreFaces": true,
+        "enableHr": true,
+        "hordeKarras": true,
+        "hrUpscaler": "4x-UltraSharp",
+        "hrScale": 2,
+        "denoisingStrength": 0.5,
+        "hrSecondPassSteps": 10,
+        "seed": 0
+      },
+      "expected": {
+        "prompt": "x",
+        "sampler": "DPM++ 2M",
+        "steps": 25,
+        "scale": 6,
+        "width": 1024,
+        "height": 1024,
+        "negative_prompt": "",
+        "restore_faces": true,
+        "enable_hr": true,
+        "karras": true,
+        "hr_upscaler": "4x-UltraSharp",
+        "hr_scale": 2,
+        "denoising_strength": 0.5,
+        "hr_second_pass_steps": 10,
+        "seed": 0
+      }
+    },
+    {
+      "id": "043-extras-seed-zero",
+      "kind": "extras",
+      "args": {
+        "prompt": "y",
+        "negativePrompt": "",
+        "sampler": "DDIM",
+        "steps": 10,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "restoreFaces": false,
+        "enableHr": false,
+        "hordeKarras": false,
+        "hrUpscaler": "Latent",
+        "hrScale": 1,
+        "denoisingStrength": 0.7,
+        "hrSecondPassSteps": 0,
+        "seed": 0
+      },
+      "expected": {
+        "prompt": "y",
+        "sampler": "DDIM",
+        "steps": 10,
+        "scale": 7,
+        "width": 512,
+        "height": 512,
+        "negative_prompt": "",
+        "restore_faces": false,
+        "enable_hr": false,
+        "karras": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "seed": 0
+      }
+    }
+  ]
+}

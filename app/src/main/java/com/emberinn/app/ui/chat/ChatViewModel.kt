@@ -135,7 +135,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val translateClient = TranslateClient()
     private val imageGenClient = ImageGenClient()
     private val vectorRag = VectorRagService(application)
-    private val slashExecutor = AppSlashExecutor(this)
+    private val slashExecutor = AppSlashExecutor(this, getApplication())
     private val autoExecuteHandler = AutoExecuteHandler()
 
     private val _messages = MutableStateFlow(chatStore.messages(sessionId))

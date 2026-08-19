@@ -70,13 +70,31 @@ private val TARGET_LANGUAGES = listOf(
 
 // 官方 stable-diffusion/index.js 的 sources（取主流自托管 / 云来源）
 private val IMAGE_SOURCES = listOf(
-    DropdownOption("auto", "AUTOMATIC1111"),
-    DropdownOption("sdcpp", "SDCPP（本地 /sdapi/v1/txt2img）"),
-    DropdownOption("novel", "NovelAI"),
-    DropdownOption("openai", "OpenAI · gpt-image"),
-    DropdownOption("huggingface", "Hugging Face Inference"),
-    DropdownOption("horde", "Stable Horde"),
+    // 1:1 对照官方 stable-diffusion/settings.html L44-67 顺序
+    DropdownOption("aimlapi", "AI/ML API"),
+    DropdownOption("bfl", "BFL (Black Forest Labs)"),
+    DropdownOption("chutes", "Chutes"),
+    DropdownOption("workersai", "Cloudflare Workers AI"),
     DropdownOption("comfy", "ComfyUI（需 workflow）"),
+    DropdownOption("drawthings", "DrawThings HTTP API (macOS)"),
+    DropdownOption("electronhub", "Electron Hub"),
+    DropdownOption("extras", "Extras API (deprecated)"),
+    DropdownOption("falai", "FAL.AI"),
+    DropdownOption("google", "Google AI"),
+    DropdownOption("huggingface", "Hugging Face Inference"),
+    DropdownOption("nanogpt", "NanoGPT"),
+    DropdownOption("novel", "NovelAI Diffusion"),
+    DropdownOption("openai", "OpenAI · gpt-image"),
+    DropdownOption("openrouter", "OpenRouter"),
+    DropdownOption("pollinations", "Pollinations"),
+    DropdownOption("vlad", "SD.Next (vladmandic)"),
+    DropdownOption("stability", "Stability AI"),
+    DropdownOption("auto", "Stable Diffusion Web UI (AUTOMATIC1111)"),
+    DropdownOption("sdcpp", "stable-diffusion.cpp server"),
+    DropdownOption("horde", "Stable Horde"),
+    DropdownOption("togetherai", "TogetherAI"),
+    DropdownOption("xai", "xAI (Grok)"),
+    DropdownOption("zai", "Z.AI"),
 )
 
 private val VECTOR_PROVIDERS = listOf(
@@ -149,6 +167,7 @@ private fun ImageCard() {
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     var comfyWorkflow by rememberSaveable { mutableStateOf(ServicesPrefs.comfyWorkflow(context)) }
+    var comfyType by rememberSaveable { mutableStateOf(ServicesPrefs.comfyType(context)) }
     var promptPrefix by rememberSaveable { mutableStateOf(ServicesPrefs.imagePromptPrefix(context)) }
     var negativePrompt by rememberSaveable { mutableStateOf(ServicesPrefs.imageNegativePrompt(context)) }
     var sampler by rememberSaveable { mutableStateOf(ServicesPrefs.imageSampler(context)) }
@@ -189,7 +208,13 @@ private fun ImageCard() {
     ServiceCard(title = "图像生成") {
         ServiceNote("官方 stable-diffusion 扩展核心参数（A1111/sdcpp 请求体 1:1）。来源 / 地址 / 模型 / 步数 + 采样器 / CFG / 尺寸 / HR 等。")
         MenuPicker("来源", labelOf(IMAGE_SOURCES, source), IMAGE_SOURCES) { source = it; save() }
-        if (source == "novel" || source == "huggingface" || source == "horde") {
+        // 需 API Key 的来源（对照官方 settings.html 各 source 子区段）
+        val needsApiKey = source in setOf(
+            "novel", "huggingface", "horde", "aimlapi", "bfl", "falai",
+            "workersai", "stability", "pollinations", "chutes", "electronhub",
+            "nanogpt", "togetherai", "extras", "zai", "google", "openrouter",
+        )
+        if (needsApiKey) {
             KeyRow(
                 value = apiKey,
                 visible = keyVisible,
@@ -198,21 +223,34 @@ private fun ImageCard() {
                 label = "API Key",
             )
         }
-        if (source == "auto" || source == "sdcpp" || source == "comfy") {
+        if (source == "auto" || source == "sdcpp" || source == "comfy" || source == "vlad" || source == "drawthings") {
             TextFieldRow("接口地址", url) { url = it; save() }
         }
-        if (source == "novel" || source == "sdcpp" || source == "huggingface" || source == "comfy") {
+        if (source == "novel" || source == "sdcpp" || source == "huggingface" || source == "comfy" ||
+            source == "zai" || source == "openrouter" || source == "workersai" || source == "google" ||
+            source == "falai" || source == "extras"
+        ) {
             TextFieldRow("模型", model) { model = it; save() }
         }
         if (source == "comfy") {
-            EmberTextField(
-                value = comfyWorkflow,
-                onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
-                label = { Text("ComfyUI workflow JSON（含 %prompt%/%negative%/%model%/%steps%/%width%/%height% 等占位符）") },
-                minLines = 6,
-                maxLines = 12,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            MenuPicker(
+                "服务器类型",
+                if (comfyType == "runpod_serverless") "RunPod Serverless" else "Standard",
+                listOf(
+                    DropdownOption("standard", "Standard Server"),
+                    DropdownOption("runpod_serverless", "RunPod Serverless Endpoint"),
+                ),
+            ) { comfyType = it; ServicesPrefs.saveComfyType(context, it) }
+            if (comfyType == "standard") {
+                EmberTextField(
+                    value = comfyWorkflow,
+                    onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
+                    label = { Text("ComfyUI workflow JSON（含 %prompt%/%negative%/%model%/%steps%/%width%/%height% 等占位符）") },
+                    minLines = 6,
+                    maxLines = 12,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
         EmberTextField(
             value = promptPrefix,

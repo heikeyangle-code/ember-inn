@@ -51,7 +51,17 @@ class ImageGenClient {
                 "novel" -> novel(context, fullPrompt, model, apiKey, steps)
                 "huggingface" -> huggingface(context, fullPrompt, model, apiKey)
                 "horde" -> horde(context, fullPrompt, model, apiKey, steps)
-                "comfy" -> comfy(context, url, fullPrompt, fullNegative, model, steps)
+                "vlad" -> auto1111(context, url, fullPrompt, fullNegative, steps, model, sdcpp = false) // SD.Next 同走 /sdapi/v1/txt2img（vladmandic/automatic1111 API 兼容）；登记：sd_vlad_url 字段并入 sd_url
+                "comfy" -> if (ServicesPrefs.comfyType(context) == "runpod_serverless") {
+                    ImageGenBackendsLlm.generate(context, "comfy_runpod", fullPrompt, fullNegative)
+                } else {
+                    comfy(context, url, fullPrompt, fullNegative, model, steps)
+                }
+                "togetherai", "pollinations", "stability", "aimlapi", "chutes",
+                "electronhub", "nanogpt", "bfl", "xai" ->
+                    ImageGenBackendsCloud.generate(context, source, fullPrompt, fullNegative)
+                "google", "zai", "openrouter", "workersai", "falai", "extras", "drawthings" ->
+                    ImageGenBackendsLlm.generate(context, source, fullPrompt, fullNegative)
                 else -> auto1111(context, url, fullPrompt, fullNegative, steps, null, sdcpp = false)
             }
         }.getOrNull()
