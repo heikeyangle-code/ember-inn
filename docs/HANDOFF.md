@@ -35,7 +35,7 @@ flowchart LR
 ## 1. 项目与常用命令
 
 - 项目：EmberInn（余烬酒馆）——原生 Android SillyTavern 兼容客户端；本地 `/workspace`，远程 github.com/heikeyangle-code/ember-inn（main，公开）；官方参照 `/root/sillytavern-ref`（release 8172dcd / 1.18.0）。
-- 引擎测试与 App Kotlin 编译本机均可跑（Java 17.0.2 + Gradle 9.7.0 + Android SDK 34，当前 **508 例全绿**：381 testcase + imagegen-services 57 fixture / tts-services 35 fixture / tts-local 38 fixture 各单 testcase 内 for-loop）；完整 APK 组装/签名走 CI。
+- 引擎测试与 App Kotlin 编译本机均可跑（Java 17.0.2 + Gradle 9.7.0 + Android SDK 34，当前 **559 例全绿**：381 testcase + imagegen-services 57 fixture / tts-services 35 fixture / tts-local 38 fixture 各单 testcase 内 for-loop）；完整 APK 组装/签名走 CI。
 
 ```sh
 cd ~/ember-inn && ./gradlew :engine:test
@@ -82,7 +82,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（两段
 - 2026-08-14 审查修复（现状）：世界书条目内容激活时先宏替换（官方 checkWorldInfo substituteParams），替换后文本进递归缓冲/预算/输出，总装再替换一次（官方两次替换语义）；世界书关键词也过宏替换；delayUntilRecursion 首级按官方 shift() 扫描前移出；角色卡 tags 接进 characterFilter 标签过滤；WorldInfoScannerMacroTest 锁宏替换。
 
 ### 3.3 宏 ✅（含作用域宏）
-通用作用域宏（{{setvar}}/{{#}} 保留空白/嵌套/trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 差分 7 例；!?~> flags 官方标 TBD（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。核心宏 + 官方 e2e 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。{{outlet::key}} 差分 5 例（官方 core-macros.js 逐字提取；空 key 未判空已修）；MacroRegistry 动态注册/注销/解析；角色字段已接线（{{description}}/{{chardepthprompt}} 等可用）；🟡 聊天/系统状态边界仍缺。
+通用作用域宏（{{setvar}}/{{#}} 保留空白/嵌套/trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 差分 7 例；!?~> flags 官方标 TBD（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。核心宏 + 官方 e2e 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。{{outlet::key}} 差分 5 例（官方 core-macros.js 逐字提取；空 key 未判空已修）；MacroRegistry 动态注册/注销/解析；角色字段已接线（{{description}}/{{chardepthprompt}} 等可用）；聊天/系统状态宏已补齐（{{lastmessage}}/{{lastmessageid}}/{{lastusermessage}}/{{lastcharmessage}}/{{lastswipeid}}/{{lastgenerationtype}}/{{time}}/{{date}}/{{weekday}}/{{random}}/{{roll}}/{{pick}}/{{if}} 等；MacroEnv 注入 chat/lastGenerationType/firstIncludedMessageId，App ChatPromptFactory.prepare 按官方 MacroEnvBuilder 接线）。
 
 ### 3.4 斜杠 ✅
 SlashParser（命名/无名/引号/转义/list/rawQuotes）+ SlashEngine（管道/闭包/双管道）、/pass /let /qr-arg、{{var}}/{{pipe}}/{{arg}} 状态宏、快捷回复执行器；testSymbol 差分 27 例；参数解析核心 43 例差分；斜杠数学/布尔/len/sort 1:1（SlashMathEngine 差分 444 例——注意最新 SlashMathDiffTest 已对齐 fixture 444 例，见 DIFF_MATRIX；历史 288 为旧 fixture）；输入框斜杠补全 UI（/ 前缀过滤、最多 12 条、220dp 可滚动）。
@@ -188,7 +188,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - 正则（该卡）UI：官方格式读写 + 编辑弹层 + USER_INPUT/AI_OUTPUT 位点接线 + “允许此角色应用该卡正则”开关（UI 默认开=用户要求；实际生效以 character_allowed_regex 列表为准，未进过详情页/未切换过开关时不写入）。
 - 变量（该卡）：data.extensions.emberinn_variables（README 自定义扩展，官方无 per-character 变量，见 6.1）。
 - 快捷回复（全局）：Quick Reply 官方字段（mes/label/enabled/automationId/preventAutoExecute），设置→服务→快捷回复管理；per-character 快捷回复已删。
-- 模型覆盖 / 主题配方：README 承诺的角色级自定义（官方无对应字段，模型覆盖官方是聊天级 #custom_model_id）；存储+UI+聊天背景已做；🟡 字体文件下载、风格档位映射未做。
+- 模型覆盖 / 主题配方：README 承诺的角色级自定义（官方无对应字段，模型覆盖官方是聊天级 #custom_model_id）；存储+UI+聊天背景已做；字体下载已做（FontManager 下载 Noto Sans 4 面 TTF，原生/WebView 共用，霞鹜文楷 70MB 已下线回收）；风格档位映射已做（VibePreset 5 档，外观页滑杆实时预览，见 4.5）。
 
 ### 4.3 聊天页 🟡（核心已接线 + 媒体 + 状态胶囊）
 - 发送：PromptPipeline 总装流式发送（世界书/宏/人设/AN/示例/历史/控制提示/工具/媒体/推理签名全引擎内完成，SSE 逐 token）；停止=取消 OkHttp call 保留已生成（mes_stop）；重新生成=删最后 AI 回复复用最后用户消息（option_regenerate）；继续=mes_continue（移出最后 AI，流结束合并落盘）；send_if_empty 已接；冒充=Generate('impersonate')（流式进输入框不落历史）。
@@ -311,7 +311,8 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
   - ③Translate：substituteParams(name2Override=message.name→{{char}}/{{Char}} 替换) + 译文写 extra.display_text / reasoning_display_text + 8 provider body（libre/google/lingva/deepl/deeplx/onering）→ translate-official.mjs 19 例 + `TranslateDiffTest` 全绿；App `TranslateClient` 8 家 provider 全部改走引擎 body/URL 构造；ChatViewModel.translateIncoming/Outgoing 传 message.name / user.name 作为 nameOverride。
   - ④Attachments 斜杠补 5 子命令：/db show / hide / apply / list-inline / parse-inline（AppSlashExecutor）；dbDispatch 接收 `attachmentsContext()`(characterAvatar, chatFile, charName)，三源（global/character/chat）目录隔离。
   - ⑤Gallery 4 排序字面值（nameAsc/nameDesc/dateDesc/dateAsc）+ Assets 5 类型集（extension/character/ambient/bgm/blip）→ gallery-assets-official.mjs 5 例 + App 侧 `GalleryAssetsDiffTest` 全绿。
-- 剩余未做：图像生成 ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；TTS 3 本地后端登记不差分（kokoro/kokoro-worker/openai-compatible，不同源见 4.4）；未声明 closureArgs 的闭包仍即时求值（SlashEngine，见 3.4）；斜杠命令按用户决策裁剪（仅高价值命令，见 3.4）；发送链路登记项（见 6.2）；自定义预设“设为默认”（官方无此概念）。
+- 剩余未做：图像生成 ADetailer / 样式库 / prompt templates / refine·interactive·multimodal 模式 / Comfy workflow 管理（见 3.12 登记）；未声明 closureArgs 的闭包仍即时求值（SlashEngine，见 3.4）；斜杠命令按用户决策裁剪（仅高价值命令，见 3.4）；发送链路登记项（见 6.2）；自定义预设“设为默认”（官方无此概念）。
+- 已实现但登记不差分（不再属“未做”）：TTS 3 本地后端 kokoro/kokoro-worker/openai-compatible（不同源见 4.4/6.1，App 层 HTTP 接线已实现）。
 - Prompt Itemization 分节明细面板已做（聊天消息菜单；布局对齐官方 itemizationText.html；官方 itemized-prompts.js 语义：ItemizationStore 按会话持久化 rawPrompt + TokenHandler 八分桶 + 分节消息；五分类百分比图（Character Definitions=总 token−世界书−聊天历史−扩展−bias；World Info；Chat History；Extensions；{{}} Bias）+ 总 Token/Max Context/Padding/Actual Max Context；diff 词级 LCS，超大输入回退行级）。
 - Prompt Manager 面板已做（设置→提示词管理器：identifier 自动 uuid 只读/name/role/injection_trigger 六选多选/position 0=Relative 1=In-chat/depth/order/forbid_overrides/content（marker 只读）/main·nsfw·jailbreak·enhanceDefinitions 官方 Reset/新提示项 system_prompt=false/删除二次确认/编辑底部弹层/长按拖动排序/官方 Append 下拉/“查”检查弹窗（PromptAssemblyCache 最近一次总装，官方 PromptManager.messages/handleInspect））+ dryRun 提示词预览（聊天会话菜单，全文+token）。
 - 用户决策延期：Custom CSS + Moving UI（6.4）；Claude/Gemini 官方 web tokenizer。
