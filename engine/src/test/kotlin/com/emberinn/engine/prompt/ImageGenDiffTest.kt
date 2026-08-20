@@ -54,6 +54,7 @@ class ImageGenDiffTest {
                 clipSkip = st["clip_skip"]?.jsonPrimitive?.content?.toIntOrNull(),
                 vae = s("vae"),
                 model = s("model"),
+                adetailerFace = st["adetailer_face"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false,
             )
             val prompt = args["prompt"]?.jsonPrimitive?.content ?: ""
             val negative = args["negativePrompt"]?.jsonPrimitive?.content ?: ""

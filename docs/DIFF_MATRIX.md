@@ -1,6 +1,6 @@
 # 差分矩阵（HANDOFF 附录；由 scripts/diff/*.mjs 生成 fixture，禁止手改）
 
-> HANDOFF 第 2 节引用。表内 105 行、例数合计 3268；scripts/diff/ 共 103 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史"85 组 / 1969 例""101 行 / 3112 例"为旧口径，不再使用。
+> HANDOFF 第 2 节引用。表内 105 行（104 组 + 表头）、例数合计 3230；scripts/diff/ 共 106 个 *.mjs（部分脚本输出多组 fixture/决策类，见行内说明）；历史"85 组 / 1969 例""101 行 / 3112 例"为旧口径，不再使用。
 
 | 组 | 脚本 | 测试 | 例数 |
 > 注：prompt-converters 一行脚本输出 claude-messages.json；chat-request-body 输出 requestBody；tool-loop/timed-effects/story-string/preset-apply 为决策类。
@@ -96,8 +96,9 @@
 | 消息显示格式化纯文本子集（首条宏替换与 chat.mes 写回结果/Note-system 归一/bias 剥离/显示正则位点与 depth/fixMarkdown/encode_tags/reasoning 转义/非系统 trim/名字前缀剥离；打桩 substituteParams={{user}}→Alice、getRegexedString=可观测位点标记） | message-formatting-official.mjs | MessageFormattingDiffTest | 805 |
 | CFG Scale 纯逻辑（getGuidanceScale 优先级/getCfgPrompt unshift 合并/getCustomSeparator JSON 回退/插入深度；打桩 substituteParams={{user}}→Alice；charaCfg 缺失+群聊覆盖官方抛 TypeError 登记不生成用例） | cfg-prompt-official.mjs | CfgPromptDiffTest | 25 |
 | Token 概率解析（parseOpenAIChatLogprobs/parseOpenAITextLogprobs/parseChatCompletionLogprobs source 分支；text 解析 top_logprobs 整体缺失官方抛 TypeError 登记） | logprobs-official.mjs | LogprobsDiffTest | 20 |
-| 图像生成请求体（generateAutoImage/generateSdcppImage payload；ADetailer/其余后端登记未移植） | imagegen-official.mjs | ImageGenDiffTest | 10 |
+| 图像生成请求体（generateAutoImage/generateSdcppImage payload + ADetailer alwayson_scripts.args；其余后端登记未移植） | imagegen-official.mjs | ImageGenDiffTest | 10 |
 | 图像生成 services 后端请求体（togetherai/pollinations/chutes/stability/aimlapi/electronhub/nanogpt/bfl/xai 9 云端 + getClosestSize 工具；第三批扩展：falai-server/google-client/zai/openrouter/workersai-client 5 LLM 后端 + replaceComfyWorkflow 纯函数；Pollinations path encodeURIComponent vs URLEncoder + 边界、Chutes \|\| 短路、Stability multipart payload、BFL -ultra/-pro-1.1 分支、NanoGPT parseInt/parseFloat 语义、FalAI 服务端 seed=-1 随机、Google Vertex 客户端 body、ZAI size 模板字符串、WorkersAI 空 accountId 回退、Comfy %xxx% 占位符 JSON.stringify 语义） | imagegen-services-official.mjs | ImageGenServicesDiffTest | 57 |
+| 图像生成 prompt 纯逻辑（generationMode/modeLabels/triggerWords/messageTrigger/13 个 promptTemplates 逐字/stringFormat/getGenerationType/getQuietPrompt/parseInteractiveTrigger/processReply minimal·常规两分支；FREE_EXTENDED 模板含 {0}） | imagegen-prompt-official.mjs | ImageGenPromptDiffTest | 59 |
 | TTS services 后端请求体（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate 11 云端；ElevenLabs shouldInvolveExtendedSettings 分支、OpenAI instructions 条件添加、Chutes \|\| 短路 0→默认 1.0、splitRecursive 分块） | tts-services-official.mjs | TtsServicesDiffTest | 35 |
 | TTS local 后端请求体（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts 13 本地；URLSearchParams form 编码 space=+、JSON 数字语义整数不带小数点、chatterbox 13 字段 params 过滤、vits model_type 分支 W2V2/BERT-VITS2 条件字段、speecht5 speaker 不透明入参值源不同、xtts processText 死代码不差分；kokoro/kokoro-worker/openai-compatible 3 个不同源登记不差分见行尾） | tts-local-official.mjs | TtsLocalDiffTest | 38 |
 

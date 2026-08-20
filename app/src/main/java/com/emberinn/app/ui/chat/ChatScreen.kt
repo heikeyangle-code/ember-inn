@@ -264,6 +264,7 @@ fun ChatScreen(
     val quickReplies by vm.quickReplies.collectAsState()
     val quickReplyOutput by vm.quickReplyOutput.collectAsState()
     val captionDraft by vm.captionDraft.collectAsState()
+    val imageRefineDraft by vm.imageRefineDraft.collectAsState()
     val captionPromptAsk by vm.captionPromptRequest.collectAsState()
     val inputDraft by vm.inputDraft.collectAsState()
     val chatBackground by vm.chatBackground.collectAsState()
@@ -2879,6 +2880,34 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { vm.cancelCaptionFlow() }) { Text("取消") }
+            },
+        )
+    }
+
+    // 官方 stable-diffusion refine_mode：生成前弹窗确认/编辑 LLM 生成的提示词（FREE 模式不弹）
+    val imageRefineValue = imageRefineDraft
+    if (imageRefineValue != null) {
+        var refineText by remember(imageRefineValue) { mutableStateOf(imageRefineValue.prompt) }
+        AlertDialog(
+            onDismissRequest = { vm.cancelImageRefine() },
+            title = { Text("确认图像提示词（sd_refine_mode）") },
+            text = {
+                EmberTextField(
+                    value = refineText,
+                    onValueChange = { refineText = it },
+                    label = { Text("提示词（留空则用原内容）") },
+                    minLines = 4,
+                    maxLines = 8,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.confirmImageRefine(refineText)
+                }) { Text("生成") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.cancelImageRefine() }) { Text("取消") }
             },
         )
     }

@@ -118,6 +118,7 @@ class ImageGenClient {
             clipSkip = ServicesPrefs.imageClipSkip(context),
             vae = ServicesPrefs.imageVae(context),
             model = model ?: "",
+            adetailerFace = !sdcpp && ServicesPrefs.imageADetailerFace(context),
         )
         val payload = if (sdcpp) {
             com.emberinn.engine.prompt.ImageGenRequestEngine.sdcppPayload(settings, prompt, negativePrompt, url)

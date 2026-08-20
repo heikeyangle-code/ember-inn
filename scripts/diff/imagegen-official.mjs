@@ -3,7 +3,7 @@
 // 官方函数逐字摘自 SillyTavern 1.18.0 release 8172dcd：
 //   extensions/stable-diffusion/index.js generateAutoImage / generateSdcppImage（仅 payload 构造，不含 fetch/abort）
 // 打桩（脚本头部登记）：getSdRequestBody={url}（App 直连，等价官方服务端代理转发）；settings=extension_settings.sd 传入对象。
-// 边界（不移植，登记）：ADetailer alwayson_scripts（App 未实现 adetailer_face）；drawthings/vlad/novel/openai/horde/hf/comfy 等其余后端另开差分。
+// 边界（不移植，登记）：drawthings/vlad/novel/openai/horde/hf/comfy 等其余后端另开差分。
 
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -36,7 +36,7 @@ const defaults = {
 
 function buildAutoPayload(settings, prompt, negativePrompt) {
     const isValidVae = settings.vae && !['N/A', placeholderVae].includes(settings.vae);
-    const payload = {
+    let payload = {
         url: 'http://localhost:7860',
         prompt: prompt,
         negative_prompt: negativePrompt,
@@ -66,7 +66,37 @@ function buildAutoPayload(settings, prompt, negativePrompt) {
         do_not_save_grid: false,
         do_not_save_samples: false,
     };
+    // Conditionally add the ADetailer if adetailer_face is enabled
+    // （官方 index.js generateAutoImage L3830-3845 deepMerge，deepMerge 仅新增键，等价条件赋值）
+    if (settings.adetailer_face) {
+        payload = deepMerge(payload, {
+            alwayson_scripts: {
+                ADetailer: {
+                    args: [
+                        true, // ad_enable
+                        true, // skip_img2img
+                        {
+                            'ad_model': 'face_yolov8n.pt',
+                        },
+                    ],
+                },
+            },
+        });
+    }
     return JSON.parse(JSON.stringify(payload));
+}
+
+// 官方 stable-diffusion/index.js L2832 deepMerge（仅深层对象合并，数组整体替换）。
+function deepMerge(target, source) {
+    for (const key of Object.keys(source)) {
+        if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key]) &&
+            typeof target[key] === 'object' && target[key] !== null && !Array.isArray(target[key])) {
+            target[key] = deepMerge(target[key], source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
 }
 
 function buildSdcppPayload(settings, prompt, negativePrompt) {
@@ -109,6 +139,8 @@ add('auto-seed-vae-hr', 'auto', { seed: 42, vae: 'vae-ft-mse', enable_hr: true, 
 add('auto-vae-placeholder', 'auto', { vae: 'Automatic' }, 'x', '');
 add('auto-vae-na', 'auto', { vae: 'N/A' }, 'x', '');
 add('auto-seed-minus-one', 'auto', { seed: -1 }, 'x', '');
+add('auto-adetailer-defaults', 'auto', { adetailer_face: true }, 'a cat', 'blurry');
+add('auto-adetailer-preferred', 'auto', { adetailer_face: true, seed: 42, vae: 'vae-ft-mse', enable_hr: true, hr_scale: 2, hr_second_pass_steps: 15, denoising_strength: 0.5, restore_faces: true, clip_skip: 2, sampler: 'Euler a', scheduler: 'karras', steps: 28, scale: 9, width: 768, height: 512 }, 'portrait', 'lowres');
 add('sdcpp-defaults', 'sdcpp', {}, 'a cat', 'blurry');
 add('sdcpp-model-seed', 'sdcpp', { model: 'sd-turbo', seed: 7 }, 'x', '');
 add('sdcpp-na-sampler-scheduler', 'sdcpp', { sampler: 'N/A', scheduler: 'N/A' }, 'x', '');

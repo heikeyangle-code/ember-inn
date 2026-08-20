@@ -276,7 +276,142 @@
       }
     },
     {
-      "id": "006-sdcpp-defaults",
+      "id": "006-auto-adetailer-defaults",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "DDIM",
+          "scheduler": "normal",
+          "steps": 20,
+          "scale": 7,
+          "width": 512,
+          "height": 512,
+          "restore_faces": false,
+          "enable_hr": false,
+          "hr_upscaler": "Latent",
+          "hr_scale": 1,
+          "denoising_strength": 0.7,
+          "hr_second_pass_steps": 0,
+          "seed": -1,
+          "clip_skip": 1,
+          "vae": "",
+          "model": "",
+          "adetailer_face": true
+        },
+        "prompt": "a cat",
+        "negativePrompt": "blurry"
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "a cat",
+        "negative_prompt": "blurry",
+        "sampler_name": "DDIM",
+        "scheduler": "normal",
+        "steps": 20,
+        "cfg_scale": 7,
+        "width": 512,
+        "height": 512,
+        "restore_faces": false,
+        "enable_hr": false,
+        "hr_upscaler": "Latent",
+        "hr_scale": 1,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.7,
+        "hr_second_pass_steps": 0,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 1
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 1,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false,
+        "alwayson_scripts": {
+          "ADetailer": {
+            "args": [
+              true,
+              true,
+              {
+                "ad_model": "face_yolov8n.pt"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "007-auto-adetailer-preferred",
+      "kind": "auto",
+      "args": {
+        "settings": {
+          "sampler": "Euler a",
+          "scheduler": "karras",
+          "steps": 28,
+          "scale": 9,
+          "width": 768,
+          "height": 512,
+          "restore_faces": true,
+          "enable_hr": true,
+          "hr_upscaler": "Latent",
+          "hr_scale": 2,
+          "denoising_strength": 0.5,
+          "hr_second_pass_steps": 15,
+          "seed": 42,
+          "clip_skip": 2,
+          "vae": "vae-ft-mse",
+          "model": "",
+          "adetailer_face": true
+        },
+        "prompt": "portrait",
+        "negativePrompt": "lowres"
+      },
+      "expected": {
+        "url": "http://localhost:7860",
+        "prompt": "portrait",
+        "negative_prompt": "lowres",
+        "sampler_name": "Euler a",
+        "scheduler": "karras",
+        "steps": 28,
+        "cfg_scale": 9,
+        "width": 768,
+        "height": 512,
+        "restore_faces": true,
+        "enable_hr": true,
+        "hr_upscaler": "Latent",
+        "hr_scale": 2,
+        "hr_additional_modules": [],
+        "denoising_strength": 0.5,
+        "hr_second_pass_steps": 15,
+        "seed": 42,
+        "override_settings": {
+          "CLIP_stop_at_last_layers": 2,
+          "sd_vae": "vae-ft-mse",
+          "forge_additional_modules": [
+            "vae-ft-mse"
+          ]
+        },
+        "override_settings_restore_afterwards": true,
+        "clip_skip": 2,
+        "save_images": true,
+        "send_images": true,
+        "do_not_save_grid": false,
+        "do_not_save_samples": false,
+        "alwayson_scripts": {
+          "ADetailer": {
+            "args": [
+              true,
+              true,
+              {
+                "ad_model": "face_yolov8n.pt"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "008-sdcpp-defaults",
       "kind": "sdcpp",
       "args": {
         "settings": {
@@ -316,7 +451,7 @@
       }
     },
     {
-      "id": "007-sdcpp-model-seed",
+      "id": "009-sdcpp-model-seed",
       "kind": "sdcpp",
       "args": {
         "settings": {
@@ -358,7 +493,7 @@
       }
     },
     {
-      "id": "008-sdcpp-na-sampler-scheduler",
+      "id": "010-sdcpp-na-sampler-scheduler",
       "kind": "sdcpp",
       "args": {
         "settings": {
@@ -396,7 +531,7 @@
       }
     },
     {
-      "id": "009-sdcpp-no-clip",
+      "id": "011-sdcpp-no-clip",
       "kind": "sdcpp",
       "args": {
         "settings": {
@@ -434,7 +569,7 @@
       }
     },
     {
-      "id": "010-sdcpp-blank-model",
+      "id": "012-sdcpp-blank-model",
       "kind": "sdcpp",
       "args": {
         "settings": {

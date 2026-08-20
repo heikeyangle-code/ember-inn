@@ -27,6 +27,7 @@ import com.emberinn.app.data.GroupRecord
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.data.GroupStore
 import com.emberinn.app.data.ImageGenClient
+import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
 import com.emberinn.engine.persona.PersonaEngine
@@ -81,6 +82,7 @@ import com.emberinn.engine.prompt.CaptionEngine
 import com.emberinn.engine.prompt.CleanUpMessageEngine
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.CustomStoppingConfig
+import com.emberinn.engine.prompt.ImageGenPromptEngine
 import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.media.MediaEngine
@@ -105,6 +107,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -547,8 +550,114 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ProviderState.refresh(chatRepository.profile())
     }
 
-    /** 图像生成（A1111）：成功则追加到待发送附件，用户可预览后发送。 */
-    fun generateImage(prompt: String) {
+    /** refine 模式：生成前待用户编辑确认的提示词草稿（官方 refinePrompt 弹窗语义，FREE 除外）。 */
+    data class ImageRefineDraft(
+        val mode: Int,
+        val trigger: String,
+        val prompt: String,
+        val message: String,
+    )
+
+    private val _imageRefineDraft = MutableStateFlow<ImageRefineDraft?>(null)
+    val imageRefineDraft: StateFlow<ImageRefineDraft?> = _imageRefineDraft
+
+    fun confirmImageRefine(edited: String?) {
+        val draft = _imageRefineDraft.value ?: return
+        _imageRefineDraft.value = null
+        val finalPrompt = edited?.takeIf { it.isNotBlank() } ?: draft.prompt
+        sendImageRequest(finalPrompt, draft.trigger, draft.mode, draft.message)
+    }
+
+    fun cancelImageRefine() {
+        _imageRefineDraft.value = null
+    }
+
+    /**
+     * 官方 generatePicture 核心（App 版）：模式解析 → 提示词生成 → refine 确认 → 图像接口。
+     * 所有入口统一走这里：生图按钮（FREE 风格）、消息菜单（RAW_LAST 语义）、interactive 触发。
+     * 模式解析/模板/正则/清洗均为引擎层纯函数（ImageGenPromptEngine，差分通过）。
+     */
+    fun generateImageSmart(trigger: String, message: String?) {
+        val ctx = getApplication<Application>()
+        val t = trigger.trim()
+        if (t.isEmpty()) {
+            _notice.value = "（提示词为空。）"
+            return
+        }
+        val multimodal = ServicesPrefs.imageMultimodalCaptioning(ctx)
+        val freeExtend = ServicesPrefs.imageFreeExtend(ctx)
+        val mode = ImageGenPromptEngine.getGenerationType(t, multimodal, freeExtend)
+        val quietPrompt = ImageGenPromptEngine.getQuietPrompt(mode, t, PromptTemplateStore(ctx).templates())
+        viewModelScope.launch(Dispatchers.IO) {
+            val prompt: String = runCatching {
+                when (mode) {
+                    ImageGenPromptEngine.MODE_RAW_LAST ->
+                        message?.takeIf { it.isNotBlank() } ?: rawLastMessageForImage()
+                    ImageGenPromptEngine.MODE_FREE -> t
+                    ImageGenPromptEngine.MODE_CHARACTER_MULTIMODAL,
+                    ImageGenPromptEngine.MODE_USER_MULTIMODAL,
+                    ImageGenPromptEngine.MODE_FACE_MULTIMODAL ->
+                        multimodalImagePrompt(mode, quietPrompt)
+                    else -> llmImagePrompt(quietPrompt)
+                }
+            }.getOrElse { e ->
+                _notice.value = "（生图提示词生成失败：${e.message ?: "未知错误"}）"
+                return@launch
+            }
+            val processed = ImageGenPromptEngine.processReply(prompt, false)
+            if (processed.isBlank()) {
+                _notice.value = "（生图提示词生成失败：内容为空。）"
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                // 官方 getPrompt：generationType !== FREE 时 refinePrompt 弹窗；FREE 直接使用
+                if (ServicesPrefs.imageRefineMode(ctx) && mode != ImageGenPromptEngine.MODE_FREE) {
+                    _imageRefineDraft.value = ImageRefineDraft(mode, t, processed, message ?: "")
+                } else {
+                    sendImageRequest(processed, t, mode, message ?: "")
+                }
+            }
+        }
+    }
+
+    /** 官方 getRawLastMessage：取最后一条非系统消息文本（RAW_LAST 无 message 时的兜底）。 */
+    private fun rawLastMessageForImage(): String {
+        val list = chatStore.messages(sessionId)
+        return list.asReversed().firstNotNullOfOrNull { el ->
+            val obj = el.jsonObject
+            val isSystem = obj["is_system"]?.jsonPrimitive?.booleanOrNull == true
+            if (isSystem) null else obj["mes"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        } ?: ""
+    }
+
+    /** 官方 generateMultimodalPrompt：角色/用户头像 → LLM 视觉描述（multimodal 模板作 prompt）。 */
+    private suspend fun multimodalImagePrompt(mode: Int, quietPrompt: String): String {
+        val avatarPath = when (mode) {
+            ImageGenPromptEngine.MODE_USER_MULTIMODAL ->
+                _activePersona.value?.avatarPath?.takeIf { it.isNotBlank() }
+            else -> character?.avatarPath?.takeIf { it.isNotBlank() }
+        }
+        val file = avatarPath?.let { java.io.File(it) }?.takeIf { it.exists() }
+            ?: error("未找到头像图片（multimodal 生图需要角色或用户头像）")
+        val dataUrl = "data:${mimeForCaption(file.name)};base64," +
+            java.util.Base64.getEncoder().encodeToString(file.readBytes())
+        return chatRepository.captionImage(dataUrl, quietPrompt) ?: error("头像描述生成失败")
+    }
+
+    /** 官方 generatePrompt：用当前上下文 + quietPrompt 让 LLM 产出提示词（复用记忆扩展的 quiet 管线）。 */
+    private suspend fun llmImagePrompt(quietPrompt: String): String =
+        suspendCancellableCoroutine { cont ->
+            chatRepository.generateQuietSummary(
+                history = chatStore.messages(sessionId),
+                quietPrompt = quietPrompt,
+                onDelta = {},
+                onResult = { if (cont.isActive) cont.resume(it) },
+                onError = { if (cont.isActive) cont.resumeWith(Result.failure(it)) },
+            )
+        }
+
+    /** 真正调用图像接口；成功后追加到待发送附件，用户可预览后发送。 */
+    private fun sendImageRequest(prompt: String, trigger: String, mode: Int, message: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val ctx = getApplication<Application>()
             val path = imageGenClient.generate(
@@ -564,12 +673,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         url = path,
                         title = "生成的图片",
                     )
+                    _notice.value = "（生图完成，已加入待发送附件。）"
                 } else {
                     _notice.value = "（图像生成失败：请检查 设置→服务→图像 的接口地址与来源。）"
                 }
             }
         }
     }
+
+    /** 兼容旧入口：生图按钮的原始提示词走统一管线（官方把输入框文本当 trigger）。 */
+    fun generateImage(prompt: String) = generateImageSmart(prompt, null)
 
     /** 官方 sd_message_gen：用消息文本生成图片并挂到该消息 extra.media（非待发送附件）。 */
     fun generateImageForMessage(index: Int) {
@@ -1899,6 +2012,15 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessagesAppendOnly()
         // 官方 translate 扩展：auto_mode=inputs/both 时用户消息自动翻译（mes 换译文、原文进 extra.display_text）
         translateOutgoing(chatStore.messages(sessionId).lastIndex)
+        // 官方 stable-diffusion interactive_mode（processTriggers）：最后一条用户消息命中触发正则 →
+        // 中止正常回复，改触发图片生成（parseInteractiveTrigger 为引擎差分纯函数）
+        if (ServicesPrefs.imageInteractiveMode(getApplication())) {
+            val trigger = ImageGenPromptEngine.parseInteractiveTrigger(storedText)
+            if (trigger != null) {
+                generateImageSmart(trigger.subject, storedText)
+                return true
+            }
+        }
         val voice = VoicePrefs.read(getApplication())
         if (voice.enabled && voice.narrateUser) {
             narrateText(effectiveText)

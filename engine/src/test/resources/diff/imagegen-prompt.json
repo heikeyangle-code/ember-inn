@@ -1,0 +1,564 @@
+{
+  "cases": [
+    {
+      "id": "001-gen-type-you",
+      "kind": "genType",
+      "args": {
+        "prompt": "you",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 0
+    },
+    {
+      "id": "002-gen-type-me",
+      "kind": "genType",
+      "args": {
+        "prompt": "me",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 1
+    },
+    {
+      "id": "003-gen-type-scene",
+      "kind": "genType",
+      "args": {
+        "prompt": "scene",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 2
+    },
+    {
+      "id": "004-gen-type-raw_last",
+      "kind": "genType",
+      "args": {
+        "prompt": "raw_last",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 3
+    },
+    {
+      "id": "005-gen-type-last",
+      "kind": "genType",
+      "args": {
+        "prompt": "last",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 4
+    },
+    {
+      "id": "006-gen-type-face",
+      "kind": "genType",
+      "args": {
+        "prompt": "face",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 5
+    },
+    {
+      "id": "007-gen-type-background",
+      "kind": "genType",
+      "args": {
+        "prompt": "background",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 7
+    },
+    {
+      "id": "008-gen-type-a_cat",
+      "kind": "genType",
+      "args": {
+        "prompt": "a cat",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 6
+    },
+    {
+      "id": "009-gen-type-__you__",
+      "kind": "genType",
+      "args": {
+        "prompt": "  you  ",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 0
+    },
+    {
+      "id": "010-gen-type-You",
+      "kind": "genType",
+      "args": {
+        "prompt": "You",
+        "multimodal": false,
+        "freeExtend": false
+      },
+      "expected": 0
+    },
+    {
+      "id": "011-gen-type-multimodal-char",
+      "kind": "genType",
+      "args": {
+        "prompt": "you",
+        "multimodal": true,
+        "freeExtend": false
+      },
+      "expected": 8
+    },
+    {
+      "id": "012-gen-type-multimodal-me",
+      "kind": "genType",
+      "args": {
+        "prompt": "me",
+        "multimodal": true,
+        "freeExtend": false
+      },
+      "expected": 9
+    },
+    {
+      "id": "013-gen-type-multimodal-face",
+      "kind": "genType",
+      "args": {
+        "prompt": "face",
+        "multimodal": true,
+        "freeExtend": false
+      },
+      "expected": 10
+    },
+    {
+      "id": "014-gen-type-multimodal-cat",
+      "kind": "genType",
+      "args": {
+        "prompt": "a cat",
+        "multimodal": true,
+        "freeExtend": false
+      },
+      "expected": 6
+    },
+    {
+      "id": "015-gen-type-free-extend",
+      "kind": "genType",
+      "args": {
+        "prompt": "a cat",
+        "multimodal": false,
+        "freeExtend": true
+      },
+      "expected": 11
+    },
+    {
+      "id": "016-template-0",
+      "kind": "template",
+      "args": {
+        "key": "0"
+      },
+      "expected": "In the next response I want you to provide only a detailed comma-delimited list of keywords and phrases which describe {{char}}. The list must include all of the following items in this order: name, species and race, gender, age, clothing, occupation, physical features and appearances. Do not include descriptions of non-visual qualities such as personality, movements, scents, mental traits, or anything which could not be seen in a still photograph. Do not write in full sentences. Prefix your description with the phrase 'full body portrait,'"
+    },
+    {
+      "id": "017-template-1",
+      "kind": "template",
+      "args": {
+        "key": "1"
+      },
+      "expected": "Ignore previous instructions and provide a detailed description of {{user}}'s physical appearance from the perspective of {{char}} in the form of a comma-delimited list of keywords and phrases. The list must include all of the following items in this order: name, species and race, gender, age, clothing, occupation, physical features and appearances. Do not include descriptions of non-visual qualities such as personality, movements, scents, mental traits, or anything which could not be seen in a still photograph. Do not write in full sentences. Prefix your description with the phrase 'full body portrait,'. Ignore the rest of the story when crafting this description. Do not reply as {{char}} when writing this description, and do not attempt to continue the story."
+    },
+    {
+      "id": "018-template-2",
+      "kind": "template",
+      "args": {
+        "key": "2"
+      },
+      "expected": "Ignore previous instructions and provide a detailed description for all of the following: a brief recap of recent events in the story, {{char}}'s appearance, and {{char}}'s surroundings. Do not reply as {{char}} while writing this description."
+    },
+    {
+      "id": "019-template-3",
+      "kind": "template",
+      "args": {
+        "key": "3"
+      },
+      "expected": "Ignore previous instructions and provide ONLY the last chat message string back to me verbatim. Do not write anything after the string. Do not reply as {{char}} when writing this description, and do not attempt to continue the story."
+    },
+    {
+      "id": "020-template-4",
+      "kind": "template",
+      "args": {
+        "key": "4"
+      },
+      "expected": "Ignore previous instructions. Your next response must be formatted as a single comma-delimited list of concise keywords.  The list will describe of the visual details included in the last chat message.\n\n    Only mention characters by using pronouns ('he','his','she','her','it','its') or neutral nouns ('male', 'the man', 'female', 'the woman').\n\n    Ignore non-visible things such as feelings, personality traits, thoughts, and spoken dialog.\n\n    Add keywords in this precise order:\n    a keyword to describe the location of the scene,\n    a keyword to mention how many characters of each gender or type are present in the scene (minimum of two characters:\n    {{user}} and {{char}}, example: '2 men ' or '1 man 1 woman ', '1 man 3 robots'),\n\n    keywords to describe the relative physical positioning of the characters to each other (if a commonly known term for the positioning is known use it instead of describing the positioning in detail) + 'POV',\n\n    a single keyword or phrase to describe the primary act taking place in the last chat message,\n\n    keywords to describe {{char}}'s physical appearance and facial expression,\n    keywords to describe {{char}}'s actions,\n    keywords to describe {{user}}'s physical appearance and actions.\n\n    If character actions involve direct physical interaction with another character, mention specifically which body parts interacting and how.\n\n    A correctly formatted example response would be:\n    '(location),(character list by gender),(primary action), (relative character position) POV, (character 1's description and actions), (character 2's description and actions)'"
+    },
+    {
+      "id": "021-template-5",
+      "kind": "template",
+      "args": {
+        "key": "5"
+      },
+      "expected": "In the next response I want you to provide only a detailed comma-delimited list of keywords and phrases which describe {{char}}. The list must include all of the following items in this order: name, species and race, gender, age, facial features and expressions, occupation, hair and hair accessories (if any), what they are wearing on their upper body (if anything). Do not describe anything below their neck. Do not include descriptions of non-visual qualities such as personality, movements, scents, mental traits, or anything which could not be seen in a still photograph. Do not write in full sentences. Prefix your description with the phrase 'close up facial portrait,'"
+    },
+    {
+      "id": "022-template-7",
+      "kind": "template",
+      "args": {
+        "key": "7"
+      },
+      "expected": "Ignore previous instructions and provide a detailed description of {{char}}'s surroundings in the form of a comma-delimited list of keywords and phrases. The list must include all of the following items in this order: location, time of day, weather, lighting, and any other relevant details. Do not include descriptions of characters and non-visual qualities such as names, personality, movements, scents, mental traits, or anything which could not be seen in a still photograph. Do not write in full sentences. Prefix your description with the phrase 'background,'. Ignore the rest of the story when crafting this description. Do not reply as {{char}} when writing this description, and do not attempt to continue the story."
+    },
+    {
+      "id": "023-template-8",
+      "kind": "template",
+      "args": {
+        "key": "8"
+      },
+      "expected": "Provide an exhaustive comma-separated list of tags describing the appearance of the character on this image in great detail. Start with \"full body portrait\"."
+    },
+    {
+      "id": "024-template-9",
+      "kind": "template",
+      "args": {
+        "key": "9"
+      },
+      "expected": "Provide an exhaustive comma-separated list of tags describing the appearance of the character on this image in great detail. Start with \"full body portrait\"."
+    },
+    {
+      "id": "025-template-10",
+      "kind": "template",
+      "args": {
+        "key": "10"
+      },
+      "expected": "Provide an exhaustive comma-separated list of tags describing the appearance of the character on this image in great detail. Start with \"close-up portrait\"."
+    },
+    {
+      "id": "026-template-11",
+      "kind": "template",
+      "args": {
+        "key": "11"
+      },
+      "expected": "Ignore previous instructions and provide an exhaustive comma-separated list of tags describing the appearance of \"{0}\" in great detail. Start with {{charPrefix}} (sic) if the subject is associated with {{char}}."
+    },
+    {
+      "id": "027-template--1",
+      "kind": "template",
+      "args": {
+        "key": "-1"
+      },
+      "expected": "[{{char}} sends a picture that contains: {{prompt}}]."
+    },
+    {
+      "id": "028-template--2",
+      "kind": "template",
+      "args": {
+        "key": "-2"
+      },
+      "expected": "The text prompt used to generate the image. Must represent an exhaustive description of the desired image that will allow an artist or a photographer to perfectly recreate it."
+    },
+    {
+      "id": "029-quiet-free",
+      "kind": "quiet",
+      "args": {
+        "mode": 6,
+        "trigger": "a cat"
+      },
+      "expected": "a cat"
+    },
+    {
+      "id": "030-quiet-char",
+      "kind": "quiet",
+      "args": {
+        "mode": 0,
+        "trigger": "x"
+      },
+      "expected": "In the next response I want you to provide only a detailed comma-delimited list of keywords and phrases which describe {{char}}. The list must include all of the following items in this order: name, species and race, gender, age, clothing, occupation, physical features and appearances. Do not include descriptions of non-visual qualities such as personality, movements, scents, mental traits, or anything which could not be seen in a still photograph. Do not write in full sentences. Prefix your description with the phrase 'full body portrait,'"
+    },
+    {
+      "id": "031-quiet-free-extended",
+      "kind": "quiet",
+      "args": {
+        "mode": 11,
+        "trigger": "dragon"
+      },
+      "expected": "Ignore previous instructions and provide an exhaustive comma-separated list of tags describing the appearance of \"dragon\" in great detail. Start with {{charPrefix}} (sic) if the subject is associated with {{char}}."
+    },
+    {
+      "id": "032-fmt-basic",
+      "kind": "fmt",
+      "args": {
+        "format": "Hello, {0}!",
+        "args": [
+          "world"
+        ]
+      },
+      "expected": "Hello, world!"
+    },
+    {
+      "id": "033-fmt-missing",
+      "kind": "fmt",
+      "args": {
+        "format": "{0} and {1}",
+        "args": [
+          "a"
+        ]
+      },
+      "expected": "a and {1}"
+    },
+    {
+      "id": "034-fmt-multi",
+      "kind": "fmt",
+      "args": {
+        "format": "{2} {0} {1}",
+        "args": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      "expected": "c a b"
+    },
+    {
+      "id": "035-interactive-send_me_a_picture_of_cat",
+      "kind": "interactive",
+      "args": {
+        "message": "send me a picture of cat"
+      },
+      "expected": {
+        "mode": 6,
+        "subject": "cat"
+      }
+    },
+    {
+      "id": "036-interactive-imagine_a_picture_of_a_d",
+      "kind": "interactive",
+      "args": {
+        "message": "imagine a picture of a dragon"
+      },
+      "expected": {
+        "mode": 6,
+        "subject": "dragon"
+      }
+    },
+    {
+      "id": "037-interactive-draw_me_a_picture_of_you",
+      "kind": "interactive",
+      "args": {
+        "message": "draw me a picture of you"
+      },
+      "expected": {
+        "mode": 0,
+        "subject": "you"
+      }
+    },
+    {
+      "id": "038-interactive-show_a_photo_of_your_fac",
+      "kind": "interactive",
+      "args": {
+        "message": "show a photo of your face"
+      },
+      "expected": {
+        "mode": 5,
+        "subject": "face"
+      }
+    },
+    {
+      "id": "039-interactive-generate_a_picture_of_th",
+      "kind": "interactive",
+      "args": {
+        "message": "generate a picture of the whole story"
+      },
+      "expected": {
+        "mode": 2,
+        "subject": "scene"
+      }
+    },
+    {
+      "id": "040-interactive-make_me_an_image_of_myse",
+      "kind": "interactive",
+      "args": {
+        "message": "make me an image of myself"
+      },
+      "expected": {
+        "mode": 1,
+        "subject": "me"
+      }
+    },
+    {
+      "id": "041-interactive-send_me_a_picture_of",
+      "kind": "interactive",
+      "args": {
+        "message": "send me a picture of"
+      },
+      "expected": {
+        "mode": 6,
+        "subject": "of"
+      }
+    },
+    {
+      "id": "042-interactive-hello_there",
+      "kind": "interactive",
+      "args": {
+        "message": "hello there"
+      },
+      "expected": null
+    },
+    {
+      "id": "043-interactive-Send_Me_A_Picture_Of_You",
+      "kind": "interactive",
+      "args": {
+        "message": "Send Me A Picture Of You"
+      },
+      "expected": {
+        "mode": 0,
+        "subject": "you"
+      }
+    },
+    {
+      "id": "044-interactive-paint_a_photograph_of_th",
+      "kind": "interactive",
+      "args": {
+        "message": "paint a photograph of the scene background"
+      },
+      "expected": {
+        "mode": 7,
+        "subject": "background"
+      }
+    },
+    {
+      "id": "045-interactive-create_an_image_of_last_",
+      "kind": "interactive",
+      "args": {
+        "message": "create an image of last message"
+      },
+      "expected": {
+        "mode": 4,
+        "subject": "last"
+      }
+    },
+    {
+      "id": "046-reply-minimal-empty",
+      "kind": "reply",
+      "args": {
+        "str": "",
+        "minimal": true
+      },
+      "expected": ""
+    },
+    {
+      "id": "047-reply-minimal-json",
+      "kind": "reply",
+      "args": {
+        "str": "{\"prompt\": \"a   cat  with\n hat\", \"seed\": 42}",
+        "minimal": true
+      },
+      "expected": "{\"prompt\": \"a cat with hat\", \"seed\": 42}"
+    },
+    {
+      "id": "048-reply-minimal-multiws",
+      "kind": "reply",
+      "args": {
+        "str": "  a   very    long\n\n   prompt with   tabs\t here  ",
+        "minimal": true
+      },
+      "expected": "a very long prompt with tabs here"
+    },
+    {
+      "id": "049-reply-minimal-accents",
+      "kind": "reply",
+      "args": {
+        "str": "café déjà vu naïve",
+        "minimal": true
+      },
+      "expected": "café déjà vu naïve"
+    },
+    {
+      "id": "050-reply-reg-empty",
+      "kind": "reply",
+      "args": {
+        "str": "",
+        "minimal": false
+      },
+      "expected": ""
+    },
+    {
+      "id": "051-reply-reg-quotes",
+      "kind": "reply",
+      "args": {
+        "str": "He said \"hi\" and then “hello” to her",
+        "minimal": false
+      },
+      "expected": "He said hi and then hello to her"
+    },
+    {
+      "id": "052-reply-reg-newlines",
+      "kind": "reply",
+      "args": {
+        "str": "line one\nline two\nline three",
+        "minimal": false
+      },
+      "expected": "line one, line two, line three"
+    },
+    {
+      "id": "053-reply-reg-realistic",
+      "kind": "reply",
+      "args": {
+        "str": "A woman, wearing a \"red dress\", standing in front of a castle.\n\nShe looks elegant, with long hair.",
+        "minimal": false
+      },
+      "expected": "A woman, wearing a red dress, standing in front of a castle., She looks elegant, with long hair."
+    },
+    {
+      "id": "054-reply-reg-marks",
+      "kind": "reply",
+      "args": {
+        "str": "hero - warrior! (1girl), [masterpiece], best quality??",
+        "minimal": false
+      },
+      "expected": "hero - warrior (1girl), [masterpiece], best quality"
+    },
+    {
+      "id": "055-reply-reg-commas",
+      "kind": "reply",
+      "args": {
+        "str": "  one  ,, two ,, three ,  ",
+        "minimal": false
+      },
+      "expected": "one, two, three"
+    },
+    {
+      "id": "056-reply-reg-accents",
+      "kind": "reply",
+      "args": {
+        "str": "café noir, déjà vu",
+        "minimal": false
+      },
+      "expected": "cafe noir, de ja vu"
+    },
+    {
+      "id": "057-reply-reg-curly",
+      "kind": "reply",
+      "args": {
+        "str": "full body portrait, {masterpiece:1.2}, <lora:x:0.8>",
+        "minimal": false
+      },
+      "expected": "full body portrait, {masterpiece:1.2}, <lora:x:0.8>"
+    },
+    {
+      "id": "058-reply-reg-only-spaces",
+      "kind": "reply",
+      "args": {
+        "str": "   \n\n   ",
+        "minimal": false
+      },
+      "expected": ""
+    },
+    {
+      "id": "059-reply-reg-mixed",
+      "kind": "reply",
+      "args": {
+        "str": "a  cat with a \"bowtie\"  sitting on  a chair\n\nwarm lighting",
+        "minimal": false
+      },
+      "expected": "a cat with a bowtie sitting on a chair, warm lighting"
+    }
+  ]
+}

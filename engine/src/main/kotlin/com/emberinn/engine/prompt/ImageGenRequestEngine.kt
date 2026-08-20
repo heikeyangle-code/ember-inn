@@ -10,8 +10,8 @@ import kotlinx.serialization.json.put
 
 /**
  * 官方 stable-diffusion 扩展请求体（extensions/stable-diffusion/index.js generateAutoImage /
- * generateSdcppImage 1:1）。差分：scripts/diff/imagegen-official.mjs（10 例）。
- * 边界（登记）：ADetailer alwayson_scripts 未移植；vlad/drawthings/novel/openai/horde/hf/comfy 等其余后端另开差分。
+ * generateSdcppImage 1:1）。差分：scripts/diff/imagegen-official.mjs（12 例，含 ADetailer alwayson_scripts）。
+ * 边界（登记）：vlad/drawthings/novel/openai/horde/hf/comfy 等其余后端另开差分。
  */
 object ImageGenRequestEngine {
 
@@ -32,6 +32,7 @@ object ImageGenRequestEngine {
         val clipSkip: Int? = 1,
         val vae: String = "",
         val model: String = "",
+        val adetailerFace: Boolean = false,
     )
 
     /** 官方 generateAutoImage payload（JSON.stringify 语义：seed<0/非法 vae 的 undefined 键省略）。 */
@@ -71,6 +72,28 @@ object ImageGenRequestEngine {
             put("send_images", JsonPrimitive(true))
             put("do_not_save_grid", JsonPrimitive(false))
             put("do_not_save_samples", JsonPrimitive(false))
+            if (settings.adetailerFace) {
+                put(
+                    "alwayson_scripts",
+                    buildJsonObject {
+                        put(
+                            "ADetailer",
+                            buildJsonObject {
+                                put(
+                                    "args",
+                                    JsonArray(
+                                        listOf(
+                                            JsonPrimitive(true), // ad_enable
+                                            JsonPrimitive(true), // skip_img2img
+                                            buildJsonObject { put("ad_model", JsonPrimitive("face_yolov8n.pt")) },
+                                        ),
+                                    ),
+                                )
+                            },
+                        )
+                    },
+                )
+            }
         }
     }
 

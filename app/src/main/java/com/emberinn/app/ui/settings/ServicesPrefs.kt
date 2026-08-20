@@ -84,6 +84,16 @@ object ServicesPrefs {
     fun imageEnableHr(context: Context): Boolean =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_enable_hr", false)
 
+    /** ADetailer（官方 extension_settings.sd.adetailer_face，仅 auto 后端生效）。 */
+    fun imageADetailerFace(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_adetailer_face", false)
+
+    fun saveImageADetailerFace(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("sd_adetailer_face", enabled)
+            .apply()
+    }
+
     fun imageHrUpscaler(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_hr_upscaler", "Latent") ?: "Latent"
 
@@ -95,6 +105,28 @@ object ServicesPrefs {
 
     fun imageDenoisingStrength(context: Context): Double =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getFloat("sd_denoising_strength", 0.7f).toDouble()
+
+    /** Refine 模式：生成前允许手动编辑提示词（官方 sd_refine_mode）。 */
+    fun imageRefineMode(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_refine_mode", false)
+
+    /** Interactive 模式：发送含触发词的消息自动生图（官方 sd_interactive_mode）。 */
+    fun imageInteractiveMode(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_interactive_mode", false)
+
+    /** Multimodal captioning：基于头像生成人物/人像提示（官方 sd_multimodal_captioning）。 */
+    fun imageMultimodalCaptioning(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_multimodal_captioning", false)
+
+    /** Free mode LLM 扩展：FREE 模式用 LLM 扩写主题提示（官方 sd_free_extend）。 */
+    fun imageFreeExtend(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("sd_free_extend", false)
+
+    fun saveImageModeToggle(context: Context, key: String, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(key, enabled)
+            .apply()
+    }
 
     /** 角色提示词前缀（官方 extension_settings.sd.character_prompts，按角色 id 存）。 */
     fun imageCharaPrompt(context: Context, characterId: String?): String =

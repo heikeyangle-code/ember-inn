@@ -4,6 +4,9 @@ package com.emberinn.app.ui.settings
 import android.widget.Toast
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.data.ComfyWorkflowStore
+import com.emberinn.app.data.PromptTemplateStore
+import com.emberinn.app.data.StyleStore
+import com.emberinn.engine.prompt.ImageGenPromptEngine
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.clickable
@@ -187,6 +190,11 @@ private fun ImageCard() {
     var hrScale by rememberSaveable { mutableStateOf(ServicesPrefs.imageHrScale(context).toString()) }
     var hrSecondPassSteps by rememberSaveable { mutableStateOf(ServicesPrefs.imageHrSecondPassSteps(context).toString()) }
     var denoising by rememberSaveable { mutableStateOf(ServicesPrefs.imageDenoisingStrength(context).toString()) }
+    var adetailerFace by rememberSaveable { mutableStateOf(ServicesPrefs.imageADetailerFace(context)) }
+    var refineMode by rememberSaveable { mutableStateOf(ServicesPrefs.imageRefineMode(context)) }
+    var interactiveMode by rememberSaveable { mutableStateOf(ServicesPrefs.imageInteractiveMode(context)) }
+    var multimodalCaptioning by rememberSaveable { mutableStateOf(ServicesPrefs.imageMultimodalCaptioning(context)) }
+    var freeExtend by rememberSaveable { mutableStateOf(ServicesPrefs.imageFreeExtend(context)) }
     fun save() = ServicesPrefs.saveImage(context, source, url, model, steps)
     fun saveAdvanced() = ServicesPrefs.saveImageAdvanced(
         context,
@@ -264,6 +272,15 @@ private fun ImageCard() {
             maxLines = 4,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
+        StyleSection(
+            prefix = promptPrefix,
+            negative = negativePrompt,
+            onApply = { prefix, neg ->
+                promptPrefix = prefix
+                negativePrompt = neg
+                saveAdvanced()
+            },
+        )
         EmberTextField(
             value = steps.toString(),
             onValueChange = { steps = it.toIntOrNull() ?: 0; save() },
@@ -288,6 +305,20 @@ private fun ImageCard() {
             modifier = Modifier.padding(horizontal = 16.dp),
         ) { Text("交换宽高（swap）") }
         ToggleRow("恢复人脸（restore_faces）", restoreFaces) { restoreFaces = it; saveAdvanced() }
+        ToggleRow("ADetailer（人脸）", adetailerFace) { adetailerFace = it; ServicesPrefs.saveImageADetailerFace(context, it) }
+        ToggleRow("生成前编辑提示词（refine）", refineMode) {
+            refineMode = it; ServicesPrefs.saveImageModeToggle(context, "sd_refine_mode", it)
+        }
+        ToggleRow("交互模式（消息触发生图）", interactiveMode) {
+            interactiveMode = it; ServicesPrefs.saveImageModeToggle(context, "sd_interactive_mode", it)
+        }
+        ToggleRow("头像多模态提示（multimodal）", multimodalCaptioning) {
+            multimodalCaptioning = it; ServicesPrefs.saveImageModeToggle(context, "sd_multimodal_captioning", it)
+        }
+        ToggleRow("自由模式 LLM 扩写（free_extend）", freeExtend) {
+            freeExtend = it; ServicesPrefs.saveImageModeToggle(context, "sd_free_extend", it)
+        }
+        PromptTemplatesSection()
         TextFieldRow("CLIP skip", clipSkip) { clipSkip = it; saveAdvanced() }
         TextFieldRow("VAE（留空=默认）", vae) { vae = it; saveAdvanced() }
         ToggleRow("高清修复（enable_hr）", enableHr) { enableHr = it; saveAdvanced() }
@@ -468,6 +499,196 @@ private fun ComfyWorkflowSection() {
             },
             dismissButton = { TextButton(onClick = { deleteOpen = false }) { Text("取消") } },
         )
+    }
+}
+
+/**
+ * 图像生成样式库（对齐官方 stable-diffusion 扩展 onStyleSelect/onSaveStyleClick/
+ * onRenameStyleClick/onDeleteStyleClick）：选样式 → 应用到提示词前缀/负向；把当前前缀/负向存为样式。
+ * 数据在 [StyleStore]（ember_services.sd_styles JSON 数组 + sd_style 活动名）。
+ */
+@Composable
+private fun StyleSection(
+    prefix: String,
+    negative: String,
+    onApply: (String, String) -> Unit,
+) {
+    val context = LocalContext.current
+    val store = remember { StyleStore(context) }
+    var styles by remember { mutableStateOf(store.styles()) }
+    var active by remember { mutableStateOf(store.active()) }
+    var selectorOpen by remember { mutableStateOf(false) }
+    var saveOpen by remember { mutableStateOf(false) }
+    var renameOpen by remember { mutableStateOf(false) }
+    var deleteOpen by remember { mutableStateOf(false) }
+    var draftName by remember { mutableStateOf("") }
+
+    fun refresh() {
+        styles = store.styles()
+        active = store.active()
+    }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Box {
+                FilterChip(
+                    selected = false,
+                    onClick = { selectorOpen = true },
+                    label = { Text(if (active.isBlank()) "样式库（未选择）" else "样式：$active", maxLines = 1) },
+                )
+                DropdownMenu(expanded = selectorOpen, onDismissRequest = { selectorOpen = false }) {
+                    styles.forEach { s ->
+                        DropdownMenuItem(text = { Text(s.name) }, onClick = {
+                            selectorOpen = false
+                            store.setActive(s.name)
+                            active = s.name
+                            onApply(s.prefix, s.negative)
+                        })
+                    }
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = { draftName = ""; saveOpen = true }) { Text("保存当前") }
+            if (active.isNotBlank()) {
+                TextButton(onClick = { draftName = active; renameOpen = true }) { Text("重命名") }
+                TextButton(onClick = { deleteOpen = true }) { Text("删除") }
+            }
+        }
+        Text(
+            "选中样式会应用到上方提示词前缀/负向（官方 onStyleSelect）；「保存当前」用当前前缀/负向新建或覆盖同名样式。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+
+    if (saveOpen) {
+        AlertDialog(
+            onDismissRequest = { saveOpen = false },
+            title = { Text("保存样式") },
+            text = {
+                Column {
+                    Text("将用当前「提示词前缀 / 负向提示」保存为样式：", style = MaterialTheme.typography.bodySmall)
+                    EmberTextField(
+                        value = draftName,
+                        onValueChange = { draftName = it },
+                        label = { Text("样式名") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draftName.trim().isNotEmpty()) {
+                        store.save(draftName.trim(), prefix, negative)
+                        refresh()
+                    } else {
+                        Toast.makeText(context, "样式名不能为空", Toast.LENGTH_SHORT).show()
+                    }
+                    saveOpen = false
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { saveOpen = false }) { Text("取消") } },
+        )
+    }
+
+    if (renameOpen) {
+        AlertDialog(
+            onDismissRequest = { renameOpen = false },
+            title = { Text("重命名样式") },
+            text = {
+                EmberTextField(
+                    value = draftName,
+                    onValueChange = { draftName = it },
+                    label = { Text("新名字") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!store.rename(active, draftName)) {
+                        Toast.makeText(context, "重命名失败：名字为空/重复", Toast.LENGTH_SHORT).show()
+                    } else {
+                        refresh()
+                    }
+                    renameOpen = false
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("取消") } },
+        )
+    }
+
+    if (deleteOpen) {
+        AlertDialog(
+            onDismissRequest = { deleteOpen = false },
+            title = { Text("删除样式：$active？") },
+            text = { Text("删除后不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    store.delete(active)
+                    refresh()
+                    deleteOpen = false
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { deleteOpen = false }) { Text("取消") } },
+        )
+    }
+}
+
+/**
+ * 图像生成 prompt templates（对齐官方 stable-diffusion 扩展 addPromptTemplates）：
+ * 13 个 generationMode 模板，按模式号排序渲染；可编辑写回 sd_prompts，每行「恢复默认」。
+ * 数据在 [PromptTemplateStore]（合并引擎默认 [ImageGenPromptEngine.DEFAULT_PROMPT_TEMPLATES]）。
+ */
+@Composable
+private fun PromptTemplatesSection() {
+    val context = LocalContext.current
+    val store = remember { PromptTemplateStore(context) }
+    var templates by remember { mutableStateOf(store.templates()) }
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        ) {
+            Text("图像提示词模板（${templates.size}）", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.weight(1f))
+            Text(if (expanded) "收起 ▾" else "展开 ▴", color = MaterialTheme.colorScheme.primary)
+        }
+        Text(
+            "官方 13 个 generationMode 预设提示词（getQuietPrompt 使用），可编辑；点「恢复默认」还原官方原文。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        if (expanded) {
+            // 官方 addPromptTemplates 按 Number(key) 升序排序
+            val sorted = templates.entries.sortedBy { it.key.toIntOrNull() ?: Int.MAX_VALUE }
+            for ((key, text) in sorted) {
+                val label = ImageGenPromptEngine.MODE_LABELS[key] ?: key
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        store.restore(key)
+                        templates = store.templates()
+                    }) { Text("恢复默认") }
+                }
+                EmberTextField(
+                    value = text,
+                    onValueChange = {
+                        store.set(key, it)
+                        templates = store.templates()
+                    },
+                    label = { Text("模式 $key 模板") },
+                    minLines = 2,
+                    maxLines = 6,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 
