@@ -384,6 +384,7 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 - abbr/acronym 官方虚线下划线，Compose 无虚线用实线近似；嵌套 sub/sup/small 按单层 0.83×（官方逐层累乘），极低频偏差。
 - 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（有意偏差，见 7.4 安全）。
 - 行内 Web 标签（button/input/select/.../span[属性]/font face-size/ruby/bdi/bdo 等）整段走 Web（Compose 无法原生文字+行内控件混排）。
+- 路线 A 原生渲染覆盖颜色/盒模型/文字/基础布局；冷门 CSS（grid/flex 高级/动画/伪元素/媒体查询）忽略、未知标签/属性降级文本（不致命）；外部媒体默认放行（用户决策，覆盖官方 forbid_external_media 默认禁）。
 - 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似；img width/height 不保留；残缺元素延伸到末尾、跨围栏按片段处理（低频）。
 - WebViewPool 上限 6；HTML 开关关闭时围栏外一律原生且 < > 已转义；WebView 链接 text-decoration:none；高度允许回缩、按实测全高展开。
 
@@ -395,21 +396,26 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 ## 7. 渲染与 HTML 卡片
 
 ### 7.1 官方管线 vs 我方管线
-官方：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染。
-我方：`displayTextOf`/`displayReasoningText`（引擎 MessageFormattingEngine 纯文本子集，差分 805 例；含首条宏替换写回 chat.mes 与非系统 trim）→ `preprocessOfficialHtml`（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`（buildMarkdownAnnotatedString + applyOfficialMarkers）→ 或 WebView 兜底（officialStyledHtml + 自动测高）。渲染层全部 App/UI，引擎只负责格式化序列。
+官方：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染（DOM/CSS 浏览器渲染）。
+我方两条路线（处理顺序宏→正则→Markdown→消毒与官方一致，805 例差分锁定）：
+1. 格式化序列（引擎层）：`MessageFormattingEngine` 纯文本子集（差分 805 例；首条宏替换写回 chat.mes、bias 剥离、正则位点、fixMarkdown/encode_tags/reasoning 转义/非系统 trim）→ App `preprocessOfficialHtml`（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`。
+2. 真 HTML/CSS 渲染（本任务新增）：`ChatMarkdown` → `buildMessageSegments` 分段后按 `isStaticHtml` 分流——
+   - **路线 A（静态 HTML，无脚本依赖）→ 原生 UI**：引擎渲染管线 `HtmlSanitizerEngine`（DOMPurify 白名单复刻 + style 属性保守 CSS 消毒 + 独立 `<style>` 块 + 媒体规则）→ `CssStyleParser` → `RenderStyleResolver`（样式合并/继承）→ `RenderNode` 树 → App `RenderNodeCompose` 递归映射原生 Compose（`<details>/<summary>` 原生折叠、img/音视频、链接、未知标签降级文本）。消毒/样式计算在引擎层（无 UI 依赖），树→UI 映射在 App 层，单向依赖。
+   - **路线 B（含 `<script>`/事件依赖）→ WebView**：动态 HTML 整段 WebView（JS 恒开、网络与外链全放开、自动测高）；Mermaid 恒走 WebView。
+   - 权威清单 [docs/RENDER_AUTHORITY.md](RENDER_AUTHORITY.md) / 诊断 [docs/RENDER_DIAGNOSIS.md](RENDER_DIAGNOSIS.md) / 验证报告 [docs/RENDER_REPORT.md](RENDER_REPORT.md)。
 
 **逐项对照表与文本级 HTML 标签细节见 [docs/RENDER_AUDIT.md](RENDER_AUDIT.md)。**
 
 ### 7.2 交互 HTML 卡片 / iframe 渲染器（App 层，第三方机制）
 - 定位：App/UI 层，官方本体没有（官方 DOMPurify 禁消息脚本）。机制参照 Tavern Helper 渲染器与阡濯《ST酒馆 html 代码注入器》（userscript，CC BY-NC 4.0——只参考机制未搬运代码；若日后搬运注意非商用）。
 - 开关：设置→扩展插件→交互 HTML 卡片（`ExtensionPrefs.interactiveCards`，默认开）。渲染与交互分离：``` 内 HTML 代码块无论开关都渲染成 iframe 卡片；关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用）。
-- 实现：ChatMarkdown 先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段（``` 内以 `<` 开头以 `>` 结尾或含 `<body>`）与 Mermaid/富 HTML 段各自进独立 WebView，围栏外文本走原生；embedInteractiveBlocks 做 `<iframe srcdoc>`（实体转义 + onload/ResizeObserver/MutationObserver 持续同步）；WebViewHtml JS 恒开、网络与外链放开、实例来自 WebViewPool 复用；加载方式=原文 UTF-8 + file base（曾因 base64 不解码导致空白，已修）；整页文档（<!DOCTYPE html>）整段走 WebView，兜底 CSS 注入原文档 `<head>`（不再 html 套 html）；测高/样式注入点跳过 `<script>/<style>` 文本内的伪 `</body>`；`allowFileAccessFromFileURLs`/`allowUniversalAccessFromFileURLs`/`MIXED_CONTENT_ALWAYS_ALLOW` 全开。
+- 实现：ChatMarkdown 先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段与富 HTML 段按 `isStaticHtml` 分流——静态（无 `<script>`/`on\w+=`/`javascript:`）走路线 A 原生（`StaticHtmlContent` + 引擎渲染管线，见 7.1），动态（含脚本）与 Mermaid 段进 WebView；围栏外文本走原生；动态段经 embedInteractiveBlocks 做 `<iframe srcdoc>`（实体转义 + onload/ResizeObserver/MutationObserver 持续同步）；WebViewHtml JS 恒开、网络与外链全放开、外部媒体默认放行（用户决策，撤销 forbid_external_media 收紧；官方语义保留为 `HtmlSanitizerEngine.Config.externalMediaAllowed=false` 可选收紧）、实例来自 WebViewPool 复用；加载方式=原文 UTF-8 + file base（曾因 base64 不解码导致空白，已修）；整页文档（<!DOCTYPE html>）整段走 WebView，兜底 CSS 注入原文档 `<head>`（不再 html 套 html）；测高/样式注入点跳过 `<script>/<style>` 文本内的伪 `</body>`；`allowFileAccessFromFileURLs`/`allowUniversalAccessFromFileURLs`/`MIXED_CONTENT_ALWAYS_ALLOW` 全开。
 - 能力对照：```→iframe 脚本可交互 ✅；非 HTML 代码块保留显示 ✅（pre/code）；自动测高 ✅；围栏外文本保留换行 ✅；头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` ✅（`{{userAvatarPath}}` 暂空登记）；min-height vh 换算 ➖；原代码折叠 ✅；后台脚本库/表情 VN STT EJS 变量/插件市场 ➖（App 等价物 = Kotlin 引擎 + 快捷回复/斜杠）。
 - 手工回归清单：①单个 ``` 包 HTML+onclick 按钮可点、高度自适应不撑爆；②交互块+普通文字/代码块混排正常；③纯 HTML 消息（无围栏）正常；④远程图片/字体可加载（离线占位）；⑤长网页 ≤90% 屏高全高展开、超上限 WebView 内滚动，`height:100%;overflow:hidden` 页面被注入 `height:auto!important;overflow:visible!important` 还原。
 - 安全：交互代码块（开关开）= 执行任意脚本（可发网络请求、可读该消息 WebView 内一切）；唯一 JS 桥 EmberInnBridge 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。与 JS 全开同风险等级，官方默认禁止，属有意偏差；收紧时先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
 
 ### 7.3 分段渲染 / WebView 池 / 测高（App/UI 层）
-- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；围栏（含未闭合围栏，行首 ```/~~~ 无闭合时延伸到文本末尾、对齐官方 marked 按代码块渲染）内不切 Web 元素；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView，否则原生。
+- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；围栏（含未闭合围栏，行首 ```/~~~ 无闭合时延伸到文本末尾、对齐官方 marked 按代码块渲染）内不切 Web 元素；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView（再按 `isStaticHtml` 分流：静态→路线 A 原生，动态→WebView），否则原生。
 - WebViewPool：ArrayDeque 闲置池（上限 6）；release 不 about:blank，保留已渲染页面 + WebViewSession（loaded/loadToken/heightPx）；token 每次进入换新，复用同页不重载、记忆高度直接恢复；同页滚动出屏不再销毁重建；池化实例整页重载期间 INVISIBLE、onPageFinished（token 校验后）恢复显示，复用不闪上一条消息的旧页面。
 - 测高：ResizeObserver(html+body) + load + fonts.ready + 图片未就绪 800ms 低频轮询（20s 上限）+ onPageFinished 纯字符串轮询 ≤15s + 初始 160dp 兜底；公式 = html/body scrollHeight 与 getBoundingClientRect 最大值 + ≤8000 元素 max(bottom) 扫描 + ceil+2px；CSS 像素 1:1 转 dp（旧代码按物理像素/density 导致高密度屏压扁）；上限 maxOf(90% 屏高, 280dp)，超上限 WebView 内滚动；iframe 150/500/1500/3000ms 复测 + 父页观察同源 srcdoc 持续同步。
 - 性能：animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（依据 Cloudy 源码 Sky.kt/SkyFrameDriver.kt：滚动活动触发每帧重捕；同屏玻璃 ≤2-3 处）；热路径缓存（chatTypography/chatTextShadow/NativeMarkdown 组件 remember；Markdown 解析 LRU 缓存 MarkdownCache.kt 上限 32）；行级参数稳定化（immersiveActions/bubbleStyle/density 层读一次、List<MediaAttachment> 包 @Immutable ChatMedia）；发送链路缓存（角色卡解析 LRU 8、外置世界书 mtime、连接档案 mtime、聊天元数据；JSONL/元数据落盘单线程后台队列；命中面板/上下文胶囊移出请求关键路径）。
