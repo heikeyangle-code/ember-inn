@@ -1,0 +1,133 @@
+{
+  "generated": "2026-08-20T13:35:32.726Z",
+  "source": "official-sillytavern-real-browser",
+  "cases": [
+    {
+      "id": "A_wi_content_regex_at_building_prompt",
+      "input": {
+        "chat": [
+          "密道"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "密道"
+            ],
+            "content": "宝藏密码",
+            "order": 10,
+            "position": 0
+          }
+        ],
+        "regexScripts": [
+          {
+            "findRegex": "/宝藏/g",
+            "replaceString": "珍宝",
+            "placement": [
+              5
+            ],
+            "markdownOnly": false,
+            "promptOnly": true,
+            "runOnEdit": true,
+            "disabled": false,
+            "substituteRegex": 0
+          }
+        ]
+      },
+      "sendPhaseText": "密道",
+      "promptPhaseText": "密道",
+      "raw": {
+        "before": "珍宝密码",
+        "uids": [
+          "probe_regex.1"
+        ]
+      },
+      "prompt": {
+        "before": "珍宝密码",
+        "uids": [
+          "probe_regex.1"
+        ]
+      }
+    },
+    {
+      "id": "B_promptonly_chat_regex_before_wi_scan",
+      "input": {
+        "chat": [
+          "请说密语"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "开锁"
+            ],
+            "content": "门开了",
+            "order": 10,
+            "position": 0
+          }
+        ],
+        "regexScripts": [
+          {
+            "findRegex": "/密语/g",
+            "replaceString": "开锁",
+            "placement": [
+              1
+            ],
+            "markdownOnly": false,
+            "promptOnly": true,
+            "runOnEdit": true,
+            "disabled": false,
+            "substituteRegex": 0
+          }
+        ]
+      },
+      "sendPhaseText": "请说密语",
+      "promptPhaseText": "请说开锁",
+      "raw": {
+        "before": "",
+        "uids": []
+      },
+      "prompt": {
+        "before": "门开了",
+        "uids": [
+          "probe_regex.1"
+        ]
+      }
+    },
+    {
+      "id": "C_default_script_not_run_in_prompt_phase",
+      "input": {
+        "chat": [
+          "甲"
+        ],
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "乙"
+            ],
+            "content": "条目乙",
+            "order": 10,
+            "position": 0
+          }
+        ],
+        "regexScripts": [
+          {
+            "findRegex": "/甲/g",
+            "replaceString": "乙",
+            "placement": [
+              1
+            ],
+            "markdownOnly": false,
+            "promptOnly": false,
+            "runOnEdit": true,
+            "disabled": false,
+            "substituteRegex": 0
+          }
+        ]
+      },
+      "sendPhaseText": "乙",
+      "promptPhaseText": "甲"
+    }
+  ]
+}

@@ -3643,10 +3643,18 @@ private fun closeStreamingDelimiters(text: String): String {
 }
 
 /**
- * README 上下文占比胶囊：圆环进度 + token/上限 + 百分比 + 绿→黄→橙→红分级，点开详细分解。
+ * 合并后的上下文胶囊：圆环进度 + token/上限 + 百分比（绿→黄→橙→红分级）｜世界书命中数，
+ * 两端同一胶囊。数据实时取自引擎 `onPrepared`（wiResult.activated + result.counts/maxContextTokens），
+ * 非 UI 模拟值。点击上下文区开预算分解；点击世界书命中区开命中面板。
  */
 @Composable
-private fun ContextCapsule(used: Int, max: Int, onClick: () -> Unit) {
+private fun ContextCapsule(
+    used: Int,
+    max: Int,
+    worldHits: Int,
+    onOpenContext: () -> Unit,
+    onOpenWorld: () -> Unit,
+) {
     val ratio = if (max <= 0) 0f else used.toFloat() / max
     val grade = when {
         ratio >= 0.90f -> MaterialTheme.colorScheme.error
@@ -3654,59 +3662,71 @@ private fun ContextCapsule(used: Int, max: Int, onClick: () -> Unit) {
         ratio >= 0.50f -> Color(0xFFF9A825)
         else -> Color(0xFF2E7D32)
     }
+    // 世界书命中存在即高亮主色，无命中置灰（常驻胶囊，弱化但不消失）
+    val worldColor = if (worldHits > 0) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f))
-            .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
-        CircularProgressIndicator(
-            progress = { ratio.coerceIn(0f, 1f) },
-            modifier = Modifier.size(16.dp),
-            strokeWidth = 2.dp,
-            color = grade,
-            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-        )
-        Spacer(Modifier.size(6.dp))
-        Text(
-            "${(ratio * 100).toInt()}%",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = grade,
-        )
-        Spacer(Modifier.size(5.dp))
-        Text(
-            "上下文 ${formatTokens(used)}/${formatTokens(max)}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-/** 状态胶囊（世界书命中等），README 状态可见；中性低调，不抢输入区。 */
-@Composable
-private fun StatusPill(text: String, onClick: (() -> Unit)? = null) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
-        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
-    ) {
+        // 上下文区：圆环 + 百分比 + token 明细
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.combinedClickable(onClick = onOpenContext, onLongClick = onOpenWorld),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+            CircularProgressIndicator(
+                progress = { ratio.coerceIn(0f, 1f) },
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = grade,
+                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+            )
+            Spacer(Modifier.size(6.dp))
+            Text(
+                "${(ratio * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = grade,
             )
             Spacer(Modifier.size(5.dp))
             Text(
-                text = text,
+                "上下文 ${formatTokens(used)}/${formatTokens(max)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // 细分隔线：上下文 | 世界书命中 同囊区隔
+        Spacer(Modifier.size(8.dp))
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(14.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        )
+        Spacer(Modifier.size(8.dp))
+        // 世界书命中区：书图标 + 命中数，点击开命中面板
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable(onClick = onOpenWorld),
+        ) {
+            Icon(
+                FaIcons.BookOpen,
+                contentDescription = "世界书命中",
+                tint = worldColor,
+                modifier = Modifier.size(13.dp),
+            )
+            Spacer(Modifier.size(4.dp))
+            Text(
+                if (worldHits > 0) "×$worldHits" else "—",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (worldHits > 0) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (worldHits > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
             )
         }
     }
@@ -5877,19 +5897,21 @@ private fun ChatInputBar(
                     .height(1.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
             )
-            // README 状态可见：上下文占比 + 世界书命中常驻输入栏顶部（不占消息区）
-            if (!isStreaming && (contextUsage != null || worldHitsCount > 0)) {
+            // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，常驻输入栏顶部（不占消息区）
+            if (!isStreaming && contextUsage != null) {
+                val (used, max) = contextUsage
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp),
                 ) {
-                    contextUsage?.let { (used, max) ->
-                        ContextCapsule(used = used, max = max, onClick = onOpenContextDetail)
-                    }
-                    if (worldHitsCount > 0) {
-                        StatusPill("世界书 ×$worldHitsCount", onClick = onOpenWorldPanel)
-                    }
+                    ContextCapsule(
+                        used = used,
+                        max = max,
+                        worldHits = worldHitsCount,
+                        onOpenContext = onOpenContextDetail,
+                        onOpenWorld = onOpenWorldPanel,
+                    )
                 }
             }
             if (pendingMedia.isNotEmpty()) {

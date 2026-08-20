@@ -1,0 +1,399 @@
+{
+  "generated": "2026-08-20T13:20:22.846Z",
+  "source": "official-sillytavern-real-browser",
+  "cases": [
+    {
+      "id": "recursion_cycle_ab",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": true
+        },
+        "chat": [
+          "线索"
+        ],
+        "maxContext": 100,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "暗门",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "暗门"
+            ],
+            "content": "宝藏",
+            "order": 20,
+            "position": 0
+          },
+          {
+            "uid": 3,
+            "key": [
+              "宝藏"
+            ],
+            "content": "钥匙线索",
+            "order": 30,
+            "position": 0
+          }
+        ]
+      },
+      "before": "暗门\n宝藏\n钥匙线索",
+      "after": "",
+      "uids": [
+        "probe_world.1",
+        "probe_world.2",
+        "probe_world.3"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "recursion_max_steps_1",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": true,
+          "world_info_max_recursion_steps": 1
+        },
+        "chat": [
+          "线索"
+        ],
+        "maxContext": 100,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "A文本",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "A文本"
+            ],
+            "content": "B文本",
+            "order": 20,
+            "position": 0
+          },
+          {
+            "uid": 3,
+            "key": [
+              "B文本"
+            ],
+            "content": "C文本",
+            "order": 30,
+            "position": 0
+          },
+          {
+            "uid": 4,
+            "key": [
+              "C文本"
+            ],
+            "content": "D文本",
+            "order": 40,
+            "position": 0
+          }
+        ]
+      },
+      "before": "A文本",
+      "after": "",
+      "uids": [
+        "probe_world.1"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "recursion_max_steps_2",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": true,
+          "world_info_max_recursion_steps": 2
+        },
+        "chat": [
+          "线索"
+        ],
+        "maxContext": 100,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "线索"
+            ],
+            "content": "A文本",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "A文本"
+            ],
+            "content": "B文本",
+            "order": 20,
+            "position": 0
+          },
+          {
+            "uid": 3,
+            "key": [
+              "B文本"
+            ],
+            "content": "C文本",
+            "order": 30,
+            "position": 0
+          },
+          {
+            "uid": 4,
+            "key": [
+              "C文本"
+            ],
+            "content": "D文本",
+            "order": 40,
+            "position": 0
+          }
+        ]
+      },
+      "before": "A文本\nB文本",
+      "after": "",
+      "uids": [
+        "probe_world.1",
+        "probe_world.2"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "budget_priority_order",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": false
+        },
+        "chat": [
+          "a b"
+        ],
+        "maxContext": 15,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "a"
+            ],
+            "content": "甲甲甲甲甲",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "b"
+            ],
+            "content": "乙乙乙乙乙",
+            "order": 20,
+            "position": 0
+          },
+          {
+            "uid": 3,
+            "key": [
+              "b"
+            ],
+            "content": "丙丙丙丙丙",
+            "order": 30,
+            "position": 0
+          }
+        ]
+      },
+      "before": "乙乙乙乙乙\n丙丙丙丙丙",
+      "after": "",
+      "uids": [
+        "probe_world.3",
+        "probe_world.2"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "budget_priority_sticky",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": false
+        },
+        "chat": [
+          "a b"
+        ],
+        "maxContext": 20,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "a"
+            ],
+            "content": "普通A普通A普通A普通A普通A",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "b"
+            ],
+            "content": "粘住B粘住B粘住B粘住B粘住B",
+            "order": 20,
+            "position": 0,
+            "sticky": 2
+          }
+        ]
+      },
+      "before": "粘住B粘住B粘住B粘住B粘住B",
+      "after": "",
+      "uids": [
+        "probe_world.2"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "budget_ignorebudget",
+      "input": {
+        "settings": {
+          "world_info_depth": 2,
+          "world_info_budget": 100,
+          "world_info_recursive": false
+        },
+        "chat": [
+          "a b c"
+        ],
+        "maxContext": 12,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "a"
+            ],
+            "content": "AAAAAAAAAAAAAAAAAAAA",
+            "order": 30,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "b"
+            ],
+            "content": "BBBBBBBBBBBBBBBBBBBB",
+            "order": 20,
+            "position": 0
+          },
+          {
+            "uid": 3,
+            "key": [
+              "c"
+            ],
+            "content": "忽略预算C",
+            "order": 10,
+            "position": 0,
+            "ignoreBudget": true
+          }
+        ]
+      },
+      "before": "忽略预算C\nAAAAAAAAAAAAAAAAAAAA",
+      "after": "",
+      "uids": [
+        "probe_world.1",
+        "probe_world.3"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": []
+    },
+    {
+      "id": "depth_positions",
+      "input": {
+        "settings": {
+          "world_info_depth": 3,
+          "world_info_budget": 100,
+          "world_info_recursive": false
+        },
+        "chat": [
+          "钥匙 门"
+        ],
+        "maxContext": 100,
+        "entries": [
+          {
+            "uid": 1,
+            "key": [
+              "钥匙"
+            ],
+            "content": "前置X",
+            "order": 10,
+            "position": 0
+          },
+          {
+            "uid": 2,
+            "key": [
+              "门"
+            ],
+            "content": "后置Y",
+            "order": 20,
+            "position": 1
+          },
+          {
+            "uid": 3,
+            "key": [
+              "门"
+            ],
+            "content": "深处Z",
+            "order": 30,
+            "position": 4,
+            "depth": 1
+          }
+        ]
+      },
+      "before": "前置X",
+      "after": "后置Y",
+      "uids": [
+        "probe_world.3",
+        "probe_world.2",
+        "probe_world.1"
+      ],
+      "em": [],
+      "anBefore": [],
+      "anAfter": [],
+      "depth": [
+        {
+          "depth": 1,
+          "role": 0,
+          "entries": [
+            "深处Z"
+          ]
+        }
+      ]
+    }
+  ]
+}

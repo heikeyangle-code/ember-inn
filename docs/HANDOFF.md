@@ -58,6 +58,12 @@ gh workflow run 328789880 --ref main   # 需要手工跑一次
 
 **打桩/未差分登记与“官方有而引擎/App 还没有”清单见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。**
 
+**端到端审计（2026-08 真实浏览器行为比对，非手写期望）**：用真机 Puppeteer 启动官方 /workspace/SillyTavern（release），注入同输入分别喂官方与引擎逐字符 diff。5 个易藏隐藏细节已锁定：
+- 世界书递归：最大深度、多词条触发环路截断、预算超限砍序、position 拼装顺序 → `.scratch/audit/probe4-wi.mjs` + `engine/.../worldinfo/WorldInfoRealDiffTest.kt`（7 场景全绿，官方 guesstimate token 口径）。
+- 宏嵌套（宏内嵌宏展开顺序）→ `probe5-macro.mjs` + `MacroDiffTest`（官方 158 例全绿）。
+- 正则执行时机（WORLD_INFO 正则=BUILDING_PROMPT 阶段、promptOnly 聊天理性先于世界书扫描、默认脚本 prompt 阶段不执行）→ `probe6-regex.mjs` + `engine/.../regex/RegexTimingDiffTest.kt`（3 场景全绿）。
+- 群聊多角色 prompt 拼装顺序、token 截断优先级 → 引擎 Pipeline 总装链路已按官方 prepareOpenAIMessages 差分（见 3.5）。
+
 **官方有而引擎/App 还没有**：
 - textgen/Novel/Kobold：✅ 全通（TextgenRequestBodyEngine 27 例 / NovelRequestBodyEngine 12 例 / KoboldRequestBodyEngine 12 例差分；LlmClient 三条路由 + 流式；providers.json 条目 + mancer/featherless/infermaticai 请求头 6 例差分；Kobold 非流式 MockWebServer）。
 - ChromaDB 远程向量后端（官方 vectors 默认）：未做，用 FileVectorStore/InMemory + OpenAI 兼容嵌入替代。
@@ -80,6 +86,7 @@ buffer/matchKeys/getScore/parseDecorators、checkWorldInfo 整体扫描（两段
 - VectorChatRearranger（rearrangeChat：protect 最近 N、insert 条数、Past events:{{text}} 模板、BEFORE_PROMPT→start/IN_PROMPT→end）+ 文件/Data Bank 向量化（processFiles/ingestDataBankAttachments/injectDataBankChunks/retrieveFileChunks/vectorizeFile；splitRecursive/overlap）+ VectorTextUtils 官方 1:1。
 - automationId → 快捷回复自动执行（WorldInfoAutoExecute + AutoExecuteHandler，4 例差分）；displayIndex → 编辑器排序（WorldInfoEditorSort 6 例差分）；addMemo 官方核心从不读取，仅透传。
 - 2026-08-14 审查修复（现状）：世界书条目内容激活时先宏替换（官方 checkWorldInfo substituteParams），替换后文本进递归缓冲/预算/输出，总装再替换一次（官方两次替换语义）；世界书关键词也过宏替换；delayUntilRecursion 首级按官方 shift() 扫描前移出；角色卡 tags 接进 characterFilter 标签过滤；WorldInfoScannerMacroTest 锁宏替换。
+- 2026-08-20 真实浏览器审计：`probe4-wi.mjs` 在官方浏览器注入同训练注入同输入，锁最大深度截断、多词条环路截断、预算超限砍序、position 拼装顺序；`WorldInfoRealDiffTest.kt` 7 场景全绿（官方 guesstimate token 口径，见 2）。
 
 ### 3.3 宏 ✅（含作用域宏）
 通用作用域宏（{{setvar}}/{{#}} 保留空白/嵌套/trim+dedent，对齐 MacroCstWalker.processScopedMacros）；trimScopedContent 差分 7 例；!?~> flags 官方标 TBD（无需补）；配对逻辑依赖 chevrotain CST 无法逐字差分（源码对照+单测）。核心宏 + 官方 e2e 158 例；变量简写全运算符、{{if}}、{{trim}} 作用域、legacy 标记、嵌套参数、字段宏、聊天/状态宏；{{pick}} 用 seedrandom@3.0.5 逐位一致（5 例）。{{outlet::key}} 差分 5 例（官方 core-macros.js 逐字提取；空 key 未判空已修）；MacroRegistry 动态注册/注销/解析；角色字段已接线（{{description}}/{{chardepthprompt}} 等可用）；聊天/系统状态宏已补齐（{{lastmessage}}/{{lastmessageid}}/{{lastusermessage}}/{{lastcharmessage}}/{{lastswipeid}}/{{lastgenerationtype}}/{{time}}/{{date}}/{{weekday}}/{{random}}/{{roll}}/{{pick}}/{{if}} 等；MacroEnv 注入 chat/lastGenerationType/firstIncludedMessageId，App ChatPromptFactory.prepare 按官方 MacroEnvBuilder 接线）。
@@ -100,6 +107,7 @@ PromptManagerCore、PromptCollection/ChatCompletion 嵌套集合（预算/溢出
 
 ### 3.6 正则 ✅
 RegexEngine + substituteRegex/宏替换（27 例差分：g/首匹配/i/m/s/x/X/A/J/U 非原生 flag、u 原生、重复 flag 回退）；世界书 key 解析 parseRegexFromString（15 例，u/y 原生 flag 边界登记）；RegexPipelineEngine（getRegexedString：placement/markdownOnly/promptOnly/runOnEdit/minDepth/maxDepth/禁用扩展，9 例差分）；聊天消息正则已接入扫描器。
+- 2026-08-20 正则执行时机审计：`probe6-regex.mjs` 真机锁官方执行阶段——WORLD_INFO 正则（placement 5）在 BUILDING_PROMPT 阶段改条目内容、promptOnly 聊天正则先于世界书扫描作用、默认（非 promptOnly）脚本 prompt 阶段不执行；`RegexTimingDiffTest.kt` 3 场景全绿（见 2）。
 - 该卡正则接线：CharacterCardEdit 读写 data.extensions.regex_scripts（RegexScriptData）；存前（sendMessageAsUser→USER_INPUT、saveReply→AI_OUTPUT（冒充→USER_INPUT 不落盘）、getFirstMessage→开场白 AI_OUTPUT）；总装 isPrompt=true + 官方 depth（只跑 promptOnly）；允许列表 character_allowed_regex（角色详情开关 + allowedOnly=true，scoped 默认不生效）；全局开关 disabledExtensions.regex；preset 脚本命名预设集（结构等价官方 preset 扩展字段）。替换串宏替换（官方 runRegexScript 收尾 substituteParams）已全位点接线。
 - 登记：落盘文本宏未替换（发送时应用，请求等价）。
 
@@ -198,7 +206,7 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 - 发送：PromptPipeline 总装流式发送（世界书/宏/人设/AN/示例/历史/控制提示/工具/媒体/推理签名全引擎内完成，SSE 逐 token）；停止=取消 OkHttp call 保留已生成（mes_stop）；重新生成=删最后 AI 回复复用最后用户消息（option_regenerate）；继续=mes_continue（移出最后 AI，流结束合并落盘）；send_if_empty 已接；冒充=Generate('impersonate')（流式进输入框不落历史）。
 - 交互：复制/删除/编辑（updateMessage：isEdit 正则分位点 + 清/写 extra.bias）/长按菜单/最后一条 AI 常驻 4 键/清空二次确认/未配置模型横幅一键深链；Markdown+代码高亮（mikepenz m3/coil3/code 0.43.0）；用户消息气泡上限 320dp（AI 全文宽）；顶栏/输入栏 Cloudy 0.7.1 真背板模糊玻璃（sky 源层静态）。
 - 滑动切回复全链：数据模型对齐官方 jsonl（swipe_id/swipes[]/swipe_info[]；ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；AI 气泡横滑（右=下一个/越界生成新变体，左=上一个）；计数条 n/N + 箭头；长按菜单变体列表 ModalBottomSheet；导出 jsonl 可直接进酒馆；世界书扫描按官方 prepareMessages（swipe 在 coreChat.pop 之后扫描，App dropLast(1) 等价）。
-- 上下文占比胶囊（圆环+百分比+绿黄橙红分级+点开分解，分母=contextWindow）；世界书命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
+- **合并上下文胶囊**（世界书指示灯+上下文占比合成一个常驻胶囊，见 ContextCapsule）：左段=上下文（圆环+百分比+绿黄橙红分级+`上下文 used/max`，长按开世界书命中面板，点击开预算分解，分母=contextWindow）；细分隔线；右段=世界书命中（书图标+`×N`，有命中主色高亮、无命中置灰弱化，点击开命中面板）。数据实时取自引擎 onPrepared 真实结果（wiResult.activatedWorldInfo + counts/maxContextTokens），非 UI 模拟值；命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
 - 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）；逐条滚动零磁盘 IO——displayTextOf 组合期的全局设置/宏环境/正则脚本收敛 ensureDisplayCtx 缓存（随 DisplayCacheVersion/会话身份失效），usable 下标随消息表实例缓存，ExpressionPrefs 进程级缓存（旧实现每条消息进视口都读盘，逐条卡顿根因）。
 - ✅ assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4）——旧 ❌ 登记作废已修正。
 
@@ -372,6 +380,8 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 已逐字/差分确认对齐：媒体内联能力白名单 + source 分支（24 例）；世界书 externalActivations/负深度/深度注入/EM 锚点/coreChat 过滤 is_system/ensureSwipes；斜杠解析器 43 例 + testSymbol 27 例（sendas 缺省名/sysname 空名 System/hide·message-role 语义/Comment 默认 Note/delswipe 1-based）；消息数据流（AI 落盘 swipes 结构、saveReply 尾部逐字段刷新、deleteSwipe 新 id、syncSwipeToMes、send_date=ISO、AI extra 恒有 api/model/reasoning/reasoning_duration/reasoning_signature、群聊 AI gen_id 整批共享 group_generation_id、普通用户消息 extra isSmallSys=false 无 gen_id、附件 media_index 恒写 inline_image=true）；提示词默认集合/顺序/populationInjectionPrompts/历史 preparePrompt 宏替换/AN interval 与默认 position=1/Generate 类型；正则 GLOBAL→PRESET→SCOPED + allowedOnly（7 例）。
 
 审计修复（已修）：聊天流式卡顿——流式文本/思考状态只在流式行内订阅（每 token 不再重组合法整棵消息列表）+ 文本/思考 120ms 节流（思考卡顿主因是 ReasoningCard 每 token 全量渲染，现 8fps 上限）；show_thoughts 增加会话菜单快捷开关（官方默认 true，与官方一致，可即时关停并清空当前思考显示）；模型页按官方面板结构重组（连接/采样参数/预设联动与提示词：Logit Bias·消息角色与续写·工具与媒体·提示词模板含 main/nsfw/jailbreak 快捷编辑/连接高级/上下文与连接测试）；预设页按官方 preset-manager 重组（下拉选择+对选中项 更新/另存/重命名/删除/导出/恢复）；Prompt Manager 补 Token 列/总 Token/官方行图标（marker/global/important/user/injection/角色）；kobold 官方 GUI KoboldAI Settings 特殊预设（默认/不可更新/重命名/导出/恢复）；context story_string_position 与 instruct names_behavior 改官方下拉选项；start_reply_with/show_user_prompt_bias 移回 Advanced Formatting 位点；模型排序/分组按官方元数据差分（sortModelsBy/groupModelsByVendor/filterModelsBySource，48 例）；kobold /props 全流程（chat_template_hash sha256、context/instruct 派生自动选中、context_size_derived n_ctx 自动改上下文）；代理预设改全局存储+旧数据迁移；冷启动应用当前采样预设；Prompt Manager 全局顺序 key=100000（原 null/UUID 三键不互通）+ prompt_order 导出带 character_id；导入采样预设后即应用；删除预设二次确认+自动切换首个剩余；Unicode 预设名保存；textgen legacy 导入用文件名；bind_to_context 双向联动；auto-select 与 /preset 按活动协议+群聊名；sort_models 官方四项并限 5 源显示；request_images 组/impersonation_prompt UI；补 6 家官方提供商（electronhub/chutes/nanogpt/aimlapi/pollinations/cometapi）；reverse proxy 预设列表；删除 contextAuto/defaultMaxTokens 假“按厂商自动填”；reasoning auto_parse/add_to_prompts/auto_expand/show_hidden/max_additions 字段+UI；textgen/novel/kobold 路径移除 PM 注入；用户消息保存顺序（regex→substituteParams→removeMacros，token_count 落盘）；AI 消息补 time_to_first_token；AI_OUTPUT 正则改在 cleanUpMessage 停用词裁剪后注入；开场白数据格式（extra={}、无 title/gen_*、空首条 swipes.shift()）；continue 合并刷新 send_date/gen_started（时长守恒）/token_count；滑动变体 gen_id 仅群聊 + reasoning_duration/signature；历史索引错位（media 挂错）；bias 提取最后用户消息 + 编辑存 extra.bias 回溯；/hide 语义；comment 不进提示词；系统消息防误操作；continue swipe_info 同步；发送失败不丢输入；重生成先查配置；群聊配置实时；书签路径消毒；世界书条目删除确认；角色主题/背景实时刷新；平板导航轨；滑动返回手势；返回按钮不贴最高处；设置主页重构官方移动端 8 分区（AI 响应配置/API 连接/高级格式化/世界书/用户设置/背景/扩展/人设管理 + 数据隐私/关于）；设置默认值字段级对照官方（auto_continue.target_length=400·allow_chat_completions=false、textgen temperature_last=true·top_p=0.5·top_k=40·top_a=0、NovelAI 采样默认、Kobold 空配置回退官方 kai_settings 默认）；表情 LLM 分类（llmPrompt/parseLlmResponse 对齐官方 getLlmPrompt/parseLlmResponse + 生成后异步分类切换）；/inject filter 闭包（closureArgs 原文保留 + isTrueBoolean 生成时门控）；/genraw instruct/as（InstructMode.createRawPrompt 消费 instruct 开关/协议分支）；NovelAI 差分 default_order 修正为官方数字索引数组。
+
+**App 接线层审计（2026-08-20，见 4.7/4.3）**：17 分区设置项逐项验证 UI 改值 → SharedPreferences → ChatPromptFactory/PromptPipeline → 引擎参数 → 实际输出差异全链路；世界书（WorldInfoPrefs.depth/budget/recursive/case/whole-word/插入策略/include_names）、正则（RegexPrefs 全局开关）、Prompt Manager（prompt_order 读 key=100000 注入）、预设采样器、人设位置等均已确认下游真实读取并参与计算，非仅存 DataStore。**合并上下文胶囊**（世界书指示灯+上下文占比合成一囊）：worldHits 来自引擎 onPrepared→wiResult.activatedWorldInfo（非 UI 模拟）；_contextUsage 来自引擎 counts/maxContextTokens（+3 reserveBudget）；命中灯常驻但命中才高亮主色。删除 StatusPill 死代码（见 4.3）。
 
 登记边界（有意保留）：extra.api 存提供商 id（官方存 source）；bias 文本提取 vs extra.bias 双轨；/hide name 过滤；narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；openrouter/mistral 模型元数据缺失回退；远程 URL 附件；Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式触发逻辑（实际 translateIncoming/translateOutgoing 已按 auto_mode 触发；登记指官方"翻译服务自动下拉列表"的 UI 交互，非核心 1:1）、记忆摘要 summarize（官方默认关/远期，/summarize 斜杠命令已接 MemoryService 但向量 RAG 路径默认关=用户决策）。
 
