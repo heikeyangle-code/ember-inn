@@ -45,16 +45,15 @@
 - `SegmentedMarkdown`（ChatScreen.kt:5039）：`WebHtml`（:5057）/ `Interactive`（:5076）段按 `isStaticHtml` 分流；`Mermaid` 段恒走 WebView（依赖 JS）。
 - `<details>/<summary>` 明确划入路线 A（`InteractiveKind.Details`），不丢给路线 B。
 
-### 路线 B（WebView，网络收紧）
-- `shouldInterceptRequest`（ChatScreen.kt:5379）：按官方 `forbid_external_media` 语义拦截外部 http(s) 媒体资源（`isExternalMediaUrl` :5179，媒体扩展名 + Accept:image 请求头）；data:/本地 file:/android_asset 放行（字体/头像/mermaid.min.js）。JS/交互保持可用。
+### 路线 B（WebView，网络放开）
+- 网络全放开（用户要求，撤销本阶段安全收紧）：远程图片/音视频/资源正常加载；http(s) 链接交系统浏览器打开。仅 `javascript:` 链接被替换为 `blocked:`（防卡片内脚本导航）。
 
 ### 明确不支持项（及理由）
 | 不支持项 | 理由 |
 |---|---|
 | 冷门 CSS 特性（grid 复杂布局、flex 高级属性、动画/过渡/伪元素/媒体查询） | 阶段三既定方案：只覆盖颜色/盒模型/文字/基础布局 |
 | style 属性里的 `position/float/transform/z-index` 等 | 同上，忽略不致命 |
-| 外部媒体默认加载 | 官方默认禁外部媒体，角色卡不可信；仅 data:/本 origin 放行 |
-| 无扩展名签名 CDN 的 video/audio 外部 URL 拦截 | WebView 请求头不含元素类型，扩展名/Content-Type 无法识别（已知限制） |
+| 外部媒体加载策略 | 应用层默认放行外部媒体（用户决策，覆盖官方 forbid_external_media 默认禁）；官方语义保留为可选的显式收紧参数 `externalMediaAllowed=false` |
 | 任意第三方脚本调用官方全局对象（SillyTavern 运行时 API、事件系统） | 阶段三既定方案：范围收紧为"传状态、展示正确"，不做通用 JS 沙盒 |
 
 ## 4. 实测通过率（具体数字）

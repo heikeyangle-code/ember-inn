@@ -359,7 +359,11 @@ private fun RenderMedia(
     val context = LocalContext.current
     val player = remember(src) {
         ExoPlayer.Builder(context).build().apply {
-            val uri = if (src.startsWith("data:")) Uri.parse(src) else Uri.fromFile(File(src))
+            val uri = when {
+                src.startsWith("data:") || src.startsWith("http://") || src.startsWith("https://") ->
+                    Uri.parse(src)
+                else -> Uri.fromFile(File(src))
+            }
             setMediaItem(MediaItem.fromUri(uri))
             prepare()
         }
@@ -573,8 +577,9 @@ object HtmlRenderCache {
     }
 }
 
-/** 静态 HTML → RenderNode 树（消毒 + 样式块 + 树构建，全部无 UI 依赖，可后台线程执行）。 */
-fun parseStaticHtml(html: String, externalMediaAllowed: Boolean = false): RenderNode {
+/** 静态 HTML → RenderNode 树（消毒 + 样式块 + 树构建，全部无 UI 依赖，可后台线程执行）。
+ *  外部媒体默认放行（用户要求放开网络）；显式传 false 时才按官方 forbid_external_media 删除外部媒体。 */
+fun parseStaticHtml(html: String, externalMediaAllowed: Boolean = true): RenderNode {
     val config = HtmlSanitizerEngine.Config(externalMediaAllowed = externalMediaAllowed)
     val result = HtmlSanitizerEngine.sanitize(html, config)
     return RenderStyleResolver.resolve(result.root, result.styleRules)
@@ -583,14 +588,14 @@ fun parseStaticHtml(html: String, externalMediaAllowed: Boolean = false): Render
 /**
  * 路线 A 入口：把静态 HTML 渲染成原生 UI 树。
  * 解析（消毒/样式块/树构建）在 Dispatchers.Default 执行并缓存；首帧先给非零占位避免滚回闪空。
- * 外部媒体默认禁用（角色卡不可信，官方 forbid_external_media 语义），只放行 data:/file: 内嵌。
+ * 外部媒体默认放行（用户要求）；显式传 false 时才按官方 forbid_external_media 语义删除外部媒体节点。
  */
 @Composable
 fun StaticHtmlContent(
     html: String,
     textColor: Color,
     modifier: Modifier = Modifier,
-    externalMediaAllowed: Boolean = false,
+    externalMediaAllowed: Boolean = true,
 ) {
     var state by remember(html) { mutableStateOf<RenderNode?>(HtmlRenderCache.get(html)) }
     LaunchedEffect(html, externalMediaAllowed) {

@@ -97,15 +97,27 @@ class RenderRoutingTest {
     }
 
     @Test
-    fun `external media forbidden by default in route A`() {
+    fun `external media allowed by default, removed when strictly opted in`() {
+        // 用户要求放开网络：默认放行外部媒体
         val root = parseStaticHtml(
             "<img src=\"https://x.com/a.png\"><img src=\"data:image/png;base64,AAAA\">",
         )
         val imgs = (root as RenderNode.Element).children
             .filterIsInstance<RenderNode.Element>()
             .filter { it.tag == "img" }
-        assertEquals(1, imgs.size)
-        assertEquals("data:image/png;base64,AAAA", imgs[0].src)
+        assertEquals(2, imgs.size)
+        assertEquals("data:image/png;base64,AAAA", imgs[1].src)
+
+        // 显式收紧时才删除外部媒体（保留官方 forbid_external_media 语义兜底）
+        val strict = parseStaticHtml(
+            "<img src=\"https://x.com/a.png\"><img src=\"data:image/png;base64,AAAA\">",
+            externalMediaAllowed = false,
+        )
+        val strictImgs = (strict as RenderNode.Element).children
+            .filterIsInstance<RenderNode.Element>()
+            .filter { it.tag == "img" }
+        assertEquals(1, strictImgs.size)
+        assertEquals("data:image/png;base64,AAAA", strictImgs[0].src)
     }
 
     @Test

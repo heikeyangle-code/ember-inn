@@ -5167,27 +5167,6 @@ private fun mermaidHtmlOf(content: String): String? {
 private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
 
-/** 官方 forbid_external_media 语义的外部媒体 URL 判定（路线 B 拦截用）：
- *  媒体文件扩展名命中，或 <img> 的 Accept: image/{star} 请求头命中。
- *  video/audio 无扩展名 URL（如签名 CDN）无法可靠识别，属已知限制。 */
-private val EXTERNAL_MEDIA_EXT = setOf(
-    "png", "jpg", "jpeg", "gif", "webp", "avif", "apng", "svg", "bmp", "ico", "heic", "heif",
-    "tif", "tiff", "mp4", "m4v", "webm", "mov", "ogv", "ogg", "mp3", "wav", "m4a", "aac",
-    "flac", "opus", "mid", "midi",
-)
-
-private fun isExternalMediaUrl(
-    url: String,
-    request: android.webkit.WebResourceRequest?,
-): Boolean {
-    val path = url.substringBefore('?').substringBefore('#').lowercase()
-    val ext = path.substringAfterLast('.', "")
-    if (ext in EXTERNAL_MEDIA_EXT) return true
-    val accept = request?.requestHeaders?.get("Accept").orEmpty()
-    if (accept.contains("image/")) return true
-    return false
-}
-
 /** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时低频兜底。
  *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；
  *  onPageFinished 轮询作为页面脚本/桥接失效时的第二道兜底。
@@ -5371,23 +5350,6 @@ private fun configureWebView(
                 return true
             }
             return false
-        }
-
-        // 路线 B 网络收紧：官方 forbid_external_media 语义（默认禁外部媒体）——
-        // 角色卡不可信，拦截外部 http(s) 媒体资源（img/video/audio），只放行
-        // data:/file:///android_asset/ 与本地文件（字体/头像/mermaid.min.js）。
-        override fun shouldInterceptRequest(
-            view: android.webkit.WebView?,
-            request: android.webkit.WebResourceRequest?,
-        ): android.webkit.WebResourceResponse? {
-            val url = request?.url?.toString().orEmpty()
-            if ((url.startsWith("https://") || url.startsWith("http://")) && isExternalMediaUrl(url, request)) {
-                return android.webkit.WebResourceResponse(
-                    "text/plain", "utf-8",
-                    java.io.ByteArrayInputStream(ByteArray(0)),
-                )
-            }
-            return super.shouldInterceptRequest(view, request)
         }
 
         override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
