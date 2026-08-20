@@ -4616,6 +4616,12 @@ private fun isHtmlFence(raw: String): Boolean {
     return STRUCTURAL_HTML_TAG.containsMatchIn(inner)
 }
 
+/** 提取 HTML 围栏的内部内容（去掉 ```html 围栏标记）。非围栏原样返回。 */
+private fun htmlFenceInner(raw: String): String {
+    val m = INTERACTIVE_FENCE.find(raw) ?: return raw
+    return m.groupValues[1].trim()
+}
+
 /** 完整 HTML 文档判定：以 <!doctype html 开头，或以 <html> 开头且带结构标记。
  *  这类内容（角色卡自带网页 / 模型直接输出的整页）不能外套一层 <html>：
  *  html 套 html 时嵌套的 </head>/</body> 会被解析器提前处理 → 页面错乱/大片空白；
@@ -5048,20 +5054,43 @@ private fun SegmentedMarkdown(
                     isSystem = isSystem,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                SegmentKind.WebHtml -> WebViewHtml(
-                    html = sanitizeHtmlForWebView(seg.raw),
-                    modifier = Modifier.fillMaxWidth(),
-                    charAvatarPath = charAvatarPath,
-                    userAvatarPath = userAvatarPath,
-                    interactiveCardsOn = interactiveCardsOn,
-                )
-                SegmentKind.Interactive -> WebViewHtml(
-                    html = sanitizeHtmlForWebView(seg.raw),
-                    modifier = Modifier.fillMaxWidth(),
-                    charAvatarPath = charAvatarPath,
-                    userAvatarPath = userAvatarPath,
-                    interactiveCardsOn = interactiveCardsOn,
-                )
+                SegmentKind.WebHtml -> {
+                    // 内容分流：静态 HTML（无脚本依赖，含 details 等原生交互标签）走路线 A 原生渲染；
+                    // 含脚本/事件依赖的走路线 B WebView（保持既有网络/JS 语义）。
+                    if (isStaticHtml(seg.raw)) {
+                        StaticHtmlContent(
+                            html = seg.raw,
+                            textColor = onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        WebViewHtml(
+                            html = sanitizeHtmlForWebView(seg.raw),
+                            modifier = Modifier.fillMaxWidth(),
+                            charAvatarPath = charAvatarPath,
+                            userAvatarPath = userAvatarPath,
+                            interactiveCardsOn = interactiveCardsOn,
+                        )
+                    }
+                }
+                SegmentKind.Interactive -> {
+                    val inner = htmlFenceInner(seg.raw)
+                    if (isStaticHtml(inner)) {
+                        StaticHtmlContent(
+                            html = inner,
+                            textColor = onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        WebViewHtml(
+                            html = sanitizeHtmlForWebView(seg.raw),
+                            modifier = Modifier.fillMaxWidth(),
+                            charAvatarPath = charAvatarPath,
+                            userAvatarPath = userAvatarPath,
+                            interactiveCardsOn = interactiveCardsOn,
+                        )
+                    }
+                }
                 SegmentKind.Mermaid -> WebViewHtml(
                     html = mermaidHtmlOf(seg.raw) ?: sanitizeHtmlForWebView(seg.raw),
                     modifier = Modifier.fillMaxWidth(),
@@ -5137,6 +5166,27 @@ private fun mermaidHtmlOf(content: String): String? {
  *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
 private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
+
+/** 官方 forbid_external_media 语义的外部媒体 URL 判定（路线 B 拦截用）：
+ *  媒体文件扩展名命中，或 <img> 的 Accept: image/{star} 请求头命中。
+ *  video/audio 无扩展名 URL（如签名 CDN）无法可靠识别，属已知限制。 */
+private val EXTERNAL_MEDIA_EXT = setOf(
+    "png", "jpg", "jpeg", "gif", "webp", "avif", "apng", "svg", "bmp", "ico", "heic", "heif",
+    "tif", "tiff", "mp4", "m4v", "webm", "mov", "ogv", "ogg", "mp3", "wav", "m4a", "aac",
+    "flac", "opus", "mid", "midi",
+)
+
+private fun isExternalMediaUrl(
+    url: String,
+    request: android.webkit.WebResourceRequest?,
+): Boolean {
+    val path = url.substringBefore('?').substringBefore('#').lowercase()
+    val ext = path.substringAfterLast('.', "")
+    if (ext in EXTERNAL_MEDIA_EXT) return true
+    val accept = request?.requestHeaders?.get("Accept").orEmpty()
+    if (accept.contains("image/")) return true
+    return false
+}
 
 /** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时低频兜底。
  *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；
@@ -5321,6 +5371,23 @@ private fun configureWebView(
                 return true
             }
             return false
+        }
+
+        // 路线 B 网络收紧：官方 forbid_external_media 语义（默认禁外部媒体）——
+        // 角色卡不可信，拦截外部 http(s) 媒体资源（img/video/audio），只放行
+        // data:/file:///android_asset/ 与本地文件（字体/头像/mermaid.min.js）。
+        override fun shouldInterceptRequest(
+            view: android.webkit.WebView?,
+            request: android.webkit.WebResourceRequest?,
+        ): android.webkit.WebResourceResponse? {
+            val url = request?.url?.toString().orEmpty()
+            if ((url.startsWith("https://") || url.startsWith("http://")) && isExternalMediaUrl(url, request)) {
+                return android.webkit.WebResourceResponse(
+                    "text/plain", "utf-8",
+                    java.io.ByteArrayInputStream(ByteArray(0)),
+                )
+            }
+            return super.shouldInterceptRequest(view, request)
         }
 
         override fun onPageFinished(view: android.webkit.WebView?, url: String?) {

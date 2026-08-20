@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.snakeyaml)
     implementation(libs.jtokkit)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.jsoup)
     implementation(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
