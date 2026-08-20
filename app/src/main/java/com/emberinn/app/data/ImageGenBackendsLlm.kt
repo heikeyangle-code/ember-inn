@@ -362,7 +362,7 @@ object ImageGenBackendsLlm {
         runCatching {
             val apiKey = ServicesPrefs.imageApiKey(context)
             val endpointId = ServicesPrefs.imageUrl(context).trimEnd('/').substringAfterLast('/')
-            val workflow = ServicesPrefs.comfyWorkflow(context)
+            val workflow = ComfyWorkflowStore(context).activeWorkflowJson()
             if (apiKey.isBlank() || endpointId.isBlank() || workflow.isBlank()) return@runCatching null
             val replaced = ImageGenRequestEngine.replaceComfyWorkflow(
                 workflow = workflow,

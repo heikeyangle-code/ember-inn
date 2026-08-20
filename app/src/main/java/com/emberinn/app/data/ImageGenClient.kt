@@ -265,11 +265,11 @@ class ImageGenClient {
      * ComfyUI：官方 src/endpoints/stable-diffusion.js comfy.generate 1:1——
      * POST {url}/prompt（workflow JSON 字符串，含 %prompt%/%model%/%steps%/%width% 等占位符），
      * 轮询 /history 至 prompt_id 出现，取 outputs 第一张图，GET /view 下载。
-     * workflow 由用户在设置里提供（官方默认 Default_Comfy_Workflow.json 不在仓库，登记）。
+     * workflow 取 [ComfyWorkflowStore] 活动项（多 workflow 管理，含内嵌官方默认）。
      */
     private fun comfy(context: Context, url: String, prompt: String, negativePrompt: String, model: String, steps: Int): String? {
         if (url.isBlank()) return null
-        val workflow = ServicesPrefs.comfyWorkflow(context)
+        val workflow = ComfyWorkflowStore(context).activeWorkflowJson()
         if (workflow.isBlank()) return null
         val seed = kotlin.random.Random.nextLong(0, Long.MAX_VALUE).toString()
         var replaced = workflow

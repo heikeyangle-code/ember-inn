@@ -176,16 +176,6 @@ object ServicesPrefs {
         }.getOrDefault(emptyMap())
     }
 
-    /** ComfyUI 用户 workflow JSON（官方 comfy_workflow 文件内容；含 %prompt% 等占位符）。 */
-    fun comfyWorkflow(context: Context): String =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_workflow", "") ?: ""
-
-    fun saveComfyWorkflow(context: Context, workflow: String) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putString("sd_comfy_workflow", workflow)
-            .apply()
-    }
-
     /** 官方 sd_comfy_type：standard / runpod_serverless（settings.html L230-233 默认 standard）。 */
     fun comfyType(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_comfy_type", "standard") ?: "standard"

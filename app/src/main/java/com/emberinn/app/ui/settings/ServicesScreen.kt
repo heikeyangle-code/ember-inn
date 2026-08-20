@@ -1,10 +1,13 @@
 package com.emberinn.app.ui.settings
 
 
+import android.widget.Toast
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.data.ComfyWorkflowStore
 import com.emberinn.app.data.GenerationPrefs
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -166,7 +170,6 @@ private fun ImageCard() {
     var steps by rememberSaveable { mutableStateOf(ServicesPrefs.imageSteps(context)) }
     var apiKey by rememberSaveable { mutableStateOf(ServicesPrefs.imageApiKey(context)) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
-    var comfyWorkflow by rememberSaveable { mutableStateOf(ServicesPrefs.comfyWorkflow(context)) }
     var comfyType by rememberSaveable { mutableStateOf(ServicesPrefs.comfyType(context)) }
     var promptPrefix by rememberSaveable { mutableStateOf(ServicesPrefs.imagePromptPrefix(context)) }
     var negativePrompt by rememberSaveable { mutableStateOf(ServicesPrefs.imageNegativePrompt(context)) }
@@ -242,14 +245,7 @@ private fun ImageCard() {
                 ),
             ) { comfyType = it; ServicesPrefs.saveComfyType(context, it) }
             if (comfyType == "standard") {
-                EmberTextField(
-                    value = comfyWorkflow,
-                    onValueChange = { comfyWorkflow = it; ServicesPrefs.saveComfyWorkflow(context, it) },
-                    label = { Text("ComfyUI workflow JSON（含 %prompt%/%negative%/%model%/%steps%/%width%/%height% 等占位符）") },
-                    minLines = 6,
-                    maxLines = 12,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                ComfyWorkflowSection()
             }
         }
         EmberTextField(
@@ -301,6 +297,177 @@ private fun ImageCard() {
             NumberRow("HR 二次步数（hr_second_pass_steps）", hrSecondPassSteps) { hrSecondPassSteps = it; saveAdvanced() }
             DecimalRow("去噪强度（denoising_strength）", denoising) { denoising = it; saveAdvanced() }
         }
+    }
+}
+
+/**
+ * ComfyUI workflow 管理（对齐官方 stable-diffusion 扩展 comfyWorkflowEditor）：
+ * 活动 workflow 选择 + 新建 / 重命名 / 删除 / 编辑（JSON 编辑器 + 占位符提示）。
+ * 数据在 [ComfyWorkflowStore]（filesDir/comfy-workflows 目录，*.json 文件），含内嵌官方默认；标准与 RunPod 共用活动 workflow。
+ */
+@Composable
+private fun ComfyWorkflowSection() {
+    val context = LocalContext.current
+    val store = remember { ComfyWorkflowStore(context) }
+    var workflows by remember { mutableStateOf(store.workflows()) }
+    var active by remember { mutableStateOf(store.active()) }
+    var selectorOpen by remember { mutableStateOf(false) }
+    var editorOpen by remember { mutableStateOf(false) }
+    var draftJson by remember { mutableStateOf("") }
+    var newOpen by remember { mutableStateOf(false) }
+    var renameOpen by remember { mutableStateOf(false) }
+    var deleteOpen by remember { mutableStateOf(false) }
+    var draftName by remember { mutableStateOf("") }
+
+    fun refresh() {
+        workflows = store.workflows()
+        active = store.active()
+    }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Box {
+                FilterChip(selected = false, onClick = { selectorOpen = true }, label = { Text("Workflow：$active", maxLines = 1) })
+                DropdownMenu(expanded = selectorOpen, onDismissRequest = { selectorOpen = false }) {
+                    workflows.forEach { w ->
+                        DropdownMenuItem(text = { Text(w) }, onClick = {
+                            selectorOpen = false
+                            store.setActive(w)
+                            active = w
+                        })
+                    }
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = {
+                draftJson = store.read(active) ?: ""
+                editorOpen = true
+            }) { Text("编辑") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { draftName = ""; newOpen = true }) { Text("新建") }
+            TextButton(onClick = { draftName = active; renameOpen = true }) { Text("重命名") }
+            if (workflows.size > 1) {
+                TextButton(onClick = { deleteOpen = true }) { Text("删除") }
+            }
+        }
+        Text(
+            "占位符：%prompt% / %negative_prompt% / %model% / %seed% / %steps% / %width% / %height% / %sampler% / %scheduler% / %scale% / %denoise% / %clip_skip% / %vae%",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+
+    if (editorOpen) {
+        AlertDialog(
+            onDismissRequest = { editorOpen = false },
+            title = { Text("编辑 Workflow：$active") },
+            text = {
+                Column {
+                    EmberTextField(
+                        value = draftJson,
+                        onValueChange = { draftJson = it },
+                        label = { Text("workflow JSON（API 格式，含占位符）") },
+                        minLines = 8,
+                        maxLines = 16,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "占位符：%prompt% / %negative_prompt% / %model% / %seed% / %steps% / %width% / %height% / %sampler% / %scheduler% / %scale% / %denoise% / %clip_skip% / %vae%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draftJson.trim().isNotEmpty()) {
+                        store.write(active, draftJson)
+                        refresh()
+                    } else {
+                        Toast.makeText(context, "workflow JSON 不能为空", Toast.LENGTH_SHORT).show()
+                    }
+                    editorOpen = false
+                }) { Text("保存") }
+            },
+            dismissButton = { TextButton(onClick = { editorOpen = false }) { Text("取消") } },
+        )
+    }
+
+    if (newOpen) {
+        AlertDialog(
+            onDismissRequest = { newOpen = false },
+            title = { Text("新建 Workflow") },
+            text = {
+                EmberTextField(
+                    value = draftName,
+                    onValueChange = { draftName = it },
+                    label = { Text("workflow 名（自动补 .json）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = draftName.trim()
+                    if (name.isNotEmpty()) {
+                        val full = if (name.lowercase().endsWith(".json")) name else "$name.json"
+                        store.write(full, ComfyWorkflowStore.DEFAULT_WORKFLOW)
+                        store.setActive(full)
+                        refresh()
+                    } else {
+                        Toast.makeText(context, "workflow 名不能为空", Toast.LENGTH_SHORT).show()
+                    }
+                    newOpen = false
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { newOpen = false }) { Text("取消") } },
+        )
+    }
+
+    if (renameOpen) {
+        AlertDialog(
+            onDismissRequest = { renameOpen = false },
+            title = { Text("重命名 Workflow") },
+            text = {
+                EmberTextField(
+                    value = draftName,
+                    onValueChange = { draftName = it },
+                    label = { Text("新名字（自动补 .json）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!store.rename(active, draftName)) {
+                        Toast.makeText(context, "重命名失败：名字为空/重复/非法", Toast.LENGTH_SHORT).show()
+                    } else {
+                        refresh()
+                    }
+                    renameOpen = false
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("取消") } },
+        )
+    }
+
+    if (deleteOpen) {
+        AlertDialog(
+            onDismissRequest = { deleteOpen = false },
+            title = { Text("删除 Workflow：$active？") },
+            text = { Text("删除后不可恢复。至少保留 1 个 workflow。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    store.delete(active)
+                    refresh()
+                    deleteOpen = false
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { deleteOpen = false }) { Text("取消") } },
+        )
     }
 }
 
