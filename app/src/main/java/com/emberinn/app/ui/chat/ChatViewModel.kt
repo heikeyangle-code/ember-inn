@@ -3990,6 +3990,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
             pendingItemization = null
         }
+        // 关键：落盘后立即把新回复刷进 _messages StateFlow，否则流式结束（isStreaming=false）
+        // 移除 Streaming 行后，客户端看不到这条已提交的 AI 回复（ChatScreen 直接 collect messages）。
+        refreshMessagesAppendOnly()
     }
 
     /** 官方 findItemizedPromptSet：按消息索引取该条的总装明细。 */

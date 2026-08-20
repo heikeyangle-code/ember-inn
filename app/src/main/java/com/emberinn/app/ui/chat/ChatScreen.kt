@@ -3304,7 +3304,7 @@ private fun MessageRowContent(
                     fontStyle = if (isSystem) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.widthIn(max = 220.dp),
                 )
                 // 官方 mes_ghost：被用户隐藏（不进提示词）的消息在名字旁标记；'SillyTavern System' 真系统消息不带
                 if (isSystem && name != SYSTEM_USER_NAME) {

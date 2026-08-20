@@ -32,6 +32,8 @@ import com.emberinn.app.ui.theme.ThemePreset
 import com.emberinn.app.ui.theme.ThemePresets
 import com.emberinn.app.ui.theme.VibePrefs
 import com.emberinn.app.ui.theme.VibePreset
+import com.emberinn.app.ui.theme.VibePresets
+import com.emberinn.app.ui.theme.vibeById
 
 class MainActivity : ComponentActivity() {
     /** 官方每次加载设置都会把当前采样预设应用到 oai_settings；App 等价在冷启动应用一次。 */
@@ -54,12 +56,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             var mode by remember { mutableStateOf(ThemePrefs.mode(this)) }
             var preset by remember { mutableStateOf(ThemePrefs.preset(this)) }
-            var vibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
             var textureOverride by remember { mutableStateOf(com.emberinn.app.ui.theme.BackdropPrefs.resolve(this)) }
             var appearanceRev by remember { mutableIntStateOf(0) }
             remember(appearanceRev) { Unit }
             val recipe by ThemeState.recipe.collectAsState()
             val seedColor by ThemeState.seedColor.collectAsState()
+            // 第四层角色主题氛围：角色配方 style > 用户全局 vibe（README 清单 3）
+            // 无配方 style 时读全局；配方 style 变更时随 remember 键重算
+            var userVibe by remember { mutableStateOf(VibePrefs.resolve(this)) }
+            val vibe = remember(recipe?.style) {
+                recipe?.style?.takeIf { it.isNotBlank() }?.let { VibePresets.vibeById(it) } ?: userVibe
+            }
             // 第三层角色主题配方：浅深锁定 > 全局模式；显式配方 seed > 角色取色/名字哈希 > 全局预设
             val effectiveMode = when (recipe?.lockMode) {
                 "light" -> ThemeMode.LIGHT
@@ -143,7 +150,7 @@ class MainActivity : ComponentActivity() {
                     themePreset = preset,
                     vibe = vibe,
                     onVibeChanged = { newVibe ->
-                        vibe = newVibe
+                        userVibe = newVibe
                         VibePrefs.save(this, newVibe)
                     },
                     onTextureChanged = {

@@ -21,6 +21,8 @@ val VibePresets: List<VibePreset> = listOf(
     VibePreset("soft", "柔和", "轻微降饱和，观感更柔和", 0.15f, 0.13f, 0f, 0.6f),
     VibePreset("cool", "清冷", "偏冷灰蓝的低饱和", 0.28f, 0.22f, -0.10f, 0.5f),
     VibePreset("vivid", "明快", "高饱和、更鲜艳", 0.05f, 0.05f, 0.02f, 0.8f),
+    VibePreset("airy", "轻盈", "高亮度、低饱和的通透感", 0.2f, 0.15f, 0.05f, 0.6f),
+    VibePreset("calm", "沉静", "低对比度、冷色调的平静感", 0.3f, 0.25f, -0.06f, 0.4f),
     VibePreset("custom", "自定义", "手动调节三项参数", 0.15f, 0.15f, 0f, 0.6f),
 )
 
