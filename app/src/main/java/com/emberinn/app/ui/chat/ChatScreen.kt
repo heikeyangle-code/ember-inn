@@ -923,7 +923,8 @@ fun ChatScreen(
                                 modifier = Modifier,
                                 isUser = isUserMsg,
                                 isSystem = isSystemMsg,
-                                kernelPool = if (kernelRender && !isStreaming) kernelPool else null,
+                                // 内核流式启用后，历史行在流式期间也保持内核渲染（不再整列回退原生）
+                                kernelPool = if (kernelRender) kernelPool else null,
                                 mesid = "m-${item.index}",
                                 kernelText = if (isUserMsg) null else kernelText,
                                 text = text,
@@ -1005,6 +1006,8 @@ fun ChatScreen(
                                 avatarPath = vm.avatarPath,
                                 accent = accent,
                                 impersonating = isImpersonating,
+                                kernelPool = if (kernelRender && !isImpersonating) kernelPool else null,
+                                mesid = "m-${items.lastIndex}",
                             )
                         }
                         ChatItem.ReasoningOnly -> {
@@ -3509,6 +3512,8 @@ private fun StreamingRow(
     avatarPath: String?,
     accent: Color,
     impersonating: Boolean = false,
+    kernelPool: KernelWebViewPool? = null,
+    mesid: String = "",
 ) {
     val transition = rememberInfiniteTransition(label = "caret")
     val caretAlpha by transition.animateFloat(
@@ -3547,22 +3552,54 @@ private fun StreamingRow(
                 )
                 Spacer(Modifier.size(6.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StreamingMarkdown(
-                    content = text.ifEmpty { "…" },
-                )
-                // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
-                Box(
-                    modifier = Modifier
-                        .padding(start = 4.dp, end = 2.dp)
-                        .size(6.dp)
-                        .graphicsLayer {
-                            scaleX = caretScale
-                            scaleY = caretScale
-                            this.alpha = caretAlpha
-                        }
-                        .background(EmberTheme.colors.ai, CircleShape),
-                )
+            if (kernelPool != null && mesid.isNotEmpty()) {
+                // 内核流式（§3.4）：正文走池化 WebView 官方管线，120ms 节流轻量更新；
+                // 冒充草稿仍走原生轻量路径（临时预览不占池槽位）
+                Row(verticalAlignment = Alignment.Bottom) {
+                    MessageKernelRow(
+                        pool = kernelPool,
+                        payload = KernelMessagePayload(
+                            mesid = mesid,
+                            mes = text.ifEmpty { "…" },
+                            chName = name,
+                            isUser = false,
+                            isSystem = false,
+                        ),
+                        streamingText = text,
+                        modifier = Modifier.weight(1f),
+                        onLongPress = null,
+                    )
+                    // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 4.dp, end = 2.dp)
+                            .size(6.dp)
+                            .graphicsLayer {
+                                scaleX = caretScale
+                                scaleY = caretScale
+                                this.alpha = caretAlpha
+                            }
+                            .background(EmberTheme.colors.ai, CircleShape),
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StreamingMarkdown(
+                        content = text.ifEmpty { "…" },
+                    )
+                    // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 4.dp, end = 2.dp)
+                            .size(6.dp)
+                            .graphicsLayer {
+                                scaleX = caretScale
+                                scaleY = caretScale
+                                this.alpha = caretAlpha
+                            }
+                            .background(EmberTheme.colors.ai, CircleShape),
+                    )
+                }
             }
         }
     }

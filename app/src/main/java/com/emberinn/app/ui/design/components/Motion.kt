@@ -76,9 +76,12 @@ fun EnterFadeSlide(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val progress = remember(key) { Animatable(if (EmberTheme.reducedMotion) 1f else 0f) }
-    LaunchedEffect(key) {
-        if (progress.value < 1f) progress.animateTo(1f, tween(EmberTheme.motion.sheetMs))
+    // EmberTheme 访问器是 @Composable getter：先在组合上下文读出，再进 remember/协程 lambda
+    val startAtEnd = EmberTheme.reducedMotion
+    val durationMs = EmberTheme.motion.sheetMs
+    val progress = remember(key, startAtEnd) { Animatable(if (startAtEnd) 1f else 0f) }
+    LaunchedEffect(key, durationMs) {
+        if (progress.value < 1f) progress.animateTo(1f, tween(durationMs))
     }
     Box(
         modifier = modifier
