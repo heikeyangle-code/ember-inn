@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.theme.LocalThemePreset
 
 /**
  * README UI 质感清单 3：触觉反馈按语义匹配，不处处用 LongPress。
@@ -102,7 +101,7 @@ fun EmberSkeletonBox(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = (1300f / LocalThemePreset.current.motionScale).toInt().coerceAtLeast(300), easing = LinearEasing),
+            animation = tween(durationMillis = 1300, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "ember-shimmer-progress",

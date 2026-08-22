@@ -2,14 +2,13 @@
 
 package com.emberinn.app.ui.sessions
 
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as SheetRow
 import com.emberinn.app.ui.components.EmberGlassFab
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
-import com.emberinn.app.ui.theme.LocalThemePreset
-import com.emberinn.app.ui.theme.emberBackdrop
+import com.emberinn.app.ui.design.EmberTheme
 
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
@@ -144,7 +143,7 @@ fun SessionsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .emberBackdrop(),
+                .background(EmberTheme.colors.bg),
         )
         Column(modifier = Modifier.fillMaxSize()) {
             Surface(
@@ -175,7 +174,7 @@ fun SessionsScreen(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp * LocalThemePreset.current.spacing),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(sessions, key = { it.id }) { session ->
@@ -372,11 +371,10 @@ private fun SessionRow(
     onClick: () -> Unit,
     onMenu: () -> Unit,
 ) {
-    // 每张会话卡都带角色 seed：卡片底 tint + 左侧 seed 竖条 + 彩色发光阴影（与首页角色卡同一套语言）
+    // 每张会话卡带角色 seed：左侧 seed 竖条 + 克制投影（EmberDS：层次靠亮度阶梯，阴影只做轻浮起）
     val seed = character?.seedColor?.let { Color(it.toInt()) }
     val corner = RoundedCornerShape(18.dp)
-    val glow = com.emberinn.app.ui.theme.LocalVibe.current.glow
-    val shadowBase = seed ?: MaterialTheme.colorScheme.primary
+    val shadowBase = seed ?: EmberTheme.colors.accent
     val avatarFile = character?.avatarPath?.let { File(it) }?.takeIf { it.exists() }
     Surface(
         shape = corner,
@@ -388,8 +386,8 @@ private fun SessionRow(
             .emberShadow(
                 brush = Brush.verticalGradient(
                     listOf(
-                        shadowBase.copy(alpha = 0.26f * glow),
-                        shadowBase.copy(alpha = 0.06f * glow),
+                        shadowBase.copy(alpha = 0.14f),
+                        shadowBase.copy(alpha = 0.04f),
                         Color.Transparent,
                     ),
                 ),
@@ -603,7 +601,7 @@ private fun CharacterAvatar(character: CharacterRecord) {
 
 @Composable
 private fun EmptySessions(onNew: () -> Unit) {
-    EmberEmptyState(
+    EmptyState(
         title = "还没有会话",
         body = "新建一个对话，或去角色页点一张角色卡开始",
         actionLabel = "新建对话",

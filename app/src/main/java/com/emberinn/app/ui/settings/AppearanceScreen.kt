@@ -1,41 +1,32 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.components.ColorField
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberSlider
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,722 +35,495 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import com.emberinn.app.ui.theme.ThemeMode
-import com.emberinn.app.ui.theme.ThemePreset
-import com.emberinn.app.ui.theme.ThemePresets
-import com.emberinn.app.ui.theme.BackdropPrefs
-import com.emberinn.app.ui.theme.BackdropSpec
-import com.emberinn.app.ui.theme.BackdropLibrary
-import com.emberinn.app.ui.theme.CanvasGradient
-import com.emberinn.app.ui.theme.TextureSpec
-import com.emberinn.app.ui.theme.VibePrefs
-import com.emberinn.app.ui.theme.VibePreset
-import com.emberinn.app.ui.theme.VibePresets
-import com.emberinn.app.ui.theme.canvasBackdrop
-import com.emberinn.app.ui.theme.randomWashes
 import com.emberinn.app.data.FontManager
-import com.emberinn.app.ui.settings.AppearancePrefs
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.height
+import com.emberinn.app.data.OfficialThemeManager
+import com.emberinn.app.ui.design.AppearanceBus
+import com.emberinn.app.ui.design.EmberSkins
+import com.emberinn.app.ui.design.EmberSkin
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.SkinStore
+import com.emberinn.app.ui.design.components.InkTier
+import com.emberinn.app.ui.design.components.InkText
+import com.emberinn.app.ui.design.components.SectionTitle
+import com.emberinn.app.ui.design.components.SurfaceCard
+import com.emberinn.app.ui.design.components.EmberChip
+import com.emberinn.app.ui.design.components.ChipRow
+import com.emberinn.app.ui.design.components.EmberBottomSheet
+import com.emberinn.app.ui.design.components.SheetRow
+import com.emberinn.app.ui.design.components.SheetRowTone
+import com.emberinn.app.ui.icons.FaIcons
 import kotlinx.coroutines.launch
 
-/** 画布调色盘：十二色（覆盖主题宝石/天空/海色的常用色域）。 */
-private val CanvasPalette = listOf(
-    Color(0xFFD9382B), Color(0xFFE8804A), Color(0xFFE8C24B), Color(0xFF8FA65A),
-    Color(0xFF3E9B78), Color(0xFF4FA8C9), Color(0xFF2E5A9E), Color(0xFF5B4B9E),
-    Color(0xFF9E4B8F), Color(0xFFE86FA0), Color(0xFFE8E2D6), Color(0xFF2B2B2E),
-)
-
-/** 外观与主题：README 三层主题的第一层（全局）。选预设即全局实时生效。 */
+/**
+ * 外观（DESIGN_SYSTEM §五）：皮肤商店 + 酒馆官方主题管理 + 显示偏好。
+ * 皮肤=壳层换装（一键即时全局生效）；官方主题=内核渲染层配色，经 seed 桥只染壳层强调三态。
+ */
 @Composable
 fun AppearanceScreen(
-    themeMode: ThemeMode,
-    themePreset: ThemePreset,
-    vibe: VibePreset,
-    onVibeChanged: (VibePreset) -> Unit,
-    onTextureChanged: () -> Unit = {},
-    onAppearanceChanged: () -> Unit = {},
-    onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     onBack: () -> Unit,
 ) {
-    val appearanceContext = LocalContext.current
-    var radius by remember { mutableStateOf(AppearancePrefs.radius(appearanceContext)) }
-    var font by remember { mutableStateOf(AppearancePrefs.font(appearanceContext)) }
+    val context = LocalContext.current
+    val official = remember { OfficialThemeManager.shared(context) }
+    val themes by official.themes.collectAsState()
+    val currentTheme by official.currentName.collectAsState()
+
+    var radius by remember { mutableStateOf(AppearancePrefs.radius(context)) }
+    var font by remember { mutableStateOf(AppearancePrefs.font(context)) }
     val fontScope = rememberCoroutineScope()
     var fontDownloading by remember { mutableStateOf(false) }
     var fontError by remember { mutableStateOf<String?>(null) }
 
+    // 官方主题：导入 / 导出 / 管理（导出、删除收进弹层）
+    var manageSheetFor by remember { mutableStateOf<String?>(null) }
+    var pendingExport by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf<String?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            runCatching {
+                val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
+                    ?: error("无法读取文件")
+                val name = official.import(text)
+                Toast.show(context, "已导入主题：$name")
+            }.onFailure { e ->
+                Toast.show(context, "导入失败：${e.message}")
+            }
+        }
+    }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val name = pendingExport
+        if (uri != null && name != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(official.export(name)?.toByteArray()) }
+                Toast.show(context, "已导出：${name}.json")
+            }.onFailure { e ->
+                Toast.show(context, "导出失败：${e.message}")
+            }
+        }
+        pendingExport = null
+    }
+
     SettingsGlassPage { settingsSky ->
-    Column(modifier = Modifier.fillMaxSize()) {
-        SettingsTopBar(title = "外观与主题", onBack = onBack, sky = settingsSky)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("主题", "主题模式与 11 套预设，点选立即全局生效")
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("主题模式", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp),
-                        ) {
-                            ThemeMode.entries.forEach { mode ->
-                                FilterChip(
-                                    selected = themeMode == mode,
-                                    onClick = { onThemeChanged(mode, themePreset) },
-                                    label = { Text(mode.label) },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    Text("预设主题", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        "点选立即生效",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            items(ThemePresets, key = { it.id }) { preset ->
-                PresetCard(
-                    preset = preset,
-                    selected = preset.id == themePreset.id,
-                    onClick = { onThemeChanged(themeMode, preset) },
-                )
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("视觉与质感", "氛围滤镜、圆角字体、头像、文字阴影与玻璃")
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val vibeContext = LocalContext.current
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("视觉氛围", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "配色性格：饱和度 / 冷暖 / 光效，全部可调，默认标准无滤镜",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(modifier = Modifier.fillMaxSize()) {
+            SettingsTopBar(title = "外观", onBack = onBack, sky = settingsSky)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // ---------------- 壳层皮肤 ----------------
+                item {
+                    Column {
+                        SectionTitle("皮肤")
+                        InkText(
+                            "整套界面即时换装：底色 · 卡面 · 强调色 · 聊天输入区",
+                            tier = InkTier.Mute,
+                            sizeSp = 12f,
                         )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp),
-                        ) {
-                            VibePresets.forEach { p ->
-                                FilterChip(
-                                    selected = vibe.id == p.id,
-                                    onClick = {
-                                        // 只更新状态，持久化由 MainActivity 的 onVibeChanged 统一负责（修复双重写盘）
-                                        if (p.id == "custom") {
-                                            onVibeChanged(VibePrefs.resolve(vibeContext).copy(id = "custom"))
-                                        } else {
-                                            onVibeChanged(p)
-                                        }
-                                    },
-                                    label = { Text(p.name) },
-                                )
-                            }
-                        }
-                        // 实时色板预览：读当前主题 scheme，拖滑杆/换滤镜立即在此可见（也整页可见）
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.padding(top = 12.dp),
-                        ) {
-                            listOf(
-                                "底色" to MaterialTheme.colorScheme.background,
-                                "卡片" to MaterialTheme.colorScheme.surfaceContainer,
-                                "主色" to MaterialTheme.colorScheme.primary,
-                                "次色" to MaterialTheme.colorScheme.secondary,
-                                "点缀" to MaterialTheme.colorScheme.tertiary,
-                            ).forEach { (label, c) ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(RoundedCornerShape(11.dp))
-                                            .background(c),
-                                    )
-                                    Text(
-                                        label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 3.dp),
-                                    )
-                                }
-                            }
-                        }
-                        if (vibe.id == "custom") {
-                            SliderRow(
-                                label = "降饱和",
-                                hint = "作用于全部配色（0 = 原样，0.5 = 接近灰）",
-                                value = vibe.desaturateLight,
-                                range = 0f..0.5f,
-                            ) { v ->
-                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", v, v, vibe.warmth, vibe.glow))
-                            }
-                            SliderRow(
-                                label = "冷暖",
-                                hint = "左冷右暖，作用于全部配色",
-                                value = vibe.warmth,
-                                range = -0.25f..0.25f,
-                            ) { v ->
-                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, v, vibe.glow))
-                            }
-                            SliderRow(
-                                label = "光效",
-                                hint = "空状态装饰与阴影强度（0 = 关闭）",
-                                value = vibe.glow,
-                                range = 0f..1f,
-                            ) { v ->
-                                onVibeChanged(VibePreset("custom", "自定义", "手动调节三项参数", vibe.desaturateLight, vibe.desaturateDark, vibe.warmth, v))
-                            }
-                        }
                     }
                 }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val textureContext = LocalContext.current
-                var textureCustom by remember { mutableStateOf(BackdropPrefs.custom(textureContext)) }
-                var backdropSpec by remember { mutableStateOf(BackdropPrefs.spec(textureContext)) }
-                var washSeed by remember { mutableStateOf((1000..99999).random()) }
-                fun pushBackdrop(custom: Boolean, spec: BackdropSpec) {
-                    textureCustom = custom
-                    backdropSpec = spec
-                    BackdropPrefs.saveCustom(textureContext, custom, spec)
-                    onTextureChanged()
-                }
-                val textureDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("画布底材", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "占面积最大的底子，像画板一样自由：泼彩撞色 + 定向渐变 + 纹理图元，全部页面与聊天底通用",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                skinRows()
+
+                // ---------------- 官方内容主题 ----------------
+                item {
+                    Column {
+                        SectionTitle("酒馆官方主题")
+                        InkText(
+                            "内核渲染层配色，与官方 SillyTavern 主题文件完全互导；强调色自动协调到壳层",
+                            tier = InkTier.Mute,
+                            sizeSp = 12f,
                         )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                        ) {
-                            FilterChip(
-                                selected = !textureCustom,
-                                onClick = { pushBackdrop(false, backdropSpec) },
-                                label = { Text("跟随主题") },
-                            )
-                            FilterChip(
-                                selected = textureCustom,
-                                onClick = { pushBackdrop(true, backdropSpec) },
-                                label = { Text("自定义") },
-                            )
-                        }
-                        // 效果库：一键套用完整配方（色域+渐变+纹理），套用后进自定义继续改
-                        Text("效果库", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            BackdropLibrary.forEach { (name, libSpec) ->
-                                FilterChip(
-                                    selected = false,
-                                    onClick = { pushBackdrop(true, libSpec) },
-                                    label = { Text(name) },
+                    }
+                }
+                items(themes.size) { index ->
+                    val meta = themes[index]
+                    val active = meta.name == currentTheme
+                    SurfaceCard(modifier = Modifier.fillMaxWidth(), onClick = { official.select(meta.name) }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                InkText(meta.name, tier = InkTier.Primary, sizeSp = 14f, fontWeight = FontWeight.Medium)
+                                InkText(
+                                    if (meta.bundled) "内置" else "导入",
+                                    tier = InkTier.Mute,
+                                    sizeSp = 11f,
                                 )
                             }
-                        }
-                        // 实时预览：跟随主题 = 当前主题配方；自定义 = 编辑中的配方（拖动立即可见）
-                        val previewSpec = if (textureCustom) backdropSpec else themePreset.backdrop
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .height(96.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .then(Modifier.canvasBackdrop(previewSpec, textureDark)),
-                            )
-                        }
-                        if (textureCustom) {
-                            // ---- 定向渐变层 ----
-                            val grad = backdropSpec.gradient
-                            val gradStart = grad?.colors?.firstOrNull() ?: CanvasPalette[0]
-                            val gradEnd = grad?.colors?.lastOrNull() ?: CanvasPalette[6]
-                            Text("定向渐变", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            Text("起色（渐变起点）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            SwatchPalette(CanvasPalette, setOf(gradStart)) { c ->
-                                pushBackdrop(true, backdropSpec.copy(gradient = (grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)).copy(colors = listOf(c, gradEnd))))
-                            }
-                            Text("终色（渐变终点）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            SwatchPalette(CanvasPalette, setOf(gradEnd)) { c ->
-                                pushBackdrop(true, backdropSpec.copy(gradient = (grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)).copy(colors = listOf(gradStart, c))))
-                            }
-                            SliderRow(label = "渐变强度", hint = "0 = 关闭；两端颜色的过渡浓度", value = grad?.alpha ?: 0f, range = 0f..0.6f) { v ->
-                                val base = grad ?: CanvasGradient(listOf(gradStart, gradEnd))
-                                pushBackdrop(true, backdropSpec.copy(gradient = if (v <= 0.01f) null else base.copy(alpha = v)))
-                            }
-                            SliderRow(label = "渐变角度", hint = "0 = 自上而下，90 = 从左到右", value = grad?.angle ?: 0f, range = 0f..360f) { v ->
-                                val base = grad ?: CanvasGradient(listOf(gradStart, gradEnd), 0f, 0.2f)
-                                pushBackdrop(true, backdropSpec.copy(gradient = base.copy(angle = v)))
-                            }
-                            // ---- 色域泼彩层 ----
-                            val washColors = backdropSpec.washes.map { it.color }
-                            val washMax = backdropSpec.washes.maxOfOrNull { it.alpha } ?: 0f
-                            Text("色域泼彩", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            Text(
-                                "点色即泼彩（可多选，撞色随意），重掷换布局",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            SwatchPalette(CanvasPalette, washColors.toSet()) { c ->
-                                val remaining = backdropSpec.washes.filterNot { it.color == c }
-                                val strength = washMax.takeIf { it > 0f } ?: 0.2f
-                                val added = if (remaining.size == backdropSpec.washes.size) randomWashes(listOf(c), strength, washSeed) else emptyList()
-                                pushBackdrop(true, backdropSpec.copy(washes = remaining + added))
-                            }
-                            SliderRow(label = "泼彩浓度", hint = "所有色域的浓度上限", value = washMax, range = 0f..0.5f) { v ->
-                                pushBackdrop(true, backdropSpec.copy(washes = backdropSpec.washes.map { it.copy(alpha = if (washMax > 0f) it.alpha * (v / washMax) else v) }))
-                            }
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(top = 4.dp),
-                            ) {
-                                FilterChip(
-                                    selected = false,
-                                    onClick = {
-                                        washSeed += 1
-                                        val strength = washMax.takeIf { it > 0f } ?: 0.2f
-                                        pushBackdrop(true, backdropSpec.copy(washes = randomWashes(washColors, strength, washSeed)))
-                                    },
-                                    label = { Text("重掷布局") },
-                                )
-                            }
-                            // ---- 纹理图元层 ----
-                            fun pushTex(t: TextureSpec) = pushBackdrop(true, backdropSpec.copy(texture = t))
-                            val tex = backdropSpec.texture
-                            Text("纹理图元", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            SliderRow(label = "织纹", hint = "经纬交织的画布底", value = tex.weave, range = 0f..1f) { v -> pushTex(tex.copy(weave = v)) }
-                            SliderRow(label = "布点", hint = "随机散点，尘埃/星屑", value = tex.stipple, range = 0f..1f) { v -> pushTex(tex.copy(stipple = v)) }
-                            SliderRow(label = "排线", hint = "定向平行短线，刀刻/铅笔", value = tex.hatch, range = 0f..1f) { v -> pushTex(tex.copy(hatch = v)) }
-                            SliderRow(label = "交叉排线", hint = "第二方向排线，铜版画明暗", value = tex.crossHatch, range = 0f..1f) { v -> pushTex(tex.copy(crossHatch = v)) }
-                            SliderRow(label = "纤维", hint = "微弯长丝，宣纸草筋/云纹", value = tex.fiber, range = 0f..1f) { v -> pushTex(tex.copy(fiber = v)) }
-                            SliderRow(label = "颗粒", hint = "细密噪点，胶片感光粒", value = tex.grain, range = 0f..1f) { v -> pushTex(tex.copy(grain = v)) }
-                            SliderRow(label = "排线角度", hint = "排线与交叉排线的方向", value = tex.hatchAngle, range = 0f..180f) { v -> pushTex(tex.copy(hatchAngle = v)) }
-                            SliderRow(label = "图元大小", hint = ">1 更大更疏，<1 更细更密", value = tex.scale, range = 0.5f..2.5f) { v -> pushTex(tex.copy(scale = v)) }
-                            SliderRow(label = "整体强度", hint = "所有层透明度同乘", value = tex.intensity, range = 0.2f..2f) { v -> pushTex(tex.copy(intensity = v)) }
-                        } else {
-                            Text(
-                                "跟随主题：每套预设自带专属画布（泼彩/渐变/纹理组合），换主题即换底材",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 2.dp),
-                            )
+                            if (active) InkText("使用中", tier = InkTier.Primary, sizeSp = 12f, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("全局圆角", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
-                        ) {
-                            listOf("default" to "系统", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
-                                FilterChip(selected = radius == v, onClick = { radius = v; AppearancePrefs.save(appearanceContext, radius, font); onAppearanceChanged() }, label = { Text(label) })
+                item {
+                    ChipRow {
+                        EmberChip(label = "导入主题 JSON", selected = false, onClick = { importLauncher.launch(arrayOf("*/*")) })
+                        EmberChip(label = "管理当前主题", selected = false, onClick = { manageSheetFor = currentTheme })
+                    }
+                }
+
+                // ---------------- 显示 ----------------
+                item {
+                    SectionTitle("显示")
+                    PreferenceGroup {
+                        GroupLabel("全局圆角")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf("default" to "系统", "square" to "方正", "rounded" to "圆润", "circle" to "浑圆").forEach { (v, label) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = radius == v,
+                                    onClick = { radius = v; AppearancePrefs.save(context, radius, font); AppearanceBus.notifyChanged() },
+                                )
                             }
                         }
-                        Text("全局字体", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 6.dp, bottom = 4.dp),
-                        ) {
+                    }
+                }
+                item {
+                    PreferenceGroup {
+                        GroupLabel("全局字体")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
                             listOf(
                                 "default" to "系统",
-                                "serif" to "衬线（思源宋体近似）",
-                                "noto" to "Noto Sans（官方·下载）",
+                                "serif" to "衬线",
+                                "noto" to "Noto Sans",
                             ).forEach { (v, label) ->
                                 val fontReady = when (v) {
-                                    "noto" -> FontManager.notoReady(appearanceContext)
+                                    "noto" -> FontManager.notoReady(context)
                                     else -> true
                                 }
-                                FilterChip(
+                                EmberChip(
+                                    label = if (v == "noto" && !fontReady) "$label ↓" else label,
                                     selected = font == v,
-                                    enabled = fontReady || v == "noto",
                                     onClick = {
                                         when {
                                             v == "noto" && !fontReady -> {
                                                 font = "noto"
                                                 fontScope.launch {
                                                     fontDownloading = true
-                                                    val result = FontManager.ensureNoto(appearanceContext)
+                                                    val result = FontManager.ensureNoto(context)
                                                     fontDownloading = false
                                                     result.onSuccess {
-                                                        AppearancePrefs.save(appearanceContext, radius, "noto")
-                                                        onAppearanceChanged()
+                                                        AppearancePrefs.save(context, radius, "noto")
+                                                        AppearanceBus.notifyChanged()
                                                     }.onFailure { e ->
-                                                        font = AppearancePrefs.font(appearanceContext)
+                                                        font = AppearancePrefs.font(context)
                                                         fontError = e.message ?: "未知错误"
                                                     }
                                                 }
                                             }
                                             else -> {
                                                 font = v
-                                                AppearancePrefs.save(appearanceContext, radius, v)
-                                                onAppearanceChanged()
+                                                AppearancePrefs.save(context, radius, v)
+                                                AppearanceBus.notifyChanged()
                                             }
                                         }
                                     },
-                                    label = { Text(label) },
                                 )
                             }
-                        }
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val fxContext = LocalContext.current
-                var shadowOn by remember { mutableStateOf(AppearancePrefs.textShadowEnabled(fxContext)) }
-                var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(fxContext)) }
-                var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(fxContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("头像形状", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "官方默认方形 2px；圆角 10px；圆形 50%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
-                        ) {
-                            listOf("circle" to "圆形 50%", "rounded" to "圆角 10px", "square" to "方形 2px（官方）").forEach { (v, label) ->
-                                FilterChip(
-                                    selected = avatarShape == v,
-                                    onClick = { avatarShape = v; AppearancePrefs.saveAvatarShape(fxContext, v); onAppearanceChanged() },
-                                    label = { Text(label) },
-                                )
-                            }
-                        }
-                        Text("文字阴影", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "对齐官方 style.css：全站文字 0 0 2px 黑 50% 阴影（--SmartThemeShadowColor）",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                            Text("启用", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                            EmberSwitch(
-                                checked = shadowOn,
-                                onCheckedChange = { shadowOn = it; AppearancePrefs.saveTextShadowEnabled(fxContext, it); onAppearanceChanged() },
-                            )
-                        }
-                        EmberSlider(
-                            value = shadowStrength.toFloat(),
-                            onValueChange = { shadowStrength = it.toInt(); AppearancePrefs.saveTextShadowStrength(fxContext, it.toInt()); onAppearanceChanged() },
-                            valueRange = 0f..4f,
-                            steps = 3,
-                        )
-                        Text("强度：$shadowStrength px", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val optContext = LocalContext.current
-                var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(optContext)) }
-                var blurStrength by remember { mutableStateOf(AppearancePrefs.blurStrength(optContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { blur = !blur; AppearancePrefs.saveBackgroundBlur(optContext, blur); onAppearanceChanged() }.padding(vertical = 6.dp),
-                        ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                        Text("背景模糊（玻璃表面）", style = MaterialTheme.typography.bodyLarge)
-                        Text("顶栏 / 输入栏 / 浮层的 Cloudy 毛玻璃总开关", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        EmberSwitch(checked = blur, onCheckedChange = { blur = it; AppearancePrefs.saveBackgroundBlur(optContext, it); onAppearanceChanged() })
-                        }
-                        if (blur) {
-                            // 强度与开关同卡：玻璃的所有控制集中一处，不再散落到消息渲染页
-                            // 下限 14 = EmberGlassDefaults.MIN_RADIUS（再低玻璃观感消失，官方默认 10 即为此被抬升）
-                            Text("模糊强度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
-                            EmberSlider(
-                                value = blurStrength.coerceAtLeast(14).toFloat(),
-                                onValueChange = { blurStrength = it.toInt(); AppearancePrefs.saveBlurStrength(optContext, it.toInt()); onAppearanceChanged() },
-                                valueRange = 14f..40f,
-                            )
-                            Text("半径 $blurStrength px", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
 
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionLabel("消息外观", "气泡、密度与消息操作按钮")
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val optContext = LocalContext.current
-                var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(optContext)) }
-                var density by remember { mutableStateOf(AppearancePrefs.density(optContext)) }
-                var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(optContext)) }
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("气泡样式", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
-                        ) {
-                            listOf("paper" to "纸面（AI 纯文本流）", "bubble" to "气泡（AI 也带气泡）").forEach { (v, label) ->
-                                FilterChip(selected = bubbleStyle == v, onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(optContext, v); onAppearanceChanged() }, label = { Text(label) })
-                            }
-                        }
-                        Text("密度", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
-                        ) {
-                            listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
-                                FilterChip(selected = density == v, onClick = { density = v; AppearancePrefs.saveDensity(optContext, v); onAppearanceChanged() }, label = { Text(label) })
-                            }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { immersive = !immersive; AppearancePrefs.setImmersiveActions(optContext, immersive); onAppearanceChanged() }
-                                .padding(vertical = 6.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("沉浸模式", style = MaterialTheme.typography.bodyLarge)
-                                Text(
-                                    "隐藏消息常驻操作按钮：关=最后一条 AI 消息常驻 4 键；开=全部操作收进长按菜单",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            EmberSwitch(checked = immersive, onCheckedChange = { immersive = it; AppearancePrefs.setImmersiveActions(optContext, it); onAppearanceChanged() })
-                        }
-                    }
+                // ---------------- 头像与文字 ----------------
+                item {
+                    AvatarAndShadowGroup(onChanged = { AppearanceBus.notifyChanged() })
+                }
+
+                // ---------------- 玻璃 ----------------
+                item {
+                    BlurGroup(onChanged = { AppearanceBus.notifyChanged() })
+                }
+
+                // ---------------- 消息外观 ----------------
+                item {
+                    MessageAppearanceGroup(onChanged = { AppearanceBus.notifyChanged() })
                 }
             }
+        }
+    }
 
-        }
-        if (fontDownloading) {
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text("下载字体") },
-                text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB），完成后自动应用，请稍候…") },
-                confirmButton = {},
-            )
-        }
-        fontError?.let { err ->
-            AlertDialog(
-                onDismissRequest = { fontError = null },
-                title = { Text("字体下载失败") },
-                text = { Text(err) },
-                confirmButton = {
-                    TextButton(onClick = { fontError = null }) { Text("知道了") }
+    // 管理当前主题弹层
+    val manageTarget = manageSheetFor
+    if (manageTarget != null) {
+        val meta = themes.firstOrNull { it.name == manageTarget }
+        EmberBottomSheet(visible = true, onDismiss = { manageSheetFor = null }, title = manageTarget) {
+            SheetRow(
+                label = "导出 JSON",
+                icon = FaIcons.Download,
+                onClick = {
+                    pendingExport = manageTarget
+                    exportLauncher.launch("${manageTarget}.json")
+                    manageSheetFor = null
                 },
             )
-        }
-    }
-    }
-}
-
-@Composable
-private fun SectionLabel(title: String, hint: String) {
-    Column(modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun SliderRow(
-    label: String,
-    hint: String,
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    onChange: (Float) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Text(String.format("%.2f", value), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        EmberSlider(value = value, onValueChange = onChange, valueRange = range)
-    }
-}
-
-/** 色板：点击选色（单选/多选由 selected 集合与调用方决定，选中画主题色描边圈）。 */
-@Composable
-private fun SwatchPalette(
-    colors: List<Color>,
-    selected: Set<Color>,
-    onToggle: (Color) -> Unit,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(vertical = 4.dp),
-    ) {
-        colors.forEach { c ->
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(c)
-                    .then(
-                        if (c in selected) {
-                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                        } else {
-                            Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        },
-                    )
-                    .clickable { onToggle(c) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun PresetCard(
-    preset: ThemePreset,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    // Card(onClick) 会把波纹裁进 shape；固定 20dp 圆角，避免选中不同形状主题时卡片四角跟着变
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
-        ),
-        border = if (selected) BorderStroke(2.dp, preset.metal ?: MaterialTheme.colorScheme.primary) else null,
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // 预览色板：seed/secondary/tertiary 圆点 + 宝石菱形 + 金属高光环
-                listOfNotNull(
-                    preset.seed,
-                    preset.secondary,
-                    preset.tertiary,
-                    preset.gem,
-                    preset.metal,
-                ).forEachIndexed { index, color ->
-                    val isGem = index == 3 && preset.gem != null
-                    val isMetal = index >= 4 && preset.metal != null
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .let { m ->
-                                when {
-                                    isGem -> m.graphicsLayer { rotationZ = 45f }.clip(RoundedCornerShape(4.dp))
-                                    isMetal -> m.clip(CircleShape).drawBehind {
-                                        drawCircle(
-                                            color = Color.White.copy(alpha = 0.45f),
-                                            radius = size.minDimension / 2f - 2.dp.toPx(),
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()),
-                                        )
-                                    }
-                                    else -> m.clip(CircleShape)
-                                }
-                            }
-                            .background(color),
-                    )
-                    if (index < 4) Spacer(Modifier.width(6.dp))
-                }
-                Spacer(Modifier.weight(1f))
-                if (selected) {
-                    Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
-                }
+            if (meta != null && !meta.bundled) {
+                SheetRow(
+                    label = "删除主题",
+                    icon = FaIcons.TrashCan,
+                    tone = SheetRowTone.Danger,
+                    onClick = {
+                        confirmDelete = manageTarget
+                        manageSheetFor = null
+                    },
+                )
             }
-            Text(
-                preset.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-            Text(
-                preset.desc,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+        }
+    }
+
+    confirmDelete?.let { name ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("删除主题") },
+            text = { Text("确定删除「$name」？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val ok = official.delete(name)
+                    Toast.show(context, if (ok) "已删除" else "删除失败")
+                    confirmDelete = null
+                }) { Text("删除", color = EmberTheme.colors.danger) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = null }) { Text("取消") }
+            },
+        )
+    }
+
+    if (fontDownloading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("下载字体") },
+            text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB），完成后自动应用，请稍候…") },
+            confirmButton = {},
+        )
+    }
+    fontError?.let { err ->
+        AlertDialog(
+            onDismissRequest = { fontError = null },
+            title = { Text("字体下载失败") },
+            text = { Text(err) },
+            confirmButton = {
+                TextButton(onClick = { fontError = null }) { Text("知道了") }
+            },
+        )
+    }
+}
+
+/** 两列皮肤卡行：按索引生成整行两张卡。 */
+private fun androidx.compose.foundation.lazy.LazyListScope.skinRows() {
+    EmberSkins.all.chunked(2).forEach { rowSkins ->
+        item(key = "skin-${rowSkins.first().id}") {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                rowSkins.forEach { skin ->
+                    SkinCard(skin, modifier = Modifier.weight(1f))
+                }
+                if (rowSkins.size == 1) Spacer(Modifier.weight(1f))
+            }
         }
     }
 }
 
+/**
+ * 皮肤卡：顶部四段色条预览（底色/卡面/强调/AI 金），下方名称与明暗标注。
+ * 点选即全局换装。
+ */
+@Composable
+private fun SkinCard(skin: EmberSkin, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val activeSkin by SkinStore.skin.collectAsState()
+    val selected = activeSkin.id == skin.id
+    val c = EmberTheme.colors
+    val p = skin.dark
+    val cardShape = RoundedCornerShape(EmberTheme.shapes.cornerCard)
+    Box(
+        modifier = modifier
+            .clip(cardShape)
+            .border(1.dp, if (selected) c.accentSoft else Color.Transparent, cardShape),
+    ) {
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), onClick = { SkinStore.select(context, skin) }) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                ) {
+                    Box(Modifier.weight(2.2f).fillMaxSize().background(p.bg))
+                    Box(Modifier.weight(1.6f).fillMaxSize().background(p.surface))
+                    Box(Modifier.weight(0.9f).fillMaxSize().background(p.accent))
+                    Box(Modifier.weight(0.7f).fillMaxSize().background(p.ai))
+                }
+                Spacer(Modifier.height(9.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    InkText(
+                        skin.name,
+                        tier = InkTier.Primary,
+                        sizeSp = 14f,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (selected) {
+                        InkText("✓", tier = InkTier.Primary, sizeSp = 14f, fontWeight = FontWeight.Bold)
+                    }
+                }
+                InkText(
+                    if (p.bg.luminance() < 0.35f) "深色" else "浅色",
+                    tier = InkTier.Mute,
+                    sizeSp = 11f,
+                )
+            }
+        }
+    }
+}
 
+/** 设置分组容器：surface 卡统一包裹。 */
+@Composable
+private fun PreferenceGroup(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val c = EmberTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(EmberTheme.shapes.cornerCard))
+            .background(c.surface)
+            .padding(14.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun GroupLabel(text: String) {
+    InkText(text, tier = InkTier.Soft, sizeSp = 13f, fontWeight = FontWeight.Medium)
+}
+
+@Composable
+private fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!checked) }
+            .padding(vertical = 6.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        EmberSwitch(checked = checked, onCheckedChange = onToggle)
+    }
+}
+
+/** 头像形状 + 文字阴影组。 */
+@Composable
+private fun AvatarAndShadowGroup(onChanged: () -> Unit) {
+    val context = LocalContext.current
+    var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(context)) }
+    var shadowOn by remember { mutableStateOf(AppearancePrefs.textShadowEnabled(context)) }
+    var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(context)) }
+    PreferenceGroup {
+        GroupLabel("头像形状")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf("circle" to "圆形", "rounded" to "圆角", "square" to "方形（官方）").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = avatarShape == v,
+                    onClick = { avatarShape = v; AppearancePrefs.saveAvatarShape(context, v); onChanged() },
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        GroupLabel("文字阴影")
+        InkText(
+            "对齐官方 style.css：全站文字 0 0 2px 黑阴影（--SmartThemeShadowColor）",
+            tier = InkTier.Mute,
+            sizeSp = 12f,
+        )
+        SwitchPrefRow(
+            title = "启用",
+            subtitle = "",
+            checked = shadowOn,
+            onToggle = { shadowOn = it; AppearancePrefs.saveTextShadowEnabled(context, it); onChanged() },
+        )
+        if (shadowOn) {
+            EmberSlider(
+                value = shadowStrength.toFloat(),
+                onValueChange = { shadowStrength = it.toInt(); AppearancePrefs.saveTextShadowStrength(context, it.toInt()); onChanged() },
+                valueRange = 0f..4f,
+                steps = 3,
+            )
+            InkText("强度：$shadowStrength px", tier = InkTier.Mute, sizeSp = 11f)
+        }
+    }
+}
+
+/** 背景模糊组（玻璃总开关 + 强度）。 */
+@Composable
+private fun BlurGroup(onChanged: () -> Unit) {
+    val context = LocalContext.current
+    var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(context)) }
+    var blurStrength by remember { mutableStateOf(AppearancePrefs.blurStrength(context)) }
+    PreferenceGroup {
+        SwitchPrefRow(
+            title = "背景模糊（玻璃表面）",
+            subtitle = "顶栏 / 输入栏 / 浮层的毛玻璃总开关",
+            checked = blur,
+            onToggle = { blur = it; AppearancePrefs.saveBackgroundBlur(context, it); onChanged() },
+        )
+        if (blur) {
+            // 下限 14 = EmberGlassDefaults.MIN_RADIUS（再低玻璃观感消失）
+            InkText("模糊强度", tier = InkTier.Soft, sizeSp = 13f, fontWeight = FontWeight.Medium)
+            EmberSlider(
+                value = blurStrength.coerceAtLeast(14).toFloat(),
+                onValueChange = { blurStrength = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()); onChanged() },
+                valueRange = 14f..40f,
+            )
+            InkText("半径 $blurStrength px", tier = InkTier.Mute, sizeSp = 11f)
+        }
+    }
+}
+
+/** 气泡样式 / 密度 / 沉浸模式组。 */
+@Composable
+private fun MessageAppearanceGroup(onChanged: () -> Unit) {
+    val context = LocalContext.current
+    var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(context)) }
+    var density by remember { mutableStateOf(AppearancePrefs.density(context)) }
+    var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(context)) }
+    PreferenceGroup {
+        GroupLabel("气泡样式")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf("paper" to "纸面", "bubble" to "气泡").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = bubbleStyle == v,
+                    onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(context, v); onChanged() },
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        GroupLabel("密度")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = density == v,
+                    onClick = { density = v; AppearancePrefs.saveDensity(context, v); onChanged() },
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        SwitchPrefRow(
+            title = "沉浸模式",
+            subtitle = "隐藏消息常驻操作按钮：开 = 全部操作收进长按菜单",
+            checked = immersive,
+            onToggle = { immersive = it; AppearancePrefs.setImmersiveActions(context, it); onChanged() },
+        )
+    }
+}
+
+/** Toast 简写。 */
+private object Toast {
+    fun show(context: android.content.Context, msg: String) {
+        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+    }
+}

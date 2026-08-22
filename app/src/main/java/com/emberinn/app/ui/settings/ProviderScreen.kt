@@ -4,7 +4,7 @@ package com.emberinn.app.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
 import com.emberinn.app.ui.icons.FaIcons
@@ -1303,7 +1303,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                         }
                     }
                 } else {
-                    EmberEmptyState(
+                    EmptyState(
                         title = "还没有模型列表",
                         body = "点「测试连接」拉取该服务商的模型列表",
                         compact = true,

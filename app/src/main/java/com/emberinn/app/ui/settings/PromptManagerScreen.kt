@@ -60,7 +60,6 @@ import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberEmptyState
 import com.emberinn.engine.prompt.PromptCollection
 import com.emberinn.engine.prompt.PromptItem
 import com.emberinn.engine.prompt.PromptManagerCore

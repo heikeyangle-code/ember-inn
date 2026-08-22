@@ -7,21 +7,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.settings.AppearancePrefs
-import com.emberinn.app.ui.theme.LocalThemePreset
 import com.skydoves.cloudy.Sky
 import com.skydoves.cloudy.cloudy
 
 /** 玻璃色调（官方 --SmartThemeBlurTintColor）：
- *  用户设置 stBlurTint > 当前主题预设 stBlurTint（酒馆官方 #171717）> M3 surface。
+ *  用户设置 stBlurTint > 官方主题桥接的舞台染色（EmberTheme.stageTint）> EmberDS surface。
  *  alpha 由调用方按各玻璃面的透明度叠加（0.38-0.52）。 */
 @Composable
 fun glassTint(base: Color = MaterialTheme.colorScheme.surface): Color {
     val context = LocalContext.current
-    val stTheme = LocalThemePreset.current
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     return parseHexColor(AppearancePrefs.stBlurTint(context))
-        ?: (if (dark) stTheme.stBlurTint else null)
+        ?: EmberTheme.stageTint
         ?: base
 }
 

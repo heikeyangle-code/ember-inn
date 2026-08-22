@@ -2,7 +2,7 @@
 
 package com.emberinn.app.ui.home
 
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow
 import com.emberinn.app.ui.components.EmberSectionHeader
 import com.emberinn.app.ui.components.EmberPrimaryButton
@@ -12,9 +12,7 @@ import com.emberinn.app.ui.components.glassEdgeHighlight
 import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
-import com.emberinn.app.ui.theme.LocalThemePreset
-import com.emberinn.app.ui.theme.LocalVibe
-import com.emberinn.app.ui.theme.emberBackdrop
+import com.emberinn.app.ui.design.EmberTheme
 
 import com.emberinn.app.ui.icons.FaIcons
 import android.content.Context
@@ -181,7 +179,7 @@ fun CharactersScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .emberBackdrop(),
+                .background(EmberTheme.colors.bg),
         ) {
             Box(
                 modifier = Modifier
@@ -215,8 +213,8 @@ fun CharactersScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topBarPad + 8.dp, bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
-                verticalArrangement = Arrangement.spacedBy(12.dp * LocalThemePreset.current.spacing),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -431,7 +429,7 @@ private fun SearchResultsColumn(
         val isEmpty = results.characters.isEmpty() && results.sessions.isEmpty() &&
             results.worldInfo.isEmpty() && results.settings.isEmpty()
         if (isEmpty) {
-            EmberEmptyState(
+            EmptyState(
                 title = "没有找到「$query」",
                 body = "换个关键词，试试角色名 / 会话内容 / 世界书条目 / 设置项",
                 icon = FaIcons.MagnifyingGlass,
@@ -639,10 +637,10 @@ private fun GlassFab(
         modifier = modifier
             .size(56.dp)
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                color = EmberTheme.colors.accent,
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
-                alpha = 0.18f + 0.12f * LocalVibe.current.glow,
+                alpha = 0.14f,
             )
             .clip(RoundedCornerShape(18.dp))
             .emberGlass(sky = sky, atTop = true, tintAlpha = EmberGlassDefaults.FAB_TINT)
@@ -659,10 +657,10 @@ private fun AiChatCard(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                color = EmberTheme.colors.accent,
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
-                alpha = 0.08f + 0.16f * LocalVibe.current.glow,
+                alpha = 0.10f,
             ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -716,10 +714,10 @@ private fun RecentChatCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().emberShadow(
-            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f),
+            color = EmberTheme.colors.accent,
             radius = 10.dp,
             offset = DpOffset(0.dp, 4.dp),
-            alpha = 0.08f + 0.16f * LocalVibe.current.glow,
+            alpha = 0.10f,
         ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -774,9 +772,8 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
         "rounded" -> 16.dp
         else -> 16.dp
     }
-    // 彩色发光阴影：角色 seed 垂直渐变光晕（网格只渲染可见卡，无卡顿）
-    val glow = LocalVibe.current.glow
-    val shadowColor = seed ?: MaterialTheme.colorScheme.primary
+    // 彩色阴影：角色 seed 垂直渐变光晕，固定克制的强度（网格只渲染可见卡，无卡顿）
+    val shadowColor = seed ?: EmberTheme.colors.accent
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -785,8 +782,8 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
             .emberShadow(
                 brush = Brush.verticalGradient(
                     listOf(
-                        shadowColor.copy(alpha = 0.30f * glow),
-                        shadowColor.copy(alpha = 0.08f * glow),
+                        shadowColor.copy(alpha = 0.16f),
+                        shadowColor.copy(alpha = 0.04f),
                         Color.Transparent,
                     ),
                 ),

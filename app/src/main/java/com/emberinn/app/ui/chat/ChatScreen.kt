@@ -2,7 +2,8 @@
 
 package com.emberinn.app.ui.chat
 
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.emberGlass
 
@@ -18,8 +19,6 @@ import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
 import com.emberinn.app.ui.settings.ExtensionPrefs
-import com.emberinn.app.ui.theme.LocalThemePreset
-import com.emberinn.app.ui.theme.canvasBackdrop
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.renderer.ChatDisplayMode
@@ -192,7 +191,6 @@ import com.emberinn.app.ui.components.EmberInputIcon
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.emberds.EmberDefaults
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberTextFieldDefaults
 import com.emberinn.app.ui.components.emberShadow
@@ -302,7 +300,7 @@ fun ChatScreen(
             kernelPool.destroyAll()
         }
     }
-    val themeManager = remember { OfficialThemeManager(context) }
+    val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
     // chat_display 布局类随主题派生；embed-shell 常驻（内核只渲染正文）
     LaunchedEffect(officialThemeJson) {
@@ -586,7 +584,7 @@ fun ChatScreen(
     val skinAccent = remember(officialThemeJson) { themeManager.skinColors().accent }
     val accent = vm.accentColor?.let { Color(it.toInt()) }
         ?: skinAccent?.let { Color(it) }
-        ?: EmberDefaults.colors.accent
+        ?: EmberTheme.colors.accent
     val items = remember(messages, isStreaming, lastReasoning, isImpersonating) {
         buildList {
             // reverseLayout=true：第 0 项固定在视口底部，因此最新内容（流式/最后一条）放在最前。
@@ -781,7 +779,8 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(EmberDefaults.colors.stage),
+                .background(EmberTheme.colors.bg)
+                .background((EmberTheme.stageTint ?: Color.Transparent).copy(alpha = 0.30f)),
         ) {
         // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 舞台底色兑底
         // 可读性遮罩：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
@@ -843,7 +842,7 @@ fun ChatScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 if (items.isEmpty()) {
-                    item { EmptyChat(name = currentName, accent = accent) }
+                    item { EmptyChat(name = currentName) }
                 }
                 itemsIndexed(
                     items,
@@ -2939,10 +2938,10 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // EmberDS GlassBar：chrome 退后（DESIGN_SYSTEM §六.2）——半透明近黑 + hairline 分界，无投影
-    val E = EmberDefaults.colors
+    // EmberDS GlassBar：chrome 退后（DESIGN_SYSTEM §六.2）——半透明底 + hairline 分界，无投影
+    val E = EmberTheme.colors
     Surface(
-        color = E.stage.copy(alpha = 0.72f),
+        color = E.bg.copy(alpha = 0.72f),
         shadowElevation = 0.dp,
         modifier = modifier,
     ) {
@@ -2953,7 +2952,7 @@ private fun ChatTopBar(
                 .drawBehind {
                     // 底边 hairline（Compose border 无对齐重载，手绘底线）
                     drawLine(
-                        color = E.hairline,
+                        color = E.line,
                         start = Offset(0f, size.height),
                         end = Offset(size.width, size.height),
                         strokeWidth = 0.5.dp.toPx(),
@@ -2964,7 +2963,7 @@ private fun ChatTopBar(
         ) {
             // 返回按钮在左上角（配合边缘滑动返回），留足上下间距避免贴最高处
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSecondary)
+                Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSoft)
             }
             Spacer(Modifier.size(6.dp))
             RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
@@ -2980,13 +2979,13 @@ private fun ChatTopBar(
                 )
             }
             IconButton(onClick = onAuthorsNote, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSecondary)
+                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSoft)
             }
             IconButton(onClick = onPersona, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSecondary)
+                Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSoft)
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSecondary)
+                Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSoft)
             }
         }
     }
@@ -3248,17 +3247,19 @@ private fun MessageRowContent(
         }
     }
     val textShadow = chatTextShadow()
-    val stTheme = LocalThemePreset.current
-    val stDark = isDarkThemeSurface()
-    // EmberDS 直配：气泡底/描边走令牌（Moonlit mes tint 直译），用户自定义 hex 仍可覆盖
-    val E = EmberDefaults.colors
-    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: E.bubbleUser
-    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: E.bubbleBot
+    // 用户 hex > 当前官方主题字段（blur tint 真值）> EmberDS 令牌（§五 seed 桥静态面）
+    val st = rememberStColors()
+    fun stCol(v: Long?) = v?.let { Color(it) }
+    val c = EmberTheme.colors
+    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context))
+        ?: stCol(st.userBubbleTint) ?: c.accentBg
+    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context))
+        ?: stCol(st.botBubbleTint) ?: c.surface
     val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))
-        ?.let { BorderStroke(1.dp, it) } ?: BorderStroke(0.5.dp, E.hairlineStrong)
+        ?.let { BorderStroke(1.dp, it) }
+        ?: BorderStroke(0.5.dp, stCol(st.border) ?: c.line)
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: (if (stDark) stTheme.stEm else null)
-        ?: E.aiGold
+        ?: stCol(st.emText) ?: c.inkSoft
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
@@ -3560,7 +3561,7 @@ private fun StreamingRow(
                             scaleY = caretScale
                             this.alpha = caretAlpha
                         }
-                        .background(EmberDefaults.colors.aiGold, CircleShape),
+                        .background(EmberTheme.colors.ai, CircleShape),
                 )
             }
         }
@@ -3573,21 +3574,16 @@ private fun StreamingRow(
 @Composable
 private fun StreamingMarkdown(content: String, fillWidth: Boolean = true) {
     val context = LocalContext.current
-    val stTheme = LocalThemePreset.current
-    val stDark = isDarkThemeSurface()
-    val onSurface = MaterialTheme.colorScheme.onSurface
+    val st = rememberStColors()
+    fun stCol(v: Long?) = v?.let { Color(it) }
     val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: (if (stDark) stTheme.stBody else null)
-        ?: onSurface
+        ?: stCol(st.mainText) ?: MaterialTheme.colorScheme.onSurface
     val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: (if (stDark) stTheme.stQuote else null)
-        ?: MaterialTheme.colorScheme.primary
+        ?: stCol(st.quote) ?: MaterialTheme.colorScheme.primary
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: (if (stDark) stTheme.stEm else null)
-        ?: MaterialTheme.colorScheme.onSurfaceVariant
+        ?: stCol(st.emText) ?: MaterialTheme.colorScheme.onSurfaceVariant
     val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: (if (stDark) stTheme.stUnderline else null)
-        ?: MaterialTheme.colorScheme.primary
+        ?: stCol(st.underline) ?: MaterialTheme.colorScheme.primary
     val styled = remember(content, bodyColor, quoteColor, emColor, underlineColor) {
         streamingStyledText(content, bodyColor, quoteColor, emColor, underlineColor)
     }
@@ -4115,7 +4111,15 @@ private fun chatTypography(): ChatTypography {
     }
 }
 
-/** 深色表面判断：主题预设的官方 st* 字段是深色专属真值（官方无浅色），浅色模式回退 M3 自动配色。 */
+/** 当前官方主题颜色字段（实时）：壳层气泡/正文/引用/阴影的官方真值来源（§五 seed 桥静态面）。 */
+@Composable
+private fun rememberStColors(): OfficialThemeManager.StColors {
+    val manager = remember { OfficialThemeManager.shared(LocalContext.current) }
+    val name by manager.currentName.collectAsState()
+    return remember(name) { manager.stColors() }
+}
+
+/** 深色表面判断：App 已强制暗基底，此判断保留给玻璃边缘高光等明暗二态逻辑。 */
 @Composable
 private fun isDarkThemeSurface(): Boolean =
     MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -4126,10 +4130,8 @@ private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
     val context = LocalContext.current
     val enabled = AppearancePrefs.textShadowEnabled(context)
     val blur = AppearancePrefs.textShadowStrength(context)
-    val stTheme = LocalThemePreset.current
-    val stDark = isDarkThemeSurface()
     val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context))
-        ?: (if (stDark) stTheme.stShadow else null)
+        ?: rememberStColors().shadow?.let { Color(it) }
         ?: Color(0x80000000)
     // 设置值不变就复用同一个 Shadow：滚动/流式高频重组时不再每次分配
     return remember(enabled, blur, shadowColor) {
@@ -4930,21 +4932,17 @@ private fun NativeMarkdown(
     fillWidth: Boolean = true,
 ) {
     val context = LocalContext.current
-    // 官方字段：用户设置 > 当前主题默认（酒馆官方=官方真值） > 跟随 M3 自动生成
-    val stTheme = LocalThemePreset.current
-    val stDark = isDarkThemeSurface()
+    // 官方字段：用户设置 > 当前官方主题真值（power-user 同源）> M3 自动生成
+    val st = rememberStColors()
+    fun stCol(v: Long?) = v?.let { Color(it) }
     val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: (if (stDark) stTheme.stBody else null)
-        ?: onSurface
+        ?: stCol(st.mainText) ?: onSurface
     val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: (if (stDark) stTheme.stQuote else null)
-        ?: MaterialTheme.colorScheme.primary
+        ?: stCol(st.quote) ?: MaterialTheme.colorScheme.primary
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: (if (stDark) stTheme.stEm else null)
-        ?: MaterialTheme.colorScheme.onSurfaceVariant
+        ?: stCol(st.emText) ?: MaterialTheme.colorScheme.onSurfaceVariant
     val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: (if (stDark) stTheme.stUnderline else null)
-        ?: MaterialTheme.colorScheme.primary
+        ?: stCol(st.underline) ?: MaterialTheme.colorScheme.primary
     val type = chatTypography()
     // 颜色/排版/间距工厂是 @Composable（读主题），直接在组合上下文调用；组件 lambda 走 remember 复用
     val codeBg = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -5537,12 +5535,12 @@ private fun WebViewHtml(
 ) {
     val context = LocalContext.current
     var heightPx by remember { mutableIntStateOf(0) }
-    val stTheme = LocalThemePreset.current
-    val stDark = isDarkThemeSurface()
-    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: (if (stDark) stTheme.stBody else null)
-    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: (if (stDark) stTheme.stEm else null)
-    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: (if (stDark) stTheme.stUnderline else null)
-    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: (if (stDark) stTheme.stQuote else null)
+    val st = rememberStColors()
+    fun stColN(v: Long?): Color? = v?.let { Color(it) }
+    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stColN(st.mainText)
+    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stColN(st.emText)
+    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stColN(st.underline)
+    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stColN(st.quote)
     val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn) {
         buildStyledWebPage(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn)
     }
@@ -5926,8 +5924,8 @@ private fun ChatInputBar(
                 .take(12)
         }
     }
-    // EmberDS 输入栏：surface 半透明浮在舞台之上，hairlineStrong 上分界（ChatAreaTheme 独立配色待皮肤包）
-    val barColor = EmberDefaults.colors.surface.copy(alpha = 0.78f)
+    // EmberDS 输入栏：ChatAreaTheme.inputBg 浮在舞台之上，lineStrong 上分界（§6.1 输入区独立配色）
+    val barColor = EmberTheme.chat.inputBg
     Surface(
         color = barColor,
         shadowElevation = 0.dp,
@@ -5939,7 +5937,7 @@ private fun ChatInputBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(EmberDefaults.colors.hairlineStrong),
+                    .background(EmberTheme.colors.lineStrong),
             )
             // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，常驻输入栏顶部（不占消息区）
             if (!isStreaming && contextUsage != null) {
@@ -6071,82 +6069,108 @@ private fun ChatInputBar(
                     }
                 }
             }
+            // —— 作曲行（DESIGN_SYSTEM §6.2）：一体化输入卡。
+            // 工具收进卡内左缘（幽灵纯图标）、正文无边框透明、发送/停止独立在卡右——
+            // 三层嵌套容器收敛成"一张卡 + 一个动作"，输入区只保留一条视觉主线。——
+            val chatC = EmberTheme.chat
             Row(
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
-            // 左侧工具簇：+ 附件为通用入口（中性 tonal）；冒充/继续是生成类操作，
-            // 幽灵态纯图标（无彩色容器）——一排圆钮太抢输入框，降噪后层次更清楚
-            EmberInputIcon(
-                onClick = onAttach,
-                icon = FaIcons.Plus,
-                contentDescription = "附件与工具",
-            )
-            if (!isStreaming) {
-                // 官方 rightSendForm：impersonate(user-secret) + continue(arrow-right)
-                EmberInputIcon(
-                    onClick = onQuickImpersonate,
-                    icon = FaIcons.UserSecret,
-                    contentDescription = "冒充用户发言",
-                    tint = accent.copy(alpha = 0.85f),
-                    ghost = true,
-                )
-                if (canQuickContinue) {
-                    EmberInputIcon(
-                        onClick = onQuickContinue,
-                        icon = FaIcons.ArrowRight,
-                        contentDescription = "继续生成",
-                        tint = accent.copy(alpha = 0.85f),
-                        ghost = true,
-                    )
-                }
-            }
-            EmberTextField(
-                value = if (impersonating) impersonationClean else input,
-                onValueChange = if (impersonating) { _ -> } else onInputChange,
-                placeholder = {
-                    Text(
-                        "输入消息…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                    )
-                },
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = EmberTextFieldDefaults.colors(
-                    cursorColor = accent,
-                    focusedContainerColor = EmberDefaults.colors.surfaceHigh.copy(alpha = 0.9f),
-                    unfocusedContainerColor = EmberDefaults.colors.surface.copy(alpha = 0.7f),
-                ),
-                focusGlow = accent,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 44.dp, max = 160.dp),
-            )
-            if (!isStreaming) {
-                val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
-                ChatSendButton(accent = accent, canSend = canSend, onSend = onSend)
-            } else {
-                IconButton(onClick = onStop, modifier = Modifier.size(42.dp)) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .emberShadow(color = MaterialTheme.colorScheme.error.copy(alpha = 0.4f), radius = 10.dp, offset = DpOffset(0.dp, 3.dp), alpha = 0.35f)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.error),
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(chatC.inputBg)
+                        .border(0.5.dp, chatC.inputBorder, RoundedCornerShape(24.dp)),
+                ) {
+                    // 卡内工具簇：附件 + 冒充 + 继续（官方 rightSendForm 的移动端等价）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 2.dp, top = 2.dp),
                     ) {
-                        Icon(FaIcons.CircleStop, contentDescription = "停止生成", tint = MaterialTheme.colorScheme.onError, modifier = Modifier.size(20.dp))
+                        EmberInputIcon(
+                            onClick = onAttach,
+                            icon = FaIcons.Plus,
+                            contentDescription = "附件与工具",
+                            tint = chatC.buttonIcon,
+                            ghost = true,
+                        )
+                        if (!isStreaming) {
+                            EmberInputIcon(
+                                onClick = onQuickImpersonate,
+                                icon = FaIcons.UserSecret,
+                                contentDescription = "冒充用户发言",
+                                tint = chatC.inputAccent.copy(alpha = 0.85f),
+                                ghost = true,
+                            )
+                            if (canQuickContinue) {
+                                EmberInputIcon(
+                                    onClick = onQuickContinue,
+                                    icon = FaIcons.ArrowRight,
+                                    contentDescription = "继续生成",
+                                    tint = chatC.inputAccent.copy(alpha = 0.85f),
+                                    ghost = true,
+                                )
+                            }
+                        }
                     }
+                    EmberTextField(
+                        value = if (impersonating) impersonationClean else input,
+                        onValueChange = if (impersonating) { _ -> } else onInputChange,
+                        placeholder = {
+                            Text(
+                                if (impersonating) "正在代写你的发言…" else "输入消息…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = chatC.inputPlaceholder,
+                            )
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        maxLines = 4,
+                        colors = EmberTextFieldDefaults.colors(
+                            cursorColor = chatC.inputAccent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedPlaceholderColor = chatC.inputPlaceholder,
+                            unfocusedPlaceholderColor = chatC.inputPlaceholder,
+                        ),
+                        focusGlow = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 44.dp, max = 160.dp)
+                            .padding(horizontal = 4.dp),
+                    )
                 }
-            }
+                if (!isStreaming) {
+                    val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
+                    ChatSendButton(accent = chatC.inputAccent, canSend = canSend, onSend = onSend)
+                } else {
+                    ChatStopButton(onStop = onStop)
+                }
             }
         }
     }
 
+}
+
+/** 停止生成：danger 实心圆钮（EmberDS 语义色，与发送钮同尺寸对位）。 */
+@Composable
+private fun ChatStopButton(onStop: () -> Unit) {
+    val c = EmberTheme.colors
+    IconButton(onClick = onStop, modifier = Modifier.size(44.dp)) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(c.danger),
+        ) {
+            Icon(FaIcons.CircleStop, contentDescription = "停止生成", tint = Color.White, modifier = Modifier.size(19.dp))
+        }
+    }
 }
 
 /** 快捷回复胶囊（官方 Quick Reply 的 menu_button 移动端等价）：tonal 圆角小胶囊，横滑容器内使用。 */
@@ -6271,13 +6295,13 @@ private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) 
                 .clip(CircleShape)
                 .background(
                     if (canSend) sendBrush
-                    else SolidColor(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    else SolidColor(EmberTheme.colors.lineStrong),
                 ),
         ) {
             Icon(
                 FaIcons.PaperPlane,
                 contentDescription = "发送",
-                tint = if (canSend) onAccent else MaterialTheme.colorScheme.outlineVariant,
+                tint = if (canSend) onAccent else EmberTheme.colors.inkMute,
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -6285,11 +6309,10 @@ private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) 
 }
 
 @Composable
-private fun EmptyChat(name: String, accent: Color) {
-    EmberEmptyState(
+private fun EmptyChat(name: String) {
+    EmptyState(
         title = "和 ${name.ifBlank { "TA" }} 打个招呼吧",
         body = "第一条消息会连同角色卡、世界书与示例对话一起发给模型",
-        accent = accent,
         icon = FaIcons.BookOpen,
         modifier = Modifier.fillMaxWidth().padding(top = 72.dp, bottom = 24.dp),
     )

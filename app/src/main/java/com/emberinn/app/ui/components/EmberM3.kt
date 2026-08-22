@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.skydoves.cloudy.Sky
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.theme.LocalVibe
 
 /**
  * README UI 质感升级：高级输入框（全局替换 OutlinedTextField）。
@@ -197,7 +196,7 @@ fun EmberGlassFab(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
-                alpha = 0.18f + 0.12f * LocalVibe.current.glow,
+                alpha = 0.14f,
             )
             .clip(RoundedCornerShape(18.dp))
             .emberGlass(sky = sky, atTop = true, tintAlpha = EmberGlassDefaults.FAB_TINT)

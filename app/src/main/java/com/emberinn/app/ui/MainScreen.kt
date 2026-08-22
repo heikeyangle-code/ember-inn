@@ -1,6 +1,5 @@
 package com.emberinn.app.ui
 
-import com.emberinn.app.ui.icons.FaIcons
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -15,8 +14,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -24,11 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,39 +33,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.emberinn.app.data.CardFormat
 import com.emberinn.app.data.OnboardingPrefs
-import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.data.SessionRecord
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.InkText
 import com.emberinn.app.ui.home.HomeViewModel
-import com.emberinn.engine.card.CardFormat
+import com.emberinn.app.ui.icons.FaIcons
+import com.emberinn.app.ui.settings.AppearancePrefs
+import androidx.compose.ui.unit.sp
 
 private data class TabSpec(val label: String, val icon: ImageVector)
 
+/**
+ * 底部导航三域（DESIGN_SYSTEM §6.3 IA）：聊天居左、世界（角色+世界书）居中、设置居右。
+ */
 private val Tabs = listOf(
-    TabSpec("角色", FaIcons.User),
-    TabSpec("聊天", FaIcons.ListUl),
+    TabSpec("聊天", FaIcons.Comments),
+    TabSpec("世界", FaIcons.Globe),
     TabSpec("设置", FaIcons.Gear),
 )
 
 @Composable
-fun MainScreen(
-    themeMode: com.emberinn.app.ui.theme.ThemeMode = com.emberinn.app.ui.theme.ThemeMode.SYSTEM,
-    themePreset: com.emberinn.app.ui.theme.ThemePreset = com.emberinn.app.ui.theme.ThemePresets.first(),
-    vibe: com.emberinn.app.ui.theme.VibePreset = com.emberinn.app.ui.theme.VibePresets.first(),
-    onVibeChanged: (com.emberinn.app.ui.theme.VibePreset) -> Unit = {},
-    onTextureChanged: () -> Unit = {},
-    onAppearanceChanged: () -> Unit = {},
-    onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit = { _, _ -> },
-) {
+fun MainScreen() {
     val context = LocalContext.current
     // README 启动行为：启动直接进入上次聊天（默认关）
     val initialLastSession = AppearancePrefs.openLastChat(context) && AppearancePrefs.lastSessionId(context).isNotBlank()
-    var selectedTab by rememberSaveable { mutableIntStateOf(if (initialLastSession) 1 else 0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var openSessionId by rememberSaveable { mutableStateOf(if (initialLastSession) AppearancePrefs.lastSessionId(context) else null) }
     var openName by rememberSaveable { mutableStateOf("") }
     var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -145,18 +139,12 @@ fun MainScreen(
     if (sessionId != null) {
         val wide = LocalConfiguration.current.screenWidthDp >= 840
         if (wide) {
-            // 平板/折叠屏双栏：导航轨 + 左侧列表 + 右侧聊天（README 大屏自适应）
+            // 平板/折叠屏双栏：导航轨 + 左侧列表 + 右侧聊天
             Row(modifier = Modifier.fillMaxSize()) {
-                NavigationRail {
-                    Tabs.forEachIndexed { index, tab ->
-                        NavigationRailItem(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                        )
-                    }
-                }
+                NavigationRail(
+                    selected = selectedTab,
+                    onSelect = { selectedTab = it },
+                )
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -173,17 +161,6 @@ fun MainScreen(
                             if (route != null) settingsDeepLink = route
                         },
                         onOpenDetail = { record -> openDetailId = record.id },
-                        onOpenSession = { session ->
-                            openSession(session.id)
-                            openName = session.name
-                        },
-                        themeMode = themeMode,
-                        themePreset = themePreset,
-                        vibe = vibe,
-                        onVibeChanged = onVibeChanged,
-                        onTextureChanged = onTextureChanged,
-                        onAppearanceChanged = onAppearanceChanged,
-                        onThemeChanged = onThemeChanged,
                         settingsDeepLink = settingsDeepLink,
                         onSettingsDeepLinkConsumed = { settingsDeepLink = null },
                     )
@@ -229,19 +206,9 @@ fun MainScreen(
         return
     }
 
-    Scaffold(
-        bottomBar = {
-            EmberBottomNav(
-                tabs = Tabs,
-                selected = selectedTab,
-                onSelect = { selectedTab = it },
-            )
-        },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.Center,
-        ) {
+    Box(Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
+        // 状态栏内边距在此统一处理（旧 Scaffold innerPadding 的等价物）；各屏列表自留底栏空间
+        Box(Modifier.fillMaxSize().statusBarsPadding()) {
             TabContent(
                 selectedTab = selectedTab,
                 onOpenChat = { session ->
@@ -253,134 +220,146 @@ fun MainScreen(
                     if (route != null) settingsDeepLink = route
                 },
                 onOpenDetail = { record -> openDetailId = record.id },
-                onOpenSession = { session ->
-                    openSession(session.id)
-                    openName = session.name
-                },
-                themeMode = themeMode,
-                themePreset = themePreset,
-                vibe = vibe,
-                onVibeChanged = onVibeChanged,
-                onTextureChanged = onTextureChanged,
-                onAppearanceChanged = onAppearanceChanged,
-                onThemeChanged = onThemeChanged,
                 settingsDeepLink = settingsDeepLink,
                 onSettingsDeepLinkConsumed = { settingsDeepLink = null },
             )
         }
+        // 底部导航浮在内容上（内容自管底部留白）
+        EmberBottomNav(
+            tabs = Tabs,
+            selected = selectedTab,
+            onSelect = { selectedTab = it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+/** 平板导航轨（EmberDS 版）。 */
+@Composable
+private fun NavigationRail(selected: Int, onSelect: (Int) -> Unit) {
+    val c = EmberTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .background(c.bgTint.copy(alpha = 0.5f))
+            .padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Tabs.forEachIndexed { index, tab ->
+            val active = selected == index
+            RailItem(tab.label, tab.icon, active) { onSelect(index) }
+            Spacer(Modifier.height(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun RailItem(label: String, icon: ImageVector, active: Boolean, onClick: () -> Unit) {
+    val c = EmberTheme.colors
+    val tint = if (active) c.accent else c.inkMute
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label,
+            color = tint,
+            fontSize = 11.sp,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+        )
     }
 }
 
 /**
- * 自绘底部导航（替换默认 M3 NavigationBar）：发丝顶线 + 低投影表面 +
- * “胶囊图标在上 / 小字标签在下”的经典结构（比横排胶囊+文字更安静，
- * 不抢内容）。选中态主色提亮，未选中低对比。
+ * 玻璃底栏（EmberDS 版）：bg 半透明 + 发丝顶线，胶囊指示随选中淡入，
+ * 选中态 accent 提亮、未选中弱化——chrome 退后。
  */
 @Composable
-private fun EmberBottomNav(
+fun EmberBottomNav(
     tabs: List<TabSpec>,
     selected: Int,
     onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
-        // 发丝顶线：宽=屏宽、高=1dp。
-        // 注意不能用 fillMaxSize()：它会把最小高度锁成全屏高，height(1.dp) 被 coerce 失效，
-        // 底栏因此撑满整屏、Scaffold 内容被 innerPadding 顶出屏幕 → 主界面白屏（已修复）。
+    val c = EmberTheme.colors
+    Column(modifier = modifier) {
+        // 发丝顶线：宽=屏宽、高=1dp。不能用 fillMaxSize()——会把最小高度锁成全屏高。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+                .height(0.5.dp)
+                .background(c.line),
         )
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 3.dp,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(c.surface.copy(alpha = 0.88f))
+                .navigationBarsPadding()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    val active = selected == index
-                    val pillAlpha by animateFloatAsState(
-                        targetValue = if (active) 1f else 0f,
-                        animationSpec = tween(180),
-                        label = "navPill",
-                    )
-                    val tint = if (active) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+            tabs.forEachIndexed { index, tab ->
+                val active = selected == index
+                val pillAlpha by animateFloatAsState(
+                    targetValue = if (active) 1f else 0f,
+                    animationSpec = tween(EmberTheme.motion.sheetMs),
+                    label = "navPill",
+                )
+                val tint = if (active) c.accent else c.inkMute
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onSelect(index) }
+                        .padding(vertical = 2.dp),
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable { onSelect(index) }
-                            .padding(vertical = 2.dp),
+                            .size(width = 56.dp, height = 30.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(c.accent.copy(alpha = 0.14f * pillAlpha)),
                     ) {
-                        // 胶囊指示容器：仅选中态淡入
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(width = 56.dp, height = 30.dp)
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f * pillAlpha),
-                                ),
-                        ) {
-                            Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(19.dp))
-                        }
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            tab.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                            color = tint,
-                        )
+                        Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(19.dp))
                     }
+                    Spacer(Modifier.height(3.dp))
+                    InkText(
+                        tab.label,
+                        tier = if (active) InkTier.Primary else InkTier.Mute,
+                        sizeSp = 11f,
+                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                    )
                 }
             }
         }
     }
 }
 
-
 @Composable
 private fun TabContent(
     selectedTab: Int,
-    onOpenChat: (com.emberinn.app.data.SessionRecord) -> Unit,
+    onOpenChat: (SessionRecord) -> Unit,
     onOpenSettings: (String?) -> Unit,
     onOpenDetail: (com.emberinn.app.data.CharacterRecord) -> Unit,
-    onOpenSession: (com.emberinn.app.data.SessionRecord) -> Unit,
-    themeMode: com.emberinn.app.ui.theme.ThemeMode,
-    themePreset: com.emberinn.app.ui.theme.ThemePreset,
-    vibe: com.emberinn.app.ui.theme.VibePreset,
-    onVibeChanged: (com.emberinn.app.ui.theme.VibePreset) -> Unit,
-    onTextureChanged: () -> Unit,
-    onAppearanceChanged: () -> Unit,
-    onThemeChanged: (com.emberinn.app.ui.theme.ThemeMode, com.emberinn.app.ui.theme.ThemePreset) -> Unit,
     settingsDeepLink: String?,
     onSettingsDeepLinkConsumed: () -> Unit,
 ) {
     when (selectedTab) {
-        0 -> com.emberinn.app.ui.home.CharactersScreen(
+        0 -> com.emberinn.app.ui.sessions.SessionsScreen(
+            onOpenSession = onOpenChat,
+        )
+        1 -> com.emberinn.app.ui.home.CharactersScreen(
             onOpenChat = onOpenChat,
             onOpenSettings = onOpenSettings,
             onOpenDetail = onOpenDetail,
         )
-        1 -> com.emberinn.app.ui.sessions.SessionsScreen(
-            onOpenSession = onOpenSession,
-        )
         else -> com.emberinn.app.ui.settings.SettingsScreen(
-            themeMode = themeMode,
-            themePreset = themePreset,
-            vibe = vibe,
-            onVibeChanged = onVibeChanged,
-            onTextureChanged = onTextureChanged,
-            onAppearanceChanged = onAppearanceChanged,
-            onThemeChanged = onThemeChanged,
             deepLink = settingsDeepLink,
             onDeepLinkConsumed = onSettingsDeepLinkConsumed,
         )

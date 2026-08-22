@@ -57,11 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
-import com.emberinn.app.ui.theme.ThemeMode
-import com.emberinn.app.ui.theme.ThemePreset
-import com.emberinn.app.ui.theme.emberBackdrop
-import com.emberinn.app.ui.theme.VibePreset
-import com.emberinn.app.ui.theme.VibePresets
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.components.EmberTextField
 
 private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, TYPOGRAPHY, RENDER, EXTENSIONS, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
@@ -69,13 +65,6 @@ private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL,
 /** 设置入口：对照官方 SillyTavern 移动端 8 分区抽屉（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理）。 */
 @Composable
 fun SettingsScreen(
-    themeMode: ThemeMode,
-    themePreset: ThemePreset,
-    vibe: VibePreset = VibePresets.first(),
-    onVibeChanged: (VibePreset) -> Unit = {},
-    onTextureChanged: () -> Unit = {},
-    onAppearanceChanged: () -> Unit = {},
-    onThemeChanged: (ThemeMode, ThemePreset) -> Unit,
     deepLink: String? = null,
     onDeepLinkConsumed: () -> Unit = {},
     vm: ProviderViewModel = viewModel(),
@@ -164,19 +153,12 @@ fun SettingsScreen(
             onOpenAbout = { open(SettingsPage.ABOUT) },
         )
         SettingsPage.APPEARANCE -> AppearanceScreen(
-            themeMode = themeMode,
-            themePreset = themePreset,
-            vibe = vibe,
-            onVibeChanged = onVibeChanged,
-            onTextureChanged = onTextureChanged,
-            onAppearanceChanged = onAppearanceChanged,
-            onThemeChanged = onThemeChanged,
             onBack = ::goBack,
         )
-        SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = ::goBack)
         SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = ::goBack)
-        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
-        SettingsPage.RENDER -> MessageRenderScreen(onBack = ::goBack, onAppearanceChanged = onAppearanceChanged)
+        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = ::goBack)
+        SettingsPage.RENDER -> MessageRenderScreen(onBack = ::goBack)
         SettingsPage.EXTENSIONS -> ExtensionsHubScreen(
             onBack = ::goBack,
             onOpenServices = { open(SettingsPage.SERVICES) },
@@ -205,8 +187,6 @@ fun SettingsScreen(
         SettingsPage.ABOUT -> AboutScreen(onBack = ::goBack)
         else -> SettingsHome(
             vm = vm,
-            themeMode = themeMode,
-            themePreset = themePreset,
             listState = homeListState,
             query = homeQuery,
             onQueryChange = { homeQuery = it },
@@ -255,8 +235,6 @@ private data class OfficialSection(
 @Composable
 private fun SettingsHome(
     vm: ProviderViewModel,
-    themeMode: ThemeMode,
-    themePreset: ThemePreset,
     listState: LazyListState,
     query: String,
     onQueryChange: (String) -> Unit,
@@ -480,7 +458,7 @@ fun SettingsGlassPage(content: @Composable (com.skydoves.cloudy.Sky) -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .emberBackdrop(),
+                .background(EmberTheme.colors.bg),
         )
         content(sky)
     }

@@ -1,7 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberSecondaryButton
@@ -132,7 +132,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 }
             }
             if (slots.isEmpty()) {
-                EmberEmptyState(
+                EmptyState(
                     title = "还没有快捷回复",
                     body = "点下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
                     compact = true,

@@ -1,7 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.components.EmberEmptyState
+import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -120,7 +120,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 )
             }
             if (scripts.isEmpty()) {
-                EmberEmptyState(
+                EmptyState(
                     title = "还没有全局正则",
                     body = "可用来统一清理输入输出，例如去掉“*”强调。点下方按钮新增第一条。",
                     compact = true,

@@ -58,6 +58,11 @@ class OfficialThemeManager(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
     private val themesDir: File get() = File(context.filesDir, "themes").apply { mkdirs() }
 
+    /** 主题定位：JSON 展示名 / 文件名 都能索引到同一份原始 JSON（内置走 assets，导入走 filesDir）。 */
+    private class Locator(val path: String, val bundled: Boolean, val meta: ThemeMeta)
+
+    private val locators = mutableMapOf<String, Locator>()
+
     private val _themes = MutableStateFlow<List<ThemeMeta>>(emptyList())
     val themes: StateFlow<List<ThemeMeta>> = _themes
 
@@ -79,19 +84,28 @@ class OfficialThemeManager(private val context: Context) {
 
     fun reload() {
         val list = mutableListOf<ThemeMeta>()
-        // 内置：assets/themes/<dir>/*.json
+        locators.clear()
+        fun put(meta: ThemeMeta, loc: Locator) {
+            if (list.none { it.name == meta.name }) list += meta
+            locators[meta.name] = loc
+            locators[meta.fileName.removeSuffix(".json")] = loc
+        }
+        // 内置：assets/themes/<dir>/*.json（只收真主题 JSON；同目录的预设包等被 looksLikeTheme 挡掉）
         runCatching {
-            val root = "themes"
-            context.assets.list(root)?.forEach { dir ->
-                context.assets.list("$root/$dir")?.filter { it.endsWith(".json") }?.forEach { f ->
-                    val obj = parseOrNull(context.assets.open("$root/$dir/$f").bufferedReader().readText())
-                    if (obj != null) list += ThemeMeta(themeName(obj, f), f, bundled = true)
+            context.assets.list(THEME_ASSETS_ROOT)?.forEach { dir ->
+                context.assets.list("$THEME_ASSETS_ROOT/$dir")?.filter { it.endsWith(".json") }?.forEach { f ->
+                    val path = "$THEME_ASSETS_ROOT/$dir/$f"
+                    val obj = parseOrNull(context.assets.open(path).bufferedReader().readText()) ?: return@forEach
+                    if (!looksLikeTheme(obj)) return@forEach
+                    put(ThemeMeta(themeName(obj, f), f, bundled = true), Locator(path, bundled = true, meta = ThemeMeta(themeName(obj, f), f, bundled = true)))
                 }
             }
         }
         // 用户导入：filesDir/themes/*.json
         themesDir.listFiles { f -> f.extension == "json" }?.forEach { f ->
-            parseOrNull(f.readText())?.let { obj -> list += ThemeMeta(themeName(obj, f.name), f.name, bundled = false) }
+            val obj = parseOrNull(f.readText()) ?: return@forEach
+            if (!looksLikeTheme(obj)) return@forEach
+            put(ThemeMeta(themeName(obj, f.name), f.name, bundled = false), Locator(f.absolutePath, bundled = false, meta = ThemeMeta(themeName(obj, f.name), f.name, bundled = false)))
         }
         _themes.value = list
     }
@@ -114,10 +128,11 @@ class OfficialThemeManager(private val context: Context) {
             // 回退默认内置
             val fallback = readRaw(DEFAULT_THEME) ?: return
             _currentThemeJson.value = fallback
-            _currentName.value = DEFAULT_THEME
+            _currentName.value = locators[DEFAULT_THEME]?.meta?.name ?: DEFAULT_THEME
         } else {
             _currentThemeJson.value = raw
-            _currentName.value = name
+            // 归一为列表展示名（按文件名命中时，currentName 仍与主题列表一致）
+            _currentName.value = (locators[name] ?: locators[DEFAULT_THEME])?.meta?.name ?: name
         }
         if (persist) prefs.edit().putString(KEY_CURRENT, _currentName.value).apply()
     }
@@ -175,10 +190,48 @@ class OfficialThemeManager(private val context: Context) {
         )
     }
 
+    /**
+     * 官方主题颜色字段全集（对照官方 power-user.js SmartTheme 变量）。
+     * 消息渲染页“主题默认”预览与渲染器 fallback 共用；缺字段返回 null（调用方回退 Ember 令牌）。
+     */
+    data class StColors(
+        val mainText: Long?,      // --SmartThemeBodyColor
+        val emText: Long?,        // --SmartThemeEmColor
+        val underline: Long?,     // --SmartThemeUnderlineColor
+        val quote: Long?,         // --SmartThemeQuoteColor
+        val userBubbleTint: Long?,// --SmartThemeUserMesBlurTintColor
+        val botBubbleTint: Long?, // --SmartThemeBotMesBlurTintColor
+        val border: Long?,        // --SmartThemeBorderColor
+        val shadow: Long?,        // --SmartThemeShadowColor
+        val blurTint: Long?,      // --SmartThemeBlurTintColor
+        val chatTint: Long?,      // --SmartThemeChatTintColor
+    )
+
+    fun stColors(): StColors {
+        val raw = _currentThemeJson.value ?: return emptySt()
+        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject
+            ?: return emptySt()
+        fun col(k: String) = obj[k]?.jsonPrimitive?.contentOrNull?.let(::parseStColor)
+        return StColors(
+            mainText = col("main_text_color"),
+            emText = col("italics_text_color"),
+            underline = col("underline_text_color"),
+            quote = col("quote_text_color"),
+            userBubbleTint = col("user_mes_blur_tint_color"),
+            botBubbleTint = col("bot_mes_blur_tint_color"),
+            border = col("border_color"),
+            shadow = col("shadow_color"),
+            blurTint = col("blur_tint_color"),
+            chatTint = col("chat_tint_color"),
+        )
+    }
+
+    private fun emptySt() = StColors(null, null, null, null, null, null, null, null, null, null)
+
     fun delete(name: String): Boolean {
-        if (name == DEFAULT_THEME) return false
-        val f = File(themesDir, sanitize(name) + ".json")
-        val ok = f.exists() && f.delete()
+        val loc = locators[name] ?: return false
+        if (loc.bundled) return false
+        val ok = File(loc.path).delete()
         if (ok) reload()
         return ok
     }
@@ -188,20 +241,16 @@ class OfficialThemeManager(private val context: Context) {
     // ------------------------------------------------------------------
 
     private fun readRaw(name: String): String? {
-        // 先用户目录，后 assets
-        val user = File(themesDir, sanitize(name) + ".json")
-        if (user.exists()) return user.readText()
-        runCatching {
-            context.assets.list("themes")?.forEach { dir ->
-                context.assets.list("themes/$dir")?.forEach { f ->
-                    if (themeNameOf(f) == name) {
-                        return context.assets.open("themes/$dir/$f").bufferedReader().readText()
-                    }
-                }
-            }
+        val loc = locators[name] ?: return null
+        return if (loc.bundled) {
+            runCatching { context.assets.open(loc.path).bufferedReader().readText() }.getOrNull()
+        } else {
+            File(loc.path).takeIf { it.exists() }?.readText()
         }
-        return null
     }
+
+    /** 官方主题 JSON 识别：至少含一个官方主题字段（挡掉同目录的采样预设包等非主题 JSON）。 */
+    private fun looksLikeTheme(obj: JsonObject): Boolean = THEME_FIELD_PROBES.any { obj.containsKey(it) }
 
     private fun parseOrNull(text: String): JsonObject? = runCatching {
         json.parseToJsonElement(text) as? JsonObject
@@ -242,5 +291,20 @@ class OfficialThemeManager(private val context: Context) {
     companion object {
         const val DEFAULT_THEME = "Glimmer"
         private const val KEY_CURRENT = "current"
+        private const val THEME_ASSETS_ROOT = "themes"
+
+        /** 官方 power-user.js 主题字段抽样：命中任一即视为主题 JSON（对照官方源码 L162-165）。 */
+        private val THEME_FIELD_PROBES = setOf(
+            "main_text_color", "blur_tint_color", "chat_tint_color", "quote_text_color",
+            "italics_text_color", "border_color", "user_mes_blur_tint_color",
+            "bot_mes_blur_tint_color", "custom_css", "chat_display",
+        )
+
+        /** 进程级共享实例：壳层（根主题桥）、聊天页、外观页共用同一份状态流，切主题即时全局生效。 */
+        @Volatile private var sharedManager: OfficialThemeManager? = null
+        fun shared(context: Context): OfficialThemeManager =
+            sharedManager ?: synchronized(this) {
+                sharedManager ?: OfficialThemeManager(context.applicationContext).also { sharedManager = it }
+            }
     }
 }
