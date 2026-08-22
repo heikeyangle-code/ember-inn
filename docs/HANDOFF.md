@@ -246,20 +246,27 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
   - 边界登记：流式过程仍走原生轻量渲染（避免流中换页闪烁），流结束落盘后走内核权威渲染；.mes 在 embed-shell 下强制透明（主题卡片背景待 P6 全 DOM 行模式恢复）；内核路径暂不渲染用户消息（节省池槽位给 AI 长文）
 - ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
 - ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流备用，P6 启用内核流式）
-- **P4 扩展桥已完成（21a9888）**：assets/kernel/js/st-api-shim.js = 官方 EventEmitter 1:1 移植（7 原型方法）+ 全量 event_types + SillyTavern.getContext()/triggerSlash/executeSlashCommands/substituteParams（同步本地 {{user}}/{{char}} 回退 + macro.substitute 桥全量宏）；桥协议 shimRequest{reqId,method,params} → StApiShimInstaller 分发 VM 差分锁定资产：ctx.snapshot / metadata.get / metadata.set（即时落盘+bump displayRevision）/ slash.run→AppSlashExecutor / macro.substitute→MacroEngine；generate 族显式拒绝并登记边界；回传走 URLEncoder + window.__shimRespond 免转义陷阱。金测试 shim-api.test.mjs 18 例并入 npm test
-- **P3 第一波壳层换装（e451399/d5df3bf，CI 绿）**：聊天页舞台近黑中性底（旧艺术系统退役）、顶栏玻璃 hairline、输入栏 surface 浮起、气泡底直配令牌、accent 派生链（角色配方>官方主题 quote/italics/main_text>Glimmer 蓝）；OfficialThemeManager.skinColors() 桥接 API
-- **用户验收反馈（关键转向）**：换色不满足要求——用户明确要求**结构推倒重来**：首页/导航骨架/五大屏按 DESIGN_SYSTEM §六 IA 全部重排布局，参考 Moonlit Echoes 等标杆源码的结构而非仅配色；全局仍随系统浅色主题导致暗舞台上墨字不可读的问题待「全局强制 Ember 暗基底」解决（下一步第一刀）
+- **P4 扩展桥已完成（21a9888）**：assets/kernel/js/st-api-shim.js = 官方 EventEmitter 1:1 移植（7 原型方法）+ 全量 event_types + SillyTavern.getContext()/triggerSlash/executeSlashCommands/substituteParams（同步本地 {{user}}/{{char}} 回退 + macro.substitute 桥全量宏）；桥协议 shimRequest{reqId,method,params} → StApiShimInstaller 分发 VM 差分锁定资产：ctx.snapshot / metadata.get / metadata.set（即时落盘+bump displayRevision）/ slash.run→AppSlashExecutor / macro.substitute→MacroEngine；generate 族显式拒绝并登记边界；回传走 URLEncoder + window.__shimRespond 免转义陷阱。金测试 shim-api.test.mjs 18 例并入 npm test。扩展兼容边界登记见 §6.3
+- **全局强制 Ember 暗基底已完成**：根节点 EmberTheme(darkTheme 默认 true)，不再跟随系统浅色；mapToM3Scheme 把 EmberColors 映射进 M3 ColorScheme，存量 M3 组件自动协调。官方主题桥只动强调三态（accent/accentSoft/accentBg + chat.inputAccent），底面五阶与墨阶保持皮肤性格（互不污染原则）
+- **结构推倒已完成（25d1109c，CI 绿后继续修编）**：MainScreen 三域底部导航（聊天/世界/设置，玻璃底栏胶囊指示）+ 平板 ≥840dp 双栏 NavigationRail；首页/书架/世界/设置/外观五大屏按 DESIGN_SYSTEM §六 IA 全部重排；onboarding 重做
+- **ui/design 令牌层（新架构核心）**：
+  - EmberTokens.kt：EmberColors（bg/bgTint/surface/surface2/surfaceSink 五阶底面 + ink 四档墨阶 + line/lineStrong + accent 三态 + ai 身份三态 + success/warning/danger）/ EmberShapes / EmberSpacing / EmberMotion（弹簧底座 damping 0.6 / stiffness 500，reducedMotion 全降 80ms）/ ChatAreaTheme（10 个可空 Color? 字段 + floatingInput，null=回落令牌）
+  - EmberTheme.kt：全部访问器是 @Composable getter（CompositionLocal）——**禁止在 remember/LaunchedEffect lambda 里直接读，必须先在组合上下文读出局部变量**（CI 两轮红的根因）
+  - 皮肤系统：EmberSkin（colors/shapes/spacing/motion/chat 五件套）+ SkinStore（filesDir 持久化当前皮肤）+ AppearanceBus；AppearanceScreen = 皮肤商店（皮肤卡四段色条预览 + 官方主题导入/导出/删除/切换）；OfficialThemeManager.skinColors() 桥接（quote_text_color→壳层 accent、blur_tint_color→stageTint）
+  - 组件库 components/：InkText(墨阶排版)/SurfaceCard/GlassBar/Bubbles/Buttons/Chips/EmptyState/Overlays/Motion（rememberEmberSpring/Light、breathingGlow 1.6s 呼吸、EnterFadeSlide 入场）
+- **P5 删旧码已执行部分**：RenderNodeCompose.kt（615 行 RenderNode 原生 HTML 渲染生态）整删；isStaticHtml 双轨分流删（WebHtml/Interactive 段统一 WebView 路线 B，htmlFenceInner 死码同删）；旧主题体系 24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset 随 25d1109c 退役；剩余清单见 §5.3
+- **P6 内核流式已启用（914ea9ed）**：AI 流式行走 MessageKernelRow + StreamingThrottler（120ms 节流 updateStreamingText，querySelector 定位 .mes[mesid] .mes_text 轻量 innerHTML 更新，无需动 render.js）；流结束 payload 变化触发权威全量管线。mesid 连续性：ChatItem.Streaming key "m-${items.lastIndex}" == 落地后 ChatItem.Message key "m-${item.index}"，同一组合槽位 → 池化 WebView 跨过渡复用不闪换；impersonation 保持原生（官方行为且省池槽位）；history 行流中保持内核（kernelPool 门只看 kernelRender，不再叠加 !isStreaming）。回到底部浮标已补（followBottom 断开浮出，点击回最新，DESIGN_SYSTEM §6.2）
 
-### 5.2 待办（用户升级优先级后重排）
-1. **全局强制 Ember 暗基底**（最高杠杆）：App 根 MaterialTheme 换 EmberDarkScheme，不再跟随系统浅色——所有仍读 colorScheme 的存量界面瞬间统一深夜墨阶，消除暗底墨字不可读
-2. **结构推倒（用户明确要求，非换色）**：首页/书架按 §6.3 IA 重排（沉浸头图 + 封面卡网格）、导航骨架换 Ember 导航壳、设置屏分组重排；参考 Moonlit Echoes 结构
-3. P5 删旧码（§5.3 清单）
-4. P6 聊天屏完整官方 DOM 行模式 + 内核流式（StreamingThrottler 启用）
-5. P7 Puppeteer DOM 黄金对比 harness 进 CI；EXTENSION_COMPATIBILITY.md（登记 generate 族拒绝/saveSettingsDebounced no-op/TavernHelper globals 未做）
-- 扩展桥验收仍欠：2 张 MVU 卡+2 个酒馆助手脚本免改运行（真机验证）
+### 5.2 待办（当前优先级）
+1. **P5 删双轨收尾**：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt)、NativeMarkdown/SegmentedMarkdown 兜底路线、RenderPrefs.kernelRender 开关——待内核路径真机验证全覆盖后一次性删
+2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；用户消息内核渲染评估
+3. **ThemeSkin 图像资产层**：皮肤头图/舞台背景资产（现仅纯色令牌）
+4. **P7 门禁**：Puppeteer DOM 黄金对比 harness 进 CI；业务组件禁直读 MaterialTheme.colorScheme 的 lint/source-scan 门禁
+5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行；event_types 触发点位接线表；TavernHelper 变量族 globals（MVU 卡硬依赖，桥到 ChatStore）
 
-### 5.3 旧 UI 待删清单（P5，区域裁决达成后执行）
-RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 定制/MarkdownCache、旧 WebViewPool(上限 6)、MarkdownCache 等；净删约 4000-6000 行。删除前旧 UI 保持可编译（新旧并存）。
+### 5.3 旧 UI 待删清单（P5）
+已删：RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 依赖（gradle 已移除）。
+待删（第二批，真机验证内核覆盖后）：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt，上限 6)、NativeMarkdown/SegmentedMarkdown/WebViewHtml 兜底路线、RenderPrefs.kernelRender 过渡开关。
 
 ### 5.4 App 接线总表（官方行为怎么接，引擎能力部分仍有效）
 > 原则：App 只做“调用引擎 + 渲染结果”，不再重写逻辑；每项注明官方源码位置。
@@ -365,6 +372,26 @@ RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/B
 - **Custom CSS 结论更新（V2 后）**：
 - Custom CSS 已随内核落地：官方 user.css 语义 = 内核 custom-style 注入点 + 主题 custom_css 字段，逐字支持；Moving UI 维持延期（官方 isMobile() 直接禁用）
 
+### 6.4 扩展兼容状态登记（不独立成文，随本表维护）
+
+> 原则：不做没测过的"100% 兼容"宣称；状态升级必须附验证方式（jsdom 金测试 / 真机跑通记录）。
+
+**垫片能力面（st-api-shim v1）**：
+
+| 能力 | 我方实现 | 状态 |
+|---|---|---|
+| eventSource（7 原型方法）/ event_types 全量事件名 | 1:1 移植进 shim（金测试 18 例）；触发点位逐步接线中 | ✅ |
+| SillyTavern.getContext() | ctx.snapshot 只读快照（实时代理未做） | ✅ 只读 |
+| chat_metadata 读/写 | metadata.get/set，写即时落盘+bump displayRevision（非 debounce 语义） | ✅ |
+| triggerSlash / executeSlashCommands | slash.run → AppSlashExecutor（命令集按用户决策裁剪） | ✅ |
+| substituteParams | macro.substitute → MacroEngine 全量宏 | ✅ |
+| generate()/generateQuietPrompt() 生成族 | **显式拒绝**——生成链路由 App 侧统一调度 | 🚫 登记边界 |
+| saveSettingsDebounced | no-op（设置由 App 侧持久化） | 🟡 |
+| TavernHelper 变量族 globals | 未做（MVU 卡硬依赖，待桥 ChatStore） | 🚫 |
+
+**逐扩展**：卡内交互 HTML/Moonlit Echoes/官方 34 套主题/快捷回复/表情精灵/vectors 本地/stable-diffusion/TTS/translate/attachments ✅；MVU 与酒馆助手脚本 🟡（缺 TavernHelper globals）；ChromaDB 远程与 summarize 🔴 SERVER_REQUIRED（/summarize 斜杠已接 MemoryService）；connection-manager ⚪ 由 ProviderScreen 多档案等价替代。
+**验收欠账**：2 MVU 卡+2 酒馆助手脚本免改真机运行；event_types 触发点位接线表。
+
 ## 7. 维护速记与注意事项
 
 ### 7.1 常见编译坑（CI 红→绿经验）
@@ -374,12 +401,14 @@ RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/B
 4. 正则字符串里 `\s` 必须双反斜杠（非 raw string）；helper 别嵌局部函数。
 5. 全局替换函数名时 `return@旧名` 标签必须同步改名。
 6. Modifier 扩展用 rememberUpdatedState 必须包 `Modifier.composed`。
-7. App Kotlin 可本地编译（`:app:compileDebugKotlin`）；APK 组装/签名靠 CI，push 后以 `gh run list` 为准，网络不稳重试。
+7. **EmberTheme 访问器全是 @Composable getter**：在 remember{}/LaunchedEffect{} lambda 里直接读会报 "@Composable invocations"——先在组合上下文读出局部变量再进 lambda（Motion.kt EnterFadeSlide 教训）。
+8. ChatAreaTheme 字段全部 Color? 可空：直接当 Color 用报类型不匹配，用 `?: EmberTheme.colors.xxx` 回落令牌；EmberTextFieldDefaults.colors() 无 focused/unfocusedPlaceholderColor 参数（placeholder 色由 placeholder composable 自己给）。
+9. 本机（Termux）无 gradle/Android SDK，任何编译验证只能 push 走 CI（`gh run list` / `gh run view <id> --log-failed`，网络不稳重试）；push 前用括号平衡自检 + grep 悬空引用兜底。
 
 ### 7.2 注意事项
 - 兼容层 1:1，UI 层自由：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主。
-- 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注（登记 6.1/6.3）。
-- App Kotlin 编译本机可跑（Android SDK 已装）；APK 组装/签名走 CI；引擎测试本机可跑。
+- 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注（登记 6.1/6.3/6.4）。
+- 本机（Termux）无 gradle/SDK：编译与 APK 全走 CI；引擎 jsdom 金测试本机可跑（scripts/kernel-golden）。
 - push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
 - 沙箱会话重置会丢 GitHub 凭证（gh auth/token）：push 失败先查 `gh auth status`，缺凭证就 `gh auth login` 或临时 PAT，不要反复盲推。
 - 删除类操作先确认；大改动保持小步提交。

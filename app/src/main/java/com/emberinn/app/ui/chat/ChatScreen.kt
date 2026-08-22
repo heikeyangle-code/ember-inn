@@ -102,6 +102,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -109,6 +110,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -1038,6 +1040,7 @@ fun ChatScreen(
 
                 // jump-to-bottom 浮标：用户上滑看历史时出现，点击回到最新并恢复贴底跟随
                 if (!followBottom) {
+                    val jumpScope = rememberCoroutineScope()
                     Surface(
                         shape = CircleShape,
                         color = EmberTheme.colors.surface.copy(alpha = 0.92f),
@@ -1049,7 +1052,7 @@ fun ChatScreen(
                     ) {
                         IconButton(onClick = {
                             followBottom = true
-                            listState.animateScrollToItem(0)
+                            jumpScope.launch { listState.animateScrollToItem(0) }
                         }) {
                             Icon(
                                 FaIcons.ChevronDown,
