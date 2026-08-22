@@ -43,6 +43,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -119,6 +120,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
@@ -774,7 +776,6 @@ fun ChatScreen(
                 .sky(sky)
                 .background(EmberDefaults.colors.stage),
         ) {
-        }
         // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 舞台底色兑底
         // 可读性遮罩：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
         val glassOn = AppearancePrefs.chatBgAvatarGlass(context)
@@ -2942,7 +2943,15 @@ private fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .border(0.5.dp, E.hairline, Alignment.Bottom)
+                .drawBehind {
+                    // 底边 hairline（Compose border 无对齐重载，手绘底线）
+                    drawLine(
+                        color = E.hairline,
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width, size.height),
+                        strokeWidth = 0.5.dp.toPx(),
+                    )
+                }
                 .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp)
                 .heightIn(min = 52.dp),
         ) {

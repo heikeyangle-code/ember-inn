@@ -810,8 +810,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             settings = MessageFormattingSettings(
                 userPromptBias = "",
                 showUserPromptBias = true,
-                autoFixMarkdown = !forKernel && dctxFixMarkdown,
-                encodeTags = !forKernel && dctxEncodeTags,
+                autoFixMarkdown = dctxFixMarkdown,
+                encodeTags = dctxEncodeTags,
                 reasoningPrefix = dctxReasoningPrefix,
                 reasoningSuffix = dctxReasoningSuffix,
                 allowName2Display = true,
