@@ -832,10 +832,12 @@ fun ChatScreen(
                 UnconfiguredBanner(onOpenSettings = onOpenSettings)
             }
 
+            // 列表 + jump-to-bottom 浮标的同一画布（DESIGN_SYSTEM §6.2：浮标 + 未读跳转）
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(
                     if (rowDensity == "compact") 4.dp else 8.dp,
                 ),
@@ -1030,6 +1032,32 @@ fun ChatScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                         )
+                    }
+                }
+            }
+
+                // jump-to-bottom 浮标：用户上滑看历史时出现，点击回到最新并恢复贴底跟随
+                if (!followBottom) {
+                    Surface(
+                        shape = CircleShape,
+                        color = EmberTheme.colors.surface.copy(alpha = 0.92f),
+                        border = BorderStroke(0.5.dp, EmberTheme.colors.line),
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 10.dp),
+                    ) {
+                        IconButton(onClick = {
+                            followBottom = true
+                            listState.animateScrollToItem(0)
+                        }) {
+                            Icon(
+                                FaIcons.ChevronDown,
+                                contentDescription = "回到最新",
+                                tint = EmberTheme.colors.inkSoft,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -4718,12 +4746,6 @@ private fun isHtmlFence(raw: String): Boolean {
     return STRUCTURAL_HTML_TAG.containsMatchIn(inner)
 }
 
-/** 提取 HTML 围栏的内部内容（去掉 ```html 围栏标记）。非围栏原样返回。 */
-private fun htmlFenceInner(raw: String): String {
-    val m = INTERACTIVE_FENCE.find(raw) ?: return raw
-    return m.groupValues[1].trim()
-}
-
 /** 完整 HTML 文档判定：以 <!doctype html 开头，或以 <html> 开头且带结构标记。
  *  这类内容（角色卡自带网页 / 模型直接输出的整页）不能外套一层 <html>：
  *  html 套 html 时嵌套的 </head>/</body> 会被解析器提前处理 → 页面错乱/大片空白；
@@ -5152,43 +5174,21 @@ private fun SegmentedMarkdown(
                     isSystem = isSystem,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                SegmentKind.WebHtml -> {
-                    // 内容分流：静态 HTML（无脚本依赖，含 details 等原生交互标签）走路线 A 原生渲染；
-                    // 含脚本/事件依赖的走路线 B WebView（保持既有网络/JS 语义）。
-                    if (isStaticHtml(seg.raw)) {
-                        StaticHtmlContent(
-                            html = seg.raw,
-                            textColor = onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        WebViewHtml(
-                            html = sanitizeHtmlForWebView(seg.raw),
-                            modifier = Modifier.fillMaxWidth(),
-                            charAvatarPath = charAvatarPath,
-                            userAvatarPath = userAvatarPath,
-                            interactiveCardsOn = interactiveCardsOn,
-                        )
-                    }
-                }
-                SegmentKind.Interactive -> {
-                    val inner = htmlFenceInner(seg.raw)
-                    if (isStaticHtml(inner)) {
-                        StaticHtmlContent(
-                            html = inner,
-                            textColor = onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        WebViewHtml(
-                            html = sanitizeHtmlForWebView(seg.raw),
-                            modifier = Modifier.fillMaxWidth(),
-                            charAvatarPath = charAvatarPath,
-                            userAvatarPath = userAvatarPath,
-                            interactiveCardsOn = interactiveCardsOn,
-                        )
-                    }
-                }
+                SegmentKind.WebHtml -> WebViewHtml(
+                    // P5 删双轨：路线 A 静态原生渲染随 RenderNodeCompose 一并移除，HTML 段统一走 WebView
+                    html = sanitizeHtmlForWebView(seg.raw),
+                    modifier = Modifier.fillMaxWidth(),
+                    charAvatarPath = charAvatarPath,
+                    userAvatarPath = userAvatarPath,
+                    interactiveCardsOn = interactiveCardsOn,
+                )
+                SegmentKind.Interactive -> WebViewHtml(
+                    html = sanitizeHtmlForWebView(seg.raw),
+                    modifier = Modifier.fillMaxWidth(),
+                    charAvatarPath = charAvatarPath,
+                    userAvatarPath = userAvatarPath,
+                    interactiveCardsOn = interactiveCardsOn,
+                )
                 SegmentKind.Mermaid -> WebViewHtml(
                     html = mermaidHtmlOf(seg.raw) ?: sanitizeHtmlForWebView(seg.raw),
                     modifier = Modifier.fillMaxWidth(),
