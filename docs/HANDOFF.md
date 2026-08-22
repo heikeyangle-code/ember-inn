@@ -240,17 +240,23 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - **聊天数据流已接内核（P2 收尾，embed-shell 模式）**：AI 消息正文（含系统消息）走池化 WebView 官方管线渲染；用户消息/头像/操作条/滑动变体/媒体/reasoning 卡仍为原生壳。要点：
   - 主题随页：池持有 currentThemeJson + bodyClasses（chat_display 布局类 + embed-shell），新建实例 ready 即套用，updateTheme 广播全量同步（ChatScreen 收集 OfficialThemeManager 流驱动）
   - 文本前处理分工：引擎 MessageFormattingEngine 仍管正则/宏/bias/name2 等（kernelDisplayTextOf 跳过 fixMarkdown/encode_tags，由内核 render.js 接管后半段，独立 kernelDisplayCache 防双轨缓存串写）
-  - 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），MessageKernelRow 按 mesid 过滤监听撑高，未回报前 64dp 兜底；快速滚动竞态由 slot.parent 判定防护（未挂载即归还池）
+  - 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），MessageKernelRow 按 mesid 过滤监听撑高，未回报前 64dp 兜底；挂载竞态用 disposed 哨兵判定（**禁止用 slot.parent 判定**——AndroidView factory 阶段容器 parent 恒为 null，会把每次首挂载误判为已销毁而归还池 → 正文全空白，21a9888 修复）；池 release 端负责摘除旧父容器
   - 长按路由：内核 touch 桥 → pool.longPressListeners → 复用原生 menuMessageIndex ActionSheet
   - 开关与回退：RenderPrefs.kernelRender（默认开）；设置→消息渲染→“内核渲染（V2）”可切回旧原生路线（P5 删双轨前保留）
   - 边界登记：流式过程仍走原生轻量渲染（避免流中换页闪烁），流结束落盘后走内核权威渲染；.mes 在 embed-shell 下强制透明（主题卡片背景待 P6 全 DOM 行模式恢复）；内核路径暂不渲染用户消息（节省池槽位给 AI 长文）
 - ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
 - ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流备用，P6 启用内核流式）
+- **P4 扩展桥已完成（21a9888）**：assets/kernel/js/st-api-shim.js = 官方 EventEmitter 1:1 移植（7 原型方法）+ 全量 event_types + SillyTavern.getContext()/triggerSlash/executeSlashCommands/substituteParams（同步本地 {{user}}/{{char}} 回退 + macro.substitute 桥全量宏）；桥协议 shimRequest{reqId,method,params} → StApiShimInstaller 分发 VM 差分锁定资产：ctx.snapshot / metadata.get / metadata.set（即时落盘+bump displayRevision）/ slash.run→AppSlashExecutor / macro.substitute→MacroEngine；generate 族显式拒绝并登记边界；回传走 URLEncoder + window.__shimRespond 免转义陷阱。金测试 shim-api.test.mjs 18 例并入 npm test
+- **P3 第一波壳层换装（e451399/d5df3bf，CI 绿）**：聊天页舞台近黑中性底（旧艺术系统退役）、顶栏玻璃 hairline、输入栏 surface 浮起、气泡底直配令牌、accent 派生链（角色配方>官方主题 quote/italics/main_text>Glimmer 蓝）；OfficialThemeManager.skinColors() 桥接 API
+- **用户验收反馈（关键转向）**：换色不满足要求——用户明确要求**结构推倒重来**：首页/导航骨架/五大屏按 DESIGN_SYSTEM §六 IA 全部重排布局，参考 Moonlit Echoes 等标杆源码的结构而非仅配色；全局仍随系统浅色主题导致暗舞台上墨字不可读的问题待「全局强制 Ember 暗基底」解决（下一步第一刀）
 
-### 5.2 待办（按 REFACTOR_V2_PLAN P2-P7）
-- ChatViewModel 数据流接 ChatSurface；五大屏重写（聊天/书架/角色详情/会话管理/设置）套 EmberDS
-- P4 扩展运行时 st-api-shim（eventSource 对齐官方 event_types、triggerSlash→引擎 SlashEngine、get/setVariables→ChatStore）；验收=2 张 MVU 卡+2 个酒馆助手脚本免改运行
-- P7 Puppeteer DOM 黄金对比 harness 进 CI；EXTENSION_COMPATIBILITY.md
+### 5.2 待办（用户升级优先级后重排）
+1. **全局强制 Ember 暗基底**（最高杠杆）：App 根 MaterialTheme 换 EmberDarkScheme，不再跟随系统浅色——所有仍读 colorScheme 的存量界面瞬间统一深夜墨阶，消除暗底墨字不可读
+2. **结构推倒（用户明确要求，非换色）**：首页/书架按 §6.3 IA 重排（沉浸头图 + 封面卡网格）、导航骨架换 Ember 导航壳、设置屏分组重排；参考 Moonlit Echoes 结构
+3. P5 删旧码（§5.3 清单）
+4. P6 聊天屏完整官方 DOM 行模式 + 内核流式（StreamingThrottler 启用）
+5. P7 Puppeteer DOM 黄金对比 harness 进 CI；EXTENSION_COMPATIBILITY.md（登记 generate 族拒绝/saveSettingsDebounced no-op/TavernHelper globals 未做）
+- 扩展桥验收仍欠：2 张 MVU 卡+2 个酒馆助手脚本免改运行（真机验证）
 
 ### 5.3 旧 UI 待删清单（P5，区域裁决达成后执行）
 RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 定制/MarkdownCache、旧 WebViewPool(上限 6)、MarkdownCache 等；净删约 4000-6000 行。删除前旧 UI 保持可编译（新旧并存）。
