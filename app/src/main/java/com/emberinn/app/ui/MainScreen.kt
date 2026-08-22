@@ -36,17 +36,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.emberinn.app.data.CardFormat
 import com.emberinn.app.data.OnboardingPrefs
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.InkText
+import com.emberinn.app.ui.design.components.InkTier
 import com.emberinn.app.ui.home.HomeViewModel
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.engine.card.CardFormat
 import androidx.compose.ui.unit.sp
 
 private data class TabSpec(val label: String, val icon: ImageVector)
@@ -280,7 +282,7 @@ private fun RailItem(label: String, icon: ImageVector, active: Boolean, onClick:
  * 选中态 accent 提亮、未选中弱化——chrome 退后。
  */
 @Composable
-fun EmberBottomNav(
+private fun EmberBottomNav(
     tabs: List<TabSpec>,
     selected: Int,
     onSelect: (Int) -> Unit,

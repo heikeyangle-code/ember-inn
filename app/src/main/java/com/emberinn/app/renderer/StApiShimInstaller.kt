@@ -35,7 +35,7 @@ object StApiShimInstaller {
                 try {
                     respond(when (method) {
                         "ctx.snapshot" -> vm.shimContextSnapshot()
-                        "metadata.get" -> vm.shimChatMetadata()
+                        "metadata.get" -> vm.shimChatMetadata().toString()
                         "metadata.set" -> {
                             val meta = json.parseToJsonElement(paramsJson).jsonObject["metadata"]
                                 ?.jsonObject ?: JsonObject(emptyMap())

@@ -4114,7 +4114,8 @@ private fun chatTypography(): ChatTypography {
 /** 当前官方主题颜色字段（实时）：壳层气泡/正文/引用/阴影的官方真值来源（§五 seed 桥静态面）。 */
 @Composable
 private fun rememberStColors(): OfficialThemeManager.StColors {
-    val manager = remember { OfficialThemeManager.shared(LocalContext.current) }
+    val context = LocalContext.current
+    val manager = remember { OfficialThemeManager.shared(context) }
     val name by manager.currentName.collectAsState()
     return remember(name) { manager.stColors() }
 }
@@ -5925,7 +5926,7 @@ private fun ChatInputBar(
         }
     }
     // EmberDS 输入栏：ChatAreaTheme.inputBg 浮在舞台之上，lineStrong 上分界（§6.1 输入区独立配色）
-    val barColor = EmberTheme.chat.inputBg
+    val barColor = EmberTheme.chat.inputBg ?: EmberTheme.colors.surface
     Surface(
         color = barColor,
         shadowElevation = 0.dp,
@@ -6073,6 +6074,13 @@ private fun ChatInputBar(
             // 工具收进卡内左缘（幽灵纯图标）、正文无边框透明、发送/停止独立在卡右——
             // 三层嵌套容器收敛成"一张卡 + 一个动作"，输入区只保留一条视觉主线。——
             val chatC = EmberTheme.chat
+            // ChatAreaTheme 允许皮肤缺省字段：逐项解析到 EmberDS 令牌兜底（颜色链：皮肤>令牌）
+            val ccT = EmberTheme.colors
+            val inputBgC = chatC.inputBg ?: ccT.surface
+            val inputBorderC = chatC.inputBorder ?: ccT.line
+            val inputAccentC = chatC.inputAccent ?: ccT.accent
+            val placeholderC = chatC.inputPlaceholder ?: ccT.inkMute
+            val buttonIconC = chatC.buttonIcon ?: ccT.inkSoft
             Row(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -6084,8 +6092,8 @@ private fun ChatInputBar(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(chatC.inputBg)
-                        .border(0.5.dp, chatC.inputBorder, RoundedCornerShape(24.dp)),
+                        .background(inputBgC)
+                        .border(0.5.dp, inputBorderC, RoundedCornerShape(24.dp)),
                 ) {
                     // 卡内工具簇：附件 + 冒充 + 继续（官方 rightSendForm 的移动端等价）
                     Row(
@@ -6096,7 +6104,7 @@ private fun ChatInputBar(
                             onClick = onAttach,
                             icon = FaIcons.Plus,
                             contentDescription = "附件与工具",
-                            tint = chatC.buttonIcon,
+                            tint = buttonIconC,
                             ghost = true,
                         )
                         if (!isStreaming) {
@@ -6104,7 +6112,7 @@ private fun ChatInputBar(
                                 onClick = onQuickImpersonate,
                                 icon = FaIcons.UserSecret,
                                 contentDescription = "冒充用户发言",
-                                tint = chatC.inputAccent.copy(alpha = 0.85f),
+                                tint = inputAccentC.copy(alpha = 0.85f),
                                 ghost = true,
                             )
                             if (canQuickContinue) {
@@ -6112,7 +6120,7 @@ private fun ChatInputBar(
                                     onClick = onQuickContinue,
                                     icon = FaIcons.ArrowRight,
                                     contentDescription = "继续生成",
-                                    tint = chatC.inputAccent.copy(alpha = 0.85f),
+                                    tint = inputAccentC.copy(alpha = 0.85f),
                                     ghost = true,
                                 )
                             }
@@ -6125,17 +6133,15 @@ private fun ChatInputBar(
                             Text(
                                 if (impersonating) "正在代写你的发言…" else "输入消息…",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = chatC.inputPlaceholder,
+                                color = placeholderC,
                             )
                         },
                         shape = RoundedCornerShape(16.dp),
                         maxLines = 4,
                         colors = EmberTextFieldDefaults.colors(
-                            cursorColor = chatC.inputAccent,
+                            cursorColor = inputAccentC,
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
-                            focusedPlaceholderColor = chatC.inputPlaceholder,
-                            unfocusedPlaceholderColor = chatC.inputPlaceholder,
                         ),
                         focusGlow = null,
                         modifier = Modifier
@@ -6146,7 +6152,7 @@ private fun ChatInputBar(
                 }
                 if (!isStreaming) {
                     val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
-                    ChatSendButton(accent = chatC.inputAccent, canSend = canSend, onSend = onSend)
+                    ChatSendButton(accent = inputAccentC, canSend = canSend, onSend = onSend)
                 } else {
                     ChatStopButton(onStop = onStop)
                 }

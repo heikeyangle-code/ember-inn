@@ -3,6 +3,7 @@ package com.emberinn.app.ui.design.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
@@ -32,16 +34,16 @@ import com.emberinn.app.ui.design.EmberTheme
 
 /** 标准交互弹簧（气泡入场/形状形变，stiffness 500 / damping 0.6）。 */
 @Composable
-fun rememberEmberSpring() = spring(
+fun rememberEmberSpring(): SpringSpec<Float> = spring(
     dampingRatio = EmberTheme.motion.springDamping,
     stiffness = EmberTheme.motion.springStiffness,
 )
 
 /** 轻量弹簧（chip 切换等小位移）。 */
 @Composable
-fun rememberEmberSpringLight() = spring(
+fun rememberEmberSpringLight(): SpringSpec<Float> = spring(
     dampingRatio = EmberTheme.motion.springDamping,
-    stiffness = (EmberTheme.motion.springStiffness * 0.6f).toInt().coerceAtLeast(Spring.StiffnessLow),
+    stiffness = (EmberTheme.motion.springStiffness * 0.6f).coerceAtLeast(Spring.StiffnessLow),
 )
 
 /**

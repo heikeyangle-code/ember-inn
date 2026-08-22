@@ -80,7 +80,7 @@ fun ScrimGradient(
 ) {
     val c = EmberTheme.colors
     val base = EmberTheme.stageTint ?: c.bg
-    androidx.compose.foundation.Box(
+    Box(
         modifier = modifier.background(
             androidx.compose.ui.graphics.Brush.verticalGradient(
                 colors = if (top) listOf(base.copy(alpha = 0.92f), base.copy(alpha = 0f))
