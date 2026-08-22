@@ -10,6 +10,7 @@ lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 material3 = "1.4.0"
 coil = "3.5.0"
+webkit = "1.14.0"
 lifecycleViewmodelCompose = "2.11.0"
 palette = "1.0.0"
 jtokkit = "1.1.0"
@@ -22,6 +23,7 @@ cloudy = "0.7.1"
 jsoup = "1.18.3"
 
 [libraries]
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }

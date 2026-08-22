@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+  EmberInn RenderKernel v0.1
+  官方资产基线：SillyTavern release 8172dcd (1.18.0)
+  职责：以与官方逐字节相同的 CSS/JS 渲染单条消息。
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <!-- 安全策略：放开模式（用户决策）。允许外链媒体/网络/脚本。 -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src * data: blob: about:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; font-src * data:; connect-src *; frame-src *;">
+    <link rel="stylesheet" href="official/webfonts/NotoSans/stylesheet.css">
+    <link rel="stylesheet" href="official/webfonts/NotoSansMono/stylesheet.css">
+    <link rel="stylesheet" href="official/css/fontawesome.min.css">
+    <link rel="stylesheet" href="official/css/solid.min.css">
+    <link rel="stylesheet" href="official/css/brands.min.css">
+    <link rel="stylesheet" href="official/css/style.css">
+    <link rel="stylesheet" href="official/css/mobile-styles.css">
+    <style id="custom-style" type="text/css"></style>
+</head>
+<body class="light-theme">
+    <!-- 官方 style.css 依赖 #chat / .mes 层级，保持同构 -->
+    <div id="chat">
+        <div id="mes_stop" class="fa-solid fa-circle-stop stop_generation_button" title="Abort generation" style="display:none;"></div>
+    </div>
+
+    <script src="js/showdown.min.js"></script>
+    <script src="js/css-tools.min.js"></script>
+    <script src="js/dompurify.min.js"></script>
+    <script src="js/highlight.min.js"></script>
+    <script src="js/st-extensions.js"></script>
+    <script src="js/render.js"></script>
+</body>
+</html>
