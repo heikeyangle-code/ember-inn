@@ -81,6 +81,11 @@ data class KernelEvent(
     val height: Float? = null,
     /** click 事件的目标描述 {tag, cls} */
     val target: KernelClickTarget? = null,
+    // ---- st-api-shim 请求-响应（P4 扩展桥）----
+    val reqId: String? = null,
+    val method: String? = null,
+    /** params 为 JSON 字符串（避免嵌套对象反序列化歧义），无参为 null */
+    val params: String? = null,
 )
 
 @Serializable
@@ -97,4 +102,5 @@ object KernelEventType {
     const val CLICK = "click"
     const val LONG_PRESS = "longPress"
     const val THEME_APPLIED = "themeApplied"
+    const val SHIM_REQUEST = "shimRequest"
 }

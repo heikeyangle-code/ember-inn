@@ -45,6 +45,12 @@ class KernelWebViewPool(
     fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
     fun addClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.add(l) } }
     fun addLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.add(l) } }
+
+    /**
+     * st-api-shim 请求处理器（P4 扩展桥）：由宿主层安装（StApiShimInstaller）。
+     * 在 WebView 桥后台线程回调；handler 自行调度协程并最终调用 respond(payloadJson)。
+     */
+    @Volatile var shimHandler: ((method: String, paramsJson: String, respond: (String) -> Unit) -> Unit)? = null
     fun removeLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.remove(l) } }
 
     // 每页主题状态：新建实例 ready 后自动应用；updateTheme 广播到全部存活实例。
@@ -90,6 +96,22 @@ class KernelWebViewPool(
 
             override fun onMessageLongPressed(mesid: String) {
                 synchronized(longPressListeners) { longPressListeners.toList() }.forEach { it(mesid) }
+            }
+
+            override fun onShimRequest(reqId: String, method: String, paramsJson: String) {
+                // URLEncoder + JS decodeURIComponent：免转义陷阱回传任意 JSON 文本
+                val respond: (String) -> Unit = { payload ->
+                    val encoded = java.net.URLEncoder.encode(payload, "UTF-8")
+                    instance.webView.post {
+                        instance.webView.evaluateJavascript(
+                            "window.__shimRespond&&window.__shimRespond('$reqId',\"$encoded\");",
+                            null,
+                        )
+                    }
+                }
+                val handler = shimHandler
+                if (handler != null) handler(method, paramsJson, respond)
+                else respond("{\"ok\":false,\"error\":\"shim handler not installed\"}")
             }
         })
     }
@@ -152,6 +174,8 @@ class KernelWebViewPool(
     fun release(pooled: PooledWebView) {
         scope.launch(Dispatchers.Main) {
             pooled.webView.evaluateJavascript("window.Kernel && window.Kernel.clear();", null)
+            // 摘除旧父容器：复用实例挂新槽位前必须脱离回收槽（否则不可见）
+            (pooled.webView.parent as? android.view.ViewGroup)?.removeView(pooled.webView)
             pooled.busy = false
             idle.addFirst(pooled)
         }

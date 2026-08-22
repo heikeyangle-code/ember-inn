@@ -118,6 +118,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -396,6 +397,50 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /** 全部可执行斜杠命令清单（App 命令 + 引擎命令），供输入框补全弹层使用。 */
     fun slashCommandList(): List<Pair<String, String>> = slashExecutor.commandList()
+
+    // ---- P4 扩展桥（st-api-shim）：差分锁定资产直接暴露给内核页脚本 ----
+
+    /** 官方 executeSlashCommandsWithOptions：执行斜杠链，返回管道输出 */
+    suspend fun shimSlash(line: String): String = slashExecutor.executeAsync(line)
+
+    /** 官方 chat_metadata 读取 */
+    fun shimChatMetadata(): JsonObject = chatStore.metadata(sessionId)
+
+    /** 官方 setChatMetadata：即时落盘 + 触发显示层重算（变量卡改 metadata 后正文可见） */
+    fun shimSaveChatMetadata(meta: JsonObject) {
+        chatStore.saveMetadata(sessionId, meta)
+        _displayRevision.value++
+    }
+
+    /** 官方 getContext() 快照：chat 消息子集 + 身份字段 */
+    fun shimContextSnapshot(): String {
+        val msgs = _messages.value
+        val chat = JsonArray(msgs.map { m ->
+            val el = m.jsonObject
+            buildJsonObject {
+                put("name", el["name"]?.jsonPrimitive?.contentOrNull ?: "")
+                put("is_user", el["is_user"]?.jsonPrimitive?.booleanOrNull ?: false)
+                put("is_system", el["is_system"]?.jsonPrimitive?.booleanOrNull ?: false)
+                put("mes", el["mes"]?.jsonPrimitive?.contentOrNull ?: "")
+                put("swipe_id", el["swipe_id"]?.jsonPrimitive?.intOrNull ?: 0)
+                el["swipes"]?.jsonArray?.let { put("swipes", it) }
+            }
+        })
+        return buildJsonObject {
+            put("chat", chat)
+            put("chatId", sessionId)
+            put("characterId", characterId)
+            put("groupId", group?.id ?: "")
+            put("name1", currentUserName)
+            put("name2", currentCharName)
+        }.toString()
+    }
+
+    /** 官方 substituteParams：引擎宏全量（差分锁定） */
+    fun shimSubstitute(text: String): String {
+        ensureDisplayCtx()
+        return MacroEngine.substitute(text, dctxEnv ?: MacroEnv(user = currentUserName, char = currentCharName))
+    }
 
     /** 输入框以 / 开头：走斜杠命令（官方 ST 输入即执行；未知命令给提示，不当作普通消息发送）。 */
     fun runSlash(line: String) {

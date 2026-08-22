@@ -17,6 +17,8 @@ class KernelBridge(
         fun onHeightChanged(mesid: String, heightDp: Float)
         fun onMessageClicked(mesid: String, target: KernelClickTarget?)
         fun onMessageLongPressed(mesid: String)
+        /** st-api-shim 请求（P4）：method/params 由上层 handler 解答，respond 回送 JS */
+        fun onShimRequest(reqId: String, method: String, paramsJson: String) {}
     }
 
     @JavascriptInterface
@@ -31,6 +33,10 @@ class KernelBridge(
                 event.mesid?.let { id -> callbacks.onHeightChanged(id, event.height ?: 0f) }
             KernelEventType.CLICK -> callbacks.onMessageClicked(event.mesid ?: "", event.target)
             KernelEventType.LONG_PRESS -> callbacks.onMessageLongPressed(event.mesid ?: "")
+            KernelEventType.SHIM_REQUEST ->
+                event.reqId?.let { id ->
+                    callbacks.onShimRequest(id, event.method ?: "", event.params ?: "{}")
+                }
         }
     }
 }

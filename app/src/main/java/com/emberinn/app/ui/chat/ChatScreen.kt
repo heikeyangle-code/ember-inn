@@ -25,6 +25,7 @@ import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelWebViewPool
+import com.emberinn.app.renderer.StApiShimInstaller
 import com.emberinn.app.ui.chat.surface.MessageKernelRow
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
@@ -294,7 +295,13 @@ fun ChatScreen(
     val kernelPool = remember {
         KernelWebViewPool(context).also { it.preload() }
     }
-    DisposableEffect(Unit) { onDispose { kernelPool.destroyAll() } }
+    DisposableEffect(Unit) {
+        StApiShimInstaller.install(kernelPool, vm)
+        onDispose {
+            StApiShimInstaller.uninstall(kernelPool)
+            kernelPool.destroyAll()
+        }
+    }
     val themeManager = remember { OfficialThemeManager(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
     // chat_display 布局类随主题派生；embed-shell 常驻（内核只渲染正文）

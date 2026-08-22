@@ -1,0 +1,45 @@
+/**
+ * st-api-shim.js 结构守护（P4）：关键 API 面存在、官方事件表完整、桥协议字段对齐。
+ * 纯静态断言，不依赖 DOM。
+ */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const shim = readFileSync(join(root, 'app/src/main/assets/kernel/js/st-api-shim.js'), 'utf-8');
+const html = readFileSync(join(root, 'app/src/main/assets/kernel/kernel.html'), 'utf-8');
+const bridge = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/KernelBridge.kt'), 'utf-8');
+
+let pass = 0, fail = 0;
+function ok(cond, name) {
+    if (cond) { pass++; console.log('  ✓', name); }
+    else { fail++; console.error('  ✗', name); }
+}
+
+console.log('st-api-shim 结构:');
+ok(shim.includes('window.SillyTavern'), 'SillyTavern 全局暴露');
+ok(shim.includes('getContext'), 'getContext 存在');
+ok(shim.includes('window.eventSource = eventSource'), 'eventSource 全局单例');
+ok(shim.includes('window.event_types = event_types'), 'event_types 全局');
+ok(shim.includes("MESSAGE_RECEIVED: 'message_received'"), '官方事件 MESSAGE_RECEIVED 原文');
+ok(shim.includes("CHAT_CHANGED: 'chat_id_changed'"), '官方事件 CHAT_CHANGED 原名不一致点保留');
+ok(shim.includes("STREAM_TOKEN_RECEIVED: 'stream_token_received'"), '流式 token 事件保留');
+ok((shim.match(/EventEmitter.prototype/g) || []).length >= 7, '官方 EventEmitter 原型方法齐全(官方共7个: on/once/emit/emitAndWait/removeListener/makeFirst/makeLast)');
+ok(shim.includes('autoFireAfterEmit'), 'autoFire 语义保留(APP_READY 类)');
+ok(shim.includes("type: 'shimRequest'"), '桥请求类型 shimRequest');
+ok(shim.includes('__shimRespond'), 'JS 响应入口');
+ok(shim.includes('executeSlashCommandsWithOptions'), '斜杠 API 面');
+ok(shim.includes('setChatMetadata'), 'metadata 写入面');
+ok(shim.includes("generate: unsupported"), '生成族显式拒绝(边界登记)');
+
+console.log('kernel.html 装配:');
+ok(html.includes('js/st-api-shim.js'), 'shim 已引入内核页');
+ok(html.indexOf('st-api-shim.js') < html.indexOf('render.js'), 'shim 先于 render.js 加载');
+
+console.log('Kotlin 桥对齐:');
+ok(bridge.includes('SHIM_REQUEST ->'), '桥分发 shimRequest');
+ok(bridge.includes('onShimRequest(reqId: String, method: String, paramsJson: String) {}'), 'Callbacks 默认实现');
+
+console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
+process.exit(fail > 0 ? 1 : 0);

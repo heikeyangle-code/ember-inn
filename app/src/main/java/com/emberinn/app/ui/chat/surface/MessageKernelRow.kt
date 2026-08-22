@@ -41,6 +41,10 @@ fun MessageKernelRow(
 ) {
     var host by remember(payload.mesid) { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
     var heightDp by remember(payload.mesid) { mutableStateOf(initialHeightDp) }
+    // 生命周期哨兵：onDispose 置位。acquire 回调（主线程异步）到达时若已销毁则直接归还池。
+    // 不能用 slot.parent 判定——AndroidView factory 创建的容器在组合提交前 parent 恒为 null，
+    // 用它判定会把每次首挂载都误判为已销毁（全空白 bug 根因）。
+    val disposed = remember(payload.mesid) { java.util.concurrent.atomic.AtomicBoolean(false) }
     val density = LocalDensity.current
 
     // 高度回报与长按路由：按 mesid 过滤，只认自己这条消息的事件
@@ -57,6 +61,7 @@ fun MessageKernelRow(
         }
         if (longPressListener != null) pool.addLongPressListener(longPressListener)
         onDispose {
+            disposed.set(true)
             pool.removeHeightListener(heightListener)
             if (longPressListener != null) pool.removeLongPressListener(longPressListener)
             host?.let(pool::release)
@@ -81,8 +86,9 @@ fun MessageKernelRow(
                 FrameLayout(ctx).also { slot ->
                     pool.acquire { pooled ->
                         RenderKernel(pooled).setEmbedShell(true)
-                        // 快速滚动竞态：组合已销毁（slot 无父容器）→ 直接归还，不挂载不记 host
-                        if (slot.parent != null) {
+                        if (!disposed.get()) {
+                            // 池复用安全：先摘旧父容器再挂本槽位（release 不负责摘除）
+                            (pooled.webView.parent as? ViewGroup)?.removeView(pooled.webView)
                             slot.addView(
                                 pooled.webView,
                                 FrameLayout.LayoutParams(
@@ -91,7 +97,7 @@ fun MessageKernelRow(
                                 ),
                             )
                             host = pooled
-                            RenderKernel(pooled).renderMessage(payload)
+                            // 渲染由 LaunchedEffect(host, payload) 统一触发，此处不重复
                         } else {
                             pool.release(pooled)
                         }
