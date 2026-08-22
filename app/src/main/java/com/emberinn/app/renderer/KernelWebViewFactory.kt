@@ -9,6 +9,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
+import java.io.File
 
 /**
  * 内核 WebView 装配：AssetLoader + 放开模式设置。
@@ -23,10 +24,12 @@ object KernelWebViewFactory {
     const val DATA_PREFIX = "/data/"
 
     fun createAssetLoader(context: Context): WebViewAssetLoader {
+        // 官方推荐模式：只暴露 filesDir 下的 public 子目录（同源页面可读该根下一切文件）
+        val publicDir = File(context.filesDir, "public")
         return WebViewAssetLoader.Builder()
             .setDomain("appassets.androidplatform.net")
             .addPathHandler(ASSETS_PREFIX, WebViewAssetLoader.AssetsPathHandler(context))
-            .addPathHandler(DATA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context))
+            .addPathHandler(DATA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, publicDir))
             .build()
     }
 

@@ -93,7 +93,7 @@ fun KernelThemeEffect(
     displayMode: ChatDisplayMode,
     stylePackClasses: List<String> = emptyList(),
 ) {
-    LaunchedEffect(theme, displayMode) {
+    LaunchedEffect(themeJson, displayMode) {
         pool.acquire { pooled ->
             val kernel = RenderKernel(pooled)
             themeJson?.let(kernel::applyThemeRaw)
