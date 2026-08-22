@@ -154,6 +154,27 @@ class OfficialThemeManager(private val context: Context) {
         )
     }
 
+    /**
+     * 壳层皮肤色：从官方主题颜色变量提取（DESIGN_SYSTEM §五桥接规则——导入 ST 主题时
+     * 壳层自动配套）。强调色优先 quote_text_color（Glimmer 引号蓝即来源于此），
+     * 退而 italics/main_text；舞台染色取 blur_tint_color。缺字段返回 null，壳层回退 Ember 令牌。
+     */
+    data class SkinColors(
+        val accent: Long?,      // ARGB long
+        val stageTint: Long?,
+    )
+
+    fun skinColors(): SkinColors {
+        val raw = _currentThemeJson.value ?: return SkinColors(null, null)
+        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject
+            ?: return SkinColors(null, null)
+        fun col(k: String) = obj[k]?.jsonPrimitive?.contentOrNull?.let(::parseStColor)
+        return SkinColors(
+            accent = col("quote_text_color") ?: col("italics_text_color") ?: col("main_text_color"),
+            stageTint = col("blur_tint_color") ?: col("chat_tint_color"),
+        )
+    }
+
     fun delete(name: String): Boolean {
         if (name == DEFAULT_THEME) return false
         val f = File(themesDir, sanitize(name) + ".json")
@@ -192,6 +213,29 @@ class OfficialThemeManager(private val context: Context) {
             ?: fallback.removeSuffix(".json")
 
     private fun themeNameOf(fileName: String): String = fileName.removeSuffix(".json")
+
+    /** 官方颜色字符串解析：#RGB / #RRGGBB / #AARRGGBB / rgb()/rgba() → ARGB Long */
+    private fun parseStColor(v: String): Long? {
+        val t = v.trim()
+        if (t.startsWith("#")) {
+            val hex = t.removePrefix("#")
+            // #RRGGBB → 补全为 AARRGGBB（不透明）
+            val expanded = when {
+                hex.length == 3 -> hex.map { c -> "${c}${c}" }.joinToString("")
+                else -> hex
+            }
+            return when (expanded.length) {
+                6 -> runCatching { 0xFF000000L or expanded.toLong(16) }.getOrNull()
+                8 -> runCatching { expanded.toLong(16) }.getOrNull()
+                else -> null
+            }
+        }
+        val m = Regex("rgba?\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)(?:\\s*,\\s*([0-9.]+))?\\)").find(t)
+            ?: return null
+        val (r, g, b, a) = m.destructured
+        val alpha = if (a.isEmpty()) 255 else ((a.toFloat() * 255).toInt()).coerceIn(0, 255)
+        return (alpha.toLong() shl 24) or (r.toLong() shl 16) or (g.toLong() shl 8) or b.toLong()
+    }
 
     private fun sanitize(name: String) = name.replace(Regex("[/\\\\]"), "_")
 

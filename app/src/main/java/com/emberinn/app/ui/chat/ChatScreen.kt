@@ -189,6 +189,7 @@ import com.emberinn.app.ui.components.EmberInputIcon
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.emberds.EmberDefaults
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberTextFieldDefaults
 import com.emberinn.app.ui.components.emberShadow
@@ -572,7 +573,11 @@ fun ChatScreen(
         )
     }
 
-    val accent = vm.accentColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
+    // 壳层强调色派生链：角色主题配方 > 官方 ST 主题主色提取 > Glimmer 引号蓝（DESIGN_SYSTEM §五桥接规则）
+    val skinAccent = remember(officialThemeJson) { themeManager.skinColors().accent }
+    val accent = vm.accentColor?.let { Color(it.toInt()) }
+        ?: skinAccent?.let { Color(it) }
+        ?: EmberDefaults.colors.accent
     val items = remember(messages, isStreaming, lastReasoning, isImpersonating) {
         buildList {
             // reverseLayout=true：第 0 项固定在视口底部，因此最新内容（流式/最后一条）放在最前。
@@ -762,69 +767,16 @@ fun ChatScreen(
     ) {
         // 静态背景层：氛围渐变 + 光晕 + 显式/头像背景。作为顶栏/输入栏毛玻璃的静态模糊源；
         // 不再把消息列表当 sky 源，避免每次滚动/键盘动画都重捕整屏模糊（滚动/收键盘卡顿主因）。
-        val artPreset = LocalThemePreset.current
-        val darkBg = isDarkThemeSurface()
-        // 顶部天空：深色=红月/雾战场，浅色=象牙晨光/绯薄暮（浅色也有画面，不再惨白）
-        val skyColor = (if (darkBg) artPreset.auraTop else artPreset.auraTopLight)
-            ?.let { lerp(it, MaterialTheme.colorScheme.background, if (darkBg) 0.76f else 0.80f) }
+        // EmberDS 舞台：低饱和近黑中性底；氛围渐变/宝石光晕/金属微光/画布纹理全部退役
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
-                .background(
-                    // README 格调守则：界面克制、背景出彩——正文区干净，顶部天空氛围，
-                    // 底部透一点角色色低饱和氛围光
-                    Brush.verticalGradient(
-                        0f to (skyColor ?: MaterialTheme.colorScheme.background),
-                        0.5f to MaterialTheme.colorScheme.background,
-                        0.6f to MaterialTheme.colorScheme.background,
-                        1f to lerp(accent, MaterialTheme.colorScheme.background, 0.82f),
-                    ),
-                )
-                // 主题画布（色域泼彩 + 定向渐变 + 六图元纹理）：画在背景之上、内容之下；
-                // 用户在设置里自定义的画布（LocalBackdropOverride）优先于主题预设
-                .then(
-                    Modifier.canvasBackdrop(
-                        com.emberinn.app.ui.theme.resolveBackdrop(artPreset),
-                        darkBg,
-                    ),
-                ),
+                .background(EmberDefaults.colors.stage),
         ) {
-            // 角色色低饱和光晕（氛围层，叠在消息列表之下，正文区保持干净）；
-            // 艺术主题的宝石色在此点亮——红宝石余烬、星尘青光（浅色也画，更收敛）
-            val glowColor = artPreset.gem ?: accent
-            val glowAlpha = if (darkBg) 0.13f else 0.09f
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .size(380.dp)
-                    .offset(x = (-140).dp, y = 60.dp)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = glowAlpha), Color.Transparent),
-                        ),
-                    ),
-            )
-            // 顶部金属色微光（右上角）：gem 之外的第二氛围光源——古金月色/冷银月光/青铜暮色，
-            // 与左下宝石光形成对角呼应；有 metal 的主题才画，官方主题自然退化
-            artPreset.metal?.let { metalColor ->
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(300.dp)
-                        .offset(x = 110.dp, y = (-130).dp)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    metalColor.copy(alpha = if (darkBg) 0.10f else 0.07f),
-                                    Color.Transparent,
-                                ),
-                            ),
-                        ),
-                )
-            }
-        // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 外层氛围渐变兜底。
-        // 可读性遮罩（README 玻璃背景规范 + 调研）：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
+        }
+        // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 舞台底色兑底
+        // 可读性遮罩：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
         val glassOn = AppearancePrefs.chatBgAvatarGlass(context)
         val bgBlur = AppearancePrefs.chatBgBlur(context)
         val darkSurface = isDarkThemeSurface()
@@ -2979,21 +2931,24 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    // EmberDS GlassBar：chrome 退后（DESIGN_SYSTEM §六.2）——半透明近黑 + hairline 分界，无投影
+    val E = EmberDefaults.colors
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
-        shadowElevation = 1.dp,
+        color = E.stage.copy(alpha = 0.72f),
+        shadowElevation = 0.dp,
         modifier = modifier,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
+                .border(0.5.dp, E.hairline, Alignment.Bottom)
                 .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp)
                 .heightIn(min = 52.dp),
         ) {
             // 返回按钮在左上角（配合边缘滑动返回），留足上下间距避免贴最高处
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.ArrowLeft, contentDescription = "返回")
+                Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSecondary)
             }
             Spacer(Modifier.size(6.dp))
             RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
@@ -3003,19 +2958,19 @@ private fun ChatTopBar(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = accent,
+                    color = E.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             IconButton(onClick = onAuthorsNote, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.FileLines, contentDescription = "作者注释")
+                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSecondary)
             }
             IconButton(onClick = onPersona, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.User, contentDescription = "人设")
+                Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSecondary)
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.Bars, contentDescription = "更多")
+                Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSecondary)
             }
         }
     }
@@ -3279,17 +3234,15 @@ private fun MessageRowContent(
     val textShadow = chatTextShadow()
     val stTheme = LocalThemePreset.current
     val stDark = isDarkThemeSurface()
+    // EmberDS 直配：气泡底/描边走令牌（Moonlit mes tint 直译），用户自定义 hex 仍可覆盖
+    val E = EmberDefaults.colors
+    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context)) ?: E.bubbleUser
+    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context)) ?: E.bubbleBot
+    val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))
+        ?.let { BorderStroke(1.dp, it) } ?: BorderStroke(0.5.dp, E.hairlineStrong)
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
         ?: (if (stDark) stTheme.stEm else null)
-        ?: MaterialTheme.colorScheme.outline
-    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context))
-        ?: (if (stDark) stTheme.stUserBubble else null)
-        ?: MaterialTheme.colorScheme.primaryContainer
-    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context))
-        ?: (if (stDark) stTheme.stBotBubble else null)
-        ?: MaterialTheme.colorScheme.surfaceContainerLow
-    val bubbleBorder = (parseHexColor(AppearancePrefs.stBorderColor(context))
-        ?: (if (stDark) stTheme.stBorder else null))?.let { BorderStroke(1.dp, it) }
+        ?: E.aiGold
 
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
@@ -3581,7 +3534,7 @@ private fun StreamingRow(
                 StreamingMarkdown(
                     content = text.ifEmpty { "…" },
                 )
-                // 呼吸圆点光标：缩放 + 淡入淡出，比 ▍ 打字光标更细腻
+                // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
                 Box(
                     modifier = Modifier
                         .padding(start = 4.dp, end = 2.dp)
@@ -3591,7 +3544,7 @@ private fun StreamingRow(
                             scaleY = caretScale
                             this.alpha = caretAlpha
                         }
-                        .background(accent, CircleShape),
+                        .background(EmberDefaults.colors.aiGold, CircleShape),
                 )
             }
         }
@@ -5957,18 +5910,20 @@ private fun ChatInputBar(
                 .take(12)
         }
     }
+    // EmberDS 输入栏：surface 半透明浮在舞台之上，hairlineStrong 上分界（ChatAreaTheme 独立配色待皮肤包）
+    val barColor = EmberDefaults.colors.surface.copy(alpha = 0.78f)
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
-        shadowElevation = 1.dp,
+        color = barColor,
+        shadowElevation = 0.dp,
         modifier = modifier,
     ) {
         Column {
-            // 发丝线：消息区/输入区分界，低对比不抢内容（与胶囊描边同一透明度量级）
+            // 发丝线：消息区/输入区分界
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)),
+                    .background(EmberDefaults.colors.hairlineStrong),
             )
             // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，常驻输入栏顶部（不占消息区）
             if (!isStreaming && contextUsage != null) {
@@ -6147,8 +6102,8 @@ private fun ChatInputBar(
                 maxLines = 4,
                 colors = EmberTextFieldDefaults.colors(
                     cursorColor = accent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.26f),
+                    focusedContainerColor = EmberDefaults.colors.surfaceHigh.copy(alpha = 0.9f),
+                    unfocusedContainerColor = EmberDefaults.colors.surface.copy(alpha = 0.7f),
                 ),
                 focusGlow = accent,
                 modifier = Modifier
