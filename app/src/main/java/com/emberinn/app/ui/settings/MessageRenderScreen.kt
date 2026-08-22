@@ -180,6 +180,12 @@ fun MessageRenderScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}
                             hint = "官方 power_user.auto_fix_generated_markdown（默认开）：显示前修复模型生成的坏 Markdown",
                             checked = fixMarkdown,
                         ) { fixMarkdown = it; AppearancePrefs.saveFixMarkdown(context, it); onAppearanceChanged() }
+                        var kernelRender by remember { mutableStateOf(RenderPrefs.kernelRender(context)) }
+                        RenderSwitchRow(
+                            label = "内核渲染（V2）",
+                            hint = "AI 消息正文走 WebView 官方管线（Showdown/DOMPurify/代码高亮/主题 CSS 同源），头像与操作条仍为原生；关闭回退旧原生渲染",
+                            checked = kernelRender,
+                        ) { kernelRender = it; RenderPrefs.setKernelRender(context, it); onAppearanceChanged() }
                         EmberTextField(
                             value = separator,
                             onValueChange = {

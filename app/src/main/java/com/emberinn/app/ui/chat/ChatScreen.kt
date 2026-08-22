@@ -21,6 +21,11 @@ import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.theme.LocalThemePreset
 import com.emberinn.app.ui.theme.canvasBackdrop
 import com.emberinn.app.ui.settings.RenderPrefs
+import com.emberinn.app.data.OfficialThemeManager
+import com.emberinn.app.renderer.ChatDisplayMode
+import com.emberinn.app.renderer.KernelMessagePayload
+import com.emberinn.app.renderer.KernelWebViewPool
+import com.emberinn.app.ui.chat.surface.MessageKernelRow
 import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
 import androidx.compose.ui.platform.LocalDensity
@@ -277,6 +282,33 @@ fun ChatScreen(
     val generationEpoch by vm.generationEpoch.collectAsState()
     val pastChatsRevision by vm.pastChatsRevision.collectAsState()
 
+    // ---- V2 内核渲染（embed-shell）：池 + 官方主题全量同步 -----------------
+    // 消息正文走 WebView 官方管线；头像/操作条/媒体仍由原生壳承担。
+    // RenderPrefs.kernelRender 关闭时回退旧原生渲染路线（P5 删双轨前的过渡开关）。
+    val context = LocalContext.current
+    // 不包 remember：设置页切换后回聊天页即随重组重读，即时生效
+    val kernelRender = RenderPrefs.kernelRender(context)
+    val kernelPool = remember {
+        KernelWebViewPool(context).also { it.preload() }
+    }
+    DisposableEffect(Unit) { onDispose { kernelPool.destroyAll() } }
+    val themeManager = remember { OfficialThemeManager(context) }
+    val officialThemeJson by themeManager.currentThemeJson.collectAsState()
+    // chat_display 布局类随主题派生；embed-shell 常驻（内核只渲染正文）
+    LaunchedEffect(officialThemeJson) {
+        val shell = themeManager.shellSettings()
+        val displayClass = when (shell.chatDisplay) {
+            1 -> ChatDisplayMode.BUBBLE.bodyClass
+            2 -> ChatDisplayMode.DOCUMENT.bodyClass
+            else -> null
+        }
+        kernelPool.updateTheme(
+            officialThemeJson,
+            listOfNotNull(displayClass, "embed-shell"),
+        )
+    }
+    // ------------------------------------------------------------------------
+
     var input by rememberSaveable { mutableStateOf("") }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
     var reasoningExpanded by rememberSaveable { mutableStateOf(false) }
@@ -375,7 +407,6 @@ fun ChatScreen(
     val glassBlurActive by remember {
         derivedStateOf { !listState.isScrollInProgress }
     }
-    val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
 
@@ -895,6 +926,10 @@ fun ChatScreen(
                             val isUserMsg = derived.isUser
                             val isSystemMsg = derived.isSystem
                             val text = derived.text
+                            // 内核路径文本：引擎只做正则/宏前处理，fixMarkdown/encode_tags 由内核接管
+                            val kernelText = if (kernelRender) {
+                                remember(el, displayRevision) { vm.kernelDisplayTextOf(item.index) }
+                            } else null
                             // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
                             val mediaList = remember(derived.media) { ChatMedia(derived.media) }
                             val immersiveActions = rowImmersiveActions
@@ -929,6 +964,9 @@ fun ChatScreen(
                                 modifier = Modifier,
                                 isUser = isUserMsg,
                                 isSystem = isSystemMsg,
+                                kernelPool = if (kernelRender && !isStreaming) kernelPool else null,
+                                mesid = "m-${item.index}",
+                                kernelText = if (isUserMsg) null else kernelText,
                                 text = text,
                                 media = mediaList,
                                 mediaDisplay = derived.mediaDisplay,
@@ -3068,6 +3106,9 @@ private fun MessageRow(
     modifier: Modifier = Modifier,
     isUser: Boolean,
     isSystem: Boolean = false,
+    kernelPool: KernelWebViewPool? = null,
+    mesid: String = "",
+    kernelText: String? = null,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3114,7 +3155,7 @@ private fun MessageRow(
             Box(modifier = Modifier.weight(1f)) {
                 MessageRowContent(
                     modifier = Modifier,
-                    isUser = isUser, isSystem = isSystem, text = text, media = media,
+                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
                     mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
                     reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
                     name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3131,7 +3172,7 @@ private fun MessageRow(
     }
     MessageRowContent(
         modifier = modifier,
-        isUser = isUser, isSystem = isSystem, text = text, media = media,
+        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
         mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
         reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
         name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3149,6 +3190,9 @@ private fun MessageRowContent(
     modifier: Modifier = Modifier,
     isUser: Boolean,
     isSystem: Boolean = false,
+    kernelPool: KernelWebViewPool? = null,
+    mesid: String = "",
+    kernelText: String? = null,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3372,6 +3416,7 @@ private fun MessageRowContent(
                     modifier = bubbleModifier,
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
+                        // 用户消息保持原生渲染（短文本为主，节省内核 WebView 池槽位给 AI 长文）
                         ChatMarkdown(
                             content = text,
                             onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -3389,24 +3434,52 @@ private fun MessageRowContent(
                     border = bubbleBorder,
                     modifier = bubbleModifier,
                 ) {
+                    if (kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
+                        MessageKernelRow(
+                            pool = kernelPool,
+                            payload = KernelMessagePayload(
+                                mesid = mesid,
+                                mes = kernelText,
+                                chName = name,
+                                isUser = false,
+                                isSystem = isSystem,
+                            ),
+                            onLongPress = onLongPress,
+                        )
+                    } else {
+                        ChatMarkdown(
+                            content = text,
+                            onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                            isSystem = formatAsSystem,
+                            charAvatarPath = avatarPath,
+                            fillWidth = false,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                        )
+                    }
+                }
+            } else {
+                // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
+                if (kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
+                    MessageKernelRow(
+                        pool = kernelPool,
+                        payload = KernelMessagePayload(
+                            mesid = mesid,
+                            mes = kernelText,
+                            chName = name,
+                            isUser = false,
+                            isSystem = isSystem,
+                        ),
+                        onLongPress = onLongPress,
+                    )
+                } else {
                     ChatMarkdown(
                         content = text,
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         isSystem = formatAsSystem,
                         charAvatarPath = avatarPath,
-                        fillWidth = false,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                        modifier = bubbleModifier,
                     )
                 }
-            } else {
-                // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
-                ChatMarkdown(
-                    content = text,
-                    onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    isSystem = formatAsSystem,
-                    charAvatarPath = avatarPath,
-                    modifier = bubbleModifier,
-                )
             }
             // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
             // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。

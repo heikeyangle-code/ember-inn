@@ -34,6 +34,17 @@ object RenderPrefs {
             .apply()
     }
 
+    /** V2 内核渲染：消息正文走 WebView 官方管线（池化，embed-shell 模式）。
+     *  默认开；关闭回退旧原生渲染路线（P5 删除前保留双轨）。 */
+    fun kernelRender(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("kernel_render", true)
+
+    fun setKernelRender(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("kernel_render", enabled)
+            .apply()
+    }
+
     /** 官方 power_user.context.example_separator（默认 ***）。 */
     fun exampleSeparator(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("example_separator", "***") ?: "***"

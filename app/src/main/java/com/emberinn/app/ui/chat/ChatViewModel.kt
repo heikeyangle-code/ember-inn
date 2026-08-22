@@ -158,6 +158,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
      *  防止显示错条内容（索引漂移）。 */
     private data class DisplayCacheEntry(val sendDate: String?, val text: String)
     private val displayCache = mutableMapOf<Int, DisplayCacheEntry>()
+    private val kernelDisplayCache = mutableMapOf<Int, DisplayCacheEntry>()
     private var displayCacheVersion = -1
 
     /** 显示管线上下文缓存（全局设置层）：behavior/fixMarkdown/encodeTags/推理模板/正则开关与脚本/宏环境。
@@ -809,8 +810,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             settings = MessageFormattingSettings(
                 userPromptBias = "",
                 showUserPromptBias = true,
-                autoFixMarkdown = dctxFixMarkdown,
-                encodeTags = dctxEncodeTags,
+                autoFixMarkdown = !forKernel && dctxFixMarkdown,
+                encodeTags = !forKernel && dctxEncodeTags,
                 reasoningPrefix = dctxReasoningPrefix,
                 reasoningSuffix = dctxReasoningSuffix,
                 allowName2Display = true,
@@ -833,13 +834,21 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return result.text
     }
 
-    fun displayTextOf(index: Int): String {
+    fun displayTextOf(index: Int): String = displayTextInternal(index, forKernel = false)
+
+    /** V2 内核路径：正则/宏等文本前处理仍走引擎，但 fixMarkdown/encode_tags 交给内核
+     *  render.js（官方 messageFormatting 后半段），避免双重处理。 */
+    fun kernelDisplayTextOf(index: Int): String = displayTextInternal(index, forKernel = true)
+
+    private fun displayTextInternal(index: Int, forKernel: Boolean): String {
         syncDisplayVersion()
         val msgs = _messages.value
         val el = msgs.getOrNull(index)?.jsonObject ?: return ""
         val sendDate = el["send_date"]?.jsonPrimitive?.contentOrNull
         // 身份校验：同 index 但消息已换（结构变更漂移）→ 视为未命中重算
-        displayCache[index]?.takeIf { it.sendDate == sendDate }?.let { return it.text }
+        // 内核/旧原生两条管线产物不同，分开缓存
+        val cache = if (forKernel) kernelDisplayCache else displayCache
+        cache[index]?.takeIf { it.sendDate == sendDate }?.let { return it.text }
         val extra = el["extra"] as? JsonObject
         val base = extra?.get("display_text")?.jsonPrimitive?.contentOrNull
             ?: el["mes"]?.jsonPrimitive?.contentOrNull ?: return ""
@@ -871,8 +880,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             settings = MessageFormattingSettings(
                 userPromptBias = behavior.userPromptBias,
                 showUserPromptBias = behavior.showUserPromptBias,
-                autoFixMarkdown = dctxFixMarkdown,
-                encodeTags = dctxEncodeTags,
+                autoFixMarkdown = !forKernel && dctxFixMarkdown,
+                encodeTags = !forKernel && dctxEncodeTags,
                 reasoningPrefix = dctxReasoningPrefix,
                 reasoningSuffix = dctxReasoningSuffix,
                 allowName2Display = behavior.allowName2Display,
@@ -901,7 +910,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             }
         }
         val out = result.text
-        displayCache[index] = DisplayCacheEntry(sendDate, out)
+        cache[index] = DisplayCacheEntry(sendDate, out)
         return out
     }
 
@@ -4005,7 +4014,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     private fun refreshMessages() {
         _messages.value = chatStore.messages(sessionId)
-        displayCache.clear()
+        displayCache.clear(); kernelDisplayCache.clear()
         _displayRevision.value++
     }
 
@@ -4022,7 +4031,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     private fun syncDisplayVersion() {
         if (displayCacheVersion != DisplayCacheVersion.version) {
-            displayCache.clear()
+            displayCache.clear(); kernelDisplayCache.clear()
             displayCacheVersion = DisplayCacheVersion.version
             _displayRevision.value++
         }

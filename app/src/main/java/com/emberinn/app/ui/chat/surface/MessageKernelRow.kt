@@ -1,65 +1,111 @@
 package com.emberinn.app.ui.chat.surface
 
-import android.webkit.WebView
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
-import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
-import com.emberinn.app.renderer.StTheme
 
 /**
- * 单条消息的内核宿主：从池中取 WebView，渲染后按内容高度回报给 LazyColumn。
- * raw 文本永远保存在 Kotlin 侧（ChatStore），WebView 只是显示器官——
+ * 单条消息正文的内核宿主（embed-shell 模式）：
+ * 池化 WebView 只渲染官方管线的消息 HTML 正文；头像/名字/操作条/媒体等壳层交互
+ * 仍由原生组件承担。raw 文本永远保存在 Kotlin 侧（ChatStore），WebView 只是显示器官——
  * 渲染进程崩溃时重建即可，数据零丢失。
+ *
+ * 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），本组件据此撑高，
+ * 未回报前用 [initialHeightDp] 兜底避免首帧塌陷。
  */
 @Composable
 fun MessageKernelRow(
     pool: KernelWebViewPool,
     payload: KernelMessagePayload,
     modifier: Modifier = Modifier,
-    onHeightChanged: (mesid: String, heightPx: Float) -> Unit = { _, _ -> },
+    initialHeightDp: Float = 64f,
+    onHeightChanged: ((Float) -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
 ) {
-    AndroidView(
-        modifier = modifier.fillMaxWidth(),
-        factory = { context ->
-            // 占位容器；acquire 回调里换上真实内核 WebView
-            WebView(context).apply { isEnabled = false }
-        },
-        update = { placeholder ->
-            if (placeholder.tag != RENDER_TAG) {
-                placeholder.tag = RENDER_TAG
-                pool.acquire { pooled ->
-                    val kernel = RenderKernel(pooled)
-                    pooled.webView.tag = payload.mesid
-                    kernel.renderMessage(payload)
-                    (placeholder.parent as? android.view.ViewGroup)?.let { parent ->
-                        val index = parent.indexOfChild(placeholder)
-                        parent.removeView(placeholder)
-                        parent.addView(pooled.webView, index)
-                        pooled.webView.layoutParams = android.view.ViewGroup.LayoutParams(
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-                        )
+    var host by remember(payload.mesid) { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
+    var heightDp by remember(payload.mesid) { mutableStateOf(initialHeightDp) }
+    val density = LocalDensity.current
+
+    // 高度回报与长按路由：按 mesid 过滤，只认自己这条消息的事件
+    DisposableEffect(pool, payload.mesid) {
+        val heightListener = { id: String, h: Float ->
+            if (id == payload.mesid && h > 0f) {
+                heightDp = h
+                onHeightChanged?.invoke(h)
+            }
+        }
+        pool.addHeightListener(heightListener)
+        val longPressListener = onLongPress?.let { cb ->
+            { id: String -> if (id == payload.mesid) cb() }
+        }
+        if (longPressListener != null) pool.addLongPressListener(longPressListener)
+        onDispose {
+            pool.removeHeightListener(heightListener)
+            if (longPressListener != null) pool.removeLongPressListener(longPressListener)
+            host?.let(pool::release)
+        }
+    }
+
+    // 载荷变化（文本编辑/swipe 切换）→ 权威重渲
+    LaunchedEffect(host, payload) {
+        val pooled = host ?: return@LaunchedEffect
+        RenderKernel(pooled).renderMessage(payload)
+    }
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(with(density) { heightDp.toDp() })
+            .clipToBounds(),
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                FrameLayout(ctx).also { slot ->
+                    pool.acquire { pooled ->
+                        RenderKernel(pooled).setEmbedShell(true)
+                        // 快速滚动竞态：组合已销毁（slot 无父容器）→ 直接归还，不挂载不记 host
+                        if (slot.parent != null) {
+                            slot.addView(
+                                pooled.webView,
+                                FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                ),
+                            )
+                            host = pooled
+                            RenderKernel(pooled).renderMessage(payload)
+                        } else {
+                            pool.release(pooled)
+                        }
                     }
                 }
-            }
-        },
-    )
-    LaunchedEffect(pool) {
-        pool.addHeightListener { mesid, h -> onHeightChanged(mesid, h) }
+            },
+        )
     }
 }
-
-private const val RENDER_TAG = "ember_kernel_row"
 
 /**
  * 聊天流式渲染节流器（docs/REFACTOR_V2_PLAN.md §3.4）：
  * 流中 120ms 节流的轻量 innerHTML 更新；流结束调用 [finish] 做权威全量管线。
+ * （当前流式显示仍走原生轻量路径避免换页闪烁；内核流式在 P6 聊天屏重写时启用。）
  */
 class StreamingThrottler(
     private val intervalMs: Long = 120,
@@ -81,24 +127,5 @@ class StreamingThrottler(
         kernel.renderMessage(finalPayload)
         pendingText = null
         lastFlush = 0
-    }
-}
-
-/** 主题与布局模式的内核应用副作用 */
-@Composable
-fun KernelThemeEffect(
-    pool: KernelWebViewPool,
-    /** 官方主题原始 JSON（全字段透传给内核） */
-    themeJson: String?,
-    displayMode: ChatDisplayMode,
-    stylePackClasses: List<String> = emptyList(),
-) {
-    LaunchedEffect(themeJson, displayMode) {
-        pool.acquire { pooled ->
-            val kernel = RenderKernel(pooled)
-            themeJson?.let(kernel::applyThemeRaw)
-            kernel.setChatDisplayMode(displayMode)
-            if (stylePackClasses.isNotEmpty()) kernel.setStylePackBodyClass(*stylePackClasses.toTypedArray())
-        }
     }
 }

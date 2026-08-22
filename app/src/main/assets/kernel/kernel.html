@@ -19,6 +19,24 @@
     <link rel="stylesheet" href="official/css/style.css">
     <link rel="stylesheet" href="official/css/mobile-styles.css">
     <style id="custom-style" type="text/css"></style>
+    <style id="embed-shell-style">
+        /* embed-shell：宿主原生壳已提供头像/名字/操作条/气泡，内核只渲染正文。
+         * 隐藏官方模板 chrome，.mes 退为透明文本流容器。 */
+        body.embed-shell .mesAvatarWrapper,
+        body.embed-shell .mes_block > .ch_name,
+        body.embed-shell .mesIDDisplay,
+        body.embed-shell .mes_timer { display: none !important; }
+        body.embed-shell .mes {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        body.embed-shell .mes_text { padding: 0; margin: 0; }
+        body.embed-shell .mes_block { padding: 0; }
+    </style>
 </head>
 <body class="light-theme">
     <!-- 官方 style.css 依赖 #chat / .mes 层级，保持同构 -->

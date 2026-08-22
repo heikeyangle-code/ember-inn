@@ -237,8 +237,15 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 
 ### 5.1 已完成（新架构）
 - renderer/ 五类（§4.4）+ OfficialThemeManager（§4.5）
+- **聊天数据流已接内核（P2 收尾，embed-shell 模式）**：AI 消息正文（含系统消息）走池化 WebView 官方管线渲染；用户消息/头像/操作条/滑动变体/媒体/reasoning 卡仍为原生壳。要点：
+  - 主题随页：池持有 currentThemeJson + bodyClasses（chat_display 布局类 + embed-shell），新建实例 ready 即套用，updateTheme 广播全量同步（ChatScreen 收集 OfficialThemeManager 流驱动）
+  - 文本前处理分工：引擎 MessageFormattingEngine 仍管正则/宏/bias/name2 等（kernelDisplayTextOf 跳过 fixMarkdown/encode_tags，由内核 render.js 接管后半段，独立 kernelDisplayCache 防双轨缓存串写）
+  - 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），MessageKernelRow 按 mesid 过滤监听撑高，未回报前 64dp 兜底；快速滚动竞态由 slot.parent 判定防护（未挂载即归还池）
+  - 长按路由：内核 touch 桥 → pool.longPressListeners → 复用原生 menuMessageIndex ActionSheet
+  - 开关与回退：RenderPrefs.kernelRender（默认开）；设置→消息渲染→“内核渲染（V2）”可切回旧原生路线（P5 删双轨前保留）
+  - 边界登记：流式过程仍走原生轻量渲染（避免流中换页闪烁），流结束落盘后走内核权威渲染；.mes 在 embed-shell 下强制透明（主题卡片背景待 P6 全 DOM 行模式恢复）；内核路径暂不渲染用户消息（节省池槽位给 AI 长文）
 - ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
-- ui/chat/surface/MessageKernelRow.kt：消息内核宿主（池化 WebView AndroidView 绑定）+ StreamingThrottler（120ms 节流轻量更新，流结束权威全量）+ KernelThemeEffect
+- ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流备用，P6 启用内核流式）
 
 ### 5.2 待办（按 REFACTOR_V2_PLAN P2-P7）
 - ChatViewModel 数据流接 ChatSurface；五大屏重写（聊天/书架/角色详情/会话管理/设置）套 EmberDS

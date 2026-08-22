@@ -42,10 +42,16 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval(js)
     }
 
-    /** 标杆样式资产包切换（如 Moonlit Echoes 的 echostyle/whisperstyle 等 body 类） */
-    fun setStylePackBodyClass(vararg classes: String) {
-        val list = classes.joinToString(",") { "'$it'" }
-        eval("document.body.className='light-theme '+[$list].join(' ');")
+    /** body 类全量同步（池主题状态专用）：light-theme 为基底，其余类整体重设。 */
+    fun setBodyClasses(classes: List<String>) {
+        val joined = classes.joinToString("") { " $it" }
+        eval("document.body.className='light-theme$joined';")
+    }
+
+    /** 嵌入模式：宿主原生壳已提供头像/名字/操作条，内核只渲染正文（隐藏模板 chrome）。 */
+    fun setEmbedShell(enabled: Boolean) {
+        val op = if (enabled) "add" else "remove"
+        eval("document.body.classList.$op('embed-shell');")
     }
 
     fun clear(onDone: (() -> Unit)? = null) = eval("window.Kernel.clear();", onDone)

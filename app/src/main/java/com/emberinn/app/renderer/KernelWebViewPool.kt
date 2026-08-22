@@ -42,8 +42,30 @@ class KernelWebViewPool(
     private val longPressListeners = mutableListOf<(String) -> Unit>()
 
     fun addHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.add(l) } }
+    fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
     fun addClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.add(l) } }
     fun addLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.add(l) } }
+    fun removeLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.remove(l) } }
+
+    // 每页主题状态：新建实例 ready 后自动应用；updateTheme 广播到全部存活实例。
+    // bodyClasses 为全量同步语义（含 chat_display 布局类 + 样式包类 + embed-shell）。
+    @Volatile private var currentThemeJson: String? = null
+    @Volatile private var currentBodyClasses: List<String> = listOf("embed-shell")
+
+    /** 主题/布局变更入口（ChatScreen 收集 OfficialThemeManager 流后调用） */
+    fun updateTheme(themeJson: String?, bodyClasses: List<String>) {
+        currentThemeJson = themeJson
+        currentBodyClasses = bodyClasses
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
+        }
+    }
+
+    private fun applyPageSetup(instance: PooledWebView) {
+        val kernel = RenderKernel(instance)
+        currentThemeJson?.let(kernel::applyThemeRaw)
+        kernel.setBodyClasses(currentBodyClasses)
+    }
 
     fun preload() {
         scope.launch(Dispatchers.Main) {
@@ -101,6 +123,8 @@ class KernelWebViewPool(
             instance.webView.loadUrl(KernelProtocol.KERNEL_URL)
             handler.postDelayed(check, 50)
         }
+        // 就绪即套当前主题与布局类（新实例无需等 updateTheme 广播）
+        runCatching { applyPageSetup(instance) }
         idle.addLast(instance)
         return instance
     }
