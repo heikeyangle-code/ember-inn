@@ -108,6 +108,18 @@ EmberDS 默认深色皮肤的视觉 DNA 直接取自 Glimmer/Moonlit 的成功�
 - 强调色少而冷（引号蓝 #51A0DE 级），AI 身份暖金三色作唯一暖色点睛
 - 字号克制（font_scale ≈ 0.98–1.0）、行距宽松、留白优先
 
+### 官方主题 34 字段逐项处置表（以 Azure.json 实测为准）
+
+| 处置 | 字段 | 说明 |
+|---|---|---|
+| ✅ 内核已实现（已测试） | 15 个 CSS 变量：main_text/italics/underline/quote/blur_tint/chat_tint/user_mes_blur_tint/bot_mes_blur_tint/shadow/border 色 + blur_strength/shadow_width/font_scale/chat_width + custom_css | applyTheme 全部落位 |
+| ✅ 内核已实现（已测试） | 开关→body 类：fast_ui_mode(no-blur)/noShadows/waifuMode/reduced_motion/timestamps/timer/tokenCount/mesIDDisplay/modelIcons/hotswap(no-hotswap)/hideChatAvatars/expandMessageActions/swipeAllMessages/enableZenSliders | 与 power-user.js 同构 |
+| ✅ 内核已实现（已测试） | 枚举：chat_display(平铺/气泡/文档)、avatar_style(默认/大/方) | |
+| 🔜 壳层读取（P6 实现） | compact_input_area(输入栏紧凑)、hotswap_enabled(主题快捷切换钮)、bogus_folders(书架文件夹)、enableLabMode、zoomed_avatar_magnification(头像放大镜) | 输入栏/书架是原生组件；主题值作为配置源保存并透传，不丢 |
+| ℹ️ 无需处理 | name | 仅显示名 |
+
+**重要事实：官方主题 JSON 不含输入框形状。** 形状/圆角从来不是酒馆主题的能力（那是 custom_css 的领地）；主题对输入区的全部影响 = compact_input_area 紧凑开关 + fast_ui_mode 模糊开关 + 颜色变量间接染色。本项目输入栏为原生 EmberDS 组件，形状由 EmberSkin 决定，颜色从导入主题提取主色自动配套。
+
 ## 三、EmberDS 设计原则
 
 1. **沉浸优先**：聊天页 = 舞台。chrome（导航/按钮/栏）用玻璃和渐变退到幕后，角色立绘与文字内容站前排

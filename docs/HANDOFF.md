@@ -189,98 +189,66 @@ OpenAI 兼容全家、Anthropic、Gemini（含预算自动推导）、Mistral、
 ### 3.15 表情精灵 ✅（引擎层纯逻辑）
 ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseSpriteForExpression fallback/多立绘随机/rerollIfSame/overrideSpriteFile）；sampleClassifyText（去宏/引号/星号、短文本裁句尾、长文本首尾各 250 拼接、LLM 模式仅 trim；8 例差分）；官方差分 14+8+7 例（expressions/index.js + endpoints/sprites.js + utils.js 逐字对拍）；SpriteStorage（spritesPath 子目录/sanitize + importRisuSprites）；LLM 分类 ✅（llmPrompt=官方 getLlmPrompt {{labels}} 模板 + parseLlmResponse=JSON {emotion} → removeReasoning 清理后模糊匹配 → null 走 fallback；App ExpressionScreen 开关/自定义提示词，ChatViewModel 生成后异步分类切换表情）；App 层 ExpressionStore 精灵目录 LRU 缓存（24 角色，save/delete/import 即时失效——对齐官方 spriteCache 语义，聊天列表滚动每条 AI 消息组合不再列目录）；DOM 显示/动画属 App 层；差分顺带修 VectorTextUtils.trimToStartSentence（Kotlin 需 coerceAtMost）。
 
-## 4. App / UI 进度
+## 4. 渲染内核（V2 核心，已完成）
 
-### 4.1 导航与返回手势 ✅
-底部三 Tab（角色/聊天/设置）；聊天页、设置子页 BackHandler 逐级回退；设置页内导航栈（页面切换压栈，子页返回回真实上一级而非全跳 HOME；主页列表位置与搜索词常驻层保留，进出子页不重置）；Manifest enableOnBackInvokedCallback（Android 13+ 预测性返回）。
+### 4.1 架构定位
+WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核 DOM 与官方同构，官方 style.css/主题/社区主题 CSS 原样生效。引擎层（差分锁定）负责宏/正则/reasoning 前处理；内核 render.js 负责 fixMarkdown 之后到 DOMPurify 为止的显示管线；壳层（EmberDS）负责聊天以外的全部界面。
 
-### 4.2 首页（角色 Tab）与角色详情 🟡
-- 首页：品牌顶栏 + 全局搜索（角色名/描述、会话名/最后消息、世界书条目 key/content/comment、设置项；条目详情弹层；设置项跳转）、AI 对话置顶、最近聊过横滑、角色双列网格、FAB 导入（PNG/JSON/CharX）、长按菜单（置顶/新会话/字段/导出/删除）、删除二次确认、角色卡取色 seed 已存。
-- 角色详情编辑页：官方 v2 卡字段全集（name/description/personality/scenario/first_mes/mes_example/system_prompt/post_history_instructions/creator_notes/creator/character_version/tags/alternate_greetings）+ 世界书条目管理 UI（官方全字段，v1 key→v2 keys 归一，未知扩展字段原样保留）+ 删除/置顶/导出/一键开始聊天。depth_prompt/talkativeness 读写官方位置 data.extensions；字段读写抽为纯逻辑 CharacterCardEdit（App 单测 5 例）。
-- 正则（该卡）UI：官方格式读写 + 编辑弹层 + USER_INPUT/AI_OUTPUT 位点接线 + “允许此角色应用该卡正则”开关（UI 默认开=用户要求；实际生效以 character_allowed_regex 列表为准，未进过详情页/未切换过开关时不写入）。
-- 变量（该卡）：data.extensions.emberinn_variables（README 自定义扩展，官方无 per-character 变量，见 6.1）。
-- 快捷回复（全局）：Quick Reply 官方字段（mes/label/enabled/automationId/preventAutoExecute），设置→服务→快捷回复管理；per-character 快捷回复已删。
-- 模型覆盖 / 主题配方：README 承诺的角色级自定义（官方无对应字段，模型覆盖官方是聊天级 #custom_model_id）；存储+UI+聊天背景已做；字体下载已做（FontManager 下载 Noto Sans 4 面 TTF，原生/WebView 共用，霞鹜文楷 70MB 已下线回收）；风格档位映射已做（VibePreset 5 档，外观页滑杆实时预览，见 4.5）。
+### 4.2 内核资产（app/src/main/assets/kernel/）
+- kernel.html：CSP 全放行（用户决策）；官方 webfonts/fontawesome/style.css/mobile-styles.css；`<style id="custom-style">` 注入点；body.light-theme + #chat 同构骨架
+- js/render.js（509 行）：官方管线移植——fixMarkdown、encodeStyleTags/decodeStyleTags（css-tools）、引号包裹 6 种、\ufffe 标签内引号保护、DOMPurify 三 hooks（class 加 custom- 前缀豁免 fa-*、target=_blank+noopener、未知元素换行转 br）
+- 同版本库：showdown 2.1.0 / dompurify 3.4.2 / highlight 11.11.1 / css-tools 4.4.4
+- official/message-template.html：官方模板原样；**克隆内部 .mes 而非根节点**（template_element，对齐 script.js L447）
 
-### 4.3 聊天页 🟡（核心已接线 + 媒体 + 状态胶囊）
-- 发送：PromptPipeline 总装流式发送（世界书/宏/人设/AN/示例/历史/控制提示/工具/媒体/推理签名全引擎内完成，SSE 逐 token）；停止=取消 OkHttp call 保留已生成（mes_stop）；重新生成=删最后 AI 回复复用最后用户消息（option_regenerate）；继续=mes_continue（移出最后 AI，流结束合并落盘）；send_if_empty 已接；冒充=Generate('impersonate')（流式进输入框不落历史）。
-- 交互：复制/删除/编辑（updateMessage：isEdit 正则分位点 + 清/写 extra.bias）/长按菜单/最后一条 AI 常驻 4 键/清空二次确认/未配置模型横幅一键深链；Markdown+代码高亮（mikepenz m3/coil3/code 0.43.0）；用户消息气泡上限 320dp（AI 全文宽）；顶栏/输入栏 Cloudy 0.7.1 真背板模糊玻璃（sky 源层静态）。
-- 滑动切回复全链：数据模型对齐官方 jsonl（swipe_id/swipes[]/swipe_info[]；ensureSwipes/syncSwipeToMes/Generate('swipe')/deleteSwipe/editMessage）；AI 气泡横滑（右=下一个/越界生成新变体，左=上一个）；计数条 n/N + 箭头；长按菜单变体列表 ModalBottomSheet；导出 jsonl 可直接进酒馆；世界书扫描按官方 prepareMessages（swipe 在 coreChat.pop 之后扫描，App dropLast(1) 等价）。
-- **合并上下文胶囊**（世界书指示灯+上下文占比合成一个常驻胶囊，见 ContextCapsule）：左段=上下文（圆环+百分比+绿黄橙红分级+`上下文 used/max`，长按开世界书命中面板，点击开预算分解，分母=contextWindow）；细分隔线；右段=世界书命中（书图标+`×N`，有命中主色高亮、无命中置灰弱化，点击开命中面板）。数据实时取自引擎 onPrepared 真实结果（wiResult.activatedWorldInfo + counts/maxContextTokens），非 UI 模拟值；命中面板（条目名/命中键/常驻/位置/token）；快捷工具盘=“继续/冒充 + 全局快捷回复 chips”+ automationId 自动执行；图像生成/附件/TTS 已入快捷工具盘与长按菜单；全局正则开关在设置→正则。
-- 滚动/键盘：reverseLayout=true（第 0 项=最新消息贴底，删掉三条 scrollToItem 强制滚动与 layoutInfo 手写贴底）；自动滚底=贴底跟随 + 上滑暂停 + 回底恢复；imePadding 只作用于“消息列表+输入栏”列；animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（消息列表不再参与模糊重绘）；逐条滚动零磁盘 IO——displayTextOf 组合期的全局设置/宏环境/正则脚本收敛 ensureDisplayCtx 缓存（随 DisplayCacheVersion/会话身份失效），usable 下标随消息表实例缓存，ExpressionPrefs 进程级缓存（旧实现每条消息进视口都读盘，逐条卡顿根因）。
-- ✅ assistant_impersonation 已接 Claude 冒充预填（见 3.9/4.4）——旧 ❌ 登记作废已修正。
+### 4.3 window.Kernel API 与桥协议
+| API | 说明 |
+|---|---|
+| formatText(mes, opts) | 返回 HTML 字符串（DOM 黄金对比入口） |
+| renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount} |
+| applyTheme(theme) | 官方主题全字段 → CSS 变量 + custom_css + body 类开关 |
+| clear() | 清空 #chat |
 
-### 4.3.5 聊天 Tab（会话列表）✅
-会话按时间倒序、置顶优先；点卡片进聊天；长按/⋯ = 置顶/导出聊天 JSONL/删除（二次确认）；FAB 新建对话（AI 或选角色，UUID 会话 id，每角色可多会话，会话名=角色名）；空状态引导；置顶持久化（SessionRecord.pinned，兼容旧 JSON）；新建群聊入口（FAB → 勾选角色 → GroupRecord + 群聊设置 UI）。
+applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings 逐项同构：no-blur/noShadows/waifuMode/reduced-motion/no-timestamps/no-timer/no-tokenCount/no-mesIDDisplay/no-modelIcons/no-hotswap/hideChatAvatars/expandMessageActions/swipeAllMessages/enableZenSliders/big-avatars/square-avatars/bubblechat/documentstyle；每次应用先移除后添加（全量同步语义）。avatar_style 枚举 0 默认/1 大矩形/2 方形；chat_display 0 平铺/1 气泡/2 文档。
+长按手势：500ms 阈值、touchmove 超 10px 取消，bridgeSend {type:'longPress'}。
+桥事件：kernelReady/height/heightChanged/click/longPress/themeApplied → window.AndroidKernel.postMessage(JSON)。
 
-### 4.4 设置 ✅（README 规格）
-- 数据与隐私：导出全部数据（zip：角色/会话/聊天/头像/提供商配置）+ 数据位置透明 + 清除全部数据（二次确认）；首启引导（欢迎页 + 导入角色卡/直接开始/跳过）。
-- 设置主页：对照官方移动端 8 分区抽屉重构（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理 + 数据与隐私/关于）；搜索（真过滤）；聊天页未配置模型一键深链进 API 连接；分区子屏：AiResponseScreen（参数预设/采样器/快速提示词/Prompt Manager 入口）、UserSettingsScreen（UI 主题/个性化/聊天与消息处理/自动滑动/续写）、MessageRenderScreen+TextTypographyScreen（渲染与排版）、BackgroundsScreen、PersonaSettingsScreen；外观（AppearanceScreen）：主题模式（浅/深/跟随系统）+ 24 套预设主题卡（预览色板 = 三圆点 + 宝石菱形 + 金属环，选中描边用主题 metal，架构见 4.5）+ 视觉氛围滑杆（VibePreset），实时预览。
-- 提供商与模型：搜索 + 卡片列表（品牌 SVG/已配置 pill/我的连接）；详情页 = API Key（遮罩）/接口地址（未配置自动预填 providers.json 默认）/区域/账户 ID/API 版本/默认模型（底部弹层搜索）/上下文上限/最大回复/测试连接/保存/删除确认；模型页已补 top_k/min_p/top_a/repetition_penalty/seed/n/流式/logprobs/use_sysprompt + OpenRouter use_fallback/allow_fallbacks/middleout/providers/quantizations。
-- 关于页：版本 0.1.0 / AGPL-3.0 / 数据仅本地 / 开源仓库。
-- 语音（TTS）：Android 系统 TTS（语音/语速/试听）+ 🟡 27 个外部后端（app/data/TtsBackend.kt 接口 + TtsBackendsCloud.kt 11 云端 + TtsBackendsLocal1/2.kt 16 本地，对照官方 `tts/*.js fetchTtsGeneration`）；字段对齐官方 tts 扩展（enabled/voice/rate/auto_generation/narrate_user/narrate_by_paragraphs/skip_codeblocks/skip_tags/apply_regex）；朗读前 substituteParams；文本处理纯逻辑 TtsTextProcessor 单测 3 例；官方 1.18 无 STT，语音输入不假装。**✅ 11 云端后端已差分**（elevenlabs/openai/edge/azure/novel/minimax/volcengine/chutes/pollinations/google-native/google-translate，`scripts/diff/tts-services-official.mjs` 35 例 + 引擎层 `TtsRequestEngine` + `TtsServicesDiffTest`，App 改为只做 HTTP 接线，准则 2；差分修复 ElevenLabs `shouldInvolveExtendedSettings` 分支、OpenAI `instructions` 条件添加、Chutes `||` 短路 0→默认 1.0）；**✅ 13 本地后端已差分**（alltalk/chatterbox/coqui/cosyvoice/gpt-sovits-adapter/gpt-sovits-v2/gsvi/sbvits2/silerotts/speecht5/tts-webui/vits/xtts，`scripts/diff/tts-local-official.mjs` 38 例 + 引擎层 `TtsRequestEngine` + `TtsLocalDiffTest`，App 全 13 本地改为只做 HTTP 接线，准则 2；差分修复 URLSearchParams form 编码 space=+、JSON 数字语义整数不带小数点、chatterbox 13 字段 params 过滤、vits model_type 分支 W2V2/BERT-VITS2 条件字段）；**🟡 3 本地后端登记不差分**（kokoro/kokoro-worker/openai-compatible，不同源：kokoro.js/kokoro-worker.js 为浏览器 WebWorker postMessage 无 HTTP 请求体，App POST {endpoint}/tts {text,voice}；openai-compatible.js 走 ST 代理 /api/openai/custom/generate-voice body 含 provider_endpoint 字段，App 直连厂商 /v1/audio/speech body 不含）。TtsReader 改造为 MediaPlayer 播放字节 + Android 系统 TTS 回退；VoicePrefs 扩展 `tts_provider`/`tts_endpoint`/`tts_api_key`/`tts_model`。
-- 服务页：翻译 8 家全实现（Libre/Google/Yandex/Lingva/DeepL/OneRing/DeepLX/Bing，协议对齐 translate.js；自动模式 responses/both/inputs/both；编辑后 translateMessageEdit 自动重译/清除）；图像（A1111/SDCPP/NovelAI/OpenAI gpt-image/HuggingFace/Stable Horde 异步轮询（官方 horde.js）/ComfyUI workflow+轮询；DrawThings 仅 macOS 已移除；官方默认 Default_Comfy_Workflow.json 不在仓库，由用户粘贴，登记）；向量（OpenAI 兼容嵌入/本地 BagOfGram；聊天历史重排+数据银行+强制激活+聊天 ⋮ 管理）；翻译/图像/向量未完成项见 5。
+### 4.4 Kotlin 侧（app/.../renderer/）
+- KernelModels.kt：载荷与事件模型；StTheme 仅作类型化视图，**主题必须以原始 JSON 字符串透传**（RenderKernel.applyThemeRaw），防有损转换丢字段
+- KernelBridge.kt：window.AndroidKernel；能力面=高度/点击/长按回传；无任意 Android API/文件系统通道
+- KernelWebViewFactory.kt：WebViewAssetLoader（assets/=内核，data/=头像媒体，统一 https origin appassets.androidplatform.net）；JS/DOM storage 开、媒体自动播放、外链交系统浏览器
+- KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）
+- RenderKernel.kt：门面——renderMessage/updateStreamingText(流中轻量)/applyThemeRaw/setChatDisplayMode/setStylePackBodyClass
 
-### 4.4.5 应用图标 ✅
-launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.png）缩放为 mipmap-xxxhdpi/ic_launcher.png（192px），Manifest 引用 @mipmap/ic_launcher；换图替换该 PNG。
+### 4.5 官方主题导入与管理（data/OfficialThemeManager.kt）
+- 内置：assets/themes/moonlit-echoes/（Glimmer/MoonlitEchoes 两套官方格式 + Glimmer-preset 扩展预设 + style.css 101KB + extension.css + AGPL-3.0 LICENSE）；默认主题=Glimmer
+- 导入：任意官方格式主题 JSON 无损保存（filesDir/themes/）；导出/删除/切换
+- currentThemeJson：原始 JSON StateFlow 直接喂内核；shellSettings() 派生壳层设置（compactInputArea/hotswapEnabled/bogusFolders 等 21 项供原生 UI 读）
+- 官方 34 字段处置表见 docs/DESIGN_SYSTEM.md §二点六
 
-### 4.5 主题系统 ✅（全局层）
-**生成管线**：ThemePreset → Theme.kt 生成 M3 ColorScheme（浅色主色自适应加深至 WCAG 4.5:1 + 氛围底色，深色 schemePrimary ?? lighten(seed,0.30) + 夜色底）→ MainActivity 贯通 MainScreen → SettingsScreen → AppearanceScreen；**容器色阶整面染主题色相**：浅色容器阶梯直接向 seed 染色（5.5%–18% × contrast，主题感从"点点缀"变"整面画布"——卡片/顶栏/输入栏/气泡全走这条阶梯，画布本身染 10%）、深色容器向"主色调白"提亮 45%（卡片像被主题光照射——火光反射在铠甲上，阶梯比例 7.5%–20.5%，官方主题豁免仍用纯灰阶）；浅色不再是白纸——24 套 lightBg 全部重做为氛围日间版（天青釉/旧画布/羊皮纸/海雾/暮霭紫），深浅同性格；VibePreset 视觉氛围（降饱和/冷暖/光效，外观页滑杆）对整盘 scheme 后处理（standard 档与官方主题豁免）；玻璃表面 5 处（聊天顶栏/输入栏 + 首页顶栏/搜索顶栏 + 玻璃 FAB）接 Cloudy 0.7.1（静态 sky + 边缘高光）；角色卡驱动主题管线（seed/形状/字体/浅深锁定，角色配方优先，全局兜底，艺术字段全默认=不启用，角色主题沿用全局预设的 texture/aura）；聊天背景三层（显式 > 头像玻璃（模糊五档 0/12/24/36/48 + 遮罩色/强度）> 氛围渐变）。
+### 4.6 Moonlit Echoes 兼容（首要审美标杆）
+其消息风格=body 类+官方 DOM 选择器 CSS（源码级核实）；内核 DOM 同构→style.css 可近乎逐字作为样式资产包加载；8 种布局类 echostyle/whisperstyle/hushstyle/tidestyle/ripplestyle/bubblechat/documentstyle/flatchat 经 setStylePackBodyClass 切换。
 
-**ThemePreset 字段架构**（ThemePreset.kt）：
-- 基础：seed/secondary/tertiary 三强调色 + lightBg/darkBg 氛围底/夜色 + shape（square 4dp / default 12dp / rounded 16dp / circle 24dp）+ spacing 间距节奏倍数 + motionScale 动效速度倍数
-- 官方对齐：st*（消息渲染正文/强调/下划线/引用/气泡/阴影，对齐官方 SmartTheme 变量）+ scheme*（M3 角色覆盖；酒馆官方主题填绝对真值，无浅色模式恒按官方深色渲染且豁免一切滤镜）
-- 艺术扩展六字段（默认全关；官方主题恒关；实现全在 ArtBackdrop.kt）：
-  - `contrast` 明暗对照（chiaroscuro）：缩放 surfaceContainer 色阶梯，>1 夜更沉卡片浮更亮、<1 雾感压平（clamp 0.6–1.6）
-  - `gem` 宝石色：聊天页左下光晕（深色 alpha 0.13 / 浅色 0.09）+ 主题卡菱形预览
-  - `metal` 金属色：聊天页右上角第二氛围光（对角呼应宝石光）+ 选中主题卡描边 + 圆环预览
-  - `backdrop` 画布底材 = **BackdropSpec 三层画板级自由配方**（不再是 3 选 1，也不是只有纹理）：
-    1. **washes 色域泼彩**：N 个径向色斑（ColorWash：颜色/位置/半径/浓度），软边渐变落下去像水彩湿画/光晕/撞色泼彩；
-    2. **gradient 定向渐变**：CanvasGradient（任意多色 + 角度 0–360° + 浓度），日落/夜幕/极光的整面底色；
-    3. **texture 六图元纹理**：weave 织纹（主线+错位辅线两级、逐段抖动）/ stipple 布点 / hatch 定向排线（角度可调）/ crossHatch 交叉排线 / fiber 微弯长纤维 / grain 细颗粒 + 缩放/强度/着色。
-    绘制顺序 = 色域 → 渐变 → 纹理 → 内容（先铺底色再上肌理的作画顺序）；色域/渐变在浅色自动收敛（×0.8/×0.85）同一配方深浅都成立；drawWithCache 预生成一次（固定随机种子不闪烁），滚动/重组零开销；
-    设置→外观→画布底材可全局自定义：跟随主题/自定义双模式 + **效果库 10 套一键配方**（落日熔金/霓虹雨夜/水彩粉彩/星穹夜幕/大理石云纹/火山余烬/极光垂帘/晨雾海面/羊皮古卷/素白画布）+ 渐变起终色色板/强度/角度 + 泼彩色板多选/浓度/**重掷布局**（randomWashes 换随机位置）+ 纹理 9 滑杆 + 实时预览；LocalBackdropOverride 贯通，BackdropPrefs JSON 持久化（色值 ARGB Long 往返）
-  - `auraTop` 深色天空氛围：页面顶部渐变（红月/烟雾战场等，混合比 0.76）
-  - `auraTopLight` 浅色天空氛围：象牙晨光/绯薄暮等——浅色模式同样有画面而非惨白纸面（混合比 0.80）；聊天页渐变 + emberBackdrop 四屏背景（角色/会话/设置/角色详情）均深浅双模式生效
+### 4.7 黄金测试（scripts/kernel-golden/，jsdom，59 例全绿）
+- kernel-format.test.mjs 25 例：markdown/引号包裹/DOMPurify hooks/style 前缀化/表格/官方扩展/name2/fixMarkdown/LaTeX 链
+- theme-moonlit.test.mjs 34 例：Glimmer/MoonlitEchoes 全字段落位、换主题全量同步、官方 5 套批量验证、Moonlit 选择器与内核 DOM 同构命中、布局类规则存在性
+- 运行：cd scripts/kernel-golden && npm install && npm test
 
-**24 套主题清单**（性格 = 形状/间距/动效/艺术字段的组合，彼此不重复；全部非官方主题均配深浅双天空）：
+## 5. App/UI 进度（V2 重构中）
 
-| 组 | 主题 | 画种 · 关键性格 |
-|---|---|---|
-| 基础 11 | 墨韵 ink | 水墨：墨青色域浮于右上 + 宣纸草筋纤维+微尘，朱砂宝石 + 冷银金属 + 墨青天/青雾晨光，rounded 慢 0.85x |
-| | 青瓷 celadon | 瓷器：无纹理（釉面光滑即身份），青釉在底部积出窑变釉泪（色域），天青夜/暖沙晨光 aura |
-| | 夜航 night | 透纳海景：深青色域=海在底 + 琥珀色域=灯塔光在右上 + 画布织纹+海盐颗粒，黄铜金属，深海夜天/灯塔晨光 |
-| | 丹砂 cinnabar | 篆刻金石：印泥朱色域沉在左下 + 蚀刻排线 60°+交叉（刀痕）+ 印泥朱宝石 + 刻石白金属，square 快 1.15x |
-| | 琉璃 glaze | 玻璃器：无纹高反差 1.3，紫/青两色琉璃色域对撞 + 紫宝石/青金属，circle，紫夜/淡紫玻璃光 |
-| | 石墨 paper | 石墨素描：全场唯一无宝石无金属（极简即身份），铅笔排线 30°+交叉+炭粉颗粒，灰纸光 |
-| | 竹青 bamboo | 竹园晨雾：竹绿色域在右下 + 竹叶长纤维+雾尘 + 竹黄宝石/苔色金属，黛绿夜天/竹雾晨光 |
-| | 暮紫 dusk | 暮霭水彩：紫→橙黄昏渐变铺天 + 暮尘布点+水彩颗粒 + 落日橙宝石/紫银金属，紫暮天/暮光橙 |
-| | 晨雾 mist | 全场唯一低反差 0.9（雾压平明暗），两片雾色域 + 雾滴布点+湿颗粒（intensity 0.8 收敛）+ 晨光金宝石 |
-| | 樱粉 sakura | 樱吹雪：樱粉天空色域在顶 + 落瓣大布点（scale 1.5）+花瓣纤维 + 樱绯宝石/粉银金属，暮樱紫天/樱霞光 |
-| | 酒馆官方 st | 官方 SmartTheme 逐值还原，无滤镜/画布/氛围（恒定豁免） |
-| 艺术向 7 | 熔金 molten | 电影 teal&orange：teal→orange 对角撞色渐变铺满 + 粗织纹（scale 1.35）+胶片颗粒 + 熔金金属/余烬宝石，金夜天/金色黄昏光 |
-| | 靛夜 indigo | 梦境星夜：靛蓝夜幕渐变从天垂下 + 星尘布点（scale 1.3）+微颗粒 + 星尘青宝石/月银金属，靛蓝天/淡靛光 |
-| | 琥珀 amber | 古典油画：琥珀底光从画布底透上（渐变）+ 老画布粗织纹（scale 1.5）+龟裂颗粒 + 烛光琥珀/威尼斯红宝石，画布夜天/暖琥珀光 |
-| | 黛山 inkwash | 水墨留白：两片雾色域浮于上下（山岚）+ 宣纸纤维最重（草筋横陈）+雾尘，枯金宝石，最慢 0.8x 最松 1.18x，青灰山雾光 |
-| | 深海 abyss | 万米幽光：海水随深度压暗（渐变从底）+ 一柱浮游青光（色域）+ 浮游光斑大布点（scale 1.8）+悬浮微粒 + 浮游青绿宝石，深海 aura/浅海青光 |
-| | 胶片 film | 柯达褪色：暖橙/冷青两片偏色色域对角分置 + 银盐颗粒全场最重+相纸微尘 + 褪棕宝石/灰青金属，褪色暖调光 |
-| | 霓虹 neon | 雨夜霓虹：品红/青两片霓虹色域对角互撞（湿路面倒影），无纹方正（湿玻璃）+ 品红宝石/青金属，最快 1.1x，雨后粉紫光 |
-| 画廊 6 | 猩红王座 crown | 巴洛克骷髅王：顶部金色天光 + 底部暗青烟雾（王座厅空气透视）+ 宫廷粗织挂毯（scale 1.6）+金粉颗粒 + 古金主色 + 红宝石光晕，黑曜石王座厅 |
-| | 白鹰圣殿 knight | 白马白鹰圣殿：一柱神圣白光从穹顶洒下（色域）+ 大理石云纹纤维+石粉颗粒 + 象牙白主色 + 暗红宝石，蓝灰夜空/象牙晨光，square 庄重 |
-| | 赤月森林 vermilion | 红月孤影：血月本体挂在画布顶部（红月色域）+ 地平线余烬（底部暖红域）+ 血月浮尘（scale 1.4）+ 红黑有限色调，circle，血月天/绯薄暮光 |
-| | 亡者圣堂 requiem | 白袍玫瑰：底部玫瑰墓园寒光（白域）+ 立剑下血泊（极淡红域）+ 蚀刻全工艺（排线+交叉+布点三件套）+ 全场最高反差 1.45（白袍对极黑虚空），黑白红三色 |
-| | 古海神殿 cobalt | 碧海神阶：钴蓝海从底部涨上来（渐变）+ 海面天光（色域）+ 版画组合（布点+15°海风排线+交叉）+ 钴蓝海/大理石/赤月宝石，钴蓝夜天/海雾蓝光 |
-| | 禁忌档案馆 archive | 原创·五画元素融为一馆：一盏烛灯悬在画布上方（烛光色域）+ 羊皮纸（草筋纤维+颗粒+尘点）+ 烛光古金主色 + 红宝石微光 + 蓝宝石点缀 + 旧铜金属，烛光暖天/羊皮纸暖光，最松 1.2x 最静 0.85x |
+### 5.1 已完成（新架构）
+- renderer/ 五类（§4.4）+ OfficialThemeManager（§4.5）
+- ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
+- ui/chat/surface/MessageKernelRow.kt：消息内核宿主（池化 WebView AndroidView 绑定）+ StreamingThrottler（120ms 节流轻量更新，流结束权威全量）+ KernelThemeEffect
 
-🟡 MeshGradient 氛围背景未做（README 可选）。
+### 5.2 待办（按 REFACTOR_V2_PLAN P2-P7）
+- ChatViewModel 数据流接 ChatSurface；五大屏重写（聊天/书架/角色详情/会话管理/设置）套 EmberDS
+- P4 扩展运行时 st-api-shim（eventSource 对齐官方 event_types、triggerSlash→引擎 SlashEngine、get/setVariables→ChatStore）；验收=2 张 MVU 卡+2 个酒馆助手脚本免改运行
+- P7 Puppeteer DOM 黄金对比 harness 进 CI；EXTENSION_COMPATIBILITY.md
 
-### 4.5.5 图标系统 ✅
-全 App 图标 = **Font Awesome 6 Solid**（512 viewport viewBox，与酒馆官方前端同库同形），内置 88 枚 `app/src/main/java/com/emberinn/app/ui/icons/FaIcons.kt`（scripts/gen-fa-icons.mjs 从 Font Awesome 官方 SVG 生成，增图先加清单再重跑脚本；SVG 缓存 .fa-cache/）。material-icons-core/extended 与旧 Phosphor 已移除。规范：默认 onSurfaceVariant、激活 primary、警示 error。
+### 5.3 旧 UI 待删清单（P5，区域裁决达成后执行）
+RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 定制/MarkdownCache、旧 WebViewPool(上限 6)、MarkdownCache 等；净删约 4000-6000 行。删除前旧 UI 保持可编译（新旧并存）。
 
-### 4.6 数据存储 🟡
-角色卡 characters/*.json + avatars/*.png；会话 sessions/*.json（含 pinned）+ chats/*.jsonl；提供商 profiles.json；主题 SharedPreferences（README 计划 DataStore 未迁移）；ProviderState 进程内共享（设置保存/切换/删除后刷新，聊天页订阅，仅进聊天页读一次盘兜底）；Room 未引入。
-
-### 4.7 App 接线总表（官方行为怎么接）
+### 5.4 App 接线总表（官方行为怎么接，引擎能力部分仍有效）
 > 原则：App 只做“调用引擎 + 渲染结果”，不再重写逻辑；每项注明官方源码位置。
 
 | 引擎能力 | 官方源码位置 | App 接线点 |
@@ -290,7 +258,7 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 | 消息转换 | src/prompt-converters.js | Claude/Gemini 在各自 builder；Mistral/xAI/Cohere/AI21 在 LlmClient 协议分支；OpenRouter 在 openai-compatible 先签名/媒体再序列化 |
 | 工具/能力选项 | chat-completions.js + openai.js oai_settings | ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety；LlmClient 按厂商官方形态写入请求体 |
 | 预算计算 | chat-completions.js calculateClaudeBudgetTokens/calculateGoogleBudgetTokens | LlmClient 按模型/effort 调两个预算函数，结果进 builder reasoningBudget（adaptive→effort/auto→不加/数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | Showdown + highlight.js + DOMPurify | ✅ 显示格式化序列进引擎差分（MessageFormattingEngine + message-formatting 805 例）；渲染层 mikepenz + Highlights/KodeView；encode_tags 开关（默认关=渲染）；Mermaid WebView 兜底（mermaid.min.js 本地 asset，网络/外链放开，JS 全开只拦 javascript: URL——官方 DOMPurify 禁脚本，有意偏差） |
+| Markdown 渲染 | Showdown + highlight.js + DOMPurify | ✅ V2：内核 render.js 原版管线（同版本 showdown/dompurify/highlight），见 §4.2；引擎 MessageFormattingEngine 差分 805 例仍为前处理权威；旧 mikepenz 路线待删（§5.3） |
 | 媒体渲染 | openai.js Message.addImage/addVideo/addAudio + media.js | extra.media → MediaEngine.getFromMime → Coil3（图片/GIF）/ Media3 ExoPlayer（音视频）；URL 附件按官方逻辑下载/展示 |
 | 世界书注入 | world-info.js checkWorldInfo + openai.js | 发送前：条目 → Scanner（正则 messageTransformer、RAG 强制激活）→ PromptAssembler；命中灯只读 Scanner 结果 |
 | 宏 | macros/engine/ | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、AN、历史 preparePrompt 已引擎接线）；App 保证 MacroEnv 提供聊天/角色/系统状态 |
@@ -305,16 +273,11 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 | tokenizer | src/tokenizers.js | TokenCounterFactory：OpenAI JTokkit；Claude/Gemini 回退 cl100k（豁免） |
 | 提供商设置 | script.js / chat-completions.js | ProviderStore（profiles.json）多档案；协议/URL/认证/模型全在 LlmClient，UI 只读写 ProviderSpec + ConnectionProfile |
 
-### 4.8 媒体盘点
-- 引擎已做（差分全过）：MediaEngine 17 例（type/display/index 越界 NaN null）；MediaInliner 7 例（OpenAI content 文本→数组 + image_url/video_url/audio_url + detail）；MediaConverter 25 例（Claude/Gemini 内容块转换）；消息转换整链 41 例；MediaTokenCost 18 例（image low→85/auto≤512→85/2048 缩放→768 短边→512 方格 170/格+85；视频 263 tokens/秒（回退 263×40）；音频 32 tokens/秒（回退 32×300））。
-- App 已接：extra.media 解析（mediaDisplay/mediaIndex）；Coil3 图片/GIF + Media3 ExoPlayer；系统文件选择器 → filesDir/media/，extra.media 只存路径+source:"upload"（官方 saveBase64AsFile 语义）；发送时读文件转 data URL → 引擎链内联 + token 预算；上下文胶囊 + 世界书命中面板；图库切换（LIST↔GALLERY + media_index 落盘）；从 URL 导入附件（后缀+魔数判型）；删除/清空/删会话清理附件文件。
-- “只思考无正文/继续不出内容”已修：gpt-5 分支已移植（max_tokens→max_completion_tokens、删不支持采样参数，差分 27 例）+ 老档案默认值迁移（旧 maxTokens=512/contextWindow=8192 自动升厂商默认）+ providers.json 24 家补 default_context_window + model_contexts。
-- 未做（登记）：URL 型资产下载（compressImage 近似：非 jpeg/png/webp 转 JPEG 最长边 2048）。
 
-### 4.9 接线状态
-聊天链路（发送/停止/继续/重新生成/冒充/编辑/删除/媒体/思考）全部接到引擎 1:1 能力上；上下文预算对齐官方（默认 4095/300，getMaxPromptTokens=context-response，必选提示词超限 ContextBudgetException，历史超限静默丢最老）；Claude 直连缓存参数已接线。
 
-## 5. 完成度总览
+## 6. 完成度与边界登记
+
+### 6.0 完成度总览
 
 - 引擎测试 **全绿**（engine 全量 testcase + imagegen-services 57 + tts-services 35 + tts-local 38 + quickreply 16 + caption 17 + translate 19 + gallery-assets 5 + imagegen-prompt 59 → fixture 内 for-loop 累计）；App `:app:compileDebugKotlin` 全过；App 单测 `GalleryAssetsDiffTest` 5 例全绿；差分分组表 104 组，明细见 [docs/DIFF_MATRIX.md](DIFF_MATRIX.md)。
 - 完成项对齐（“写了未差分”全部补齐）：
@@ -331,11 +294,8 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 - 用户决策延期：Custom CSS + Moving UI（6.4）；Claude/Gemini 官方 web tokenizer。
 - 官方发版流程：`node scripts/diff/*.mjs` + `node scripts/build-presets.mjs` → `./gradlew :engine:test` → 按 0.2 更新基线。
 
-## 6. 不一致与边界登记（防漏机制）
 
-> 规则：任何与官方 1:1 有出入的实现必须在此登记；未登记即视为未完成。
-
-### 6.1 与官方差异表
+### 6.1 与官方差异表（引擎层，仍有效）
 
 | 功能 | 与官方的差异 | 状态 |
 |---|---|---|
@@ -385,56 +345,16 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 
 登记边界（有意保留）：extra.api 存提供商 id（官方存 source）；bias 文本提取 vs extra.bias 双轨；/hide name 过滤；narrator/sendas bias-only is_system；SWAP/APPEND 旧版近似；openrouter/mistral 模型元数据缺失回退；远程 URL 附件；Room/DataStore、插件 API、网络代理、视觉小说、STT、翻译自动模式触发逻辑（实际 translateIncoming/translateOutgoing 已按 auto_mode 触发；登记指官方"翻译服务自动下拉列表"的 UI 交互，非核心 1:1）、记忆摘要 summarize（官方默认关/远期，/summarize 斜杠命令已接 MemoryService 但向量 RAG 路径默认关=用户决策）。
 
-### 6.3 渲染已知限制（App/UI）
-- 原生 mikepenz 列表/表格样式与官方 CSS 非逐像素一致（视觉近似）。
-- 全站文字阴影覆盖聊天内全部文字；按钮/输入栏等 UI 未加（官方 `*` 全站）。
-- 气泡为平涂半透明色，官方是毛玻璃 tint（色值一致，质感差一层）。
-- Markdown 表格单元格/任务列表 checkbox 文本走库内直绘，官方字段可能残留占位符（低频）。
-- 流式中间态为轻量近似（官方每 tick 全量 messageFormatting）；最终一致。
-- abbr/acronym 官方虚线下划线，Compose 无虚线用实线近似；嵌套 sub/sup/small 按单层 0.83×（官方逐层累乘），极低频偏差。
-- 官方页面级交互（click-to-edit/消息按钮/角色自定义样式开关）未实现；消息内脚本官方禁、我方放行（有意偏差，见 7.4 安全）。
-- 行内 Web 标签（button/input/select/.../span[属性]/font face-size/ruby/bdi/bdo 等）整段走 Web（Compose 无法原生文字+行内控件混排）。
-- 路线 A 原生渲染覆盖颜色/盒模型/文字/基础布局；冷门 CSS（grid/flex 高级/动画/伪元素/媒体查询）忽略、未知标签/属性降级文本（不致命）；外部媒体默认放行（用户决策，覆盖官方 forbid_external_media 默认禁）。
-- 无属性 `<div>`/`<p>` 用 `\n\n` 段落近似；img width/height 不保留；残缺元素延伸到末尾、跨围栏按片段处理（低频）。
-- WebViewPool 上限 6；HTML 开关关闭时围栏外一律原生且 < > 已转义；WebView 链接 text-decoration:none；高度允许回缩、按实测全高展开。
 
-### 6.4 用户决策延期：Custom CSS + Moving UI（暂不做）
-- Custom CSS：官方写 data/_css/user.css 套整个 Web UI；EmberInn 是原生 Compose 无 DOM，无法 1:1。
-- Moving UI：官方设置→移动界面（top/left/.../margin + 命名预设 default/content/presets/moving-ui/*.json，1.18 自带只有空 Default.json）；**官方 isMobile() 直接禁用**。
-- 结论：1:1 不可行（依赖 DOM/CSS，且官方移动端禁用）。等价方案待选：A 自定义 CSS 限定 WebView 交互卡（推荐）；B 主题 JSON 编辑器；C 布局预设。用户答复：先记录以后再做，未选 A/B/C。本项不参与差分。
+### 6.3 渲染边界（V2 内核架构下重新登记）
+- 旧原生渲染路线的边界登记全部作废（该路线已由 WebView 内核取代，旧文归档于 git 历史）
+- 内核已知边界：流式中间态为轻量近似（120ms 节流跳过全量消毒），流结束权威全量；jsdom 无法验证 CSS 视觉级联，Moonlit style.css 视觉效果待 CI Puppeteer/真机确认；WebView 池软上限 8，池满兜底新建不设限（内存压力由系统回收）
+- **Custom CSS 结论更新（V2 后）**：
+- Custom CSS 已随内核落地：官方 user.css 语义 = 内核 custom-style 注入点 + 主题 custom_css 字段，逐字支持；Moving UI 维持延期（官方 isMobile() 直接禁用）
 
-## 7. 渲染与 HTML 卡片
+## 7. 维护速记与注意事项
 
-### 7.1 官方管线 vs 我方管线
-官方：script.js `messageFormatting` → Showdown(makeHtml) → DOMPurify → style.css 渲染（DOM/CSS 浏览器渲染）。
-我方两条路线（处理顺序宏→正则→Markdown→消毒与官方一致，805 例差分锁定）：
-1. 格式化序列（引擎层）：`MessageFormattingEngine` 纯文本子集（差分 805 例；首条宏替换写回 chat.mes、bias 剥离、正则位点、fixMarkdown/encode_tags/reasoning 转义/非系统 trim）→ App `preprocessOfficialHtml`（代码保护 + 官方标记化 \uE001-\uE007）→ 原生 mikepenz Markdown + `OfficialMarkdownNode`。
-2. 真 HTML/CSS 渲染（本任务新增）：`ChatMarkdown` → `buildMessageSegments` 分段后按 `isStaticHtml` 分流——
-   - **路线 A（静态 HTML，无脚本依赖）→ 原生 UI**：引擎渲染管线 `HtmlSanitizerEngine`（DOMPurify 白名单复刻 + style 属性保守 CSS 消毒 + 独立 `<style>` 块 + 媒体规则）→ `CssStyleParser` → `RenderStyleResolver`（样式合并/继承）→ `RenderNode` 树 → App `RenderNodeCompose` 递归映射原生 Compose（`<details>/<summary>` 原生折叠、img/音视频、链接、未知标签降级文本）。消毒/样式计算在引擎层（无 UI 依赖），树→UI 映射在 App 层，单向依赖。
-   - **路线 B（含 `<script>`/事件依赖）→ WebView**：动态 HTML 整段 WebView（JS 恒开、网络与外链全放开、自动测高）；Mermaid 恒走 WebView。
-   - 权威清单 [docs/RENDER_AUTHORITY.md](RENDER_AUTHORITY.md) / 诊断 [docs/RENDER_DIAGNOSIS.md](RENDER_DIAGNOSIS.md) / 验证报告 [docs/RENDER_REPORT.md](RENDER_REPORT.md)。
-
-**逐项对照表与文本级 HTML 标签细节见 [docs/RENDER_AUDIT.md](RENDER_AUDIT.md)。**
-
-### 7.2 交互 HTML 卡片 / iframe 渲染器（App 层，第三方机制）
-- 定位：App/UI 层，官方本体没有（官方 DOMPurify 禁消息脚本）。机制参照 Tavern Helper 渲染器与阡濯《ST酒馆 html 代码注入器》（userscript，CC BY-NC 4.0——只参考机制未搬运代码；若日后搬运注意非商用）。
-- 开关：设置→扩展插件→交互 HTML 卡片（`ExtensionPrefs.interactiveCards`，默认开）。渲染与交互分离：``` 内 HTML 代码块无论开关都渲染成 iframe 卡片；关闭时 `sandbox="allow-same-origin"`（静态渲染、脚本/表单禁用）。
-- 实现：ChatMarkdown 先按 ``` / ~~~ 分段（buildMessageSegments）；交互卡段与富 HTML 段按 `isStaticHtml` 分流——静态（无 `<script>`/`on\w+=`/`javascript:`）走路线 A 原生（`StaticHtmlContent` + 引擎渲染管线，见 7.1），动态（含脚本）与 Mermaid 段进 WebView；围栏外文本走原生；动态段经 embedInteractiveBlocks 做 `<iframe srcdoc>`（实体转义 + onload/ResizeObserver/MutationObserver 持续同步）；WebViewHtml JS 恒开、网络与外链全放开、外部媒体默认放行（用户决策，撤销 forbid_external_media 收紧；官方语义保留为 `HtmlSanitizerEngine.Config.externalMediaAllowed=false` 可选收紧）、实例来自 WebViewPool 复用；加载方式=原文 UTF-8 + file base（曾因 base64 不解码导致空白，已修）；整页文档（<!DOCTYPE html>）整段走 WebView，兜底 CSS 注入原文档 `<head>`（不再 html 套 html）；测高/样式注入点跳过 `<script>/<style>` 文本内的伪 `</body>`；`allowFileAccessFromFileURLs`/`allowUniversalAccessFromFileURLs`/`MIXED_CONTENT_ALWAYS_ALLOW` 全开。
-- 能力对照：```→iframe 脚本可交互 ✅；非 HTML 代码块保留显示 ✅（pre/code）；自动测高 ✅；围栏外文本保留换行 ✅；头像类 `.char-avatar`/`.char_avatar` + `{{charAvatarPath}}` ✅（`{{userAvatarPath}}` 暂空登记）；min-height vh 换算 ➖；原代码折叠 ✅；后台脚本库/表情 VN STT EJS 变量/插件市场 ➖（App 等价物 = Kotlin 引擎 + 快捷回复/斜杠）。
-- 手工回归清单：①单个 ``` 包 HTML+onclick 按钮可点、高度自适应不撑爆；②交互块+普通文字/代码块混排正常；③纯 HTML 消息（无围栏）正常；④远程图片/字体可加载（离线占位）；⑤长网页 ≤90% 屏高全高展开、超上限 WebView 内滚动，`height:100%;overflow:hidden` 页面被注入 `height:auto!important;overflow:visible!important` 还原。
-- 安全：交互代码块（开关开）= 执行任意脚本（可发网络请求、可读该消息 WebView 内一切）；唯一 JS 桥 EmberInnBridge 只收“高度/未加载图片数”两个整数，不暴露 Android API/本地文件（除 asset）。与 JS 全开同风险等级，官方默认禁止，属有意偏差；收紧时先关 `settings.javaScriptEnabled` 或恢复 sanitize 剥 script。
-
-### 7.3 分段渲染 / WebView 池 / 测高（App/UI 层）
-- 分段：carveWebElementRanges 切块级 Web 元素（table/ul/ol/li/blockquote/pre/h1-6/.../iframe/style/script/form 及带属性 div/p、face/size font），周围文字保持原生 Markdown；围栏（含未闭合围栏，行首 ```/~~~ 无闭合时延伸到文本末尾、对齐官方 marked 按代码块渲染）内不切 Web 元素；再按 ``` / ~~~ 切交互卡/Mermaid/普通代码块；围栏外文本命中 OFFICIAL_HTML_TAG 或 MessageHtml 且 htmlEnabled → WebView（再按 `isStaticHtml` 分流：静态→路线 A 原生，动态→WebView），否则原生。
-- WebViewPool：ArrayDeque 闲置池（上限 6）；release 不 about:blank，保留已渲染页面 + WebViewSession（loaded/loadToken/heightPx）；token 每次进入换新，复用同页不重载、记忆高度直接恢复；同页滚动出屏不再销毁重建；池化实例整页重载期间 INVISIBLE、onPageFinished（token 校验后）恢复显示，复用不闪上一条消息的旧页面。
-- 测高：ResizeObserver(html+body) + load + fonts.ready + 图片未就绪 800ms 低频轮询（20s 上限）+ onPageFinished 纯字符串轮询 ≤15s + 初始 160dp 兜底；公式 = html/body scrollHeight 与 getBoundingClientRect 最大值 + ≤8000 元素 max(bottom) 扫描 + ceil+2px；CSS 像素 1:1 转 dp（旧代码按物理像素/density 导致高密度屏压扁）；上限 maxOf(90% 屏高, 280dp)，超上限 WebView 内滚动；iframe 150/500/1500/3000ms 复测 + 父页观察同源 srcdoc 持续同步。
-- 性能：animateItem 已移除（Google Issue 395536917）；毛玻璃 sky 源静态化（依据 Cloudy 源码 Sky.kt/SkyFrameDriver.kt：滚动活动触发每帧重捕；同屏玻璃 ≤2-3 处）；热路径缓存（chatTypography/chatTextShadow/NativeMarkdown 组件 remember；Markdown 解析 LRU 缓存 MarkdownCache.kt 上限 32）；行级参数稳定化（immersiveActions/bubbleStyle/density 层读一次、List<MediaAttachment> 包 @Immutable ChatMedia）；发送链路缓存（角色卡解析 LRU 8、外置世界书 mtime、连接档案 mtime、聊天元数据；JSONL/元数据落盘单线程后台队列；命中面板/上下文胶囊移出请求关键路径）。
-- 代码块：mikepenz 默认 MarkdownCode 挂 horizontalScroll（源码 MarkdownCode.kt）导致长 JSON 框死；WrappingHighlightedCode（snipme 高亮 + softWrap 换行）替换 codeFence/codeBlock（官方 overflow-x:auto，我方有意改换行，内容完整可见）。
-- 第三方扩展卡说明（MVU/酒馆助手/EJS，如“苍玄界”）：完整渲染依赖三层——①角色卡自带正则（官方核心，须角色详情开启“允许此角色应用该卡正则”→ character_allowed_regex；开启后 `【GameStart】`→HTML 启动页、`<inner>`→心声卡片、`<StatusPlaceHolderImpl/>`→状态栏）；②MVU 变量系统（`<UpdateVariable>/<initvar>/JSONPatch` + `{{format_message_variable::stat_data}}`，第三方扩展，官方核心不含）；③EJS 模板（`<% getvar(...) %>`，ST-Prompt-Template/酒馆助手，官方核心不含）。本 App 与官方核心一致：只做①接线与②③“未知标签可见”兜底，不实现 MVU/EJS 扩展本身。
-
-## 8. 维护速记与注意事项
-
-### 8.1 常见编译坑（CI 红→绿经验）
+### 7.1 常见编译坑（CI 红→绿经验）
 1. 注释里写 `group-chats/*.json` 会触发 Kotlin 嵌套注释吞文件 → 写成“目录的 *.json”。
 2. 缺 import、括号不配对、前向引用属性 → push 前自查。
 3. M3 1.4：Typography 无 defaultFontFamily；Modifier.padding 不能混用 horizontal+top。
@@ -443,7 +363,7 @@ launcher 图标 = 用户原图（Download/file_0000000078d0820782054bfedd4cb346.
 6. Modifier 扩展用 rememberUpdatedState 必须包 `Modifier.composed`。
 7. App Kotlin 可本地编译（`:app:compileDebugKotlin`）；APK 组装/签名靠 CI，push 后以 `gh run list` 为准，网络不稳重试。
 
-### 8.2 注意事项
+### 7.2 注意事项
 - 兼容层 1:1，UI 层自由：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主。
 - 改动先对照官方源码，能 1:1 就 1:1，近似项必须标注（登记 6.1/6.3）。
 - App Kotlin 编译本机可跑（Android SDK 已装）；APK 组装/签名走 CI；引擎测试本机可跑。
