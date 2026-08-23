@@ -2884,6 +2884,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         )
         _pendingMedia.value = _pendingMedia.value.filterNot { it.url == image.url }
         refreshMessages()
+        // 官方 sendMessageAsUser 带附件路径同样发 MESSAGE_SENT(chat_id)（script.js:5858）
+        kernelEvents.tryEmit("message_sent" to listOf(chatStore.messages(sessionId).lastIndex.toString()))
         startStream(history = chatStore.messages(sessionId))
     }
 
