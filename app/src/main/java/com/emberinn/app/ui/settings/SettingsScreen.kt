@@ -243,7 +243,6 @@ private fun SettingsHome(
     onOpenBackgrounds: () -> Unit,
     onOpenExtensionsHub: () -> Unit,
     onOpenPersonas: () -> Unit,
-    onOpenTypography: () -> Unit,
     onOpenRender: () -> Unit,
     onOpenVoice: () -> Unit,
     onOpenServices: () -> Unit,
