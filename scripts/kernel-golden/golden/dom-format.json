@@ -1,0 +1,19 @@
+{
+  "empty": "",
+  "plain": "<p>这是一段没有任何标记的纯文本。</p>",
+  "md-inline": "<p><strong>粗体</strong> <em>斜体</em> <del>删除</del> <code>行内代码</code> <a href=\"https://example.com\" target=\"_blank\" rel=\"noopener\">链接</a></p>",
+  "md-list": "<ul>\n<li>项目一</li>\n<li>项目二<ul>\n<li>嵌套项</li></ul></li>\n</ul>\n<ol>\n<li>有序</li>\n<li>列表</li>\n</ol>",
+  "md-heading-quote": "<h1 id=\"\">标题一</h1>\n<h2 id=\"-1\">标题二</h2>\n<blockquote>\n  <p>引用一行<br>\n  引用续行</p>\n</blockquote>",
+  "code-fence-js": "<pre><code class=\"custom-js custom-language-js\">function hello(name) {\n  return `hi, ${name}`;\n}\n</code></pre>\n<p>正文继续</p>",
+  "table": "<table>\n<thead>\n<tr>\n<th>A</th>\n<th>B</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n<tr>\n<td>3</td>\n<td>4</td>\n</tr>\n</tbody>\n</table>",
+  "hr-and-image": "<hr>\n<p><img src=\"https://example.com/a.png\" alt=\"图片\"></p>\n<hr>",
+  "html-status-bar": "<div class=\"custom-status_bar\"><b>HP</b>: 100 / 100<br><i>状态：</i>正常</div>",
+  "html-details": "<p></p><details><summary>展开详情</summary><p></p>\n<p>隐藏内容段落</p>\n<p></p></details><p></p>",
+  "html-nested": "<div class=\"custom-outer\"><span style=\"color:#ff0000\">红字</span><ul><li>HTML 列表</li></ul></div>",
+  "html-font": "<p><font color=\"#E09A3E\">琥珀色文字</font> 与<u>下划线</u>与<q>引用</q></p>",
+  "html-comment": "<p>前文  后文</p>",
+  "malformed-unclosed": "<p><b>未闭合的粗体<span>嵌套未闭</span></b></p>",
+  "mixed-md-html": "<p><strong>Markdown 粗体</strong> 与 <em>HTML 斜体</em> 混排</p>\n<ul>\n<li>md 列表</li>\n</ul>\n<div>块级</div>",
+  "multiline-whitespace": "<p>前导空格与尾随\\n</p>",
+  "special-chars": "<p>5 &lt; 6 &amp; 7 &gt; 3 <q>\"引号\"</q> '单引' </p>"
+}

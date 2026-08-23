@@ -1,0 +1,19 @@
+[
+  { "id": "empty", "mes": "" },
+  { "id": "plain", "mes": "这是一段没有任何标记的纯文本。" },
+  { "id": "md-inline", "mes": "**粗体** *斜体* ~~删除~~ `行内代码` [链接](https://example.com)" },
+  { "id": "md-list", "mes": "- 项目一\n- 项目二\n  - 嵌套项\n\n1. 有序\n2. 列表" },
+  { "id": "md-heading-quote", "mes": "# 标题一\n\n## 标题二\n\n> 引用一行\n> 引用续行" },
+  { "id": "code-fence-js", "mes": "```js\nfunction hello(name) {\n  return `hi, ${name}`;\n}\n```\n正文继续" },
+  { "id": "table", "mes": "| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |" },
+  { "id": "hr-and-image", "mes": "---\n\n![图片](https://example.com/a.png)\n\n***" },
+  { "id": "html-status-bar", "mes": "<div class=\"status_bar\"><b>HP</b>: 100 / 100<br><i>状态：</i>正常</div>" },
+  { "id": "html-details", "mes": "<details><summary>展开详情</summary>\n<p>隐藏内容段落</p>\n</details>" },
+  { "id": "html-nested", "mes": "<div class=\"outer\"><span style=\"color:#ff0000\">红字</span><ul><li>HTML 列表</li></ul></div>" },
+  { "id": "html-font", "mes": "<font color=\"#E09A3E\">琥珀色文字</font> 与<u>下划线</u>与<q>引用</q>" },
+  { "id": "html-comment", "mes": "前文 <!-- 这是一段注释 --> 后文" },
+  { "id": "malformed-unclosed", "mes": "<b>未闭合的粗体<span>嵌套未闭" },
+  { "id": "mixed-md-html", "mes": "**Markdown 粗体** 与 <em>HTML 斜体</em> 混排\n\n- md 列表\n\n<div>块级</div>" },
+  { "id": "multiline-whitespace", "mes": "\n\n  前导空格与尾随\\n\n\n" },
+  { "id": "special-chars", "mes": "5 < 6 & 7 > 3 \"引号\" '单引' <script>alert(1)</script>" }
+]

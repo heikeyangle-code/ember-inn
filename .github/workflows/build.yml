@@ -46,6 +46,8 @@ jobs:
           node-version: '20'
       - name: Kernel golden tests (jsdom)
         run: cd scripts/kernel-golden && npm ci && npm test
+      - name: Kernel DOM golden tests (Puppeteer/Chromium, V2 §六.2)
+        run: cd scripts/kernel-golden && npm run test:dom
       - name: Token gate (业务层禁直读 M3 colorScheme, DESIGN_SYSTEM §六)
         run: node scripts/source-scan/check-tokens.mjs
 
