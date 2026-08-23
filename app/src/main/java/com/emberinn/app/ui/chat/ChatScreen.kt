@@ -311,6 +311,8 @@ fun ChatScreen(
     val context = LocalContext.current
     // 不包 remember：设置页切换后回聊天页即随重组重读，即时生效
     val kernelRender = RenderPrefs.kernelRender(context)
+    // P6 用户消息内核渲染（评估结论见 HANDOFF §5.2）：默认关省池槽位，开时用户气泡正文同走内核
+    val userKernelOn = kernelRender && RenderPrefs.userKernelRender(context)
     val kernelPool = remember {
         KernelWebViewPool(context).also { it.preload() }
     }
@@ -981,7 +983,8 @@ fun ChatScreen(
                                 // 内核流式启用后，历史行在流式期间也保持内核渲染（不再整列回退原生）
                                 kernelPool = if (kernelRender) kernelPool else null,
                                 mesid = "m-${item.index}",
-                                kernelText = if (isUserMsg) null else kernelText,
+                                userKernel = userKernelOn,
+                                kernelText = if (isUserMsg && !userKernelOn) null else kernelText,
                                 text = text,
                                 media = mediaList,
                                 mediaDisplay = derived.mediaDisplay,
@@ -3188,6 +3191,7 @@ private fun MessageRow(
     kernelPool: KernelWebViewPool? = null,
     mesid: String = "",
     kernelText: String? = null,
+    userKernel: Boolean = false,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3234,7 +3238,7 @@ private fun MessageRow(
             Box(modifier = Modifier.weight(1f)) {
                 MessageRowContent(
                     modifier = Modifier,
-                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
+                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, userKernel = userKernel, text = text, media = media,
                     mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
                     reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
                     name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3251,7 +3255,7 @@ private fun MessageRow(
     }
     MessageRowContent(
         modifier = modifier,
-        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
+        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, userKernel = userKernel, text = text, media = media,
         mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
         reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
         name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3272,6 +3276,7 @@ private fun MessageRowContent(
     kernelPool: KernelWebViewPool? = null,
     mesid: String = "",
     kernelText: String? = null,
+    userKernel: Boolean = false,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3495,14 +3500,29 @@ private fun MessageRowContent(
                     modifier = bubbleModifier,
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                        // 用户消息保持原生渲染（短文本为主，节省内核 WebView 池槽位给 AI 长文）
-                        ChatMarkdown(
-                            content = text,
-                            onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
-                            isSystem = false,
-                            charAvatarPath = avatarPath,
-                            fillWidth = false,
-                        )
+                        // 用户消息默认原生渲染（短文本为主，节省内核 WebView 池槽位给 AI 长文）；
+                        // P6 评估开关开时正文同走内核管线（官方 messageFormatting 对用户消息一视同仁）
+                        if (userKernel && kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
+                            MessageKernelRow(
+                                pool = kernelPool,
+                                payload = KernelMessagePayload(
+                                    mesid = mesid,
+                                    mes = kernelText,
+                                    chName = name,
+                                    isUser = true,
+                                    isSystem = false,
+                                ),
+                                onLongPress = onLongPress,
+                            )
+                        } else {
+                            ChatMarkdown(
+                                content = text,
+                                onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
+                                isSystem = false,
+                                charAvatarPath = avatarPath,
+                                fillWidth = false,
+                            )
+                        }
                     }
                 }
             } else if (aiBubble) {

@@ -259,7 +259,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 
 ### 5.2 待办（当前优先级）
 1. **P5 删双轨收尾**：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt)、NativeMarkdown/SegmentedMarkdown 兜底路线、RenderPrefs.kernelRender 开关——待内核路径真机验证全覆盖后一次性删
-2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；用户消息内核渲染评估
+2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；~~用户消息内核渲染评估~~ **已评估并实现**（RenderPrefs.userKernelRender，默认关省池槽位，开=用户气泡正文同走内核管线；官方 messageFormatting 对用户消息一视同仁，1:1 上应进内核）——待真机验证
 3. **ThemeSkin 图像资产层**：**加载层已就绪**（SkinImageAssets.kt——按 §五约定探测 assets/skins/<id>/background|card_frame|splash × light/dark，进程内缓存，EmberTheme 下发，MainScreen 根背景接入；无图时纯色照旧）。**待补：实际图片素材**——内置 6 套皮肤均无 assets/skins/<id>/ 文件，需美术产出后按约定路径放入即生效
 4. **P7 门禁**：~~Puppeteer DOM 黄金对比 harness 进 CI~~ **已接（puppeteer-dom.test.mjs，CI kernel-golden job `test:dom` 步骤）**：headless Chromium 加载 kernel.html——formatText 17 类语料输出对 golden/dom-format.json 逐字一致 + MoonlitEchoes 主题变量逐值读回一致 + renderMessage DOM 结构冒烟；golden 由 jsdom 同管线预生成提交，兼验两运行时一致；语料变更走 UPDATE_GOLDEN=1 重生成人工复核。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红
 5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行。~~TavernHelper 变量族 globals~~ **已做（chat+global 双作用域，GlobalVariableStore 桥，金测试 49 例）**；~~event_types 触发点位接线~~ **已接两期**——v1 生成生命周期（generation_started(type)/ended(chat.length)/stopped 无参 + chat_id_changed(getCurrentChatId)，ChatViewModel isStreaming 状态机沿 + 进页装配点）；v2 消息级七事件全落点（message_sent(下标)、message_received(下标,type：normal/swipe/continue/first_message 四形态)、message_edited→message_updated（编辑保存官方先后序）、message_deleted(删除后新长度)、message_swiped(五落点含 overswipe 先发后生成)、message_swipe_deleted({messageId,swipeId,newSwipeId} 对象参)），每处注释标官方 script.js 行号，金测试断言参数形态——待真卡验收

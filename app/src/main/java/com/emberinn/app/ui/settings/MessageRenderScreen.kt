@@ -190,6 +190,12 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             hint = "AI 消息正文走 WebView 官方管线（Showdown/DOMPurify/代码高亮/主题 CSS 同源），头像与操作条仍为原生；关闭回退旧原生渲染",
                             checked = kernelRender,
                         ) { kernelRender = it; RenderPrefs.setKernelRender(context, it) }
+                        var userKernel by remember { mutableStateOf(RenderPrefs.userKernelRender(context)) }
+                        RenderSwitchRow(
+                            label = "用户消息也走内核渲染",
+                            hint = "官方对用户消息同样走 messageFormatting，开启后主题样式完全一致；代价是多占内核池槽位（用户消息短、收益有限，群聊长列表内存压力更大）。默认关；需「内核渲染」同时为开",
+                            checked = userKernel,
+                        ) { userKernel = it; RenderPrefs.setUserKernelRender(context, it) }
                         var strictMode by remember { mutableStateOf(RenderPrefs.strictMode(context)) }
                         RenderSwitchRow(
                             label = "内核严格模式（排障用）",
