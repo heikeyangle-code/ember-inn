@@ -45,6 +45,17 @@ object RenderPrefs {
             .apply()
     }
 
+    /** 严格模式（V2 §5.3 安全模型）：默认关=全开零打扰；开=内核 WebView 禁执行 JS
+     *  （卡片脚本/围栏代码不跑，正文纯显示）。改动后需重建池实例（重进聊天页生效）。 */
+    fun strictMode(context: Context): Boolean =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("strict_mode", false)
+
+    fun setStrictMode(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("strict_mode", enabled)
+            .apply()
+    }
+
     /** 官方 power_user.context.example_separator（默认 ***）。 */
     fun exampleSeparator(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("example_separator", "***") ?: "***"

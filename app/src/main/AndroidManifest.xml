@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 内核网络资产（官方 CDN 图/字体）与 LLM 连接 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- AppBridge.vibrate/haptic（V2 §5.3 白名单触感能力） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

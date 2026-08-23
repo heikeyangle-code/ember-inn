@@ -4,11 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
+import com.emberinn.app.ui.settings.RenderPrefs
 import java.io.File
 
 /**
@@ -41,7 +43,8 @@ object KernelWebViewFactory {
     ): WebView {
         val web = WebView(context)
         with(web.settings) {
-            javaScriptEnabled = true
+            // 严格模式（§5.3 用户自选收紧）：禁执行内核页 JS；默认关=全开
+            javaScriptEnabled = !RenderPrefs.strictMode(context)
             domStorageEnabled = true
             // 放开模式：媒体自动播放、自动加载图片
             mediaPlaybackRequiresUserGesture = false
@@ -62,10 +65,14 @@ object KernelWebViewFactory {
 /**
  * 站内 origin（appassets.androidplatform.net）放行；
  * 外链交给系统浏览器——卡片里的 <a href> 与 target=_blank 由此触达。
+ *
+ * [onRenderProcessGone]（§3.3 自愈）：返回 true 表示已处理——池侧销毁崩溃实例并
+ * 通知宿主行复位重挂载，App 不闪退、raw 文本零丢失。
  */
 class KernelWebViewClient(
     private val assetLoader: WebViewAssetLoader,
     private val context: Context,
+    private val onRenderProcessGone: (() -> Unit)? = null,
 ) : WebViewClientCompat() {
 
     override fun shouldInterceptRequest(
@@ -82,9 +89,14 @@ class KernelWebViewClient(
         return openExternally(url)
     }
 
+    override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+        onRenderProcessGone?.invoke()
+        return true
+    }
+
     private fun openExternally(url: Uri): Boolean {
         runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, url))
+            context.startActivity(Intent(Intent.ACTION_VIEW, url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
         return true
     }

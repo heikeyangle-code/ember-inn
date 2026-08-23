@@ -22,6 +22,7 @@ import com.emberinn.app.ui.settings.ExtensionPrefs
 import com.emberinn.app.ui.settings.RenderPrefs
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.renderer.ChatDisplayMode
+import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.StApiShimInstaller
@@ -30,8 +31,23 @@ import com.skydoves.cloudy.sky
 import com.skydoves.cloudy.rememberSky
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
+import android.app.DownloadManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.MediaStore
+import android.util.Base64
 import android.view.ViewGroup
+import android.webkit.URLUtil
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -205,6 +221,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -296,8 +313,23 @@ fun ChatScreen(
         KernelWebViewPool(context).also { it.preload() }
     }
     DisposableEffect(Unit) {
-        StApiShimInstaller.install(kernelPool, vm)
+        // 宿主能力白名单（V2 §5.3）：卡片脚本经 AppBridge/toastr 触达系统能力
+        val mainHandler = Handler(Looper.getMainLooper())
+        val uiAction: (String, String) -> Unit = { action, value ->
+            mainHandler.post { handleHostAction(context, action, value) }
+        }
+        kernelPool.addUiActionListener(uiAction)
+        StApiShimInstaller.install(kernelPool, vm, clipboardReader = {
+            // shim 线程（Default）→ 主线程读剪贴板（API29+ 聚焦要求）；异常回空串
+            runCatching {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString() ?: ""
+                }
+            }.getOrDefault("")
+        })
         onDispose {
+            kernelPool.removeUiActionListener(uiAction)
             StApiShimInstaller.uninstall(kernelPool)
             kernelPool.destroyAll()
         }
@@ -5267,6 +5299,103 @@ private fun mermaidHtmlOf(content: String): String? {
  *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
 private fun sanitizeHtmlForWebView(html: String): String =
     html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
+
+/**
+ * 宿主能力白名单处理（V2 §5.3；动作面与 st-api-shim.js AppBridge/toastr 对齐）。
+ * 桥回调线程经 mainHandler.post 进主线程；每支 runCatching 隔离——单能力失败不影响其他。
+ */
+private fun handleHostAction(context: Context, action: String, value: String) {
+    when (action) {
+        KernelHostAction.OPEN_LINK -> runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(value)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+        KernelHostAction.COPY_TEXT -> {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("EmberInn", value))
+            Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+        }
+        KernelHostAction.SHARE -> {
+            val payload = parseJsonPayload(value)
+            val text = payload?.get("text")?.jsonPrimitive?.contentOrNull ?: value
+            val title = payload?.get("title")?.jsonPrimitive?.contentOrNull
+            runCatching {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, text)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(
+                    Intent.createChooser(send, title ?: "分享").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+        }
+        KernelHostAction.TOAST -> {
+            val payload = parseJsonPayload(value)
+            val message = payload?.get("message")?.jsonPrimitive?.contentOrNull ?: value
+            val type = payload?.get("type")?.jsonPrimitive?.contentOrNull ?: "info"
+            // 官方 toastr：error/warning 停留更久 → LENGTH_LONG 近似
+            val duration = if (type == "error" || type == "warning") Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+            Toast.makeText(context, message, duration).show()
+        }
+        KernelHostAction.SAVE_MEDIA -> runCatching {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val name = URLUtil.guessFileName(value, null, null)
+            dm.enqueue(
+                DownloadManager.Request(Uri.parse(value))
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setTitle(name)
+                    .setDescription("EmberInn 媒体保存")
+                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name),
+            )
+            Toast.makeText(context, "已加入下载：$name", Toast.LENGTH_SHORT).show()
+        }.onFailure { Toast.makeText(context, "保存失败：${it.message}", Toast.LENGTH_SHORT).show() }
+        KernelHostAction.SAVE_DATA_URL -> runCatching { saveDataUrlFile(context, value) }
+            .onFailure { Toast.makeText(context, "保存失败：${it.message}", Toast.LENGTH_SHORT).show() }
+        KernelHostAction.VIBRATE -> runCatching {
+            val ms = value.toLongOrNull() ?: 20L
+            val vib: Vibrator = if (Build.VERSION.SDK_INT >= 31) {
+                (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            vib.vibrate(VibrationEffect.createOneShot(ms.coerceIn(1, 5_000), VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+    }
+}
+
+/** AppBridge.saveDataUrl/share 的 JSON 参数解析（容错：坏 JSON 回 null 走纯文本路径） */
+private fun parseJsonPayload(value: String): JsonObject? =
+    runCatching { Json.parseToJsonElement(value).jsonObject }.getOrNull()
+
+/** data:URL 解码落盘：API29+ 写 MediaStore Downloads；以下写应用私有下载目录（无存储授权兜底） */
+private fun saveDataUrlFile(context: Context, payloadJson: String) {
+    val payload = parseJsonPayload(payloadJson) ?: throw IllegalArgumentException("参数非 JSON")
+    val dataUrl = payload["dataUrl"]?.jsonPrimitive?.contentOrNull ?: throw IllegalArgumentException("缺 dataUrl")
+    val filename = (payload["filename"]?.jsonPrimitive?.contentOrNull ?: "emberinn-export.bin")
+        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+    val comma = dataUrl.indexOf(',')
+    if (!dataUrl.startsWith("data:") || comma < 0) throw IllegalArgumentException("非 data:URL")
+    val mime = dataUrl.substring(5, comma).substringBefore(';').ifBlank { "application/octet-stream" }
+    val bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT)
+    if (Build.VERSION.SDK_INT >= 29) {
+        val values = android.content.ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw IllegalStateException("MediaStore 写入失败")
+        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+            ?: throw IllegalStateException("输出流打开失败")
+    } else {
+        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+        File(dir, filename).writeBytes(bytes)
+    }
+    Toast.makeText(context, "已保存：$filename", Toast.LENGTH_SHORT).show()
+}
 
 /** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时低频兜底。
  *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；

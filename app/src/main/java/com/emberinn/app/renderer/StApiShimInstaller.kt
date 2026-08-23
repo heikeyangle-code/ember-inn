@@ -23,6 +23,7 @@ import kotlinx.serialization.json.put
  *  - metadata.set   → chatStore.saveMetadata 即时落盘 + displayRevision 触发重渲
  *  - slash.run      → AppSlashExecutor.executeAsync（引擎 SlashEngine 1:1，返回管道输出）
  *  - macro.substitute → 引擎 MacroEngine.substitute（全量宏，差分锁定）
+ *  - host.clipboard → 系统剪贴板读（AppBridge.readClipboard；UI 层注入 reader）
  *
  * 酒馆助手变量族（getVariables/replaceVariables/insertOrAssignVariables 等）不设独立桥方法：
  * shim 端组合 metadata.get/set 实现 chat 作用域 = chat_metadata.variables（官方 variables.js
@@ -33,7 +34,12 @@ object StApiShimInstaller {
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    fun install(pool: KernelWebViewPool, vm: ChatViewModel) {
+    fun install(
+        pool: KernelWebViewPool,
+        vm: ChatViewModel,
+        /** 宿主读剪贴板（host.clipboard）：由 UI 层提供（API29+ 需应用聚焦，空串=不可得） */
+        clipboardReader: (() -> String)? = null,
+    ) {
         pool.shimHandler = { method, paramsJson, respond ->
             scope.launch {
                 try {
@@ -57,6 +63,7 @@ object StApiShimInstaller {
                                 ?.jsonPrimitive?.contentOrNull ?: ""
                             """{"ok":true,"value":${jsonEncode(vm.shimSubstitute(text))}}"""
                         }
+                        "host.clipboard" -> """{"ok":true,"value":${jsonEncode(clipboardReader?.invoke() ?: "")}}"""
                         else -> """{"ok":false,"error":"unsupported method: $method"}"""
                     })
                 } catch (e: Throwable) {

@@ -19,6 +19,8 @@ class KernelBridge(
         fun onMessageLongPressed(mesid: String)
         /** st-api-shim 请求（P4）：method/params 由上层 handler 解答，respond 回送 JS */
         fun onShimRequest(reqId: String, method: String, paramsJson: String) {}
+        /** 白名单宿主能力请求（§5.3）：action ∈ KernelHostAction，value 为 URL/文本等参数 */
+        fun onHostAction(action: String, value: String) {}
     }
 
     @JavascriptInterface
@@ -37,6 +39,8 @@ class KernelBridge(
                 event.reqId?.let { id ->
                     callbacks.onShimRequest(id, event.method ?: "", event.params ?: "{}")
                 }
+            KernelEventType.HOST_REQUEST ->
+                event.action?.let { action -> callbacks.onHostAction(action, event.value ?: "") }
         }
     }
 }

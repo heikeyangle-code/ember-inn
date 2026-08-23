@@ -40,11 +40,19 @@ class KernelWebViewPool(
     private val heightListeners = mutableListOf<(String, Float) -> Unit>()
     private val clickListeners = mutableListOf<(String, KernelClickTarget?) -> Unit>()
     private val longPressListeners = mutableListOf<(String) -> Unit>()
+    /** 白名单宿主能力请求（§5.3）：(action, value) */
+    private val uiActionListeners = mutableListOf<(String, String) -> Unit>()
+    /** 渲染进程崩溃实例剔除回调：宿主行据此复位重挂载（§3.3 自愈） */
+    private val crashListeners = mutableListOf<() -> Unit>()
 
     fun addHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.add(l) } }
     fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
     fun addClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.add(l) } }
     fun addLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.add(l) } }
+    fun addUiActionListener(l: (action: String, value: String) -> Unit) { synchronized(uiActionListeners) { uiActionListeners.add(l) } }
+    fun removeUiActionListener(l: (action: String, value: String) -> Unit) { synchronized(uiActionListeners) { uiActionListeners.remove(l) } }
+    fun addCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.add(l) } }
+    fun removeCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.remove(l) } }
 
     /**
      * st-api-shim 请求处理器（P4 扩展桥）：由宿主层安装（StApiShimInstaller）。
@@ -76,6 +84,17 @@ class KernelWebViewPool(
     fun preload() {
         scope.launch(Dispatchers.Main) {
             repeat(warmup) { runCatching { createAndWarm() } }
+        }
+    }
+
+    /** 渲染进程崩溃处理（§3.3 自愈）：销毁崩溃实例、剔出池、通知宿主行复位重挂载。
+     *  raw 文本在 Kotlin 侧，重建零丢失。 */
+    private fun handleProcessGone(instance: PooledWebView) {
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.remove(instance) }
+            idle.remove(instance)
+            runCatching { instance.webView.destroy() }
+            synchronized(crashListeners) { crashListeners.toList() }.forEach { it() }
         }
     }
 
@@ -113,6 +132,10 @@ class KernelWebViewPool(
                 if (handler != null) handler(method, paramsJson, respond)
                 else respond("{\"ok\":false,\"error\":\"shim handler not installed\"}")
             }
+
+            override fun onHostAction(action: String, value: String) {
+                synchronized(uiActionListeners) { uiActionListeners.toList() }.forEach { it(action, value) }
+            }
         })
     }
 
@@ -127,8 +150,26 @@ class KernelWebViewPool(
         )
         synchronized(all) { all.add(instance) }
         instance.webView.let { web ->
+            // WebSettings 此前从未在池路径应用（javaScriptEnabled 默认 false）——
+            // 与 KernelWebViewFactory.create 的放开模式设置对齐（§5.3）
+            with(web.settings) {
+                javaScriptEnabled = !RenderPrefs.strictMode(context)
+                domStorageEnabled = true
+                mediaPlaybackRequiresUserGesture = false
+                loadsImagesAutomatically = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+            }
+            web.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            web.isVerticalScrollBarEnabled = false
+            web.isHorizontalScrollBarEnabled = false
             web.addJavascriptInterface(makeBridge(instance), KernelProtocol.BRIDGE_NAME)
-            web.webViewClient = KernelWebViewClient(assetLoader, instance.webView.context)
+            web.webViewClient = KernelWebViewClient(
+                assetLoader,
+                instance.webView.context,
+                onRenderProcessGone = { handleProcessGone(instance) },
+            )
         }
         suspendCancellableCoroutine { cont ->
             // 桥回调（后台线程）仅置位 ready；此处主线程轮询避免跨线程续体竞争

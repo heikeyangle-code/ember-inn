@@ -190,6 +190,12 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             hint = "AI 消息正文走 WebView 官方管线（Showdown/DOMPurify/代码高亮/主题 CSS 同源），头像与操作条仍为原生；关闭回退旧原生渲染",
                             checked = kernelRender,
                         ) { kernelRender = it; RenderPrefs.setKernelRender(context, it) }
+                        var strictMode by remember { mutableStateOf(RenderPrefs.strictMode(context)) }
+                        RenderSwitchRow(
+                            label = "内核严格模式（排障用）",
+                            hint = "禁用 WebView JavaScript，只保留静态 HTML/CSS 兜底渲染（图片/样式正常、脚本与扩展桥全部失效）。默认关=全功能零打扰；开启后需重进聊天页生效",
+                            checked = strictMode,
+                        ) { strictMode = it; RenderPrefs.setStrictMode(context, it) }
                         EmberTextField(
                             value = separator,
                             onValueChange = {

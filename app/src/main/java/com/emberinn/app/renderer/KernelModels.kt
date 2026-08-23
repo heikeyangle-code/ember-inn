@@ -86,6 +86,10 @@ data class KernelEvent(
     val method: String? = null,
     /** params 为 JSON 字符串（避免嵌套对象反序列化歧义），无参为 null */
     val params: String? = null,
+    // ---- hostRequest：白名单宿主能力请求（openLink/copyText/saveMedia/haptic，§5.3）----
+    val action: String? = null,
+    /** 动作参数：URL / 文本等；haptic 无参为 null */
+    val value: String? = null,
 )
 
 @Serializable
@@ -103,4 +107,22 @@ object KernelEventType {
     const val LONG_PRESS = "longPress"
     const val THEME_APPLIED = "themeApplied"
     const val SHIM_REQUEST = "shimRequest"
+    const val HOST_REQUEST = "hostRequest"
+}
+
+/**
+ * hostRequest 白名单动作常量（与 st-api-shim.js AppBridge/toastr 兼容层对齐；新增能力在此登记）。
+ * 能力清单来源：官方全局 toastr（st-context/script.js 全局依赖）、DESIGN_SYSTEM §5.3
+ * 四能力、社区卡高频需求（dataURL 导出/系统分享/触感）；WebView 自身已覆盖的
+ * （外链跳转/音频播放）不重复提供。同步对话框 alert/confirm/prompt 无法跨异步桥保持
+ * 同步签名——登记不支持（HANDOFF §6.4）。
+ */
+object KernelHostAction {
+    const val OPEN_LINK = "openLink"
+    const val COPY_TEXT = "copyText"
+    const val SHARE = "share"
+    const val TOAST = "toast"
+    const val SAVE_MEDIA = "saveMedia"
+    const val SAVE_DATA_URL = "saveDataUrl"
+    const val VIBRATE = "vibrate"
 }

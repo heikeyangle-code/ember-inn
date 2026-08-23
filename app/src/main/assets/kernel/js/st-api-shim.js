@@ -494,4 +494,63 @@
     window.insertOrAssignVariables = insertOrAssignVariables;
     window.insertVariables = insertVariables;
     window.deleteVariable = deleteVariable;
+
+    // =====================================================================
+    // 7. 宿主能力白名单（V2 §5.3：WebBridge 主动提供的实用能力）
+    //
+    //    能力面来源调研：官方全局 toastr（script.js L347 起，扩展/卡生态高频依赖）、
+    //    DESIGN_SYSTEM §5.3 四能力（openLink/copyText/saveMedia/hapticFeedback）、
+    //    社区卡高频需求（dataURL 导出 / 系统分享 / 触感）。外链 <a>/target=_blank 与
+    //    音频播放由 WebView 自身覆盖，不重复提供。
+    //    边界登记：alert/confirm/prompt 需同步返回值，异步桥无法保持签名——不支持；
+    //    <input type=file> 需 onShowFileChooser 管线——暂不支持（HANDOFF §6.4）。
+    // =====================================================================
+    function hostRequest(action, value) {
+        if (!window.AndroidKernel || typeof window.AndroidKernel.postMessage !== 'function') return;
+        window.AndroidKernel.postMessage(JSON.stringify({
+            type: 'hostRequest',
+            action: action,
+            value: value === undefined || value === null ? null : String(value),
+        }));
+    }
+
+    window.AppBridge = {
+        /** 系统浏览器打开外链 */
+        openLink: function (url) { hostRequest('openLink', url); },
+        /** 复制到系统剪贴板（WebView 的 navigator.clipboard 基本不可用，走宿主） */
+        copyText: function (text) { hostRequest('copyText', text); },
+        /** 异步读系统剪贴板（API29+ 需应用在前台聚焦） */
+        readClipboard: function () {
+            return shimCall('host.clipboard', {}).then(function (r) {
+                if (!r || !r.ok) throw new Error(r && r.error ? r.error : 'clipboard read failed');
+                return r.value;
+            });
+        },
+        /** 系统分享面板（文本/链接） */
+        share: function (text, title) { hostRequest('share', JSON.stringify({ text: text == null ? '' : String(text), title: title == null ? '' : String(title) })); },
+        /** 通知条（官方 toastr 同语义；type: success/info/warning/error） */
+        toast: function (message, type) { hostRequest('toast', JSON.stringify({ message: message == null ? '' : String(message), type: type == null ? 'info' : String(type) })); },
+        /** 保存网络媒体到下载目录 */
+        saveMedia: function (url) { hostRequest('saveMedia', url); },
+        /** 保存 data:URL（canvas 导出等）为文件 */
+        saveDataUrl: function (dataUrl, filename) { hostRequest('saveDataUrl', JSON.stringify({ dataUrl: dataUrl == null ? '' : String(dataUrl), filename: filename == null ? '' : String(filename) })); },
+        /** 轻触感反馈 */
+        haptic: function () { hostRequest('vibrate', ''); },
+        /** 按毫秒震动 */
+        vibrate: function (ms) { hostRequest('vibrate', ms == null ? '20' : String(Number(ms) || 20)); },
+    };
+
+    // 官方 toastr 兼容面（全局裸用：toastr.success(msg, title?)）——映射原生通知条
+    function toastrFor(type) {
+        return function (message, title) {
+            var text = (title ? title + '：' : '') + (message == null ? '' : String(message));
+            window.AppBridge.toast(text, type);
+        };
+    }
+    window.toastr = {
+        success: toastrFor('success'),
+        info: toastrFor('info'),
+        warning: toastrFor('warning'),
+        error: toastrFor('error'),
+    };
 })();
