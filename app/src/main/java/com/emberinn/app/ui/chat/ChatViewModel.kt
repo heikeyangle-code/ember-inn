@@ -343,14 +343,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
 
     /**
      * 官方 event_types 触发点位（Native→Web 下发，ChatScreen 收集后转 kernelPool.emitEvent）。
-     * v1 接线：generation_started / generation_ended / generation_stopped（isStreaming 状态机
-     * 汇聚点观测）；chat_id_changed 由 ChatScreen 装配点直发。消息级事件（MESSAGE_SENT 等）
-     * 待逐点位核对官方 emit 参数后接线。args 为 JSON 字面量字符串。
+     * 生成生命周期 + 消息级七事件全接线（各落点注释标官方 script.js 行号）；
+     * chat_id_changed / first_message 由 ChatScreen 装配点直发。args 为 JSON 字面量字符串。
      */
     val kernelEvents = kotlinx.coroutines.flow.MutableSharedFlow<Pair<String, List<String>>>(
         extraBufferCapacity = 32,
         onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
     )
+
+    /**
+     * 官方 GENERATION_ENDED 语义（script.js:3473 hideStopButton 的 NOOP 闩）：每轮生成恰一次、
+     * 用户停止也照发（STOPPED+ENDED 双发）、参数是落盘后的 chat.length。isStreaming 的 falling-edge
+     * 先于落盘发生（finalizeStream/停止路径都先置 false 再 append），故挂起到此标志，待落盘/
+     * 复位完成后由 flushPendingGenerationEnded 统一消费；rising-edge 兜底补冲防跨轮泄漏。
+     */
+    private var pendingGenerationEnded = false
+
+    private fun flushPendingGenerationEnded() {
+        if (!pendingGenerationEnded) return
+        pendingGenerationEnded = false
+        kernelEvents.tryEmit("generation_ended" to listOf(_messages.value.size.toString()))
+    }
 
     /** 官方 getCurrentChatId() 等价（事件参数/桥面用；sessionId 本身构造私有） */
     val currentChatId: String get() = sessionId
@@ -1918,13 +1931,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         streamContinueMode -> "continue"
                         else -> "normal"
                     }
+                    flushPendingGenerationEnded() // 安全网：异常路径遗留的挂起先补发，防跨轮泄漏
                     kernelEvents.tryEmit("generation_started" to listOf("\"$type\""))
                 } else if (!streaming && wasStreaming) {
-                    if (userStopped) {
-                        kernelEvents.tryEmit("generation_stopped" to emptyList())
-                    } else {
-                        kernelEvents.tryEmit("generation_ended" to listOf(_messages.value.size.toString()))
-                    }
+                    // 官方 stopGeneration：STOPPED 必发（script.js:5559）；ENDED 由 hideStopButton
+                    // 闩保证每轮一次（script.js:3477）——挂起待落盘后发，参数才是落盘后的 chat.length
+                    if (userStopped) kernelEvents.tryEmit("generation_stopped" to emptyList())
+                    pendingGenerationEnded = true
                 }
                 wasStreaming = streaming
             }
@@ -2186,6 +2199,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         _impersonationDraft.value = ""
         streamContinueMode = false
         generatingSwipe = false
+        flushPendingGenerationEnded()
     }
 
     /** ViewModel 销毁兜底：取消在途请求与 flusher，避免 OkHttp 连接/协程泄漏（生成中退出聊天页）。 */
@@ -3523,6 +3537,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             finalizeStream(streamContinueMode)
                         }
                         // 官方 onErrorStreaming：上层 promise reject，群聊整批终止——不推进下一位发言人
+                        flushPendingGenerationEnded()
                     }
                 },
                 type = type,
@@ -3626,6 +3641,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 streamContinueMode = false
                 generatingSwipe = false
                 pendingGroupGenId = null
+                flushPendingGenerationEnded()
                 return@launch
             }
             if (streamActive) {
@@ -3638,6 +3654,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     streamContinueMode = false
                     generatingSwipe = false
                     _notice.value = "（未配置模型，请先选一个模型。）"
+                    flushPendingGenerationEnded()
                 }
             } else {
                 // 组装期间用户点了停止：直接取消刚建好的请求
@@ -3655,6 +3672,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                     generatingSwipe = false
                     _notice.value = e.message?.let { "（$it）" }
                         ?: "（请求失败，请检查提供商设置后重试。）"
+                    flushPendingGenerationEnded()
                 }
             }
         }
@@ -3987,7 +4005,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
         // 官方 memory 扩展 onChatEvent（CHARACTER_MESSAGE_RENDERED 后）：满足条件时自动总结
         if (!wasImpersonating) memoryService.maybeAutoSummarize(sessionId)
-        // 官方 /inject ephemeral：GENERATION_ENDED/STOPPED 后删除注入
+        // 官方 /inject ephemeral：GENERATION_ENDED/STOPPED 后删除注入（先发 ended 再清，同官方顺序）
+        flushPendingGenerationEnded()
         clearEphemeralInjects()
     }
 

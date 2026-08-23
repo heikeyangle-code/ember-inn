@@ -91,6 +91,10 @@ ok((vmSrc.match(/"message_swiped" to listOf\(/g) || []).length >= 5, 'message_sw
 ok(vmSrc.includes('"message_updated" to listOf(index.toString())') && vmSrc.indexOf('"message_edited"') < vmSrc.indexOf('"message_updated"'), '编辑保存先 EDITED 后 UPDATED（官方 messageEditDone 顺序）');
 ok(vmSrc.includes('{"messageId":$index,"swipeId":$swipeIndex,"newSwipeId":$newSwipeId}'), 'swipe_deleted 对象参数三键齐全（官方 L9328）');
 ok(screenSrc.includes('first_message'), '开场白 first_message 在进页装配点发（VM init 期无订阅者会丢）');
+// GENERATION_ENDED 官方语义：每轮恰一次、用户停止双发、参数=落盘后 chat.length（hideStopButton NOOP 闩）
+ok(vmSrc.includes('pendingGenerationEnded') && vmSrc.includes('private fun flushPendingGenerationEnded()'), 'ENDED 挂起-消费机制在位');
+ok((vmSrc.match(/flushPendingGenerationEnded\(\)/g) || []).length >= 7, 'ENDED 消费点覆盖 停止/收尾/四复位路径+rising 兜底');
+ok(!/generation_ended" to listOf\(_messages\.value\.size\.toString\(\)\)/.test(vmSrc.split('private fun flushPendingGenerationEnded')[0].split('var wasStreaming = false')[1] ?? ''), 'falling-edge 不再直发落盘前长度');
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);
