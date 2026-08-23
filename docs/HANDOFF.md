@@ -380,8 +380,8 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 
 | 能力 | 我方实现 | 状态 |
 |---|---|---|
-| eventSource（7 原型方法）/ event_types 全量事件名 | 1:1 移植进 shim；触发点位已接：chat_id_changed + 生成三事件（v1）+ 消息级七事件全落点（v2，参数逐点对官方 script.js 行号），Native→Web 走 RenderKernel.emitEvent → `__emitKernelEvent` → eventSource.emit | ✅ |
-| SillyTavern.getContext() | ctx.snapshot 只读快照（实时代理未做） | ✅ 只读 |
+| eventSource（7 原型方法）/ event_types 全量事件名 | 1:1 移植进 shim；触发点位已接：chat_id_changed + first_message + 生成三事件（v1；generation_ended 对齐官方 hideStopButton 闩——每轮恰一次、用户停止 STOPPED+ENDED 双发、参数=落盘后 chat.length）+ 消息级七事件全落点（v2，参数逐点对官方 script.js 行号），Native→Web 走 RenderKernel.emitEvent → `__emitKernelEvent` → eventSource.emit | ✅ |
+| SillyTavern.getContext() | 快照字段对齐官方 st-context.js 同名直引：chat（含 extra）/ chatMetadata / name1 / name2 / characterId / groupId（单聊 null，官方 selected_group 语义）/ chatId / eventTypes 别名；桥为异步故 getter 返回 Promise（await 取值）——同步直读差异登记为内核桥面边界；生成族方法显式拒绝 | ✅ 只读 |
 | chat_metadata 读/写 | metadata.get/set，写即时落盘+bump displayRevision（非 debounce 语义） | ✅ |
 | triggerSlash / executeSlashCommands | slash.run → AppSlashExecutor（命令集按用户决策裁剪） | ✅ |
 | substituteParams | macro.substitute → MacroEngine 全量宏 | ✅ |

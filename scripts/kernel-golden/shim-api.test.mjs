@@ -96,5 +96,16 @@ ok(vmSrc.includes('pendingGenerationEnded') && vmSrc.includes('private fun flush
 ok((vmSrc.match(/flushPendingGenerationEnded\(\)/g) || []).length >= 7, 'ENDED 消费点覆盖 停止/收尾/四复位路径+rising 兜底');
 ok(!/generation_ended" to listOf\(_messages\.value\.size\.toString\(\)\)/.test(vmSrc.split('private fun flushPendingGenerationEnded')[0].split('var wasStreaming = false')[1] ?? ''), 'falling-edge 不再直发落盘前长度');
 
+// getContext 快照字段：官方 st-context.js 同名直引（chatMetadata/name1/name2/group 语义）
+console.log('getContext 快照字段:');
+for (const part of ['chat', 'chatMetadata', 'name1', 'name2', 'characterId', 'groupId', 'chatId']) {
+    ok(shim.includes(`'${part}'`) || shim.includes(`"${part}"`), `ctx.${part} getter 在位`);
+}
+ok(shim.includes('SillyTavernContext.eventTypes = event_types'), 'eventTypes 官方别名');
+ok(shim.includes('function snapField'), '快照取数走统一 snapField（fallback 兜底）');
+ok(vmSrc.includes('put("chatMetadata", shimChatMetadata())'), 'snapshot 带 chat_metadata 全量');
+ok(vmSrc.includes('?: JsonNull'), 'groupId 单聊为 JsonNull（官方 selected_group null 语义）');
+ok(vmSrc.includes('(el["extra"] as? JsonObject)?.let { put("extra", it) }'), 'chat 消息子集带 extra');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);

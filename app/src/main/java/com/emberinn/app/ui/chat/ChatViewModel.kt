@@ -118,6 +118,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -451,15 +452,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 put("mes", el["mes"]?.jsonPrimitive?.contentOrNull ?: "")
                 put("swipe_id", el["swipe_id"]?.jsonPrimitive?.intOrNull ?: 0)
                 el["swipes"]?.jsonArray?.let { put("swipes", it) }
+                // 官方消息对象带 extra（token_count/reasoning/display_text 等，脚本常读）
+                (el["extra"] as? JsonObject)?.let { put("extra", it) }
             }
         })
         return buildJsonObject {
             put("chat", chat)
+            // 官方 st-context.js：chatId=当前聊天文件名；chatMetadata=chat_metadata 直引（脚本高频读 .variables）
             put("chatId", sessionId)
             put("characterId", characterId)
-            put("groupId", group?.id ?: "")
+            // 官方 groupId=selected_group：单聊为 null（非空串），脚本按 === null / 真值判单聊群聊
+            put("groupId", group?.id?.let { JsonPrimitive(it) } ?: JsonNull)
             put("name1", currentUserName)
             put("name2", currentCharName)
+            put("chatMetadata", shimChatMetadata())
         }.toString()
     }
 

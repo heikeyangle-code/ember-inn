@@ -20,7 +20,7 @@ function ok(cond, name) {
 
 /** 建沙箱：window=沙箱自身；AndroidKernel.post 按方法路由到内存 metadata/global 存储 */
 function makeSandbox() {
-    const store = { metadata: { variables: {} }, globals: {} };
+    const store = { metadata: { variables: {} }, globals: {}, ctx: {} };
     const calls = [];
     const sandbox = {
         console: { debug() {}, error() {}, trace() {}, warn() {} },
@@ -55,6 +55,8 @@ function makeSandbox() {
             } else if (req.method === 'variables.set') {
                 store.globals = params.variables;
                 response = { ok: true };
+            } else if (req.method === 'ctx.snapshot') {
+                response = { ok: true, value: JSON.parse(JSON.stringify(store.ctx)) };
             } else if (req.method === 'slash.run') {
                 response = { ok: true, value: '' };
             } else if (req.method === 'macro.substitute') {
@@ -225,6 +227,29 @@ const t = makeSandbox();
     ok(r.delete_occurred === false, 'unsetPath 危险键段拒绝');
     const r2 = await s.sandbox.deleteVariable('keep');
     ok(r2.delete_occurred === true && s.store.metadata.variables.keep === undefined, '正常路径删除不受防护影响');
+}
+
+{
+    console.log('getContext 快照字段（官方 st-context.js 同名直引属性）:');
+    const s = makeSandbox();
+    s.store.ctx = {
+        chat: [{ name: 'Assistant', is_user: false, mes: '你好', swipe_id: 0, extra: { token_count: 42 } }],
+        chatId: 'ch-1',
+        characterId: null,
+        groupId: null,
+        name1: '用户',
+        name2: 'Assistant',
+        chatMetadata: { variables: { hp: 5 } },
+    };
+    const ctx = s.sandbox.SillyTavern.getContext();
+    const meta = await ctx.chatMetadata;
+    ok(meta.variables.hp === 5, 'chatMetadata 直读（变量族脚本高频路径）');
+    const chat = await ctx.chat;
+    ok(chat.length === 1 && chat[0].extra.token_count === 42, 'chat 消息带 extra 字段');
+    ok((await ctx.name2) === 'Assistant' && (await ctx.name1) === '用户', 'name1/name2 顶层字段');
+    ok((await ctx.groupId) === null && (await ctx.characterId) === null, 'groupId/characterId 单聊为 null（官方 selected_group/this_chid 语义）');
+    ok((await ctx.chatId) === 'ch-1', 'chatId=当前聊天标识');
+    ok(ctx.eventTypes && ctx.eventTypes.MESSAGE_SENT === 'message_sent', 'eventTypes 官方别名（st-context.js eventTypes: event_types）');
 }
 
 console.log(`\n变量族金测试: ${pass} 通过, ${fail} 失败`);

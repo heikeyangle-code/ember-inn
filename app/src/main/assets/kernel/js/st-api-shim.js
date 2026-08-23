@@ -350,9 +350,27 @@
         saveSettingsDebounced: function () { return Promise.resolve(); },
     };
 
+    // 快照字段：官方 st-context.js 同名直引属性。桥是异步的，这里以 getter 返回 Promise——
+    // `await getContext().chat / .chatMetadata / .name1 ...` 与官方同步直读的差别是内核桥面边界（登记）
+    function snapField(part, fallback) {
+        return shimCall('ctx.snapshot', {}).then(function (r) {
+            if (!r || !r.ok) return fallback;
+            var v = r.value[part];
+            return v === undefined ? fallback : v;
+        });
+    }
     Object.defineProperty(SillyTavernContext, 'chat', {
-        get: function () { return shimCall('ctx.snapshot', {}).then(function (r) { return r.ok ? r.value.chat : []; }); },
+        get: function () { return snapField('chat', []); },
     });
+    // 官方 chatMetadata = chat_metadata 直引；变量族脚本高频读 getContext().chatMetadata.variables
+    Object.defineProperty(SillyTavernContext, 'chatMetadata', {
+        get: function () { return snapField('chatMetadata', {}); },
+    });
+    ['name1', 'name2', 'characterId', 'groupId', 'chatId'].forEach(function (k) {
+        Object.defineProperty(SillyTavernContext, k, { get: function () { return snapField(k, null); } });
+    });
+    // 官方 eventTypes 别名（st-context.js: eventTypes: event_types）
+    SillyTavernContext.eventTypes = event_types;
 
     window.SillyTavern = {
         getContext: function () { return SillyTavernContext; },
