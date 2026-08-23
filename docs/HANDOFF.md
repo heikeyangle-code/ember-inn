@@ -262,7 +262,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；用户消息内核渲染评估
 3. **ThemeSkin 图像资产层**：**加载层已就绪**（SkinImageAssets.kt——按 §五约定探测 assets/skins/<id>/background|card_frame|splash × light/dark，进程内缓存，EmberTheme 下发，MainScreen 根背景接入；无图时纯色照旧）。**待补：实际图片素材**——内置 6 套皮肤均无 assets/skins/<id>/ 文件，需美术产出后按约定路径放入即生效
 4. **P7 门禁**：~~Puppeteer DOM 黄金对比 harness 进 CI~~ **已接（puppeteer-dom.test.mjs，CI kernel-golden job `test:dom` 步骤）**：headless Chromium 加载 kernel.html——formatText 17 类语料输出对 golden/dom-format.json 逐字一致 + MoonlitEchoes 主题变量逐值读回一致 + renderMessage DOM 结构冒烟；golden 由 jsdom 同管线预生成提交，兼验两运行时一致；语料变更走 UPDATE_GOLDEN=1 重生成人工复核。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红
-5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行；event_types 触发点位接线表。~~TavernHelper 变量族 globals~~ **已做（chat+global 双作用域，GlobalVariableStore 桥，金测试 44 例）**——待真卡验收
+5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行。~~TavernHelper 变量族 globals~~ **已做（chat+global 双作用域，GlobalVariableStore 桥，金测试 49 例）**；~~event_types 触发点位接线~~ **已接两期**——v1 生成生命周期（generation_started(type)/ended(chat.length)/stopped 无参 + chat_id_changed(getCurrentChatId)，ChatViewModel isStreaming 状态机沿 + 进页装配点）；v2 消息级七事件全落点（message_sent(下标)、message_received(下标,type：normal/swipe/continue/first_message 四形态)、message_edited→message_updated（编辑保存官方先后序）、message_deleted(删除后新长度)、message_swiped(五落点含 overswipe 先发后生成)、message_swipe_deleted({messageId,swipeId,newSwipeId} 对象参)），每处注释标官方 script.js 行号，金测试断言参数形态——待真卡验收
 
 ### 5.3 旧 UI 待删清单（P5）
 已删：RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 依赖（gradle 已移除）。
@@ -380,7 +380,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 
 | 能力 | 我方实现 | 状态 |
 |---|---|---|
-| eventSource（7 原型方法）/ event_types 全量事件名 | 1:1 移植进 shim（金测试 18 例）；触发点位逐步接线中 | ✅ |
+| eventSource（7 原型方法）/ event_types 全量事件名 | 1:1 移植进 shim；触发点位已接：chat_id_changed + 生成三事件（v1）+ 消息级七事件全落点（v2，参数逐点对官方 script.js 行号），Native→Web 走 RenderKernel.emitEvent → `__emitKernelEvent` → eventSource.emit | ✅ |
 | SillyTavern.getContext() | ctx.snapshot 只读快照（实时代理未做） | ✅ 只读 |
 | chat_metadata 读/写 | metadata.get/set，写即时落盘+bump displayRevision（非 debounce 语义） | ✅ |
 | triggerSlash / executeSlashCommands | slash.run → AppSlashExecutor（命令集按用户决策裁剪） | ✅ |
@@ -393,7 +393,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 | 内核严格模式 | RenderPrefs.strictMode 禁 JS 排障开关（默认关），MessageRenderScreen 可切 | ✅ |
 
 **逐扩展**：卡内交互 HTML/Moonlit Echoes/官方 34 套主题/快捷回复/表情精灵/vectors 本地/stable-diffusion/TTS/translate/attachments ✅；MVU 与酒馆助手脚本 🟡（缺 TavernHelper globals）；ChromaDB 远程与 summarize 🔴 SERVER_REQUIRED（/summarize 斜杠已接 MemoryService）；connection-manager ⚪ 由 ProviderScreen 多档案等价替代。
-**验收欠账**：2 MVU 卡+2 酒馆助手脚本免改真机运行；event_types 触发点位接线表。
+**验收欠账**：2 MVU 卡+2 酒馆助手脚本免改真机运行。
 
 ## 7. 维护速记与注意事项
 

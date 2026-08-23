@@ -203,6 +203,15 @@ const t = makeSandbox();
     await new Promise((r) => setTimeout(r, 10)); // 官方 emit 是 async
     ok(got.length === 2 && got[0][1] === 'normal' && typeof got[0][1] === 'string', 'generation_started 带官方首参 type');
     ok(got[1][0] === 'ended' && got[1][1] === 3 && typeof got[1][1] === 'number', 'generation_ended 带 chat.length 数值');
+    s.sandbox.eventSource.on('message_edited', (id) => got.push(['edited', id]));
+    s.sandbox.eventSource.on('message_swipe_deleted', (payload) => got.push(['swdel', payload]));
+    s.vm.runInContext('window.__emitKernelEvent("message_edited", 3);', s.sandbox);
+    s.vm.runInContext('window.__emitKernelEvent("message_swipe_deleted", {"messageId":2,"swipeId":1,"newSwipeId":0});', s.sandbox);
+    await new Promise((r) => setTimeout(r, 10));
+    const edited = got.find((g) => g[0] === 'edited');
+    const swdel = got.find((g) => g[0] === 'swdel');
+    ok(edited && edited[1] === 3, 'message_edited 数值下标透传');
+    ok(swdel && swdel[1].messageId === 2 && swdel[1].swipeId === 1 && swdel[1].newSwipeId === 0, 'message_swipe_deleted 对象参数三键透传（官方 L9328）');
 }
 
 {

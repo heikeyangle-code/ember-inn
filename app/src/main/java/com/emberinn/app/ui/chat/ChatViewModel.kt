@@ -2090,6 +2090,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val substitutedText = MacroEngine.substitute(regexedText, MacroEnv(user = userName, char = charName))
         val storedText = if (messageBias.isNotBlank()) BiasEngine.removeMacros(substitutedText) else substitutedText
         chatStore.append(sessionId, true, storedText, userName, media, mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, bias = messageBias)
+        // 官方 sendMessageAsUser：MESSAGE_SENT(chat_id)，chat_id = push 后新消息下标（script.js:5858）
+        kernelEvents.tryEmit("message_sent" to listOf(chatStore.messages(sessionId).lastIndex.toString()))
         // 官方 sendMessageAsUser：message_token_count_enabled 时用户消息也写 extra.token_count
         // （官方在 removeMacros 之前按 substituteParams 后的文本计数）
         if (BehaviorPrefs.load(getApplication()).messageTokenCount) {
@@ -2169,6 +2171,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                             reasoning = rawReasoning.takeIf { it.isNotBlank() },
                         )
                         refreshMessages()
+                        // 官方 saveReply('continue')：MESSAGE_RECEIVED(chat_id,'continue')（script.js:6679 分支）
+                        kernelEvents.tryEmit("message_received" to listOf(aiIdx.toString(), "\"continue\""))
                     }
                 }
                 else -> {
@@ -2269,6 +2273,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val newId = (cur - 1 + count) % count
         chatStore.swipeTo(sessionId, index, newId)
         refreshMessages()
+        // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）
+        kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
     }
 
     /** 滑动切回复：右滑 = 下一个变体；越界时最后一条 AI 生成新变体（对齐官方 overswipe REGENERATE），其余 wrap 回第一条。 */
@@ -2284,11 +2290,16 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (cur + 1 < count) {
             chatStore.swipeTo(sessionId, index, cur + 1)
             refreshMessages()
+            // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）
+            kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
         } else if (index == msgs.lastIndex && !isUser(el)) {
+            // 官方 overswipe REGENERATE：先发 MESSAGE_SWIPED 再触发生成（script.js:10255→10258）
+            kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             generateSwipe()
         } else {
             chatStore.swipeTo(sessionId, index, 0)
             refreshMessages()
+            kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
         }
     }
 
@@ -2335,6 +2346,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun swipeToVariant(index: Int, variant: Int) {
         if (chatStore.swipeTo(sessionId, index, variant)) {
             refreshMessages()
+            // 官方 swipe_left_right_handler：变体跳转同走 MESSAGE_SWIPED(mesId)（script.js:10255）
+            kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             // 官方 memory MESSAGE_SWIPED → onChatEvent
             memoryService.maybeAutoSummarize(sessionId)
         }
@@ -2375,14 +2388,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     /** 删除当前消息的指定 swipes 变体（对齐官方 deleteSwipe）。 */
     fun deleteSwipe(index: Int, swipeIndex: Int) {
         if (_isStreaming.value) return
-        chatStore.deleteSwipe(sessionId, index, swipeIndex)
-        refreshMessages()
+        val newSwipeId = chatStore.deleteSwipe(sessionId, index, swipeIndex)
+        if (newSwipeId >= 0) {
+            refreshMessages()
+            // 官方 deleteSwipe：MESSAGE_SWIPE_DELETED({messageId,swipeId,newSwipeId})，对象参数（script.js:9328）
+            kernelEvents.tryEmit(
+                "message_swipe_deleted" to listOf(
+                    """{"messageId":$index,"swipeId":$swipeIndex,"newSwipeId":$newSwipeId}""",
+                ),
+            )
+        }
     }
 
     fun deleteMessage(index: Int) {
         if (_isStreaming.value) return
         chatStore.removeAt(sessionId, index)
         refreshMessages()
+        // 官方 deleteLastMessage：MESSAGE_DELETED(chat.length)，参数为删除后的新长度（script.js:1609）
+        kernelEvents.tryEmit("message_deleted" to listOf(chatStore.messages(sessionId).size.toString()))
         // 官方 memory MESSAGE_DELETED → onChatEvent
         memoryService.maybeAutoSummarize(sessionId)
         // 官方 deleteItemizedPromptForMessage：删除明细并把后续消息索引下移。
@@ -2549,6 +2572,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val processed = MacroEngine.substitute(cleaned, env)
         chatStore.updateMessage(sessionId, index, processed, bias = bias)
         refreshMessages()
+        // 官方 messageEditDone：先 MESSAGE_EDITED 后 MESSAGE_UPDATED，同参 messageId（script.js:8345/8371）
+        kernelEvents.tryEmit("message_edited" to listOf(index.toString()))
+        kernelEvents.tryEmit("message_updated" to listOf(index.toString()))
         // 官方 translateMessageEdit：auto_mode=none 时清 display_text；否则按消息类型重译
         val autoMode = translateAutoMode()
         if (autoMode == "none") {
@@ -3919,6 +3945,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                         }
                     }
                     refreshMessages()
+                    // 官方 saveReply('continue')：MESSAGE_RECEIVED(chat_id,'continue')（script.js:6679 分支）
+                    kernelEvents.tryEmit("message_received" to listOf(aiIdx.toString(), "\"continue\""))
                 }
             }
             rawReasoning.isNotBlank() -> {
@@ -3997,6 +4025,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 chatStore.setExtraValue(sessionId, aiIdx, "token_count", count.toString())
             }
             refreshMessagesAppendOnly()
+            // 官方 saveReply('swipe')：MESSAGE_RECEIVED(chat_id,'swipe')，chat_id=chat.length-1（script.js:6632 分支）
+            kernelEvents.tryEmit("message_received" to listOf(aiIdx.toString(), "\"swipe\""))
         }
     }
 
@@ -4085,6 +4115,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 关键：落盘后立即把新回复刷进 _messages StateFlow，否则流式结束（isStreaming=false）
         // 移除 Streaming 行后，客户端看不到这条已提交的 AI 回复（ChatScreen 直接 collect messages）。
         refreshMessagesAppendOnly()
+        // 官方 saveReply 普通分支：MESSAGE_RECEIVED(chat_id,'normal')，chat_id=chat.length-1（script.js:6722；
+        // 流式路径官方由 StreamingProcessor 收尾发同参事件 script.js:3740——此处统一落盘点单发一次）
+        kernelEvents.tryEmit("message_received" to listOf(chatStore.messages(sessionId).lastIndex.toString(), "\"normal\""))
     }
 
     /** 官方 findItemizedPromptSet：按消息索引取该条的总装明细。 */

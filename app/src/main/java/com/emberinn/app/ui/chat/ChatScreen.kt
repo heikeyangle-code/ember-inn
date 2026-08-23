@@ -348,6 +348,10 @@ fun ChatScreen(
     }
     LaunchedEffect(kernelPool) {
         kernelPool.emitEvent("chat_id_changed", listOf(kotlinx.serialization.json.JsonPrimitive(vm.currentChatId).toString()))
+        // 官方 getChatResult：打开的聊天恰有 1 条消息（开场白）→ MESSAGE_RECEIVED(0,'first_message')（script.js:7646）
+        if (vm.messages.value.size == 1) {
+            kernelPool.emitEvent("message_received", listOf("0", "\"first_message\""))
+        }
     }
     val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()

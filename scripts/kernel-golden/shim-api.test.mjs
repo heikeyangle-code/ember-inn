@@ -79,5 +79,18 @@ ok(shim.includes('window.__emitKernelEvent = function'), 'Native→Web 事件接
 const kernel = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/RenderKernel.kt'), 'utf-8');
 ok(kernel.includes('__emitKernelEvent') && kernel.includes('fun emitEvent'), 'RenderKernel.emitEvent 发射端在位');
 
+// 消息级事件触发点位 v2：Kotlin 落点 ↔ 官方参数形态咬合（script.js 行号见各落点注释）
+console.log('消息级事件触发点位:');
+const vmSrc = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/ui/chat/ChatViewModel.kt'), 'utf-8');
+const screenSrc = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/ui/chat/ChatScreen.kt'), 'utf-8');
+for (const ev of ['message_sent', 'message_received', 'message_edited', 'message_updated', 'message_deleted', 'message_swiped', 'message_swipe_deleted']) {
+    ok(vmSrc.includes(`"${ev}" to listOf(`), `ChatViewModel 发 ${ev}`);
+}
+ok((vmSrc.match(/"message_received" to listOf\(/g) || []).length >= 4, 'message_received 覆盖 swipe/continue×2/normal 四落点');
+ok((vmSrc.match(/"message_swiped" to listOf\(/g) || []).length >= 5, 'message_swiped 覆盖左滑/右滑×3/变体跳转五落点');
+ok(vmSrc.includes('"message_updated" to listOf(index.toString())') && vmSrc.indexOf('"message_edited"') < vmSrc.indexOf('"message_updated"'), '编辑保存先 EDITED 后 UPDATED（官方 messageEditDone 顺序）');
+ok(vmSrc.includes('{"messageId":$index,"swipeId":$swipeIndex,"newSwipeId":$newSwipeId}'), 'swipe_deleted 对象参数三键齐全（官方 L9328）');
+ok(screenSrc.includes('first_message'), '开场白 first_message 在进页装配点发（VM init 期无订阅者会丢）');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);
