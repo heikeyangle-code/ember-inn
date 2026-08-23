@@ -594,10 +594,8 @@ fun ChatScreen(
         )
     }
 
-    // 壳层强调色派生链：角色主题配方 > 官方 ST 主题主色提取 > Glimmer 引号蓝（DESIGN_SYSTEM §五桥接规则）
-    val skinAccent = remember(officialThemeJson) { themeManager.skinColors().accent }
+    // 强调色派生链：角色主题配方 > 官方主题字段推导（ShellTheme：quote_text_color → accent）
     val accent = vm.accentColor?.let { Color(it.toInt()) }
-        ?: skinAccent?.let { Color(it) }
         ?: EmberTheme.colors.accent
     val items = remember(messages, isStreaming, lastReasoning, isImpersonating) {
         buildList {

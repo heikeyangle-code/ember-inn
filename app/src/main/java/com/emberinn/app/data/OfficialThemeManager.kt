@@ -237,27 +237,6 @@ class OfficialThemeManager(private val context: Context) {
     }
 
     /**
-     * 壳层皮肤色：从官方主题颜色变量提取（DESIGN_SYSTEM §五桥接规则——导入 ST 主题时
-     * 壳层自动配套）。强调色优先 quote_text_color（Glimmer 引号蓝即来源于此），
-     * 退而 italics/main_text；舞台染色取 blur_tint_color。缺字段返回 null，壳层回退 Ember 令牌。
-     */
-    data class SkinColors(
-        val accent: Long?,      // ARGB long
-        val stageTint: Long?,
-    )
-
-    fun skinColors(): SkinColors {
-        val raw = _currentThemeJson.value ?: return SkinColors(null, null)
-        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject
-            ?: return SkinColors(null, null)
-        fun col(k: String) = obj[k]?.jsonPrimitive?.contentOrNull?.let(::parseStColor)
-        return SkinColors(
-            accent = col("quote_text_color") ?: col("italics_text_color") ?: col("main_text_color"),
-            stageTint = col("blur_tint_color") ?: col("chat_tint_color"),
-        )
-    }
-
-    /**
      * 官方主题颜色字段全集（对照官方 power-user.js SmartTheme 变量）。
      * 消息渲染页“主题默认”预览与渲染器 fallback 共用；缺字段返回 null（调用方回退 Ember 令牌）。
      */

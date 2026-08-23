@@ -105,9 +105,9 @@ object ShellTheme {
         val s = v.trim()
         Regex("""rgba?\s*\(\s*(\d+)\s*[\s,]\s*(\d+)\s*[\s,]\s*(\d+)(?:\s*[\s,]\s*([\d.]+))?\s*\)""").find(s)?.let { m ->
             return Color(
-                red = m.groupValues[1].toInt().coerceIn(0, 255),
-                green = m.groupValues[2].toInt().coerceIn(0, 255),
-                blue = m.groupValues[3].toInt().coerceIn(0, 255),
+                red = m.groupValues[1].toInt().coerceIn(0, 255) / 255f,
+                green = m.groupValues[2].toInt().coerceIn(0, 255) / 255f,
+                blue = m.groupValues[3].toInt().coerceIn(0, 255) / 255f,
                 alpha = (m.groupValues[4].toFloatOrNull() ?: 1f).coerceIn(0f, 1f),
             )
         }
