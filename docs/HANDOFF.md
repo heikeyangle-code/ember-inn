@@ -204,48 +204,52 @@ WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核
 | API | 说明 |
 |---|---|
 | formatText(mes, opts) | 返回 HTML 字符串（DOM 黄金对比入口） |
-| renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount} |
+| renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount}。全 DOM 行：整条官方 .mes 模板（头像/名字/时间/token 数/正文）由内核渲染 |
 | applyTheme(theme) | 官方主题全字段 → CSS 变量 + custom_css + body 类开关 |
+| applyStylePack(cfg) | 第三方样式包整包：{enabled,href,extensionHref,vars}——style.css 走 `<link id="style-pack-style">`、extension.css 兼容层独立 link、vars 逐键写入 documentElement CSS 变量（缺 `--` 自动补）；href 变更复用节点；enabled=false 零污染 |
 | clear() | 清空 #chat |
 
-applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings 逐项同构：no-blur/noShadows/waifuMode/reduced-motion/no-timestamps/no-timer/no-tokenCount/no-mesIDDisplay/no-modelIcons/no-hotswap/hideChatAvatars/expandMessageActions/swipeAllMessages/enableZenSliders/big-avatars/square-avatars/bubblechat/documentstyle；每次应用先移除后添加（全量同步语义）。avatar_style 枚举 0 默认/1 大矩形/2 方形；chat_display 0 平铺/1 气泡/2 文档。
+applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings 逐项同构：no-blur/noShadows/waifuMode/reduced-motion/no-timestamps/no-timer/no-tokenCount/no-mesIDDisplay/no-modelIcons/no-hotswap/hideChatAvatars/expandMessageActions/swipeAllMessages/enableZenSliders/enableLabMode/big-avatars/square-avatars/rounded-avatars/bubblechat/documentstyle/flatchat/echostyle/whisperstyle/hushstyle/tidestyle/ripplestyle；每次应用先移除后添加（全量同步语义）。avatar_style 枚举对齐 power-user.js L95-100：ROUND=0/RECTANGULAR=1(big-avatars)/SQUARE=2(square-avatars)/ROUNDED=3(rounded-avatars)。chat_display 全枚举：0 flatchat/1 bubblechat/2 documentstyle/3 echostyle/4 whisperstyle/5 hushstyle/6 ripplestyle/7 tidestyle（3-7 经 Moonlit 上游扩展 index.js initChatDisplaySwitcher 核实）；≥8 安全落空不加类。
 长按手势：500ms 阈值、touchmove 超 10px 取消，bridgeSend {type:'longPress'}。
-桥事件：kernelReady/height/heightChanged/click/longPress/themeApplied → window.AndroidKernel.postMessage(JSON)。
+桥事件：kernelReady/height/heightChanged/click/longPress/themeApplied → window.AndroidKernel.postMessage(JSON)。宿主能力白名单（openLink/copy/share/toast/saveMedia/saveDataUrl/vibrate）经 hostAction 回传 ChatScreen.handleHostAction。
 
 ### 4.4 Kotlin 侧（app/.../renderer/）
-- KernelModels.kt：载荷与事件模型；StTheme 仅作类型化视图，**主题必须以原始 JSON 字符串透传**（RenderKernel.applyThemeRaw），防有损转换丢字段
-- KernelBridge.kt：window.AndroidKernel；能力面=高度/点击/长按回传；无任意 Android API/文件系统通道
-- KernelWebViewFactory.kt：WebViewAssetLoader（assets/=内核，data/=头像媒体，统一 https origin appassets.androidplatform.net）；JS/DOM storage 开、媒体自动播放、外链交系统浏览器
-- KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）
-- RenderKernel.kt：门面——renderMessage/updateStreamingText(流中轻量)/applyThemeRaw/setChatDisplayMode/setStylePackBodyClass
+- KernelModels.kt：载荷与事件模型（tokenCount 为官方 tokenCounterDisplay 形态原样 String 透传）；ChatDisplayMode 枚举与内核布局 body 类一一对应；StTheme 仅作类型化视图，**主题必须以原始 JSON 字符串透传**（RenderKernel.applyThemeRaw），防有损转换丢字段
+- KernelBridge.kt：window.AndroidKernel；能力面=高度/点击/长按/shimRequest/hostAction 回传；无任意 Android API/文件系统通道
+- KernelWebViewFactory.kt：WebViewAssetLoader 统一 https origin appassets.androidplatform.net——assets/=内核页、/avatars/=角色头像（filesDir/avatars）、/pavatars/=人设头像（filesDir/persona-avatars）、/themefiles/=导入主题 CSS（filesDir/themes）；JS/DOM storage 开、媒体自动播放、外链交系统浏览器
+- KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）。池持有页面三态（themeJson/bodyClasses/stylePack），新建实例 ready 即套用，updateTheme/updateStylePack 广播全部存活实例；层叠顺序=applyThemeRaw→setBodyClasses→applyStylePack，与官方「power-user 设置→扩展主题 CSS」一致。body 类默认含 app-host-actions（隐藏被原生接管的官方死控件：mes_buttons/swipe 箭头/计数器/reasoning details/del_checkbox 等，DOM 字节不动只藏）
+- RenderKernel.kt：门面——renderMessage/updateStreamingText(流中轻量)/applyThemeRaw/setBodyClasses(全量同步)/applyStylePack/emitEvent(官方 event_types 下发)/clear
 
 ### 4.5 官方主题导入与管理（data/OfficialThemeManager.kt）
-- 内置：assets/themes/moonlit-echoes/（Glimmer/MoonlitEchoes 两套官方格式 + Glimmer-preset 扩展预设 + style.css 101KB + extension.css + AGPL-3.0 LICENSE）；默认主题=Glimmer
+- 内置：assets/themes/moonlit-echoes/（Glimmer/MoonlitEchoes 两套官方格式 + *-preset.json 扩展预设 + style.css 101KB + extension.css + AGPL-3.0 LICENSE）；默认主题=Glimmer
 - 导入：任意官方格式主题 JSON 无损保存（filesDir/themes/）；导出/删除/切换
-- currentThemeJson：原始 JSON StateFlow 直接喂内核；shellSettings() 派生壳层设置（compactInputArea/hotswapEnabled/bogusFolders 等 21 项供原生 UI 读）
-- 官方 34 字段处置表见 docs/DESIGN_SYSTEM.md §二点六
+- currentThemeJson：原始 JSON StateFlow 直接喂内核；shellSettings() 派生壳层设置（chatDisplay/avatarStyle/compactInputArea 等 21 项供原生 UI 读）
+- currentStylePack：StylePack(enabled/href/extensionHref/varsJson) StateFlow。detectStylePack() 探测主题目录的 style.css/extension.css 与 *-preset.json 的 settings 对象（逐键转 CSS 变量）；内置主题 href=/assets/themes/<dir>/…，导入包 href=/themefiles/…。零按名特判，任何含同构文件的目录同样生效
+- 官方 36 字段处置表见 docs/DESIGN_SYSTEM.md §二点六
 
 ### 4.6 Moonlit Echoes 兼容（首要审美标杆）
-其消息风格=body 类+官方 DOM 选择器 CSS（源码级核实）；内核 DOM 同构→style.css 可近乎逐字作为样式资产包加载；8 种布局类 echostyle/whisperstyle/hushstyle/tidestyle/ripplestyle/bubblechat/documentstyle/flatchat 经 setStylePackBodyClass 切换。
+其消息风格=body 类+官方 DOM 选择器 CSS（源码级核实）；内核 DOM 同构→style.css/extension.css 经 applyStylePack 整包装载（extension.css 含 .mes/#sheld 等聊天区选择器，故一并加载）。通用承诺：任何含 style.css(+extension.css)+*-preset.json 的官方/社区主题包走同一探测/装载路径。
 
-### 4.7 黄金测试（scripts/kernel-golden/，jsdom，59 例全绿）
+### 4.7 黄金测试（scripts/kernel-golden/，本地 jsdom 222 例全绿 + CI puppeteer-dom）
 - kernel-format.test.mjs 25 例：markdown/引号包裹/DOMPurify hooks/style 前缀化/表格/官方扩展/name2/fixMarkdown/LaTeX 链
-- theme-moonlit.test.mjs 34 例：Glimmer/MoonlitEchoes 全字段落位、换主题全量同步、官方 5 套批量验证、Moonlit 选择器与内核 DOM 同构命中、布局类规则存在性
+- theme-moonlit.test.mjs 68 例：全字段落位、换主题全量同步、chat_display 0..7 全枚举+未知值安全、样式包 link/扩展层/变量/href 复用/禁用零污染、avatar_style 0..3、enableLabMode、Moonlit 选择器与内核 DOM 同构命中
+- shim-api.test.mjs 74 例 / variables-shim.test.mjs 55 例：st-api-shim 协议与 TavernHelper 变量族
+- puppeteer-dom.test.mjs：CI kernel-golden job `test:dom` 步骤（headless Chromium 对 golden 逐字对比）
 - 运行：cd scripts/kernel-golden && npm install && npm test
 
 ## 5. App/UI 进度（V2 重构中）
 
 ### 5.1 已完成（新架构）
 - renderer/ 五类（§4.4）+ OfficialThemeManager（§4.5）
-- **聊天数据流已接内核（P2 收尾，embed-shell 模式）**：AI 消息正文（含系统消息）走池化 WebView 官方管线渲染；用户消息/头像/操作条/滑动变体/媒体/reasoning 卡仍为原生壳。要点：
-  - 主题随页：池持有 currentThemeJson + bodyClasses（chat_display 布局类 + embed-shell），新建实例 ready 即套用，updateTheme 广播全量同步（ChatScreen 收集 OfficialThemeManager 流驱动）
-  - 文本前处理分工：引擎 MessageFormattingEngine 仍管正则/宏/bias/name2 等（kernelDisplayTextOf 跳过 fixMarkdown/encode_tags，由内核 render.js 接管后半段，独立 kernelDisplayCache 防双轨缓存串写）
-  - 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），MessageKernelRow 按 mesid 过滤监听撑高，未回报前 64dp 兜底；挂载竞态用 disposed 哨兵判定（**禁止用 slot.parent 判定**——AndroidView factory 阶段容器 parent 恒为 null，会把每次首挂载误判为已销毁而归还池 → 正文全空白，21a9888 修复）；池 release 端负责摘除旧父容器
-  - 长按路由：内核 touch 桥 → pool.longPressListeners → 复用原生 menuMessageIndex ActionSheet
-  - 开关与回退：RenderPrefs.kernelRender（默认开）；设置→消息渲染→“内核渲染（V2）”可切回旧原生路线（P5 删双轨前保留）
-  - 边界登记：流式过程仍走原生轻量渲染（避免流中换页闪烁），流结束落盘后走内核权威渲染；.mes 在 embed-shell 下强制透明（主题卡片背景待 P6 全 DOM 行模式恢复）；内核路径暂不渲染用户消息（节省池槽位给 AI 长文）
+- **消息渲染单轨化（内核为唯一管线，全 DOM 行）**：每条消息整条官方 .mes 模板进内核渲染（头像/名字/时间/tokenCount/正文全部官方 DOM）；原生只承担交互面——reasoning 卡、操作条（swipe 箭头/计数器/⋯/flag/pencil）、媒体、手势。无任何回退开关。要点：
+  - 用户消息与 AI 一视同仁进内核（对齐官方 messageFormatting 全量语义）；impersonation 保持原生
+  - 流式行走内核：StreamingThrottler 120ms 节流 updateStreamingText 轻量更新 .mes_text；流结束 payload 变化触发 renderMessage 权威重渲。mesid 连续性："m-${items.lastIndex}" == "m-${item.index}" 同槽位跨过渡复用不闪换
+  - 主题随页：池持有 themeJson/bodyClasses/stylePack 三态（§4.4），新建实例 ready 即套用；ChatScreen 收集 OfficialThemeManager 的 currentThemeJson 与 currentStylePack 双流驱动广播
+  - 文本前处理分工：引擎 MessageFormattingEngine 管正则/宏/bias/name2 等（kernelDisplayTextOf 跳过 fixMarkdown/encode_tags，由内核 render.js 接管后半段，独立 kernelDisplayCache 防缓存串写）
+  - 高度契约：内核 ResizeObserver 回报 CSS px（≈dp），MessageKernelRow 按 mesid 过滤监听撑高，未回报前 64dp 兜底；挂载竞态用 disposed 哨兵判定（**禁止用 slot.parent 判定**——AndroidView factory 阶段 parent 恒为 null，会误判首挂载为已销毁而归还池 → 正文空白）；池 release 端摘除旧父容器
+  - 长按路由：内核 touch 桥 → pool.longPressListeners → 原生 ActionSheet
 - ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
-- ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流备用，P6 启用内核流式）
+- ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流，流式在用）
 - **P4 扩展桥已完成（21a9888）**：assets/kernel/js/st-api-shim.js = 官方 EventEmitter 1:1 移植（7 原型方法）+ 全量 event_types + SillyTavern.getContext()/triggerSlash/executeSlashCommands/substituteParams（同步本地 {{user}}/{{char}} 回退 + macro.substitute 桥全量宏）；桥协议 shimRequest{reqId,method,params} → StApiShimInstaller 分发 VM 差分锁定资产：ctx.snapshot / metadata.get / metadata.set（即时落盘+bump displayRevision）/ slash.run→AppSlashExecutor / macro.substitute→MacroEngine；generate 族显式拒绝并登记边界；回传走 URLEncoder + window.__shimRespond 免转义陷阱。金测试 shim-api.test.mjs 18 例并入 npm test。扩展兼容边界登记见 §6.3
 - **全局强制 Ember 暗基底已完成**：根节点 EmberTheme(darkTheme 默认 true)，不再跟随系统浅色；mapToM3Scheme 把 EmberColors 映射进 M3 ColorScheme，存量 M3 组件自动协调。官方主题桥只动强调三态（accent/accentSoft/accentBg + chat.inputAccent），底面五阶与墨阶保持皮肤性格（互不污染原则）
 - **结构推倒已完成（25d1109c，CI 绿后继续修编）**：MainScreen 三域底部导航（聊天/世界/设置，玻璃底栏胶囊指示）+ 平板 ≥840dp 双栏 NavigationRail；首页/书架/世界/设置/外观五大屏按 DESIGN_SYSTEM §六 IA 全部重排；onboarding 重做
@@ -254,19 +258,17 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
   - EmberTheme.kt：全部访问器是 @Composable getter（CompositionLocal）——**禁止在 remember/LaunchedEffect lambda 里直接读，必须先在组合上下文读出局部变量**（CI 两轮红的根因）
   - 皮肤系统：EmberSkin（colors/shapes/spacing/motion/chat 五件套）+ SkinStore（filesDir 持久化当前皮肤）+ AppearanceBus；AppearanceScreen = 皮肤商店（皮肤卡四段色条预览 + 官方主题导入/导出/删除/切换）；OfficialThemeManager.skinColors() 桥接（quote_text_color→壳层 accent、blur_tint_color→stageTint）
   - 组件库 components/：InkText(墨阶排版)/SurfaceCard/GlassBar/Bubbles/Buttons/Chips/EmptyState/Overlays/Motion（rememberEmberSpring/Light、breathingGlow 1.6s 呼吸、EnterFadeSlide 入场）
-- **P5 删旧码已执行部分**：RenderNodeCompose.kt（615 行 RenderNode 原生 HTML 渲染生态）整删；isStaticHtml 双轨分流删（WebHtml/Interactive 段统一 WebView 路线 B，htmlFenceInner 死码同删）；旧主题体系 24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset 随 25d1109c 退役；剩余清单见 §5.3
-- **P6 内核流式已启用（914ea9ed）**：AI 流式行走 MessageKernelRow + StreamingThrottler（120ms 节流 updateStreamingText，querySelector 定位 .mes[mesid] .mes_text 轻量 innerHTML 更新，无需动 render.js）；流结束 payload 变化触发权威全量管线。mesid 连续性：ChatItem.Streaming key "m-${items.lastIndex}" == 落地后 ChatItem.Message key "m-${item.index}"，同一组合槽位 → 池化 WebView 跨过渡复用不闪换；impersonation 保持原生（官方行为且省池槽位）；history 行流中保持内核（kernelPool 门只看 kernelRender，不再叠加 !isStreaming）。回到底部浮标已补（followBottom 断开浮出，点击回最新，DESIGN_SYSTEM §6.2）
+- **P5 删旧码已执行部分**：RenderNodeCompose.kt（615 行 RenderNode 原生 HTML 渲染生态）整删；isStaticHtml 双轨分流删（WebHtml/Interactive 段统一 WebView 路线 B，htmlFenceInner 死码同删）；旧主题体系 24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset 随 25d1109c 退役
 
 ### 5.2 待办（当前优先级）
-1. **P5 删双轨收尾**：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt)、NativeMarkdown/SegmentedMarkdown 兜底路线、RenderPrefs.kernelRender 开关——待内核路径真机验证全覆盖后一次性删
-2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；~~用户消息内核渲染评估~~ **已评估并实现**（RenderPrefs.userKernelRender，默认关省池槽位，开=用户气泡正文同走内核管线；官方 messageFormatting 对用户消息一视同仁，1:1 上应进内核）——待真机验证
-3. **ThemeSkin 图像资产层**：**加载层已就绪**（SkinImageAssets.kt——按 §五约定探测 assets/skins/<id>/background|card_frame|splash × light/dark，进程内缓存，EmberTheme 下发，MainScreen 根背景接入；无图时纯色照旧）。**待补：实际图片素材**——内置 6 套皮肤均无 assets/skins/<id>/ 文件，需美术产出后按约定路径放入即生效
-4. **P7 门禁**：~~Puppeteer DOM 黄金对比 harness 进 CI~~ **已接（puppeteer-dom.test.mjs，CI kernel-golden job `test:dom` 步骤）**：headless Chromium 加载 kernel.html——formatText 17 类语料输出对 golden/dom-format.json 逐字一致 + MoonlitEchoes 主题变量逐值读回一致 + renderMessage DOM 结构冒烟；golden 由 jsdom 同管线预生成提交，兼验两运行时一致；语料变更走 UPDATE_GOLDEN=1 重生成人工复核。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红
-5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行。~~TavernHelper 变量族 globals~~ **已做（chat+global 双作用域，GlobalVariableStore 桥，金测试 49 例）**；~~event_types 触发点位接线~~ **已接两期**——v1 生成生命周期（generation_started(type)/ended(chat.length)/stopped 无参 + chat_id_changed(getCurrentChatId)，ChatViewModel isStreaming 状态机沿 + 进页装配点）；v2 消息级七事件全落点（message_sent(下标)、message_received(下标,type：normal/swipe/continue/first_message 四形态)、message_edited→message_updated（编辑保存官方先后序）、message_deleted(删除后新长度)、message_swiped(五落点含 overswipe 先发后生成)、message_swipe_deleted({messageId,swipeId,newSwipeId} 对象参)），每处注释标官方 script.js 行号，金测试断言参数形态——待真卡验收
+1. **壳层 UI 架构级重写**：语义角色令牌制（surface 五阶/墨四档/线/accent 三态/AI 身份三态）× Moonlit 美学基准；删除 EmberSkin 六件套与 darkTheme=true 硬编码；顶栏/输入区/action sheet/抽屉/对话框按官方移动端基线重排。壳层取色全部由 OfficialThemeManager 主题字段单向推导（quote_text_color→accent、blur_tint 族→stage、main_text_color→墨阶、compact_input_area→输入密度），导入任何官方主题壳层随之换装
+2. **主题整包导入通道**：zip/目录导入含 style.css/extension.css/*-preset.json 的主题包（安全校验：压缩比/路径穿越/重复表项/条目上限），落 filesDir/themes/ 即被 detectStylePack 探测生效
+3. **渲染边界欠账**：mes_ghost eye-slash 指示未随内核行携带（payload 缺口）；背景图进内核页（原生 backdrop-filter 才能对 Compose 内容取样真玻璃）；highlight.js 语言包经 AppBridge 按需装载
+4. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行。event_types 两期接线已落（v1 生成生命周期 + v2 消息级七事件，注释标官方 script.js 行号，金测试断言参数形态）——待真卡验收
+5. **ThemeSkin 图像素材**：加载层就绪（SkinImageAssets.kt 探测 assets/skins/<id>/background|card_frame|splash × light/dark），内置 6 套均无图，美术产出后按约定路径放入即生效
 
-### 5.3 旧 UI 待删清单（P5）
-已删：RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 依赖（gradle 已移除）。
-待删（第二批，真机验证内核覆盖后）：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt，上限 6)、NativeMarkdown/SegmentedMarkdown/WebViewHtml 兜底路线、RenderPrefs.kernelRender 过渡开关。
+### 5.3 旧渲染链清理（已完成）
+RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系、mikepenz 全家（NativeMarkdown/SegmentedMarkdown/OfficialMarkdownNode/官方 HTML 转译与 WebView 嵌页链）、MarkdownCache、旧 ui.chat.WebViewPool、TextTypographyScreen、双轨开关 RenderPrefs.kernelRender/userKernelRender 全部删除；gradle markdown-renderer 四件套移除。消息渲染唯一管线=渲染内核（§4）。
 
 ### 5.4 App 接线总表（官方行为怎么接，引擎能力部分仍有效）
 > 原则：App 只做“调用引擎 + 渲染结果”，不再重写逻辑；每项注明官方源码位置。
@@ -278,7 +280,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 | 消息转换 | src/prompt-converters.js | Claude/Gemini 在各自 builder；Mistral/xAI/Cohere/AI21 在 LlmClient 协议分支；OpenRouter 在 openai-compatible 先签名/媒体再序列化 |
 | 工具/能力选项 | chat-completions.js + openai.js oai_settings | ProviderRequestOptions 承载 tools/tool_choice/json_schema/web_search/request_images/safety；LlmClient 按厂商官方形态写入请求体 |
 | 预算计算 | chat-completions.js calculateClaudeBudgetTokens/calculateGoogleBudgetTokens | LlmClient 按模型/effort 调两个预算函数，结果进 builder reasoningBudget（adaptive→effort/auto→不加/数字→budget_tokens/thinkingBudget） |
-| Markdown 渲染 | Showdown + highlight.js + DOMPurify | ✅ V2：内核 render.js 原版管线（同版本 showdown/dompurify/highlight），见 §4.2；引擎 MessageFormattingEngine 差分 805 例仍为前处理权威；旧 mikepenz 路线待删（§5.3） |
+| Markdown 渲染 | Showdown + highlight.js + DOMPurify | ✅ 内核 render.js 原版管线（同版本 showdown/dompurify/highlight），见 §4.2；引擎 MessageFormattingEngine 差分 805 例为前处理权威 |
 | 媒体渲染 | openai.js Message.addImage/addVideo/addAudio + media.js | extra.media → MediaEngine.getFromMime → Coil3（图片/GIF）/ Media3 ExoPlayer（音视频）；URL 附件按官方逻辑下载/展示 |
 | 世界书注入 | world-info.js checkWorldInfo + openai.js | 发送前：条目 → Scanner（正则 messageTransformer、RAG 强制激活）→ PromptAssembler；命中灯只读 Scanner 结果 |
 | 宏 | macros/engine/ | 所有文本入 prompt 前统一走 MacroEngine（世界书 format、AN、历史 preparePrompt 已引擎接线）；App 保证 MacroEnv 提供聊天/角色/系统状态 |
