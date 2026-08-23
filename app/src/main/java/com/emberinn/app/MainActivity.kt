@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -17,12 +16,11 @@ import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.ui.MainScreen
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.SkinStore
 import com.emberinn.app.ui.settings.AppearancePrefs
 
 /**
- * 应用根：EmberDS 强制暗基底（用户决策——不再跟随系统浅色，HANDOFF 待办 #1）。
- * 壳层皮肤来自 SkinStore；官方内容主题经 seed 桥只染强调三态与舞台遮罩，互不污染。
+ * 应用根：暗色为基线（用户决策——不跟随系统浅色）。
+ * 壳层调色板 = 官方主题字段推导（ShellTheme.derive）：切换官方主题整壳即时换装。
  */
 class MainActivity : ComponentActivity() {
 
@@ -44,15 +42,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val appContext = applicationContext
-            remember { SkinStore.init(appContext) }
-            val skin by SkinStore.skin.collectAsState()
             val official = remember { OfficialThemeManager.shared(appContext) }
-            // 收集主题名：切换官方主题时触发壳层重取桥接色（验收标准 4：导入后壳层自动协调）
-            val themeName by official.currentName.collectAsState()
-            val bridge = remember(themeName) { official.skinColors() }
-            val shell = remember(themeName) { official.shellSettings() }
-            val accentOverride = bridge.accent?.let { Color(it) }
-            val stageTint = bridge.stageTint?.let { Color(it) }
+            // 官方主题字段 → 壳层令牌单向推导：导入/切换任何官方主题，整壳即时换装
+            val themeJson by official.currentThemeJson.collectAsState()
+            val derived = remember(themeJson) { com.emberinn.app.ui.design.ShellTheme.derive(themeJson) }
+            val shell = remember(themeJson) { official.shellSettings() }
             // 字体等外观偏好变更经 AppearanceBus 推送，此处按 revision 重读
             val appearanceRev by com.emberinn.app.ui.design.AppearanceBus.revision.collectAsState()
             val fontFamily = remember(appearanceRev) {
@@ -74,18 +68,14 @@ class MainActivity : ComponentActivity() {
                     else -> FontFamily.Default
                 }
             }
-            // §五 图像资产层：按皮肤 id 探测 assets/skins/<id>/（内置皮肤无图 → EMPTY 纯色渲染）
-            val imageAssets = remember(skin.id) {
-                com.emberinn.app.ui.design.SkinAssetResolver.resolve(appContext, skin.id, dark = true)
-            }
+            val radius = remember(appearanceRev) { AppearancePrefs.radius(appContext) }
             EmberTheme(
-                skin = skin,
-                darkTheme = true,
-                accentOverride = accentOverride,
-                stageTint = stageTint,
+                colors = derived.colors,
+                chat = derived.chat,
+                stageTint = derived.stageTint,
                 reducedMotion = shell.reducedMotion,
                 fontFamily = fontFamily,
-                imageAssets = imageAssets,
+                radius = radius,
             ) {
                 MainScreen()
             }

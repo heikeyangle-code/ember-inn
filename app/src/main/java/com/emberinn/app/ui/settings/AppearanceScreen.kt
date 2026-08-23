@@ -43,10 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.ui.design.AppearanceBus
-import com.emberinn.app.ui.design.EmberSkins
-import com.emberinn.app.ui.design.EmberSkin
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.SkinStore
 import com.emberinn.app.ui.design.components.InkTier
 import com.emberinn.app.ui.design.components.InkText
 import com.emberinn.app.ui.design.components.SectionTitle
@@ -60,8 +57,8 @@ import com.emberinn.app.ui.icons.FaIcons
 import kotlinx.coroutines.launch
 
 /**
- * 外观（DESIGN_SYSTEM §五）：皮肤商店 + 酒馆官方主题管理 + 显示偏好。
- * 皮肤=壳层换装（一键即时全局生效）；官方主题=内核渲染层配色，经 seed 桥只染壳层强调三态。
+ * 外观（DESIGN_SYSTEM §五）：酒馆官方主题管理 + 显示偏好。
+ * 官方主题=唯一换装来源：字段推导供内核与壳层（ShellTheme），无独立皮肤体系。
  */
 @Composable
 fun AppearanceScreen(
@@ -116,20 +113,7 @@ fun AppearanceScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // ---------------- 壳层皮肤 ----------------
-                item {
-                    Column {
-                        SectionTitle("皮肤")
-                        InkText(
-                            "整套界面即时换装：底色 · 卡面 · 强调色 · 聊天输入区",
-                            tier = InkTier.Mute,
-                            sizeSp = 12f,
-                        )
-                    }
-                }
-                skinRows()
-
-                // ---------------- 官方内容主题 ----------------
+                // ---------------- 官方内容主题（壳层换装唯一来源：字段推导整壳生效） ----------------
                 item {
                     Column {
                         SectionTitle("酒馆官方主题")
@@ -307,73 +291,6 @@ fun AppearanceScreen(
                 TextButton(onClick = { fontError = null }) { Text("知道了") }
             },
         )
-    }
-}
-
-/** 两列皮肤卡行：按索引生成整行两张卡。 */
-private fun androidx.compose.foundation.lazy.LazyListScope.skinRows() {
-    EmberSkins.all.chunked(2).forEach { rowSkins ->
-        item(key = "skin-${rowSkins.first().id}") {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                rowSkins.forEach { skin ->
-                    SkinCard(skin, modifier = Modifier.weight(1f))
-                }
-                if (rowSkins.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-/**
- * 皮肤卡：顶部四段色条预览（底色/卡面/强调/AI 金），下方名称与明暗标注。
- * 点选即全局换装。
- */
-@Composable
-private fun SkinCard(skin: EmberSkin, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val activeSkin by SkinStore.skin.collectAsState()
-    val selected = activeSkin.id == skin.id
-    val c = EmberTheme.colors
-    val p = skin.dark
-    val cardShape = RoundedCornerShape(EmberTheme.shapes.cornerCard)
-    Box(
-        modifier = modifier
-            .clip(cardShape)
-            .border(1.dp, if (selected) c.accentSoft else Color.Transparent, cardShape),
-    ) {
-        SurfaceCard(modifier = Modifier.fillMaxWidth(), onClick = { SkinStore.select(context, skin) }) {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                ) {
-                    Box(Modifier.weight(2.2f).fillMaxSize().background(p.bg))
-                    Box(Modifier.weight(1.6f).fillMaxSize().background(p.surface))
-                    Box(Modifier.weight(0.9f).fillMaxSize().background(p.accent))
-                    Box(Modifier.weight(0.7f).fillMaxSize().background(p.ai))
-                }
-                Spacer(Modifier.height(9.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    InkText(
-                        skin.name,
-                        tier = InkTier.Primary,
-                        sizeSp = 14f,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (selected) {
-                        InkText("✓", tier = InkTier.Primary, sizeSp = 14f, fontWeight = FontWeight.Bold)
-                    }
-                }
-                InkText(
-                    if (p.bg.luminance() < 0.35f) "深色" else "浅色",
-                    tier = InkTier.Mute,
-                    sizeSp = 11f,
-                )
-            }
-        }
     }
 }
 

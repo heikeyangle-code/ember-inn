@@ -1,6 +1,5 @@
 package com.emberinn.app.ui.design
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -22,8 +21,8 @@ import androidx.compose.ui.unit.dp
  * 令牌经 CompositionLocal 下发；M3 只是实现底座——EmberColors 映射进 MaterialTheme.scheme
  * 保证存量 M3 组件自动协调，但业务组件一律读 [EmberTheme]，禁止直接 colorScheme。
  *
- * 暗色优先（§三 3）：全局强制暗基底是用户决策——不再跟随系统浅色，
- * 浅色皮肤为一等公民但在外观页显式选择。
+ * 调色板来源=官方主题字段推导（ShellTheme.derive，Commit 4a）：壳层没有自己的皮肤体系，
+ * 导入任何官方主题整壳随之换装；暗色为基线（用户决策，不跟随系统浅色）。
  */
 object EmberTheme {
     val colors: EmberColors @Composable get() = LocalEmberColors.current
@@ -42,61 +41,51 @@ object EmberTheme {
     val reducedMotion: Boolean @Composable get() = LocalEmberReduced.current
 }
 
-val LocalEmberColors = staticCompositionLocalOf { EmberSkins.DEFAULT.dark }
+val LocalEmberColors = staticCompositionLocalOf { ShellTheme.FALLBACK.colors }
 val LocalEmberShapes = staticCompositionLocalOf { EmberShapes(16.dp, 14.dp, 28.dp, 8.dp) }
 val LocalEmberSpacing = staticCompositionLocalOf { EmberSpacing(4.dp, 20.dp, 8.dp, 24.dp) }
 val LocalEmberMotion = staticCompositionLocalOf { EmberMotion() }
-val LocalEmberChatTheme = staticCompositionLocalOf { ChatAreaTheme(null, null, null, null, null, null, null, null, null, false) }
+val LocalEmberChatTheme = staticCompositionLocalOf { ShellTheme.FALLBACK.chat }
 val LocalEmberDark = staticCompositionLocalOf { true }
-val LocalEmberStageTint = staticCompositionLocalOf<Color?> { null }
+val LocalEmberStageTint = staticCompositionLocalOf<Color?> { ShellTheme.FALLBACK.stageTint }
 val LocalEmberReduced = staticCompositionLocalOf { false }
-// SkinImageAssets / LocalEmberImageAssets 定义于 SkinImageAssets.kt（§五资产层）
+
+/** 圆角偏好四档 → 形状性格（外观页「全局圆角」实时生效）。 */
+fun shapesForRadius(radius: String): EmberShapes = when (radius) {
+    "square" -> EmberShapes(10.dp, 8.dp, 14.dp, 4.dp)
+    "rounded" -> EmberShapes(20.dp, 16.dp, 32.dp, 12.dp)
+    "circle" -> EmberShapes(26.dp, 24.dp, 36.dp, 14.dp)
+    else -> EmberShapes(16.dp, 14.dp, 28.dp, 8.dp)
+}
 
 /**
  * 应用根主题。
- * @param darkTheme 强制暗基底默认 true（用户决策：不再跟随系统浅色）；
- *   外观页将来提供浅色皮肤时显式传 false。
- * @param accentOverride 官方内容主题强调色桥（quote_text_color 系）：壳层自动配套不违和（验收标准 4）。
- * @param stageTint 官方内容主题舞台染色桥（blur_tint/chat_tint）。
+ * @param colors 由官方主题字段推导的完整调色板（ShellTheme.derive）
+ * @param radius 外观页圆角偏好（default/square/rounded/circle）
  */
 @Composable
 fun EmberTheme(
-    skin: EmberSkin,
-    darkTheme: Boolean = true,
-    accentOverride: Color? = null,
-    stageTint: Color? = null,
+    colors: EmberColors,
+    chat: ChatAreaTheme,
+    stageTint: Color?,
     reducedMotion: Boolean = false,
     fontFamily: FontFamily = FontFamily.Default,
-    imageAssets: SkinImageAssets = SkinImageAssets.EMPTY,
+    radius: String = "default",
     content: @Composable () -> Unit,
 ) {
-    var palette = if (darkTheme) skin.dark else skin.light
-    // 官方主题桥：只动强调三态，底面五阶与墨阶保持皮肤性格（互不污染原则）
-    if (accentOverride != null) {
-        palette = palette.copy(
-            accent = accentOverride,
-            accentSoft = accentOverride.copy(alpha = 0x5C / 255f),
-            accentBg = accentOverride.copy(alpha = 0x1A / 255f),
-        )
-    }
-    val chatSkin = skin.chat.let { ct ->
-        if (accentOverride != null) ct.copy(inputAccent = accentOverride) else ct
-    }
-    val m3Scheme = mapToM3Scheme(palette, darkTheme)
-
+    val dark = colors.bg.luminance() < 0.5f
     CompositionLocalProvider(
-        LocalEmberColors provides palette,
-        LocalEmberShapes provides skin.shapes,
-        LocalEmberSpacing provides skin.spacing,
-        LocalEmberMotion provides skin.motion,
-        LocalEmberChatTheme provides chatSkin,
-        LocalEmberDark provides darkTheme,
+        LocalEmberColors provides colors,
+        LocalEmberShapes provides shapesForRadius(radius),
+        LocalEmberSpacing provides EmberSpacing(4.dp, 20.dp, 8.dp, 24.dp),
+        LocalEmberMotion provides EmberMotion(),
+        LocalEmberChatTheme provides chat,
+        LocalEmberDark provides dark,
         LocalEmberStageTint provides stageTint,
         LocalEmberReduced provides reducedMotion,
-        LocalEmberImageAssets provides imageAssets,
     ) {
         MaterialTheme(
-            colorScheme = m3Scheme,
+            colorScheme = mapToM3Scheme(colors, dark),
             typography = emberTypography(fontFamily),
             content = content,
         )
