@@ -190,8 +190,10 @@ class KernelWebViewPool(
                 domStorageEnabled = true
                 mediaPlaybackRequiresUserGesture = false
                 loadsImagesAutomatically = true
-                loadWithOverviewMode = true
-                useWideViewPort = true
+                // 官方度量对齐（同 KernelWebViewFactory）：textZoom 固定 100，关 overview/wideViewport
+                textZoom = 100
+                loadWithOverviewMode = false
+                useWideViewPort = false
                 cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             }
             web.setBackgroundColor(android.graphics.Color.TRANSPARENT)

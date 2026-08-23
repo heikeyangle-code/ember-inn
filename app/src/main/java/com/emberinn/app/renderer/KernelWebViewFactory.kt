@@ -60,8 +60,12 @@ object KernelWebViewFactory {
             // 放开模式：媒体自动播放、自动加载图片
             mediaPlaybackRequiresUserGesture = false
             loadsImagesAutomatically = true
-            loadWithOverviewMode = true
-            useWideViewPort = true
+            // 官方度量对齐：textZoom 固定 100（系统字体缩放不得膨胀内核文本，
+            // 否则换行/高度全偏离官方 CSS 语义）；overview/wideViewport 关闭——
+            // viewport meta 已是 width=device-width，overview 首帧缩放反而造成不满宽
+            textZoom = 100
+            loadWithOverviewMode = false
+            useWideViewPort = false
             cacheMode = WebSettings.LOAD_DEFAULT
         }
         web.setBackgroundColor(android.graphics.Color.TRANSPARENT)

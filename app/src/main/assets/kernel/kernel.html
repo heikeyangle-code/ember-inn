@@ -32,11 +32,40 @@
         body.app-host-actions .for_checkbox,
         body.app-host-actions .mes_edit_buttons { display: none !important; }
     </style>
+    <style id="app-host-shell-style">
+        /* 嵌入态壳级覆盖：官方 #sheld/#chat 布局假定整页应用壳（顶栏/输入栏、绝对定位、
+         * 视口高裁剪、#chat 内部滚动）。单消息渲染页没有这些壳——若照搬，#chat 的
+         * max-height(100vh)+overflow-y:scroll 会把超屏消息裁进内部滚动框。
+         * 这里只解除定位与滚动语义；宽度语义与主题包装饰规则全部保留
+         * （Moonlit #sheld::before 背景/padding、@media 移动端 100dvw 铺满等照常生效），
+         * 高度由 ResizeObserver 全量回报宿主。 */
+        html, body { height: auto; overflow: visible; }
+        #sheld {
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+        }
+        #chat {
+            max-height: none !important;
+            overflow: visible !important;
+            bottom: auto !important;
+        }
+    </style>
 </head>
 <body class="light-theme">
-    <!-- 官方 style.css 依赖 #chat / .mes 层级，保持同构 -->
-    <div id="chat">
-        <div id="mes_stop" class="fa-solid fa-circle-stop stop_generation_button" title="Abort generation" style="display:none;"></div>
+    <!-- 官方 style.css 与主题包依赖 #sheld > #chat 层级（#sheld 背景/padding/移动端铺满规则），
+         结构同构；壳级定位差异由 app-host-shell-style 嵌入态覆盖处理 -->
+    <div id="sheld">
+        <div id="chat">
+            <div id="mes_stop" class="fa-solid fa-circle-stop stop_generation_button" title="Abort generation" style="display:none;"></div>
+        </div>
     </div>
 
     <script src="js/showdown.min.js"></script>
