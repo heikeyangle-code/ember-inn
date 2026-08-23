@@ -70,11 +70,6 @@
             overflow-y: auto !important;
             overflow-x: hidden !important;
             bottom: auto !important;
-            /* Android WebView 兼容：第三方主题的渐变 mask 在部分内核/合成器路径
-             * 会把整个滚动内容裁成不可见。整页壳先禁用该装饰，消息可见性优先；
-             * 后续真机审计确认 WebView 行为后再按官方语义恢复。 */
-            -webkit-mask-image: none !important;
-            mask-image: none !important;
         }
     </style>
 </head>
