@@ -2,9 +2,12 @@
 // 运行: node theme-moonlit.test.mjs（需先 npm install）
 import { JSDOM } from 'jsdom';
 import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
-const K = '/workspace/ember-inn/app/src/main/assets/kernel';
-const ME = '/workspace/ember-inn/app/src/main/assets/themes/moonlit-echoes';
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const K = join(ROOT, 'app', 'src', 'main', 'assets', 'kernel');
+const ME = join(ROOT, 'app', 'src', 'main', 'assets', 'themes', 'moonlit-echoes');
 
 const dom = new JSDOM(`<!DOCTYPE html><html><body class="light-theme"><style id="custom-style" type="text/css"></style><div id="chat"></div></body></html>`, {
     url: 'https://appassets.androidplatform.net/assets/kernel/kernel.html',

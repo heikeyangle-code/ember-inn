@@ -41,5 +41,13 @@ console.log('Kotlin 桥对齐:');
 ok(bridge.includes('SHIM_REQUEST ->'), '桥分发 shimRequest');
 ok(bridge.includes('onShimRequest(reqId: String, method: String, paramsJson: String) {}'), 'Callbacks 默认实现');
 
+console.log('变量族与桥信封:');
+for (const fn of ['getVariables', 'replaceVariables', 'insertOrAssignVariables', 'insertVariables', 'deleteVariable', 'updateVariablesWith']) {
+    ok(shim.includes(`window.${fn} =`), `变量族 ${fn} 暴露`);
+}
+ok(shim.includes("var reqId = String(++reqSeq)"), 'reqId 统一字符串键（数字键=回传落空 bug）');
+const installer = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/StApiShimInstaller.kt'), 'utf-8');
+ok(installer.includes('"value":${vm.shimChatMetadata()}'), 'metadata.get 响应带 {ok,value} 信封');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);

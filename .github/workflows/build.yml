@@ -11,6 +11,7 @@ on:
       - 'build.gradle.kts'
       - 'gradle.properties'
       - '.github/workflows/**'
+      - 'scripts/kernel-golden/**'
   pull_request:
     paths:
       - 'app/**'
@@ -20,6 +21,7 @@ on:
       - 'build.gradle.kts'
       - 'gradle.properties'
       - '.github/workflows/**'
+      - 'scripts/kernel-golden/**'
 
 jobs:
   engine-test:
@@ -32,6 +34,16 @@ jobs:
           java-version: '21'
       - name: Engine unit tests
         run: chmod +x gradlew && ./gradlew :engine:test --no-daemon
+
+  kernel-golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Kernel golden tests (jsdom)
+        run: cd scripts/kernel-golden && npm ci && npm test
 
   build:
     runs-on: ubuntu-latest

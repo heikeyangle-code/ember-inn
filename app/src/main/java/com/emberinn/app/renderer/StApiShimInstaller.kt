@@ -19,10 +19,14 @@ import kotlinx.serialization.json.put
  *
  * 方法面（与 assets/kernel/js/st-api-shim.js 对齐）：
  *  - ctx.snapshot   → getContext().chat 快照（消息子集字段）+ name1/name2/characterId/chatId
- *  - metadata.get   → chatStore.metadata（官方 chat_metadata）
+ *  - metadata.get   → chatStore.metadata（官方 chat_metadata），信封 {ok,value}
  *  - metadata.set   → chatStore.saveMetadata 即时落盘 + displayRevision 触发重渲
  *  - slash.run      → AppSlashExecutor.executeAsync（引擎 SlashEngine 1:1，返回管道输出）
  *  - macro.substitute → 引擎 MacroEngine.substitute（全量宏，差分锁定）
+ *
+ * 酒馆助手变量族（getVariables/replaceVariables/insertOrAssignVariables 等）不设独立桥方法：
+ * shim 端组合 metadata.get/set 实现 chat 作用域 = chat_metadata.variables（官方 variables.js
+ * 同源）；未来接全局变量存储时在 Kotlin 加 variables.* 方法即可，公开 API 不变。
  */
 object StApiShimInstaller {
 
@@ -35,7 +39,8 @@ object StApiShimInstaller {
                 try {
                     respond(when (method) {
                         "ctx.snapshot" -> vm.shimContextSnapshot()
-                        "metadata.get" -> vm.shimChatMetadata().toString()
+                        // 信封 {ok,value}：shim 端按 r.ok/r.value 解包（此前裸回 metadata 导致 getChatMetadata 恒空）
+                        "metadata.get" -> """{"ok":true,"value":${vm.shimChatMetadata()}}"""
                         "metadata.set" -> {
                             val meta = json.parseToJsonElement(paramsJson).jsonObject["metadata"]
                                 ?.jsonObject ?: JsonObject(emptyMap())

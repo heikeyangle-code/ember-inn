@@ -1,6 +1,8 @@
 import { JSDOM } from 'jsdom';
 import { readFileSync } from 'fs';
-const K = '/workspace/ember-inn/app/src/main/assets/kernel';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+const K = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'app', 'src', 'main', 'assets', 'kernel');
 const dom = new JSDOM(`<!DOCTYPE html><html><body><div id="chat"></div></body></html>`, {
     url: 'https://appassets.androidplatform.net/assets/kernel/kernel.html',
     runScripts: 'dangerously', pretendToBeVisual: true,

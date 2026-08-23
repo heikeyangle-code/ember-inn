@@ -245,11 +245,13 @@
                 reject(new Error('ST API shim: AndroidKernel bridge unavailable'));
                 return;
             }
-            var reqId = ++reqSeq;
+            // 键统一字符串：Kotlin 回传 __shimRespond('<reqId>',…) 是字符串字面量，
+            // 数字键会让 pendingCalls.get 永远落空（全部调用 15s 超时的根因）
+            var reqId = String(++reqSeq);
             pendingCalls.set(reqId, { resolve: resolve, reject: reject });
             window.AndroidKernel.postMessage(JSON.stringify({
                 type: 'shimRequest',
-                reqId: String(reqId),
+                reqId: reqId,
                 method: method,
                 params: params ? JSON.stringify(params) : null,
             }));
@@ -356,4 +358,140 @@
     };
     window.executeSlashCommands = window.triggerSlash;
     window.executeSlashCommandsWithOptions = SillyTavernContext.executeSlashCommandsWithOptions;
+
+    // =====================================================================
+    // 6. 酒馆助手变量族（JS-Slash-Runner src/function/variables.ts 语义移植）
+    //
+    //    存储 1:1 依据：
+    //    - chat   = chat_metadata.variables（官方 variables.js L17/L36 同源；
+    //      酒馆助手 replaceVariables('chat') 即 _.set(chat_metadata,'variables',…)+saveMetadataDebounced）
+    //      本页经 metadata.get/set 桥读写，落盘与 displayRevision 由宿主 metadata.set 负责
+    //    - global/character/preset/message/script/extension 依赖设置存储/角色编辑器/
+    //      iframe 运行时等宿主态 → 显式报错（HANDOFF §6.4 登记边界），API 形状保持可扩展
+    //
+    //    合并语义（mergeWith customizer (_lhs,rhs)=>isArray(rhs)?rhs:undefined）：
+    //    对象递归深合并、数组整体替换、标量覆盖、undefined 源值跳过
+    // =====================================================================
+    function assertChatScope(option) {
+        var type = option && option.type ? option.type : 'chat';
+        if (type !== 'chat') {
+            throw new Error('[EmberInn shim] 变量族暂只支持 {type:"chat"} 作用域，收到 type="' + type + '"');
+        }
+    }
+
+    function isPlainObject(v) {
+        return v !== null && typeof v === 'object' && !Array.isArray(v);
+    }
+
+    /** lodash mergeWith 的 JSON 子集（变量表数据只经 JSON 桥，模型即完备）。
+     *  customizer(dstVal, srcVal)：返回 undefined 走默认合并，否则整体采用返回值。 */
+    function mergeWith(dst, src, customizer) {
+        for (var key in src) {
+            if (!Object.prototype.hasOwnProperty.call(src, key)) continue;
+            var s = src[key];
+            if (s === undefined) continue; // lodash：undefined 源值跳过
+            var d = dst[key];
+            var c = customizer ? customizer(d, s) : undefined;
+            if (c !== undefined) { dst[key] = c; continue; }
+            if (isPlainObject(s) && isPlainObject(d)) { mergeWith(d, s, customizer); continue; }
+            dst[key] = s;
+        }
+        return dst;
+    }
+
+    /** 数组替换 customizer（酒馆助手 (_lhs,rhs)=>isArray(rhs)?rhs:undefined 原样） */
+    function arrayReplaceCustomizer(_lhs, rhs) {
+        return Array.isArray(rhs) ? rhs : undefined;
+    }
+
+    /** lodash _.unset 的点路径子集（'a.b' / 'a.0.b'） */
+    function unsetPath(obj, path) {
+        var segs = String(path).split('.').filter(function (s) { return s !== ''; });
+        if (segs.length === 0) return false;
+        var cur = obj;
+        for (var i = 0; i < segs.length - 1; i++) {
+            if (!isPlainObject(cur) && !Array.isArray(cur)) return false;
+            cur = cur[segs[i]];
+        }
+        if (!isPlainObject(cur) && !Array.isArray(cur)) return false;
+        if (!Object.prototype.hasOwnProperty.call(cur, segs[segs.length - 1])) return false;
+        delete cur[segs[segs.length - 1]];
+        return true;
+    }
+
+    async function readChatMetadata() {
+        var r = await shimCall('metadata.get', {});
+        if (!r || !r.ok) throw new Error('variables: metadata.get failed');
+        return r.value && typeof r.value === 'object' ? r.value : {};
+    }
+
+    async function writeChatMetadata(meta) {
+        var r = await shimCall('metadata.set', { metadata: meta });
+        if (!r || !r.ok) throw new Error('variables: metadata.set failed');
+    }
+
+    async function getVariables(option) {
+        assertChatScope(option);
+        var meta = await readChatMetadata();
+        return JSON.parse(JSON.stringify(meta.variables !== undefined ? meta.variables : {})); // klona
+    }
+
+    async function replaceVariables(variables, option) {
+        assertChatScope(option);
+        var meta = await readChatMetadata();
+        meta.variables = variables !== undefined && variables !== null ? variables : {};
+        await writeChatMetadata(meta);
+    }
+
+    async function updateVariablesWith(updater, option) {
+        assertChatScope(option);
+        var meta = await readChatMetadata();
+        var old = meta.variables !== undefined ? meta.variables : {};
+        var result = updater(old);
+        if (result && typeof result.then === 'function') {
+            result = await result;
+        }
+        meta.variables = result === undefined || result === null ? {} : result;
+        await writeChatMetadata(meta);
+        return result;
+    }
+
+    /** 覆盖式合并：新值胜出（_.mergeWith(old, variables, arrReplace)） */
+    async function insertOrAssignVariables(variables, option) {
+        return updateVariablesWith(function (oldVars) {
+            return mergeWith(
+                isPlainObject(oldVars) ? oldVars : {},
+                isPlainObject(variables) ? variables : {},
+                arrayReplaceCustomizer,
+            );
+        }, option);
+    }
+
+    /** 插入不覆盖：旧值胜出。_.mergeWith({}, variables, old_variables, arrReplace)
+     *  = 多源按序合并：{} ← variables ← old，旧叶子覆盖新叶子，仅补缺键。 */
+    async function insertVariables(variables, option) {
+        return updateVariablesWith(function (oldVars) {
+            var merged = {};
+            mergeWith(merged, isPlainObject(variables) ? variables : {}, arrayReplaceCustomizer);
+            mergeWith(merged, isPlainObject(oldVars) ? oldVars : {}, arrayReplaceCustomizer);
+            return merged;
+        }, option);
+    }
+
+    async function deleteVariable(variablePath, option) {
+        var occurred = false;
+        var variables = await updateVariablesWith(function (oldVars) {
+            occurred = unsetPath(isPlainObject(oldVars) ? oldVars : {}, variablePath);
+            return oldVars;
+        }, option);
+        return { variables: variables, delete_occurred: occurred };
+    }
+
+    // 酒馆助手脚本按 iframe 全局直接调用（@types/function/variables.d.ts 导出面）
+    window.getVariables = getVariables;
+    window.replaceVariables = replaceVariables;
+    window.updateVariablesWith = updateVariablesWith;
+    window.insertOrAssignVariables = insertOrAssignVariables;
+    window.insertVariables = insertVariables;
+    window.deleteVariable = deleteVariable;
 })();

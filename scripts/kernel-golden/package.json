@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node kernel-format.test.mjs && node theme-moonlit.test.mjs && node shim-api.test.mjs"
+    "test": "node kernel-format.test.mjs && node theme-moonlit.test.mjs && node shim-api.test.mjs && node variables-shim.test.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"
