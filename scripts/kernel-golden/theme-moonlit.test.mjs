@@ -108,27 +108,39 @@ t('chat_display=9 不加任何布局类', layoutClasses.every(c => !body().class
 
 // ---------- 6. 样式包 applyStylePack ----------
 const packHref = '../themes/moonlit-echoes/style.css';
-// 启用：注入 <link id="style-pack-style"> + 变量写入 documentElement
+const extHref = '../themes/moonlit-echoes/extension.css';
+// 启用：注入 <link id="style-pack-style"> + 扩展兼容层 + 变量写入 documentElement
 window.Kernel.applyStylePack({
-    enabled: true, href: packHref,
+    enabled: true, href: packHref, extensionHref: extHref,
     vars: { customThemeColor: 'rgba(81, 160, 222, 1)', 'custom-ChatAvatar': '40px' },
 });
 const packLink = window.document.getElementById('style-pack-style');
 t('样式包: link 注入', !!packLink, true);
 t('样式包: link rel=stylesheet', packLink?.getAttribute('rel'), 'stylesheet');
 t('样式包: link href 正确', packLink?.getAttribute('href'), packHref);
+t('样式包: 扩展层 link 注入', window.document.getElementById('style-pack-extension')?.getAttribute('href'), extHref);
 t('样式包: 无前缀键自动补 --', root().style.getPropertyValue('--customThemeColor'), 'rgba(81, 160, 222, 1)');
 t('样式包: 带前缀键原样写入', root().style.getPropertyValue('--custom-ChatAvatar'), '40px');
 // href 变更：复用同一 link 节点换地址（主题切换不堆积节点）
 window.Kernel.applyStylePack({ enabled: true, href: '../themes/other/style.css', vars: {} });
 t('样式包: 换主题复用节点换 href', window.document.getElementById('style-pack-style')?.getAttribute('href'), '../themes/other/style.css');
 t('样式包: 换主题仍是单节点', window.document.querySelectorAll('#style-pack-style').length, 1);
+t('样式包: 无 extensionHref 时扩展层移除', window.document.getElementById('style-pack-extension'), null);
 // 禁用：link 移除，变量保留由主题切换流程清理（与官方 custom_css 语义同构）
 window.Kernel.applyStylePack({ enabled: false, href: null, vars: null });
 t('样式包: 禁用移除 link', window.document.getElementById('style-pack-style'), null);
+t('样式包: 禁用移除扩展层 link', window.document.getElementById('style-pack-extension'), null);
 // 纯官方主题路径：enabled=false 为无操作，不产生任何节点
 window.Kernel.applyStylePack({ enabled: false, href: packHref, vars: { customThemeColor: 'x' } });
 t('样式包: 官方主题零污染', window.document.getElementById('style-pack-style'), null);
+
+// ---------- 7. 官方字段补遗（对照 power-user.js L95-549）----------
+window.Kernel.applyTheme({ ...moonlit, avatar_style: 3, enableLabMode: true, chat_display: 0 });
+t('avatar_style=3 → rounded-avatars', body().classList.contains('rounded-avatars'), true);
+t('enableLabMode=true → body 类', body().classList.contains('enableLabMode'), true);
+window.Kernel.applyTheme({ ...moonlit, avatar_style: 0, enableLabMode: false, chat_display: 0 });
+t('avatar_style=0 圆形：三形状类全清', ['big-avatars','square-avatars','rounded-avatars'].every(c => !body().classList.contains(c)), true);
+t('enableLabMode=false 类移除', body().classList.contains('enableLabMode'), false);
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail ? 1 : 0);

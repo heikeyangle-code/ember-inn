@@ -496,24 +496,36 @@
     // 样式包（第三方主题整包 CSS，如 Moonlit Echoes style.css）：
     // 注入/移除 <link id="style-pack-style">，并把包内自定义变量写入 documentElement。
     // vars 键即 CSS 自定义属性名（可带或不带 -- 前缀），值一律字符串化。
+    // extensionHref 可选：上游以扩展形式安装时全局加载的 extension.css（兼容层），
+    // 存在即一并注入 <link id="style-pack-extension">——与官方「装了扩展就载它的 css」行为对齐。
     var STYLE_PACK_LINK_ID = 'style-pack-style';
-    function applyStylePack(cfg) {
-        cfg = cfg || {};
+    var STYLE_PACK_EXT_LINK_ID = 'style-pack-extension';
+    function syncPackLink(id, href) {
         var head = document.head;
-        var existing = document.getElementById(STYLE_PACK_LINK_ID);
-        if (!cfg.enabled || !cfg.href) {
+        var existing = document.getElementById(id);
+        if (!href) {
             if (existing) { existing.remove(); }
             return;
         }
         if (!existing) {
             existing = document.createElement('link');
-            existing.id = STYLE_PACK_LINK_ID;
+            existing.id = id;
             existing.rel = 'stylesheet';
             head.appendChild(existing);
         }
-        if (existing.getAttribute('href') !== cfg.href) {
-            existing.setAttribute('href', cfg.href);
+        if (existing.getAttribute('href') !== href) {
+            existing.setAttribute('href', href);
         }
+    }
+    function applyStylePack(cfg) {
+        cfg = cfg || {};
+        if (!cfg.enabled || !cfg.href) {
+            syncPackLink(STYLE_PACK_LINK_ID, null);
+            syncPackLink(STYLE_PACK_EXT_LINK_ID, null);
+            return;
+        }
+        syncPackLink(STYLE_PACK_LINK_ID, cfg.href);
+        syncPackLink(STYLE_PACK_EXT_LINK_ID, cfg.extensionHref || null);
         var vars = cfg.vars || {};
         var root = document.documentElement;
         Object.keys(vars).forEach(function (key) {
@@ -573,8 +585,10 @@
             ['expand_message_actions', 'expandMessageActions', 'true'],
             ['show_swipe_num_all_messages', 'swipeAllMessages', 'true'],
             ['enableZenSliders', 'enableZenSliders', 'true'],
+            // 官方 L549：enableLabMode 直接以 body 类生效（bogus_folders 无 CSS 类，纯 Web 壳逻辑）
+            ['enableLabMode', 'enableLabMode', 'true'],
         ];
-        var managedClasses = ['no-blur','noShadows','waifuMode','reduced-motion','no-timestamps','no-timer','no-tokenCount','no-mesIDDisplay','no-modelIcons','no-hotswap','hideChatAvatars','expandMessageActions','swipeAllMessages','enableZenSliders','big-avatars','square-avatars','bubblechat','documentstyle','flatchat','echostyle','whisperstyle','hushstyle','tidestyle','ripplestyle'];
+        var managedClasses = ['no-blur','noShadows','waifuMode','reduced-motion','no-timestamps','no-timer','no-tokenCount','no-mesIDDisplay','no-modelIcons','no-hotswap','hideChatAvatars','expandMessageActions','swipeAllMessages','enableZenSliders','enableLabMode','big-avatars','square-avatars','rounded-avatars','bubblechat','documentstyle','flatchat','echostyle','whisperstyle','hushstyle','tidestyle','ripplestyle'];
         managedClasses.forEach(function (cls) { document.body.classList.remove(cls); });
         classSync.forEach(function (item) {
             var field = item[0], cls = item[1], mode = item[2];
@@ -583,14 +597,16 @@
             var on = mode === 'true' ? !!v : !v;
             if (on) document.body.classList.add(cls);
         });
-        // 头像形状：avatar_style 0 默认 / 1 矩形大头像 / 2 方形（官方 avatar_styles 枚举）
+        // 头像形状：avatar_style 0 圆 / 1 矩形大头像 / 2 方形 / 3 圆角（官方 avatar_styles 枚举 L95-100）
         if ('avatar_style' in theme) {
             if (theme.avatar_style === 1) document.body.classList.add('big-avatars');
             else if (theme.avatar_style === 2) document.body.classList.add('square-avatars');
+            else if (theme.avatar_style === 3) document.body.classList.add('rounded-avatars');
         }
         // 消息布局：chat_display 0 平铺 / 1 气泡(bubblechat) / 2 文档(documentstyle)；
-        // 3..7 = Moonlit Echoes 扩展布局（Glimmer=3 echostyle、MoonlitEchoes=4 whisperstyle 已由内置主题核实；
-        // 5 hush / 6 ripple / 7 tide 为顺延映射，登记于 HANDOFF）。样式包未加载时这些类为惰性。
+        // 3..7 = Moonlit Echoes 扩展布局，映射已对上游扩展 index.js initChatDisplaySwitcher
+        // 逐项核实（3=echostyle/4=whisperstyle/5=hushstyle/6=ripplestyle/7=tidestyle），
+        // 全量同步语义与上游一致。样式包未加载时这些类为惰性。
         if ('chat_display' in theme) {
             var layoutClass = chatDisplayToClass(theme.chat_display);
             if (layoutClass) { document.body.classList.add(layoutClass); }

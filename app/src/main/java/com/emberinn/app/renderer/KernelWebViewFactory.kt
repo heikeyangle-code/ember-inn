@@ -25,6 +25,14 @@ object KernelWebViewFactory {
     const val ASSETS_PREFIX = "/assets/"
     const val DATA_PREFIX = "/data/"
 
+    /** 头像站内源：filesDir/avatars → /avatars/、filesDir/persona-avatars → /pavatars/
+     *  内核页与官方同构以 <img src> 直引，避免 file:// 与混合内容拦截 */
+    const val AVATARS_PREFIX = "/avatars/"
+    const val PERSONA_AVATARS_PREFIX = "/pavatars/"
+
+    /** 导入主题包站内源：filesDir/themes → /themefiles/...（第三方整包 style.css 由样式包引用） */
+    const val THEME_FILES_PREFIX = "/themefiles/"
+
     fun createAssetLoader(context: Context): WebViewAssetLoader {
         // 官方推荐模式：只暴露 filesDir 下的 public 子目录（同源页面可读该根下一切文件）
         val publicDir = File(context.filesDir, "public")
@@ -32,6 +40,9 @@ object KernelWebViewFactory {
             .setDomain("appassets.androidplatform.net")
             .addPathHandler(ASSETS_PREFIX, WebViewAssetLoader.AssetsPathHandler(context))
             .addPathHandler(DATA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, publicDir))
+            .addPathHandler(AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "avatars")))
+            .addPathHandler(PERSONA_AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "persona-avatars")))
+            .addPathHandler(THEME_FILES_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "themes").apply { mkdirs() }))
             .build()
     }
 

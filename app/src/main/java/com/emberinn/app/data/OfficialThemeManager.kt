@@ -73,6 +73,24 @@ class OfficialThemeManager(private val context: Context) {
     private val _currentName = MutableStateFlow(DEFAULT_THEME)
     val currentName: StateFlow<String> = _currentName
 
+    /**
+     * 样式包（第三方主题整包 CSS，如 Moonlit style.css）：内核 applyStylePack 直透。
+     * 探测规则通用化——当前主题 JSON 同目录存在 style.css 即启用，否则纯官方行为零污染。
+     * extensionHref 可选：同目录 extension.css（上游扩展兼容层）存在即一并注入。
+     * vars 取同目录 *-preset.json 的 settings 对象（键=CSS 自定义属性名，逐键透传不解释），
+     * 无预设包则 null。href 按载体动态解析：内置 → /assets/themes/<dir>/…；
+     * 导入 → /themefiles/…（KernelWebViewFactory THEME_FILES_PREFIX 站内源）。
+     */
+    data class StylePack(
+        val enabled: Boolean = false,
+        val href: String? = null,
+        val extensionHref: String? = null,
+        val varsJson: String? = null,
+    )
+
+    private val _currentStylePack = MutableStateFlow(StylePack())
+    val currentStylePack: StateFlow<StylePack> = _currentStylePack
+
     private val prefs get() = context.getSharedPreferences("official_theme", Context.MODE_PRIVATE)
 
     init {
@@ -134,7 +152,56 @@ class OfficialThemeManager(private val context: Context) {
             // 归一为列表展示名（按文件名命中时，currentName 仍与主题列表一致）
             _currentName.value = (locators[name] ?: locators[DEFAULT_THEME])?.meta?.name ?: name
         }
+        _currentStylePack.value = detectStylePack()
         if (persist) prefs.edit().putString(KEY_CURRENT, _currentName.value).apply()
+    }
+
+    /** 样式包探测：主题 JSON 同目录有无 style.css / extension.css（内置走 AssetManager，导入走 File） */
+    private fun detectStylePack(): StylePack {
+        val loc = locators[_currentName.value] ?: return StylePack()
+        return if (loc.bundled) {
+            val dir = loc.path.substringBeforeLast('/')
+            val listing = runCatching { context.assets.list(dir)?.toSet() }.getOrNull() ?: emptySet()
+            if (STYLE_PACK_FILE !in listing) StylePack()
+            else StylePack(
+                enabled = true,
+                href = "/$dir/$STYLE_PACK_FILE",
+                extensionHref = if (EXTENSION_CSS_FILE in listing) "/$dir/$EXTENSION_CSS_FILE" else null,
+                varsJson = presetVarsFromAssets(dir),
+            )
+        } else {
+            val dir = File(loc.path).parentFile ?: return StylePack()
+            val css = File(dir, STYLE_PACK_FILE)
+            if (!css.exists()) StylePack()
+            else StylePack(
+                enabled = true,
+                href = "$STYLE_PACK_HREF_IMPORTED$STYLE_PACK_FILE",
+                extensionHref = File(dir, EXTENSION_CSS_FILE).takeIf { it.exists() }
+                    ?.let { "$STYLE_PACK_HREF_IMPORTED$EXTENSION_CSS_FILE" },
+                varsJson = presetVarsFromDir(dir),
+            )
+        }
+    }
+
+    /** 内置预设包 vars：目录内首个含 settings 对象的 *-preset.json → 原样序列化 */
+    private fun presetVarsFromAssets(dir: String): String? {
+        val names = runCatching { context.assets.list(dir) }.getOrNull() ?: return null
+        for (f in names.filter { it.endsWith(PRESET_SUFFIX) }) {
+            val obj = parseOrNull(runCatching {
+                context.assets.open("$dir/$f").bufferedReader().readText()
+            }.getOrNull() ?: continue) ?: continue
+            (obj["settings"] as? JsonObject)?.let { return it.toString() }
+        }
+        return null
+    }
+
+    private fun presetVarsFromDir(dir: File): String? {
+        val names = dir.listFiles { f -> f.name.endsWith(PRESET_SUFFIX) } ?: return null
+        for (f in names) {
+            val obj = parseOrNull(runCatching { f.readText() }.getOrNull() ?: continue) ?: continue
+            (obj["settings"] as? JsonObject)?.let { return it.toString() }
+        }
+        return null
     }
 
     /** 壳层派生设置（每次取当前主题实时计算） */
@@ -292,6 +359,12 @@ class OfficialThemeManager(private val context: Context) {
         const val DEFAULT_THEME = "Glimmer"
         private const val KEY_CURRENT = "current"
         private const val THEME_ASSETS_ROOT = "themes"
+        private const val STYLE_PACK_FILE = "style.css"
+        private const val EXTENSION_CSS_FILE = "extension.css"
+        private const val PRESET_SUFFIX = "-preset.json"
+
+        /** 导入主题包的内核站内源（KernelWebViewFactory.THEME_FILES_PREFIX，避免 data→renderer 依赖） */
+        private const val STYLE_PACK_HREF_IMPORTED = "/themefiles/"
 
         /** 官方 power-user.js 主题字段抽样：命中任一即视为主题 JSON（对照官方源码 L162-165）。 */
         private val THEME_FIELD_PROBES = setOf(

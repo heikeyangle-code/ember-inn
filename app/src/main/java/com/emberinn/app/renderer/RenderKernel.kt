@@ -48,10 +48,22 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval("document.body.className='light-theme$joined';")
     }
 
-    /** 嵌入模式：宿主原生壳已提供头像/名字/操作条，内核只渲染正文（隐藏模板 chrome）。 */
-    fun setEmbedShell(enabled: Boolean) {
-        val op = if (enabled) "add" else "remove"
-        eval("document.body.classList.$op('embed-shell');")
+    /** 样式包（第三方主题整包 CSS）：varsJson 为原始 JSON 对象字面量（键=CSS 变量名）。
+     *  extensionHref 可选（上游扩展兼容层 extension.css）。enabled=false 或 href=null
+     *  时内核侧为无操作——纯官方主题零污染。 */
+    fun applyStylePack(enabled: Boolean, href: String?, varsJson: String?, extensionHref: String? = null) {
+        val js = buildString {
+            append("window.Kernel && window.Kernel.applyStylePack({enabled:")
+            append(if (enabled) "true" else "false")
+            append(",href:")
+            append(if (href != null) jsonEsc(href) else "null")
+            append(",extensionHref:")
+            append(if (extensionHref != null) jsonEsc(extensionHref) else "null")
+            append(",vars:")
+            append(varsJson ?: "null")
+            append("});")
+        }
+        eval(js)
     }
 
     fun clear(onDone: (() -> Unit)? = null) = eval("window.Kernel.clear();", onDone)

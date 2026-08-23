@@ -38,7 +38,8 @@ data class KernelMessagePayload(
     @SerialName("isSystem") val isSystem: Boolean = false,
     val avatarUrl: String? = null,
     val timestamp: String? = null,
-    val tokenCount: Int? = null,
+    /** 官方 tokenCounterDisplay 文本（原样透传，"123" 或 "1.2k"） */
+    val tokenCount: String? = null,
 )
 
 /** 官方主题 JSON（34 字段中与渲染相关的核心子集；未知字段由 ignoreUnknownKeys 吸收） */
@@ -63,11 +64,21 @@ data class StTheme(
     fun toJsonString(): String = KernelProtocol.json.encodeToString(serializer(), this)
 }
 
-/** 官方消息布局模式（power-user.js chat_display：0 平铺 / 1 气泡 / 2 文档） */
+/**
+ * 官方消息布局模式（power-user.js chat_display：0 平铺 / 1 气泡 / 2 文档）。
+ * 3..7 = Moonlit Echoes 扩展布局，映射已对上游扩展 index.js initChatDisplaySwitcher
+ * 逐项核实（3=Echo/4=Whisper/5=Hush/6=Ripple/7=Tide）。类名由对应样式包 CSS 定义，
+ * 包未加载时惰性——与官方 applyChatDisplay 只认 0..2 不冲突。
+ */
 enum class ChatDisplayMode(val bodyClass: String?) {
-    FLAT(null),
+    FLAT("flatchat"),
     BUBBLE("bubblechat"),
     DOCUMENT("documentstyle"),
+    ECHOSTYLE("echostyle"),
+    WHISPERSTYLE("whisperstyle"),
+    HUSHSTYLE("hushstyle"),
+    RIPPLESTYLE("ripplestyle"),
+    TIDESTYLE("tidestyle"),
 }
 
 // ---------------------------------------------------------------------------

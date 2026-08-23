@@ -357,18 +357,19 @@ fun ChatScreen(
     }
     val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
-    // chat_display 布局类随主题派生；embed-shell 常驻（内核只渲染正文）
+    val stylePack by themeManager.currentStylePack.collectAsState()
+    // chat_display 布局类随主题派生（0..2 官方 + 3..7 Moonlit 扩展顺延）。
+    // 全 DOM 行：头像/名字/操作 chrome 全在内核页，原生侧不再挂 embed-shell。
     LaunchedEffect(officialThemeJson) {
         val shell = themeManager.shellSettings()
-        val displayClass = when (shell.chatDisplay) {
-            1 -> ChatDisplayMode.BUBBLE.bodyClass
-            2 -> ChatDisplayMode.DOCUMENT.bodyClass
-            else -> null
-        }
         kernelPool.updateTheme(
             officialThemeJson,
-            listOfNotNull(displayClass, "embed-shell"),
+            listOfNotNull(ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass),
         )
+    }
+    // 样式包（第三方整包 CSS + 可选扩展兼容层）：官方主题 enabled=false，内核侧零污染
+    LaunchedEffect(stylePack) {
+        kernelPool.updateStylePack(stylePack.enabled, stylePack.href, stylePack.varsJson, stylePack.extensionHref)
     }
     // ------------------------------------------------------------------------
 
@@ -3183,6 +3184,24 @@ private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
 /** 官方 script.js systemUserName：只有这个名字的系统消息按系统消息格式化（Note 评论等按普通消息）。 */
 private const val SYSTEM_USER_NAME = "SillyTavern System"
 
+/** 内核站内源 origin（appassets.androidplatform.net，与 KernelProtocol.KERNEL_URL 同域） */
+private const val KERNEL_ORIGIN = "https://appassets.androidplatform.net"
+
+/**
+ * 内核页头像 URL：仅当路径位于已暴露的站内根时可解析——
+ * 角色 avatars → /avatars/<file>；persona-avatars → /pavatars/<file>。
+ * 其余路径返回 null，内核模板按官方缺省头像渲染。
+ */
+internal fun kernelAvatarUrlOf(path: String?): String? {
+    val f = path?.let { File(it) } ?: return null
+    val prefix = when (f.parentFile?.name) {
+        "avatars" -> "/avatars/"
+        "persona-avatars" -> "/pavatars/"
+        else -> return null
+    }
+    return "$KERNEL_ORIGIN$prefix${f.name}"
+}
+
 @Composable
 private fun MessageRow(
     modifier: Modifier = Modifier,
@@ -3375,6 +3394,31 @@ private fun MessageRowContent(
     val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
         ?: stCol(st.emText) ?: c.inkSoft
 
+    // 全 DOM 行判定：内核就绪即整行交官方模板（头像/名字/时间戳/正文一体，官方移动端结构）；
+    // 原生只保留宿主交互面（思考卡/操作条/媒体/手势）。用户消息按 P6 开关分流省池槽位。
+    val useKernel = kernelPool != null && mesid.isNotEmpty() && kernelText != null && (!isUser || userKernel)
+    val kernelAvatarUrl = remember(avatarPath) { kernelAvatarUrlOf(avatarPath) }
+    // 长按菜单 + AI 消息横滑手势：全 DOM 行与原生回退路径共用
+    var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
+    if (!isUser && !isSystem && swipeCount >= 1) {
+        val threshold = with(LocalDensity.current) { 56.dp.toPx() }
+        bubbleModifier = bubbleModifier.then(
+            Modifier.pointerInput(Unit) {
+                var total = 0f
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (total > threshold) onSwipeLeft()
+                        else if (total < -threshold) onSwipeRight()
+                        total = 0f
+                    },
+                ) { change, dragAmount ->
+                    change.consume()
+                    total += dragAmount
+                }
+            },
+        )
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
         if (dateLabel == null && !isPrevSameSender) {
@@ -3393,6 +3437,82 @@ private fun MessageRowContent(
         modifier = Modifier.fillMaxWidth().padding(top = if (isUser) 12.dp else 0.dp),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
+        if (useKernel) {
+            // 全 DOM 行：官方模板承担头像/名字/时间戳/token 计数；原生只留交互面。
+            Column(modifier = Modifier.fillMaxWidth().then(bubbleModifier)) {
+                if (!reasoning.isNullOrBlank()) {
+                    ReasoningCard(
+                        text = reasoning,
+                        expanded = reasoningExpanded,
+                        onToggle = onReasoningToggle,
+                    )
+                    Spacer(Modifier.size(3.dp))
+                }
+                MessageKernelRow(
+                    pool = kernelPool!!,
+                    payload = KernelMessagePayload(
+                        mesid = mesid,
+                        mes = kernelText!!,
+                        chName = name,
+                        isUser = isUser,
+                        isSystem = formatAsSystem,
+                        avatarUrl = kernelAvatarUrl,
+                        timestamp = time,
+                        tokenCount = tokenCount,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    onLongPress = onLongPress,
+                )
+                if (spriteFile != null) {
+                    AsyncImage(
+                        model = spriteFile,
+                        contentDescription = "表情精灵",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .padding(top = 3.dp)
+                            .size(34.dp),
+                    )
+                }
+                if (!isSystem && (swipeCount >= 1 || showActions)) {
+                    Spacer(Modifier.size(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        if (swipeCount >= 1) {
+                            MessageActionIcon(FaIcons.ChevronLeft, "上一个回复", onSwipeLeft)
+                            Text(
+                                text = "${curSwipe + 1}/${swipeCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable(onClick = onSwipePicker)
+                                    .padding(horizontal = 4.dp, vertical = 3.dp),
+                            )
+                            MessageActionIcon(FaIcons.ChevronRight, "下一个回复", onSwipeRight)
+                        }
+                        if (showActions) {
+                            if (swipeCount >= 1) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 6.dp)
+                                        .size(width = 1.dp, height = 12.dp)
+                                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                )
+                            }
+                            MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
+                            MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
+                            MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
+                        }
+                    }
+                }
+                if (media.items.isNotEmpty()) {
+                    Spacer(Modifier.size(8.dp))
+                    MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
+                }
+            }
+        } else {
         if (!isUser) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 36)
@@ -3470,27 +3590,7 @@ private fun MessageRowContent(
                 )
             }
             Spacer(Modifier.size(3.dp))
-            // 滑动切回复：AI 气泡横滑（右滑=下一个/生成变体，左滑=上一个）；不干扰列表纵向滚动。
-            // 官方 swiped-events 仅绑定最后一条消息 → swipeCount 仅最后一条 AI 非零，手势随之只在其上生效
-            var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
-            if (!isUser && !isSystem && swipeCount >= 1) {
-                val threshold = with(LocalDensity.current) { 56.dp.toPx() }
-                bubbleModifier = bubbleModifier.then(
-                    Modifier.pointerInput(Unit) {
-                        var total = 0f
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                if (total > threshold) onSwipeLeft()
-                                else if (total < -threshold) onSwipeRight()
-                                total = 0f
-                            },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            total += dragAmount
-                        }
-                    },
-                )
-            }
+            // 手势修饰符已上提至函数级（全 DOM 行与原生回退共用）
             if (isUser) {
                 // 用户消息保留右侧胶囊：对话分隔锚点，和 AI 纯文本流形成对比
                 Surface(
@@ -3500,29 +3600,14 @@ private fun MessageRowContent(
                     modifier = bubbleModifier,
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                        // 用户消息默认原生渲染（短文本为主，节省内核 WebView 池槽位给 AI 长文）；
-                        // P6 评估开关开时正文同走内核管线（官方 messageFormatting 对用户消息一视同仁）
-                        if (userKernel && kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
-                            MessageKernelRow(
-                                pool = kernelPool,
-                                payload = KernelMessagePayload(
-                                    mesid = mesid,
-                                    mes = kernelText,
-                                    chName = name,
-                                    isUser = true,
-                                    isSystem = false,
-                                ),
-                                onLongPress = onLongPress,
-                            )
-                        } else {
-                            ChatMarkdown(
-                                content = text,
-                                onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
-                                isSystem = false,
-                                charAvatarPath = avatarPath,
-                                fillWidth = false,
-                            )
-                        }
+                        // 原生回退路径（内核未就绪/池满）：短文本为主的过渡显示
+                        ChatMarkdown(
+                            content = text,
+                            onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
+                            isSystem = false,
+                            charAvatarPath = avatarPath,
+                            fillWidth = false,
+                        )
                     }
                 }
             } else if (aiBubble) {
@@ -3533,52 +3618,24 @@ private fun MessageRowContent(
                     border = bubbleBorder,
                     modifier = bubbleModifier,
                 ) {
-                    if (kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
-                        MessageKernelRow(
-                            pool = kernelPool,
-                            payload = KernelMessagePayload(
-                                mesid = mesid,
-                                mes = kernelText,
-                                chName = name,
-                                isUser = false,
-                                isSystem = isSystem,
-                            ),
-                            onLongPress = onLongPress,
-                        )
-                    } else {
-                        ChatMarkdown(
-                            content = text,
-                            onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                            isSystem = formatAsSystem,
-                            charAvatarPath = avatarPath,
-                            fillWidth = false,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
-                        )
-                    }
-                }
-            } else {
-                // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
-                if (kernelPool != null && mesid.isNotEmpty() && kernelText != null) {
-                    MessageKernelRow(
-                        pool = kernelPool,
-                        payload = KernelMessagePayload(
-                            mesid = mesid,
-                            mes = kernelText,
-                            chName = name,
-                            isUser = false,
-                            isSystem = isSystem,
-                        ),
-                        onLongPress = onLongPress,
-                    )
-                } else {
                     ChatMarkdown(
                         content = text,
                         onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         isSystem = formatAsSystem,
                         charAvatarPath = avatarPath,
-                        modifier = bubbleModifier,
+                        fillWidth = false,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
                     )
                 }
+            } else {
+                // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
+                ChatMarkdown(
+                    content = text,
+                    onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    isSystem = formatAsSystem,
+                    charAvatarPath = avatarPath,
+                    modifier = bubbleModifier,
+                )
             }
             // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
             // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。
@@ -3623,6 +3680,7 @@ private fun MessageRowContent(
                 MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
             }
         }
+        }
     }
     }
 }
@@ -3641,34 +3699,10 @@ private fun StreamingRow(
     kernelPool: KernelWebViewPool? = null,
     mesid: String = "",
 ) {
-    val transition = rememberInfiniteTransition(label = "caret")
-    val caretAlpha by transition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
-        label = "caretAlpha",
-    )
-    val caretScale by transition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
-        label = "caretScale",
-    )
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start,
-    ) {
-        RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 36)
-        Spacer(Modifier.size(10.dp))
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = if (impersonating) "冒充草稿 · 我" else name,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (impersonating) MaterialTheme.colorScheme.secondary else accent,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.size(4.dp))
-            // 流式思考：同一个卡，默认折叠，点开展开看实时思考过程
+    if (kernelPool != null && mesid.isNotEmpty() && !impersonating) {
+        // 内核流式（§3.4）：整行交官方模板（头像/名字随行），120ms 节流轻量更新，
+        // 流结束由 payload 权威重渲收尾；冒充草稿走下方原生轻量路径（临时预览不占池槽位）
+        Column(modifier = modifier.fillMaxWidth()) {
             if (reasoning.isNotBlank()) {
                 ReasoningCard(
                     text = reasoning,
@@ -3678,37 +3712,59 @@ private fun StreamingRow(
                 )
                 Spacer(Modifier.size(6.dp))
             }
-            if (kernelPool != null && mesid.isNotEmpty()) {
-                // 内核流式（§3.4）：正文走池化 WebView 官方管线，120ms 节流轻量更新；
-                // 冒充草稿仍走原生轻量路径（临时预览不占池槽位）
-                Row(verticalAlignment = Alignment.Bottom) {
-                    MessageKernelRow(
-                        pool = kernelPool,
-                        payload = KernelMessagePayload(
-                            mesid = mesid,
-                            mes = text.ifEmpty { "…" },
-                            chName = name,
-                            isUser = false,
-                            isSystem = false,
-                        ),
-                        streamingText = text,
-                        modifier = Modifier.weight(1f),
-                        onLongPress = null,
+            MessageKernelRow(
+                pool = kernelPool,
+                payload = KernelMessagePayload(
+                    mesid = mesid,
+                    mes = text.ifEmpty { "…" },
+                    chName = name,
+                    isUser = false,
+                    isSystem = false,
+                    avatarUrl = kernelAvatarUrlOf(avatarPath),
+                ),
+                streamingText = text,
+                modifier = Modifier.fillMaxWidth(),
+                onLongPress = null,
+            )
+        }
+    } else {
+        val transition = rememberInfiniteTransition(label = "caret")
+        val caretAlpha by transition.animateFloat(
+            initialValue = 0.3f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
+            label = "caretAlpha",
+        )
+        val caretScale by transition.animateFloat(
+            initialValue = 0.75f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
+            label = "caretScale",
+        )
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+        ) {
+            RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 36)
+            Spacer(Modifier.size(10.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = if (impersonating) "冒充草稿 · 我" else name,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (impersonating) MaterialTheme.colorScheme.secondary else accent,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.size(4.dp))
+                // 流式思考：同一个卡，默认折叠，点开展开看实时思考过程
+                if (reasoning.isNotBlank()) {
+                    ReasoningCard(
+                        text = reasoning,
+                        expanded = reasoningExpanded,
+                        onToggle = onReasoningToggle,
+                        streaming = true,
                     )
-                    // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 4.dp, end = 2.dp)
-                            .size(6.dp)
-                            .graphicsLayer {
-                                scaleX = caretScale
-                                scaleY = caretScale
-                                this.alpha = caretAlpha
-                            }
-                            .background(EmberTheme.colors.ai, CircleShape),
-                    )
+                    Spacer(Modifier.size(6.dp))
                 }
-            } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StreamingMarkdown(
                         content = text.ifEmpty { "…" },

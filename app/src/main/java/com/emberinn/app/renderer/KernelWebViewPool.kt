@@ -63,15 +63,30 @@ class KernelWebViewPool(
     @Volatile var shimHandler: ((method: String, paramsJson: String, respond: (String) -> Unit) -> Unit)? = null
     fun removeLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.remove(l) } }
 
-    // 每页主题状态：新建实例 ready 后自动应用；updateTheme 广播到全部存活实例。
-    // bodyClasses 为全量同步语义（含 chat_display 布局类 + 样式包类 + embed-shell）。
+    // 每页主题状态：新建实例 ready 后自动应用；updateTheme/updateStylePack 广播到全部存活实例。
+    // bodyClasses 为全量同步语义（含 chat_display 布局类 + app-host-actions 宿主接管标记）。
     @Volatile private var currentThemeJson: String? = null
-    @Volatile private var currentBodyClasses: List<String> = listOf("embed-shell")
+    @Volatile private var currentBodyClasses: List<String> = listOf("app-host-actions")
+    @Volatile private var currentStylePackEnabled: Boolean = false
+    @Volatile private var currentStylePackHref: String? = null
+    @Volatile private var currentStylePackExtensionHref: String? = null
+    @Volatile private var currentStylePackVars: String? = null
 
     /** 主题/布局变更入口（ChatScreen 收集 OfficialThemeManager 流后调用） */
     fun updateTheme(themeJson: String?, bodyClasses: List<String>) {
         currentThemeJson = themeJson
         currentBodyClasses = bodyClasses
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
+        }
+    }
+
+    /** 样式包变更入口：enabled/href/extensionHref/varsJson 全量透传内核（vars 为原始 JSON 对象字面量） */
+    fun updateStylePack(enabled: Boolean, href: String?, varsJson: String?, extensionHref: String? = null) {
+        currentStylePackEnabled = enabled
+        currentStylePackHref = href
+        currentStylePackExtensionHref = extensionHref
+        currentStylePackVars = varsJson
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
         }
@@ -90,8 +105,11 @@ class KernelWebViewPool(
 
     private fun applyPageSetup(instance: PooledWebView) {
         val kernel = RenderKernel(instance)
+        // 顺序契约：先主题变量 → 再布局类 → 最后样式包（整包 CSS 可覆盖前两者，
+        // 与官方「power-user 设置 → 扩展主题 CSS」的层叠顺序一致）
         currentThemeJson?.let(kernel::applyThemeRaw)
         kernel.setBodyClasses(currentBodyClasses)
+        kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref)
     }
 
     fun preload() {

@@ -23,9 +23,10 @@ import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
 
 /**
- * 单条消息正文的内核宿主（embed-shell 模式）：
- * 池化 WebView 只渲染官方管线的消息 HTML 正文；头像/名字/操作条/媒体等壳层交互
- * 仍由原生组件承担。raw 文本永远保存在 Kotlin 侧（ChatStore），WebView 只是显示器官——
+ * 单条消息的内核宿主（全 DOM 行）：
+ * 池化 WebView 渲染官方模板整行 .mes（头像/名字/时间戳/正文一体，官方移动端结构）；
+ * 原生只保留宿主交互面（长按菜单/操作条/swipe 手势由调用方叠加）。
+ * raw 文本永远保存在 Kotlin 侧（ChatStore），WebView 只是显示器官——
  * 渲染进程崩溃时重建即可，数据零丢失。
  *
  * 高度契约：内核 reportHeight/ResizeObserver 回报 CSS px（≈dp），本组件据此撑高，
@@ -88,7 +89,7 @@ fun MessageKernelRow(
         val s = slot ?: return@LaunchedEffect
         if (host != null || disposed.get()) return@LaunchedEffect
         pool.acquire { pooled ->
-            RenderKernel(pooled).setEmbedShell(true)
+            // 全 DOM 行：不再挂 embed-shell——头像/名字/正文全由官方模板渲染
             if (disposed.get()) {
                 pool.release(pooled)
                 return@acquire
