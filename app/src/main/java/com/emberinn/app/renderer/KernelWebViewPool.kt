@@ -1,6 +1,7 @@
 package com.emberinn.app.renderer
 
 import android.content.Context
+import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
 import kotlinx.coroutines.CoroutineScope
@@ -94,6 +95,8 @@ class KernelWebViewPool(
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.remove(instance) }
             idle.remove(instance)
+            // 官方契约：destroy() 前先脱离视图树，避免持有已损坏实例的父容器泄漏/绘制异常
+            (instance.webView.parent as? ViewGroup)?.removeView(instance.webView)
             runCatching { instance.webView.destroy() }
             synchronized(crashListeners) { crashListeners.toList() }.forEach { it() }
         }

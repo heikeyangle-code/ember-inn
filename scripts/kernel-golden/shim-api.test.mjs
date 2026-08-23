@@ -49,5 +49,25 @@ ok(shim.includes("var reqId = String(++reqSeq)"), 'reqId 统一字符串键（�
 const installer = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/StApiShimInstaller.kt'), 'utf-8');
 ok(installer.includes('"value":${vm.shimChatMetadata()}'), 'metadata.get 响应带 {ok,value} 信封');
 
+// §7 宿主白名单：shim 动作名 ↔ KernelHostAction 常量逐一咬合（改一边必须同步另一边）
+console.log('宿主白名单协议对齐:');
+const models = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/KernelModels.kt'), 'utf-8');
+const ACTION_TO_CONST = {
+    openLink: 'OPEN_LINK',
+    copyText: 'COPY_TEXT',
+    share: 'SHARE',
+    toast: 'TOAST',
+    saveMedia: 'SAVE_MEDIA',
+    saveDataUrl: 'SAVE_DATA_URL',
+    vibrate: 'VIBRATE',
+};
+for (const [action, konst] of Object.entries(ACTION_TO_CONST)) {
+    ok(shim.includes(`hostRequest('${action}'`) || shim.includes(`hostRequest("${action}"`),
+        `shim 发出动作 ${action}`);
+    ok(models.includes(`const val ${konst} = "${action}"`), `KernelHostAction.${konst} 登记`);
+}
+ok(shim.includes('window.toastr = {') && shim.includes('toastrFor('), '官方 toastr 全局兼容面存在');
+ok(shim.includes("'__proto__': true"), 'mergeWith 原型污染防护在位');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);

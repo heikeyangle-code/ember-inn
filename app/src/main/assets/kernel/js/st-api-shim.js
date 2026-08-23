@@ -384,10 +384,14 @@
     }
 
     /** lodash mergeWith 的 JSON 子集（变量表数据只经 JSON 桥，模型即完备）。
-     *  customizer(dstVal, srcVal)：返回 undefined 走默认合并，否则整体采用返回值。 */
+     *  customizer(dstVal, srcVal)：返回 undefined 走默认合并，否则整体采用返回值。
+     *  危险键跳过：lodash 自带原型污染防护（CVE-2020-8203 修复），此处对齐——
+     *  否则 dst['__proto__']=x 会改写对象原型，卡内脚本可借变量写入攻击 shim 全局。 */
+    var UNSAFE_KEYS = { '__proto__': true, 'constructor': true, 'prototype': true };
     function mergeWith(dst, src, customizer) {
         for (var key in src) {
             if (!Object.prototype.hasOwnProperty.call(src, key)) continue;
+            if (UNSAFE_KEYS[key]) continue;
             var s = src[key];
             if (s === undefined) continue; // lodash：undefined 源值跳过
             var d = dst[key];
@@ -404,10 +408,13 @@
         return Array.isArray(rhs) ? rhs : undefined;
     }
 
-    /** lodash _.unset 的点路径子集（'a.b' / 'a.0.b'） */
+    /** lodash _.unset 的点路径子集（'a.b' / 'a.0.b'）；危险键段拒绝（同 mergeWith 防污染） */
     function unsetPath(obj, path) {
         var segs = String(path).split('.').filter(function (s) { return s !== ''; });
         if (segs.length === 0) return false;
+        for (var k = 0; k < segs.length; k++) {
+            if (UNSAFE_KEYS[segs[k]]) return false;
+        }
         var cur = obj;
         for (var i = 0; i < segs.length - 1; i++) {
             if (!isPlainObject(cur) && !Array.isArray(cur)) return false;

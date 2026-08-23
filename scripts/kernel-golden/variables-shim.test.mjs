@@ -160,5 +160,18 @@ const t = makeSandbox();
     ok(shim.includes('chat_metadata.variables') || shim.includes("chat\" 作用域"), 'chat 作用域存储位置注释登记');
 }
 
+{
+    console.log('原型污染防护（对齐 lodash CVE-2020-8203 修复）:');
+    const s = makeSandbox();
+    s.store.metadata.variables = { keep: 1 };
+    await s.sandbox.insertOrAssignVariables(JSON.parse('{"__proto__":{"polluted":"pwn"},"constructor":{"prototype":{"x":1}},"keep":2}'));
+    ok(({}).polluted === undefined, '__proto__ 键不污染 Object.prototype');
+    ok(s.store.metadata.variables.polluted === undefined && s.store.metadata.variables.keep === 2, '危险键跳过、正常键照常合并');
+    const r = await s.sandbox.deleteVariable('__proto__.polluted');
+    ok(r.delete_occurred === false, 'unsetPath 危险键段拒绝');
+    const r2 = await s.sandbox.deleteVariable('keep');
+    ok(r2.delete_occurred === true && s.store.metadata.variables.keep === undefined, '正常路径删除不受防护影响');
+}
+
 console.log(`\n变量族金测试: ${pass} 通过, ${fail} 失败`);
 if (fail > 0) process.exit(1);

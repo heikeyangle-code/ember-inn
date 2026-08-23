@@ -225,6 +225,7 @@ import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -5331,10 +5332,16 @@ private fun sanitizeHtmlForWebView(html: String): String =
  */
 private fun handleHostAction(context: Context, action: String, value: String) {
     when (action) {
-        KernelHostAction.OPEN_LINK -> runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(value)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
+        KernelHostAction.OPEN_LINK -> {
+            // 只放行 http(s)——官方 window.open 语义收窄到浏览器可达 URL，
+            // 拦掉 file:/intent:/content: 等卡内脚本借桥探测或拉起任意组件的路径
+            val scheme = Uri.parse(value).scheme?.lowercase()
+            if (scheme == "http" || scheme == "https") runCatching {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(value)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.onFailure { Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show() }
+            else Toast.makeText(context, "仅支持 http(s) 链接", Toast.LENGTH_SHORT).show()
         }
         KernelHostAction.COPY_TEXT -> {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -5365,6 +5372,11 @@ private fun handleHostAction(context: Context, action: String, value: String) {
             Toast.makeText(context, message, duration).show()
         }
         KernelHostAction.SAVE_MEDIA -> runCatching {
+            // 卡脚本常把 canvas.toDataURL() 结果直接传 saveMedia——data:URL 走解码落盘路径
+            if (value.startsWith("data:", ignoreCase = true)) {
+                saveDataUrlFile(context, """{"dataUrl":${JsonPrimitive(value)}}""")
+                return@runCatching
+            }
             val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val name = URLUtil.guessFileName(value, null, null)
             dm.enqueue(
