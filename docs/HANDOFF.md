@@ -260,7 +260,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 ### 5.2 待办（当前优先级）
 1. **P5 删双轨收尾**：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt)、NativeMarkdown/SegmentedMarkdown 兜底路线、RenderPrefs.kernelRender 开关——待内核路径真机验证全覆盖后一次性删
 2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；用户消息内核渲染评估
-3. **ThemeSkin 图像资产层**：皮肤头图/舞台背景资产（现仅纯色令牌）
+3. **ThemeSkin 图像资产层**：**加载层已就绪**（SkinImageAssets.kt——按 §五约定探测 assets/skins/<id>/background|card_frame|splash × light/dark，进程内缓存，EmberTheme 下发，MainScreen 根背景接入；无图时纯色照旧）。**待补：实际图片素材**——内置 6 套皮肤均无 assets/skins/<id>/ 文件，需美术产出后按约定路径放入即生效
 4. **P7 门禁**：Puppeteer DOM 黄金对比 harness 进 CI。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs，CI kernel-golden job）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红；allowlist 清零后可收紧为全禁
 5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行；event_types 触发点位接线表；TavernHelper 变量族 globals（MVU 卡硬依赖，桥到 ChatStore）
 

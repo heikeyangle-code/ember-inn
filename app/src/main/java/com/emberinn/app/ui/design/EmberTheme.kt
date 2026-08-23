@@ -50,6 +50,7 @@ val LocalEmberChatTheme = staticCompositionLocalOf { ChatAreaTheme(null, null, n
 val LocalEmberDark = staticCompositionLocalOf { true }
 val LocalEmberStageTint = staticCompositionLocalOf<Color?> { null }
 val LocalEmberReduced = staticCompositionLocalOf { false }
+// SkinImageAssets / LocalEmberImageAssets 定义于 SkinImageAssets.kt（§五资产层）
 
 /**
  * 应用根主题。
@@ -66,6 +67,7 @@ fun EmberTheme(
     stageTint: Color? = null,
     reducedMotion: Boolean = false,
     fontFamily: FontFamily = FontFamily.Default,
+    imageAssets: SkinImageAssets = SkinImageAssets.EMPTY,
     content: @Composable () -> Unit,
 ) {
     var palette = if (darkTheme) skin.dark else skin.light
@@ -91,6 +93,7 @@ fun EmberTheme(
         LocalEmberDark provides darkTheme,
         LocalEmberStageTint provides stageTint,
         LocalEmberReduced provides reducedMotion,
+        LocalEmberImageAssets provides imageAssets,
     ) {
         MaterialTheme(
             colorScheme = m3Scheme,

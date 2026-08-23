@@ -74,6 +74,10 @@ class MainActivity : ComponentActivity() {
                     else -> FontFamily.Default
                 }
             }
+            // §五 图像资产层：按皮肤 id 探测 assets/skins/<id>/（内置皮肤无图 → EMPTY 纯色渲染）
+            val imageAssets = remember(skin.id) {
+                com.emberinn.app.ui.design.SkinAssetResolver.resolve(appContext, skin.id, dark = true)
+            }
             EmberTheme(
                 skin = skin,
                 darkTheme = true,
@@ -81,6 +85,7 @@ class MainActivity : ComponentActivity() {
                 stageTint = stageTint,
                 reducedMotion = shell.reducedMotion,
                 fontFamily = fontFamily,
+                imageAssets = imageAssets,
             ) {
                 MainScreen()
             }

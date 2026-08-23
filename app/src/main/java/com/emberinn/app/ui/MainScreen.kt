@@ -209,6 +209,8 @@ fun MainScreen() {
     }
 
     Box(Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
+        // §五 资产层：皮肤背景图（内置皮肤无图时此层为空，纯色照旧）
+        com.emberinn.app.ui.design.SkinBackgroundLayer()
         // 状态栏内边距在此统一处理（旧 Scaffold innerPadding 的等价物）；各屏列表自留底栏空间
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
             TabContent(
