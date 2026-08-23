@@ -959,7 +959,8 @@ fun ChatScreen(
                     },
                     onMessageAction = { mesid, action, _ ->
                         val index = mesid.removePrefix("m-").toIntOrNull()
-                        val el = index?.let { messages.getOrNull(it) } ?: return@onMessageAction
+                        val el = index?.let { messages.getOrNull(it) }
+                        if (el == null) return@ChatKernelShell
                         when (action) {
                             "swipe_left" -> index.let(vm::swipeLeft)
                             "swipe_right" -> index.let(vm::swipeRight)
@@ -1267,9 +1268,9 @@ fun ChatScreen(
                         // 官方 openMessageDelete：进入删除模式，勾选从该条截断到末尾。
                         deleteMode = true
                         deleteCheckIndex = index
-                        kernelPool.acquireSingle { kernel ->
-                            kernel.setDeleteMode(true)
-                            kernel.selectDeleteFrom("m-$index")
+                        kernelPool.acquireSingle { pooled ->
+                            RenderKernel(pooled).setDeleteMode(true)
+                            RenderKernel(pooled).selectDeleteFrom("m-$index")
                         }
                         menuMessageIndex = null
                     }
