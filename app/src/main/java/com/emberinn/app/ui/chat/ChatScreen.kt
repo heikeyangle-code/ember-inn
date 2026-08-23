@@ -54,9 +54,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -147,8 +145,10 @@ import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelWebViewPool
+import com.emberinn.app.renderer.RenderKernel
 import com.emberinn.app.renderer.StApiShimInstaller
 import com.emberinn.app.ui.chat.surface.MessageKernelRow
+import com.emberinn.app.ui.chat.surface.ChatKernelShell
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberInputIcon
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
@@ -322,7 +322,10 @@ fun ChatScreen(
         val shell = themeManager.shellSettings()
         kernelPool.updateTheme(
             officialThemeJson,
-            listOfNotNull(ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass),
+            listOfNotNull(
+                "fullchat",
+                ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass,
+            ),
         )
     }
     // 样式包（第三方整包 CSS + 可选扩展兼容层）：官方主题 enabled=false，内核侧零污染
@@ -337,6 +340,10 @@ fun ChatScreen(
     // 思考卡默认折叠；每次流式开始强制收起（展开+每 tick 全量渲染是滑动卡顿主因）
     LaunchedEffect(isStreaming) {
         if (isStreaming) reasoningExpanded = false
+        if (isStreaming && deleteMode) {
+            deleteMode = false
+            deleteCheckIndex = null
+        }
     }
     // 官方 reasoning 扩展：每条消息的 Thoughts 块各自独立展开/折叠（DOM 级状态、默认折叠、不落盘）。
     // 以 send_date 为身份键，滑动/刷新不串行；流式结束后 finalized 行回到折叠（官方重新渲染重置）。
@@ -423,11 +430,10 @@ fun ChatScreen(
     var deleteTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var deleteSwipeTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var swipePickerIndex by remember { mutableStateOf<MsgTarget?>(null) }
-    val listState = rememberLazyListState()
     // 滚动中（含惯性滑动）临时关掉顶栏/输入栏的实时模糊：cloudy 每帧全屏 RenderEffect
     // 是聊天滚动掉帧的最大 GPU 卡点；停稳后自动恢复，底漆观感与静态模糊几乎一致
     val glassBlurActive by remember {
-        derivedStateOf { !listState.isScrollInProgress }
+        mutableStateOf(false)
     }
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
@@ -616,8 +622,133 @@ fun ChatScreen(
     // 官方 swipe/生成目标是 chat.length-1 且非用户非系统（isMessageSwipeable）。
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) && !isSystem(el) }
 
-    // 贴底跟随：用户上滑查看历史时暂停跟随，滚回底部自动恢复（微信式）。
-    // reverseLayout=true：贴底判定 = firstVisibleItemIndex == 0（官方 LazyColumn 语义，不再读 layoutInfo）。
+    // 整页壳 C2：官方 #chat 全量同步。这里只做 Kotlin 状态 → 官方模板载荷的纯映射；
+    // 文本/头像/时间/token/reasoning 均沿用现有引擎与显示管线，避免在 UI 层重写逻辑。
+    val kernelPayloads = remember(
+        messages,
+        vm.streamingText.value,
+        vm.streamingReasoning.value,
+        isStreaming,
+        displayRevision,
+        activePersona?.avatarPath,
+        vm.avatarPath,
+        showThoughtsNow,
+        lastReasoning,
+        currentName,
+    ) {
+        items.map { item ->
+            when (item) {
+                is ChatItem.Message -> {
+                    val el = item.element
+                    val user = isUser(el)
+                    val system = isSystem(el)
+                    val mediaItems = mediaOf(el)
+                    val name = nameOf(el, user)
+                    val formatAsSystem = system && name == SYSTEM_USER_NAME
+                    val reasoningSrc = if (!user && !system && showThoughtsNow) {
+                        (el.jsonObject["extra"] as? JsonObject)?.get("reasoning")
+                            ?.jsonPrimitive?.contentOrNull
+                            ?: if (item.index == lastAiIndex) {
+                                if (isStreaming) {
+                                    DisplayPipeline.balanceStreamingDelimiters(
+                                        vm.streamingReasoning.value,
+                                        isFinal = !isStreaming,
+                                    ).let { balanced ->
+                                        val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                                        if (AppearancePrefs.encodeTags(context)) {
+                                            com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
+                                        } else fixed
+                                    }
+                                } else lastReasoning
+                            } else null
+                    } else null
+                    val reasoningDisplay = reasoningSrc?.takeIf { it.isNotBlank() }
+                        ?.let { vm.displayReasoningText(it) }
+                    KernelMessagePayload(
+                        mesid = "m-${item.index}",
+                        mes = vm.kernelDisplayTextOf(item.index),
+                        chName = name,
+                        isUser = user,
+                        isSystem = formatAsSystem,
+                        avatarUrl = if (user) {
+                            kernelAvatarUrlOf(activePersona?.avatarPath)
+                        } else {
+                            kernelAvatarUrlOf(vm.avatarPathOf(item.index) ?: vm.avatarPath)
+                        },
+                        timestamp = timeOf(el),
+                        tokenCount = (el.jsonObject["extra"] as? JsonObject)
+                            ?.get("token_count")?.jsonPrimitive?.contentOrNull,
+                        reasoning = reasoningDisplay?.takeIf { it.isNotBlank() },
+                        media = mediaItems.map {
+                            KernelMediaPayload(
+                                url = if (it.url.startsWith("data:")) it.url else kernelAvatarUrlOf(it.url).orEmpty(),
+                                type = it.type,
+                                title = it.title,
+                            )
+                        },
+                        mediaDisplay = extraDisplayOf(el)?.takeIf { display ->
+                            display == com.emberinn.engine.media.MediaDisplay.LIST ||
+                                display == com.emberinn.engine.media.MediaDisplay.GALLERY
+                        } ?: "list",
+                        ghost = system && name != SYSTEM_USER_NAME,
+                        swipeCount = vm.swipeCountOf(el),
+                        currentSwipe = vm.currentSwipeOf(el),
+                        lastMessage = item.index == messages.lastIndex,
+                    )
+                }
+                ChatItem.Streaming -> {
+                    val streamingIndex = messages.size
+                    val streamingDisplay = DisplayPipeline.balanceStreamingDelimiters(
+                        vm.streamingText.value,
+                        isFinal = !isStreaming,
+                    ).let { balanced ->
+                        val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                        if (AppearancePrefs.encodeTags(context)) {
+                            com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
+                        } else fixed
+                    }
+                    KernelMessagePayload(
+                        mesid = "m-$streamingIndex",
+                        mes = streamingDisplay.ifEmpty { "…" },
+                        chName = currentName,
+                        avatarUrl = kernelAvatarUrlOf(vm.avatarPath),
+                        // 官方流式思考块随同一条消息渲染；payload 变化触发 renderChat 权威同步。
+                        reasoning = DisplayPipeline.balanceStreamingDelimiters(
+                            vm.streamingReasoning.value,
+                            isFinal = !isStreaming,
+                        ).takeIf { it.isNotBlank() }?.let { balanced ->
+                            val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                            if (AppearancePrefs.encodeTags(context)) {
+                                com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
+                            } else fixed
+                        },
+                    )
+                    // 官方流式行不是落盘消息：隐藏 swipe/last_mes 状态，避免与最终行错位。
+                    copy(lastMessage = false, swipeCount = 0)
+                }
+                ChatItem.ReasoningOnly -> {
+                    val reasoningIndex = messages.size
+                    lastReasoning?.let { reasoningText ->
+                        KernelMessagePayload(
+                            mesid = "m-$reasoningIndex",
+                            mes = "",
+                            chName = currentName,
+                            isUser = false,
+                            isSystem = false,
+                            avatarUrl = kernelAvatarUrlOf(vm.avatarPath),
+                            reasoning = vm.displayReasoningText(reasoningText),
+                        )
+                    } ?: KernelMessagePayload(
+                        mesid = "m-$reasoningIndex",
+                        mes = "…",
+                        chName = currentName,
+                        avatarUrl = kernelAvatarUrlOf(vm.avatarPath),
+                    )
+                }
+            }
+        }
+    }
+
     var followBottom by remember { mutableStateOf(true) }
     // 全局快捷回复输出填输入框（官方点击槽位执行斜杠链；本 App 把文本输出放进输入框，用户可改可发）
     LaunchedEffect(quickReplyOutput) {
@@ -727,33 +858,6 @@ fun ChatScreen(
     // README 手势守则：系统返回键/侧滑返回 = 回到列表
     BackHandler(onBack = onBack)
 
-    // 贴底跟随（reverseLayout=true）：官方 LazyColumn 语义下 firstVisibleItemIndex==0 即“滚到底部”。
-    // 新消息/流式内容增长时底部天然钉住，无需任何 scrollToItem 强制滚动（旧的 layoutInfo 采样 +
-    // 多条 scrollToItem(Int.MAX_VALUE) 是滚动卡顿主因）。只有用户上滑（滚动位置变大）才暂停跟随。
-    LaunchedEffect(listState) {
-        var prevIndex = 0
-        var prevOffset = 0
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
-                val movedAway = listState.isScrollInProgress &&
-                    (index > prevIndex || (index == prevIndex && offset > prevOffset))
-                if (movedAway) followBottom = false
-                if (index == 0 && offset == 0) followBottom = true
-                prevIndex = index
-                prevOffset = offset
-            }
-    }
-    // 用户上滑看历史期间新消息到了不拽走；发送/快捷回复重新打开跟随时才回到最新。
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && followBottom) {
-            // 首帧尚未测量时 animateScrollToItem 会被吞甚至越界：先等列表布局出条目再滚。
-            snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
-            // 瞬时定位：reverseLayout 下已贴底（index 0）就直接跳过，避免键盘收起/新消息时反复纠正滚动位置
-            if (listState.firstVisibleItemIndex != 0) {
-                listState.scrollToItem(0)
-            }
-        }
-    }
     // 官方 generate() 开头 scrollLock = false：任何生成类型（发送/继续/重生成/变体/冒充/群聊轮次）
     // 开始时恢复自动贴底跟随——用户上滑看历史时点重新生成，官方会回到最新并跟随。
     LaunchedEffect(generationEpoch) {
@@ -770,10 +874,7 @@ fun ChatScreen(
     val sky = rememberSky()
     val keyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
-    // 行级外观设置：在 ChatScreen 层读一次传给列表，避免每条消息组合时各自读 SharedPreferences
-    val rowDensity = AppearancePrefs.density(context)
-    val rowImmersiveActions = AppearancePrefs.immersiveActions(context)
-    val rowBubbleStyle = AppearancePrefs.bubbleStyle(context)
+    // 整页壳 C2：行级外观偏好退役；布局/气泡/密度由官方主题 CSS 接管。
     var topBarHeight by remember { mutableStateOf(0) }
     val topBarPad = with(density) { topBarHeight.toDp() }
 
@@ -844,211 +945,63 @@ fun ChatScreen(
                 UnconfiguredBanner(onOpenSettings = onOpenSettings)
             }
 
-            // 列表 + jump-to-bottom 浮标的同一画布（DESIGN_SYSTEM §6.2：浮标 + 未读跳转）
+            // 整页壳 C2：官方 #sheld/#chat 接管消息区滚动；原生输入栏继续由 C3 处理。
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            LazyColumn(
-                state = listState,
-                reverseLayout = true,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(
-                    if (rowDensity == "compact") 4.dp else 8.dp,
-                ),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            ) {
-                if (items.isEmpty()) {
-                    item { EmptyChat(name = currentName) }
-                }
-                itemsIndexed(
-                    items,
-                    key = { _, item -> when (item) {
-                        is ChatItem.Message -> "m-${item.index}"
-                        // 流式项与生成完成的最后一条消息共用同一 key + contentType：
-                        // 结束瞬间是“内容原地替换”而不是“删一行+插一行”，不触发位移动画/闪跳
-                        ChatItem.Streaming -> "m-${items.lastIndex}"
-                        ChatItem.ReasoningOnly -> "m-${items.lastIndex}"
-                    } },
-                    contentType = { _, item -> when (item) {
-                        is ChatItem.Message -> "chat-message"
-                        ChatItem.Streaming -> "chat-message"
-                        ChatItem.ReasoningOnly -> "chat-message"
-                    } },
-                ) { _, item ->
-                    when (item) {
-                        is ChatItem.Message -> {
-                            val el = item.element
-                            // 派生字段随消息元素或显示管线修订号变化重算：流式 tick 不重算历史行；
-                            // displayRevision 变化（列表刷新/显示设置变更）后立即取新显示文本，修复改设置后残留旧文本
-                            val derived = remember(el, displayRevision) {
-                                val user = isUser(el)
-                                ChatItemDerived(
-                                    isUser = user,
-                                    isSystem = isSystem(el),
-                                    text = vm.displayTextOf(item.index),
-                                    reasoning = (el.jsonObject["extra"] as? JsonObject)
-                                        ?.get("reasoning")?.jsonPrimitive?.contentOrNull,
-                                    media = mediaOf(el),
-                                    mediaDisplay = extraDisplayOf(el),
-                                    mediaIndex = extraIndexOf(el),
-                                    name = nameOf(el, user),
-                                    time = timeOf(el),
-                                    swipeCount = vm.swipeCountOf(el),
-                                    curSwipe = vm.currentSwipeOf(el),
-                                    avatarPath = if (user) null else vm.avatarPathOf(item.index),
-                                )
-                            }
-                            val isUserMsg = derived.isUser
-                            val isSystemMsg = derived.isSystem
-                            val text = derived.text
-                            // 内核路径文本：引擎只做正则/宏前处理，fixMarkdown/encode_tags 由内核接管
-                            val kernelText = remember(el, displayRevision) { vm.kernelDisplayTextOf(item.index) }
-                            // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
-                            val mediaList = remember(derived.media) { ChatMedia(derived.media) }
-                            val immersiveActions = rowImmersiveActions
-                            // 底部操作条仅最后一条 AI 显示（⋯/flag/pencil 与变体箭头同行）；
-                            // 用户消息无常驻图标，长按气泡出菜单（官方移动端同款交互）
-                            val showActions = !isStreaming && !isSystemMsg && !immersiveActions &&
-                                !isUserMsg && item.index == lastAiIndex
-                            val isPrevSameSender =
-                                item.index > 0 && isUser(messages[item.index - 1]) == isUserMsg
-                            val prevEl = if (item.index == 0) null else messages[item.index - 1]
-                            val dateLabel = remember(item.index, el, prevEl) {
-                                if (prevEl == null) {
-                                    dateLabelOf(el)
-                                } else {
-                                    val prev = dateLabelOf(prevEl)
-                                    val cur = dateLabelOf(el)
-                                    if (prev == cur) null else cur
-                                }
-                            }
-                            // 官方 reasoning 扩展：每条 AI 消息各自渲染 Thoughts 块（extra.reasoning 逐条落盘）；
-                            // 最后一条 AI 在落盘刷新落地前一帧用内存 lastReasoning 兜底；show_thoughts 关闭时全部隐藏。
-                            val reasoningSrc = if (!isUserMsg && !isSystemMsg && showThoughtsNow) {
-                                derived.reasoning ?: if (item.index == lastAiIndex) lastReasoning else null
-                            } else null
-                            val reasoningDisplay = remember(reasoningSrc, displayRevision) {
-                                reasoningSrc?.takeIf { it.isNotBlank() }?.let { vm.displayReasoningText(it) }
-                            }
-                            val reasoningKey = remember(el) {
-                                el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull ?: "idx-${item.index}"
-                            }
-                            MessageRow(
-                                modifier = Modifier,
-                                isUser = isUserMsg,
-                                isSystem = isSystemMsg,
-                                // 内核流式启用后，历史行在流式期间也保持内核渲染（不再整列回退原生）
-                                kernelPool = kernelPool,
-                                mesid = "m-${item.index}",
-                                kernelText = kernelText,
-                                text = text,
-                                media = mediaList,
-                                mediaDisplay = derived.mediaDisplay,
-                                mediaIndex = derived.mediaIndex,
-                                onMediaIndexChange = { idx -> vm.setMediaIndex(item.index, idx) },
-                                reasoning = reasoningDisplay,
-                                reasoningExpanded = reasoningExpandedMap[reasoningKey] == true,
-                                onReasoningToggle = {
-                                    reasoningExpandedMap[reasoningKey] = !(reasoningExpandedMap[reasoningKey] == true)
-                                },
-                                name = derived.name,
-                                time = derived.time,
-                                dateLabel = dateLabel,
-                                // 官方：用户消息头像 = 人设头像（user_avatar，无则默认占位）；AI = 角色/force_avatar
-                                avatarPath = if (isUserMsg) {
-                                    activePersona?.avatarPath?.takeIf { java.io.File(it).exists() }
-                                } else {
-                                    derived.avatarPath ?: vm.avatarPath
-                                },
-                                spritePath = (item.element.jsonObject["extra"] as? JsonObject)
-                                    ?.get("sprite")?.jsonPrimitive?.contentOrNull,
-                                tokenCount = (item.element.jsonObject["extra"] as? JsonObject)
-                                    ?.get("token_count")?.jsonPrimitive?.contentOrNull,
-                                accent = accent,
-                                aiBubble = rowBubbleStyle == "bubble",
-                                onImageToggle = { vm.setMediaDisplay(item.index) },
-                                showActions = showActions,
-                                // 官方 isMessageSwipeable：仅 chat.length-1 且非用户、非系统、生成中隐藏（script.js:9123-9145）
-                                // —— 最后一条是用户消息时，前面的 AI 消息也不显示 swipe 控件
-                                swipeCount = if (item.index == messages.lastIndex && !isUserMsg && !isSystemMsg && !isStreaming) derived.swipeCount else 0,
-                                curSwipe = derived.curSwipe,
-                                isPrevSameSender = isPrevSameSender,
-                                onSwipeLeft = { vm.swipeLeft(item.index) },
-                                onSwipeRight = { vm.swipeRight(item.index) },
-                                onSwipePicker = { swipePickerIndex = MsgTarget(item.index, el) },
-                                onEdit = { editIndex = MsgTarget(item.index, el); editDraft = text },
-                                onMore = { menuMessageIndex = MsgTarget(item.index, el) },
-                                onBookmark = {
-                                    bookmarkDraftName = vm.defaultBookmarkName()
-                                    showBookmarkDialog = true
-                                },
-                                onClassifyExpression = { t, cb -> vm.classifyExpression(t, cb) },
-                                classifyEnabled = true,
-                                deleteCheck = if (deleteMode) deleteCheckIndex == item.index else null,
-                                onDeleteCheck = if (deleteMode) ({
-                                    deleteCheckIndex = if (deleteCheckIndex == item.index) null else item.index
-                                }) else null,
-                                onLongPress = { if (!deleteMode) menuMessageIndex = MsgTarget(item.index, el) },
-                            )
+                ChatKernelShell(
+                    pool = kernelPool,
+                    payloads = kernelPayloads,
+                    followBottom = followBottom,
+                    onAtBottomChanged = { atBottom ->
+                        if (!atBottom) followBottom = false
+                    },
+                    onLongPress = { mesid ->
+                        mesid.removePrefix("m-").toIntOrNull()?.let { index ->
+                            messages.getOrNull(index)?.let { menuMessageIndex = MsgTarget(index, it) }
                         }
-                        ChatItem.Streaming -> {
-                            // 流式状态只在“流式这一行”订阅：每 token 更新不会让整棵消息列表重组。
-                            // VM 已按官方 streaming_fps≈30 单层节流（33ms 一帧），这里直接消费，不再叠 UI 节流
-                            // （此前 100ms+120ms 双层叠加 ~220ms 一帧，是流式视觉卡顿主因）。
-                            val st by vm.streamingText.collectAsState()
-                            val sr by vm.streamingReasoning.collectAsState()
-                            // 思考流式同正文：定界符补齐 + fixMarkdown + encode_tags（官方 messageFormatting 每 tick）
-                            val reasoningDisplay = remember(sr, isStreaming) {
-                                val balanced = DisplayPipeline.balanceStreamingDelimiters(sr, isFinal = !isStreaming)
-                                val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
-                                if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
+                    },
+                    onMessageAction = { mesid, action, _ ->
+                        val index = mesid.removePrefix("m-").toIntOrNull()
+                        val el = index?.let { messages.getOrNull(it) } ?: return@onMessageAction
+                        when (action) {
+                            "swipe_left" -> index.let(vm::swipeLeft)
+                            "swipe_right" -> index.let(vm::swipeRight)
+                            "mes_copy" -> {
+                                clipboard.setText(AnnotatedString(textOf(el)))
+                                Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                             }
-                            // 官方 messageFormatting 每 tick：定界符补齐（onProgressStreaming）+ fixMarkdown(forDisplay=true)
-                            // + encode_tags（auto_fix_generated_markdown 默认开）——流式中也必须跑，否则未闭合 ** 会露符号
-                            val streamingDisplay = remember(st, isStreaming) {
-                                val balanced = DisplayPipeline.balanceStreamingDelimiters(st, isFinal = !isStreaming)
-                                val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
-                                if (AppearancePrefs.encodeTags(context)) com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed) else fixed
+                            "mes_edit" -> {
+                                editIndex = MsgTarget(index, el)
+                                editDraft = textOf(el)
                             }
-                            StreamingRow(
-                                modifier = Modifier,
-                                text = streamingDisplay,
-                                reasoning = reasoningDisplay,
-                                reasoningExpanded = reasoningExpanded,
-                                onReasoningToggle = { reasoningExpanded = !reasoningExpanded },
-                                name = currentName,
-                                avatarPath = vm.avatarPath,
-                                accent = accent,
-                                impersonating = isImpersonating,
-                                kernelPool = if (!isImpersonating) kernelPool else null,
-                                mesid = "m-${items.lastIndex}",
-                            )
+                            "mes_create_bookmark" -> {
+                                bookmarkDraftName = vm.defaultBookmarkName()
+                                showBookmarkDialog = true
+                            }
+                            "mes_create_branch" -> vm.createBranch(index)?.let(onSwitchSession)
+                            "mes_translate" -> vm.translateMessage(index)
+                            "sd_message_gen" -> vm.generateImageForMessage(index)
+                            "mes_narrate" -> vm.narrateMessage(index)
+                            "mes_prompt" -> tokenStatsIndex = MsgTarget(index, el)
+                            "mes_hide" -> vm.hideMessage(index, true)
+                            "mes_unhide" -> vm.hideMessage(index, false)
+                            "mes_media_gallery", "mes_media_list" -> vm.setMediaDisplay(index)
+                            "mes_embed" -> {
+                                embedTargetIndex = MsgTarget(index, el)
+                                embedPicker.launch(arrayOf("*/*"))
+                            }
+                            "mes_swipe_picker" -> swipePickerIndex = MsgTarget(index, el)
+                            "del_checkbox" -> if (deleteMode) {
+                                deleteCheckIndex = index
+                                kernelPool.acquireSingle { RenderKernel(it).selectDeleteFrom(mesid) }
+                            }
+                            "extraMesButtonsHint" -> Unit
                         }
-                        ChatItem.ReasoningOnly -> {
-                            lastReasoning?.let {
-                                ReasoningCard(
-                                    text = vm.displayReasoningText(it),
-                                    expanded = reasoningExpanded,
-                                    onToggle = { reasoningExpanded = !reasoningExpanded },
-                                )
-                            }
-                        }
-                    }
-                }
-                notice?.let { n ->
-                    item(key = "notice") {
-                        Text(
-                            text = n,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        )
-                    }
-                }
-            }
+                    },
+                    deleteMode = deleteMode,
+                )
 
-                // jump-to-bottom 浮标：用户上滑看历史时出现，点击回到最新并恢复贴底跟随
+                // jump-to-bottom 浮标：官方 #chat scroll 事件驱动显隐，点击回到最新
                 if (!followBottom) {
-                    val jumpScope = rememberCoroutineScope()
                     Surface(
                         shape = CircleShape,
                         color = EmberTheme.colors.surface.copy(alpha = 0.92f),
@@ -1060,7 +1013,7 @@ fun ChatScreen(
                     ) {
                         IconButton(onClick = {
                             followBottom = true
-                            jumpScope.launch { listState.animateScrollToItem(0) }
+                            kernelPool.acquireSingle { RenderKernel(it).scrollToBottom(true) }
                         }) {
                             Icon(
                                 FaIcons.ChevronDown,
@@ -1149,9 +1102,7 @@ fun ChatScreen(
         }
 
         // 沉浸顶栏（V2 §5.2 聊天页）：贴底阅读时完整显示；向上翻历史淡出，留渐变遮罩保顶部消息可读
-        val topBarSolid by remember {
-            derivedStateOf { listState.firstVisibleItemIndex == 0 }
-        }
+        val topBarSolid by remember { derivedStateOf { followBottom } }
         val topBarAlpha by animateFloatAsState(
             targetValue = if (topBarSolid) 1f else 0f,
             animationSpec = tween(180),
@@ -1315,7 +1266,14 @@ fun ChatScreen(
                         editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
                     }
                     MenuRow(FaIcons.TrashCan, "删除这条消息", danger = true) {
-                        deleteTargetIndex = MsgTarget(index, el); menuMessageIndex = null
+                        // 官方 openMessageDelete：进入删除模式，勾选从该条截断到末尾。
+                        deleteMode = true
+                        deleteCheckIndex = index
+                        kernelPool.acquireSingle { kernel ->
+                            kernel.setDeleteMode(true)
+                            kernel.selectDeleteFrom("m-$index")
+                        }
+                        menuMessageIndex = null
                     }
                     // ── 回复变体（官方 swipe chevrons：仅最后一条消息；swipes_visible 需 >1，
                     //    overswipe=REGENERATE 时右箭头恒显 = 生成新变体入口；官方 per-message
@@ -3154,6 +3112,7 @@ internal fun kernelAvatarUrlOf(path: String?): String? {
     val prefix = when (f.parentFile?.name) {
         "avatars" -> "/avatars/"
         "persona-avatars" -> "/pavatars/"
+        "media" -> com.emberinn.app.renderer.KernelWebViewFactory.MEDIA_PREFIX
         else -> return null
     }
     return "$KERNEL_ORIGIN$prefix${f.name}"

@@ -20,16 +20,9 @@
     <link rel="stylesheet" href="official/css/mobile-styles.css">
     <style id="custom-style" type="text/css"></style>
     <style id="app-host-actions-style">
-        /* app-host-actions：消息交互由原生宿主承担（长按菜单/操作条/swipe 手势），
-         * 官方模板中对应的死控件隐藏——DOM 结构保持与官方逐字节同构，只藏不删。 */
-        body.app-host-actions .mes_buttons,
-        body.app-host-actions .extraMesButtonsHint,
-        body.app-host-actions .swipe_left,
-        body.app-host-actions .swipe_right,
-        body.app-host-actions .swipes-counter,
+        /* 整页壳官方化：官方消息按钮/swipe/删除框全部保留。
+         * 交互经内核点击桥回宿主执行；不再用 app-host-actions 藏官方控件。 */
         body.app-host-actions .mes_reasoning_actions,
-        body.app-host-actions .del_checkbox,
-        body.app-host-actions .for_checkbox,
         body.app-host-actions .mes_edit_buttons { display: none !important; }
     </style>
     <style id="app-host-shell-style">

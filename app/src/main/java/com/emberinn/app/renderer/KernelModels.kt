@@ -42,6 +42,24 @@ data class KernelMessagePayload(
     val tokenCount: String? = null,
     /** 官方 .mes_reasoning 思考文本（引擎已提取；null/blank = 无思考块，details 保持折叠隐藏） */
     val reasoning: String? = null,
+    /** 官方 extra.media 附件；媒体 DOM 由内核按官方容器挂载 */
+    val media: List<KernelMediaPayload> = emptyList(),
+    /** 官方 data-media-display：list 或 gallery */
+    @SerialName("mediaDisplay") val mediaDisplay: String? = null,
+    /** 官方 mes_ghost：隐藏消息对 AI 不可见 */
+    val ghost: Boolean = false,
+    /** 官方 refreshSwipeButtons / swipes-counter 所需状态 */
+    val swipeCount: Int = 0,
+    val currentSwipe: Int = 0,
+    val lastMessage: Boolean = false,
+)
+
+/** 官方消息附件的最小跨桥载荷（URL 已由 App 层解析为可访问路径/data URL） */
+@Serializable
+data class KernelMediaPayload(
+    val url: String,
+    val type: String,
+    val title: String? = null,
 )
 
 /** 官方主题 JSON（34 字段中与渲染相关的核心子集；未知字段由 ignoreUnknownKeys 吸收） */
@@ -94,6 +112,8 @@ data class KernelEvent(
     val height: Float? = null,
     /** click 事件的目标描述 {tag, cls} */
     val target: KernelClickTarget? = null,
+    /** 官方控件动作：mes_edit/mes_copy/.../swipe_left/swipe_right/del_checkbox */
+    val action: String? = null,
     // ---- st-api-shim 请求-响应（P4 扩展桥）----
     val reqId: String? = null,
     val method: String? = null,

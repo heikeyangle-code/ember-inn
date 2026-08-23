@@ -17,6 +17,28 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval("window.Kernel.renderMessage($json);", onDone)
     }
 
+    /** 整页壳 C2：全量同步官方 #chat；payload 顺序即聊天顺序。 */
+    fun renderChat(payloads: List<KernelMessagePayload>, onDone: (() -> Unit)? = null) {
+        val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
+        eval("window.Kernel.renderChat($json);", onDone)
+    }
+
+    /** 官方 #chat 滚动接管（C1/C2）。 */
+    fun scrollToBottom(smooth: Boolean = false) {
+        eval("window.Kernel.scrollToBottom(${if (smooth) "true" else "false"});")
+    }
+
+    /** 官方 openMessageDelete 的 DOM 状态部分；确认/取消仍由宿主输入区临时承接。 */
+    fun setDeleteMode(enabled: Boolean) {
+        eval("window.Kernel.setDeleteMode($enabled);")
+    }
+
+    /** 官方 .mes 点击删除选择：从该条到末尾全部选中。 */
+    fun selectDeleteFrom(mesid: String) {
+        val escaped = jsonEsc(mesid)
+        eval("window.Kernel.selectDeleteFrom($escaped);")
+    }
+
     /** 流式更新：节流由调用方控制；流中轻量更新 .mes_text，流结束后调用 [renderMessage] 权威重渲 */
     fun updateStreamingText(mesid: String, text: String) {
         val escaped = jsonEsc(text)
@@ -89,5 +111,10 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
             kotlinx.serialization.serializer<String>(),
             s,
         )
+    }
+
+    private companion object {
+        val listAdapter =
+            kotlinx.serialization.builtins.ListSerializer(KernelMessagePayload.serializer())
     }
 }

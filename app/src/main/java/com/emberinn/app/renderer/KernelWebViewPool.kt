@@ -41,6 +41,7 @@ class KernelWebViewPool(
     /** 高度回报：(mesid, heightPx) */
     private val heightListeners = mutableListOf<(String, Float) -> Unit>()
     private val clickListeners = mutableListOf<(String, KernelClickTarget?) -> Unit>()
+    private val messageActionListeners = mutableListOf<(String, String, String) -> Unit>()
     private val longPressListeners = mutableListOf<(String) -> Unit>()
     /** 白名单宿主能力请求（§5.3）：(action, value) */
     private val uiActionListeners = mutableListOf<(String, String) -> Unit>()
@@ -52,6 +53,12 @@ class KernelWebViewPool(
     fun addHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.add(l) } }
     fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
     fun addClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.add(l) } }
+    fun addMessageActionListener(l: (mesid: String, action: String, value: String) -> Unit) {
+        synchronized(messageActionListeners) { messageActionListeners.add(l) }
+    }
+    fun removeMessageActionListener(l: (mesid: String, action: String, value: String) -> Unit) {
+        synchronized(messageActionListeners) { messageActionListeners.remove(l) }
+    }
     fun addLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.add(l) } }
     fun addUiActionListener(l: (action: String, value: String) -> Unit) { synchronized(uiActionListeners) { uiActionListeners.add(l) } }
     fun removeUiActionListener(l: (action: String, value: String) -> Unit) { synchronized(uiActionListeners) { uiActionListeners.remove(l) } }
@@ -59,6 +66,9 @@ class KernelWebViewPool(
     fun removeCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.remove(l) } }
     fun addChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.add(l) } }
     fun removeChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.remove(l) } }
+
+    /** 整页壳 C2：单实例宿主专用；语义上仍复用池，但聊天页不再并发占用多个内核页。 */
+    fun acquireSingle(block: (PooledWebView) -> Unit) = acquire(block)
 
     /**
      * st-api-shim 请求处理器（P4 扩展桥）：由宿主层安装（StApiShimInstaller）。
@@ -148,6 +158,11 @@ class KernelWebViewPool(
 
             override fun onMessageClicked(mesid: String, target: KernelClickTarget?) {
                 synchronized(clickListeners) { clickListeners.toList() }.forEach { it(mesid, target) }
+            }
+
+            override fun onMessageAction(mesid: String, action: String, value: String) {
+                synchronized(messageActionListeners) { messageActionListeners.toList() }
+                    .forEach { it(mesid, action, value) }
             }
 
             override fun onMessageLongPressed(mesid: String) {

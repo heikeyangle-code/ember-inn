@@ -16,6 +16,8 @@ class KernelBridge(
         fun onKernelReady()
         fun onHeightChanged(mesid: String, heightDp: Float)
         fun onMessageClicked(mesid: String, target: KernelClickTarget?)
+        /** 官方消息控件动作（整页壳 C2）：mesid + 官方 class 动作名 */
+        fun onMessageAction(mesid: String, action: String, value: String) {}
         fun onMessageLongPressed(mesid: String)
         /** st-api-shim 请求（P4）：method/params 由上层 handler 解答，respond 回送 JS */
         fun onShimRequest(reqId: String, method: String, paramsJson: String) {}
@@ -35,7 +37,13 @@ class KernelBridge(
             KernelEventType.KERNEL_READY -> callbacks.onKernelReady()
             KernelEventType.HEIGHT, KernelEventType.HEIGHT_CHANGED ->
                 event.mesid?.let { id -> callbacks.onHeightChanged(id, event.height ?: 0f) }
-            KernelEventType.CLICK -> callbacks.onMessageClicked(event.mesid ?: "", event.target)
+            KernelEventType.CLICK -> {
+                if (event.action != null) {
+                    callbacks.onMessageAction(event.mesid ?: "", event.action, event.value ?: "")
+                } else {
+                    callbacks.onMessageClicked(event.mesid ?: "", event.target)
+                }
+            }
             KernelEventType.LONG_PRESS -> callbacks.onMessageLongPressed(event.mesid ?: "")
             KernelEventType.SHIM_REQUEST ->
                 event.reqId?.let { id ->

@@ -29,6 +29,8 @@ object KernelWebViewFactory {
      *  内核页与官方同构以 <img src> 直引，避免 file:// 与混合内容拦截 */
     const val AVATARS_PREFIX = "/avatars/"
     const val PERSONA_AVATARS_PREFIX = "/pavatars/"
+    /** 消息附件站内源：filesDir/media → /media/（整页壳官方 <img>/<video>/<audio> 直引） */
+    const val MEDIA_PREFIX = "/media/"
 
     /** 导入主题包站内源：filesDir/themes → /themefiles/...（第三方整包 style.css 由样式包引用） */
     const val THEME_FILES_PREFIX = "/themefiles/"
@@ -42,6 +44,7 @@ object KernelWebViewFactory {
             .addPathHandler(DATA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, publicDir))
             .addPathHandler(AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "avatars")))
             .addPathHandler(PERSONA_AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "persona-avatars")))
+            .addPathHandler(MEDIA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "media")))
             .addPathHandler(THEME_FILES_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "themes").apply { mkdirs() }))
             .build()
     }
