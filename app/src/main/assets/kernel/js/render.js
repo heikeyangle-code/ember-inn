@@ -278,8 +278,9 @@
             return '';
         }
 
-        // 官方：comment 角色 / 隐藏消息强制走 markdown 格式化
-        if (isSystem && chName !== 'System:') {
+        // 官方 messageFormatting L1775：isSystem 仅对 systemUserName（'SillyTavern System'）保持真，
+        // 其余一律强制 false 走 markdown 格式化。此前误写 'System:' 导致所有系统消息都被错误格式化。
+        if (isSystem && chName !== 'SillyTavern System') {
             isSystem = false;
         }
 
@@ -382,7 +383,12 @@
         return loadTemplate().then(function (tpl) {
             var chat = document.getElementById('chat');
             var existing = chat.querySelector('.mes[mesid="' + payload.mesid + '"]');
-            if (existing) { existing.remove(); }
+            if (existing) {
+                // 池化复用下同一实例反复渲染：旧节点先解除观察，否则 ResizeObserver
+                // 强持有已移除 DOM，长会话累积泄漏（官方单页无此问题）
+                if (resizeObserver) { resizeObserver.unobserve(existing); }
+                existing.remove();
+            }
 
             var node = tpl.cloneNode(true);
             node.setAttribute('mesid', payload.mesid);
@@ -565,7 +571,10 @@
         applyTheme: applyTheme,
         clear: function () {
             var chat = document.getElementById('chat');
-            Array.from(chat.querySelectorAll('.mes')).forEach(function (n) { n.remove(); });
+            Array.from(chat.querySelectorAll('.mes')).forEach(function (n) {
+                if (resizeObserver) { resizeObserver.unobserve(n); }
+                n.remove();
+            });
         },
         ready: true,
     };
