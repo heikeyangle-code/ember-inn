@@ -261,8 +261,8 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 1. **P5 删双轨收尾**：MarkdownCache、旧 WebViewPool(ui/chat/WebViewPool.kt)、NativeMarkdown/SegmentedMarkdown 兜底路线、RenderPrefs.kernelRender 开关——待内核路径真机验证全覆盖后一次性删
 2. **P6 剩余**：完整官方 DOM 行模式（整条消息进内核 DOM，恢复主题卡片背景）；用户消息内核渲染评估
 3. **ThemeSkin 图像资产层**：**加载层已就绪**（SkinImageAssets.kt——按 §五约定探测 assets/skins/<id>/background|card_frame|splash × light/dark，进程内缓存，EmberTheme 下发，MainScreen 根背景接入；无图时纯色照旧）。**待补：实际图片素材**——内置 6 套皮肤均无 assets/skins/<id>/ 文件，需美术产出后按约定路径放入即生效
-4. **P7 门禁**：Puppeteer DOM 黄金对比 harness 进 CI。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs，CI kernel-golden job）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红；allowlist 清零后可收紧为全禁
-5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行；event_types 触发点位接线表；TavernHelper 变量族 globals（MVU 卡硬依赖，桥到 ChatStore）
+4. **P7 门禁**：~~Puppeteer DOM 黄金对比 harness 进 CI~~ **已接（puppeteer-dom.test.mjs，CI kernel-golden job `test:dom` 步骤）**：headless Chromium 加载 kernel.html——formatText 17 类语料输出对 golden/dom-format.json 逐字一致 + MoonlitEchoes 主题变量逐值读回一致 + renderMessage DOM 结构冒烟；golden 由 jsdom 同管线预生成提交，兼验两运行时一致；语料变更走 UPDATE_GOLDEN=1 重生成人工复核。~~业务组件禁直读 colorScheme 门禁~~ **已接（scripts/source-scan/check-tokens.mjs）**：ratchet 模式——存量 36 文件登记 colorscheme-allowlist.json 只减不增，新违规即红
+5. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行；event_types 触发点位接线表。~~TavernHelper 变量族 globals~~ **已做（chat+global 双作用域，GlobalVariableStore 桥，金测试 44 例）**——待真卡验收
 
 ### 5.3 旧 UI 待删清单（P5）
 已删：RenderNodeCompose.kt(615 行)、isStaticHtml 双轨分流、24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset、mikepenz 依赖（gradle 已移除）。
@@ -387,7 +387,7 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 | substituteParams | macro.substitute → MacroEngine 全量宏 | ✅ |
 | generate()/generateQuietPrompt() 生成族 | **显式拒绝**——生成链路由 App 侧统一调度 | 🚫 登记边界 |
 | saveSettingsDebounced | no-op（设置由 App 侧持久化） | 🟡 |
-| TavernHelper 变量族（getVariables/replaceVariables/insertOrAssign/insertVariables/deleteVariable/updateVariablesWith） | shim 端组合 metadata.get/set 实现 **chat 作用域** = chat_metadata.variables；lodash mergeWith 数组替换语义、insertVariables 多源旧值优先——金测试 variables-shim.test.mjs 32 例（node:vm 行为级）；global/preset/message 等其余作用域显式抛错待桥 | ✅ chat / 🚫 其余作用域 |
+| TavernHelper 变量族（getVariables/replaceVariables/insertOrAssign/insertVariables/deleteVariable/updateVariablesWith） | **双作用域**：chat = chat_metadata.variables（metadata.get/set 桥）；global = extension_settings.variables.global 等价物（variables.get/set 桥 → GlobalVariableStore，SharedPreferences 单键 JSON）——lodash mergeWith 数组替换语义、insertVariables 多源旧值优先、`__proto__` 污染防护（CVE-2020-8203 对齐）——金测试 variables-shim.test.mjs 44 例（node:vm 行为级）；character/preset/message/script 作用域显式抛错待宿主态 | ✅ chat+global / 🚫 其余 |
 | AppBridge 白名单（openLink/copyText/share/toast/saveMedia/saveDataUrl/haptic/vibrate/readClipboard） | hostRequest fire-and-forget + host.clipboard request-response；官方 toastr 全局兼容映射原生 Toast | ✅ |
 | WebView 崩溃自愈 | onRenderProcessGone→池剔除+crashListeners 广播→MessageKernelRow mountEpoch 重挂；raw 恒在 Kotlin 侧零丢失 | ✅ |
 | 内核严格模式 | RenderPrefs.strictMode 禁 JS 排障开关（默认关），MessageRenderScreen 可切 | ✅ |

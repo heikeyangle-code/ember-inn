@@ -321,15 +321,20 @@ fun ChatScreen(
             mainHandler.post { handleHostAction(context, action, value) }
         }
         kernelPool.addUiActionListener(uiAction)
-        StApiShimInstaller.install(kernelPool, vm, clipboardReader = {
-            // shim 线程（Default）→ 主线程读剪贴板（API29+ 聚焦要求）；异常回空串
-            runCatching {
-                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) {
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString() ?: ""
-                }
-            }.getOrDefault("")
-        })
+        StApiShimInstaller.install(
+            kernelPool,
+            vm,
+            clipboardReader = {
+                // shim 线程（Default）→ 主线程读剪贴板（API29+ 聚焦要求）；异常回空串
+                runCatching {
+                    kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) {
+                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString() ?: ""
+                    }
+                }.getOrDefault("")
+            },
+            globalVariables = com.emberinn.app.renderer.GlobalVariableStore(context),
+        )
         onDispose {
             kernelPool.removeUiActionListener(uiAction)
             StApiShimInstaller.uninstall(kernelPool)

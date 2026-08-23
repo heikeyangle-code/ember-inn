@@ -25,9 +25,10 @@ import kotlinx.serialization.json.put
  *  - macro.substitute → 引擎 MacroEngine.substitute（全量宏，差分锁定）
  *  - host.clipboard → 系统剪贴板读（AppBridge.readClipboard；UI 层注入 reader）
  *
- * 酒馆助手变量族（getVariables/replaceVariables/insertOrAssignVariables 等）不设独立桥方法：
- * shim 端组合 metadata.get/set 实现 chat 作用域 = chat_metadata.variables（官方 variables.js
- * 同源）；未来接全局变量存储时在 Kotlin 加 variables.* 方法即可，公开 API 不变。
+ * 酒馆助手变量族双作用域：
+ *  - chat  = chat_metadata.variables → shim 组合 metadata.get/set（官方 variables.js 同源）
+ *  - global = extension_settings.variables.global → variables.get/set 桥 + GlobalVariableStore
+ *    （酒馆助手 variables.ts L81/L169 官方语义；MVU 卡硬依赖）
  */
 object StApiShimInstaller {
 
@@ -39,6 +40,8 @@ object StApiShimInstaller {
         vm: ChatViewModel,
         /** 宿主读剪贴板（host.clipboard）：由 UI 层提供（API29+ 需应用聚焦，空串=不可得） */
         clipboardReader: (() -> String)? = null,
+        /** 变量族 global 作用域存储；null 时 shim 端 global 调用报错（能力未接） */
+        globalVariables: GlobalVariableStore? = null,
     ) {
         pool.shimHandler = { method, paramsJson, respond ->
             scope.launch {
@@ -51,6 +54,13 @@ object StApiShimInstaller {
                             val meta = json.parseToJsonElement(paramsJson).jsonObject["metadata"]
                                 ?.jsonObject ?: JsonObject(emptyMap())
                             vm.shimSaveChatMetadata(meta)
+                            """{"ok":true}"""
+                        }
+                        "variables.get" -> """{"ok":true,"value":${globalVariables?.read() ?: JsonObject(emptyMap())}}"""
+                        "variables.set" -> {
+                            val vars = json.parseToJsonElement(paramsJson).jsonObject["variables"]
+                                ?.jsonObject ?: JsonObject(emptyMap())
+                            globalVariables?.write(vars)
                             """{"ok":true}"""
                         }
                         "slash.run" -> {

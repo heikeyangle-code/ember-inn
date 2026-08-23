@@ -69,5 +69,10 @@ for (const [action, konst] of Object.entries(ACTION_TO_CONST)) {
 ok(shim.includes('window.toastr = {') && shim.includes('toastrFor('), '官方 toastr 全局兼容面存在');
 ok(shim.includes("'__proto__': true"), 'mergeWith 原型污染防护在位');
 
+// globals 双作用域：shim resolveScope + installer variables.get/set 桥咬合
+ok(shim.includes("type !== 'chat' && type !== 'global'"), 'resolveScope 放行 chat|global 两作用域');
+ok(installer.includes('"variables.get"') && installer.includes('"variables.set"'), 'installer variables.* 桥在位');
+ok(installer.includes('GlobalVariableStore'), 'Kotlin GlobalVariableStore 接线');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);

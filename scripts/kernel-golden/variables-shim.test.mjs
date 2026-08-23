@@ -18,9 +18,9 @@ function ok(cond, name) {
     else { fail++; console.error('  ✗', name); }
 }
 
-/** 建沙箱：window=沙箱自身；AndroidKernel.post 按方法路由到内存 metadata 存储 */
+/** 建沙箱：window=沙箱自身；AndroidKernel.post 按方法路由到内存 metadata/global 存储 */
 function makeSandbox() {
-    const store = { metadata: { variables: {} } };
+    const store = { metadata: { variables: {} }, globals: {} };
     const calls = [];
     const sandbox = {
         console: { debug() {}, error() {}, trace() {}, warn() {} },
@@ -49,6 +49,11 @@ function makeSandbox() {
                 response = { ok: true, value: JSON.parse(JSON.stringify(store.metadata)) };
             } else if (req.method === 'metadata.set') {
                 store.metadata = params.metadata;
+                response = { ok: true };
+            } else if (req.method === 'variables.get') {
+                response = { ok: true, value: JSON.parse(JSON.stringify(store.globals)) };
+            } else if (req.method === 'variables.set') {
+                store.globals = params.variables;
                 response = { ok: true };
             } else if (req.method === 'slash.run') {
                 response = { ok: true, value: '' };
@@ -90,9 +95,9 @@ const t = makeSandbox();
     ok(Array.isArray(s.store.metadata.variables.items), '数组原样保存');
     const back = await s.sandbox.getVariables({});
     ok(back.hp === 5, '读回一致（round-trip）');
-    let threw = false;
-    try { await s.sandbox.replaceVariables({}, { type: 'global' }); } catch (e) { threw = true; }
-    ok(threw, 'global 作用域显式报错（宿主存储未接，边界登记）');
+    // global 作用域已接（variables.get/set 桥 + GlobalVariableStore），专组用例见「global 作用域」
+    await s.sandbox.replaceVariables({}, { type: 'global' });
+    ok(s.store.globals && !Array.isArray(s.store.globals), 'global replace 走独立桥不落 chat 存储');
 }
 
 {
@@ -158,6 +163,31 @@ const t = makeSandbox();
         ok(shim.includes(`window.${fn} = ${fn}`), `window.${fn} 全局暴露`);
     }
     ok(shim.includes('chat_metadata.variables') || shim.includes("chat\" 作用域"), 'chat 作用域存储位置注释登记');
+}
+
+{
+    console.log('global 作用域（官方 extension_settings.variables.global）:');
+    const s = makeSandbox();
+    // 默认参数 = chat；global 显式 option 走 variables.get/set 桥
+    const g = await s.sandbox.getVariables({ type: 'global' });
+    ok(typeof g === 'object' && Object.keys(g).length === 0, 'global 初始为空对象');
+    await s.sandbox.replaceVariables({ mvu: { hp: 100 } }, { type: 'global' });
+    ok(s.store.globals.mvu?.hp === 100, 'replaceVariables(global) 经 variables.set 桥落盘');
+    await s.sandbox.insertOrAssignVariables({ mvu: { mp: 50 }, extra: 1 }, { type: 'global' });
+    ok(s.store.globals.mvu.hp === 100 && s.store.globals.mvu.mp === 50, 'insertOrAssign(global) 深合并不覆盖旧叶');
+    await s.sandbox.insertVariables({ mvu: { hp: 999 }, onlyNew: true }, { type: 'global' });
+    ok(s.store.globals.mvu.hp === 100 && s.store.globals.onlyNew === true, 'insertVariables(global) 旧值胜出');
+    const got = await s.sandbox.getVariables({ type: 'global' });
+    ok(got.mvu.hp === 100 && got.extra === 1, 'getVariables(global) 读回合并结果');
+    const del = await s.sandbox.deleteVariable('mvu.mp', { type: 'global' });
+    ok(del.delete_occurred === true && s.store.globals.mvu.mp === undefined, 'deleteVariable(global) 点路径删除');
+    // chat/global 隔离
+    await s.sandbox.replaceVariables({ chatOnly: true });
+    ok(s.store.metadata.variables.chatOnly === true && s.store.globals.chatOnly === undefined, '默认 chat 与 global 存储互不污染');
+    // 不支持的作用域仍显式报错
+    let threw = false;
+    try { await s.sandbox.getVariables({ type: 'message' }); } catch { threw = true; }
+    ok(threw, 'message 等宿主态作用域显式抛错（边界登记）');
 }
 
 {

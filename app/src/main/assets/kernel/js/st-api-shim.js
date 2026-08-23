@@ -362,21 +362,24 @@
     // =====================================================================
     // 6. 酒馆助手变量族（JS-Slash-Runner src/function/variables.ts 语义移植）
     //
-    //    存储 1:1 依据：
-    //    - chat   = chat_metadata.variables（官方 variables.js L17/L36 同源；
-    //      酒馆助手 replaceVariables('chat') 即 _.set(chat_metadata,'variables',…)+saveMetadataDebounced）
+    //    存储 1:1 依据（双作用域）：
+    //    - chat   = chat_metadata.variables（官方 variables.js L72 同源；
+    //      replaceVariables('chat') 即 _.set(chat_metadata,'variables',…)+saveMetadataDebounced）
     //      本页经 metadata.get/set 桥读写，落盘与 displayRevision 由宿主 metadata.set 负责
-    //    - global/character/preset/message/script/extension 依赖设置存储/角色编辑器/
+    //    - global = extension_settings.variables.global（官方 variables.ts L81/L169），
+    //      经 variables.get/set 桥读写宿主 GlobalVariableStore
+    //    - character/preset/message/script/extension 依赖角色编辑器/preset 面板/
     //      iframe 运行时等宿主态 → 显式报错（HANDOFF §6.4 登记边界），API 形状保持可扩展
     //
     //    合并语义（mergeWith customizer (_lhs,rhs)=>isArray(rhs)?rhs:undefined）：
     //    对象递归深合并、数组整体替换、标量覆盖、undefined 源值跳过
     // =====================================================================
-    function assertChatScope(option) {
+    function resolveScope(option) {
         var type = option && option.type ? option.type : 'chat';
-        if (type !== 'chat') {
-            throw new Error('[EmberInn shim] 变量族暂只支持 {type:"chat"} 作用域，收到 type="' + type + '"');
+        if (type !== 'chat' && type !== 'global') {
+            throw new Error('[EmberInn shim] 变量族暂只支持 {type:"chat"|"global"} 作用域，收到 type="' + type + '"');
         }
+        return type;
     }
 
     function isPlainObject(v) {
@@ -437,29 +440,48 @@
         if (!r || !r.ok) throw new Error('variables: metadata.set failed');
     }
 
-    async function getVariables(option) {
-        assertChatScope(option);
+    /** 作用域统一读写：chat 走 metadata 桥，global 走 variables 桥（官方两存储同形） */
+    async function readVars(scope) {
+        if (scope === 'global') {
+            var g = await shimCall('variables.get', {});
+            if (!g || !g.ok) throw new Error('variables: variables.get failed');
+            return g.value && typeof g.value === 'object' ? g.value : {};
+        }
         var meta = await readChatMetadata();
-        return JSON.parse(JSON.stringify(meta.variables !== undefined ? meta.variables : {})); // klona
+        return meta.variables !== undefined ? meta.variables : {};
     }
 
-    async function replaceVariables(variables, option) {
-        assertChatScope(option);
+    async function writeVars(scope, vars) {
+        if (scope === 'global') {
+            var r = await shimCall('variables.set', { variables: vars });
+            if (!r || !r.ok) throw new Error('variables: variables.set failed');
+            return;
+        }
         var meta = await readChatMetadata();
-        meta.variables = variables !== undefined && variables !== null ? variables : {};
+        meta.variables = vars;
         await writeChatMetadata(meta);
     }
 
+    async function getVariables(option) {
+        var scope = resolveScope(option);
+        var vars = await readVars(scope);
+        return JSON.parse(JSON.stringify(vars !== undefined && vars !== null ? vars : {})); // klona
+    }
+
+    async function replaceVariables(variables, option) {
+        var scope = resolveScope(option);
+        await writeVars(scope, variables !== undefined && variables !== null ? variables : {});
+    }
+
     async function updateVariablesWith(updater, option) {
-        assertChatScope(option);
-        var meta = await readChatMetadata();
-        var old = meta.variables !== undefined ? meta.variables : {};
+        var scope = resolveScope(option);
+        var old = await readVars(scope);
+        old = old !== null && typeof old === 'object' ? old : {};
         var result = updater(old);
         if (result && typeof result.then === 'function') {
             result = await result;
         }
-        meta.variables = result === undefined || result === null ? {} : result;
-        await writeChatMetadata(meta);
+        await writeVars(scope, result === undefined || result === null ? {} : result);
         return result;
     }
 
