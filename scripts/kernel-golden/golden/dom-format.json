@@ -15,5 +15,12 @@
   "malformed-unclosed": "<p><b>未闭合的粗体<span>嵌套未闭</span></b></p>",
   "mixed-md-html": "<p><strong>Markdown 粗体</strong> 与 <em>HTML 斜体</em> 混排</p>\n<ul>\n<li>md 列表</li>\n</ul>\n<div>块级</div>",
   "multiline-whitespace": "<p>前导空格与尾随\\n</p>",
-  "special-chars": "<p>5 &lt; 6 &amp; 7 &gt; 3 <q>\"引号\"</q> '单引' </p>"
+  "special-chars": "<p>5 &lt; 6 &amp; 7 &gt; 3 <q>\"引号\"</q> '单引' </p>",
+  "latex-inline-block": "<p>质能方程 $E=mc^2$ 很有名。</p>\n<p>$$\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}$$</p>\n<p>完。</p>",
+  "macro-placeholders": "<p>{{user}}对{{char}}说道：<q>「带我去看 {{lastMessage}} 吧。」</q>（宏占位按原样进内核，替换发生在宿主侧）</p>",
+  "complex-greeting": "<p><em>清晨的阳光穿过窗帘的缝隙，洒在木质地板上。</em></p>\n<p><q>「你终于醒了。」</q>她把一杯热茶放在床头柜上，<q>「昨晚你发烧到 39 度。」</q></p>\n<div class=\"custom-status_bar\">\n  <span>❤️ HP: 82/100</span> | <span>📍 地点：旅店二楼</span> | <span>🕐 08:15</span>\n</div>\n<blockquote>\n  <p>记忆碎片：三天前的那场暴雨……</p>\n</blockquote>\n<pre><code class=\"custom-ability custom-language-ability\">力量 12 / 敏捷 14 / 智力 13\n</code></pre>",
+  "worldinfo-lore-injection": "<p>[Details]<br>\n名称：苍蓝之塔<br>\n位置：王国边境·迷雾森林深处<br>\n守卫：双生石像鬼（Lv.45）<br>\n[/Details]</p>\n<p><em>塔底的封印阵法仍在运转，空气中弥漫着淡淡的臭氧味。</em></p>",
+  "interactive-card": "<div class=\"custom-interactive\" data-scene=\"shop\">\n<h3>铁匠铺</h3>\n<p><q>「想买点什么？」</q>老板头也不抬。</p>\n<button>买长剑 (50G)</button>\n<button data-action=\"leave\">离开</button>\n</div>",
+  "html-inside-code-fence": "<p>下面是原文：</p>\n<pre><code class=\"custom-html custom-language-html\">&lt;div class=\"status_bar\"&gt;这段不应被渲染成 DOM&lt;/div&gt;\n</code></pre>\n<p>完毕。</p>",
+  "deep-nested-quote-list": "<blockquote>\n  <p>第一层引用</p>\n  <blockquote>\n    <p>第二层引用</p>\n    <ul>\n    <li>列表项 A</li>\n    <li>列表项 B<br>\n    回到第一层</li>\n    </ul>\n  </blockquote>\n</blockquote>\n<ol>\n<li>有序列表</li>\n<li>第二项<ul>\n<li>嵌套无序</li></ul></li>\n</ol>"
 }
