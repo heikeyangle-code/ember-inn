@@ -382,10 +382,19 @@
     function mountMessage(tpl, payload) {
         var chat = document.getElementById('chat');
         var node = tpl.cloneNode(true);
+        // 官方 updateMessageElement 属性面：type/bookmark_link/force_avatar/timestamp/title。
         node.setAttribute('mesid', payload.mesid);
         node.setAttribute('ch_name', payload.chName || '');
         node.setAttribute('is_user', payload.isUser ? 'true' : 'false');
         node.setAttribute('is_system', payload.isSystem ? 'true' : 'false');
+        node.setAttribute('swipeid', String(Number(payload.currentSwipe || 0)));
+        if (payload.type != null) { node.setAttribute('type', payload.type || ''); }
+        else { node.setAttribute('type', ''); }
+        if (payload.bookmarkLink) { node.setAttribute('bookmark_link', payload.bookmarkLink); }
+        if (payload.forceAvatar) { node.setAttribute('force_avatar', 'true'); }
+        if (payload.title) { node.setAttribute('title', payload.title); }
+        if (payload.smallSysMes) { node.classList.add('smallSysMes'); }
+        if (payload.toolCall) { node.classList.add('toolCall'); }
 
         if (payload.avatarUrl) {
             var img = node.querySelector('.mesAvatarWrapper .avatar img');
@@ -395,9 +404,18 @@
         if (nameEl) { nameEl.textContent = payload.chName || ''; }
         var tsEl = node.querySelector('.timestamp');
         if (tsEl && payload.timestamp) { tsEl.textContent = String(payload.timestamp); }
+        if (tsEl && payload.apiModelTitle) { tsEl.setAttribute('title', payload.apiModelTitle); }
+        var idEl = node.querySelector('.mesIDDisplay');
+        if (idEl) { idEl.textContent = '#' + payload.messageIndex; }
         var tcEl = node.querySelector('.tokenCounterDisplay');
-        if (tcEl && payload.tokenCount != null) {
-            tcEl.textContent = String(payload.tokenCount);
+        var tokenCountText = (payload.tokenCount == null) ? '' : String(payload.tokenCount);
+        if (tcEl && tokenCountText !== '') {
+            tcEl.textContent = tokenCountText.endsWith('t') ? tokenCountText : tokenCountText + 't';
+        }
+        var timerEl = node.querySelector('.mes_timer');
+        if (timerEl && payload.timerValue) {
+            timerEl.textContent = payload.timerValue;
+            if (payload.timerTitle) { timerEl.setAttribute('title', payload.timerTitle); }
         }
 
         var mesText = node.querySelector('.mes_text');
@@ -406,6 +424,17 @@
                 chName: payload.chName,
                 isUser: payload.isUser,
                 isSystem: payload.isSystem,
+            });
+        }
+
+        // 官方 addCopyToCodeBlocks（script.js L2720）：hljs + 复制按钮。
+        if (mesText && window.hljs) {
+            Array.prototype.forEach.call(mesText.querySelectorAll('pre code'), function (block) {
+                window.hljs.highlightElement(block);
+                var copyButton = document.createElement('i');
+                copyButton.classList.add('fa-solid', 'fa-copy', 'code-copy', 'interactable');
+                copyButton.title = 'Copy code';
+                block.appendChild(copyButton);
             });
         }
 
@@ -706,6 +735,12 @@
         var style = document.getElementById('custom-style');
         if (style) { style.innerHTML = theme.custom_css || ''; }
 
+        // 官方 compact_input_area → #send_form.compact（power-user.js switchCompactInputArea）。
+        // C3 前输入区不在内核 DOM；类先落在 body 供主题过渡规则使用，C3 后同步到真实表单。
+        if ('compact_input_area' in theme) {
+            document.body.classList.toggle('compact-input-area', !!theme.compact_input_area);
+        }
+
         // 开关型字段 → body 类同步（与 power-user.js applyPowerUserSettings 逐项同构）
         // 官方语义：每次应用全量同步，先移除后按当前值添加
         var classSync = [
@@ -764,34 +799,50 @@
     }
 
     // ------------------------------------------------------------------
-    // 滚动接管（整页壳 C1）：fullchat 模式下 #chat 为滚动容器，向宿主回报贴底
-    // 状态（宿主据此驱动「跳到底部」浮标）；嵌入态无内部滚动，事件静默。
+    // 官方 scrollChatToBottom + scrollLock 逐字语义移植（script.js L2714/L11167）。
+    // auto_scroll_chat_to_bottom 官方默认 true；waifuMode 时官方强制锁定。
     // ------------------------------------------------------------------
-    function scrollToBottom(smooth) {
+    var scrollRequestId = null;
+    var scrollLock = false;
+
+    function scrollToBottom(waitForFrame) {
         var chat = document.getElementById('chat');
         if (!chat) { return; }
-        if (typeof chat.scrollTo === 'function') {
-            try {
-                chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
-                return;
-            } catch (e) { /* 老内核不支持 options 形式，落到底部直接赋值 */ }
+        var doScroll = function () {
+            var position = chat.scrollHeight;
+            if (document.body.classList.contains('waifuMode')) {
+                var lastMessage = chat.querySelector('.mes:last-of-type');
+                if (lastMessage) {
+                    position = chat.scrollTop + lastMessage.getBoundingClientRect().top - chat.getBoundingClientRect().top;
+                }
+            }
+            chat.scrollTop = position;
+            scrollRequestId = null;
+        };
+        if (scrollRequestId !== null) {
+            cancelAnimationFrame(scrollRequestId);
         }
-        chat.scrollTop = chat.scrollHeight;
+        if (!waitForFrame) {
+            doScroll();
+            return;
+        }
+        scrollRequestId = requestAnimationFrame(doScroll);
     }
 
     (function watchChatScroll() {
         var chat = document.getElementById('chat');
         if (!chat) { return; }
-        var pending = false;
         chat.addEventListener('scroll', function () {
-            if (pending) { return; }
-            pending = true;
-            setTimeout(function () {
-                pending = false;
-                // 贴底判定：距底不足 40px 视为在底部（移动端跳底浮标同级容差）
-                var atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
+            if (document.body.classList.contains('waifuMode')) {
+                scrollLock = true;
                 bridgeSend({ type: 'chatScroll', atBottom: atBottom });
-            }, 100);
+                return;
+            }
+            // 官方贴底容差 <5px；贴底解锁、离开锁定。
+            var atBottom = Math.abs(chat.scrollHeight - chat.clientHeight - chat.scrollTop) < 5;
+            if (scrollLock && atBottom) { scrollLock = false; }
+            if (!scrollLock && !atBottom) { scrollLock = true; }
+            bridgeSend({ type: 'chatScroll', atBottom: !scrollLock });
         }, { passive: true });
     })();
 

@@ -52,6 +52,18 @@ data class KernelMessagePayload(
     val swipeCount: Int = 0,
     val currentSwipe: Int = 0,
     val lastMessage: Boolean = false,
+    /** 官方 updateMessageElement 属性面（保持主题/CSS 可依赖完整 DOM 状态） */
+    val messageIndex: Int? = null,
+    val type: String? = null,
+    val bookmarkLink: String? = null,
+    val forceAvatar: Boolean = false,
+    val title: String? = null,
+    val smallSysMes: Boolean = false,
+    val toolCall: Boolean = false,
+    /** 官方 tokenCounterDisplay 是 `${token_count}t`；Kotlin 侧也可直接透传已带 t 的文本 */
+    val apiModelTitle: String? = null,
+    val timerValue: String? = null,
+    val timerTitle: String? = null,
 )
 
 /** 官方消息附件的最小跨桥载荷（URL 已由 App 层解析为可访问路径/data URL） */

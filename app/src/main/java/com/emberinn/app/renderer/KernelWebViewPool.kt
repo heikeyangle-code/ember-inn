@@ -80,7 +80,9 @@ class KernelWebViewPool(
     // 每页主题状态：新建实例 ready 后自动应用；updateTheme/updateStylePack 广播到全部存活实例。
     // bodyClasses 为全量同步语义（含 chat_display 布局类 + app-host-actions 宿主接管标记）。
     @Volatile private var currentThemeJson: String? = null
-    @Volatile private var currentBodyClasses: List<String> = listOf("app-host-actions")
+    // 整页壳 C2：fullchat 是页面级状态，必须随主题/崩溃重建一起全量同步；
+    // app-host-actions 只保留 reasoning 编辑按钮等宿主未接管项的过渡隐藏。
+    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "app-host-actions")
     @Volatile private var currentStylePackEnabled: Boolean = false
     @Volatile private var currentStylePackHref: String? = null
     @Volatile private var currentStylePackExtensionHref: String? = null

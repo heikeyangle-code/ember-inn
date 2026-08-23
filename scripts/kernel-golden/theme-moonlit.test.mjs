@@ -109,15 +109,36 @@ await window.Kernel.renderChat([
     { mesid: 'a1', mes: '第一条', chName: 'Alice', isUser: false, isSystem: false },
 ]);
 t('renderChat: 二次全量无残留', doc.querySelectorAll('#chat .mes').length, 1);
+// 官方 append 顺序：renderChat 输入数组顺序必须等于 DOM 顺序（旧反向列表曾导致开场白不可见）。
+await window.Kernel.renderChat([
+    { mesid: 'o1', mes: '开场白', chName: 'Alice', isUser: false },
+    { mesid: 'o2', mes: '用户', chName: '我', isUser: true },
+    { mesid: 'o3', mes: '回复', chName: 'Alice', isUser: false },
+]);
+t('renderChat: 官方 append 顺序', Array.from(doc.querySelectorAll('#chat .mes')).map(n => n.getAttribute('mesid')).join(','), 'o1,o2,o3');
+t('renderChat: 开场白正文非空', (doc.querySelector('.mes[mesid="o1"] .mes_text')?.textContent || '').includes('开场白'), true);
 // 增量路径与全量互操作：upsert 单条继续追加
 await window.Kernel.renderMessage({ mesid: 'a9', mes: '追加', chName: 'Alice', isUser: false, isSystem: false });
-t('renderMessage: 全量后可增量追加', doc.querySelectorAll('#chat .mes').length, 2);
+t('renderMessage: 全量后可增量追加', doc.querySelectorAll('#chat .mes').length, 4);
 // 滚动接管：jsdom 无布局，验证调用不抛错即可
 window.Kernel.scrollToBottom(false);
 window.Kernel.scrollToBottom(true);
 // kernel.html 整页壳模式块存在（C2 宿主将切 body.fullchat）
 const kernelHtml = readFileSync(`${K}/kernel.html`, 'utf8');
 t('kernel.html: body.fullchat 恢复官方滚动语义', kernelHtml.includes('body.fullchat #chat'), true);
+// 真机回归：Moonlit #chat 的渐变 mask 在 Android WebView 整页壳路径可能裁成全空白。
+// fullchat 覆盖块必须显式禁用 mask，消息可见性优先；后续真机审计后再评估恢复方式。
+t('kernel.html: fullchat 禁用 #chat mask-image 防空白',
+  /body\.fullcat|#chat[\s\S]*-webkit-mask-image:\s*none/.test(kernelHtml) &&
+  /body\.fullcat|#chat[\s\S]*(?<!-webkit-)mask-image:\s*none/.test(kernelHtml),
+  true);
+// 官方主题字段 compact_input_area 的类语义已登记，供 C3 前主题过渡/C3 后真实表单使用。
+t('applyTheme: compact_input_area → body 类', (() => {
+    window.Kernel.applyTheme({ main_text_color: '#ccc', compact_input_area: true });
+    const on = body().classList.contains('compact-input-area');
+    window.Kernel.applyTheme({ main_text_color: '#ccc', compact_input_area: false });
+    return on && !body().classList.contains('compact-input-area');
+})(), true);
 
 // Moonlit style.css 中引用的官方选择器逐一在内核 DOM 中存在
 const css = readFileSync(`${ME}/style.css`, 'utf8');

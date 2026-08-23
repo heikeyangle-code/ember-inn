@@ -326,6 +326,7 @@ fun ChatScreen(
             officialThemeJson,
             listOfNotNull(
                 "fullchat",
+                "app-host-actions",
                 ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass,
             ),
         )
@@ -603,7 +604,6 @@ fun ChatScreen(
         ?: EmberTheme.colors.accent
     val items = remember(messages, isStreaming, lastReasoning, isImpersonating) {
         buildList {
-            // reverseLayout=true：第 0 项固定在视口底部，因此最新内容（流式/最后一条）放在最前。
             // 官方冒充：不建消息、聊天区不显示，结果只进输入框（onProgressStreaming isImpersonate → send_textarea）
             if (isStreaming && !isImpersonating) {
                 add(ChatItem.Streaming)
@@ -611,7 +611,9 @@ fun ChatScreen(
                 // 空正文场景：思考过程独立成卡，不随流式结束消失
                 add(ChatItem.ReasoningOnly)
             }
-            for (i in messages.indices.reversed()) {
+            // 整页壳 C2：官方 renderChat 是 append 顺序，必须与 chat 数组一致；
+            // 不能沿用旧 LazyColumn reverseLayout 的倒序缓存。
+            for (i in messages.indices) {
                 add(ChatItem.Message(i, messages[i]))
             }
         }
@@ -692,6 +694,14 @@ fun ChatScreen(
                         swipeCount = vm.swipeCountOf(el),
                         currentSwipe = vm.currentSwipeOf(el),
                         lastMessage = item.index == messages.lastIndex,
+                        messageIndex = item.index,
+                        type = (el.jsonObject["extra"] as? JsonObject)?.get("type")
+                            ?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        bookmarkLink = (el.jsonObject["extra"] as? JsonObject)?.get("bookmark_link")
+                            ?.jsonPrimitive?.contentOrNull,
+                        forceAvatar = (el.jsonObject["extra"] as? JsonObject)?.get("force_avatar") != null,
+                        smallSysMes = (el.jsonObject["extra"] as? JsonObject)
+                            ?.get("isSmallSys")?.jsonPrimitive?.booleanOrNull == true,
                     )
                 }
                 ChatItem.Streaming -> {
