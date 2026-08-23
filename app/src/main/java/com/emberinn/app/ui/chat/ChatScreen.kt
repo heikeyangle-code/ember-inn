@@ -3060,11 +3060,15 @@ private fun ChatTopBar(
 @Composable
 private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: Int) {
     val avatarFile = avatarPath?.let { File(it) }?.takeIf { it.exists() }
-    // 头像形状（全局设置，对齐官方 --avatar-base-border-radius：方形 2px / 圆角 10px / 圆形 50%）
-    val shape = when (AppearancePrefs.avatarShape(LocalContext.current)) {
-        "square" -> RoundedCornerShape(2.dp)
-        "rounded" -> RoundedCornerShape(10.dp)
-        else -> CircleShape
+    // 头像形状（官方 avatar_style：ROUND 圆形50% / RECTANGULAR 大矩形 / SQUARE 方形2px / ROUNDED 圆角10px，
+    // 对齐 toggle-dependent.css 的 --avatar-base-border-radius 系列半径）
+    val context = LocalContext.current
+    val shape = remember(context) {
+        when (OfficialThemeManager.shared(context).shellSettings().avatarStyle) {
+            3 -> RoundedCornerShape(10.dp)
+            1, 2 -> RoundedCornerShape(2.dp)
+            else -> CircleShape
+        }
     }
     // accent 细描边：角色代入感的视觉锚点，描边叠在图片边缘
     val ring = Modifier
@@ -3330,20 +3334,12 @@ private fun MessageRowContent(
             }
         }
     }
-    val textShadow = chatTextShadow()
-    // 用户 hex > 当前官方主题字段（blur tint 真值）> EmberDS 令牌（§五 seed 桥静态面）
-    val st = rememberStColors()
-    fun stCol(v: Long?) = v?.let { Color(it) }
+    // 官方主题字段经 ShellTheme 推导进令牌（无本地覆盖）：气泡底/描边/弱化文字直接取 EmberDS
     val c = EmberTheme.colors
-    val userBubbleColor = parseHexColor(AppearancePrefs.stUserBubble(context))
-        ?: stCol(st.userBubbleTint) ?: c.accentBg
-    val botBubbleColor = parseHexColor(AppearancePrefs.stBotBubble(context))
-        ?: stCol(st.botBubbleTint) ?: c.surface
-    val bubbleBorder = parseHexColor(AppearancePrefs.stBorderColor(context))
-        ?.let { BorderStroke(1.dp, it) }
-        ?: BorderStroke(0.5.dp, stCol(st.border) ?: c.line)
-    val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: stCol(st.emText) ?: c.inkSoft
+    val userBubbleColor = c.accentBg
+    val botBubbleColor = c.surface
+    val bubbleBorder = BorderStroke(0.5.dp, c.line)
+    val emColor = c.inkMute
 
     // 全 DOM 行判定：内核就绪即整行交官方模板（头像/名字/时间戳/正文一体，官方移动端结构）；
     // 原生只保留宿主交互面（思考卡/操作条/媒体/手势）。用户消息按 P6 开关分流省池槽位。
@@ -3378,7 +3374,7 @@ private fun MessageRowContent(
         if (dateLabel != null) {
             Text(
                 text = dateLabel,
-                style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                style = MaterialTheme.typography.labelSmall,
                 color = emColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -3728,23 +3724,14 @@ private fun StreamingRow(
  *  生成结束后由内核 renderMessage 一次性权威重渲染，视觉与最终一致。 */
 @Composable
 private fun StreamingMarkdown(content: String, fillWidth: Boolean = true) {
-    val context = LocalContext.current
-    val st = rememberStColors()
-    fun stCol(v: Long?) = v?.let { Color(it) }
-    val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: stCol(st.mainText) ?: MaterialTheme.colorScheme.onSurface
-    val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: stCol(st.quote) ?: MaterialTheme.colorScheme.primary
-    val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: stCol(st.emText) ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: stCol(st.underline) ?: MaterialTheme.colorScheme.primary
-    val styled = remember(content, bodyColor, quoteColor, emColor, underlineColor) {
-        streamingStyledText(content, bodyColor, quoteColor, emColor, underlineColor)
+    // 颜色读 ShellTheme 推导令牌：正文=ink(main_text_color)、引用/下划线=accent(quote_text_color)、斜体=inkMute(italics_text_color)
+    val c = EmberTheme.colors
+    val styled = remember(content, c) {
+        streamingStyledText(content, c.ink, c.accent, c.inkMute, c.accent)
     }
     Text(
         text = styled,
-        style = chatTypography().body,
+        style = chatTextStyle(),
         modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier,
     )
 }
@@ -4146,7 +4133,6 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
  *  streaming=true 时用轻量流式渲染（不跑完整管线，否则每 tick 全量解析卡死滑动），并限高滚动。 */
 @Composable
 private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit, streaming: Boolean = false) {
-    val textShadow = chatTextShadow()
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -4156,7 +4142,7 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit,
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
-                style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 fontWeight = FontWeight.Medium,
             )
@@ -4179,138 +4165,24 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit,
     }
 }
 
-/** 聊天文字排版（外观持久化字段）：正文/行高/字重/标题/引用/代码/间距。 */
+/** 聊天正文样式：官方 font_scale 单一缩放（power_user.font_scale，默认 1）。
+ *  层级/行高/字重/代码字号交还主题 CSS——内核是权威渲染管线；原生仅流式过渡态使用。 */
 @Composable
-private fun chatTypography(): ChatTypography {
-    val context = LocalContext.current
-    val textSize = AppearancePrefs.textSize(context)
-    val lineHeight = AppearancePrefs.lineHeight(context)
-    val bodyWeightPref = AppearancePrefs.bodyWeight(context)
-    val headingStyle = AppearancePrefs.headingStyle(context)
-    val h1Mult = AppearancePrefs.headingH1(context)
-    val h2Mult = AppearancePrefs.headingH2(context)
-    val codeMult = AppearancePrefs.codeSize(context)
-    val inlineCodeMult = AppearancePrefs.inlineCodeSize(context)
-    val quoteItalic = AppearancePrefs.quoteItalic(context)
-    val baseTypography = MaterialTheme.typography
-    val shadow = chatTextShadow()
-    // 排版参数不变就复用整套 TextStyle：流式每 tick / 每条消息重组时不再重复分配几十个对象
-    return remember(textSize, lineHeight, bodyWeightPref, headingStyle, h1Mult, h2Mult, codeMult, inlineCodeMult, quoteItalic, shadow, baseTypography) {
-        val textSizeSp = when (textSize) {
-            "small" -> 14f
-            "official" -> 15f
-            "large" -> 18f
-            "xlarge" -> 20f
-            else -> 16f
-        }
-        val lineFactor = when (lineHeight) {
-            "compact" -> 1.4f
-            "loose" -> 1.7f
-            else -> 1.55f
-        }
-        val bodyWeight = when (bodyWeightPref) {
-            "medium" -> FontWeight.Medium
-            "semibold" -> FontWeight.SemiBold
-            else -> FontWeight.Normal
-        }
-        val realHeading = headingStyle == "real"
-        fun size(mult: Float) = (textSizeSp * mult).sp
-        fun line(mult: Float) = (textSizeSp * mult * lineFactor).sp
-        val body = baseTypography.bodyMedium.copy(
-            fontSize = size(1f),
-            lineHeight = line(1f),
-            fontWeight = bodyWeight,
-        )
-        val typography = ChatTypography(
-            body = body,
-            h1 = if (realHeading) {
-                baseTypography.headlineMedium.copy(fontSize = size(1.5f * h1Mult), lineHeight = line(1.5f * h1Mult), fontWeight = FontWeight.Bold)
-            } else {
-                baseTypography.titleMedium.copy(fontSize = size(1.15f * h1Mult), lineHeight = line(1.15f * h1Mult), fontWeight = FontWeight.SemiBold)
-            },
-            h2 = if (realHeading) {
-                baseTypography.headlineSmall.copy(fontSize = size(1.3f * h2Mult), lineHeight = line(1.3f * h2Mult), fontWeight = FontWeight.Bold)
-            } else {
-                baseTypography.titleMedium.copy(fontSize = size(1.15f * h2Mult), lineHeight = line(1.15f * h2Mult), fontWeight = FontWeight.SemiBold)
-            },
-            h3 = if (realHeading) {
-                baseTypography.titleLarge.copy(fontSize = size(1.15f), lineHeight = line(1.15f), fontWeight = FontWeight.SemiBold)
-            } else {
-                baseTypography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium)
-            },
-            h4 = baseTypography.titleSmall.copy(fontSize = size(1.05f), lineHeight = line(1.05f), fontWeight = FontWeight.Medium),
-            h5 = baseTypography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
-            h6 = baseTypography.titleSmall.copy(fontSize = size(1f), lineHeight = line(1f), fontWeight = FontWeight.Medium),
-            quoteItalic = quoteItalic,
-            codeMult = codeMult,
-            inlineCodeMult = inlineCodeMult,
-        )
-        // 官方 style.css：全站文字 text-shadow 0 0 2px rgba(0,0,0,.5)（--SmartThemeShadowColor），全局可调
-        if (shadow == null) {
-            typography
-        } else {
-            typography.copy(
-                body = typography.body.copy(shadow = shadow),
-                h1 = typography.h1.copy(shadow = shadow),
-                h2 = typography.h2.copy(shadow = shadow),
-                h3 = typography.h3.copy(shadow = shadow),
-                h4 = typography.h4.copy(shadow = shadow),
-                h5 = typography.h5.copy(shadow = shadow),
-                h6 = typography.h6.copy(shadow = shadow),
-            )
-        }
-    }
-}
-
-/** 当前官方主题颜色字段（实时）：壳层气泡/正文/引用/阴影的官方真值来源（§五 seed 桥静态面）。 */
-@Composable
-private fun rememberStColors(): OfficialThemeManager.StColors {
+private fun chatTextStyle(): androidx.compose.ui.text.TextStyle {
     val context = LocalContext.current
     val manager = remember { OfficialThemeManager.shared(context) }
     val name by manager.currentName.collectAsState()
-    return remember(name) { manager.stColors() }
+    val scale = remember(name) { manager.shellSettings().fontScale.toFloat().coerceIn(0.25f, 3f) }
+    val base = MaterialTheme.typography.bodyMedium
+    return remember(scale, base) {
+        base.copy(fontSize = (16f * scale).sp, lineHeight = (16f * scale * 1.55f).sp)
+    }
 }
 
 /** 深色表面判断：App 已强制暗基底，此判断保留给玻璃边缘高光等明暗二态逻辑。 */
 @Composable
 private fun isDarkThemeSurface(): Boolean =
     MaterialTheme.colorScheme.background.luminance() < 0.5f
-
-/** 全局文字阴影（外观设置）：颜色跟随官方 --SmartThemeShadowColor（消息渲染页可改，默认 rgba(0,0,0,.5)）。 */
-@Composable
-private fun chatTextShadow(): androidx.compose.ui.graphics.Shadow? {
-    val context = LocalContext.current
-    val enabled = AppearancePrefs.textShadowEnabled(context)
-    val blur = AppearancePrefs.textShadowStrength(context)
-    val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context))
-        ?: rememberStColors().shadow?.let { Color(it) }
-        ?: Color(0x80000000)
-    // 设置值不变就复用同一个 Shadow：滚动/流式高频重组时不再每次分配
-    return remember(enabled, blur, shadowColor) {
-        if (!enabled || blur <= 0) {
-            null
-        } else {
-            androidx.compose.ui.graphics.Shadow(
-                color = shadowColor,
-                offset = androidx.compose.ui.geometry.Offset.Zero,
-                blurRadius = blur.toFloat(),
-            )
-        }
-    }
-}
-
-private data class ChatTypography(
-    val body: androidx.compose.ui.text.TextStyle,
-    val h1: androidx.compose.ui.text.TextStyle,
-    val h2: androidx.compose.ui.text.TextStyle,
-    val h3: androidx.compose.ui.text.TextStyle,
-    val h4: androidx.compose.ui.text.TextStyle,
-    val h5: androidx.compose.ui.text.TextStyle,
-    val h6: androidx.compose.ui.text.TextStyle,
-    val quoteItalic: Boolean,
-    val codeMult: Float,
-    val inlineCodeMult: Float,
-)
 
 /**
  * 宿主能力白名单处理（V2 §5.3；动作面与 st-api-shim.js AppBridge/toastr 对齐）。

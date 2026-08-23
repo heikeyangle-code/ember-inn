@@ -251,21 +251,21 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - ui/emberds/：EmberTokens（Glimmer DNA：近黑中性底/亮度阶梯表面/四档墨阶/引号蓝 #51A0DE 强调/AI 暖金身份/极细描边/小圆角/克制模糊）+ InkText/SurfaceCard/GlassBar/AiBubble/UserBubble；业务组件禁直接引用 MaterialTheme.colorScheme（lint 门禁待接）
 - ui/chat/surface/MessageKernelRow.kt：消息内核宿主（槽位式挂载 + 高度感知 + 归还池）+ StreamingThrottler（120ms 节流，流式在用）
 - **P4 扩展桥已完成（21a9888）**：assets/kernel/js/st-api-shim.js = 官方 EventEmitter 1:1 移植（7 原型方法）+ 全量 event_types + SillyTavern.getContext()/triggerSlash/executeSlashCommands/substituteParams（同步本地 {{user}}/{{char}} 回退 + macro.substitute 桥全量宏）；桥协议 shimRequest{reqId,method,params} → StApiShimInstaller 分发 VM 差分锁定资产：ctx.snapshot / metadata.get / metadata.set（即时落盘+bump displayRevision）/ slash.run→AppSlashExecutor / macro.substitute→MacroEngine；generate 族显式拒绝并登记边界；回传走 URLEncoder + window.__shimRespond 免转义陷阱。金测试 shim-api.test.mjs 18 例并入 npm test。扩展兼容边界登记见 §6.3
-- **全局强制 Ember 暗基底已完成**：根节点 EmberTheme(darkTheme 默认 true)，不再跟随系统浅色；mapToM3Scheme 把 EmberColors 映射进 M3 ColorScheme，存量 M3 组件自动协调。官方主题桥只动强调三态（accent/accentSoft/accentBg + chat.inputAccent），底面五阶与墨阶保持皮肤性格（互不污染原则）
+- **壳层换装=官方主题字段直供（ShellTheme.derive）**：官方主题 JSON 字段单向纯函数推导出整套令牌——blur_tint_color→bg、bot/user_mes_blur_tint→surface/surface2、shadow_color→surfaceSink、main_text_color→墨阶、italics_text_color→inkMute、quote_text_color→accent 三态、border_color→line；AI 身份金与语义三色是壳层品牌常量。无主题 JSON 时回落 Moonlit 推导常量。暗色基线由推导 bg 亮度判定，mapToM3Scheme 映射进 M3 保证存量组件协调
 - **结构推倒已完成（25d1109c，CI 绿后继续修编）**：MainScreen 三域底部导航（聊天/世界/设置，玻璃底栏胶囊指示）+ 平板 ≥840dp 双栏 NavigationRail；首页/书架/世界/设置/外观五大屏按 DESIGN_SYSTEM §六 IA 全部重排；onboarding 重做
 - **ui/design 令牌层（新架构核心）**：
   - EmberTokens.kt：EmberColors（bg/bgTint/surface/surface2/surfaceSink 五阶底面 + ink 四档墨阶 + line/lineStrong + accent 三态 + ai 身份三态 + success/warning/danger）/ EmberShapes / EmberSpacing / EmberMotion（弹簧底座 damping 0.6 / stiffness 500，reducedMotion 全降 80ms）/ ChatAreaTheme（10 个可空 Color? 字段 + floatingInput，null=回落令牌）
   - EmberTheme.kt：全部访问器是 @Composable getter（CompositionLocal）——**禁止在 remember/LaunchedEffect lambda 里直接读，必须先在组合上下文读出局部变量**（CI 两轮红的根因）
-  - 皮肤系统：EmberSkin（colors/shapes/spacing/motion/chat 五件套）+ SkinStore（filesDir 持久化当前皮肤）+ AppearanceBus；AppearanceScreen = 皮肤商店（皮肤卡四段色条预览 + 官方主题导入/导出/删除/切换）；OfficialThemeManager.skinColors() 桥接（quote_text_color→壳层 accent、blur_tint_color→stageTint）
+  - 壳层无独立皮肤体系：EmberSkins/SkinStore/SkinImageAssets/SkinBackgroundLayer 与 OfficialThemeManager.skinColors() 桥已删，换装唯一来源=ShellTheme.derive（上条）；AppearancePrefs.radius 四档经 shapesForRadius 进形状令牌
   - 组件库 components/：InkText(墨阶排版)/SurfaceCard/GlassBar/Bubbles/Buttons/Chips/EmptyState/Overlays/Motion（rememberEmberSpring/Light、breathingGlow 1.6s 呼吸、EnterFadeSlide 入场）
 - **P5 删旧码已执行部分**：RenderNodeCompose.kt（615 行 RenderNode 原生 HTML 渲染生态）整删；isStaticHtml 双轨分流删（WebHtml/Interactive 段统一 WebView 路线 B，htmlFenceInner 死码同删）；旧主题体系 24 套 ThemePreset/BackdropSpec/ArtBackdrop/VibePreset 随 25d1109c 退役
+- **本地外观偏好收敛（官方字段全删）**：AppearancePrefs 删除 st_ 九色（main/em/underline/quote/user·bot bubble/border/shadow/blur_tint）、排版 11 字段（textSize/lineHeight/headingStyle/bodyWeight/headingH1/H2/quoteItalic/codeSize/inlineCodeSize/blockSpacing/listIndent）、avatarShape、文字阴影开关与强度——全部由官方主题接管。消费方改读真值：气泡/流式着色取 ShellTheme 令牌，正文样式 chatTextStyle() 单一 font_scale 缩放，头像形状读 shellSettings().avatarStyle（0圆/1大矩形/2方2px/3圆角10px）。保留项均为壳层自有或官方 power_user 行为旗标（radius/font/immersiveActions/bubbleStyle/density/backgroundBlur/openLastChat/encodeTags/fixMarkdown/chatBg*/blurStrength）。MessageRenderScreen 颜色编辑页删除，只留行为与兼容
 
 ### 5.2 待办（当前优先级）
-1. **壳层 UI 架构级重写**：语义角色令牌制（surface 五阶/墨四档/线/accent 三态/AI 身份三态）× Moonlit 美学基准；删除 EmberSkin 六件套与 darkTheme=true 硬编码；顶栏/输入区/action sheet/抽屉/对话框按官方移动端基线重排。壳层取色全部由 OfficialThemeManager 主题字段单向推导（quote_text_color→accent、blur_tint 族→stage、main_text_color→墨阶、compact_input_area→输入密度），导入任何官方主题壳层随之换装
+1. **壳层 UI 架构级重写（收尾）**：令牌制与字段推导已落（ShellTheme.derive）；剩 reasoning 迁内核官方 .mes_reasoning DOM（payload 加 reasoning 字段 + render.js 按 reasoning.js L555 语义填充 + 解除 app-host-actions 隐藏 + 撤原生 ReasoningCard）、操作条回归官方 .mes_buttons（点击桥接原生动作）、顶栏/输入区/action sheet/抽屉/对话框按官方移动端基线 × Moonlit 美学重排
 2. **主题整包导入通道**：zip/目录导入含 style.css/extension.css/*-preset.json 的主题包（安全校验：压缩比/路径穿越/重复表项/条目上限），落 filesDir/themes/ 即被 detectStylePack 探测生效
 3. **渲染边界欠账**：mes_ghost eye-slash 指示未随内核行携带（payload 缺口）；背景图进内核页（原生 backdrop-filter 才能对 Compose 内容取样真玻璃）；highlight.js 语言包经 AppBridge 按需装载
 4. **扩展桥验收欠账**：2 张 MVU 卡 + 2 个酒馆助手脚本免改真机运行。event_types 两期接线已落（v1 生成生命周期 + v2 消息级七事件，注释标官方 script.js 行号，金测试断言参数形态）——待真卡验收
-5. **ThemeSkin 图像素材**：加载层就绪（SkinImageAssets.kt 探测 assets/skins/<id>/background|card_frame|splash × light/dark），内置 6 套均无图，美术产出后按约定路径放入即生效
 
 ### 5.3 旧渲染链清理（已完成）
 RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系、mikepenz 全家（NativeMarkdown/SegmentedMarkdown/OfficialMarkdownNode/官方 HTML 转译与 WebView 嵌页链）、MarkdownCache、旧 ui.chat.WebViewPool、TextTypographyScreen、双轨开关 RenderPrefs.kernelRender/userKernelRender 全部删除；gradle markdown-renderer 四件套移除。消息渲染唯一管线=渲染内核（§4）。

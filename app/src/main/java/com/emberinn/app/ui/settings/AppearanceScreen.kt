@@ -212,7 +212,6 @@ fun AppearanceScreen(
 
                 // ---------------- 头像与文字 ----------------
                 item {
-                    AvatarAndShadowGroup(onChanged = { AppearanceBus.notifyChanged() })
                 }
 
                 // ---------------- 玻璃 ----------------
@@ -327,49 +326,6 @@ private fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, onT
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         EmberSwitch(checked = checked, onCheckedChange = onToggle)
-    }
-}
-
-/** 头像形状 + 文字阴影组。 */
-@Composable
-private fun AvatarAndShadowGroup(onChanged: () -> Unit) {
-    val context = LocalContext.current
-    var avatarShape by remember { mutableStateOf(AppearancePrefs.avatarShape(context)) }
-    var shadowOn by remember { mutableStateOf(AppearancePrefs.textShadowEnabled(context)) }
-    var shadowStrength by remember { mutableStateOf(AppearancePrefs.textShadowStrength(context)) }
-    PreferenceGroup {
-        GroupLabel("头像形状")
-        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-            listOf("circle" to "圆形", "rounded" to "圆角", "square" to "方形（官方）").forEach { (v, label) ->
-                EmberChip(
-                    label = label,
-                    selected = avatarShape == v,
-                    onClick = { avatarShape = v; AppearancePrefs.saveAvatarShape(context, v); onChanged() },
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        GroupLabel("文字阴影")
-        InkText(
-            "对齐官方 style.css：全站文字 0 0 2px 黑阴影（--SmartThemeShadowColor）",
-            tier = InkTier.Mute,
-            sizeSp = 12f,
-        )
-        SwitchPrefRow(
-            title = "启用",
-            subtitle = "",
-            checked = shadowOn,
-            onToggle = { shadowOn = it; AppearancePrefs.saveTextShadowEnabled(context, it); onChanged() },
-        )
-        if (shadowOn) {
-            EmberSlider(
-                value = shadowStrength.toFloat(),
-                onValueChange = { shadowStrength = it.toInt(); AppearancePrefs.saveTextShadowStrength(context, it.toInt()); onChanged() },
-                valueRange = 0f..4f,
-                steps = 3,
-            )
-            InkText("强度：$shadowStrength px", tier = InkTier.Mute, sizeSp = 11f)
-        }
     }
 }
 

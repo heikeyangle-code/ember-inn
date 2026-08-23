@@ -12,16 +12,11 @@ import com.emberinn.app.ui.settings.AppearancePrefs
 import com.skydoves.cloudy.Sky
 import com.skydoves.cloudy.cloudy
 
-/** 玻璃色调（官方 --SmartThemeBlurTintColor）：
- *  用户设置 stBlurTint > 官方主题桥接的舞台染色（EmberTheme.stageTint）> EmberDS surface。
- *  alpha 由调用方按各玻璃面的透明度叠加（0.38-0.52）。 */
+/** 玻璃色调：官方主题桥接的舞台染色（EmberTheme.stageTint ← blur_tint_color）> EmberDS surface。
+ *  无本地覆盖——官方主题切换即时生效；alpha 由调用方按各玻璃面的透明度叠加（0.38-0.52）。 */
 @Composable
-fun glassTint(base: Color = MaterialTheme.colorScheme.surface): Color {
-    val context = LocalContext.current
-    return parseHexColor(AppearancePrefs.stBlurTint(context))
-        ?: EmberTheme.stageTint
-        ?: base
-}
+fun glassTint(base: Color = MaterialTheme.colorScheme.surface): Color =
+    EmberTheme.stageTint ?: base
 
 /** 全局玻璃默认参数：顶栏/输入栏统一 tint 透明度，模糊半径下限，
  *  保证“内容从栏下滚过”时模糊可感知（之前各处 0.38-0.52 不一、观感像纯色）。 */

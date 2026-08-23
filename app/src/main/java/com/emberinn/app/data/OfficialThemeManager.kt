@@ -236,44 +236,6 @@ class OfficialThemeManager(private val context: Context) {
         )
     }
 
-    /**
-     * 官方主题颜色字段全集（对照官方 power-user.js SmartTheme 变量）。
-     * 消息渲染页“主题默认”预览与渲染器 fallback 共用；缺字段返回 null（调用方回退 Ember 令牌）。
-     */
-    data class StColors(
-        val mainText: Long?,      // --SmartThemeBodyColor
-        val emText: Long?,        // --SmartThemeEmColor
-        val underline: Long?,     // --SmartThemeUnderlineColor
-        val quote: Long?,         // --SmartThemeQuoteColor
-        val userBubbleTint: Long?,// --SmartThemeUserMesBlurTintColor
-        val botBubbleTint: Long?, // --SmartThemeBotMesBlurTintColor
-        val border: Long?,        // --SmartThemeBorderColor
-        val shadow: Long?,        // --SmartThemeShadowColor
-        val blurTint: Long?,      // --SmartThemeBlurTintColor
-        val chatTint: Long?,      // --SmartThemeChatTintColor
-    )
-
-    fun stColors(): StColors {
-        val raw = _currentThemeJson.value ?: return emptySt()
-        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject
-            ?: return emptySt()
-        fun col(k: String) = obj[k]?.jsonPrimitive?.contentOrNull?.let(::parseStColor)
-        return StColors(
-            mainText = col("main_text_color"),
-            emText = col("italics_text_color"),
-            underline = col("underline_text_color"),
-            quote = col("quote_text_color"),
-            userBubbleTint = col("user_mes_blur_tint_color"),
-            botBubbleTint = col("bot_mes_blur_tint_color"),
-            border = col("border_color"),
-            shadow = col("shadow_color"),
-            blurTint = col("blur_tint_color"),
-            chatTint = col("chat_tint_color"),
-        )
-    }
-
-    private fun emptySt() = StColors(null, null, null, null, null, null, null, null, null, null)
-
     fun delete(name: String): Boolean {
         val loc = locators[name] ?: return false
         if (loc.bundled) return false
@@ -309,28 +271,6 @@ class OfficialThemeManager(private val context: Context) {
 
     private fun themeNameOf(fileName: String): String = fileName.removeSuffix(".json")
 
-    /** 官方颜色字符串解析：#RGB / #RRGGBB / #AARRGGBB / rgb()/rgba() → ARGB Long */
-    private fun parseStColor(v: String): Long? {
-        val t = v.trim()
-        if (t.startsWith("#")) {
-            val hex = t.removePrefix("#")
-            // #RRGGBB → 补全为 AARRGGBB（不透明）
-            val expanded = when {
-                hex.length == 3 -> hex.map { c -> "${c}${c}" }.joinToString("")
-                else -> hex
-            }
-            return when (expanded.length) {
-                6 -> runCatching { 0xFF000000L or expanded.toLong(16) }.getOrNull()
-                8 -> runCatching { expanded.toLong(16) }.getOrNull()
-                else -> null
-            }
-        }
-        val m = Regex("rgba?\\((\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)(?:\\s*,\\s*([0-9.]+))?\\)").find(t)
-            ?: return null
-        val (r, g, b, a) = m.destructured
-        val alpha = if (a.isEmpty()) 255 else ((a.toFloat() * 255).toInt()).coerceIn(0, 255)
-        return (alpha.toLong() shl 24) or (r.toLong() shl 16) or (g.toLong() shl 8) or b.toLong()
-    }
 
     private fun sanitize(name: String) = name.replace(Regex("[/\\\\]"), "_")
 
