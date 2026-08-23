@@ -34,17 +34,6 @@ object RenderPrefs {
             .apply()
     }
 
-    /** V2 内核渲染：消息正文走 WebView 官方管线（池化，embed-shell 模式）。
-     *  默认开；关闭回退旧原生渲染路线（P5 删除前保留双轨）。 */
-    fun kernelRender(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("kernel_render", true)
-
-    fun setKernelRender(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean("kernel_render", enabled)
-            .apply()
-    }
-
     /** 严格模式（V2 §5.3 安全模型）：默认关=全开零打扰；开=内核 WebView 禁执行 JS
      *  （卡片脚本/围栏代码不跑，正文纯显示）。改动后需重建池实例（重进聊天页生效）。 */
     fun strictMode(context: Context): Boolean =
@@ -53,18 +42,6 @@ object RenderPrefs {
     fun setStrictMode(context: Context, enabled: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putBoolean("strict_mode", enabled)
-            .apply()
-    }
-
-    /** P6 用户消息内核渲染评估结论（HANDOFF §5.2）：官方用户消息同样走 messageFormatting，
-     *  1:1 上应进内核；代价是池槽位（用户消息短、收益小，群聊长列表内存压力）。
-     *  默认关=原生胶囊省槽位；开=用户气泡正文同走内核管线。需 kernelRender 总开关同时为开。 */
-    fun userKernelRender(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("user_kernel_render", false)
-
-    fun setUserKernelRender(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean("user_kernel_render", enabled)
             .apply()
     }
 

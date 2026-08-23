@@ -49,7 +49,6 @@ import com.emberinn.app.ui.icons.FaIcons
 fun UserSettingsScreen(
     onBack: () -> Unit,
     onOpenAppearance: () -> Unit,
-    onOpenTypography: () -> Unit,
     onOpenRender: () -> Unit,
     onOpenData: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -77,7 +76,6 @@ fun UserSettingsScreen(
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("排版", "字号 · 行距 · 标题 · 间距", FaIcons.FileLines, onOpenTypography) }
                         Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "官方配色 · 兼容行为", FaIcons.Eye, onOpenRender) }
                     }
                 }

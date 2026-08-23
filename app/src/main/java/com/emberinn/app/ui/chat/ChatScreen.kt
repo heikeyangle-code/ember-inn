@@ -3,23 +3,16 @@
 package com.emberinn.app.ui.chat
 
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.emberGlass
 
 import com.emberinn.app.data.DisplayPipeline
-import com.emberinn.app.data.ExpressionStore
 import com.emberinn.engine.expression.ExpressionApi
-import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.Persona
-import com.emberinn.app.data.ThemeState
 import com.emberinn.engine.group.GroupGenerationMode
-import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.ExpressionPrefs
-import com.emberinn.app.ui.settings.ExtensionPrefs
-import com.emberinn.app.ui.settings.RenderPrefs
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
@@ -28,40 +21,26 @@ import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.StApiShimInstaller
 import com.emberinn.app.ui.chat.surface.MessageKernelRow
 import com.skydoves.cloudy.sky
-import com.skydoves.cloudy.rememberSky
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.onSizeChanged
 import android.app.DownloadManager
-import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Base64
-import android.view.ViewGroup
-import android.webkit.URLUtil
-import android.webkit.WebView
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -82,7 +61,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -90,23 +68,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -118,21 +89,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -141,85 +105,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 import com.emberinn.engine.media.MediaAttachment
-import com.emberinn.engine.prompt.LogprobsEngine
-import com.emberinn.engine.slash.QuickReplySlot
 import com.emberinn.engine.prompt.CfgPromptEngine
-import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
-import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.compose.elements.MarkdownBlockQuote
-import org.intellij.markdown.MarkdownElementTypes
-import org.intellij.markdown.MarkdownTokenTypes
-import org.intellij.markdown.ast.ASTNode
-import org.intellij.markdown.ast.findChildOfType
-import com.mikepenz.markdown.compose.elements.MarkdownCheckBox
-import com.mikepenz.markdown.annotator.AnnotatorSettings
-import com.mikepenz.markdown.annotator.annotatorSettings
-import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
-import com.mikepenz.markdown.model.State
-import com.mikepenz.markdown.model.markdownAnnotator
-import com.mikepenz.markdown.model.markdownAnnotatorConfig
-import com.mikepenz.markdown.model.parseMarkdown
-import com.mikepenz.markdown.utils.getUnescapedTextInNode
-import com.mikepenz.markdown.compose.elements.MarkdownText
-import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
-import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
-import com.mikepenz.markdown.m3.Markdown
 import com.emberinn.app.ui.components.parseHexColor
 import com.emberinn.app.ui.components.EmberInputIcon
-import com.emberinn.app.ui.components.EmberPrimaryButton
-import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberTextFieldDefaults
-import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.EmberBottomSheet
-import com.mikepenz.markdown.m3.markdownColor
-import com.mikepenz.markdown.m3.markdownTypography
-import com.mikepenz.markdown.model.markdownPadding
 import java.io.File
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.Json
@@ -228,7 +142,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -305,14 +218,8 @@ fun ChatScreen(
     val generationEpoch by vm.generationEpoch.collectAsState()
     val pastChatsRevision by vm.pastChatsRevision.collectAsState()
 
-    // ---- V2 内核渲染（embed-shell）：池 + 官方主题全量同步 -----------------
-    // 消息正文走 WebView 官方管线；头像/操作条/媒体仍由原生壳承担。
-    // RenderPrefs.kernelRender 关闭时回退旧原生渲染路线（P5 删双轨前的过渡开关）。
+    // ---- V2 内核渲染：池 + 官方主题全量同步（单轨，内核为唯一消息渲染管线） ----
     val context = LocalContext.current
-    // 不包 remember：设置页切换后回聊天页即随重组重读，即时生效
-    val kernelRender = RenderPrefs.kernelRender(context)
-    // P6 用户消息内核渲染（评估结论见 HANDOFF §5.2）：默认关省池槽位，开时用户气泡正文同走内核
-    val userKernelOn = kernelRender && RenderPrefs.userKernelRender(context)
     val kernelPool = remember {
         KernelWebViewPool(context).also { it.preload() }
     }
@@ -944,9 +851,7 @@ fun ChatScreen(
                             val isSystemMsg = derived.isSystem
                             val text = derived.text
                             // 内核路径文本：引擎只做正则/宏前处理，fixMarkdown/encode_tags 由内核接管
-                            val kernelText = if (kernelRender) {
-                                remember(el, displayRevision) { vm.kernelDisplayTextOf(item.index) }
-                            } else null
+                            val kernelText = remember(el, displayRevision) { vm.kernelDisplayTextOf(item.index) }
                             // 附件列表包一层稳定类型，避免 List 参数让整行不可跳过重组
                             val mediaList = remember(derived.media) { ChatMedia(derived.media) }
                             val immersiveActions = rowImmersiveActions
@@ -982,10 +887,9 @@ fun ChatScreen(
                                 isUser = isUserMsg,
                                 isSystem = isSystemMsg,
                                 // 内核流式启用后，历史行在流式期间也保持内核渲染（不再整列回退原生）
-                                kernelPool = if (kernelRender) kernelPool else null,
+                                kernelPool = kernelPool,
                                 mesid = "m-${item.index}",
-                                userKernel = userKernelOn,
-                                kernelText = if (isUserMsg && !userKernelOn) null else kernelText,
+                                kernelText = kernelText,
                                 text = text,
                                 media = mediaList,
                                 mediaDisplay = derived.mediaDisplay,
@@ -1065,7 +969,7 @@ fun ChatScreen(
                                 avatarPath = vm.avatarPath,
                                 accent = accent,
                                 impersonating = isImpersonating,
-                                kernelPool = if (kernelRender && !isImpersonating) kernelPool else null,
+                                kernelPool = if (!isImpersonating) kernelPool else null,
                                 mesid = "m-${items.lastIndex}",
                             )
                         }
@@ -3210,7 +3114,6 @@ private fun MessageRow(
     kernelPool: KernelWebViewPool? = null,
     mesid: String = "",
     kernelText: String? = null,
-    userKernel: Boolean = false,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3257,7 +3160,7 @@ private fun MessageRow(
             Box(modifier = Modifier.weight(1f)) {
                 MessageRowContent(
                     modifier = Modifier,
-                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, userKernel = userKernel, text = text, media = media,
+                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
                     mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
                     reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
                     name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3274,7 +3177,7 @@ private fun MessageRow(
     }
     MessageRowContent(
         modifier = modifier,
-        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, userKernel = userKernel, text = text, media = media,
+        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
         mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
         reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
         name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
@@ -3295,7 +3198,6 @@ private fun MessageRowContent(
     kernelPool: KernelWebViewPool? = null,
     mesid: String = "",
     kernelText: String? = null,
-    userKernel: Boolean = false,
     text: String,
     media: ChatMedia,
     mediaDisplay: String? = null,
@@ -3396,7 +3298,7 @@ private fun MessageRowContent(
 
     // 全 DOM 行判定：内核就绪即整行交官方模板（头像/名字/时间戳/正文一体，官方移动端结构）；
     // 原生只保留宿主交互面（思考卡/操作条/媒体/手势）。用户消息按 P6 开关分流省池槽位。
-    val useKernel = kernelPool != null && mesid.isNotEmpty() && kernelText != null && (!isUser || userKernel)
+    val useKernel = kernelPool != null && mesid.isNotEmpty() && kernelText != null
     val kernelAvatarUrl = remember(avatarPath) { kernelAvatarUrlOf(avatarPath) }
     // 长按菜单 + AI 消息横滑手势：全 DOM 行与原生回退路径共用
     var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
@@ -3601,13 +3503,7 @@ private fun MessageRowContent(
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
                         // 原生回退路径（内核未就绪/池满）：短文本为主的过渡显示
-                        ChatMarkdown(
-                            content = text,
-                            onSurface = MaterialTheme.colorScheme.onPrimaryContainer,
-                            isSystem = false,
-                            charAvatarPath = avatarPath,
-                            fillWidth = false,
-                        )
+                        StreamingMarkdown(content = text, fillWidth = false)
                     }
                 }
             } else if (aiBubble) {
@@ -3618,24 +3514,15 @@ private fun MessageRowContent(
                     border = bubbleBorder,
                     modifier = bubbleModifier,
                 ) {
-                    ChatMarkdown(
-                        content = text,
-                        onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        isSystem = formatAsSystem,
-                        charAvatarPath = avatarPath,
-                        fillWidth = false,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
-                    )
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
+                        StreamingMarkdown(content = text, fillWidth = false)
+                    }
                 }
             } else {
                 // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
-                ChatMarkdown(
-                    content = text,
-                    onSurface = if (isSystem) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    isSystem = formatAsSystem,
-                    charAvatarPath = avatarPath,
-                    modifier = bubbleModifier,
-                )
+                Box(modifier = bubbleModifier) {
+                    StreamingMarkdown(content = text)
+                }
             }
             // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
             // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。
@@ -3787,9 +3674,9 @@ private fun StreamingRow(
     }
 }
 
-/** 流式轻量渲染：流式中不跑完整 Markdown 解析（mikepenz 流式更新会 cancel/restart 空转，整段 parse 高概率被丢弃），
+/** 流式轻量渲染：流式中不跑完整 Markdown 管线（整段重解析空转，高概率被丢弃），
  *  只做粗粒度着色（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、行内码、六种引号对、链接）。
- *  生成结束后由 ChatMarkdown 一次性完整重渲染，视觉与最终一致。 */
+ *  生成结束后由内核 renderMessage 一次性权威重渲染，视觉与最终一致。 */
 @Composable
 private fun StreamingMarkdown(content: String, fillWidth: Boolean = true) {
     val context = LocalContext.current
@@ -3873,7 +3760,7 @@ private fun streamingStyledText(
 }
 
 /** 流式未闭合定界符补齐（App 增强，仅流式中间态；官方 1.18 流式是每 tick 全量 messageFormatting，
- *  未闭合时同样露符号。这里补上闭合符让轻量渲染器吞掉标记，最终态仍由 ChatMarkdown 全量渲染一致）。 */
+ *  未闭合时同样露符号。这里补上闭合符让轻量渲染器吞掉标记，最终态仍由内核全量渲染一致）。 */
 private fun closeStreamingDelimiters(text: String): String {
     var out = text
     // ** 与 * 分开计数：** 优先（**bold 有一个 ** → 补 **；*italic 有一个 * → 补 *）
@@ -4206,7 +4093,8 @@ private fun MediaPlayer(url: String, isAudio: Boolean) {
 }
 
 /** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。
- *  streaming=true 时用轻量流式渲染（不跑完整 ChatMarkdown，否则每 tick 全量解析卡死滑动），并限高滚动。 */
+ *  【待办 Commit 4】迁入内核官方 .mes_reasoning DOM，由主题 CSS 直接接管样式。
+ *  streaming=true 时用轻量流式渲染（不跑完整管线，否则每 tick 全量解析卡死滑动），并限高滚动。 */
 @Composable
 private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit, streaming: Boolean = false) {
     val textShadow = chatTextShadow()
@@ -4236,18 +4124,13 @@ private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit,
                     StreamingMarkdown(content = text.ifEmpty { "…" })
                 }
             } else {
-                ChatMarkdown(
-                    content = text,
-                    onSurface = MaterialTheme.colorScheme.onSurfaceVariant,
-                    isSystem = false,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                StreamingMarkdown(content = text.ifEmpty { "…" })
             }
         }
     }
 }
 
-/** 聊天文字排版（独立“文字排版”设置页全量可调）：正文/行高/字重/标题/引用/代码/间距。 */
+/** 聊天文字排版（外观持久化字段）：正文/行高/字重/标题/引用/代码/间距。 */
 @Composable
 private fun chatTypography(): ChatTypography {
     val context = LocalContext.current
@@ -4380,1045 +4263,6 @@ private data class ChatTypography(
     val inlineCodeMult: Float,
 )
 
-/** 官方行内 HTML → 原生可渲染标记：<q>→引用色、<u>/~text~→下划线色、<font color>→指定色、
- *  引号对→引用色（官方 messageFormatting 先转 <q> 再交给 Showdown）；em/b/s/hr/br→Markdown。
- *  标记是私有区字符，渲染前由 applyOfficialMarkers 统一剥掉并按官方 style.css 语义上色。
- *  代码围栏/行内代码/<style> 块先占位保护，避免引号、波浪线、HTML 标签转换污染代码内容
- *  （官方 messageFormatting 的正则同样把 ``` / ~~~ / `` / ` / <style> 放在引号匹配之前）。 */
-/** HTML 颜色值规范化（官方浏览器 font[color] 支持 hex/命名色/rgb）：统一转 #RRGGBB；解析不了返回 null。 */
-private fun normalizeHtmlColor(value: String): String? {
-    val v = value.trim()
-    if (v.matches(Regex("(?i)#?[0-9a-f]{3}|#?[0-9a-f]{6}"))) {
-        val hex = v.removePrefix("#").lowercase()
-        val full = if (hex.length == 3) hex.flatMap { listOf(it, it) }.joinToString("") else hex
-        return "#$full"
-    }
-    val rgb = Regex("(?i)rgba?\\s*\\(\\s*(\\d+)[\\s,]+(\\d+)[\\s,]+(\\d+)").find(v) ?: return CSS_NAMED_COLORS[v.lowercase()]
-    val r = rgb.groupValues[1].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
-    val g = rgb.groupValues[2].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
-    val b = rgb.groupValues[3].toIntOrNull() ?: return CSS_NAMED_COLORS[v.lowercase()]
-    return "#%02x%02x%02x".format(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
-}
-
-/** CSS 命名色（角色卡常用子集，浏览器支持 148 个全量表此处取高频色）。 */
-private val CSS_NAMED_COLORS = mapOf(
-    "black" to "#000000", "white" to "#ffffff", "red" to "#ff0000", "green" to "#008000",
-    "blue" to "#0000ff", "yellow" to "#ffff00", "orange" to "#ffa500", "purple" to "#800080",
-    "pink" to "#ffc0cb", "gray" to "#808080", "grey" to "#808080", "silver" to "#c0c0c0",
-    "maroon" to "#800000", "navy" to "#000080", "teal" to "#008080", "aqua" to "#00ffff",
-    "cyan" to "#00ffff", "fuchsia" to "#ff00ff", "magenta" to "#ff00ff", "lime" to "#00ff00",
-    "olive" to "#808000", "gold" to "#ffd700", "brown" to "#a52a2a", "crimson" to "#dc143c",
-    "coral" to "#ff7f50", "salmon" to "#fa8072", "violet" to "#ee82ee", "indigo" to "#4b0082",
-    "turquoise" to "#40e0d0", "skyblue" to "#87ceeb", "lightblue" to "#add8e6", "lightgray" to "#d3d3d3",
-    "lightgrey" to "#d3d3d3", "darkblue" to "#00008b", "darkred" to "#8b0000", "darkgreen" to "#006400",
-    "dimgray" to "#696969", "whitesmoke" to "#f5f5f5", "beige" to "#f5f5dc", "ivory" to "#fffff0",
-    "khaki" to "#f0e68c", "lavender" to "#e6e6fa", "orchid" to "#da70d6", "plum" to "#dda0dd",
-    "sienna" to "#a0522d", "tan" to "#d2b48c", "tomato" to "#ff6347", "wheat" to "#f5deb3",
-)
-
-private fun preprocessOfficialHtml(content: String, convertQuotes: Boolean = true): String {
-    val protectedSegments = mutableListOf<String>()
-    var out = content
-    out = Regex(
-        "```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|(?m)^ {0,3}(?:`{3,}|~{3,})[\\s\\S]*$|``[^`\\n]*``|`[^`\\n]*`|<style>[\\s\\S]*?</style>",
-        RegexOption.IGNORE_CASE,
-    ).replace(out) { m ->
-        protectedSegments += m.value
-        "\uE100${protectedSegments.lastIndex}\uE101"
-    }
-    out = Regex("<q[^>]*>([\\s\\S]*?)</q>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE001${m.groupValues[1]}\uE002" }
-    out = Regex("<u[^>]*>([\\s\\S]*?)</u>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
-    out = Regex("<(em|i)[^>]*>([\\s\\S]*?)</(em|i)>", RegexOption.IGNORE_CASE).replace(out) { m -> "*${m.groupValues[2]}*" }
-    out = Regex("<(b|strong)[^>]*>([\\s\\S]*?)</(b|strong)>", RegexOption.IGNORE_CASE).replace(out) { m -> "**${m.groupValues[2]}**" }
-    out = Regex("<(s|strike|del)[^>]*>([\\s\\S]*?)</(s|strike|del)>", RegexOption.IGNORE_CASE).replace(out) { m -> "~~${m.groupValues[2]}~~" }
-    // 官方浏览器 font[color]：hex / 命名色 / rgb() 都有效；解析不了的保持原标签（后续剥壳=继承色）
-    out = Regex("<font[^>]*color\\s*=\\s*[\"']?([^\\s\"'>]+)[\"']?[^>]*>([\\s\\S]*?)</font>", RegexOption.IGNORE_CASE)
-        .replace(out) { m ->
-            normalizeHtmlColor(m.groupValues[1])
-                ?.let { "\uE005$it\uE006${m.groupValues[2]}\uE007" } ?: m.value
-        }
-    out = Regex("<hr[^>]*>", RegexOption.IGNORE_CASE).replace(out, "\n\n---\n\n")
-    out = Regex("<br[^>]*>", RegexOption.IGNORE_CASE).replace(out, "  \n")
-    // 官方 DOMPurify 白名单里的文本级标签原生渲染（浏览器 UA 默认样式 1:1）：
-    // sub/sup 上下标、ins 下划线、small/big 缩放、mark 黄底、kbd/samp/tt/code 等宽、
-    // var/dfn/cite 斜体、abbr/acronym 虚线下划线；data/time/wbr 无视觉效果，剥标签留内容。
-    // 私有区标记 \uE020-\uE031，applyOfficialMarkers 按层叠加；bdi/bdo/ruby 等方向/注音语义
-    // 原生无法表达，仍由 OFFICIAL_HTML_TAG 走 WebView。
-    out = Regex("<sub[^>]*>([\\s\\S]*?)</sub>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE020${m.groupValues[1]}\uE021" }
-    out = Regex("<sup[^>]*>([\\s\\S]*?)</sup>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE022${m.groupValues[1]}\uE023" }
-    out = Regex("<ins[^>]*>([\\s\\S]*?)</ins>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE024${m.groupValues[1]}\uE025" }
-    out = Regex("<small[^>]*>([\\s\\S]*?)</small>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE026${m.groupValues[1]}\uE027" }
-    out = Regex("<big[^>]*>([\\s\\S]*?)</big>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE028${m.groupValues[1]}\uE029" }
-    out = Regex("<mark[^>]*>([\\s\\S]*?)</mark>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02A${m.groupValues[1]}\uE02B" }
-    out = Regex("<(?:kbd|samp|tt|code)[^>]*>([\\s\\S]*?)</(?:kbd|samp|tt|code)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02C${m.groupValues[1]}\uE02D" }
-    out = Regex("<(?:var|dfn|cite)[^>]*>([\\s\\S]*?)</(?:var|dfn|cite)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE02E${m.groupValues[1]}\uE02F" }
-    out = Regex("<(?:abbr|acronym)(?=[^>]*\\btitle\\b)[^>]*>([\\s\\S]*?)</(?:abbr|acronym)>", RegexOption.IGNORE_CASE).replace(out) { m -> "\uE030${m.groupValues[1]}\uE031" }
-    out = Regex("</?(?:abbr|acronym)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("</?(?:data|time|wbr)[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    // 可原生表达的 HTML（减少 Web 兜底）：
-    // <a href="..">text</a> → [text](url)；无 href 的 <a> 剥标签（官方无视觉）
-    // <img src=".."> → ![img](url)（Coil 原生图片）；无 src 的 <img> 剥标签
-    // 无属性的 <div>/<p>：块级语义用空行近似（markdown 段落分隔，官方块级排版接近）
-    // 无属性的 <span>：行内无视觉语义，直接剥；带属性的 span/div/p 由 Web 元素切分器接管
-    out = Regex(
-        "<a\\b(?=[^>]*\\bhref\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))[^>]*>([\\s\\S]*?)</a>",
-        RegexOption.IGNORE_CASE,
-    ).replace(out) { m ->
-        val href = m.groupValues[1].ifEmpty { m.groupValues[2].ifEmpty { m.groupValues[3] } }
-        "[${m.groupValues[4]}]($href)"
-    }
-    out = Regex("</?a[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex(
-        "<img\\b(?=[^>]*\\bsrc\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))[^>]*>",
-        RegexOption.IGNORE_CASE,
-    ).replace(out) { m ->
-        val src = m.groupValues[1].ifEmpty { m.groupValues[2].ifEmpty { m.groupValues[3] } }
-        val alt = Regex(
-            "\\balt\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))",
-            RegexOption.IGNORE_CASE,
-        ).find(m.value)?.let { g ->
-            g.groupValues[1].ifEmpty { g.groupValues[2].ifEmpty { g.groupValues[3] } }
-        } ?: "img"
-        "![$alt]($src)"
-    }
-    out = Regex("<img[^>]*>", RegexOption.IGNORE_CASE).replace(out, "")
-    out = Regex("<(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n\n")
-    out = Regex("</(div|p)\\s*>", RegexOption.IGNORE_CASE).replace(out, "\n")
-    out = Regex("<span\\s*>|</span\\s*>", RegexOption.IGNORE_CASE).replace(out, "")
-    // 官方 messageFormatting：引号对 → <q>（引用色）；先转私有标记，渲染时整段上色（含内部 Markdown）。
-    // 官方仅对非系统消息做引号转换（script.js `if (!isSystem)`），系统消息不做
-    if (convertQuotes) {
-        out = Regex("\"([^\"]*)\"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂")
-            .replace(out) { m -> "\uE001${m.value}\uE002" }
-    }
-    // Showdown underline:true：单波浪线 ~text~ → <u>（排除 ~~）
-    out = Regex("(?<!~)~([^~\\n]+)~(?!~)").replace(out) { m -> "\uE003${m.groupValues[1]}\uE004" }
-    for ((i, seg) in protectedSegments.withIndex()) out = out.replace("\uE100$i\uE101", seg)
-    return out
-}
-
-/** 标记区间（原始字符串坐标）。 */
-private data class OfficialMarker(
-    val open: Int,
-    val innerStart: Int,
-    val innerEnd: Int,
-    val close: Int,
-    val color: Color? = null,
-)
-
-/** 已映射坐标的区间（开区间）。 */
-private data class OfficialSpan(val start: Int, val end: Int, val color: Color? = null)
-
-/** outer 区间去掉 holes 覆盖后剩下的分段（holes 为已映射坐标，开区间）。 */
-private fun minus(outer: OfficialSpan, holes: List<OfficialSpan>): List<OfficialSpan> {
-    val res = mutableListOf<OfficialSpan>()
-    var cursor = outer.start
-    for (h in holes.sortedBy { it.start }) {
-        if (h.end <= cursor) continue
-        if (h.start > cursor) res += OfficialSpan(cursor, minOf(h.start, outer.end))
-        cursor = maxOf(cursor, h.end)
-        if (cursor >= outer.end) break
-    }
-    if (cursor < outer.end) res += OfficialSpan(cursor, outer.end)
-    return res
-}
-
-/** 官方 CSS 语义的标记后处理：剥掉 \uE001-\uE007 与文本级标签标记（\uE020-\uE031），并按层上色/加样式。
- *  分层顺序对齐 style.css + 浏览器 UA 默认：
- *  - 文本级（sub/sup/small/big/mark/mono/var/cite/dfn/ins/abbr）先叠加（UA 默认，author 色可覆盖）
- *  - em/i 先按 emColor 着色（库的 annotator 完成）
- *  - q/引号对 → 整段引用色（官方 q em 继承 → 覆盖 em；strong 无色 → 继承引用色）
- *  - u/~text~ → 下划线色+下划线；em 段保留斜体色（官方 .mes_text em 优先于 u）
- *  - font[color] → 最后整段指定色（官方 font[color] em/i/u/q 全部 inherit）
- *  嵌套（引号内引号、font 内 em/u/q、文本级套文本级）由栈配对 + 层序解决。 */
-private fun applyOfficialMarkers(
-    source: AnnotatedString,
-    quoteColor: Color,
-    underlineColor: Color,
-    baseFontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
-): AnnotatedString {
-    val raw = source.text
-    val qStack = ArrayDeque<Int>()
-    val uStack = ArrayDeque<Int>()
-    val fontStack = ArrayDeque<Pair<Int, Int>>() // (open, sep)
-    val subStack = ArrayDeque<Int>()
-    val supStack = ArrayDeque<Int>()
-    val insStack = ArrayDeque<Int>()
-    val smallStack = ArrayDeque<Int>()
-    val bigStack = ArrayDeque<Int>()
-    val markStack = ArrayDeque<Int>()
-    val monoStack = ArrayDeque<Int>()
-    val semItalicStack = ArrayDeque<Int>()
-    val abbrStack = ArrayDeque<Int>()
-    val markers = mutableListOf<OfficialMarker>()
-    var i = 0
-    while (i < raw.length) {
-        when (raw[i]) {
-            '\uE001' -> qStack.addLast(i)
-            '\uE002' -> qStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE003' -> uStack.addLast(i)
-            '\uE004' -> uStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE005' -> fontStack.addLast(i to -1)
-            '\uE006' -> if (fontStack.isNotEmpty()) {
-                val (open, _) = fontStack.removeLast()
-                fontStack.addLast(open to i)
-            }
-            '\uE007' -> fontStack.removeLastOrNull()?.let { (open, sep) ->
-                if (sep > open) {
-                    val hex = raw.substring(open + 1, sep)
-                    markers += OfficialMarker(open, sep + 1, i, i, parseHexColor(hex) ?: quoteColor)
-                }
-            }
-            '\uE020' -> subStack.addLast(i)
-            '\uE021' -> subStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE022' -> supStack.addLast(i)
-            '\uE023' -> supStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE024' -> insStack.addLast(i)
-            '\uE025' -> insStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE026' -> smallStack.addLast(i)
-            '\uE027' -> smallStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE028' -> bigStack.addLast(i)
-            '\uE029' -> bigStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE02A' -> markStack.addLast(i)
-            '\uE02B' -> markStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE02C' -> monoStack.addLast(i)
-            '\uE02D' -> monoStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE02E' -> semItalicStack.addLast(i)
-            '\uE02F' -> semItalicStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-            '\uE030' -> abbrStack.addLast(i)
-            '\uE031' -> abbrStack.removeLastOrNull()?.let { markers += OfficialMarker(it, it + 1, i, i) }
-        }
-        i++
-    }
-
-    // 剥标记字符并建立旧坐标→新坐标映射
-    val removed = BooleanArray(raw.length)
-    for (m in markers) {
-        removed[m.open] = true
-        removed[m.close] = true
-        if (m.color != null) {
-            // font：开标记与 hex/分隔符之间的字符也剥掉
-            for (j in m.open + 1 until m.innerStart) removed[j] = true
-        }
-    }
-    val removedBefore = IntArray(raw.length + 1)
-    var count = 0
-    for (idx in raw.indices) {
-        removedBefore[idx] = count
-        if (removed[idx]) count++
-    }
-    removedBefore[raw.length] = count
-    fun map(old: Int): Int = old - removedBefore[old]
-
-    val sb = StringBuilder(raw.length - count)
-    for (idx in raw.indices) if (!removed[idx]) sb.append(raw[idx])
-    val stripped = sb.toString()
-
-    val emSpans = mutableListOf<OfficialSpan>()
-    val mappedSpans = source.spanStyles.mapNotNull { span ->
-        val start = map(span.start)
-        val end = map(span.end)
-        if (start >= end) return@mapNotNull null
-        if (span.item.fontStyle == androidx.compose.ui.text.font.FontStyle.Italic) {
-            emSpans += OfficialSpan(start, end)
-        }
-        AnnotatedString.Range(span.item, start, end)
-    }
-    val mappedParagraphs = source.paragraphStyles.mapNotNull { p ->
-        val start = map(p.start)
-        val end = map(p.end)
-        if (start >= end) null else AnnotatedString.Range(p.item, start, end)
-    }
-
-    val qSpans = markers.filter { m ->
-        raw.getOrNull(m.open) == '\uE001' && m.close > m.open && m.innerStart < m.innerEnd
-    }.map { OfficialSpan(map(it.innerStart), map(it.innerEnd), quoteColor) }
-    val uSpans = mutableListOf<OfficialSpan>()
-    val fontSpans = mutableListOf<OfficialSpan>()
-    val subSpans = mutableListOf<OfficialSpan>()
-    val supSpans = mutableListOf<OfficialSpan>()
-    val insSpans = mutableListOf<OfficialSpan>()
-    val smallSpans = mutableListOf<OfficialSpan>()
-    val bigSpans = mutableListOf<OfficialSpan>()
-    val markSpans = mutableListOf<OfficialSpan>()
-    val monoSpans = mutableListOf<OfficialSpan>()
-    val semItalicSpans = mutableListOf<OfficialSpan>()
-    val abbrSpans = mutableListOf<OfficialSpan>()
-    for (m in markers) {
-        if (m.innerStart >= m.innerEnd) continue
-        val start = map(m.innerStart)
-        val end = map(m.innerEnd)
-        if (start >= end) continue
-        when {
-            m.color != null -> fontSpans += OfficialSpan(start, end, m.color)
-            raw.getOrNull(m.open) == '\uE003' -> uSpans += OfficialSpan(start, end, underlineColor)
-            raw.getOrNull(m.open) == '\uE020' -> subSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE022' -> supSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE024' -> insSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE026' -> smallSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE028' -> bigSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE02A' -> markSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE02C' -> monoSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE02E' -> semItalicSpans += OfficialSpan(start, end)
-            raw.getOrNull(m.open) == '\uE030' -> abbrSpans += OfficialSpan(start, end)
-        }
-    }
-
-    // 分层（官方 CSS：元素自身的颜色规则优先于继承，因此 q 与 u 互相避让）：
-    // 文本级 UA 默认（sub/sup/small/big/mark/mono/var/cite/dfn/ins/abbr）→ em 基色 →
-    // q（避开 u 段）→ u 下划线+色（避开 q 与 em 段）→ font 最后全覆盖。
-    // 文本级样式先加、author 色（q/u/font/em）后加，与浏览器 UA 样式 < author 样式一致。
-    // Chromium UA html.css：sub/sup/small 均为 font-size: smaller（≈0.83em），big 为 larger（1.2em）。
-    // TextUnit 无 isSpecified（那是 Color 的属性），用 type 判空；Unspecified 时乘法会抛异常，先兜底。
-    val hasBaseSize = baseFontSize.type != androidx.compose.ui.unit.TextUnitType.Unspecified
-    val subSupSize = if (hasBaseSize) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
-    val smallSize = if (hasBaseSize) baseFontSize * 0.83f else androidx.compose.ui.unit.TextUnit.Unspecified
-    val bigSize = if (hasBaseSize) baseFontSize * 1.2f else androidx.compose.ui.unit.TextUnit.Unspecified
-    val finalSpans = mappedSpans.toMutableList()
-    for (s in subSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(
-            fontSize = subSupSize,
-            baselineShift = androidx.compose.ui.text.style.BaselineShift.Subscript,
-        ),
-        s.start,
-        s.end,
-    )
-    for (s in supSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(
-            fontSize = subSupSize,
-            baselineShift = androidx.compose.ui.text.style.BaselineShift.Superscript,
-        ),
-        s.start,
-        s.end,
-    )
-    for (s in insSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(textDecoration = TextDecoration.Underline),
-        s.start,
-        s.end,
-    )
-    for (s in smallSpans) finalSpans += AnnotatedString.Range(SpanStyle(fontSize = smallSize), s.start, s.end)
-    for (s in bigSpans) finalSpans += AnnotatedString.Range(SpanStyle(fontSize = bigSize), s.start, s.end)
-    for (s in monoSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
-        s.start,
-        s.end,
-    )
-    for (s in semItalicSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
-        s.start,
-        s.end,
-    )
-    // abbr/acronym：浏览器 UA 为虚线，Compose 无虚线，用实线近似
-    for (s in abbrSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(textDecoration = TextDecoration.Underline),
-        s.start,
-        s.end,
-    )
-    for (q in qSpans) {
-        for (seg in minus(q, uSpans)) {
-            finalSpans += AnnotatedString.Range(SpanStyle(color = quoteColor), seg.start, seg.end)
-        }
-    }
-    for (u in uSpans) {
-        finalSpans += AnnotatedString.Range(SpanStyle(textDecoration = TextDecoration.Underline), u.start, u.end)
-        for (seg in minus(u, qSpans).flatMap { minus(it, emSpans) }) {
-            finalSpans += AnnotatedString.Range(
-                SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline),
-                seg.start,
-                seg.end,
-            )
-        }
-    }
-    for (f in fontSpans) f.color?.let { finalSpans += AnnotatedString.Range(SpanStyle(color = it), f.start, f.end) }
-    // mark 最后加：Chromium UA html.css `mark { background-color: Mark; color: MarkText }`（黄底黑字）。
-    // UA 声明优先于继承的 author 色，所以 q/u/font/em 的颜色都不能覆盖它——与官方浏览器行为一致。
-    for (s in markSpans) finalSpans += AnnotatedString.Range(
-        SpanStyle(background = Color(0xFFFFFF00), color = Color(0xFF000000)),
-        s.start,
-        s.end,
-    )
-
-    val out = AnnotatedString.Builder(stripped)
-    for (span in finalSpans) out.addStyle(span.item, span.start, span.end)
-    for (p in mappedParagraphs) out.addStyle(p.item, p.start, p.end)
-    // Compose 1.11+ 的行内内容（Markdown 图片等）是字符串注解，不是 inlineContent map，需原样平移
-    val inlineTag = "androidx.compose.foundation.text.inlineContent"
-    for (a in source.getStringAnnotations(inlineTag, 0, raw.length)) {
-        val start = map(a.start)
-        val end = map(a.end)
-        if (start < end) out.addStringAnnotation(inlineTag, a.item, start, end)
-    }
-    return out.toAnnotatedString()
-}
-
-/** 官方行内标记的最终渲染节点：必须在 Markdown 的 CompositionLocalProvider 内调用。
- *  流程：buildMarkdownAnnotatedString 生成基础样式 → applyOfficialMarkers 剥 \uE001-\uE007/\uE020-\uE031 并按层上色/加样式。
- *  text / paragraph / heading1-6 / setextHeading1-2 全部走这里，否则默认组件会绕过管线。 */
-@Composable
-private fun OfficialMarkdownNode(
-    model: com.mikepenz.markdown.compose.components.MarkdownComponentModel,
-    style: androidx.compose.ui.text.TextStyle,
-    bodyColor: Color,
-    emColor: Color,
-    quoteColor: Color,
-    underlineColor: Color,
-    contentChildType: org.intellij.markdown.IElementType? = null,
-) {
-    // 斜体 annotator 递归构建时需要同一份 settings；用 holder 避免初始化顺序问题
-    val settingsHolder = remember { arrayOfNulls<AnnotatorSettings>(1) }
-    val emAnnotator = remember(emColor) {
-        markdownAnnotator(
-            config = markdownAnnotatorConfig(eolAsNewLine = true),
-            annotate = { content, child ->
-                // 官方 .mes_text i/em { color: emColor }：斜体单独着色；引号/下划线/字体色由
-                // applyOfficialMarkers 在最终 AnnotatedString 上按官方 CSS 层级统一处理
-                if (child.type == MarkdownElementTypes.EMPH) {
-                    pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
-                    settingsHolder[0]?.let { buildMarkdownAnnotatedString(content, child, it) }
-                    pop()
-                    true
-                } else {
-                    false
-                }
-            },
-        )
-    }
-    val mdSettings = annotatorSettings(
-        annotator = emAnnotator,
-        linkTextSpanStyle = TextLinkStyles(style = SpanStyle(color = quoteColor)),
-    )
-    settingsHolder[0] = mdSettings
-    // 对齐 MarkdownHeader：ATX/SETEXT 标题只渲染内容子节点，否则 # 号会原样输出
-    val targetNode = contentChildType?.let { model.node.findChildOfType(it) } ?: model.node
-    // 官方正文色：无色样式（正文/标题/代码）补 bodyColor；引用等已指定色的样式保持自身颜色
-    val resolvedStyle = if (style.color.isSpecified) style else style.copy(color = bodyColor)
-    // 最终着色 AnnotatedString 后台计算 + 全局缓存：滚出屏再滚回来不再主线程重算（滑动卡顿来源之一）
-    val cacheKey = remember(model.content, bodyColor, quoteColor, underlineColor, emColor, style) {
-        buildString {
-            append(model.content)
-            append('|').append(bodyColor.toArgb())
-            append('|').append(quoteColor.toArgb())
-            append('|').append(underlineColor.toArgb())
-            append('|').append(emColor.toArgb())
-            append('|').append(style.hashCode())
-        }
-    }
-    var styled by remember(cacheKey) { mutableStateOf<androidx.compose.ui.text.AnnotatedString?>(AnnotatedCache.get(cacheKey)) }
-    LaunchedEffect(cacheKey) {
-        if (styled == null) {
-            val computed = withContext(kotlinx.coroutines.Dispatchers.Default) {
-                val built = buildAnnotatedString {
-                    pushStyle(resolvedStyle.toSpanStyle())
-                    buildMarkdownAnnotatedString(model.content, targetNode, mdSettings)
-                    pop()
-                }
-                applyOfficialMarkers(built, quoteColor, underlineColor, baseFontSize = style.fontSize)
-            }
-            AnnotatedCache.put(cacheKey, computed)
-            styled = computed
-        }
-    }
-    val result = styled
-    if (result != null) {
-        MarkdownText(
-            content = result,
-            node = model.node,
-            modifier = Modifier.fillMaxWidth(),
-            style = resolvedStyle,
-            sourceContent = model.content,
-        )
-    } else {
-        // 首帧轻量占位（保持行高），后台算完无缝切换
-        StreamingMarkdown(content = model.content)
-    }
-}
-
-/** 真正无法原生的行内/对象标签（官方 DOMPurify 白名单放行、浏览器渲染，而原生文本无对应）：
- *  带属性的 span、font face/size、bdi/bdo/ruby 注音、表单控件、svg/math/canvas、音视频。
- *  段内命中才整段走 WebView；其余残留标签一律剥壳保内容走原生（官方 DOMPurify keepContent 语义）。 */
-private val WEB_INLINE_TAG = Regex(
-    "<span(?=[\\s/>])[^>]*\\s[a-zA-Z-]+\\s*=|<font(?=[\\s/>])[^>]*\\s(?:face|size)\\s*=" +
-        "|<(?:bdi|bdo|ruby|rt|rp|button|input|select|textarea|label|datalist|optgroup|option|output|progress|meter|fieldset|legend|svg|math|canvas|video|audio|source|track|picture|map|area|marquee|blink|nobr|xmp|slot|template|script|style|iframe)(?=[\\s/>])",
-    RegexOption.IGNORE_CASE,
-)
-
-/** 剥掉剩余 HTML 标签、保留内容（官方 messageFormatting → DOMPurify 移除非白名单标签、keepContent=true）：
- *  未知标签（<Status>、<giggle>…）、已原生化标签的残留壳全部消失只留文字——纯文字不再误入 WebView。
- *  代码围栏/行内代码先占位保护：讲 HTML 语法的代码内容（如 “用 `<b>` 加粗”）里的标签不许剥。 */
-private val ANY_TAG = Regex("</?[A-Za-z][A-Za-z0-9:-]*(?:\\s+[^<>]*?)?\\s*/?>")
-
-private fun stripResidualTags(text: String): String {
-    val protected = mutableListOf<String>()
-    // 闭合围栏/行内代码先配对保护；末尾未闭合围栏（行首 ```/~~~ 无闭合）也保护——内容是代码不许剥
-    var out = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~|(?m)^ {0,3}(?:`{3,}|~{3,})[\\s\\S]*$|``[^`\\n]*``|`[^`\\n]*`")
-        .replace(text) { m ->
-            protected += m.value
-            "\uE100${protected.lastIndex}\uE101"
-        }
-    out = ANY_TAG.replace(out, "")
-    for ((i, seg) in protected.withIndex()) out = out.replace("\uE100$i\uE101", seg)
-    return out
-}
-
-/** 分段渲染的段类型：原生 Markdown / WebView HTML / 交互卡片 / Mermaid。 */
-private enum class SegmentKind { Native, WebHtml, Interactive, Mermaid }
-
-private class ChatSegment(val kind: SegmentKind, val raw: String, val display: String? = null)
-
-private val ANY_FENCE = Regex("```[\\s\\S]*?```|~~~[\\s\\S]*?~~~")
-
-/** 全部围栏区间（含末尾未闭合围栏）：官方 marked/CommonMark 语义——未闭合围栏延伸到文本末尾、
- *  渲染为代码块（流式中断/模型漏闭合时的官方表现）。只认闭合围栏会把残缺代码块的 ``` 与内容
- *  当普通文字走剥壳管线（<div> 被剥掉），与官方渲染不一致。 */
-private fun fenceRanges(text: String): List<IntRange> {
-    val closed = ANY_FENCE.findAll(text).map { it.range }.toMutableList()
-    val consumed = closed.lastOrNull()?.last?.plus(1) ?: 0
-    val tail = text.substring(consumed)
-    val opener = Regex("(?m)^ {0,3}(?:`{3,}|~{3,})").find(tail) ?: return closed
-    closed += (consumed + opener.range.first) until text.length
-    return closed
-}
-private val INTERACTIVE_FENCE = Regex("```[a-zA-Z]*[ \\t]*\\n([\\s\\S]*?)```")
-
-/** 围栏内的结构性 HTML 标签（网页/卡片成分）：围栏含任意一个即按 HTML 围栏渲染成卡片。
- *  Tavern Helper 代码渲染器语义：HTML 围栏整体替换为 iframe，不要求首尾都是 <>。 */
-private val STRUCTURAL_HTML_TAG = Regex(
-    "<(?:html|head|body|div|style|script|table|center|section|article|form|details|svg|canvas|iframe|video|audio|marquee|template|input|button|select)\\b",
-    RegexOption.IGNORE_CASE,
-)
-private val MERMAID_FENCE = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
-
-/** HTML 围栏判定：与 embedInteractiveBlocks 同一套正则，避免分段器与 iframe 转换器不一致。
- *  渲染与交互分离：HTML 围栏始终进 iframe 卡片渲染，脚本是否可交互由扩展开关决定（embedInteractiveBlocks）。 */
-private fun isHtmlFence(raw: String): Boolean {
-    if (!raw.startsWith("```")) return false
-    val m = INTERACTIVE_FENCE.find(raw) ?: return false
-    val inner = m.groupValues[1].trim()
-    if (inner.startsWith("<") || inner.contains("<body", ignoreCase = true)) return true
-    // Tavern Helper 语义：围栏内出现结构性 HTML 标签即按卡片渲染。旧判定还要求结尾是 >，
-    // “HTML 卡片 + 结尾一句说明文字”这类输出被降级成普通代码块、把源码当文字显示（用户报告的降级）。
-    return STRUCTURAL_HTML_TAG.containsMatchIn(inner)
-}
-
-/** 完整 HTML 文档判定：以 <!doctype html 开头，或以 <html> 开头且带结构标记。
- *  这类内容（角色卡自带网页 / 模型直接输出的整页）不能外套一层 <html>：
- *  html 套 html 时嵌套的 </head>/</body> 会被解析器提前处理 → 页面错乱/大片空白；
- *  也不能交给 carveWebElementRanges 切块（<head>/<body> 会被拆散）。 */
-private fun isFullHtmlDocument(html: String): Boolean {
-    val t = html.trimStart { it == '\uFEFF' || it.isWhitespace() }
-    if (t.startsWith("<!doctype", ignoreCase = true)) return true
-    if (!Regex("(?i)^<html\\b[^>]*>").containsMatchIn(t)) return false
-    // 后面必须出现结构标记，避免把“讲 <html> 标签”的普通消息整段送进 WebView
-    return t.contains("</html>", ignoreCase = true) ||
-        t.contains("<head", ignoreCase = true) ||
-        t.contains("<body", ignoreCase = true)
-}
-
-/** 围栏外首个“完整网页文档”起点（<!doctype 或带闭合结构的 <html）：0=文档在开头（调用方已整段处理），
- *  -1=没有。用于“前缀文字 + 完整网页”消息的拆分——文档起点前的文字走原生，其后整段走 Web。 */
-private fun fullDocumentStartOutsideFences(content: String): Int {
-    val fences = fenceRanges(content)
-    fun outside(i: Int) = fences.none { i in it }
-    val doctype = Regex("(?i)<!doctype\\s+html").findAll(content)
-        .map { it.range.first }.filter { it > 0 && outside(it) }.minOrNull()
-    val htmlTag = Regex("(?i)<html\\b").findAll(content)
-        .map { it.range.first }
-        .filter { pos -> pos > 0 && outside(pos) && content.substring(pos).contains(Regex("(?i)</html\\s*>|<body\\b")) }
-        .minOrNull()
-    return listOfNotNull(doctype, htmlTag).minOrNull() ?: -1
-}
-
-private fun appendTextSegment(
-    out: MutableList<ChatSegment>,
-    text: String,
-    isSystem: Boolean,
-    htmlEnabled: Boolean,
-) {
-    if (text.isBlank()) return
-    val pre = preprocessOfficialHtml(text, convertQuotes = !isSystem)
-    if (htmlEnabled && WEB_INLINE_TAG.containsMatchIn(pre)) {
-        // 段内混有真正无法原生的行内/对象标签：整段走 WebView（罕见路径）
-        out += ChatSegment(SegmentKind.WebHtml, text)
-    } else if (htmlEnabled) {
-        // 官方 DOMPurify keepContent 语义：残留标签（未知标签/已原生化标签的壳）剥掉只留文字，
-        // 纯文字消息不再误入 WebView（此前 looksLikeHtml 整段判定是“纯文字走 Web”的根因）
-        out += ChatSegment(SegmentKind.Native, text, stripResidualTags(pre))
-    } else {
-        out += ChatSegment(SegmentKind.Native, text, pre)
-    }
-}
-
-/** 真正需要独立 WebView 的块级/结构标签（含带属性的 div/p；font 仅 face/size 时）。
- *  行内 Web 标签（button/input/span[属性]/font face-size/ruby/bdi/bdo 等）无法与原生文本混排，
- *  仍按 12.6 登记整段走 Web；a/img 已原生转换，不进此清单。 */
-private val WEB_BLOCK_TAG = Regex(
-    "<(table|ul|ol|li|blockquote|pre|h[1-6]|center|figure|figcaption|address|hgroup|section|header|footer|main|nav|aside|article|details|summary|dialog|menu|dl|dt|dd|form|fieldset|legend|style|script|template|marquee|blink|nobr|xmp|picture|video|audio|canvas|svg|math|iframe|tr|td|th|tbody|thead|tfoot|caption|col|colgroup|html|head|body)(?=[\\s/>])" +
-        "|<(div|p)(?=[\\s/>])(?=[^>]*\\s(?:class|style|align|id|data-[\\w-]+|title|dir|lang)=)" +
-        "|<font(?=[\\s/>])(?=[^>]*\\s(?:face|size)=)",
-    RegexOption.IGNORE_CASE,
-)
-
-/** 在围栏外切出“真正需要 WebView”的元素区间：从开标签到同名闭标签（同层嵌套计数，自闭合除外）。
- *  无闭标签（残缺 HTML）延伸到文本末尾；围栏区间（含未闭合围栏）内是代码，不许当 Web 元素切走。 */
-private fun carveWebElementRanges(text: String): List<IntRange> {
-    val out = mutableListOf<IntRange>()
-    val fences = fenceRanges(text).sortedBy { it.first }
-    var i = 0
-    while (i < text.length) {
-        // 命中围栏：整段跳过（代码内容按官方渲染为转义代码块，不进 WebView）
-        val hitFence = fences.firstOrNull { i in it }
-        if (hitFence != null) {
-            i = hitFence.last + 1
-            continue
-        }
-        // 下一个围栏起点之前找 Web 元素开标签；命中点落在围栏内（含未闭合围栏）的跳过
-        val nextFence = fences.firstOrNull { it.first > i }?.first ?: text.length
-        var t = WEB_BLOCK_TAG.find(text, i)
-        while (t != null && t.range.first >= nextFence) t = null
-        if (t == null) {
-            i = nextFence
-            continue
-        }
-        i = carveTag(text, t, out)
-    }
-    return out
-}
-
-/** 单个 Web 元素开标签的区间切分：从开标签同名闭标签计数（残缺 HTML 延伸到文本末尾），返回区间结束位置。 */
-private fun carveTag(text: String, t: MatchResult, out: MutableList<IntRange>): Int {
-    val name = t.groupValues[1].ifEmpty { t.groupValues[2].ifEmpty { t.groupValues[3] } }
-    if (t.value.trimEnd().endsWith("/>")) {
-        out += t.range.first until t.range.last + 1
-        return t.range.last + 1
-    }
-    var depth = 1
-    var j = t.range.last + 1
-    val openRe = Regex("<${Regex.escape(name)}\\b(?![^>]*/\\s*>)[^>]*>", RegexOption.IGNORE_CASE)
-    val closeRe = Regex("</${Regex.escape(name)}\\s*>", RegexOption.IGNORE_CASE)
-    while (depth > 0 && j < text.length) {
-        val o = openRe.find(text, j)
-        val c = closeRe.find(text, j)
-        val oi = o?.range?.first ?: Int.MAX_VALUE
-        val ci = c?.range?.first ?: Int.MAX_VALUE
-        if (ci == Int.MAX_VALUE) break
-        if (oi < ci) {
-            depth++
-            j = o!!.range.last + 1
-        } else {
-            depth--
-            j = c!!.range.last + 1
-        }
-    }
-    val end = if (depth == 0) j else text.length
-    out += t.range.first until end
-    return end
-}
-
-/** 把一条消息切成段：先切出真正需要 WebView 的块级 HTML 元素（周围文字保持原生 Markdown），
- *  再对非 Web 部分按围栏切分（交互卡/Mermaid/普通代码块），最后按官方富标签兜底。
- *  修复“文字+卡片混排时整条进 WebView，围栏外 **粗体** 等 Markdown 语法失效”。 */
-private fun buildMessageSegments(
-    content: String,
-    isSystem: Boolean,
-    htmlEnabled: Boolean,
-): List<ChatSegment> {
-    // 完整网页整段走 WebView：交给下面的切分器会把 <head>/<style>/<body> 拆成多段，
-    // 每段再套独立页面 → 网页永远渲染不出来（用户报告的多轮“渲染空白”根因之一）。
-    if (htmlEnabled && isFullHtmlDocument(content)) {
-        return listOf(ChatSegment(SegmentKind.WebHtml, content))
-    }
-    // 前缀文字 + 完整网页（“给你做了个页面：”+ <!DOCTYPE …）：从文档起点切开，
-    // 前缀走原生、文档整段走 Web。不切的话整页落进 appendTextSegment 被剥壳成纯文字（降级）。
-    if (htmlEnabled) {
-        val docStart = fullDocumentStartOutsideFences(content)
-        if (docStart > 0) {
-            val out = mutableListOf<ChatSegment>()
-            fun prefixFenced(text: String) {
-                var last = 0
-                for (fr in fenceRanges(text)) {
-                    appendTextSegment(out, text.substring(last, fr.first), isSystem, htmlEnabled)
-                    val raw = text.substring(fr.first, fr.last + 1)
-                    out += when {
-                        isHtmlFence(raw) -> ChatSegment(SegmentKind.Interactive, raw)
-                        MERMAID_FENCE.containsMatchIn(raw) -> ChatSegment(SegmentKind.Mermaid, raw)
-                        else -> ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
-                    }
-                    last = fr.last + 1
-                }
-                appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
-            }
-            prefixFenced(content.substring(0, docStart))
-            out += ChatSegment(SegmentKind.WebHtml, content.substring(docStart))
-            return out
-        }
-    }
-    val out = mutableListOf<ChatSegment>()
-    fun appendFenced(text: String) {
-        var last = 0
-        for (fr in fenceRanges(text)) {
-            appendTextSegment(out, text.substring(last, fr.first), isSystem, htmlEnabled)
-            val raw = text.substring(fr.first, fr.last + 1)
-            when {
-                // 未闭合围栏（无结束 ```）走 Native：markdown 渲染器按官方语义渲染成到末尾的代码块
-                isHtmlFence(raw) -> out += ChatSegment(SegmentKind.Interactive, raw)
-                MERMAID_FENCE.containsMatchIn(raw) -> out += ChatSegment(SegmentKind.Mermaid, raw)
-                else -> out += ChatSegment(SegmentKind.Native, raw, preprocessOfficialHtml(raw, convertQuotes = !isSystem))
-            }
-            last = fr.last + 1
-        }
-        appendTextSegment(out, text.substring(last), isSystem, htmlEnabled)
-    }
-    val ranges = if (htmlEnabled) carveWebElementRanges(content) else emptyList()
-    if (ranges.isEmpty()) {
-        appendFenced(content)
-        return out
-    }
-    // 官方 messageFormatting 语义：整条消息 innerHTML 进同一个 .mes_text DOM，
-    // <style>/<script> 全局作用于本条消息。分段渲染不能把 style 和它作用的 div 拆进
-    // 两个独立 WebView（iframe 沙箱互不可见 → 角色卡状态栏样式全丢、脚本找不到元素，
-    // 只剩裸文字）。因此：首个 Web 元素之前 / 末个之后的纯文字保持原生，
-    // 首元素起点→末元素终点整段合成一个 WebHtml（中间的零星文字跟着进 DOM，与官方一致）。
-    appendFenced(content.substring(0, ranges.first().first))
-    out += ChatSegment(SegmentKind.WebHtml, content.substring(ranges.first().first, ranges.last().last + 1))
-    appendFenced(content.substring(ranges.last().last + 1))
-    return out
-}
-
-/** 换行版高亮代码块（官方 style.css 代码块 pre-wrap）：长行自动换行，不再横向滚动截断。 */
-@Composable
-private fun WrappingHighlightedCode(
-    code: String,
-    language: String?,
-    style: androidx.compose.ui.text.TextStyle,
-) {
-    val dark = isSystemInDarkTheme()
-    val builder = remember(dark) {
-        dev.snipme.highlights.Highlights.Builder().theme(dev.snipme.highlights.model.SyntaxThemes.default(darkMode = dark))
-    }
-    val highlighted = remember(code, language, builder) {
-        val syntaxLanguage = language?.let { dev.snipme.highlights.model.SyntaxLanguage.getByName(it) }
-        val codeHighlights = builder.code(code)
-            .let { if (syntaxLanguage != null) it.language(syntaxLanguage) else it }
-            .build()
-            .getHighlights()
-        buildAnnotatedString {
-            append(code)
-            codeHighlights.forEach {
-                when (it) {
-                    is dev.snipme.highlights.model.ColorHighlight -> addStyle(
-                        SpanStyle(color = Color(it.rgb).copy(alpha = 1f)),
-                        it.location.start,
-                        it.location.end,
-                    )
-                    is dev.snipme.highlights.model.BoldHighlight -> addStyle(
-                        SpanStyle(fontWeight = FontWeight.Bold),
-                        it.location.start,
-                        it.location.end,
-                    )
-                }
-            }
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f)),
-    ) {
-        Text(
-            text = highlighted,
-            style = style,
-            softWrap = true,
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-        )
-    }
-}
-
-/** 原生 Markdown 渲染：官方行内字段已由 preprocessOfficialHtml 转成原生标记。 */
-@Composable
-private fun NativeMarkdown(
-    content: String,
-    onSurface: Color,
-    isSystem: Boolean = false,
-    modifier: Modifier = Modifier,
-    // false = 不强制撑满（气泡 hug 模式）；含引用/表格等 fillMaxWidth 块时仍会被撑开，属可接受降级
-    fillWidth: Boolean = true,
-) {
-    val context = LocalContext.current
-    // 官方字段：用户设置 > 当前官方主题真值（power-user 同源）> M3 自动生成
-    val st = rememberStColors()
-    fun stCol(v: Long?) = v?.let { Color(it) }
-    val bodyColor = parseHexColor(AppearancePrefs.stBodyColor(context))
-        ?: stCol(st.mainText) ?: onSurface
-    val quoteColor = parseHexColor(AppearancePrefs.stQuoteColor(context))
-        ?: stCol(st.quote) ?: MaterialTheme.colorScheme.primary
-    val emColor = parseHexColor(AppearancePrefs.stEmColor(context))
-        ?: stCol(st.emText) ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val underlineColor = parseHexColor(AppearancePrefs.stUnderlineColor(context))
-        ?: stCol(st.underline) ?: MaterialTheme.colorScheme.primary
-    val type = chatTypography()
-    // 颜色/排版/间距工厂是 @Composable（读主题），直接在组合上下文调用；组件 lambda 走 remember 复用
-    val codeBg = MaterialTheme.colorScheme.surfaceContainerHighest
-    val divider = MaterialTheme.colorScheme.outlineVariant
-    // markdownColor 是 @Composable 工厂（读主题），只能在组合上下文调用，不能进 remember
-    val colors = markdownColor(
-        text = bodyColor,
-        codeBackground = codeBg.copy(alpha = 0.55f),
-        inlineCodeBackground = codeBg.copy(alpha = 0.45f),
-        dividerColor = divider,
-        tableBackground = codeBg.copy(alpha = 0.25f),
-    )
-    val typography = markdownTypography(
-        h1 = type.h1,
-        h2 = type.h2,
-        h3 = type.h3,
-        h4 = type.h4,
-        h5 = type.h5,
-        h6 = type.h6,
-        text = type.body,
-        paragraph = type.body,
-        ordered = type.body,
-        bullet = type.body,
-        list = type.body,
-        quote = type.body.copy(
-            color = quoteColor,
-            fontStyle = if (type.quoteItalic) {
-                androidx.compose.ui.text.font.FontStyle.Italic
-            } else {
-                androidx.compose.ui.text.font.FontStyle.Normal
-            },
-        ),
-        textLink = androidx.compose.ui.text.TextLinkStyles(
-            style = androidx.compose.ui.text.SpanStyle(color = quoteColor),
-        ),
-        code = type.body.copy(
-            fontSize = (type.body.fontSize.value * type.codeMult).sp,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-        ),
-        inlineCode = type.body.copy(
-            fontSize = (type.body.fontSize.value * type.inlineCodeMult).sp,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-        ),
-    )
-    val components = remember(bodyColor, emColor, quoteColor, underlineColor, type) {
-        markdownComponents(
-            // 默认 MarkdownParagraph / MarkdownHeader 会直接调 MarkdownText、绕过自定义 text 组件，
-            // 导致 \uE001-\uE007 占位符残留（引号旁两个方框）且不上色；所以 text/paragraph/heading 全走同一管线
-            text = { model -> OfficialMarkdownNode(model, model.typography.text, bodyColor, emColor, quoteColor, underlineColor) },
-            paragraph = { model -> OfficialMarkdownNode(model, model.typography.paragraph, bodyColor, emColor, quoteColor, underlineColor) },
-            heading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            heading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            heading3 = { model -> OfficialMarkdownNode(model, model.typography.h3, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            heading4 = { model -> OfficialMarkdownNode(model, model.typography.h4, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            heading5 = { model -> OfficialMarkdownNode(model, model.typography.h5, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            heading6 = { model -> OfficialMarkdownNode(model, model.typography.h6, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.ATX_CONTENT) },
-            setextHeading1 = { model -> OfficialMarkdownNode(model, model.typography.h1, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-            setextHeading2 = { model -> OfficialMarkdownNode(model, model.typography.h2, bodyColor, emColor, quoteColor, underlineColor, MarkdownTokenTypes.SETEXT_CONTENT) },
-            // 官方 style.css 代码块 pre-wrap 语义：换行版高亮代码块，避免 mikepenz 默认
-            // horizontalScroll 让长行（如 JSON 状态栏）被“框住、看不全”
-            codeBlock = { model ->
-                MarkdownCodeBlock(content = model.content, node = model.node, style = model.typography.code) { code, language, style ->
-                    WrappingHighlightedCode(code = code, language = language, style = style)
-                }
-            },
-            codeFence = { model ->
-                MarkdownCodeFence(content = model.content, node = model.node, style = model.typography.code) { code, language, style ->
-                    WrappingHighlightedCode(code = code, language = language, style = style)
-                }
-            },
-            blockQuote = { model ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.30f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    MarkdownBlockQuote(model.content, model.node, style = model.typography.quote)
-                }
-            },
-            checkbox = { model ->
-                MarkdownCheckBox(
-                    content = model.content,
-                    node = model.node,
-                    style = type.body,
-                    checkedIndicator = { checked, modifier ->
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = modifier
-                                .size(16.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (checked) quoteColor else Color.Transparent)
-                                .border(1.dp, quoteColor, RoundedCornerShape(4.dp)),
-                        ) {
-                            if (checked) {
-                                Text("✓", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                            }
-                        }
-                    },
-                )
-            },
-        )
-    }
-    val blockSpacing = AppearancePrefs.blockSpacing(context)
-    val listIndent = AppearancePrefs.listIndent(context)
-    // markdownPadding 是 @Composable 工厂（读 LocalMarkdownPadding），只能在组合上下文调用
-    val padding = markdownPadding(
-            block = when (blockSpacing) {
-                "compact" -> 2.dp
-                "loose" -> 5.dp
-                else -> 3.dp
-            },
-            list = 2.dp,
-            listItemTop = 2.dp,
-            listItemBottom = 2.dp,
-            listIndent = listIndent.toFloatOrNull()?.dp ?: 10.dp,
-            codeBlock = PaddingValues(10.dp),
-            blockQuote = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-        )
-    val mdAnnotator = remember {
-        markdownAnnotator(config = markdownAnnotatorConfig(eolAsNewLine = true))
-    }
-    // 解析结果按内容缓存：滚动回来的行首帧直出完整 Markdown，不再异步重解析/闪空；
-    // 首次未命中时先用轻量流式着色占位（保持非零行高），后台解析完再无缝切换。
-    var mdState by remember(content) { mutableStateOf<State?>(MarkdownCache.get(content)) }
-    LaunchedEffect(content) {
-        if (mdState !is State.Success) {
-            val parsed = withContext(Dispatchers.Default) { parseMarkdown(content) }
-            if (parsed is State.Success) {
-                MarkdownCache.put(content, parsed)
-                mdState = parsed
-            }
-        }
-    }
-    val md = mdState
-    if (md is State.Success) {
-        Markdown(
-            state = md,
-            modifier = if (fillWidth) modifier.fillMaxWidth() else modifier,
-            imageTransformer = Coil3ImageTransformerImpl,
-            components = components,
-            colors = colors,
-            typography = typography,
-            padding = padding,
-            annotator = mdAnnotator,
-        )
-    } else {
-        StreamingMarkdown(content = content, fillWidth = fillWidth)
-    }
-}
-
-/** 分段渲染：围栏外 Markdown 走原生，交互卡/Mermaid/富 HTML 段各自进独立 WebView。 */
-@Composable
-private fun SegmentedMarkdown(
-    segments: List<ChatSegment>,
-    modifier: Modifier = Modifier,
-    onSurface: Color,
-    isSystem: Boolean = false,
-    charAvatarPath: String? = null,
-    userAvatarPath: String? = null,
-    interactiveCardsOn: Boolean = true,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        segments.forEach { seg ->
-            when (seg.kind) {
-                SegmentKind.Native -> NativeMarkdown(
-                    content = seg.display ?: seg.raw,
-                    onSurface = onSurface,
-                    isSystem = isSystem,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                SegmentKind.WebHtml -> WebViewHtml(
-                    // P5 删双轨：路线 A 静态原生渲染随 RenderNodeCompose 一并移除，HTML 段统一走 WebView
-                    html = sanitizeHtmlForWebView(seg.raw),
-                    modifier = Modifier.fillMaxWidth(),
-                    charAvatarPath = charAvatarPath,
-                    userAvatarPath = userAvatarPath,
-                    interactiveCardsOn = interactiveCardsOn,
-                )
-                SegmentKind.Interactive -> WebViewHtml(
-                    html = sanitizeHtmlForWebView(seg.raw),
-                    modifier = Modifier.fillMaxWidth(),
-                    charAvatarPath = charAvatarPath,
-                    userAvatarPath = userAvatarPath,
-                    interactiveCardsOn = interactiveCardsOn,
-                )
-                SegmentKind.Mermaid -> WebViewHtml(
-                    html = mermaidHtmlOf(seg.raw) ?: sanitizeHtmlForWebView(seg.raw),
-                    modifier = Modifier.fillMaxWidth(),
-                    charAvatarPath = charAvatarPath,
-                    userAvatarPath = userAvatarPath,
-                    interactiveCardsOn = interactiveCardsOn,
-                )
-            }
-        }
-    }
-}
-
-/** 聊天里的 Markdown：官方行内字段原生渲染；富 HTML / 交互卡片 / Mermaid 分段进 WebView 兜底（README 高级渲染）。 */
-@Composable
-private fun ChatMarkdown(
-    content: String,
-    onSurface: Color,
-    isSystem: Boolean = false,
-    charAvatarPath: String? = null,
-    userAvatarPath: String? = null,
-    modifier: Modifier = Modifier,
-    // 气泡模式 false：内容 hug 宽度让 Surface 包裹（否则短消息也撑满上限宽度）
-    fillWidth: Boolean = true,
-) {
-    val context = LocalContext.current
-    val htmlEnabled = RenderPrefs.htmlEnabled(context)
-    val interactiveCardsOn = ExtensionPrefs.interactiveCards(context)
-    val segments = remember(content, isSystem, htmlEnabled) {
-        buildMessageSegments(content, isSystem, htmlEnabled)
-    }
-    // 全原生段（纯 Markdown/普通代码块/官方行内字段）仍按整条一次渲染，保持原有排版；
-    // 只有出现 WebView 段（富 HTML/交互卡/Mermaid）才分段，避免拆散列表/引用等跨段 Markdown 结构。
-    // display 必须用分段器产出的剥壳文本：残留 HTML 标签若不剥，原生 Markdown 渲染器会
-    // 整块吞掉 HTML 行导致“消息空白/内容丢失”。
-    if (segments.none { it.kind != SegmentKind.Native }) {
-        val displayContent = remember(content, isSystem, htmlEnabled) {
-            if (htmlEnabled) segments.joinToString("") { it.display ?: it.raw }
-            else preprocessOfficialHtml(content, convertQuotes = !isSystem)
-        }
-        NativeMarkdown(
-            content = displayContent,
-            onSurface = onSurface,
-            isSystem = isSystem,
-            modifier = modifier,
-            fillWidth = fillWidth,
-        )
-    } else {
-        SegmentedMarkdown(
-            segments = segments,
-            modifier = modifier,
-            onSurface = onSurface,
-            isSystem = isSystem,
-            charAvatarPath = charAvatarPath,
-            userAvatarPath = userAvatarPath,
-            interactiveCardsOn = interactiveCardsOn,
-        )
-    }
-}
-
-/** 提取 ```mermaid 代码块并返回 HTML 片段，由 officialStyledHtml 统一包成完整页面。
- *  不要在这里返回 <!DOCTYPE html>：再被 officialStyledHtml 包裹会变成 html 套 html，
- *  导致 mermaid 脚本/样式落进错误 DOM 而不渲染。 */
-private fun mermaidHtmlOf(content: String): String? {
-    val m = Regex("```\\s*mermaid\\s*\\n([\\s\\S]*?)```", RegexOption.IGNORE_CASE).find(content)
-        ?: return null
-    val diagram = m.groupValues[1].trim().replace("</", "&lt;/")
-    return """<script src="mermaid.min.js"></script>
-<pre class="mermaid">$diagram</pre>
-<script>mermaid.initialize({startOnLoad:true,theme:'base'});</script>"""
-}
-
-/** 简易消毒（第 178 轮全放开）：消息里的脚本/事件/iframe 原样放行（用户要求活动页/交互页面能跑）；
- *  只拦 javascript: URL，避免点击链接时在卡片内执行脚本导航。安全风险见 HANDOFF 第 178 轮登记。 */
-private fun sanitizeHtmlForWebView(html: String): String =
-    html.replace(Regex("javascript:", RegexOption.IGNORE_CASE), "blocked:")
-
 /**
  * 宿主能力白名单处理（V2 §5.3；动作面与 st-api-shim.js AppBridge/toastr 对齐）。
  * 桥回调线程经 mainHandler.post 进主线程；每支 runCatching 隔离——单能力失败不影响其他。
@@ -5527,551 +4371,6 @@ private fun saveDataUrlFile(context: Context, payloadJson: String) {
     Toast.makeText(context, "已保存：$filename", Toast.LENGTH_SHORT).show()
 }
 
-/** 注入到兜底 WebView 页面的测高脚本：ResizeObserver 事件驱动 + 图片未就绪时低频兜底。
- *  高度经 addJavascriptInterface 的 EmberInnBridge 直接回调 Kotlin；
- *  onPageFinished 轮询作为页面脚本/桥接失效时的第二道兜底。
- *  测高公式取 html/body scrollHeight + 各自的 getBoundingClientRect（含 body 外边距、
- *  绝对定位/浮动溢出内容），并做一次全元素 max(bottom) 扫描兜底，最后 +2px 防亚像素截断；
- *  字体就绪（document.fonts.ready）后再补测一次。 */
-private val WEBVIEW_MEASURE_SCRIPT = """<script>
-(function(){
-  var last='';
-  var scanned=false;
-  function fullHeight(){
-    var de=document.documentElement, body=document.body, h=0;
-    if(de){h=Math.max(h,de.scrollHeight||0,de.getBoundingClientRect().height||0);}
-    if(body){
-      var br=body.getBoundingClientRect();
-      h=Math.max(h,body.scrollHeight||0,(br.bottom-Math.min(br.top,0))||0);
-    }
-    if(!scanned){
-      scanned=true;
-      var maxB=0;
-      var all=document.querySelectorAll('body *');
-      if(all.length<=8000){
-        for(var i=0;i<all.length;i++){var r=all[i].getBoundingClientRect();if(r&&r.bottom>maxB)maxB=r.bottom;}
-        if(maxB>h)h=maxB;
-      }
-    }
-    return Math.ceil(h)+2;
-  }
-  function report(){
-    var imgs=document.images,p=0;
-    for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}
-    var h=fullHeight();
-    var sig=h+':'+p;
-    if(sig!==last){last=sig;if(window.EmberInnBridge){window.EmberInnBridge.onMeasure(h,p);}}
-    return p===0;
-  }
-  if(window.ResizeObserver){
-    try{new ResizeObserver(report).observe(document.documentElement);}catch(e){}
-    try{new ResizeObserver(report).observe(document.body);}catch(e){}
-  }
-  window.addEventListener('load',report);
-  if(document.fonts&&document.fonts.ready){try{document.fonts.ready.then(report);}catch(e){}}
-  var t=setInterval(function(){if(report())clearInterval(t);},800);
-  setTimeout(function(){clearInterval(t);report();},20000);
-})();
-</script>"""
-
-/** onPageFinished 兜底轮询用的纯字符串高度表达式：返回 "高度:未加载图片数"（公式与注入脚本一致）。 */
-private val WEBVIEW_HEIGHT_JS =
-    "(function(){function full(){var de=document.documentElement,body=document.body,h=0;if(de){h=Math.max(h,de.scrollHeight||0,de.getBoundingClientRect().height||0);}if(body){var br=body.getBoundingClientRect();h=Math.max(h,body.scrollHeight||0,(br.bottom-Math.min(br.top,0))||0);}return Math.ceil(h)+2;}var imgs=document.images,p=0;for(var i=0;i<imgs.length;i++){if(!imgs[i].complete)p++;}return full()+':'+p;})()"
-
-/** 返回 html 中所有“不在 <script>/<style> 内部”的结构标签匹配位置（如 </head>、</body>）。
- *  角色卡/模型页面里的 JS 字符串经常包含 "</body>"、"</head>" 字面量，
- *  直接 lastIndexOf 会把脚本注入到字符串中间、破坏整段 JS。 */
-private fun structuralTagPositions(html: String, tagRegex: Regex): List<Int> {
-    val protected = Regex("(?is)<script\\b[^>]*>.*?</script\\s*>|<style\\b[^>]*>.*?</style\\s*>")
-        .findAll(html)
-        .map { it.range }
-        .sortedBy { it.first }
-        .toList()
-    return tagRegex.findAll(html)
-        .map { it.range.first }
-        .filter { pos -> protected.none { pos in it } }
-        .toList()
-}
-
-private fun injectMeasureScript(html: String): String {
-    val idx = structuralTagPositions(html, Regex("(?i)</body\\s*>")).lastOrNull()
-        ?: structuralTagPositions(html, Regex("(?i)</html\\s*>")).lastOrNull()
-        ?: -1
-    return if (idx >= 0) {
-        html.substring(0, idx) + WEBVIEW_MEASURE_SCRIPT + html.substring(idx)
-    } else {
-        html + WEBVIEW_MEASURE_SCRIPT
-    }
-}
-
-/** 拼接页内容容器：增量更新时只替换它的 innerHTML（官方流式 = mes 容器 innerHTML 更新，
- *  不整页重载），测高脚本（ResizeObserver 盯 body）在容器外不受影响。 */
-private const val CONTENT_DIV_OPEN = "<div id=\"__ember_content\">"
-
-/** 拼接页固定后缀：容器闭合 + 注入的测高脚本 + 文档收尾。用于从成品页反解出内容区间。 */
-private val CONTENT_PAGE_SUFFIX = "</div>" + WEBVIEW_MEASURE_SCRIPT + "</body></html>"
-
-/** JS 字符串字面量转义（innerHTML 增量更新用）。 */
-private fun jsQuote(s: String): String = org.json.JSONObject.quote(s)
-
-/** 增量更新可用的成品页：head（含容器开标签）与 content 都可反解；完整网页文档返回 null 走整页加载。 */
-private class StyledWebPage(val full: String, val head: String?, val content: String?)
-
-private fun buildStyledWebPage(
-    html: String,
-    context: android.content.Context,
-    body: androidx.compose.ui.graphics.Color?,
-    em: androidx.compose.ui.graphics.Color?,
-    underline: androidx.compose.ui.graphics.Color?,
-    quote: androidx.compose.ui.graphics.Color?,
-    charAvatarPath: String?,
-    userAvatarPath: String?,
-    interactiveCardsOn: Boolean,
-): StyledWebPage {
-    val page = injectMeasureScript(
-        officialStyledHtml(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn),
-    )
-    val openIdx = page.indexOf(CONTENT_DIV_OPEN)
-    if (openIdx < 0 || !page.endsWith(CONTENT_PAGE_SUFFIX)) {
-        return StyledWebPage(page, null, null)
-    }
-    val contentStart = openIdx + CONTENT_DIV_OPEN.length
-    val contentEnd = page.length - CONTENT_PAGE_SUFFIX.length
-    if (contentEnd < contentStart) return StyledWebPage(page, null, null)
-    return StyledWebPage(page, page.substring(0, contentStart), page.substring(contentStart, contentEnd))
-}
-
-/** 一次 WebView 加载会话：token 用于丢弃旧页面回调，html 用于判断是否需要重载。
- *  loaded/loadToken/heightPx 跨滚动保留：滚回来同内容不重载、高度直接复用。
- *  internal：WebViewPool（同包另一文件）需要读写 loadToken。 */
-internal class WebViewSession {
-    var token: Any = Any()
-    var html: String? = null
-    /** 上次整页加载的 head 部分（含内容容器开标签）；相同则只做 innerHTML 增量更新。 */
-    var headKey: String? = null
-    /** 页面是否已完成加载（release 中断加载时置 false，回来需要重载）。 */
-    var loaded: Boolean = false
-    /** 正在进行的 load 所属 token；null 表示没有在途加载（release 会清掉）。 */
-    var loadToken: Any? = null
-    /** 最近一次实测到的内容高度（CSS px），跨滚动复用。 */
-    var heightPx: Int = 0
-}
-
-/** JS → Kotlin 测高桥：只回传高度/未加载图片数，不暴露任何其它能力。 */
-private class WebViewMeasureBridge(private val onMeasure: (Int, Int) -> Unit) {
-    @android.webkit.JavascriptInterface
-    fun onMeasure(height: Int, pending: Int) {
-        android.os.Handler(android.os.Looper.getMainLooper()).post { onMeasure(height, pending) }
-    }
-}
-
-/** 配置/加载：返回是否发生了整页重载（false = 增量 innerHTML 或复用）。
- *  调用方据此决定是否把组合态高度清零——增量更新不清零，避免流式 tick 高度塌回兜底值抖动。 */
-private fun configureWebView(
-    view: WebView,
-    ctx: android.content.Context,
-    session: WebViewSession,
-    page: StyledWebPage,
-    onMeasure: (Int, Int) -> Unit,
-    reload: Boolean,
-): Boolean {
-    // 每次进入都换新 token：旧的轮询/桥接回调全部作废，避免已滚走的行再更新状态
-    val token = Any()
-    session.token = token
-    view.tag = session
-    view.onResume()
-    view.setBackgroundColor(0x00000000)
-    view.settings.javaScriptEnabled = true
-    view.settings.domStorageEnabled = true
-    view.settings.allowFileAccess = true
-    // 本地 HTML 需要加载 file:// 字体/图片（WebView 默认禁止 file→file 跨源）；
-    // 消息内容本身是本地拼接页，交互 JS 已按用户要求全开，保持同等级放行
-    view.settings.allowFileAccessFromFileURLs = true
-    view.settings.allowUniversalAccessFromFileURLs = true
-    view.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-    view.removeJavascriptInterface("EmberInnBridge")
-    view.addJavascriptInterface(WebViewMeasureBridge(onMeasure), "EmberInnBridge")
-    view.webViewClient = object : android.webkit.WebViewClient() {
-        // 放开网络与链接（用户要求全部放开，不加开关）：远程图片/资源正常加载；
-        // http(s) 链接交给系统浏览器打开，不在 WebView 内跳走
-        override fun shouldOverrideUrlLoading(
-            view: android.webkit.WebView?,
-            request: android.webkit.WebResourceRequest?,
-        ): Boolean {
-            val url = request?.url?.toString().orEmpty()
-            if (url.startsWith("https://") || url.startsWith("http://")) {
-                try {
-                    ctx.startActivity(
-                        android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
-                } catch (_: Exception) {
-                }
-                return true
-            }
-            return false
-        }
-
-        override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-            super.onPageFinished(view, url)
-            session.loaded = true
-            session.loadToken = null
-            val wv = view ?: return
-            if (wv.tag !== session || session.token !== token) return
-            // 本次加载完成：恢复显示（重载期间被藏住的池化实例不再闪上一条消息的旧页面）。
-            // 迟到的旧加载回调已被上面的 token 校验拦下，不会提前解除新加载的隐藏。
-            wv.visibility = android.view.View.VISIBLE
-            // 页面脚本正常时 ResizeObserver 已上报；这里再轮询兜底。
-            // 轮询不能省：Compose 初始给 WebView 的高度是 0 时页面可能根本不做内容布局，
-            // 只有先给一个可见高度、再读 scrollHeight，WebView 才会真正“长出来”。
-            measureLoop(wv, session, token, onMeasure, maxTicks = 60, intervalMs = 250L)
-        }
-    }
-    view.layoutParams = ViewGroup.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        ViewGroup.LayoutParams.WRAP_CONTENT,
-    )
-    if (reload) {
-        // 同头增量更新：页面已加载完成且 head 相同（主题/结构没变，只是消息内容变了——典型=流式 tick）
-        // → 只替换内容容器 innerHTML，不整页重载。对齐官方流式（mes 容器 innerHTML 更新）语义，
-        // 消除流式 HTML 段每 tick 整页白屏重载的闪烁/掉帧/测高归零。
-        if (page.head != null && page.content != null &&
-            session.loaded && session.headKey == page.head && view.width > 0
-        ) {
-            session.html = page.full
-            session.heightPx = 0
-            view.evaluateJavascript(
-                "(function(){var c=document.getElementById('__ember_content');if(c){c.innerHTML=" + jsQuote(page.content) + ";}})()",
-            ) { _ ->
-                if (view.tag === session && session.token === token) {
-                    measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)
-                }
-            }
-            return false
-        }
-        session.headKey = page.head
-        session.html = page.full
-        session.loaded = false
-        session.loadToken = token
-        session.heightPx = 0
-        // 池化复用的实例此刻还渲染着上一条消息的页面：整页重载完成前先藏住，
-        // 否则滚动时会在新消息位置闪现别人的旧卡片（onPageFinished 再恢复显示）
-        view.visibility = android.view.View.INVISIBLE
-        // 2026-08-12 修复“开头显示 base64 原文（PCFET0NUWVBFIGh0bWw+... = <!DOCTYPE html><html><head>）+ 大片空白”：
-        // loadDataWithBaseURL 在“非 data: 的 baseUrl”（这里是 file:///android_asset/）下，data 会被当作
-        // 普通字符串直接灌进 WebView，**不做 base64 解码**（AOSP CTS 2b3744f：non-data base URL →
-        // treat the String to load as a raw string；Android 文档：URL 编码实体也不解码）。
-        // 旧代码传 Base64 文本 + encoding="base64" 正好踩中：WebView 把整段 base64 原文显示成页面文本，
-        // 开头即 PCFET0NUWVBFIGh0bWw+...，下面全空白 —— 多轮“网页渲染不出来”的根因。
-        // 修复：直接传原文 + encoding="UTF-8" + mime 带 charset（社区权威解法，SO 57198560）。
-        // 同时因为非 data: baseUrl 下不做 URL 解码，# / %（CSS 色值）不会被截断——截断只发生在
-        // baseUrl=null 的 data: URL 路径（即 loadData）。file:///android_asset/ 保留：
-        // mermaid.min.js 相对引用与 file:// 字体仍可正常解析。
-        view.loadDataWithBaseURL(
-            "file:///android_asset/",
-            page.full,
-            "text/html; charset=UTF-8",
-            "UTF-8",
-            null,
-        )
-        return true
-    } else {
-        // 复用已加载页面：不重载、不白屏；已加载完成的实例确保可见（兜底：极端情况下
-        // onPageFinished 未触发时不能永久隐藏）；布局落定后快速复核高度（旧回调已被新 token 作废）。
-        if (session.loaded) view.visibility = android.view.View.VISIBLE
-        view.post {
-            if (view.tag === session && session.token === token) {
-                measureLoop(view, session, token, onMeasure, maxTicks = 6, intervalMs = 120L)
-            }
-        }
-        return false
-    }
-}
-
-/** 测高轮询：evaluateJavascript 读 "高度:未加载图片数"，三次稳定后停止。 */
-private fun measureLoop(
-    view: WebView,
-    session: WebViewSession,
-    token: Any,
-    onMeasure: (Int, Int) -> Unit,
-    maxTicks: Int,
-    intervalMs: Long,
-) {
-    var stable = 0
-    var lastPx = 0
-    var ticks = 0
-    fun measure() {
-        if (view.tag !== session || session.token !== token) return
-        ticks++
-        if (ticks > maxTicks) return
-        view.evaluateJavascript(WEBVIEW_HEIGHT_JS) { value ->
-            if (view.tag === session && session.token === token) {
-                val parts = value.trim('"').split(':')
-                val px = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                val pending = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                if (px > 0) {
-                    if (px == lastPx && pending == 0) stable++ else stable = 0
-                    lastPx = px
-                    onMeasure(px, pending)
-                }
-                if (stable < 3) view.postDelayed({ measure() }, intervalMs)
-            }
-        }
-    }
-    measure()
-}
-
-/** WebView 兜底渲染（HTML 消息 / Mermaid / 交互卡片）。第 178 轮按用户要求 JS 全开（活动页/交互页面能跑；
- *  官方 DOMPurify 禁脚本，此为已知偏差）；网络与外链已放开，http(s) 链接用系统浏览器打开。
- *  自动测高：WRAP_CONTENT 的 WebView 在 Compose 里会塌成 0 高（之前的 HTML 显示不出来的根因）。
- *  实例来自 WebViewPool 复用，避免 LazyColumn 滚动时反复创建 WebView 导致卡顿。 */
-@Composable
-private fun WebViewHtml(
-    html: String,
-    modifier: Modifier = Modifier,
-    charAvatarPath: String? = null,
-    userAvatarPath: String? = null,
-    interactiveCardsOn: Boolean = true,
-) {
-    val context = LocalContext.current
-    var heightPx by remember { mutableIntStateOf(0) }
-    val st = rememberStColors()
-    fun stColN(v: Long?): Color? = v?.let { Color(it) }
-    val body = parseHexColor(AppearancePrefs.stBodyColor(context)) ?: stColN(st.mainText)
-    val em = parseHexColor(AppearancePrefs.stEmColor(context)) ?: stColN(st.emText)
-    val underline = parseHexColor(AppearancePrefs.stUnderlineColor(context)) ?: stColN(st.underline)
-    val quote = parseHexColor(AppearancePrefs.stQuoteColor(context)) ?: stColN(st.quote)
-    val styled = remember(html, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn) {
-        buildStyledWebPage(html, context, body, em, underline, quote, charAvatarPath, userAvatarPath, interactiveCardsOn)
-    }
-    val webView = remember { WebViewPool.acquire(context) }
-    // 内容高度上限：≤上限的网页全高展开；超上限的 WebView 内部可滚动，长页面不会被截断、也够得着。
-    val maxWebHeight = maxOf((LocalConfiguration.current.screenHeightDp * 0.90f).dp, 280.dp)
-    fun onMeasure(px: Int, pending: Int) {
-        // pending > 0 表示还有图片在加载：只允许继续长高，不允许提前缩矮；
-        // pending == 0 时允许回缩，修复折叠/切 tab 后高度卡在旧值的问题。
-        if (px > 0 && (pending == 0 || px > heightPx)) {
-            heightPx = px
-            val s = webView.tag as? WebViewSession
-            if (s != null) s.heightPx = px
-        }
-    }
-    AndroidView(
-        factory = { ctx ->
-            val session = (webView.tag as? WebViewSession) ?: WebViewSession().also { webView.tag = it }
-            val reload = session.html != styled.full || (!session.loaded && session.loadToken == null)
-            configureWebView(
-                view = webView,
-                ctx = ctx,
-                session = session,
-                page = styled,
-                onMeasure = { px, pending -> onMeasure(px, pending) },
-                reload = reload,
-            )
-            webView
-        },
-        update = { view ->
-            val session = view.tag as? WebViewSession
-            if (session == null || session.html != styled.full || (!session.loaded && session.loadToken == null)) {
-                // 整页重载才清高度；增量 innerHTML 更新保持旧高度，由测高回调平滑长高/回缩
-                if (configureWebView(
-                        view = view,
-                        ctx = context,
-                        session = session ?: WebViewSession().also { view.tag = it },
-                        page = styled,
-                        onMeasure = { px, pending -> onMeasure(px, pending) },
-                        reload = true,
-                    )
-                ) {
-                    heightPx = 0
-                }
-            } else {
-                // 同页面复用：只换桥/回调 + 恢复记忆高度，不重载
-                configureWebView(
-                    view = view,
-                    ctx = context,
-                    session = session,
-                    page = styled,
-                    onMeasure = { px, pending -> onMeasure(px, pending) },
-                    reload = false,
-                )
-                if (heightPx <= 0 && session.heightPx > 0) heightPx = session.heightPx
-            }
-        },
-        onRelease = { view -> WebViewPool.release(view) },
-        modifier = modifier
-            .fillMaxWidth()
-            // 官方 HTML 消息在页面流里全高渲染；测高未回来时先给 160dp 可见兜底，
-            // 测到后按实测全高展开（超上限时内部滚动，不再裁掉内容）。
-            .height(
-                if (heightPx > 0) minOf(heightPx.toFloat().dp, maxWebHeight)
-                else 160.dp,
-            )
-            .clip(RoundedCornerShape(12.dp)),
-    )
-}
-
-/** 交互代码块渲染器（对齐 Tavern Helper 渲染器 / ST HTML 代码注入器机制）：
- *  消息里 ``` 包裹、内容以 < 开头以 > 结尾（或含 <body>）的代码块 → 替换成独立 iframe 网页，
- *  卡内 <script>/onclick/框架 JS 在 iframe 里正常运行（按钮/状态栏/表单可交互）；onload 自动按内容测高。
- *  非交互代码块保留为 <pre><code>；围栏外的纯文本转义后按 pre-wrap 显示（保留换行）。
- *  安全提示：交互代码块等同于执行任意脚本，与第 178 轮 JS 全开同等级，已在 HANDOFF 登记。 */
-private fun embedInteractiveBlocks(raw: String, interactive: Boolean): String {
-    val fence = INTERACTIVE_FENCE
-    val out = StringBuilder()
-    var last = 0
-    for (m in fence.findAll(raw)) {
-        out.append(embedPlainText(raw.substring(last, m.range.first)))
-        val inner = m.groupValues[1].trim()
-        if (inner.startsWith("<") || inner.contains("<body", ignoreCase = true) || STRUCTURAL_HTML_TAG.containsMatchIn(inner)) {
-            val escaped = inner
-                .replace("&", "&amp;")
-                .replace("\"", "&quot;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            out.append("<details style=\"margin-bottom:4px\"><summary>原代码</summary><pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
-                .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-                .append("</code></pre></details>")
-            // 渲染与交互分离：HTML 围栏始终渲染成 iframe 卡片；扩展开关只决定脚本/表单是否可交互。
-            // 关闭时 sandbox="allow-same-origin"（不给 allow-scripts/allow-forms）：静态渲染、
-            // 脚本被沙箱禁止，同时保留同源，父页 onload 仍可读 scrollHeight 自动测高。
-            val sandbox = if (interactive) "" else " sandbox=\"allow-same-origin\""
-            out.append(
-                "<iframe srcdoc=\"$escaped\" style=\"width:100%;border:0;display:block\"$sandbox " +
-                    "onload=\"var f=this;function h(){f.style.height=(f.contentWindow.document.documentElement.scrollHeight+5)+'px'};h();setTimeout(h,150);setTimeout(h,500);setTimeout(h,1500);setTimeout(h,3000);var d=f.contentWindow.document;if(d&&d.documentElement){if(window.ResizeObserver){new ResizeObserver(h).observe(d.documentElement);}if(window.MutationObserver){new MutationObserver(h).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});}}\"></iframe>",
-            )
-        } else {
-            out.append("<pre style=\"white-space:pre-wrap;word-break:break-word\"><code>")
-                .append(inner.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-                .append("</code></pre>")
-        }
-        last = m.range.last + 1
-    }
-    out.append(embedPlainText(raw.substring(last)))
-    return out.toString()
-}
-
-/** 围栏外纯文本：转义后按 pre-wrap 显示；若本身是 HTML（含 <）则原样放行。 */
-private fun embedPlainText(segment: String): String {
-    if (segment.isBlank() || segment.contains('<')) return segment
-    return "<div style=\"white-space:pre-wrap;word-break:break-word\">" +
-        segment.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") +
-        "</div>"
-}
-
-/** 把官方字段（正文/次要/下划线/引用/代码）注入 HTML 兜底渲染的 CSS。 */
-private fun officialStyledHtml(
-    raw: String,
-    context: android.content.Context,
-    body: androidx.compose.ui.graphics.Color?,
-    em: androidx.compose.ui.graphics.Color?,
-    underline: androidx.compose.ui.graphics.Color?,
-    quote: androidx.compose.ui.graphics.Color?,
-    charAvatarPath: String? = null,
-    userAvatarPath: String? = null,
-    interactiveCardsOn: Boolean = true,
-): String {
-    val fontSize = when (AppearancePrefs.textSize(context)) {
-        "small" -> "14px"
-        "official" -> "15px"
-        "large" -> "18px"
-        "xlarge" -> "20px"
-        else -> "16px"
-    }
-    fun css(c: androidx.compose.ui.graphics.Color?): String = c?.let {
-        "#%02X%02X%02X".format((it.red * 255).toInt(), (it.green * 255).toInt(), (it.blue * 255).toInt())
-    } ?: "inherit"
-    // 官方 --mainFontFamily Noto Sans：下载的同一批 TTF（4 面）供 WebView 兜底使用
-    val noto = FontManager.notoFiles(context)
-    val notoFace = if (noto.size == 4) buildString {
-        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[0]}') format('truetype');font-weight:400;font-style:normal}\n")
-        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[1]}') format('truetype');font-weight:700;font-style:normal}\n")
-        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[2]}') format('truetype');font-weight:400;font-style:italic}\n")
-        append("@font-face{font-family:'Noto Sans';src:url('file://${noto[3]}') format('truetype');font-weight:700;font-style:italic}\n")
-    } else {
-        ""
-    }
-    // 官方 * { text-shadow: 0 0 2px var(--SmartThemeShadowColor) }，颜色跟随消息渲染页“阴影色”设置
-    val textShadowCss = if (AppearancePrefs.textShadowEnabled(context)) {
-        val blur = AppearancePrefs.textShadowStrength(context)
-        if (blur > 0) {
-            val shadowColor = parseHexColor(AppearancePrefs.stShadowColor(context)) ?: Color(0x80000000)
-            val shadowRgba = "rgba(${(shadowColor.red * 255).toInt()},${(shadowColor.green * 255).toInt()},${(shadowColor.blue * 255).toInt()},${shadowColor.alpha})"
-            "text-shadow:0 0 ${blur}px $shadowRgba;"
-        } else {
-            ""
-        }
-    } else {
-        ""
-    }
-    val bodyHtml = embedInteractiveBlocks(raw, interactiveCardsOn)
-        .replace("{{charAvatarPath}}", charAvatarPath ?: "")
-        .replace("{{userAvatarPath}}", userAvatarPath ?: "")
-    fun avatarUrl(path: String?): String? = path?.let {
-        if (it.startsWith("file://") || it.startsWith("content://")) it else "file://$it"
-    }
-    val charUrl = avatarUrl(charAvatarPath)
-    val userUrl = avatarUrl(userAvatarPath)
-    val avatarCss = buildString {
-        charUrl?.let { append(".char-avatar,.char_avatar{background-image:url('$it')}\n") }
-        userUrl?.let { append(".user-avatar,.user_avatar{background-image:url('$it')}\n") }
-    }
-    val cssBlock = buildString {
-        append(notoFace)
-        append(avatarCss)
-        append("body{font-family:'Noto Sans',sans-serif;${textShadowCss}color:${css(body)};font-size:$fontSize;line-height:1.55;margin:0;word-break:break-word;background:transparent}\n")
-        // 长网页“被截断”根因之一：页面自带 html/body{height:100%;overflow:hidden}（或 vh 布局），
-        // 测高只能量到视口高度、WebView 内部也无滚动余地。强制还原为 auto/visible，让内容全部可测可滚。
-        append("html,body{height:auto!important;min-height:0!important;overflow:visible!important}\n")
-        append("em,i{color:${css(em)}}\n")
-        append("q{color:${css(quote)}} q em,q i{color:inherit}\n")
-        append("u{color:${css(underline)}}\n")
-        append("a{color:${css(quote)};text-decoration:none}\n")
-        append("a:hover{filter:brightness(1.25)}\n")
-        append("img{max-width:100%;max-height:75vh}\n")
-        append("font[color] em,font[color] i,font[color] u,font[color] q{color:inherit}\n")
-        append("blockquote{border-left:3px solid ${css(quote)};padding-left:10px;background:rgba(0,0,0,.3);margin:0}\n")
-        append("p{margin-top:0;margin-bottom:10px}\n")
-        append("p:last-child{margin-bottom:0}\n")
-        append("table{border-spacing:0;border-collapse:collapse;margin-bottom:10px}\n")
-        append("td,th{border:1px solid;padding:.25em}\n")
-        append("ol,ul{margin-top:5px;margin-bottom:5px}\n")
-        append("li tt{display:inline-block}\n")
-        append("pre,pre code{white-space:pre-wrap;word-break:break-word}\n")
-        append("strong em,strong,h1,h2{font-weight:bold}\n")
-        append("code{font-family:monospace}\n")
-    }
-    // 完整网页消息（角色卡自带网页 / 模型直接输出整页）：保留原文档结构，
-    // 只把兜底 CSS 注入原 <head>，不再外套一层 <html>（html 套 html → 嵌套 </body>
-    // 提前关闭外层文档，页面错乱/大片空白）。测高脚本由 WebViewHtml 的 injectMeasureScript
-    // 注入原文档 </body> 前。
-    if (isFullHtmlDocument(bodyHtml)) {
-        return injectIntoFullDocument(bodyHtml, cssBlock)
-    }
-    return """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-$cssBlock
-</style></head><body><div id="__ember_content">$bodyHtml</div></body></html>"""
-}
-
-/** 完整网页消息的文档级注入：把兜底 CSS 插进原文档 <head>（无 </head> 时插在 <body> 前）。
- *  保留原页面自己的 <head>/<body>/<script>/<style>，互不嵌套。 */
-private fun injectIntoFullDocument(html: String, cssBlock: String): String {
-    val styleTag = "<style>\n$cssBlock\n</style>"
-    val headClose = structuralTagPositions(html, Regex("(?i)</head\\s*>")).firstOrNull()
-    if (headClose != null) {
-        return html.substring(0, headClose) + styleTag + html.substring(headClose)
-    }
-    val bodyOpen = structuralTagPositions(html, Regex("(?i)<body\\b")).firstOrNull()
-    if (bodyOpen != null) {
-        return html.substring(0, bodyOpen) + styleTag + html.substring(bodyOpen)
-    }
-    val htmlOpen = structuralTagPositions(html, Regex("(?i)<html\\b")).firstOrNull()
-    if (htmlOpen != null) {
-        return html.substring(0, htmlOpen) + styleTag + html.substring(htmlOpen)
-    }
-    return styleTag + html
-}
 
 
 @Composable

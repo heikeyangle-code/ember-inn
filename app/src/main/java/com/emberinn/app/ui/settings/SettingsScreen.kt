@@ -60,7 +60,7 @@ import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, TYPOGRAPHY, RENDER, EXTENSIONS, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
+private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, RENDER, EXTENSIONS, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
 
 /** 设置入口：对照官方 SillyTavern 移动端 8 分区抽屉（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理）。 */
 @Composable
@@ -147,7 +147,6 @@ fun SettingsScreen(
         SettingsPage.USER_SETTINGS -> UserSettingsScreen(
             onBack = ::goBack,
             onOpenAppearance = { open(SettingsPage.APPEARANCE) },
-            onOpenTypography = { open(SettingsPage.TYPOGRAPHY) },
             onOpenRender = { open(SettingsPage.RENDER) },
             onOpenData = { open(SettingsPage.DATA) },
             onOpenAbout = { open(SettingsPage.ABOUT) },
@@ -157,7 +156,6 @@ fun SettingsScreen(
         )
         SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = ::goBack)
         SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = ::goBack)
-        SettingsPage.TYPOGRAPHY -> TextTypographyScreen(onBack = ::goBack)
         SettingsPage.RENDER -> MessageRenderScreen(onBack = ::goBack)
         SettingsPage.EXTENSIONS -> ExtensionsHubScreen(
             onBack = ::goBack,
@@ -198,7 +196,6 @@ fun SettingsScreen(
             onOpenBackgrounds = { open(SettingsPage.BACKGROUNDS) },
             onOpenExtensionsHub = { open(SettingsPage.EXTENSIONS) },
             onOpenPersonas = { open(SettingsPage.PERSONAS) },
-            onOpenTypography = { open(SettingsPage.TYPOGRAPHY) },
             onOpenRender = { open(SettingsPage.RENDER) },
             onOpenVoice = { open(SettingsPage.VOICE) },
             onOpenServices = { open(SettingsPage.SERVICES) },

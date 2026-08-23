@@ -146,7 +146,7 @@ fun MessageKernelRow(
 /**
  * 聊天流式渲染节流器（docs/REFACTOR_V2_PLAN.md §3.4）：
  * 流中 120ms 节流的轻量 innerHTML 更新；流结束调用 [finish] 做权威全量管线。
- * （内核流式已在 ChatScreen Streaming 行启用；原生轻量路径仅作 kernelRender 关闭时的兜底。）
+ * （内核是唯一消息渲染管线；本行为其宿主容器。）
  */
 class StreamingThrottler(
     private val intervalMs: Long = 120,
