@@ -91,5 +91,44 @@ const preset = JSON.parse(readFileSync(`${ME}/Glimmer-preset.json`, 'utf8'));
 t('预设格式: moonlitEchoesPreset 标记', preset.moonlitEchoesPreset === true, true);
 t('预设格式: settings.customThemeColor 存在', typeof preset.settings?.customThemeColor === 'string', true);
 
+// ---------- 5. chat_display 全枚举映射（0..2 官方 + 3..7 Moonlit 扩展） ----------
+// 全量同步语义：每次 applyTheme 先清后加，切布局不留残留
+const layoutCases = [[0,'flatchat'],[1,'bubblechat'],[2,'documentstyle'],[3,'echostyle'],[4,'whisperstyle'],[5,'hushstyle'],[6,'ripplestyle'],[7,'tidestyle']];
+for (const [v, cls] of layoutCases) {
+    window.Kernel.applyTheme({ ...moonlit, chat_display: v });
+    t(`chat_display=${v} → ${cls}`, body().classList.contains(cls), true);
+    const others = layoutClasses.filter(c => c !== cls);
+    t(`chat_display=${v} → 其余布局类全清`, others.every(c => !body().classList.contains(c)), true);
+}
+// 未知值安全落空：不抛错、不加任何布局类
+let unknownThrew = false;
+try { window.Kernel.applyTheme({ ...moonlit, chat_display: 9 }); } catch (e) { unknownThrew = true; }
+t('chat_display=9 不抛错', unknownThrew, false);
+t('chat_display=9 不加任何布局类', layoutClasses.every(c => !body().classList.contains(c)), true);
+
+// ---------- 6. 样式包 applyStylePack ----------
+const packHref = '../themes/moonlit-echoes/style.css';
+// 启用：注入 <link id="style-pack-style"> + 变量写入 documentElement
+window.Kernel.applyStylePack({
+    enabled: true, href: packHref,
+    vars: { customThemeColor: 'rgba(81, 160, 222, 1)', 'custom-ChatAvatar': '40px' },
+});
+const packLink = window.document.getElementById('style-pack-style');
+t('样式包: link 注入', !!packLink, true);
+t('样式包: link rel=stylesheet', packLink?.getAttribute('rel'), 'stylesheet');
+t('样式包: link href 正确', packLink?.getAttribute('href'), packHref);
+t('样式包: 无前缀键自动补 --', root().style.getPropertyValue('--customThemeColor'), 'rgba(81, 160, 222, 1)');
+t('样式包: 带前缀键原样写入', root().style.getPropertyValue('--custom-ChatAvatar'), '40px');
+// href 变更：复用同一 link 节点换地址（主题切换不堆积节点）
+window.Kernel.applyStylePack({ enabled: true, href: '../themes/other/style.css', vars: {} });
+t('样式包: 换主题复用节点换 href', window.document.getElementById('style-pack-style')?.getAttribute('href'), '../themes/other/style.css');
+t('样式包: 换主题仍是单节点', window.document.querySelectorAll('#style-pack-style').length, 1);
+// 禁用：link 移除，变量保留由主题切换流程清理（与官方 custom_css 语义同构）
+window.Kernel.applyStylePack({ enabled: false, href: null, vars: null });
+t('样式包: 禁用移除 link', window.document.getElementById('style-pack-style'), null);
+// 纯官方主题路径：enabled=false 为无操作，不产生任何节点
+window.Kernel.applyStylePack({ enabled: false, href: packHref, vars: { customThemeColor: 'x' } });
+t('样式包: 官方主题零污染', window.document.getElementById('style-pack-style'), null);
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail ? 1 : 0);

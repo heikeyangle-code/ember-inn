@@ -478,6 +478,50 @@
     // ------------------------------------------------------------------
     // 主题注入：官方 theme JSON 字段 → CSS 变量（power-user.js applyTheme 对齐）
     // ------------------------------------------------------------------
+    // chat_display → body 类（0..2 官方；3..7 Moonlit Echoes 扩展布局顺延）
+    function chatDisplayToClass(v) {
+        switch (v) {
+            case 0: return 'flatchat';
+            case 1: return 'bubblechat';
+            case 2: return 'documentstyle';
+            case 3: return 'echostyle';
+            case 4: return 'whisperstyle';
+            case 5: return 'hushstyle';
+            case 6: return 'ripplestyle';
+            case 7: return 'tidestyle';
+            default: return null;
+        }
+    }
+
+    // 样式包（第三方主题整包 CSS，如 Moonlit Echoes style.css）：
+    // 注入/移除 <link id="style-pack-style">，并把包内自定义变量写入 documentElement。
+    // vars 键即 CSS 自定义属性名（可带或不带 -- 前缀），值一律字符串化。
+    var STYLE_PACK_LINK_ID = 'style-pack-style';
+    function applyStylePack(cfg) {
+        cfg = cfg || {};
+        var head = document.head;
+        var existing = document.getElementById(STYLE_PACK_LINK_ID);
+        if (!cfg.enabled || !cfg.href) {
+            if (existing) { existing.remove(); }
+            return;
+        }
+        if (!existing) {
+            existing = document.createElement('link');
+            existing.id = STYLE_PACK_LINK_ID;
+            existing.rel = 'stylesheet';
+            head.appendChild(existing);
+        }
+        if (existing.getAttribute('href') !== cfg.href) {
+            existing.setAttribute('href', cfg.href);
+        }
+        var vars = cfg.vars || {};
+        var root = document.documentElement;
+        Object.keys(vars).forEach(function (key) {
+            var name = key.charAt(0) === '-' ? key : '--' + key;
+            root.style.setProperty(name, String(vars[key]));
+        });
+    }
+
     function applyTheme(theme) {
         var root = document.documentElement;
         function set(k, v) { root.style.setProperty(k, v); }
@@ -530,7 +574,7 @@
             ['show_swipe_num_all_messages', 'swipeAllMessages', 'true'],
             ['enableZenSliders', 'enableZenSliders', 'true'],
         ];
-        var managedClasses = ['no-blur','noShadows','waifuMode','reduced-motion','no-timestamps','no-timer','no-tokenCount','no-mesIDDisplay','no-modelIcons','no-hotswap','hideChatAvatars','expandMessageActions','swipeAllMessages','enableZenSliders','big-avatars','square-avatars','bubblechat','documentstyle'];
+        var managedClasses = ['no-blur','noShadows','waifuMode','reduced-motion','no-timestamps','no-timer','no-tokenCount','no-mesIDDisplay','no-modelIcons','no-hotswap','hideChatAvatars','expandMessageActions','swipeAllMessages','enableZenSliders','big-avatars','square-avatars','bubblechat','documentstyle','flatchat','echostyle','whisperstyle','hushstyle','tidestyle','ripplestyle'];
         managedClasses.forEach(function (cls) { document.body.classList.remove(cls); });
         classSync.forEach(function (item) {
             var field = item[0], cls = item[1], mode = item[2];
@@ -544,10 +588,12 @@
             if (theme.avatar_style === 1) document.body.classList.add('big-avatars');
             else if (theme.avatar_style === 2) document.body.classList.add('square-avatars');
         }
-        // 消息布局模式：chat_display 0 平铺 / 1 气泡 / 2 文档
+        // 消息布局：chat_display 0 平铺 / 1 气泡(bubblechat) / 2 文档(documentstyle)；
+        // 3..7 = Moonlit Echoes 扩展布局（Glimmer=3 echostyle、MoonlitEchoes=4 whisperstyle 已由内置主题核实；
+        // 5 hush / 6 ripple / 7 tide 为顺延映射，登记于 HANDOFF）。样式包未加载时这些类为惰性。
         if ('chat_display' in theme) {
-            if (theme.chat_display === 1) document.body.classList.add('bubblechat');
-            else if (theme.chat_display === 2) document.body.classList.add('documentstyle');
+            var layoutClass = chatDisplayToClass(theme.chat_display);
+            if (layoutClass) { document.body.classList.add(layoutClass); }
         }
 
         bridgeSend({ type: 'themeApplied' });
@@ -569,6 +615,7 @@
         formatText: formatText,          // DOM 黄金对比入口：返回 HTML 字符串
         renderMessage: renderMessage,    // 生产入口：挂载消息
         applyTheme: applyTheme,
+        applyStylePack: applyStylePack,  // 第三方主题整包 CSS（无则纯官方行为）
         clear: function () {
             var chat = document.getElementById('chat');
             Array.from(chat.querySelectorAll('.mes')).forEach(function (n) {
