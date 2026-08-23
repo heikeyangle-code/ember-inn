@@ -103,6 +103,8 @@ data class KernelEvent(
     val action: String? = null,
     /** 动作参数：URL / 文本等；haptic 无参为 null */
     val value: String? = null,
+    // ---- chatScroll（整页壳 C1）：#chat 滚动容器贴底状态，驱动跳底浮标显隐 ----
+    val atBottom: Boolean? = null,
 )
 
 @Serializable
@@ -121,6 +123,7 @@ object KernelEventType {
     const val THEME_APPLIED = "themeApplied"
     const val SHIM_REQUEST = "shimRequest"
     const val HOST_REQUEST = "hostRequest"
+    const val CHAT_SCROLL = "chatScroll"
 }
 
 /**

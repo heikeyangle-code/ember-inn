@@ -21,6 +21,8 @@ class KernelBridge(
         fun onShimRequest(reqId: String, method: String, paramsJson: String) {}
         /** 白名单宿主能力请求（§5.3）：action ∈ KernelHostAction，value 为 URL/文本等参数 */
         fun onHostAction(action: String, value: String) {}
+        /** #chat 滚动贴底状态（整页壳 C1/C2）：true=在底部（跳底浮标隐藏） */
+        fun onChatScroll(atBottom: Boolean) {}
     }
 
     @JavascriptInterface
@@ -41,6 +43,8 @@ class KernelBridge(
                 }
             KernelEventType.HOST_REQUEST ->
                 event.action?.let { action -> callbacks.onHostAction(action, event.value ?: "") }
+            KernelEventType.CHAT_SCROLL ->
+                event.atBottom?.let { callbacks.onChatScroll(it) }
         }
     }
 }

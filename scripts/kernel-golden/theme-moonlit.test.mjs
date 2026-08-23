@@ -91,6 +91,34 @@ t('无思考块: 不带 reasoning 类', q('.mes[mesid="3"].reasoning'), false);
 t('无思考块: 无 data-reasoning-state', doc.querySelector('.mes[mesid="3"]').getAttribute('data-reasoning-state'), null);
 t('无思考块: details 默认折叠(无 open)', !!doc.querySelector('.mes[mesid="3"] .mes_reasoning_details[open]'), false);
 
+// ---------- 3b. 整页壳 C1：renderChat 全量同步 + 滚动接管 API ----------
+t('API: renderChat 已暴露', typeof window.Kernel.renderChat, 'function');
+t('API: scrollToBottom 已暴露', typeof window.Kernel.scrollToBottom, 'function');
+await window.Kernel.renderChat([
+    { mesid: 'a1', mes: '**第一条**', chName: 'Alice', isUser: false, isSystem: false, timestamp: '13:00' },
+    { mesid: 'a2', mes: '用户回复', chName: '我', isUser: true, isSystem: false, reasoning: '> 推理链' },
+    { mesid: 'a3', mes: '第三条', chName: 'Alice', isUser: false, isSystem: false },
+]);
+const idsAfterFull = Array.from(doc.querySelectorAll('#chat .mes')).map(n => n.getAttribute('mesid'));
+t('renderChat: 清空旧消息(1..3)并按序重建', idsAfterFull.join(','), 'a1,a2,a3');
+t('renderChat: 用户消息 is_user 标记', doc.querySelector('.mes[mesid="a2"]').getAttribute('is_user'), 'true');
+t('renderChat: 思考块随行挂载', q('.mes[mesid="a2"].reasoning'), true);
+t('renderChat: 粗体格式化生效', q('.mes[mesid="a1"] strong'), true);
+// 二次全量：幂等重建（不堆积重复节点）
+await window.Kernel.renderChat([
+    { mesid: 'a1', mes: '第一条', chName: 'Alice', isUser: false, isSystem: false },
+]);
+t('renderChat: 二次全量无残留', doc.querySelectorAll('#chat .mes').length, 1);
+// 增量路径与全量互操作：upsert 单条继续追加
+await window.Kernel.renderMessage({ mesid: 'a9', mes: '追加', chName: 'Alice', isUser: false, isSystem: false });
+t('renderMessage: 全量后可增量追加', doc.querySelectorAll('#chat .mes').length, 2);
+// 滚动接管：jsdom 无布局，验证调用不抛错即可
+window.Kernel.scrollToBottom(false);
+window.Kernel.scrollToBottom(true);
+// kernel.html 整页壳模式块存在（C2 宿主将切 body.fullchat）
+const kernelHtml = readFileSync(`${K}/kernel.html`, 'utf8');
+t('kernel.html: body.fullchat 恢复官方滚动语义', kernelHtml.includes('body.fullchat #chat'), true);
+
 // Moonlit style.css 中引用的官方选择器逐一在内核 DOM 中存在
 const css = readFileSync(`${ME}/style.css`, 'utf8');
 const criticalSelectors = ['.mes_text', '.mes', '.mesAvatarWrapper', '.mes_block', '#chat'];

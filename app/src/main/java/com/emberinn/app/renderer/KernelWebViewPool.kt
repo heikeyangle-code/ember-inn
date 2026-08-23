@@ -46,6 +46,8 @@ class KernelWebViewPool(
     private val uiActionListeners = mutableListOf<(String, String) -> Unit>()
     /** 渲染进程崩溃实例剔除回调：宿主行据此复位重挂载（§3.3 自愈） */
     private val crashListeners = mutableListOf<() -> Unit>()
+    /** #chat 滚动贴底状态（整页壳 C1/C2）：驱动跳底浮标显隐 */
+    private val chatScrollListeners = mutableListOf<(Boolean) -> Unit>()
 
     fun addHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.add(l) } }
     fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
@@ -55,6 +57,8 @@ class KernelWebViewPool(
     fun removeUiActionListener(l: (action: String, value: String) -> Unit) { synchronized(uiActionListeners) { uiActionListeners.remove(l) } }
     fun addCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.add(l) } }
     fun removeCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.remove(l) } }
+    fun addChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.add(l) } }
+    fun removeChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.remove(l) } }
 
     /**
      * st-api-shim 请求处理器（P4 扩展桥）：由宿主层安装（StApiShimInstaller）。
@@ -168,6 +172,10 @@ class KernelWebViewPool(
 
             override fun onHostAction(action: String, value: String) {
                 synchronized(uiActionListeners) { uiActionListeners.toList() }.forEach { it(action, value) }
+            }
+
+            override fun onChatScroll(atBottom: Boolean) {
+                synchronized(chatScrollListeners) { chatScrollListeners.toList() }.forEach { it(atBottom) }
             }
         })
     }

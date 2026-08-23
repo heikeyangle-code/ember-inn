@@ -263,12 +263,14 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - **本地外观偏好收敛（官方字段全删）**：AppearancePrefs 删除 st_ 九色（main/em/underline/quote/user·bot bubble/border/shadow/blur_tint）、排版 11 字段（textSize/lineHeight/headingStyle/bodyWeight/headingH1/H2/quoteItalic/codeSize/inlineCodeSize/blockSpacing/listIndent）、avatarShape、文字阴影开关与强度——全部由官方主题接管。消费方改读真值：气泡/流式着色取 ShellTheme 令牌，正文样式 chatTextStyle() 单一 font_scale 缩放，头像形状读 shellSettings().avatarStyle（0圆/1大矩形/2方2px/3圆角10px）。保留项均为壳层自有或官方 power_user 行为旗标（radius/font/immersiveActions/bubbleStyle/density/backgroundBlur/openLastChat/encodeTags/fixMarkdown/chatBg*/blurStrength）。MessageRenderScreen 颜色编辑页删除，只留行为与兼容
 
 ### 5.2 待办（当前优先级）
-1. **聊天页整页壳（用户已拍板的方向终点）**：聊天屏整体交一个 WebView 承载官方 #top-bar/#sheld/#chat/#form_sheld 全套层级——主题包对顶栏/输入栏/背景的规则直接生效，接缝类 bug（薄空隙/裁剪/度量漂移）连根消失；池化与高度契约机器退役（单实例）。分期：
-   - C1 内核页多消息 API（renderAll/append/remove/edit + 官方 #chat 滚动接管）
-   - C2 ChatScreen 单 AndroidView 化（LazyColumn/pool/高度契约退役，长按+swipe 手势桥）
-   - C3 #form_sheld 输入区进 DOM（发送/中断/附件经桥），主题包输入栏样式自动生效
+1. **聊天页整页壳（用户已拍板的方向终点）**：聊天屏整体交一个 WebView 承载官方 #top-bar/#sheld/#chat/#form_sheld 全套层级——主题包对顶栏/输入栏/背景的规则直接生效，接缝类 bug（薄空隙/裁剪/度量漂移）连根消失；池化与高度契约机器退役（单实例）。总纲（用户指令）：**官方渲染一律直拷官方源文件，内核 JS 只做薄胶水；桥接以稳定+兼容为最高准则；架构留扩展缝。**
+   分期：
+   - ✅ C1 已落：render.js 拆 mountMessage（模板就绪后同步挂载）+ renderChat 全量同步（清空重建保序，幂等）+ scrollToBottom + watchChatScroll 节流回报 {type:'chatScroll',atBottom}（距底 40px 容差）；Kernel.clear 委托共享 clearMessages；kernel.html 增 body.fullchat 模式块（恢复官方 #sheld fixed/#chat overflow-y:auto 滚动语义，声明序压过嵌入态覆盖）；桥协议 KernelEvent.atBottom + CHAT_SCROLL，池侧 chatScrollListeners 扇出。金测试 239 绿
+   - C2 ChatScreen 单 AndroidView 化（LazyColumn/pool/高度契约退役，长按+swipe 手势桥；fullchat 类切换；跳底浮标吃 chatScroll 事件）
+   - C3 #form_sheld 输入区进 DOM（textarea/#send_but/#mes_stop 结构直拷官方 index.html，发送/中断/附件经桥），主题包输入栏样式自动生效
    - C4 背景=官方 #bg1 语义（background+blur_strength+chat_tint_color），本机 chatBg* 背景系统删除
    - C5 流式 per-tick 进 .mes_text/.mes_reasoning（单页后 StreamingThrottler 直写）
+   - C6 官方面直拷对齐（审计驱动）：官方 messageFormatting/utils、reasoning.js、power-user applyTheme 等能整文件拷的不再手写移植——以审计清单为准逐项替换并跑金测试
    原生保留：ActionSheet/对话框浮层、导航壳、设置/世界书各屏（Compose+ShellTheme 推导）。
    嵌入态覆盖（app-host-shell-style）为过渡期产物，整页壳落地后删除
 2. **主题整包导入通道**：zip/目录导入含 style.css/extension.css/*-preset.json 的主题包（安全校验：压缩比/路径穿越/重复表项/条目上限），落 filesDir/themes/ 即被 detectStylePack 探测生效

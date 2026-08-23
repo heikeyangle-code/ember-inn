@@ -57,6 +57,27 @@
             overflow: visible !important;
             bottom: auto !important;
         }
+
+        /* 整页壳模式（C1/C2）：宿主给 body 加 fullchat 类——官方滚动语义恢复，
+         * #chat 成为唯一滚动容器。上方嵌入态覆盖与本块同为 !important，
+         * 后声明者胜出，故本块放同一样式表末尾。#sheld 回到 fixed 全屏
+         * （官方整页壳定位），主题包装饰规则（#sheld::before 等）不受影响。 */
+        body.fullchat #sheld {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
+            margin: 0 !important;
+        }
+        body.fullchat #chat {
+            flex: 1 1 auto !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            bottom: auto !important;
+        }
     </style>
 </head>
 <body class="light-theme">

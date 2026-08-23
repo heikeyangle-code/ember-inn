@@ -376,99 +376,118 @@
     }
 
     /**
-     * 渲染一条消息到 #chat。
-     * payload: { mesid, mes, chName, isUser, isSystem, avatarUrl, timestamp, tokenCount }
+     * 模板就绪后同步挂载一条消息（官方 script.js addOneMessage 同构）：
+     * 填字段 → 思考块 → 追加 #chat → 高度回报与观察 → 点击与长按手势接线。
+     */
+    function mountMessage(tpl, payload) {
+        var chat = document.getElementById('chat');
+        var node = tpl.cloneNode(true);
+        node.setAttribute('mesid', payload.mesid);
+        node.setAttribute('ch_name', payload.chName || '');
+        node.setAttribute('is_user', payload.isUser ? 'true' : 'false');
+        node.setAttribute('is_system', payload.isSystem ? 'true' : 'false');
+
+        if (payload.avatarUrl) {
+            var img = node.querySelector('.mesAvatarWrapper .avatar img');
+            if (img) { img.src = payload.avatarUrl; }
+        }
+        var nameEl = node.querySelector('.name_text');
+        if (nameEl) { nameEl.textContent = payload.chName || ''; }
+        var tsEl = node.querySelector('.timestamp');
+        if (tsEl && payload.timestamp) { tsEl.textContent = String(payload.timestamp); }
+        var tcEl = node.querySelector('.tokenCounterDisplay');
+        if (tcEl && payload.tokenCount != null) {
+            tcEl.textContent = String(payload.tokenCount);
+        }
+
+        var mesText = node.querySelector('.mes_text');
+        if (mesText) {
+            mesText.innerHTML = formatText(payload.mes, {
+                chName: payload.chName,
+                isUser: payload.isUser,
+                isSystem: payload.isSystem,
+            });
+        }
+
+        // 思考块：官方 reasoning.js updateDom 语义——.mes reasoning 类切换 + data-state 标记，
+        // 内容走 messageFormatting（isReasoning 仅影响正则位点，引擎侧已提取，此处即 formatText）
+        var detailsEl = node.querySelector('.mes_reasoning_details');
+        if (detailsEl) {
+            var reasoningText = payload.reasoning ? String(payload.reasoning).trim() : '';
+            node.classList.toggle('reasoning', !!reasoningText);
+            if (reasoningText) {
+                node.setAttribute('data-reasoning-state', 'done');
+                detailsEl.setAttribute('data-state', 'done');
+                var contentEl = detailsEl.querySelector('.mes_reasoning');
+                if (contentEl) {
+                    contentEl.innerHTML = formatText(reasoningText, { chName: '', isUser: false, isSystem: false });
+                }
+            } else {
+                node.removeAttribute('data-reasoning-state');
+            }
+        }
+
+        chat.appendChild(node);
+        reportHeight(payload.mesid, node.scrollHeight);
+        observeHeight(node, payload.mesid);
+
+        // 点击上报（链接/交互元素由 WebViewClient 外链逻辑处理，这里报宿主决策）
+        node.addEventListener('click', function (ev) {
+            bridgeSend({ type: 'click', mesid: payload.mesid, target: describeTarget(ev.target) });
+        });
+
+        // 长按手势（500ms，官方移动端长按菜单同款阈值）：报宿主弹出 ActionSheet
+        (function () {
+            var timer = null, startX = 0, startY = 0;
+            node.addEventListener('touchstart', function (ev) {
+                if (ev.touches.length !== 1) return;
+                startX = ev.touches[0].clientX; startY = ev.touches[0].clientY;
+                timer = setTimeout(function () {
+                    timer = null;
+                    bridgeSend({ type: 'longPress', mesid: payload.mesid, target: null });
+                }, 500);
+            }, { passive: true });
+            node.addEventListener('touchmove', function (ev) {
+                if (!timer) return;
+                var dx = ev.touches[0].clientX - startX, dy = ev.touches[0].clientY - startY;
+                if (dx * dx + dy * dy > 100) { clearTimeout(timer); timer = null; } // 移动超10px取消
+            }, { passive: true });
+            ['touchend', 'touchcancel'].forEach(function (evt) {
+                node.addEventListener(evt, function () {
+                    if (timer) { clearTimeout(timer); timer = null; }
+                }, { passive: true });
+            });
+        })();
+
+        return node;
+    }
+
+    /**
+     * 渲染一条消息到 #chat（upsert：同 mesid 先移除再追加）。
      */
     function renderMessage(payload) {
         return loadTemplate().then(function (tpl) {
-            var chat = document.getElementById('chat');
-            var existing = chat.querySelector('.mes[mesid="' + payload.mesid + '"]');
+            var existing = document.querySelector('.mes[mesid="' + payload.mesid + '"]');
             if (existing) {
                 // 池化复用下同一实例反复渲染：旧节点先解除观察，否则 ResizeObserver
                 // 强持有已移除 DOM，长会话累积泄漏（官方单页无此问题）
                 if (resizeObserver) { resizeObserver.unobserve(existing); }
                 existing.remove();
             }
+            return mountMessage(tpl, payload);
+        });
+    }
 
-            var node = tpl.cloneNode(true);
-            node.setAttribute('mesid', payload.mesid);
-            node.setAttribute('ch_name', payload.chName || '');
-            node.setAttribute('is_user', payload.isUser ? 'true' : 'false');
-            node.setAttribute('is_system', payload.isSystem ? 'true' : 'false');
-
-            if (payload.avatarUrl) {
-                var img = node.querySelector('.mesAvatarWrapper .avatar img');
-                if (img) { img.src = payload.avatarUrl; }
-            }
-            var nameEl = node.querySelector('.name_text');
-            if (nameEl) { nameEl.textContent = payload.chName || ''; }
-            var tsEl = node.querySelector('.timestamp');
-            if (tsEl && payload.timestamp) { tsEl.textContent = String(payload.timestamp); }
-            var tcEl = node.querySelector('.tokenCounterDisplay');
-            if (tcEl && payload.tokenCount != null) {
-                tcEl.textContent = String(payload.tokenCount);
-            }
-
-            var mesText = node.querySelector('.mes_text');
-            if (mesText) {
-                mesText.innerHTML = formatText(payload.mes, {
-                    chName: payload.chName,
-                    isUser: payload.isUser,
-                    isSystem: payload.isSystem,
-                });
-            }
-
-            // 思考块：官方 reasoning.js updateDom 语义——.mes reasoning 类切换 + data-state 标记，
-            // 内容走 messageFormatting（isReasoning 仅影响正则位点，引擎侧已提取，此处即 formatText）
-            var detailsEl = node.querySelector('.mes_reasoning_details');
-            if (detailsEl) {
-                var reasoningText = payload.reasoning ? String(payload.reasoning).trim() : '';
-                node.classList.toggle('reasoning', !!reasoningText);
-                if (reasoningText) {
-                    node.setAttribute('data-reasoning-state', 'done');
-                    detailsEl.setAttribute('data-state', 'done');
-                    var contentEl = detailsEl.querySelector('.mes_reasoning');
-                    if (contentEl) {
-                        contentEl.innerHTML = formatText(reasoningText, { chName: '', isUser: false, isSystem: false });
-                    }
-                } else {
-                    node.removeAttribute('data-reasoning-state');
-                }
-            }
-
-            chat.appendChild(node);
-            reportHeight(payload.mesid, node.scrollHeight);
-            observeHeight(node, payload.mesid);
-
-            // 点击上报（链接/交互元素由 WebViewClient 外链逻辑处理，这里报宿主决策）
-            node.addEventListener('click', function (ev) {
-                bridgeSend({ type: 'click', mesid: payload.mesid, target: describeTarget(ev.target) });
-            });
-
-            // 长按手势（500ms，官方移动端长按菜单同款阈值）：报宿主弹出 ActionSheet
-            (function () {
-                var timer = null, startX = 0, startY = 0;
-                node.addEventListener('touchstart', function (ev) {
-                    if (ev.touches.length !== 1) return;
-                    startX = ev.touches[0].clientX; startY = ev.touches[0].clientY;
-                    timer = setTimeout(function () {
-                        timer = null;
-                        bridgeSend({ type: 'longPress', mesid: payload.mesid, target: null });
-                    }, 500);
-                }, { passive: true });
-                node.addEventListener('touchmove', function (ev) {
-                    if (!timer) return;
-                    var dx = ev.touches[0].clientX - startX, dy = ev.touches[0].clientY - startY;
-                    if (dx * dx + dy * dy > 100) { clearTimeout(timer); timer = null; } // 移动超10px取消
-                }, { passive: true });
-                ['touchend', 'touchcancel'].forEach(function (evt) {
-                    node.addEventListener(evt, function () {
-                        if (timer) { clearTimeout(timer); timer = null; }
-                    }, { passive: true });
-                });
-            })();
-
-            return node;
+    /**
+     * 全量同步整个聊天（整页壳 C1）：清空重建，payloads 顺序即聊天顺序。
+     * 切聊天 / 首挂载走这里；增量渲染走 renderMessage（模板缓存后两者均同步可用）。
+     */
+    function renderChat(payloads) {
+        return loadTemplate().then(function (tpl) {
+            clearMessages();
+            var last = null;
+            (payloads || []).forEach(function (p) { last = mountMessage(tpl, p); });
+            return last;
         });
     }
 
@@ -485,6 +504,15 @@
 
     function reportHeight(mesid, h) {
         bridgeSend({ type: 'height', mesid: mesid, height: h });
+    }
+
+    /** 清空全部消息节点：先解除高度观察再移除，防止 ResizeObserver 强持有已摘除 DOM */
+    function clearMessages() {
+        var chat = document.getElementById('chat');
+        Array.prototype.forEach.call(chat.querySelectorAll('.mes'), function (n) {
+            if (resizeObserver) { resizeObserver.unobserve(n); }
+            n.remove();
+        });
     }
 
     function describeTarget(el) {
@@ -643,20 +671,48 @@
     }
 
     // ------------------------------------------------------------------
+    // 滚动接管（整页壳 C1）：fullchat 模式下 #chat 为滚动容器，向宿主回报贴底
+    // 状态（宿主据此驱动「跳到底部」浮标）；嵌入态无内部滚动，事件静默。
+    // ------------------------------------------------------------------
+    function scrollToBottom(smooth) {
+        var chat = document.getElementById('chat');
+        if (!chat) { return; }
+        if (typeof chat.scrollTo === 'function') {
+            try {
+                chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+                return;
+            } catch (e) { /* 老内核不支持 options 形式，落到底部直接赋值 */ }
+        }
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    (function watchChatScroll() {
+        var chat = document.getElementById('chat');
+        if (!chat) { return; }
+        var pending = false;
+        chat.addEventListener('scroll', function () {
+            if (pending) { return; }
+            pending = true;
+            setTimeout(function () {
+                pending = false;
+                // 贴底判定：距底不足 40px 视为在底部（移动端跳底浮标同级容差）
+                var atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
+                bridgeSend({ type: 'chatScroll', atBottom: atBottom });
+            }, 100);
+        }, { passive: true });
+    })();
+
+    // ------------------------------------------------------------------
     // 公开 API
     // ------------------------------------------------------------------
     window.Kernel = {
         formatText: formatText,          // DOM 黄金对比入口：返回 HTML 字符串
-        renderMessage: renderMessage,    // 生产入口：挂载消息
+        renderMessage: renderMessage,    // 生产入口：upsert 单条消息
+        renderChat: renderChat,          // 整页壳 C1：全量同步（清空重建，payloads 有序）
+        scrollToBottom: scrollToBottom,  // 官方 #chat 滚动接管（C1/C2）
         applyTheme: applyTheme,
         applyStylePack: applyStylePack,  // 第三方主题整包 CSS（无则纯官方行为）
-        clear: function () {
-            var chat = document.getElementById('chat');
-            Array.from(chat.querySelectorAll('.mes')).forEach(function (n) {
-                if (resizeObserver) { resizeObserver.unobserve(n); }
-                n.remove();
-            });
-        },
+        clear: clearMessages,
         ready: true,
     };
     bridgeSend({ type: 'kernelReady' });
