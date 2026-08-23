@@ -2217,6 +2217,8 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (!isUser(last)) {
             chatStore.removeAt(sessionId, msgs.lastIndex)
             refreshMessages()
+            // 官方 Generate 重生成清理同发 MESSAGE_DELETED(chat.length)（script.js:4352）
+            kernelEvents.tryEmit("message_deleted" to listOf(chatStore.messages(sessionId).size.toString()))
         }
         if (group != null) {
             startGroupTurn(type = "regenerate")
@@ -3760,6 +3762,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             stealthCalls = false, // App 无 stealth 概念（工具执行异常计入 executed 空）
         )
         // 官方流式分支：shouldDeleteMessage → 删空用户消息；否则有回复先落盘中间 assistant 消息
+        // （官方工具循环删空消息无独立 MESSAGE_DELETED emit 点位，此处不发——边界登记）
         if (decision.shouldDeleteMessage) {
             chatStore.removeAt(sessionId, msgs.lastIndex)
         } else if (reply.isNotBlank()) {
