@@ -55,6 +55,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -1172,6 +1173,29 @@ fun ChatScreen(
             }
         }
 
+        // 沉浸顶栏（V2 §5.2 聊天页）：贴底阅读时完整显示；向上翻历史淡出，留渐变遮罩保顶部消息可读
+        val topBarSolid by remember {
+            derivedStateOf { listState.firstVisibleItemIndex == 0 }
+        }
+        val topBarAlpha by animateFloatAsState(
+            targetValue = if (topBarSolid) 1f else 0f,
+            animationSpec = tween(180),
+            label = "chatTopBarAlpha",
+        )
+        if (topBarAlpha < 1f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(maxOf(topBarPad, 64.dp) + 20.dp)
+                    .graphicsLayer { alpha = 1f - topBarAlpha }
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(EmberTheme.colors.bg.copy(alpha = 0.88f), Color.Transparent),
+                        ),
+                    ),
+            )
+        }
         ChatTopBar(
             name = currentName,
             avatarPath = vm.avatarPath,
@@ -1183,6 +1207,7 @@ fun ChatScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
+                .graphicsLayer { alpha = topBarAlpha }
                 .onSizeChanged { topBarHeight = it.height }
                 .emberGlass(sky = sky, atTop = false, blurEnabled = glassBlurActive),
         )

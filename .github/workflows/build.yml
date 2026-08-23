@@ -12,6 +12,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/**'
       - 'scripts/kernel-golden/**'
+      - 'scripts/source-scan/**'
   pull_request:
     paths:
       - 'app/**'
@@ -22,6 +23,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/**'
       - 'scripts/kernel-golden/**'
+      - 'scripts/source-scan/**'
 
 jobs:
   engine-test:
@@ -44,6 +46,8 @@ jobs:
           node-version: '20'
       - name: Kernel golden tests (jsdom)
         run: cd scripts/kernel-golden && npm ci && npm test
+      - name: Token gate (业务层禁直读 M3 colorScheme, DESIGN_SYSTEM §六)
+        run: node scripts/source-scan/check-tokens.mjs
 
   build:
     runs-on: ubuntu-latest

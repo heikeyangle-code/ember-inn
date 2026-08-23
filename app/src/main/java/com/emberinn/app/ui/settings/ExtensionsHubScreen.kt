@@ -20,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,8 +36,17 @@ private data class ExtensionEntry(
     val title: String,
     val subtitle: String,
     val icon: ImageVector,
+    /** 兼容状态徽章（HANDOFF §6.4 登记表的可视投影）：OK=完整 / PARTIAL=部分 / NATIVE=App 原生等价 */
+    val status: ExtStatus = ExtStatus.OK,
     val onClick: () -> Unit,
 )
+
+/** 扩展兼容状态（docs/HANDOFF.md §6.4）：徽章文案与登记表一致，升级状态须先改登记表附验证方式。 */
+enum class ExtStatus(val label: String, val hint: String) {
+    OK("✅ 完整", "官方扩展能力已等价落地"),
+    PARTIAL("🟡 部分", "部分能力可用，余项见交接文档 §6.4"),
+    NATIVE("原生", "由 App 原生实现等价替代"),
+}
 
 /** 扩展中心（官方 div_extensions 移植）：各扩展面板入口。 */
 @Composable
@@ -54,16 +64,16 @@ fun ExtensionsHubScreen(
     onOpenData: () -> Unit,
 ) {
     val entries = listOf(
-        ExtensionEntry("翻译 · 图像 · 向量服务", "第三方服务 Key 与开关", FaIcons.Language, onOpenServices),
-        ExtensionEntry("语音朗读 TTS", "系统 TTS · 自动朗读", FaIcons.VolumeHigh, onOpenVoice),
-        ExtensionEntry("快捷回复", "一键执行斜杠命令组", FaIcons.Brain, onOpenQuickReplies),
-        ExtensionEntry("向量记忆", "数据银行 · 长期记忆", FaIcons.Database, onOpenMemory),
-        ExtensionEntry("图像说明", "本地模型为图片生成描述", FaIcons.Image, onOpenCaption),
-        ExtensionEntry("表情分类", "角色立绘表情切换", FaIcons.FaceSmile, onOpenExpression),
-        ExtensionEntry("正则脚本", "输入/输出文本正则替换", FaIcons.CodeBranch, onOpenRegex),
-        ExtensionEntry("互动模式", "扩展互动配置", FaIcons.WandMagicSparkles, onOpenInteractive),
-        ExtensionEntry("作者注", "固定注入提示词与深度", FaIcons.Pencil, onOpenAuthorsNote),
-        ExtensionEntry("数据管理", "导出 · 备份 · 清除", FaIcons.Folder, onOpenData),
+        ExtensionEntry("翻译 · 图像 · 向量服务", "第三方服务 Key 与开关", FaIcons.Language, ExtStatus.OK, onOpenServices),
+        ExtensionEntry("语音朗读 TTS", "系统 TTS · 自动朗读", FaIcons.VolumeHigh, ExtStatus.OK, onOpenVoice),
+        ExtensionEntry("快捷回复", "一键执行斜杠命令组", FaIcons.Brain, ExtStatus.OK, onOpenQuickReplies),
+        ExtensionEntry("向量记忆", "数据银行 · 长期记忆", FaIcons.Database, ExtStatus.OK, onOpenMemory),
+        ExtensionEntry("图像说明", "本地模型为图片生成描述", FaIcons.Image, ExtStatus.NATIVE, onOpenCaption),
+        ExtensionEntry("表情分类", "角色立绘表情切换", FaIcons.FaceSmile, ExtStatus.OK, onOpenExpression),
+        ExtensionEntry("正则脚本", "输入/输出文本正则替换", FaIcons.CodeBranch, ExtStatus.OK, onOpenRegex),
+        ExtensionEntry("互动模式", "酒馆助手脚本 · MVU 变量框架", FaIcons.WandMagicSparkles, ExtStatus.PARTIAL, onOpenInteractive),
+        ExtensionEntry("作者注", "固定注入提示词与深度", FaIcons.Pencil, ExtStatus.NATIVE, onOpenAuthorsNote),
+        ExtensionEntry("数据管理", "导出 · 备份 · 清除", FaIcons.Folder, ExtStatus.NATIVE, onOpenData),
     )
 
     SettingsGlassPage { settingsSky ->
@@ -110,6 +120,23 @@ private fun ExtensionCard(entry: ExtensionEntry) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+            // 兼容状态徽章：与 HANDOFF §6.4 登记表同步，一眼看出哪些扩展是部分兼容
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = if (entry.status == ExtStatus.PARTIAL)
+                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+                else MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.padding(end = 8.dp),
+            ) {
+                Text(
+                    entry.status.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (entry.status == ExtStatus.PARTIAL)
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                 )
             }
             Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
