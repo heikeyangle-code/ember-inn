@@ -112,7 +112,8 @@ data class KernelEvent(
     val height: Float? = null,
     /** click 事件的目标描述 {tag, cls} */
     val target: KernelClickTarget? = null,
-    /** 官方控件动作：mes_edit/mes_copy/.../swipe_left/swipe_right/del_checkbox */
+    /** 官方消息控件动作：mes_edit/mes_copy/.../swipe_left/swipe_right/del_checkbox */
+    @SerialName("messageAction")
     val action: String? = null,
     // ---- st-api-shim 请求-响应（P4 扩展桥）----
     val reqId: String? = null,
@@ -120,7 +121,7 @@ data class KernelEvent(
     /** params 为 JSON 字符串（避免嵌套对象反序列化歧义），无参为 null */
     val params: String? = null,
     // ---- hostRequest：白名单宿主能力请求（openLink/copyText/saveMedia/haptic，§5.3）----
-    val action: String? = null,
+    @SerialName("hostAction") val hostAction: String? = null,
     /** 动作参数：URL / 文本等；haptic 无参为 null */
     val value: String? = null,
     // ---- chatScroll（整页壳 C1）：#chat 滚动容器贴底状态，驱动跳底浮标显隐 ----

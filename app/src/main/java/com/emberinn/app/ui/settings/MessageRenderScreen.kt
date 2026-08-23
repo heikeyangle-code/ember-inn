@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberTextField
 
 /**
  * 消息渲染行为开关：对齐官方 power_user 行为字段（折叠换行/示例分隔符/标签转义/Markdown 修复）与内核排障开关。

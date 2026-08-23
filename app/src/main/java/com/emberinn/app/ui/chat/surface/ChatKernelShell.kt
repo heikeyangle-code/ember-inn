@@ -72,7 +72,7 @@ fun ChatKernelShell(
         pool.acquireSingle { pooled ->
             if (disposed.get()) {
                 pool.release(pooled)
-                return@acquire
+                return@acquireSingle
             }
             (pooled.webView.parent as? ViewGroup)?.removeView(pooled.webView)
             target.removeAllViews()

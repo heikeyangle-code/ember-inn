@@ -501,14 +501,14 @@
                 ev.target.closest('[class*="mes_"], .swipe_left, .swipe_right, .del_checkbox') : null;
             // 官方删除模式点击整条 .mes：从该条截断到末尾；普通模式不吞消息链接点击。
             if (!actionEl && document.body.classList.contains('delete-mode')) {
-                bridgeSend({ type: 'click', mesid: payload.mesid, action: 'del_checkbox', target: null });
+                bridgeSend({ type: 'click', mesid: payload.mesid, messageAction: 'del_checkbox', target: null });
                 return;
             }
             if (actionEl && actionEl !== node) {
                 bridgeSend({
                     type: 'click',
                     mesid: payload.mesid,
-                    action: describeAction(actionEl),
+                    messageAction: describeAction(actionEl),
                     target: describeTarget(ev.target),
                 });
             } else {

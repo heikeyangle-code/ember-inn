@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -144,6 +145,7 @@ import com.emberinn.app.data.ThemeState
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelMessagePayload
+import com.emberinn.app.renderer.KernelMediaPayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
 import com.emberinn.app.renderer.StApiShimInstaller
@@ -340,10 +342,6 @@ fun ChatScreen(
     // 思考卡默认折叠；每次流式开始强制收起（展开+每 tick 全量渲染是滑动卡顿主因）
     LaunchedEffect(isStreaming) {
         if (isStreaming) reasoningExpanded = false
-        if (isStreaming && deleteMode) {
-            deleteMode = false
-            deleteCheckIndex = null
-        }
     }
     // 官方 reasoning 扩展：每条消息的 Thoughts 块各自独立展开/折叠（DOM 级状态、默认折叠、不落盘）。
     // 以 send_date 为身份键，滑动/刷新不串行；流式结束后 finalized 行回到折叠（官方重新渲染重置）。
@@ -723,8 +721,8 @@ fun ChatScreen(
                             } else fixed
                         },
                     )
-                    // 官方流式行不是落盘消息：隐藏 swipe/last_mes 状态，避免与最终行错位。
-                    copy(lastMessage = false, swipeCount = 0)
+                        // 官方流式行不是落盘消息：隐藏 swipe/last_mes 状态，避免与最终行错位。
+                        .copy(lastMessage = false, swipeCount = 0)
                 }
                 ChatItem.ReasoningOnly -> {
                     val reasoningIndex = messages.size
@@ -3443,7 +3441,7 @@ private fun MessageRowContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
-                    style = (MaterialTheme.typography.labelMedium).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                    style = MaterialTheme.typography.labelMedium,
                     color = when {
                         isUser || isSystem -> MaterialTheme.colorScheme.onSurfaceVariant
                         else -> accent
@@ -3467,14 +3465,14 @@ private fun MessageRowContent(
                 Spacer(Modifier.size(8.dp))
                 Text(
                     text = time,
-                    style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                    style = MaterialTheme.typography.labelSmall,
                     color = emColor,
                 )
                 if (tokenCount != null) {
                     Spacer(Modifier.size(6.dp))
                     Text(
                         text = "· ${tokenCount}t",
-                        style = (MaterialTheme.typography.labelSmall).let { if (textShadow != null) it.copy(shadow = textShadow) else it },
+                        style = MaterialTheme.typography.labelSmall,
                         color = emColor,
                     )
                 }

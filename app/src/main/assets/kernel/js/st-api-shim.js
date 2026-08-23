@@ -562,7 +562,7 @@
         if (!window.AndroidKernel || typeof window.AndroidKernel.postMessage !== 'function') return;
         window.AndroidKernel.postMessage(JSON.stringify({
             type: 'hostRequest',
-            action: action,
+            hostAction: action,
             value: value === undefined || value === null ? null : String(value),
         }));
     }

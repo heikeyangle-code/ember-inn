@@ -50,7 +50,7 @@ class KernelBridge(
                     callbacks.onShimRequest(id, event.method ?: "", event.params ?: "{}")
                 }
             KernelEventType.HOST_REQUEST ->
-                event.action?.let { action -> callbacks.onHostAction(action, event.value ?: "") }
+                event.hostAction?.let { action -> callbacks.onHostAction(action, event.value ?: "") }
             KernelEventType.CHAT_SCROLL ->
                 event.atBottom?.let { callbacks.onChatScroll(it) }
         }
