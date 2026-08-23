@@ -40,6 +40,8 @@ data class KernelMessagePayload(
     val timestamp: String? = null,
     /** 官方 tokenCounterDisplay 文本（原样透传，"123" 或 "1.2k"） */
     val tokenCount: String? = null,
+    /** 官方 .mes_reasoning 思考文本（引擎已提取；null/blank = 无思考块，details 保持折叠隐藏） */
+    val reasoning: String? = null,
 )
 
 /** 官方主题 JSON（34 字段中与渲染相关的核心子集；未知字段由 ignoreUnknownKeys 吸收） */

@@ -418,6 +418,24 @@
                 });
             }
 
+            // 思考块：官方 reasoning.js updateDom 语义——.mes reasoning 类切换 + data-state 标记，
+            // 内容走 messageFormatting（isReasoning 仅影响正则位点，引擎侧已提取，此处即 formatText）
+            var detailsEl = node.querySelector('.mes_reasoning_details');
+            if (detailsEl) {
+                var reasoningText = payload.reasoning ? String(payload.reasoning).trim() : '';
+                node.classList.toggle('reasoning', !!reasoningText);
+                if (reasoningText) {
+                    node.setAttribute('data-reasoning-state', 'done');
+                    detailsEl.setAttribute('data-state', 'done');
+                    var contentEl = detailsEl.querySelector('.mes_reasoning');
+                    if (contentEl) {
+                        contentEl.innerHTML = formatText(reasoningText, { chName: '', isUser: false, isSystem: false });
+                    }
+                } else {
+                    node.removeAttribute('data-reasoning-state');
+                }
+            }
+
             chat.appendChild(node);
             reportHeight(payload.mesid, node.scrollHeight);
             observeHeight(node, payload.mesid);

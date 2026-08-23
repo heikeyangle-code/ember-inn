@@ -3387,14 +3387,7 @@ private fun MessageRowContent(
         if (useKernel) {
             // 全 DOM 行：官方模板承担头像/名字/时间戳/token 计数；原生只留交互面。
             Column(modifier = Modifier.fillMaxWidth().then(bubbleModifier)) {
-                if (!reasoning.isNullOrBlank()) {
-                    ReasoningCard(
-                        text = reasoning,
-                        expanded = reasoningExpanded,
-                        onToggle = onReasoningToggle,
-                    )
-                    Spacer(Modifier.size(3.dp))
-                }
+                // 思考块随行进内核官方 .mes_reasoning DOM（主题 CSS 接管样式，details 原生折叠展开）
                 MessageKernelRow(
                     pool = kernelPool!!,
                     payload = KernelMessagePayload(
@@ -3406,6 +3399,7 @@ private fun MessageRowContent(
                         avatarUrl = kernelAvatarUrl,
                         timestamp = time,
                         tokenCount = tokenCount,
+                        reasoning = reasoning?.takeIf { it.isNotBlank() },
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     onLongPress = onLongPress,

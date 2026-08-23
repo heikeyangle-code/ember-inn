@@ -70,6 +70,27 @@ t('内核 DOM: .mesAvatarWrapper 存在', q('.mes[mesid="1"] .mesAvatarWrapper')
 t('内核 DOM: .mes_block 存在', q('.mes[mesid="1"] .mes_block'), true);
 t('内核 DOM: .name_text 存在', q('.mes[mesid="1"] .name_text'), true);
 
+// 思考块（官方 reasoning.js updateDom 语义）：reasoning 类 + done 状态 + 内容经 messageFormatting
+await window.Kernel.renderMessage({
+    mesid: '2', mes: '最终回答', chName: 'Alice', isUser: false,
+    isSystem: false, avatarUrl: null, timestamp: '12:01', tokenCount: 8,
+    reasoning: '**内心独白**\n让我想想再答',
+});
+t('思考块: .mes 带 reasoning 类', q('.mes[mesid="2"].reasoning'), true);
+t('思考块: data-reasoning-state=done', doc.querySelector('.mes[mesid="2"]').getAttribute('data-reasoning-state'), 'done');
+t('思考块: details[data-state=done]', doc.querySelector('.mes[mesid="2"] .mes_reasoning_details').getAttribute('data-state'), 'done');
+t('思考块: 内容经 formatText(粗体生效)', q('.mes[mesid="2"] .mes_reasoning strong'), true);
+t('思考块: summary 标题存在', q('.mes[mesid="2"] .mes_reasoning_header_title'), true);
+
+// 无 reasoning：不带类、不标状态（details 存在于模板但保持折叠）
+await window.Kernel.renderMessage({
+    mesid: '3', mes: '普通回答', chName: 'Alice', isUser: false,
+    isSystem: false, avatarUrl: null, timestamp: '12:02', tokenCount: 5,
+});
+t('无思考块: 不带 reasoning 类', q('.mes[mesid="3"].reasoning'), false);
+t('无思考块: 无 data-reasoning-state', doc.querySelector('.mes[mesid="3"]').getAttribute('data-reasoning-state'), null);
+t('无思考块: details 默认折叠(无 open)', !!doc.querySelector('.mes[mesid="3"] .mes_reasoning_details[open]'), false);
+
 // Moonlit style.css 中引用的官方选择器逐一在内核 DOM 中存在
 const css = readFileSync(`${ME}/style.css`, 'utf8');
 const criticalSelectors = ['.mes_text', '.mes', '.mesAvatarWrapper', '.mes_block', '#chat'];
