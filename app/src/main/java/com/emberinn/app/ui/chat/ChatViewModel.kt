@@ -341,6 +341,20 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _generationEpoch = MutableStateFlow(0)
     val generationEpoch: StateFlow<Int> = _generationEpoch
 
+    /**
+     * 官方 event_types 触发点位（Native→Web 下发，ChatScreen 收集后转 kernelPool.emitEvent）。
+     * v1 接线：generation_started / generation_ended / generation_stopped（isStreaming 状态机
+     * 汇聚点观测）；chat_id_changed 由 ChatScreen 装配点直发。消息级事件（MESSAGE_SENT 等）
+     * 待逐点位核对官方 emit 参数后接线。args 为 JSON 字面量字符串。
+     */
+    val kernelEvents = kotlinx.coroutines.flow.MutableSharedFlow<Pair<String, List<String>>>(
+        extraBufferCapacity = 32,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+    )
+
+    /** 官方 getCurrentChatId() 等价（事件参数/桥面用；sessionId 本身构造私有） */
+    val currentChatId: String get() = sessionId
+
     /** 冒充生成中（官方 type=impersonate：结果进输入框，不落历史）。 */
     private val _isImpersonating = MutableStateFlow(false)
     val isImpersonating: StateFlow<Boolean> = _isImpersonating
@@ -1889,6 +1903,30 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             )
             if (decided != null && decided != presetPrefs.samplerPreset) {
                 com.emberinn.app.ui.settings.PresetSettingsStore.applySampler(getApplication(), decided)
+            }
+        }
+        // 官方事件触发点位（script.js 同名 emit）：isStreaming 状态机沿 → generation_started/ended/stopped。
+        // started 带官方首参 type（normal/continue/swipe/impersonate，options/dryRun 两参 v1 不带——
+        // 官方订阅方普遍按位取第一参）；ended 带 chat.length；stopped 无参（官方 L5559 同）。
+        var wasStreaming = false
+        viewModelScope.launch {
+            _isStreaming.collect { streaming ->
+                if (streaming && !wasStreaming) {
+                    val type = when {
+                        _isImpersonating.value -> "impersonate"
+                        generatingSwipe -> "swipe"
+                        streamContinueMode -> "continue"
+                        else -> "normal"
+                    }
+                    kernelEvents.tryEmit("generation_started" to listOf("\"$type\""))
+                } else if (!streaming && wasStreaming) {
+                    if (userStopped) {
+                        kernelEvents.tryEmit("generation_stopped" to emptyList())
+                    } else {
+                        kernelEvents.tryEmit("generation_ended" to listOf(_messages.value.size.toString()))
+                    }
+                }
+                wasStreaming = streaming
             }
         }
         if (chatStore.messages(sessionId).isEmpty() && !isGroupSession) {

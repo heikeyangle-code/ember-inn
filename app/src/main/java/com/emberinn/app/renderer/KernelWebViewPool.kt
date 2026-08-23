@@ -77,6 +77,17 @@ class KernelWebViewPool(
         }
     }
 
+    /**
+     * 官方事件广播（event_types 触发点位接线）：广播到全部存活实例。
+     * args 传 JSON 字面量字符串列表（如 listOf("0", "\"swipe\"")），由 RenderKernel.emitEvent 拼装。
+     * 时机对齐官方 script.js emit 点位；卡脚本经 eventSource.on 监听。
+     */
+    fun emitEvent(type: String, args: List<String> = emptyList()) {
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { RenderKernel(it).emitEvent(type, args) }
+        }
+    }
+
     private fun applyPageSetup(instance: PooledWebView) {
         val kernel = RenderKernel(instance)
         currentThemeJson?.let(kernel::applyThemeRaw)

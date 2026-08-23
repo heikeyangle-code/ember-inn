@@ -341,6 +341,14 @@ fun ChatScreen(
             kernelPool.destroyAll()
         }
     }
+    // 官方事件下发（event_types 触发点位）：VM 状态机事件 → 池广播；进页即发 chat_id_changed
+    // （官方 selectChat L1696 同参 getCurrentChatId()；卡脚本在此重置 per-chat 状态）
+    LaunchedEffect(kernelPool) {
+        vm.kernelEvents.collect { (type, args) -> kernelPool.emitEvent(type, args) }
+    }
+    LaunchedEffect(kernelPool) {
+        kernelPool.emitEvent("chat_id_changed", listOf(kotlinx.serialization.json.JsonPrimitive(vm.currentChatId).toString()))
+    }
     val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
     // chat_display 布局类随主题派生；embed-shell 常驻（内核只渲染正文）

@@ -217,6 +217,12 @@
         ITEMIZED_PROMPTS_DELETED: 'itemized_prompts_deleted'
     };
     window.event_types = event_types;
+    // Native→Web 事件下发入口（宿主 pool.emitEvent → evaluateJavascript）：
+    // 宿主在官方 script.js 对应 emit 点位调用，参数已 JSON 字面量化，此处转官方 emit（async，fire-and-forget）
+    window.__emitKernelEvent = function (type) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        try { eventSource.emit.apply(eventSource, [type].concat(args)); } catch (e) { console.debug('emit failed: ' + type); }
+    };
 
     var eventSource = new EventEmitter([event_types.APP_READY, event_types.APP_INITIALIZED]);
     window.eventSource = eventSource;

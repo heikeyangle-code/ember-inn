@@ -56,6 +56,17 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
 
     fun clear(onDone: (() -> Unit)? = null) = eval("window.Kernel.clear();", onDone)
 
+    /** 官方 event_types 触发（Native→Web 下发）：args 经 JSON 序列化保持类型，shim 端转 eventSource.emit */
+    fun emitEvent(type: String, args: List<String> = emptyList()) {
+        val js = buildString {
+            append("window.__emitKernelEvent && window.__emitKernelEvent(")
+            append(jsonEsc(type))
+            args.forEach { append(','); append(it) } // args 已是 JSON 字面量
+            append(");")
+        }
+        eval(js)
+    }
+
     private fun eval(js: String, onDone: (() -> Unit)? = null) {
         web.evaluateJavascript(js) { onDone?.invoke() }
     }

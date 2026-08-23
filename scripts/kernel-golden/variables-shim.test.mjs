@@ -68,7 +68,7 @@ function makeSandbox() {
     };
     vm.createContext(sandbox);
     vm.runInContext(shimSource, sandbox, { filename: 'st-api-shim.js' });
-    return { sandbox, store, calls };
+    return { sandbox, store, calls, vm };
 }
 
 const t = makeSandbox();
@@ -188,6 +188,21 @@ const t = makeSandbox();
     let threw = false;
     try { await s.sandbox.getVariables({ type: 'message' }); } catch { threw = true; }
     ok(threw, 'message 等宿主态作用域显式抛错（边界登记）');
+}
+
+{
+    console.log('Native→Web 事件下发通道（event_types 触发点位）:');
+    const s = makeSandbox();
+    ok(typeof s.sandbox.__emitKernelEvent === 'function', '__emitKernelEvent 接收器暴露');
+    const got = [];
+    s.sandbox.eventSource.on('generation_started', (type) => got.push(['started', type]));
+    s.sandbox.eventSource.on('generation_ended', (n) => got.push(['ended', n]));
+    // 按 Kotlin RenderKernel.emitEvent 的拼装形态执行（evaluateJavascript 收到的即该 JS 串）
+    s.vm.runInContext('window.__emitKernelEvent("generation_started", "normal");', s.sandbox);
+    s.vm.runInContext('window.__emitKernelEvent("generation_ended", 3);', s.sandbox);
+    await new Promise((r) => setTimeout(r, 10)); // 官方 emit 是 async
+    ok(got.length === 2 && got[0][1] === 'normal' && typeof got[0][1] === 'string', 'generation_started 带官方首参 type');
+    ok(got[1][0] === 'ended' && got[1][1] === 3 && typeof got[1][1] === 'number', 'generation_ended 带 chat.length 数值');
 }
 
 {

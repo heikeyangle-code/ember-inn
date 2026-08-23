@@ -74,5 +74,10 @@ ok(shim.includes("type !== 'chat' && type !== 'global'"), 'resolveScope 放行 c
 ok(installer.includes('"variables.get"') && installer.includes('"variables.set"'), 'installer variables.* 桥在位');
 ok(installer.includes('GlobalVariableStore'), 'Kotlin GlobalVariableStore 接线');
 
+// 事件下发通道：shim 接收器 + Kotlin 广播链咬合
+ok(shim.includes('window.__emitKernelEvent = function'), 'Native→Web 事件接收器在位');
+const kernel = readFileSync(join(root, 'app/src/main/java/com/emberinn/app/renderer/RenderKernel.kt'), 'utf-8');
+ok(kernel.includes('__emitKernelEvent') && kernel.includes('fun emitEvent'), 'RenderKernel.emitEvent 发射端在位');
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);
