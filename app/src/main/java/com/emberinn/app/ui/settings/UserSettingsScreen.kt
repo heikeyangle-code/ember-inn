@@ -144,6 +144,18 @@ fun UserSettingsScreen(
                                 checked = behavior.smoothStreamingNoThink,
                             ) { saveBehavior(behavior.copy(smoothStreamingNoThink = it)) }
                         }
+                        UserSwitchRow(
+                            label = "回复音效",
+                            hint = "play_message_sound：AI 回复完成时短促提示音（默认关）",
+                            checked = behavior.playMessageSound,
+                        ) { saveBehavior(behavior.copy(playMessageSound = it)) }
+                        if (behavior.playMessageSound) {
+                            UserSwitchRow(
+                                label = "仅后台提示",
+                                hint = "play_sound_unfocused（官方默认开；当前前后台同音，登记边界）",
+                                checked = behavior.playSoundUnfocused,
+                            ) { saveBehavior(behavior.copy(playSoundUnfocused = it)) }
+                        }
                     }
                 }
                 item {

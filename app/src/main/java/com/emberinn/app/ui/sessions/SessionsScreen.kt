@@ -453,7 +453,7 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                                     lerp(seed, EmberTheme.colors.surface, 0.80f),
                                 )
                             } else {
-                                listOf(EmberTheme.colors.accentContainer, EmberTheme.colors.surface2)
+                                listOf(EmberTheme.colors.surface, EmberTheme.colors.surface2)
                             },
                         ),
                     ),

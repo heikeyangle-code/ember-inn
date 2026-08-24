@@ -20,6 +20,9 @@ data class BehaviorSettings(
     val smoothStreaming: Boolean = false,
     val smoothStreamingSpeed: Int = 50,
     val smoothStreamingNoThink: Boolean = false,
+    /** 官方 power_user.play_message_sound / play_sound_unfocused：回复音效（前台）/仅后台提示。 */
+    val playMessageSound: Boolean = false,
+    val playSoundUnfocused: Boolean = true,
     val autoSwipe: Boolean = false,
     val autoSwipeMinimumLength: Int = 0,
     val autoSwipeBlacklist: Set<String> = emptySet(),
@@ -64,6 +67,8 @@ object BehaviorPrefs {
             smoothStreaming = p.getBoolean("smooth_streaming", false),
             smoothStreamingSpeed = p.getInt("smooth_streaming_speed", 50),
             smoothStreamingNoThink = p.getBoolean("smooth_streaming_no_think", false),
+            playMessageSound = p.getBoolean("play_message_sound", false),
+            playSoundUnfocused = p.getBoolean("play_sound_unfocused", true),
             autoSwipe = p.getBoolean("auto_swipe", false),
             autoSwipeMinimumLength = p.getInt("auto_swipe_minimum_length", 0),
             autoSwipeBlacklist = (p.getStringSet("auto_swipe_blacklist", emptySet()) ?: emptySet()).toSet(),
@@ -87,6 +92,8 @@ object BehaviorPrefs {
             .putBoolean("smooth_streaming", s.smoothStreaming)
             .putInt("smooth_streaming_speed", s.smoothStreamingSpeed)
             .putBoolean("smooth_streaming_no_think", s.smoothStreamingNoThink)
+            .putBoolean("play_message_sound", s.playMessageSound)
+            .putBoolean("play_sound_unfocused", s.playSoundUnfocused)
             .putBoolean("auto_swipe", s.autoSwipe)
             .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
             .putStringSet("auto_swipe_blacklist", s.autoSwipeBlacklist)
