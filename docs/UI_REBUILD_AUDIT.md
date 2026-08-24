@@ -38,7 +38,7 @@
 |---|---|---|
 | 今夜主页 §4.1 | ✅ | TonightScreen 全要素 |
 | 导航栈/全局搜索 §4.2 | 🟡 | 栈已落；搜索面板未建 |
-| 角色库海报墙 §4.3 | ⬜ | CharactersScreen 仍为旧搜索式首页结构 |
+| 角色库海报墙 §4.3 | 🟡 | 双列瀑布 PosterTile+幽灵导入砖已落（c4c322fc）；集合 chips（bogus_folders）与排序选择器待接 |
 | 角色详情幕布 §4.4 | ⬜ | CharacterDetailScreen 未重做 |
 | 世界卷轴架 §4.5 | 🟡 | WorldInfoScreen 新语言完成；烛火点/命中统计在设置页形态，独立「世界」目的地未拆出 |
 | 设置搜索先行 §4.6 | ✅ | SettingsHome 搜索场+分区行+实时值 |
