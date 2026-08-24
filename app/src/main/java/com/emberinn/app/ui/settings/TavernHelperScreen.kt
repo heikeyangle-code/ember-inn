@@ -45,6 +45,7 @@ fun TavernHelperScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize()) {
             SettingsTopBar(
                 title = "酒馆助手",
+                subtitle = "前端卡脚本沙箱 · TH API 兼容层",
                 onBack = onBack,
                 sky = settingsSky,
             )

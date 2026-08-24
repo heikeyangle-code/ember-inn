@@ -93,7 +93,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
 
     SettingsGlassPage { settingsSky ->
         Column(modifier = Modifier.fillMaxSize()) {
-            SettingsTopBar(title = "背景", onBack = onBack, sky = settingsSky)
+            SettingsTopBar(title = "背景", subtitle = "全局背景与适配 · 会话级在聊天页设置", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
