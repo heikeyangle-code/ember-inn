@@ -864,6 +864,14 @@ fun ChatScreen(
     // 不重建整个 #chat——每 tick 全量 renderChat 会重挂全部消息节点，图片重载、滚动抖动。
     // 节流 ~120ms；结束后的权威渲染由 messages/isStreaming 变化触发 renderChat 完成。
     val behaviorSmooth = remember { BehaviorPrefs.load(context) }
+    // 官方 play_message_sound：回复完成提示音（isStreaming 真→假跳变时触发一次）
+    var prevStreaming by remember { mutableStateOf(false) }
+    LaunchedEffect(isStreaming) {
+        if (prevStreaming && !isStreaming && !isImpersonating && behaviorSmooth.playMessageSound) {
+            com.emberinn.app.ui.design.components.EmberSound.message(context)
+        }
+        prevStreaming = isStreaming
+    }
     LaunchedEffect(isStreaming, isImpersonating) {
         if (!isStreaming || isImpersonating) return@LaunchedEffect
         var lastPush = 0L
