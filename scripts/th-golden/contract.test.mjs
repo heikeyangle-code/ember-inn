@@ -45,6 +45,12 @@ const phase1Functions = [
     'eventOn', 'eventMakeFirst', 'eventMakeLast', 'eventRemoveListener', 'eventEmit',
     'substitudeMacros', 'getLastMessageId', 'getMessageId',
     'getChatMessages', 'setChatMessages', 'createChatMessages', 'deleteChatMessages', 'rotateChatMessages',
+    // Batch A: 世界书族 + 版本
+    'getWorldbookNames', 'getGlobalWorldbookNames', 'getWorldbook', 'createWorldbook',
+    'createOrReplaceWorldbook', 'deleteWorldbook', 'replaceWorldbook', 'updateWorldbookWith',
+    'createWorldbookEntries', 'deleteWorldbookEntries',
+    'getChatWorldbookName', 'rebindChatWorldbook', 'getOrCreateChatWorldbook',
+    'getTavernHelperVersion', 'getTavernVersion',
 ];
 for (const name of phase1Functions) t(`API 存在: ${name}`, typeof window[name] === 'function');
 t('tavern_events = event_types 别名', window.tavern_events === window.event_types && !!window.tavern_events.GENERATION_STARTED);

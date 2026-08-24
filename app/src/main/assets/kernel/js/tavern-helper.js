@@ -347,4 +347,205 @@
             scheduleSweep();
         });
     }
+
+    // =====================================================================
+    // 6. 世界书族（Batch A）：Bridge 只搬官方原文，官方↔TH 形状转换在此层
+    //    逐字对照 src/function/worldbook.ts L176-356 的字段映射
+    // =====================================================================
+    var POSITION_TO_TYPE = {
+        '0': 'before_character_definition', '1': 'after_character_definition',
+        '5': 'before_example_messages', '6': 'after_example_messages',
+        '2': 'before_author_note', '3': 'after_author_note',
+        '4': 'at_depth', '7': 'outlet',
+    };
+    var TYPE_TO_POSITION = {
+        before_character_definition: 0, after_character_definition: 1,
+        before_example_messages: 5, after_example_messages: 6,
+        before_author_note: 2, after_author_note: 3, at_depth: 4, outlet: 7,
+    };
+    var SELECTIVE_LOGIC = { 0: 'and_any', 1: 'not_all', 2: 'not_any', 3: 'and_all' };
+    var LOGIC_TO_NUM = { and_any: 0, not_all: 1, not_any: 2, and_all: 3 };
+    var ROLE_TO_NAME = { 0: 'system', 1: 'user', 2: 'assistant' };
+    var NAME_TO_ROLE = { system: 0, user: 1, assistant: 2 };
+
+    /** TH parseRegexFromString：'/pattern/flags' → RegExp，其余原样 */
+    function parseRegexFromString(value) {
+        if (typeof value !== 'string') { return value; }
+        var m = value.match(/^\/(.*)\/([gimsuy]*)$/s);
+        if (m) { try { return new RegExp(m[1], m[2]); } catch (e) { /* 非法正则按字面量 */ } }
+        return value;
+    }
+
+    function toStringValue(v) {
+        return (v instanceof RegExp) ? ('/' + v.source + '/' + v.flags) : String(v == null ? '' : v);
+    }
+
+    /** 官方条目 → TH WorldbookEntry（toWorldbookEntry 同构） */
+    function toWorldbookEntry(o) {
+        o = o || {};
+        var delayUntil = typeof o.delayUntilRecursion === 'number' && o.delayUntilRecursion > 0 ? o.delayUntilRecursion : null;
+        return {
+            uid: typeof o.uid === 'number' ? o.uid : 0,
+            name: o.comment != null ? o.comment : '',
+            enabled: o.disable !== true,
+            strategy: {
+                type: o.constant ? 'constant' : o.vectorized ? 'vectorized' : 'selective',
+                keys: (o.key || []).map(parseRegexFromString),
+                keys_secondary: {
+                    logic: SELECTIVE_LOGIC[o.selectiveLogic] || 'and_any',
+                    keys: (o.keysecondary || []).map(parseRegexFromString),
+                },
+                scan_depth: o.scanDepth != null ? o.scanDepth : 'same_as_global',
+            },
+            position: {
+                type: POSITION_TO_TYPE[String(o.position)] || 'before_character_definition',
+                role: ROLE_TO_NAME[o.role == null ? 0 : o.role] || 'system',
+                depth: typeof o.depth === 'number' ? o.depth : 4,
+                order: typeof o.order === 'number' ? o.order : 100,
+            },
+            content: o.content != null ? o.content : '',
+            probability: o.useProbability === false ? 100 : (typeof o.probability === 'number' ? o.probability : 100),
+            recursion: {
+                prevent_incoming: o.excludeRecursion === true,
+                prevent_outgoing: o.preventRecursion === true,
+                delay_until: delayUntil,
+            },
+            effect: {
+                sticky: typeof o.sticky === 'number' && o.sticky > 0 ? o.sticky : null,
+                cooldown: typeof o.cooldown === 'number' && o.cooldown > 0 ? o.cooldown : null,
+                delay: typeof o.delay === 'number' && o.delay > 0 ? o.delay : null,
+            },
+        };
+    }
+
+    /** TH WorldbookEntry(部分) → 官方条目（fromWorldbookEntry 同构） */
+    function fromWorldbookEntry(e, displayIndex) {
+        e = e || {};
+        var st = e.strategy || {};
+        var pos = e.position || {};
+        var rec = e.recursion || {};
+        var eff = e.effect || {};
+        return {
+            uid: typeof e.uid === 'number' ? e.uid : displayIndex,
+            displayIndex: displayIndex,
+            comment: e.name != null ? String(e.name) : '',
+            disable: !(e.enabled !== false),
+            constant: st.type ? st.type === 'constant' : true,
+            selective: st.type === 'selective',
+            key: (st.keys || []).map(toStringValue),
+            selectiveLogic: LOGIC_TO_NUM[(st.keys_secondary || {}).logic] != null
+                ? LOGIC_TO_NUM[st.keys_secondary.logic] : 0,
+            keysecondary: ((st.keys_secondary || {}).keys || []).map(toStringValue),
+            scanDepth: st.scan_depth === 'same_as_global' || st.scan_depth == null ? null : st.scan_depth,
+            vectorized: st.type === 'vectorized',
+            position: TYPE_TO_POSITION[pos.type] != null ? TYPE_TO_POSITION[pos.type] : 0,
+            role: NAME_TO_ROLE[pos.role] != null ? NAME_TO_ROLE[pos.role] : 0,
+            depth: typeof pos.depth === 'number' ? pos.depth : 4,
+            order: typeof pos.order === 'number' ? pos.order : 100,
+            content: e.content != null ? String(e.content) : '',
+            useProbability: e.probability !== undefined,
+            probability: typeof e.probability === 'number' ? e.probability : 100,
+            excludeRecursion: rec.prevent_incoming === true,
+            preventRecursion: rec.prevent_outgoing === true,
+            delayUntilRecursion: typeof rec.delay_until === 'number' ? rec.delay_until : false,
+            sticky: typeof eff.sticky === 'number' ? eff.sticky : false,
+            cooldown: typeof eff.cooldown === 'number' ? eff.cooldown : false,
+            delay: typeof eff.delay === 'number' ? eff.delay : false,
+        };
+    }
+
+    function worldEntries(name) {
+        return shimCallStrict('th.worldbook.raw', { name: name }).then(function (r) {
+            var parsed = JSON.parse(r.value);
+            var map = parsed && typeof parsed === 'object' ? (parsed.entries || parsed) : {};
+            var arr = [];
+            Object.keys(map).forEach(function (uid) { arr[Number(uid)] = map[uid]; });
+            var out = [];
+            for (var i = 0; i < arr.length; i++) { if (arr[i]) { out.push(toWorldbookEntry(arr[i])); } }
+            return out;
+        });
+    }
+
+    function saveWorldEntries(name, thEntries) {
+        var entriesMap = {};
+        (thEntries || []).forEach(function (e, i) {
+            var o = fromWorldbookEntry(e, i);
+            entriesMap[String(o.uid != null ? o.uid : i)] = o;
+        });
+        return shimCallStrict('th.worldbook.saveRaw', {
+            name: String(name), content: JSON.stringify({ entries: entriesMap }),
+        }).then(function (r) { return !!r.value; });
+    }
+
+    window.getWorldbookNames = function () {
+        return shimCallStrict('th.worldbook.names', null).then(function (r) { return r.value || []; });
+    };
+    /** 全局世界书：App 尚无全局绑定概念，空表（Batch B 登记接等价物） */
+    window.getGlobalWorldbookNames = function () { return Promise.resolve([]); };
+    window.getChatWorldbookName = function () {
+        return shimCallStrict('th.worldbook.chatWorld', null).then(function (r) { return r.value || null; });
+    };
+    window.rebindChatWorldbook = function (_chatName, worldbookName) {
+        return shimCallStrict('th.worldbook.setChatWorld', { name: worldbookName == null ? null : String(worldbookName) })
+            .then(function () { return undefined; });
+    };
+    window.getOrCreateChatWorldbook = function (_chatName, worldbookName) {
+        return window.getChatWorldbookName().then(function (current) {
+            if (current) { return current; }
+            var target = worldbookName != null ? String(worldbookName) : ('chat-' + (window.__shimChar || 'default') + '-worldbook');
+            return shimCallStrict('th.worldbook.create', { name: target })
+                .then(function () { return shimCallStrict('th.worldbook.setChatWorld', { name: target }); })
+                .then(function () { return target; });
+        });
+    };
+    window.getWorldbook = function (name) { return worldEntries(String(name)); };
+    window.createWorldbook = function (name, entries) {
+        return shimCallStrict('th.worldbook.create', { name: String(name) })
+            .then(function () { return saveWorldEntries(String(name), entries || []); });
+    };
+    window.createOrReplaceWorldbook = function (name, entries) {
+        return window.getWorldbookNames().then(function (names) {
+            return names.indexOf(String(name)) !== -1
+                ? saveWorldEntries(String(name), entries || [])
+                : window.createWorldbook(String(name), entries);
+        });
+    };
+    window.deleteWorldbook = function (name) {
+        return shimCallStrict('th.worldbook.delete', { name: String(name) }).then(function (r) { return !!r.value; });
+    };
+    window.replaceWorldbook = function (name, entries) { return saveWorldEntries(String(name), entries); };
+    window.updateWorldbookWith = function (name, updater) {
+        return window.getWorldbook(name).then(function (entries) {
+            var result = updater(entries);
+            return (result && typeof result.then === 'function')
+                ? result.then(function (next) { return saveWorldEntries(String(name), next); })
+                : saveWorldEntries(String(name), result);
+        });
+    };
+    window.createWorldbookEntries = function (name, entries) {
+        return window.getWorldbook(name).then(function (existing) {
+            var maxUid = existing.reduce(function (m, e) { return Math.max(m, e.uid); }, -1);
+            (entries || []).forEach(function (e, i) {
+                e.uid = (e && typeof e.uid === 'number') ? e.uid : ++maxUid;
+                existing.push(e);
+            });
+            return saveWorldEntries(String(name), existing);
+        });
+    };
+    window.deleteWorldbookEntries = function (name, uids) {
+        var kill = {};
+        (uids || []).forEach(function (u) { kill[u] = true; });
+        return window.getWorldbook(name).then(function (existing) {
+            return saveWorldEntries(String(name), existing.filter(function (e) { return !kill[e.uid]; }));
+        });
+    };
+    window.rebindGlobalWorldbooks = function () {
+        return Promise.reject(new Error('[EmberInn] rebindGlobalWorldbooks 待 Batch B（全局绑定概念未落地）'));
+    };
+
+    // =====================================================================
+    // 7. 版本常量（version.ts；TH 包版本与官方基线版本）
+    // =====================================================================
+    window.getTavernHelperVersion = function () { return '4.9.3'; };
+    window.getTavernVersion = function () { return '1.18.0'; };
 })();

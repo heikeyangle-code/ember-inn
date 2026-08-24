@@ -36,6 +36,15 @@ object TavernHelperBridge {
         fun contextSnapshotJson(): String
         fun isStreaming(): Boolean
         fun mutateMessages(transform: (List<JsonElement>) -> List<JsonElement>)
+
+        // ---- 世界书族（Batch A）：官方原文 JSON 原样搬运，形状转换在内核 JS ----
+        fun worldNames(): List<String>
+        fun worldRaw(name: String): String?
+        fun saveWorldRaw(name: String, content: String): Boolean
+        fun createWorld(name: String): Boolean
+        fun deleteWorld(name: String): Boolean
+        fun chatWorldName(): String?
+        fun setChatWorldName(name: String?)
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -101,6 +110,45 @@ object TavernHelperBridge {
                 out.addAll(b, right)
                 out
             }
+            """{"ok":true}"""
+        }
+        // ---- 世界书族（Batch A）：原文搬运，TH 形状转换在 tavern-helper.js ----
+        "th.worldbook.names" ->
+            """{"ok":true,"value":${json.encodeToString(
+                kotlinx.serialization.serializer<List<String>>(),
+                host.worldNames(),
+            )}}"""
+        "th.worldbook.raw" -> {
+            val p = params(paramsJson) ?: return errMsg("参数无效")
+            val name = p.str("name") ?: return errMsg("需要 name")
+            val raw = host.worldRaw(name)
+            if (raw == null) """{"ok":false,"error":"worldbook not found: $name"}"""
+            else """{"ok":true,"value":${json.encodeToString(
+                kotlinx.serialization.json.JsonPrimitive.serializer(),
+                kotlinx.serialization.json.JsonPrimitive(raw),
+            )}}"""
+        }
+        "th.worldbook.saveRaw" -> {
+            val p = params(paramsJson) ?: return errMsg("参数无效")
+            val name = p.str("name") ?: return errMsg("需要 name")
+            val content = p.str("content") ?: return errMsg("需要 content")
+            """{"ok":true,"value":${host.saveWorldRaw(name, content)}}"""
+        }
+        "th.worldbook.create" -> {
+            val p = params(paramsJson) ?: return errMsg("参数无效")
+            """{"ok":true,"value":${host.createWorld(p.str("name").orEmpty())}}"""
+        }
+        "th.worldbook.delete" -> {
+            val p = params(paramsJson) ?: return errMsg("参数无效")
+            """{"ok":true,"value":${host.deleteWorld(p.str("name").orEmpty())}}"""
+        }
+        "th.worldbook.chatWorld" ->
+            """{"ok":true,"value":${host.chatWorldName()?.let {
+                json.encodeToString(kotlinx.serialization.json.JsonPrimitive.serializer(), kotlinx.serialization.json.JsonPrimitive(it))
+            } ?: "null"}}"""
+        "th.worldbook.setChatWorld" -> {
+            val p = params(paramsJson) ?: return errMsg("参数无效")
+            host.setChatWorldName(p.str("name"))
             """{"ok":true}"""
         }
         else -> null

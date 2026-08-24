@@ -254,6 +254,18 @@ fun ChatScreen(
             override fun isStreaming(): Boolean = vm.isStreaming.value
             override fun mutateMessages(transform: (List<kotlinx.serialization.json.JsonElement>) -> List<kotlinx.serialization.json.JsonElement>) =
                 vm.mutateChatMessages(transform)
+            // 世界书族：组合根直持 WorldStore（文件型轻量仓），原文搬运不经 VM
+            private val worlds by lazy { com.emberinn.app.data.WorldStore(context.applicationContext) }
+            override fun worldNames(): List<String> = worlds.list().map { it.name }
+            override fun worldRaw(name: String): String? = worlds.export(name)
+            // 能力边界：WorldStore 当前无公开原文覆写口；importWorld 对已存在文件返回 false 时
+            // 由 JS 层报错兜底（TH replace 族 Batch A+ 补 Store 原语后打通）
+            override fun saveWorldRaw(name: String, content: String): Boolean =
+                runCatching { worlds.importWorld("$name.json", content) }.getOrDefault(false)
+            override fun createWorld(name: String): Boolean = runCatching { worlds.create(name); true }.getOrDefault(false)
+            override fun deleteWorld(name: String): Boolean = worlds.delete(name)
+            override fun chatWorldName(): String? = vm.chatWorld()
+            override fun setChatWorldName(name: String?) { name?.let(vm::setChatWorld) }
         }
         StApiShimInstaller.install(
             kernelPool,
