@@ -349,48 +349,48 @@ private fun SectionRow(section: OfficialSection) {
     }
 }
 
-/** 关于页：版本 / 许可 / 仓库 / 本地数据声明。 */
+/** 关于页（新语言）：版本 / 许可 / 仓库 / 本地数据声明，E0 平面行式。 */
 @Composable
 private fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val c = EmberTheme.colors
     SettingsGlassPage { settingsSky ->
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsTopBar(title = "关于", onBack = onBack, sky = settingsSky)
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         ) {
-            Text("EmberInn", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("EmberInn", color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 "SillyTavern 兼容的原生 Android 客户端",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = c.inkMute,
+                fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(13.dp),
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    InfoLine("版本", "0.1.0")
-                    InfoLine("开源许可", "AGPL-3.0")
-                    InfoLine("数据", "默认只保存在本机")
-                    InfoLine("仓库", "github.com/heikeyangle-code/ember-inn")
-                }
+                InfoLine("版本", "0.1.0")
+                InfoLine("开源许可", "AGPL-3.0")
+                InfoLine("数据", "默认只保存在本机")
+                InfoLine("仓库", "github.com/heikeyangle-code/ember-inn")
             }
-            TextButton(
-                onClick = {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
-                        )
+            Text(
+                "访问开源仓库",
+                color = c.accent,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/heikeyangle-code/ember-inn"))
+                            )
+                        }
                     }
-                },
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Text("访问开源仓库")
-            }
+                    .padding(4.dp),
+            )
         }
     }
     }
@@ -398,29 +398,28 @@ private fun AboutScreen(onBack: () -> Unit) {
 
 @Composable
 private fun InfoLine(label: String, value: String) {
+    val c = EmberTheme.colors
     Row(modifier = Modifier.fillMaxWidth()) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, color = c.inkMute, fontSize = 14.sp)
         Spacer(Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(value, color = c.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
-/** 设置页玻璃容器：静态背景层作为顶栏毛玻璃的 sky 源（内容滚动不触发整屏重捕）。 */
+/** 设置页容器（新语言）：纯页底平面，无玻璃重捕层。sky 形参保留以兼容既有调用点。 */
 @Composable
 fun SettingsGlassPage(content: @Composable (com.skydoves.cloudy.Sky) -> Unit) {
     val sky = rememberSky()
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .sky(sky)
-                .background(EmberTheme.colors.bg),
-        )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(EmberTheme.colors.bg),
+    ) {
         content(sky)
     }
 }
 
-/** 设置子页通用顶栏（玻璃模式：传 sky 后为毛玻璃 + 边缘高光；不传保持透明）。 */
+/** 设置子页通用顶栏（新语言 §4.6）：透明平面 + 弱墨返回粒 + 墨阶标题，无实底无投影。 */
 @Composable
 fun SettingsTopBar(
     title: String,
@@ -430,28 +429,30 @@ fun SettingsTopBar(
     trailing: (@Composable () -> Unit)? = null,
     sky: com.skydoves.cloudy.Sky? = null,
 ) {
-    Surface(
-        color = if (sky != null) MaterialTheme.colorScheme.surface.copy(alpha = 0.16f) else Color.Transparent,
-        shadowElevation = if (sky != null) 1.dp else 0.dp,
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .emberGlass(sky = sky, atTop = false),
+            .padding(start = 10.dp, end = 12.dp, top = 14.dp, bottom = 8.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+        // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center,
         ) {
-            // 返回按钮在左上角，但留足上下间距（避免贴最高处被状态栏遮挡）
-            IconButton(onClick = onBack) {
-                Icon(FaIcons.ArrowLeft, contentDescription = "返回")
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                if (subtitle != null) {
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            trailing?.invoke()
+            Icon(FaIcons.ChevronLeft, contentDescription = "返回", tint = c.inkMute, modifier = Modifier.size(18.dp))
         }
+        Spacer(Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = c.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            if (subtitle != null) {
+                Text(subtitle, color = c.inkMute, fontSize = 12.sp)
+            }
+        }
+        trailing?.invoke()
     }
 }
