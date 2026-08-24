@@ -70,7 +70,7 @@
 | ui/components 13 文件删除 | ⬜ 同上 |
 | MainScreen 重写 | ✅ |
 | home/sessions 重写 | 🟡 Tonight✅ Sessions✅ Characters/Detail⬜ |
-| settings 子屏重写 | 🟡 已完整重写 11 屏（主页/AI响应/扩展/用户设置/世界书/人设/图片说明/消息渲染/作者注释官方序/表情/记忆/酒馆助手/背景/数据隐私/快捷回复/正则/语音=17 屏）；余 Appearance/PromptManager/Services/Presets/Provider |
+| settings 子屏重写 | ✅ 17 屏完整重写（主页/AI响应/扩展/用户设置/世界书/人设/图片说明/消息渲染/作者注释官方序/表情/记忆/酒馆助手/背景/数据隐私/快捷回复/正则/语音）；🟡 余：Appearance(已令牌化留R4换件)/PromptManager/Services/Presets收尾/Provider收尾 |
 | onboarding/icons 重写 | ✅ / 图标族沿用 FaIcons（细线几何达标） |
 | chat 铬件 REFIT | ✅ |
 
