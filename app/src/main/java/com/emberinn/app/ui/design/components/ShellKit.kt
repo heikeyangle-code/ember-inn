@@ -445,6 +445,60 @@ fun ShellActionButton(
     }
 }
 
+/** 统一底部弹层：主题底色容器，无默认把手拖泥。 */
+@Composable
+fun ShellSheet(
+    onDismiss: () -> Unit,
+    title: String? = null,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val c = EmberTheme.colors
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = c.bg,
+        tonalElevation = 0.dp,
+    ) {
+        Column(Modifier.padding(bottom = 26.dp)) {
+            if (title != null) {
+                Text(
+                    title,
+                    color = c.ink,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                )
+            }
+            content()
+        }
+    }
+}
+
+/** 弹层动作行：图标 + 标签 + 可选副文本；danger 行用语义红。 */
+@Composable
+fun SheetRow(
+    icon: ImageVector,
+    label: String,
+    subtitle: String? = null,
+    danger: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = if (danger) c.danger else c.inkMute, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, color = if (danger) c.danger else c.ink, fontSize = 15.sp)
+            if (subtitle != null) Text(subtitle, color = c.inkMute, fontSize = 11.sp)
+        }
+    }
+}
+
 /** 导航栈条目（FloatHub 内部用）。 */
 data class HubItem(val label: String, val icon: ImageVector)
 
