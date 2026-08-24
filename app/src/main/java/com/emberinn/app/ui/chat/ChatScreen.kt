@@ -4185,13 +4185,15 @@ private fun generationTimerOf(el: JsonElement): Pair<String, String>? {
     val startRaw = obj["gen_started"]?.jsonPrimitive?.contentOrNull ?: return null
     val finishRaw = obj["gen_finished"]?.jsonPrimitive?.contentOrNull ?: return null
     if (startRaw.isEmpty() || finishRaw.isEmpty()) return null
-    fun parse(raw: String) = runCatching {
-        java.time.OffsetDateTime.parse(raw).toInstant()
-    }.recoverCatching { java.time.Instant.parse(raw) }
-        .recoverCatching {
-            java.time.LocalDateTime.parse(raw.replace(' ', 'T'))
-                .toInstant(java.time.ZoneOffset.UTC)
-        }.getOrNull() ?: return null
+    fun parse(raw: String): java.time.Instant? {
+        return runCatching {
+            java.time.OffsetDateTime.parse(raw).toInstant()
+        }.recoverCatching { java.time.Instant.parse(raw) }
+            .recoverCatching {
+                java.time.LocalDateTime.parse(raw.replace(' ', 'T'))
+                    .toInstant(java.time.ZoneOffset.UTC)
+            }.getOrNull()
+    }
     val start = parse(startRaw) ?: return null
     val finish = parse(finishRaw) ?: return null
     val seconds = java.time.Duration.between(start, finish).toMillis() / 1000.0
