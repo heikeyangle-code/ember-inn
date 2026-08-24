@@ -26,7 +26,7 @@ import kotlin.coroutines.resume
 class KernelWebViewPool(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
-    private val warmup: Int = 2,
+    private val warmup: Int = 1,
     private val maxSize: Int = 8,
 ) {
     class PooledWebView internal constructor(
@@ -187,11 +187,10 @@ class KernelWebViewPool(
     }
 
     fun preload() {
+        // 低端机教训：多 WebView 并发创建会挤爆/反复杀死共享渲染进程（渲染 1s 即崩的循环）。
+        // 单实例串行预热；第二个实例只在真正被 acquire 需要时才建。
         scope.launch(Dispatchers.Main) {
-            // 并发预热：createAndWarm 挂起等待 kernelReady，串行会叠加两份冷启动耗时
-            repeat(warmup) {
-                launch { runCatching { createAndWarm() }.onFailure { reportError("内核实例预热失败", it) } }
-            }
+            runCatching { createAndWarm() }.onFailure { reportError("内核实例预热失败", it) }
         }
     }
 
