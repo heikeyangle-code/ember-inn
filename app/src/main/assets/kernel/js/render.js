@@ -862,6 +862,11 @@
         var chat = document.getElementById('chat');
         if (!chat) { return; }
         chat.addEventListener('scroll', function () {
+            document.body.classList.add('is-scrolling');
+            if (chat._isScrollingTimer) { clearTimeout(chat._isScrollingTimer); }
+            chat._isScrollingTimer = setTimeout(function () {
+                document.body.classList.remove('is-scrolling');
+            }, 150);
             if (document.body.classList.contains('waifuMode')) {
                 scrollLock = true;
                 bridgeSend({ type: 'chatScroll', atBottom: atBottom });

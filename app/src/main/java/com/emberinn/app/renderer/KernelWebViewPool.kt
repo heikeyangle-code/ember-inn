@@ -336,8 +336,8 @@ class KernelWebViewPool(
                         instance.ready -> cont.resume(instance)
                         !cont.isActive -> Unit
                         System.currentTimeMillis() >= deadline -> {
-                            synchronized(all) { all.remove(instance) }
-                            runCatching { instance.webView.destroy() }
+                            // 慢设备冷加载可超 15s:只对本次调用方报错,实例留池继续加载
+                            // (就绪后自然进 idle 供后续使用;此前销毁=把慢而健康的实例误杀)
                             cont.resumeWithException(
                                 IllegalStateException(
                                     "kernelReady 超时(${READY_TIMEOUT_MS / 1000}s)：页面未加载或 JS 未执行" +
@@ -407,6 +407,6 @@ class KernelWebViewPool(
     companion object {
         private const val TAG = "EmberInnKernel"
         /** kernelReady 等待上限：正常冷启动 <2s；超时即视为页面加载/JS 执行失败（黑匣子上报后销毁实例） */
-        private const val READY_TIMEOUT_MS = 15_000L
+        private const val READY_TIMEOUT_MS = 30_000L
     }
 }

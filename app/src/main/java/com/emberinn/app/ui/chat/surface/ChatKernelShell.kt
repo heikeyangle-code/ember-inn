@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.chat.surface
 
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.Box
@@ -112,6 +113,12 @@ fun ChatKernelShell(
                 ),
             )
             host = pooled
+            android.util.Log.e("EmberInnKernel",
+                "attach slot=${target.width}x${target.height} view=${pooled.webView.width}x${pooled.webView.height}")
+            target.post {
+                android.util.Log.e("EmberInnKernel",
+                    "attached-post slot=${target.width}x${target.height} view=${pooled.webView.width}x${pooled.webView.height}")
+            }
             // C3：草稿回填（applyPageSetup 不携带草稿，挂载点单独下发）
             RenderKernel(pooled).pushInputText(draftProvider())
         }

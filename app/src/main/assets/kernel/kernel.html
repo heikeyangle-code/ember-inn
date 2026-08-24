@@ -97,6 +97,15 @@
             width: 100% !important;
             bottom: auto !important;
         }
+        /* 滚动性能:backdrop-filter 每帧重算是大面积玻璃主题的掉帧主凶;
+           滚动期间整体挂起,停止 150ms 后由 JS 摘类恢复 */
+        body.is-scrolling #sheld,
+        body.is-scrolling #chat *,
+        body.is-scrolling #form_sheld * {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            transition: none !important;
+        }
     </style>
 </head>
 <body class="light-theme fullchat">
