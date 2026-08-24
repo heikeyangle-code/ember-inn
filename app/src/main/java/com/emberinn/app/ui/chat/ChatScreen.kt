@@ -1019,18 +1019,6 @@ fun ChatScreen(
         kernelPool.updateInputState(generating = isStreaming)
     }
 
-    // X 光诊断：进页 8 秒后取内核页 DOM 事实（行数/容器高度/display/body 类/载荷数），
-    // toast 显性报告——白屏从此有第一手数据，不再靠猜。消息为空时跳过。
-    LaunchedEffect(kernelPool, messages.size) {
-        if (messages.isEmpty()) return@LaunchedEffect
-        kotlinx.coroutines.delay(8_000)
-        val payloadCount = kernelPayloads.size
-        kernelPool.acquireSingle { pooled ->
-            RenderKernel(pooled).diagnose(payloadCount) { json ->
-                Toast.makeText(context, "内核体检：$json", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
 
     // 官方冒充：流式正文实时写入 #send_textarea（StreamingProcessor L3600-3603 同构，含 VM 侧逐 tick 清洗）；
     // 结束后成品留在草稿框（官方不自动发送），inputChanged 镜像在冒充期间被抑制
@@ -1323,6 +1311,33 @@ fun ChatScreen(
 
     }
 
+    var kernelDiagReport by remember { mutableStateOf<String?>(null) }
+    if (kernelDiagReport != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { kernelDiagReport = null },
+            title = { Text("内核体检", fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(max = 420.dp),
+                ) {
+                    Text(
+                        kernelDiagReport.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    clipboard.setText(AnnotatedString(kernelDiagReport.orEmpty()))
+                    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                }) { Text("复制全部") }
+            },
+            dismissButton = { TextButton(onClick = { kernelDiagReport = null }) { Text("关闭") } },
+        )
+    }
     if (worldPanel) {
         EmberBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
@@ -1681,6 +1696,13 @@ fun ChatScreen(
                 MenuRow(FaIcons.ChartPie, "Token 概率（logprobs）") {
                     showMore = false
                     showLogprobsSheet = true
+                }
+                MenuRow(FaIcons.ChartPie, "内核体检（渲染诊断）") {
+                    showMore = false
+                    val count = kernelPayloads.size
+                    kernelPool.acquireSingle { pooled ->
+                        RenderKernel(pooled).diagnose(count) { json -> kernelDiagReport = json }
+                    }
                 }
                 // ── 官方检查点组：back_to_main / new_bookmark / convert_to_group ──
                 MenuSectionLabel("检查点与分支")

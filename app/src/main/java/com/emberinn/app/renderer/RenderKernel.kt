@@ -147,21 +147,34 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
 
     fun clear(onDone: ((String?) -> Unit)? = null) = eval("window.Kernel.clear();", onDone)
 
-    /** X 光诊断（白屏排查）：回传内核页关键 DOM 事实的 JSON 字符串。
-     *  ready/mesCount/sheldH/chatH/formH/formDisplay/bodyClass/payloadLen */
+    /** X 光诊断：回传内核页渲染全链路事实的 JSON 字符串（菜单「内核体检」入口，被动零开销）。 */
     fun diagnose(payloadCount: Int, onResult: (String) -> Unit) {
         val js = """
             (function(){
               function h(id){var e=document.getElementById(id);if(!e)return 'MISSING';
                 var cs=getComputedStyle(e);return Math.round(e.getBoundingClientRect().height)+'px/'
                   +cs.display+'/'+cs.position;}
+              var csEl=document.getElementById('custom-style');
+              var pack=document.getElementById('style-pack-style');
+              var firstMes=document.querySelector('#chat .mes .mes_text');
               var __d=JSON.stringify({
                 ready:!!(window.Kernel&&window.Kernel.ready),
+                generating:document.body.getAttribute('data-generating'),
                 mesCount:document.querySelectorAll('#chat .mes').length,
-                sheld:h('sheld'),chat:h('chat'),form:h('form_sheld'),
+                firstTextLen:firstMes?firstMes.textContent.length:-1,
+                sheld:h('sheld'),chat:h('chat'),form:h('form_sheld'),bg1:h('bg1'),
+                bgImage:(document.getElementById('bg1')||{style:{}}).style.backgroundImage||'none',
                 bodyClass:document.body.className,
-                href:location.href,
-                payloadCount:$payloadCount
+                chatDisplay:getComputedStyle(document.body).getPropertyValue('--sheldWidth'),
+                fontScale:getComputedStyle(document.documentElement).getPropertyValue('--fontScale'),
+                customCssLen:csEl?csEl.textContent.length:-1,
+                stylePackHref:pack?pack.getAttribute('href'):'none',
+                styleSheetCount:document.styleSheets.length,
+                viewport:window.innerWidth+'x'+window.innerHeight+'@'+window.devicePixelRatio,
+                href:location.href.replace('https://appassets.androidplatform.net',''),
+                payloadCount:$payloadCount,
+                kernelApi:window.Kernel?Object.keys(window.Kernel).length:-1,
+                thApi:[typeof getVariables,typeof triggerSlash,typeof eventOn,typeof getChatMessages].join(',')
               });
               console.error(__d);
               return __d;
