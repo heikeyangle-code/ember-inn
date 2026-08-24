@@ -2,7 +2,6 @@ package com.emberinn.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,11 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,18 +27,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.GenerationPrefs
-import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmberSwitch
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 
 /**
  * 用户设置（官方 div_user_settings 移植）：
  * UI 主题/排版/渲染入口 + 聊天与消息处理（power_user 语义）+ 自动滑动/续写 + 用户提示偏置。
+ * 视觉层=新语言：E0 分组留白分隔，无卡片框；全部 hint 保留官方键名与默认值口径。
  */
 @Composable
 fun UserSettingsScreen(
@@ -68,19 +65,17 @@ fun UserSettingsScreen(
             SettingsTopBar(title = "用户设置", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 item {
-                    UserNavCard("外观与主题", "主题模式 · 预设 · 氛围滤镜 · 圆角字体", FaIcons.Paintbrush, onOpenAppearance)
+                    UserNavRow("外观与主题", "主题模式 · 氛围滤镜 · 圆角字体", FaIcons.Paintbrush, onOpenAppearance)
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("消息渲染", "官方配色 · 兼容行为", FaIcons.Eye, onOpenRender) }
-                    }
+                    UserNavRow("消息渲染", "官方配色 · 兼容行为", FaIcons.Eye, onOpenRender)
                 }
                 item {
-                    UserSectionCard(title = "聊天与消息处理", subtitle = "官方 power_user Chat/Message Handling") {
+                    Column {
+                        GroupLabel("聊天与消息处理")
                         UserSwitchRow(
                             label = "裁剪空格",
                             hint = "trim_spaces：消息首尾空格裁剪（默认开）",
@@ -119,7 +114,8 @@ fun UserSettingsScreen(
                     }
                 }
                 item {
-                    UserSectionCard(title = "自动滑动 / 自动续写", subtitle = "回复过短自动重掷与继续生成") {
+                    Column {
+                        GroupLabel("自动滑动 / 自动续写")
                         UserSwitchRow(
                             label = "自动续写",
                             hint = "auto_continue：回复低于目标长度自动继续（默认关）",
@@ -134,19 +130,18 @@ fun UserSettingsScreen(
                             )
                         }
                         if (autoContinue) {
-                            EmberTextField(
+                            ShellInput(
                                 value = autoContinueLength,
                                 onValueChange = { v ->
                                     autoContinueLength = v
                                     GenerationPrefs.saveAutoContinue(
                                         context,
                                         true,
-                                        v.filter { it.isDigit() }.toIntOrNull() ?: 0,
+                                        v.filter { ch -> ch.isDigit() }.toIntOrNull() ?: 0,
                                         GenerationPrefs.allowChatCompletions(context),
                                     )
                                 },
-                                label = { Text("目标长度（tokens，0 = 按模型默认）") },
-                                singleLine = true,
+                                label = "目标长度（tokens，0 = 按模型默认）",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -157,13 +152,12 @@ fun UserSettingsScreen(
                             checked = behavior.autoSwipe,
                         ) { saveBehavior(behavior.copy(autoSwipe = it)) }
                         if (behavior.autoSwipe) {
-                            EmberTextField(
+                            ShellInput(
                                 value = behavior.autoSwipeMinimumLength.toString(),
                                 onValueChange = { v ->
-                                    saveBehavior(behavior.copy(autoSwipeMinimumLength = v.filter { it.isDigit() }.toIntOrNull() ?: 0))
+                                    saveBehavior(behavior.copy(autoSwipeMinimumLength = v.filter { ch -> ch.isDigit() }.toIntOrNull() ?: 0))
                                 },
-                                label = { Text("最短回复长度（不足则重掷）") },
-                                singleLine = true,
+                                label = "最短回复长度（不足则重掷）",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -172,7 +166,8 @@ fun UserSettingsScreen(
                 }
                 item {
                     var openLastChat by remember { mutableStateOf(AppearancePrefs.openLastChat(context)) }
-                    UserSectionCard(title = "启动与恢复", subtitle = "应用启动时的会话行为") {
+                    Column {
+                        GroupLabel("启动与恢复")
                         UserSwitchRow(
                             label = "启动进入上次聊天",
                             hint = "开启后启动直接回到上次会话（默认关）",
@@ -184,24 +179,28 @@ fun UserSettingsScreen(
                     }
                 }
                 item {
-                    UserSectionCard(title = "用户提示偏置", subtitle = "每次请求附带的固定提示") {
+                    Column {
+                        GroupLabel("用户提示偏置")
                         UserSwitchRow(
                             label = "显示偏置输入框",
                             hint = "show_user_prompt_bias（默认开）",
                             checked = behavior.showUserPromptBias,
                         ) { saveBehavior(behavior.copy(showUserPromptBias = it)) }
-                        EmberTextField(
-                            value = behavior.userPromptBias,
-                            onValueChange = { saveBehavior(behavior.copy(userPromptBias = it)) },
-                            label = { Text("偏置内容") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        if (behavior.showUserPromptBias) {
+                            ShellInput(
+                                value = behavior.userPromptBias,
+                                onValueChange = { saveBehavior(behavior.copy(userPromptBias = it)) },
+                                label = "偏置内容（每次请求附带）",
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("数据与隐私", "导出 · 清除", FaIcons.Folder, onOpenData) }
-                        Box(modifier = Modifier.weight(1f)) { UserNavCard("关于", "版本 · 许可", FaIcons.CircleInfo, onOpenAbout) }
+                    Column {
+                        GroupLabel("数据")
+                        UserNavRow("数据与隐私", "导出 · 清除", FaIcons.Folder, onOpenData)
+                        UserNavRow("关于", "版本 · 许可", FaIcons.CircleInfo, onOpenAbout)
                     }
                 }
             }
@@ -210,61 +209,45 @@ fun UserSettingsScreen(
 }
 
 @Composable
-private fun UserNavCard(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+private fun UserNavRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 9.dp),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-            Box(
-                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
-            }
-            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp))
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
         }
-    }
-}
-
-@Composable
-private fun UserSectionCard(title: String, subtitle: String, content: @Composable () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            content()
+        Spacer(Modifier.width(13.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = c.ink, fontSize = 15.sp)
+            Text(subtitle, color = c.inkMute, fontSize = 12.sp)
         }
+        Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(14.dp))
     }
 }
 
 @Composable
 private fun UserSwitchRow(label: String, hint: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val c = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, color = c.ink, fontSize = 15.sp)
+            Text(hint, color = c.inkMute, fontSize = 12.sp)
         }
-        Spacer(Modifier.width(8.dp))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        Spacer(Modifier.width(10.dp))
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }

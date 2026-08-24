@@ -186,6 +186,43 @@ fun SearchField(
     }
 }
 
+/** 标签输入场：弱墨小标签在上方，凹陷面输入行。数字/文本通用。 */
+@Composable
+fun ShellInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
+        androidx.compose.foundation.text.KeyboardOptions.Default,
+) {
+    val c = EmberTheme.colors
+    val shape = RoundedCornerShape(12.dp)
+    Column(modifier = modifier.padding(vertical = 6.dp)) {
+        Text(label, color = c.inkMute, fontSize = 12.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(c.surfaceSink)
+                .border(1.dp, c.line, shape)
+                .padding(horizontal = 13.dp, vertical = 12.dp),
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
+                cursorBrush = SolidColor(c.accent),
+                keyboardOptions = keyboardOptions,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
 /** 头像圆（人圆物方口径里的"人"）：有图用图，无图落首字于凹陷面。 */
 @Composable
 fun AvatarCircle(path: String?, name: String, size: Dp) {
