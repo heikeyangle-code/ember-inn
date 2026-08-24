@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
@@ -221,12 +222,11 @@ private data class QuickAction(
     val onClick: () -> Unit,
 )
 
-/** 官方移动端 8 分区抽屉顺序（index.html #top-settings-holder）；hue 为该分区图标块的专属色调。 */
+/** 官方移动端分区顺序（index.html #top-settings-holder）。value 只放实时状态，不放静态功能清单。 */
 private data class OfficialSection(
     val title: String,
-    val subtitle: String,
+    val value: String?,
     val icon: ImageVector,
-    val hue: Color,
     val onClick: () -> Unit,
 )
 
@@ -271,124 +271,81 @@ private fun SettingsHome(
         }
     } ?: "未配置"
 
-    // 官方 8 分区（顺序对照官方 index.html 顶部抽屉栏）；图标块按分区配色，
-    // 页面不再一水灰——每张卡自带身份色（低饱和 tint，克制不花哨）
-    val sectionHue = MaterialTheme.colorScheme
+    // 官方移动端分区顺序（index.html #top-settings-holder）；副文本只留实时状态真值
     val sections = listOf(
-        OfficialSection("AI 响应配置", "参数预设 · 采样器 · 快速提示词 · Prompt Manager", FaIcons.Gear, sectionHue.primary) { onOpenAiResponse() },
-        OfficialSection("API 连接", providerSummary, FaIcons.Link, sectionHue.tertiary) { onOpenProviders() },
-        OfficialSection("高级格式化", "上下文 · 指导 · 系统提示 · 推理 · Master 导入导出", FaIcons.Pencil, sectionHue.secondary) { onOpenFormatting() },
-        OfficialSection("世界书", "激活世界 · 扫描深度 / 递归 / 预算", FaIcons.BookOpen, Color(0xFF43A047)) { onOpenWorldInfo() },
-        OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", FaIcons.User, sectionHue.primary) { onOpenUserSettings() },
-        OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", FaIcons.Image, Color(0xFF8E24AA)) { onOpenBackgrounds() },
-        OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", FaIcons.WandMagicSparkles, Color(0xFFFB8C00)) { onOpenExtensionsHub() },
-        OfficialSection("酒馆助手", "前端卡脚本沙箱 · 变量 / 消息 API（TH 兼容层）", FaIcons.WandMagicSparkles, Color(0xFF00897B)) { onOpenTavernHelper() },
-        OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", FaIcons.User, sectionHue.secondary) { onOpenPersonas() },
+        OfficialSection("AI 响应配置", null, FaIcons.Sliders) { onOpenAiResponse() },
+        OfficialSection("API 连接", providerSummary, FaIcons.Link) { onOpenProviders() },
+        OfficialSection("高级格式化", null, FaIcons.Pencil) { onOpenFormatting() },
+        OfficialSection("世界书", null, FaIcons.BookOpen) { onOpenWorldInfo() },
+        OfficialSection("用户设置", null, FaIcons.User) { onOpenUserSettings() },
+        OfficialSection("背景", null, FaIcons.Image) { onOpenBackgrounds() },
+        OfficialSection("扩展", null, FaIcons.WandMagicSparkles) { onOpenExtensionsHub() },
+        OfficialSection("酒馆助手", null, FaIcons.WandMagicSparkles) { onOpenTavernHelper() },
+        OfficialSection("人设管理", null, FaIcons.Users) { onOpenPersonas() },
     )
 
     val visibleSections = remember(sections, query, providerSummary) {
         val q = query.trim()
         if (q.isBlank()) sections
-        else sections.filter { it.title.contains(q, true) || it.subtitle.contains(q, true) }
+        else sections.filter { it.title.contains(q, true) || (!it.value.isNullOrBlank() && it.value.contains(q, true)) }
     }
 
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
     ) {
         item {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("设置", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "对照官方移动端布局的八个分区",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                    ) {
-                        Text(
-                            "v0.1.0",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-                EmberTextField(
+                Text("设置", color = EmberTheme.colors.ink, fontSize = 26.sp, fontWeight = FontWeight.Light)
+                Spacer(Modifier.height(14.dp))
+                com.emberinn.app.ui.design.components.SearchField(
                     value = query,
                     onValueChange = onQueryChange,
-                    placeholder = { Text("搜索设置") },
-                    leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { onQueryChange("") }) {
-                                Icon(FaIcons.XMark, contentDescription = "清除")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    placeholder = "搜索设置项",
                 )
             }
         }
         items(visibleSections, key = { it.title }) { section ->
-            OfficialSectionCard(section)
+            SectionRow(section)
         }
     }
 }
 
+/** 分区行（§4.6）：图标块=内容面圆角方，行无边框无线，右端只放实时值。 */
 @Composable
-private fun OfficialSectionCard(section: OfficialSection) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = section.onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+private fun SectionRow(section: OfficialSection) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = section.onClick)
+            .padding(horizontal = 4.dp, vertical = 9.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.surface),
+            contentAlignment = Alignment.Center,
         ) {
-            // 分区身份色图标块：色调低饱和混合（14% tint），图标取分区色
-            Box(
-                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
-                    .background(section.hue.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    section.icon,
-                    contentDescription = null,
-                    tint = section.hue,
-                    modifier = Modifier.size(21.dp),
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(section.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                Text(
-                    section.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Icon(
-                FaIcons.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(16.dp),
+            Icon(section.icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(13.dp))
+        Text(section.title, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        if (!section.value.isNullOrBlank()) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                section.value!!,
+                color = c.inkMute,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(14.dp))
     }
 }
 
