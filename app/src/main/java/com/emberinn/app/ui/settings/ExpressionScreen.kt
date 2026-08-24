@@ -4,8 +4,10 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,12 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,18 +28,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ExpressionStore
-import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberPrimaryButton
+import com.emberinn.app.ui.components.EmberHaptics
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmberSwitch
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellChip
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
-import java.io.File
 
-/** 表情精灵管理（对齐官方 extensions/expressions：角色精灵文件 + 选择设置）。 */
+/**
+ * 表情精灵管理（对齐官方 extensions/expressions：角色精灵文件 + 选择设置）。
+ * 呈现层=新语言；字段集随引擎差分锁定口径（ExpressionEngine §3.15）。
+ */
 @Composable
 fun ExpressionScreen(onBack: () -> Unit) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     val store = remember { ExpressionStore(context) }
     val characters = remember { CharacterStore(context).list() }
@@ -56,8 +61,8 @@ fun ExpressionScreen(onBack: () -> Unit) {
             runCatching {
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching
                 val name = runCatching {
-                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-                        if (c.moveToFirst()) c.getString(0) else null
+                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cc ->
+                        if (cc.moveToFirst()) cc.getString(0) else null
                     }
                 }.getOrNull() ?: "sprite.png"
                 store.saveSprite(selectedName, name, bytes)
@@ -71,20 +76,20 @@ fun ExpressionScreen(onBack: () -> Unit) {
             SettingsTopBar(title = "表情精灵", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp),
             ) {
                 item {
-                    Text("表情精灵", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                     Text(
                         "对齐官方 expressions 扩展：精灵按角色存放在 expressions/{角色名}/，AI 消息正文自动分类选图。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkMute,
+                        color = c.inkMute,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
-                }
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                    ) {
+                        Text("启用", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.enabled, onChange = { prefs = prefs.copy(enabled = it); save() })
                     }
                     ShellInput(
@@ -92,67 +97,70 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         onValueChange = { prefs = prefs.copy(fallbackExpression = it); save() },
                         label = "兜底表情（fallbackExpression；空=无）",
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                        Text("多立绘随机（allowMultiple）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+                        Text("多立绘随机（allowMultiple）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.allowMultiple, onChange = { prefs = prefs.copy(allowMultiple = it); save() })
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("避免与上一张重复（rerollIfSame）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+                        Text("避免与上一张重复（rerollIfSame）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.rerollIfSame, onChange = { prefs = prefs.copy(rerollIfSame = it); save() })
                     }
                 }
                 item {
-                    Text("选择角色", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        characters.take(8).forEach { c ->
-                            FilterChip(
-                                selected = c.id == selectedId,
-                                onClick = {
-                                    selectedId = c.id
-                                    sprites = store.sprites(c.name)
-                                },
-                                label = { Text(c.name) },
-                                modifier = Modifier.padding(end = 6.dp),
-                            )
+                    GroupLabel("选择角色")
+                    Row(
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(7.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    ) {
+                        characters.take(8).forEach { ch ->
+                            ShellChip(ch.name, selected = ch.id == selectedId) {
+                                selectedId = ch.id
+                                sprites = store.sprites(ch.name)
+                            }
                         }
                     }
                 }
                 if (selectedName.isNotBlank()) {
                     item {
-                        EmberPrimaryButton(
-                            label = "导入精灵图片（PNG/JPG/WebP）",
-                            onClick = { picker.launch("image/*") },
-                            icon = FaIcons.Plus,
-                            expandWidth = true,
-                        )
+                        ShellActionButton(
+                            label = "＋ 导入精灵图片（PNG/JPG/WebP）",
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                        ) { picker.launch("image/*") }
                     }
                 }
                 items(sprites, key = { it.path }) { sprite ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                     ) {
-                        Text(sprite.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        IconButton(onClick = {
-                            store.deleteSprite(selectedName, sprite.path)
-                            sprites = store.sprites(selectedName)
-                        }) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除", tint = EmberTheme.colors.danger)
-                        }
+                        Text(sprite.label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Icon(
+                            FaIcons.TrashCan,
+                            contentDescription = "删除",
+                            tint = c.danger,
+                            modifier = Modifier
+                                .size(17.dp)
+                                .clickable {
+                                    store.deleteSprite(selectedName, sprite.path)
+                                    sprites = store.sprites(selectedName)
+                                }
+                                .padding(2.dp),
+                        )
                     }
                 }
                 if (sprites.isEmpty() && selectedName.isNotBlank()) {
                     item {
                         Text(
                             "还没有精灵。文件名即表情标签（如 joy.png / sad-1.png），AI 消息正文会按表情词自动匹配。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.lineStrong,
+                            color = c.inkMute,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 4.dp),
                         )
                     }
                 }
-                item { Spacer(Modifier.height(8.dp)) }
+                item { Spacer(Modifier.height(120.dp)) }
             }
         }
     }
