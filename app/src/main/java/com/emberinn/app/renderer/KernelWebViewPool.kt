@@ -197,6 +197,8 @@ class KernelWebViewPool(
     /** 渲染进程崩溃处理（§3.3 自愈）：销毁崩溃实例、剔出池、通知宿主行复位重挂载。
      *  raw 文本在 Kotlin 侧，重建零丢失。 */
     private fun handleProcessGone(instance: PooledWebView) {
+        // 黑匣子：崩溃必须留痕（9.2b「正文消失只剩背景」的触发源排查全靠它）
+        reportError("渲染进程崩溃(onRenderProcessGone)：实例已销毁剔除,宿主将自动重挂")
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.remove(instance) }
             idle.remove(instance)
@@ -270,6 +272,7 @@ class KernelWebViewPool(
      * 必须在主线程调用。
      */
     private suspend fun createAndWarm(): PooledWebView {
+        val warmT0 = android.os.SystemClock.elapsedRealtime()
         val webView = try {
             WebView(context)
         } catch (t: Throwable) {
@@ -354,6 +357,7 @@ class KernelWebViewPool(
         // 就绪即套当前主题与布局类（新实例无需等 updateTheme 广播）
         runCatching { applyPageSetup(instance) }
         idle.addLast(instance)
+        Log.e(TAG, "内核实例预热完成 ${android.os.SystemClock.elapsedRealtime() - warmT0}ms（创建+加载+kernelReady）")
         return instance
     }
 

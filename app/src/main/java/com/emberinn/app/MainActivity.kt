@@ -42,6 +42,9 @@ class MainActivity : ComponentActivity() {
         runCatching { applySelectedSamplerPresetOnLoad() }
         // 已下线字体的旧文件回收（lxgw.ttf 等），启动时静默执行
         runCatching { FontManager.cleanupLegacy(this) }
+        // 内核页进程级只建一次（官方常驻页签等价架构）：入口尽早拿池，首帧后自动预热，
+        // 进聊天零等待；预热失败不影响启动
+        runCatching { com.emberinn.app.renderer.KernelPoolHolder.warm(applicationContext) }
         enableEdgeToEdge()
         setContent {
             val appContext = applicationContext

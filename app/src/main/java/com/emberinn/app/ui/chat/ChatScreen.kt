@@ -120,6 +120,7 @@ import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
+import com.emberinn.app.renderer.KernelPoolHolder
 import com.emberinn.app.renderer.KernelMessagePayload
 import com.emberinn.app.renderer.KernelProtocol
 import com.emberinn.app.renderer.KernelMediaPayload
@@ -230,9 +231,12 @@ fun ChatScreen(
 
     // ---- V2 内核渲染：池 + 官方主题全量同步（单轨，内核为唯一消息渲染管线） ----
     val context = LocalContext.current
-    val kernelPool = remember {
-        KernelWebViewPool(context).also { it.preload() }
-    }
+    // 进程级单例池（KernelPoolHolder）：内核页随进程只建一次，进聊天只是取用——
+    // 官方常驻页签等价架构。此前在此 remember 新建池 = 每次进聊天重载整页（空白 8~10s）
+    // 且旧池泄漏挤爆共享渲染进程（开场白 1~2s 后消失的根因之一）
+    val kernelPool = remember { KernelPoolHolder.get(context) }
+    // 当前挂载到本聊天页的内核实例：编辑类动作复用它，禁止再 acquire 另建实例
+    var kernelHost by remember { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
     DisposableEffect(Unit) {
         // 宿主能力白名单（V2 §5.3）：卡片脚本经 AppBridge/toastr 触达系统能力
         val mainHandler = Handler(Looper.getMainLooper())
@@ -1145,6 +1149,7 @@ fun ChatScreen(
                     followBottom = followBottom,
                     draftProvider = { input },
                     showMore = showMoreFlag,
+                    onAttachedKernel = { kernelHost = it },
                     onAtBottomChanged = { atBottom ->
                         if (!atBottom) followBottom = false
                     },
@@ -1156,8 +1161,13 @@ fun ChatScreen(
                     onTextClick = { mesid ->
                         // 边界3 click_to_edit（chats.js L2292）：主题开关开启时点击正文进内核编辑
                         if (themeShell.clickToEdit) {
-                            kernelPool.acquireSingle { pooled ->
-                                RenderKernel(pooled).beginEditMessage(mesid)
+                            val attached = kernelHost
+                            if (attached != null) {
+                                RenderKernel(attached).beginEditMessage(mesid)
+                            } else {
+                                kernelPool.acquireSingle { pooled ->
+                                    RenderKernel(pooled).beginEditMessage(mesid)
+                                }
                             }
                         }
                     },
@@ -1174,8 +1184,13 @@ fun ChatScreen(
                             }
                             "mes_edit" -> {
                                 // 边界3：官方 messageEdit——内核进入行内编辑，草稿初值随载荷 rawMes 下发
-                                kernelPool.acquireSingle { pooled ->
-                                    RenderKernel(pooled).beginEditMessage(mesid)
+                                val attached = kernelHost
+                                if (attached != null) {
+                                    RenderKernel(attached).beginEditMessage(mesid)
+                                } else {
+                                    kernelPool.acquireSingle { pooled ->
+                                        RenderKernel(pooled).beginEditMessage(mesid)
+                                    }
                                 }
                             }
                             "mes_create_bookmark" -> {

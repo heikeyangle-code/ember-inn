@@ -39,6 +39,9 @@ fun ChatKernelShell(
     onTextClick: (String) -> Unit = {},
     /** C3：新内核实例挂载（含崩溃自愈重挂）后把宿主草稿写回 #send_textarea */
     draftProvider: () -> String = { "" },
+    /** 实例挂载状态上抛：宿主（ChatScreen）据此复用同一实例做行内编辑等动作，
+     *  禁止再 acquire 另建 WebView 挤占共享渲染进程 */
+    onAttachedKernel: (KernelWebViewPool.PooledWebView?) -> Unit = {},
     deleteMode: Boolean = false,
     /** 边界5 长聊天截断：顶部挂官方 #show_more_messages（script.js printMessages） */
     showMore: Boolean = false,
@@ -63,12 +66,14 @@ fun ChatKernelShell(
         pool.addMessageActionListener(actionListener)
         pool.addClickListener(textClickListener)
         val crashListener: () -> Unit = {
+            onAttachedKernel(null)
             host = null
             mountEpoch++
         }
         pool.addCrashListener(crashListener)
         onDispose {
             disposed.set(true)
+            onAttachedKernel(null)
             pool.removeChatScrollListener(scrollListener)
             pool.removeLongPressListener(longPressListener)
             pool.removeMessageActionListener(actionListener)
@@ -113,6 +118,7 @@ fun ChatKernelShell(
                 ),
             )
             host = pooled
+            onAttachedKernel(pooled)
             android.util.Log.e("EmberInnKernel",
                 "attach slot=${target.width}x${target.height} view=${pooled.webView.width}x${pooled.webView.height}")
             target.post {
@@ -125,8 +131,10 @@ fun ChatKernelShell(
     }
 
     // 渲染签名守卫：流式 tick 会重建 payloads 实例但多数行未变；
-    // 内容指纹不变时跳过 renderChat 全量重建（官方 addOneMessage 为增量，此处对齐其成本量级）
-    var lastRenderSig by remember { mutableStateOf<String?>(null) }
+    // 内容指纹不变时跳过 renderChat 全量重建（官方 addOneMessage 为增量，此处对齐其成本量级）。
+    // 签名必须按实例重置 remember(host)：实例重挂（崩溃自愈/换槽）后新内核页是空 DOM，
+    // 若沿用旧签名会永久跳过渲染——payloadCount=1 而 mesCount=0 的元凶（9.2b）
+    var lastRenderSig by remember(host) { mutableStateOf<String?>(null) }
     LaunchedEffect(host, payloads, followBottom, showMore) {
         val kernel = host?.let(::RenderKernel) ?: return@LaunchedEffect
         val sig = payloads.size.toString() + "#" + payloads.joinToString("|") { p ->
