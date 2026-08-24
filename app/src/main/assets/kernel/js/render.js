@@ -658,13 +658,27 @@
         }
     }
 
-    /** 官方控件动作名：点击桥专用（mes_edit/mes_copy/.../swipe_left/swipe_right/del_checkbox）。 */
+    /** 官方控件动作名：点击桥专用。白名单精确匹配——按钮首类恒为通用样式 mes_button，
+     *  按"第一个 mes_ 前缀"取会全错成 mes_button（全部菜单按钮装死的根因）；
+     *  清单=官方 index.html 消息模板按钮类全量（L7350-7448）。 */
+    var ACTION_CLASSES = [
+        'swipe_left', 'swipe_right', 'del_checkbox',
+        'mes_translate', 'sd_message_gen', 'mes_narrate', 'mes_prompt',
+        'mes_hide', 'mes_unhide', 'mes_media_gallery', 'mes_media_list',
+        'mes_embed', 'mes_swipe_picker', 'mes_create_bookmark', 'mes_create_branch',
+        'mes_copy', 'mes_edit', 'mes_bookmark', 'mes_stop',
+        'mes_edit_done', 'mes_edit_cancel', 'mes_edit_copy', 'mes_edit_add_reasoning',
+        'mes_edit_delete', 'mes_edit_up', 'mes_edit_down',
+        'mes_reasoning_edit', 'mes_reasoning_edit_done', 'mes_reasoning_edit_cancel',
+        'mes_reasoning_delete', 'mes_reasoning_copy', 'mes_reasoning_close_all',
+        'mes_img_swipe', 'mes_media_delete',
+    ];
     function describeAction(el) {
         if (!el || !el.classList) { return null; }
-        return Array.prototype.find.call(el.classList, function (cls) {
-            return cls === 'swipe_left' || cls === 'swipe_right' ||
-                cls === 'del_checkbox' || cls.indexOf('mes_') === 0;
-        }) || null;
+        for (var i = 0; i < el.classList.length; i++) {
+            if (ACTION_CLASSES.indexOf(el.classList[i]) !== -1) { return el.classList[i]; }
+        }
+        return null;
     }
 
     // 样式包（第三方主题整包 CSS，如 Moonlit Echoes style.css）：
