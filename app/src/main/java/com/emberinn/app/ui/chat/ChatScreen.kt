@@ -3220,34 +3220,52 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // 顶栏定稿 v3（2026-08-25 用户令）：完全透明、无名字文字、与内容完全融为一体
+    // 顶栏定稿 v4（2026-08-25）：全透明+底部微渐隐；名字保留；聊天内容进入顶栏区渐隐消失；
+    // 图标轻量化(16dp/34dp 触点)
     val E = EmberTheme.colors
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    listOf(E.bg.copy(alpha = 0.30f), E.bg.copy(alpha = 0.0f)),
+    Box(modifier = modifier.fillMaxWidth()) {
+        // 内容渐隐幕：聊天文字滚入顶栏区时淡出（盖在内核页上、栏之下）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(E.bg.copy(alpha = 0.95f), E.bg.copy(alpha = 0.0f)),
+                    ),
                 ),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 8.dp)
+                .heightIn(min = 40.dp),
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {
+                Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.ink, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.size(4.dp))
+            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 28)
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = E.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-            .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 10.dp)
-            .heightIn(min = 44.dp),
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.ink)
-        }
-        Spacer(Modifier.size(4.dp))
-        RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 32)
-        Spacer(Modifier.weight(1f))
-        IconButton(onClick = onAuthorsNote, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.ink)
-        }
-        IconButton(onClick = onPersona, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.User, contentDescription = "人设", tint = E.ink)
-        }
-        IconButton(onClick = onMenu, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.Bars, contentDescription = "更多", tint = E.ink)
+            IconButton(onClick = onAuthorsNote, modifier = Modifier.size(34.dp)) {
+                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.ink, modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onPersona, modifier = Modifier.size(34.dp)) {
+                Icon(FaIcons.User, contentDescription = "人设", tint = E.ink, modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onMenu, modifier = Modifier.size(34.dp)) {
+                Icon(FaIcons.Bars, contentDescription = "更多", tint = E.ink, modifier = Modifier.size(16.dp))
+            }
         }
     }
 }
