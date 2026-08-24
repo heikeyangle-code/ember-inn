@@ -195,8 +195,8 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核 DOM 与官方同构，官方 style.css/主题/社区主题 CSS 原样生效。引擎层（差分锁定）负责宏/正则/reasoning 前处理；内核 render.js 负责 fixMarkdown 之后到 DOMPurify 为止的显示管线；壳层（EmberDS）负责聊天以外的全部界面。
 
 ### 4.2 内核资产（app/src/main/assets/kernel/）
-- kernel.html：CSP 全放行（用户决策）；官方 webfonts/fontawesome/style.css/mobile-styles.css；`<style id="custom-style">` 注入点；body.light-theme + #chat 同构骨架
-- js/render.js（509 行）：官方管线移植——fixMarkdown、encodeStyleTags/decodeStyleTags（css-tools）、引号包裹 6 种、\ufffe 标签内引号保护、DOMPurify 三 hooks（class 加 custom- 前缀豁免 fa-*、target=_blank+noopener、未知元素换行转 br）
+- kernel.html：CSP 全放行（用户决策）；官方 webfonts/fontawesome/style.css/mobile-styles.css/toggle-dependent.css；`<style id="custom-style">` 注入点；body.light-theme + 官方整页壳骨架 **#sheld > #chat + #form_sheld**（C3 输入区，同构 index.html L8069-8113，文案中文化）+ **#bg1**（C4 官方背景层）；app-host-actions-style 仅藏 reasoning 编辑按钮等宿主未接管项（官方消息按钮/swipe/删除框全部保留，交互经点击桥回宿主）
+- js/render.js（约 1070 行）：官方管线移植——fixMarkdown、encodeStyleTags/decodeStyleTags（css-tools）、引号包裹 6 种、\ufffe 标签内引号保护、DOMPurify 三 hooks（class 加 custom- 前缀豁免 fa-*、target=_blank+noopener、未知元素换行转 br）；滑动语义对齐 refreshSwipeButtons/isMessageSwipeable（swipes_visible/last_swipe/ZWSP 计数）、extraMesButtonsHint 展开/点外收起（script.js L11806/L11835）、头像失败兜底 missing-avatar（L2646-2650）
 - 同版本库：showdown 2.1.0 / dompurify 3.4.2 / highlight 11.11.1 / css-tools 4.4.4
 - official/message-template.html：官方模板原样；**克隆内部 .mes 而非根节点**（template_element，对齐 script.js L447）
 
@@ -204,21 +204,28 @@ WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核
 | API | 说明 |
 |---|---|
 | formatText(mes, opts) | 返回 HTML 字符串（DOM 黄金对比入口） |
-| renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount}。全 DOM 行：整条官方 .mes 模板（头像/名字/时间/token 数/正文）由内核渲染 |
-| applyTheme(theme) | 官方主题全字段 → CSS 变量 + custom_css + body 类开关 |
+| renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount,reasoning,swipeCount,currentSwipe,lastMessage,smallSysMes,type,bookmarkLink,forceAvatar,title,toolCall,media,timerValue,apiModelTitle…}。全 DOM 行：整条官方 .mes 模板由内核渲染 |
+| renderChat(payloads) | 整页壳 C1/C2：清空重建全量同步官方 #chat，payload 顺序即聊天顺序 |
+| scrollToBottom(smooth) | 官方 scrollChatToBottom 接管（C1） |
+| setDeleteMode(enabled) / selectDeleteFrom(mesid) | 官方 openMessageDelete 的 DOM 状态部分 + 删除模式点击截断选择 |
+| setInputText(text) | C3：宿主 → #send_textarea（草稿下发/冒充流式/发送后清空），派发合成 input 事件回镜像 |
+| setInputState({generating,swiping}) | C3：body[data-generating]/[data-swiping] + mes_stop 显隐 + hideAllSwipeButtons 合成 |
+| setBackground(url, fitting) | C4：#bg1 background-image + cover/contain/stretch/center 类；url=null 清除 |
+| updateStreaming(mesid,text,reasoning?) | C5：官方 onProgressStreaming 原地换 .mes_text innerHTML（+ .mes_reasoning），不重建其余节点 |
+| applyTheme(theme) | 官方主题全字段 → CSS 变量 + custom_css + body 类开关（compact_input_area → #send_form.compact，power-user.js L529-532 官方语义） |
 | applyStylePack(cfg) | 第三方样式包整包：{enabled,href,extensionHref,vars}——style.css 走 `<link id="style-pack-style">`、extension.css 兼容层独立 link、vars 逐键写入 documentElement CSS 变量（缺 `--` 自动补）；href 变更复用节点；enabled=false 零污染 |
 | clear() | 清空 #chat |
 
 applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings 逐项同构：no-blur/noShadows/waifuMode/reduced-motion/no-timestamps/no-timer/no-tokenCount/no-mesIDDisplay/no-modelIcons/no-hotswap/hideChatAvatars/expandMessageActions/swipeAllMessages/enableZenSliders/enableLabMode/big-avatars/square-avatars/rounded-avatars/bubblechat/documentstyle/flatchat/echostyle/whisperstyle/hushstyle/tidestyle/ripplestyle；每次应用先移除后添加（全量同步语义）。avatar_style 枚举对齐 power-user.js L95-100：ROUND=0/RECTANGULAR=1(big-avatars)/SQUARE=2(square-avatars)/ROUNDED=3(rounded-avatars)。chat_display 全枚举：0 flatchat/1 bubblechat/2 documentstyle/3 echostyle/4 whisperstyle/5 hushstyle/6 ripplestyle/7 tidestyle（3-7 经 Moonlit 上游扩展 index.js initChatDisplaySwitcher 核实）；≥8 安全落空不加类。
 长按手势：500ms 阈值、touchmove 超 10px 取消，bridgeSend {type:'longPress'}。
-桥事件：kernelReady/height/heightChanged/click/longPress/themeApplied → window.AndroidKernel.postMessage(JSON)。宿主能力白名单（openLink/copy/share/toast/saveMedia/saveDataUrl/vibrate）经 hostAction 回传 ChatScreen.handleHostAction。
+桥事件：kernelReady/height/heightChanged/click/longPress/chatScroll/hostRequest/inputChanged/inputHeight → window.AndroidKernel.postMessage(JSON)。hostRequest 承载输入区 8 控件动作（chat_send/chat_interrupt/chat_options/chat_attach/chat_impersonate/chat_continue/chat_delete_confirm/chat_delete_cancel）。宿主能力白名单（openLink/copy/share/toast/saveMedia/saveDataUrl/vibrate）经 hostAction 回传 ChatScreen.handleHostAction。
 
 ### 4.4 Kotlin 侧（app/.../renderer/）
 - KernelModels.kt：载荷与事件模型（tokenCount 为官方 tokenCounterDisplay 形态原样 String 透传）；ChatDisplayMode 枚举与内核布局 body 类一一对应；StTheme 仅作类型化视图，**主题必须以原始 JSON 字符串透传**（RenderKernel.applyThemeRaw），防有损转换丢字段
 - KernelBridge.kt：window.AndroidKernel；能力面=高度/点击/长按/shimRequest/hostAction 回传；无任意 Android API/文件系统通道
-- KernelWebViewFactory.kt：WebViewAssetLoader 统一 https origin appassets.androidplatform.net——assets/=内核页、/avatars/=角色头像（filesDir/avatars）、/pavatars/=人设头像（filesDir/persona-avatars）、/themefiles/=导入主题 CSS（filesDir/themes）；JS/DOM storage 开、媒体自动播放、外链交系统浏览器
-- KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）。池持有页面三态（themeJson/bodyClasses/stylePack），新建实例 ready 即套用，updateTheme/updateStylePack 广播全部存活实例；层叠顺序=applyThemeRaw→setBodyClasses→applyStylePack，与官方「power-user 设置→扩展主题 CSS」一致。body 类默认含 app-host-actions（隐藏被原生接管的官方死控件：mes_buttons/swipe 箭头/计数器/reasoning details/del_checkbox 等，DOM 字节不动只藏）
-- RenderKernel.kt：门面——renderMessage/updateStreamingText(流中轻量)/applyThemeRaw/setBodyClasses(全量同步)/applyStylePack/emitEvent(官方 event_types 下发)/clear
+- KernelWebViewFactory.kt：WebViewAssetLoader 统一 https origin appassets.androidplatform.net——assets/=内核页、/avatars/=角色头像（filesDir/avatars）、/pavatars/=人设头像（filesDir/persona-avatars）、/media/=消息附件（filesDir/media）、/backgrounds/=官方背景（C4，filesDir/backgrounds）、/themefiles/=导入主题 CSS（filesDir/themes）；JS/DOM storage 开、媒体自动播放、textZoom 固定 100、外链交系统浏览器
+- KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）。池持有页面五态（themeJson/bodyClasses/stylePack/inputState/background），新建实例 ready 即套用，updateTheme/updateStylePack/updateInputState/updateBackground 广播全部存活实例；层叠顺序=applyThemeRaw→setBodyClasses→applyStylePack，与官方「power-user 设置→扩展主题 CSS」一致。body 类默认含 fullchat（整页壳：#sheld fixed 全屏、#chat 唯一滚动容器）+ app-host-actions（仅藏 reasoning 编辑按钮等宿主未接管项）；监听器面=height/click/messageAction/longPress/uiAction/chatScroll/crash/input/inputHeight
+- RenderKernel.kt：门面——renderMessage/renderChat/scrollToBottom/setDeleteMode/selectDeleteFrom/pushInputText/setInputState/setBackground/updateStreaming(官方 onProgressStreaming 原地换 .mes_text，替代旧 updateStreamingText)/applyThemeRaw/setBodyClasses(全量同步)/applyStylePack/emitEvent(官方 event_types 下发)/setChatDisplayMode/clear
 
 ### 4.5 官方主题导入与管理（data/OfficialThemeManager.kt）
 - 内置：assets/themes/moonlit-echoes/（Glimmer/MoonlitEchoes 两套官方格式 + *-preset.json 扩展预设 + style.css 101KB + extension.css + AGPL-3.0 LICENSE）；默认主题=Glimmer
@@ -230,9 +237,9 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 ### 4.6 Moonlit Echoes 兼容（首要审美标杆）
 其消息风格=body 类+官方 DOM 选择器 CSS（源码级核实）；内核 DOM 同构→style.css/extension.css 经 applyStylePack 整包装载（extension.css 含 .mes/#sheld 等聊天区选择器，故一并加载）。通用承诺：任何含 style.css(+extension.css)+*-preset.json 的官方/社区主题包走同一探测/装载路径。
 
-### 4.7 黄金测试（scripts/kernel-golden/，本地 jsdom 230 例全绿 + CI puppeteer-dom）
+### 4.7 黄金测试（scripts/kernel-golden/，本地 jsdom 25+108+74+55=262 例全绿 + CI puppeteer-dom）
 - kernel-format.test.mjs 25 例：markdown/引号包裹/DOMPurify hooks/style 前缀化/表格/官方扩展/name2/fixMarkdown/LaTeX 链
-- theme-moonlit.test.mjs 68 例：全字段落位、换主题全量同步、chat_display 0..7 全枚举+未知值安全、样式包 link/扩展层/变量/href 复用/禁用零污染、avatar_style 0..3、enableLabMode、Moonlit 选择器与内核 DOM 同构命中
+- theme-moonlit.test.mjs 108 例：全字段落位、换主题全量同步、chat_display 0..7 全枚举+未知值安全、样式包 link/扩展层/变量/href 复用/禁用零污染、avatar_style 0..3、enableLabMode、Moonlit 选择器与内核 DOM 同构命中、compact_input_area→#send_form.compact 官方语义、setInputState/setBackground、头像失败兜底 missing-avatar、滑动 swipes_visible/last_swipe/ZWSP 计数、按钮排展开/点外收起/expandMessageActions 常显豁免
 - shim-api.test.mjs 74 例 / variables-shim.test.mjs 55 例：st-api-shim 协议与 TavernHelper 变量族
 - puppeteer-dom.test.mjs：CI kernel-golden job `test:dom` 步骤（headless Chromium 对 golden 逐字对比）
 - 运行：cd scripts/kernel-golden && npm install && npm test
