@@ -235,7 +235,16 @@
     //    （panel/render/iframe.ts createSrcContent 同构；srcdoc 继承父 origin，
     //     卡内脚本可直接使用本层暴露的全部 API 与 window.parent.SillyTavern）
     // =====================================================================
-    var RUNNABLE_LANG = /^(language-)?(js|javascript|ts|typescript)$/i;
+    // 管线实际类名形如 "custom-js custom-language-js"（encodeStyleTags 前缀），逐 token 匹配
+    var RUNNABLE_LANG = /^(?:custom-)?(?:language-)?(?:js|javascript|ts|typescript)$/i;
+
+    function shouldRunNode(node) {
+        var toks = (node.className || '').split(/\s+/);
+        for (var i = 0; i < toks.length; i++) {
+            if (toks[i] && RUNNABLE_LANG.test(toks[i])) { return true; }
+        }
+        return false;
+    }
 
     function isGenerating() {
         return document.body.getAttribute('data-generating') === 'true';
@@ -305,7 +314,7 @@
         var codes = mesNode.querySelectorAll('pre > code');
         Array.prototype.forEach.call(codes, function (code) {
             if (code.dataset.thDone === '1') { return; }
-            if (!shouldRun(code)) { return; }
+            if (!shouldRunNode(code)) { return; }
             var pre = code.parentElement;
             var src = code.textContent || '';
             var frame = makeIframe(src);

@@ -79,7 +79,24 @@ fun ChatKernelShell(
 
     LaunchedEffect(slot, mountEpoch, host) {
         val target = slot ?: return@LaunchedEffect
-        if (host != null || disposed.get()) return@LaunchedEffect
+        if (disposed.get()) return@LaunchedEffect
+        // 宿主已持实例：校验其视图仍挂在当前槽位。Compose 重组可能重建 AndroidView 容器，
+        // 旧引用会把 WebView 留在已摘除的旧槽里（视口 0x0=页面活着但整树不可见）→ 重挂。
+        val current = host
+        if (current != null) {
+            if (current.webView.parent === target) { return@LaunchedEffect }
+            (current.webView.parent as? ViewGroup)?.removeView(current.webView)
+            target.removeAllViews()
+            target.addView(
+                current.webView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            current.webView.requestLayout()
+            return@LaunchedEffect
+        }
         pool.acquireSingle { pooled ->
             if (disposed.get()) {
                 pool.release(pooled)
@@ -100,9 +117,20 @@ fun ChatKernelShell(
         }
     }
 
+    // 渲染签名守卫：流式 tick 会重建 payloads 实例但多数行未变；
+    // 内容指纹不变时跳过 renderChat 全量重建（官方 addOneMessage 为增量，此处对齐其成本量级）
+    var lastRenderSig by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(host, payloads, followBottom, showMore) {
         val kernel = host?.let(::RenderKernel) ?: return@LaunchedEffect
-        kernel.renderChat(payloads, showMore)
+        val sig = payloads.size.toString() + "#" + payloads.joinToString("|") { p ->
+            p.mesid + ":" + p.mes.length + ":" +
+                p.mes.take(16).hashCode() + ":" + p.mes.takeLast(16).hashCode() + ":" +
+                (p.reasoning?.length ?: 0) + ":" + p.currentSwipe
+        } + "#" + showMore
+        if (sig != lastRenderSig) {
+            kernel.renderChat(payloads, showMore)
+            lastRenderSig = sig
+        }
         if (followBottom) kernel.scrollToBottom()
     }
 

@@ -38,6 +38,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 内核预热：渲染进程冷拉起是聊天页首开数秒的大头；App 启动即异步触碰一次
+        // WebView（建即毁），系统级 renderer 进程随后常驻，进聊天页时池实例秒就绪。
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            runCatching { com.emberinn.app.renderer.Warmer.touch(applicationContext) }
+        }, 400)
         runCatching { applySelectedSamplerPresetOnLoad() }
         // 已下线字体的旧文件回收（lxgw.ttf 等），启动时静默执行
         runCatching { FontManager.cleanupLegacy(this) }

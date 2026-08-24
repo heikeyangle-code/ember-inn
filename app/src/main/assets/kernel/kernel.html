@@ -67,7 +67,9 @@
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            width: var(--sheldWidth, 100vw) !important;
+            /* 官方移动端语义:#sheld 铺满视口(--sheldWidth 仅桌面居中列);
+               left/right 双锚定 + width auto,主题变量不再压缩宽度 */
+            width: auto !important;
             height: 100vh !important;
             max-height: none !important;
             margin: 0 !important;
@@ -85,6 +87,9 @@
             overflow-y: auto !important;
             overflow-x: hidden !important;
             bottom: auto !important;
+            /* 触摸滚动:惯性(-webkit-overflow-scrolling)+阻止滚动链穿透到宿主 */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         body.fullchat #form_sheld {
             position: relative !important;

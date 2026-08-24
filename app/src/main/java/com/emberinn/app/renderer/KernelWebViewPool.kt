@@ -188,7 +188,10 @@ class KernelWebViewPool(
 
     fun preload() {
         scope.launch(Dispatchers.Main) {
-            repeat(warmup) { runCatching { createAndWarm() }.onFailure { reportError("内核实例预热失败", it) } }
+            // 并发预热：createAndWarm 挂起等待 kernelReady，串行会叠加两份冷启动耗时
+            repeat(warmup) {
+                launch { runCatching { createAndWarm() }.onFailure { reportError("内核实例预热失败", it) } }
+            }
         }
     }
 
