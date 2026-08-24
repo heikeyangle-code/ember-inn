@@ -1205,22 +1205,10 @@ private fun SectionCard(
     count: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = EmberTheme.colors.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .emberShadow(
-                color = EmberTheme.colors.accent.copy(alpha = 0.12f),
-                radius = 10.dp,
-                offset = DpOffset(0.dp, 4.dp),
-                alpha = 0.06f,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-            SectionHeader(title, count)
-            content()
-        }
+    // E0 平面分组：无卡片框无投影，组题 + 留白即分隔（DESIGN_SYSTEM §一-1）
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(title, count)
+        content()
     }
 }
 
