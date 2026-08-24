@@ -179,8 +179,9 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval(js)
     }
 
-    private fun eval(js: String, onDone: (() -> Unit)? = null) {
-        web.evaluateJavascript(js) { onDone?.invoke() }
+    /** onDone 收到 evaluateJavascript 的返回字符串（无返回值调用传 null/空串） */
+    private fun eval(js: String, onDone: ((String?) -> Unit)? = null) {
+        web.evaluateJavascript(js) { onDone?.invoke(it) }
     }
 
     private fun jsonEsc(s: String): String {

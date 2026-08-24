@@ -283,18 +283,6 @@ fun ChatScreen(
             kernelPool.emitEvent("tavern_helper_config", listOf(TavernHelperPrefs.current.toJsonString()))
         }
     }
-    // X 光诊断：进页 8 秒后取内核页 DOM 事实（行数/容器高度/display/body 类/载荷数），
-    // toast 显性报告——白屏从此有第一手数据，不再靠猜。消息为空时跳过。
-    LaunchedEffect(kernelPool, messages.size) {
-        if (messages.isEmpty()) return@LaunchedEffect
-        kotlinx.coroutines.delay(8_000)
-        val payloadCount = kernelPayloads.size
-        kernelPool.acquireSingle { pooled ->
-            RenderKernel(pooled).diagnose(payloadCount) { json ->
-                Toast.makeText(context, "内核体检：$json", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
     val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
     val stylePack by themeManager.currentStylePack.collectAsState()
@@ -1018,6 +1006,20 @@ fun ChatScreen(
     LaunchedEffect(isStreaming) {
         kernelPool.updateInputState(generating = isStreaming)
     }
+
+    // X 光诊断：进页 8 秒后取内核页 DOM 事实（行数/容器高度/display/body 类/载荷数），
+    // toast 显性报告——白屏从此有第一手数据，不再靠猜。消息为空时跳过。
+    LaunchedEffect(kernelPool, messages.size) {
+        if (messages.isEmpty()) return@LaunchedEffect
+        kotlinx.coroutines.delay(8_000)
+        val payloadCount = kernelPayloads.size
+        kernelPool.acquireSingle { pooled ->
+            RenderKernel(pooled).diagnose(payloadCount) { json ->
+                Toast.makeText(context, "内核体检：$json", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     // 官方冒充：流式正文实时写入 #send_textarea（StreamingProcessor L3600-3603 同构，含 VM 侧逐 tick 清洗）；
     // 结束后成品留在草稿框（官方不自动发送），inputChanged 镜像在冒充期间被抑制
     var lastImpersonationText by remember { mutableStateOf("") }
