@@ -147,6 +147,27 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
 
     fun clear(onDone: (() -> Unit)? = null) = eval("window.Kernel.clear();", onDone)
 
+    /** X 光诊断（白屏排查）：回传内核页关键 DOM 事实的 JSON 字符串。
+     *  ready/mesCount/sheldH/chatH/formH/formDisplay/bodyClass/payloadLen */
+    fun diagnose(payloadCount: Int, onResult: (String) -> Unit) {
+        val js = """
+            (function(){
+              function h(id){var e=document.getElementById(id);if(!e)return 'MISSING';
+                var cs=getComputedStyle(e);return Math.round(e.getBoundingClientRect().height)+'px/'
+                  +cs.display+'/'+cs.position;}
+              return JSON.stringify({
+                ready:!!(window.Kernel&&window.Kernel.ready),
+                mesCount:document.querySelectorAll('#chat .mes').length,
+                sheld:h('sheld'),chat:h('chat'),form:h('form_sheld'),
+                bodyClass:document.body.className,
+                href:location.href,
+                payloadCount:$payloadCount
+              });
+            })()
+        """.trimIndent()
+        eval(js) { onResult(it ?: "eval-no-callback") }
+    }
+
     /** 官方 event_types 触发（Native→Web 下发）：args 经 JSON 序列化保持类型，shim 端转 eventSource.emit */
     fun emitEvent(type: String, args: List<String> = emptyList()) {
         val js = buildString {
