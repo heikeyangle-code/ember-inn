@@ -28,9 +28,11 @@ fun Modifier.edgeSwipeBack(enabled: Boolean = true, onBack: () -> Unit): Modifie
                 val inEdge = down.position.x <= edge || down.position.x >= size.width - edge
                 var claimed = false
                 var total = 0f
+                var lastX = down.position.x
                 while (true) {
                     val change = awaitPointerEvent().changes.firstOrNull { it.pressed } ?: break
-                    val dx = change.positionChange().x
+                    val dx = change.position.x - lastX
+                    lastX = change.position.x
                     if (!claimed) {
                         if (!inEdge) { break }
                         if (abs(change.position.x - down.position.x) > slop) { claimed = true }

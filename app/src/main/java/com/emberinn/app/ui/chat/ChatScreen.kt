@@ -3220,8 +3220,7 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // 悬浮薄玻璃条（2026-08-25 用户定稿）：无底线、底部渐隐融入内容、常驻不消失；
-    // 底色只取主题令牌低透明度，杜绝实底盖板
+    // 顶栏定稿 v3（2026-08-25 用户令）：完全透明、无名字文字、与内容完全融为一体
     val E = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -3229,35 +3228,26 @@ private fun ChatTopBar(
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    listOf(E.bg.copy(alpha = 0.55f), E.bg.copy(alpha = 0.0f)),
+                    listOf(E.bg.copy(alpha = 0.30f), E.bg.copy(alpha = 0.0f)),
                 ),
             )
             .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 10.dp)
             .heightIn(min = 44.dp),
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSoft)
+            Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.ink)
         }
         Spacer(Modifier.size(4.dp))
         RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 32)
-        Spacer(Modifier.size(10.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = E.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Spacer(Modifier.weight(1f))
         IconButton(onClick = onAuthorsNote, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSoft)
+            Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.ink)
         }
         IconButton(onClick = onPersona, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSoft)
+            Icon(FaIcons.User, contentDescription = "人设", tint = E.ink)
         }
         IconButton(onClick = onMenu, modifier = Modifier.size(40.dp)) {
-            Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSoft)
+            Icon(FaIcons.Bars, contentDescription = "更多", tint = E.ink)
         }
     }
 }
