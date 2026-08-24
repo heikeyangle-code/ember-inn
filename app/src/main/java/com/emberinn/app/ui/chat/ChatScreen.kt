@@ -3195,55 +3195,48 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // EmberDS GlassBar：chrome 退后（DESIGN_SYSTEM §六.2）——半透明底 + hairline 分界，无投影
+    // 悬浮薄玻璃条（2026-08-25 重做）：不再实铺 Surface——主题 bg 一深就成黑盖板；
+    // 近透明主题底(0.38)+模糊(调用点 emberGlass)+极细底线，高度砍半，chrome 退后
     val E = EmberTheme.colors
-    Surface(
-        color = E.bg.copy(alpha = 0.72f),
-        shadowElevation = 0.dp,
-        modifier = modifier,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .drawBehind {
-                    // 底边 hairline（Compose border 无对齐重载，手绘底线）
-                    drawLine(
-                        color = E.line,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 0.5.dp.toPx(),
-                    )
-                }
-                .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp)
-                .heightIn(min = 52.dp),
-        ) {
-            // 返回按钮在左上角（配合边缘滑动返回），留足上下间距避免贴最高处
-            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSoft)
-            }
-            Spacer(Modifier.size(6.dp))
-            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 40)
-            Spacer(Modifier.size(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = E.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(E.bg.copy(alpha = 0.38f))
+            .drawBehind {
+                drawLine(
+                    color = E.line.copy(alpha = 0.6f),
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = 0.5.dp.toPx(),
                 )
             }
-            IconButton(onClick = onAuthorsNote, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSoft)
-            }
-            IconButton(onClick = onPersona, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSoft)
-            }
-            IconButton(onClick = onMenu, modifier = Modifier.size(44.dp)) {
-                Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSoft)
-            }
+            .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
+            .heightIn(min = 44.dp),
+    ) {
+        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+            Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.inkSoft)
+        }
+        Spacer(Modifier.size(4.dp))
+        RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 32)
+        Spacer(Modifier.size(10.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = E.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onAuthorsNote, modifier = Modifier.size(40.dp)) {
+            Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.inkSoft)
+        }
+        IconButton(onClick = onPersona, modifier = Modifier.size(40.dp)) {
+            Icon(FaIcons.User, contentDescription = "人设", tint = E.inkSoft)
+        }
+        IconButton(onClick = onMenu, modifier = Modifier.size(40.dp)) {
+            Icon(FaIcons.Bars, contentDescription = "更多", tint = E.inkSoft)
         }
     }
 }
