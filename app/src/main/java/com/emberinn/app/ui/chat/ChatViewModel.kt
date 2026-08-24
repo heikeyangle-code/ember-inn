@@ -1193,6 +1193,40 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     }
 
     /** 当前会话正则脚本（全局 + 角色 + 预设），供 /sendas 等 SLASH_COMMAND 位点复用。 */
+    /** 内核体检·引擎侧事实：正则链路每一环的实际状态（诊断专用，随体检报告展示）。 */
+    fun kernelRegexFacts(): String {
+        val c = character
+        val scripts = runCatching { resolveDisplayRegexScripts() }.getOrDefault(emptyList())
+        return listOf(
+            "characterLinked=${characterId != null && c != null}",
+            "rawJsonHasRegexScripts=${c?.rawJson?.contains("regex_scripts") == true}",
+            "regexMasterOn=${runCatching { com.emberinn.app.ui.settings.GlobalRegexPrefs.enabled(getApplication()) }.getOrDefault(false)}",
+            "scopedAllowed=${c?.let { "${it.id}.png" in com.emberinn.app.ui.settings.GlobalRegexPrefs.characterAllowedRegex(getApplication()) } ?: false}",
+            "displayScriptCount=${scripts.size}",
+            "scriptNames=${scripts.take(12).joinToString("/") { it.scriptName }}",
+        ).joinToString("\n")
+    }
+
+    /** 内核体检·引擎生效全景：各子系统当前实际状态（诊断专用，全部读真值不读缓存壳）。 */
+    fun kernelEngineFacts(): String {
+        val profile = runCatching { chatRepository.profile() }.getOrNull()
+        val preset = runCatching {
+            com.emberinn.app.ui.settings.PresetPrefsStore.load(getApplication()).samplerPreset
+        }.getOrDefault("")
+        val ctx = _contextUsage.value
+        return listOf(
+            "---- 引擎生效全景 ----",
+            kernelRegexFacts(),
+            "worldBookHits=${_worldHits.value.size}${_worldHits.value.take(6).joinToString("/", prefix = "[", postfix = "]") { it.name }}",
+            "contextUsage=${ctx?.first ?: "-"}/${ctx?.second ?: "-"}",
+            "persona=${_activePersona.value?.name.orEmpty().ifBlank { "无" }}",
+            "provider=${profile?.name.orEmpty().ifBlank { "未配置" }} protocol=${profile?.protocol ?: "-"} model=${profile?.model.orEmpty().ifBlank { "-" }}",
+            "samplerPreset=${preset.ifBlank { "无" }}",
+            "encodeTags=${com.emberinn.app.ui.settings.AppearancePrefs.encodeTags(getApplication())}" +
+                " fixMarkdown=${com.emberinn.app.ui.settings.AppearancePrefs.fixMarkdown(getApplication())}",
+        ).joinToString("\n")
+    }
+
     /** 显示位点正则脚本集合（displayTextOf/displayReasoningText 共用）。 */
     private fun resolveDisplayRegexScripts(): List<RegexPipelineScript> {
         val (presetScripts, presetAllowed) = presetRegex()

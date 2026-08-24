@@ -1752,11 +1752,11 @@ fun ChatScreen(
                     val count = kernelPayloads.size
                     kernelPool.acquireSingle { pooled ->
                         RenderKernel(pooled).diagnose(count) { json ->
-                            // 黑匣子可见化：X 光快照 + 全量诊断事件史（创建/就绪/崩溃/渲染/清空/报错）
+                            // 黑匣子可见化：引擎生效全景 + 内核 X 光 + 全量诊断事件史
+                            val engine = runCatching { vm.kernelEngineFacts() }.getOrDefault("引擎事实读取失败")
                             val history = com.emberinn.app.renderer.KernelDiagnostics.dump()
-                            kernelDiagReport = if (history.isEmpty()) json else {
-                                json + "\n---- 诊断事件史（新→旧） ----\n" + history.joinToString("\n")
-                            }
+                            kernelDiagReport = engine + "\n---- 内核 X 光 ----\n" + json +
+                                if (history.isEmpty()) "" else "\n---- 诊断事件史（新→旧） ----\n" + history.joinToString("\n")
                         }
                     }
                 }
@@ -3735,23 +3735,7 @@ private fun ChatComposerOverlays(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier.padding(start = 12.dp, end = 12.dp, bottom = (formHeightDp.dp + 6.dp)),
     ) {
-        // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，悬浮在官方输入区上方
-        if (!isStreaming && contextUsage != null) {
-            val (used, max) = contextUsage
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ContextCapsule(
-                    used = used,
-                    max = max,
-                    worldHits = worldHitsCount,
-                    onOpenContext = onOpenContextDetail,
-                    onOpenWorld = onOpenWorldPanel,
-                )
-            }
-        }
+        // 上下文/世界书胶囊已按用户要求移除（2026-08-25）；命中面板仍可从会话菜单进入
             if (pendingMedia.isNotEmpty()) {
                 if (pendingMedia.count { it.type == "image" } > 1) {
                     Row(
