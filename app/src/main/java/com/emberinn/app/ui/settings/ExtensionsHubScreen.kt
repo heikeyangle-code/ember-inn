@@ -59,7 +59,7 @@ fun ExtensionsHubScreen(
     onOpenCaption: () -> Unit,
     onOpenExpression: () -> Unit,
     onOpenRegex: () -> Unit,
-    onOpenInteractive: () -> Unit,
+    onOpenTavernHelper: () -> Unit,
     onOpenAuthorsNote: () -> Unit,
     onOpenData: () -> Unit,
 ) {
@@ -71,7 +71,7 @@ fun ExtensionsHubScreen(
         ExtensionEntry("图像说明", "本地模型为图片生成描述", FaIcons.Image, ExtStatus.NATIVE, onOpenCaption),
         ExtensionEntry("表情分类", "角色立绘表情切换", FaIcons.FaceSmile, ExtStatus.OK, onOpenExpression),
         ExtensionEntry("正则脚本", "输入/输出文本正则替换", FaIcons.CodeBranch, ExtStatus.OK, onOpenRegex),
-        ExtensionEntry("互动模式", "酒馆助手脚本 · MVU 变量框架", FaIcons.WandMagicSparkles, ExtStatus.PARTIAL, onOpenInteractive),
+        ExtensionEntry("酒馆助手", "前端卡脚本沙箱 · MVU 变量框架", FaIcons.WandMagicSparkles, ExtStatus.PARTIAL, onOpenTavernHelper),
         ExtensionEntry("作者注", "固定注入提示词与深度", FaIcons.Pencil, ExtStatus.NATIVE, onOpenAuthorsNote),
         ExtensionEntry("数据管理", "导出 · 备份 · 清除", FaIcons.Folder, ExtStatus.NATIVE, onOpenData),
     )

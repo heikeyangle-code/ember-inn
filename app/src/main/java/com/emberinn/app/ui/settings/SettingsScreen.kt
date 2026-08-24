@@ -60,7 +60,7 @@ import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, RENDER, EXTENSIONS, TAVERN_HELPER, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
+private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, RENDER, EXTENSIONS, TAVERN_HELPER, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
 
 /** 设置入口：对照官方 SillyTavern 移动端 8 分区抽屉（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理）。 */
 @Composable
@@ -167,11 +167,10 @@ fun SettingsScreen(
             onOpenCaption = { open(SettingsPage.CAPTION) },
             onOpenExpression = { open(SettingsPage.EXPRESSION) },
             onOpenRegex = { open(SettingsPage.REGEX) },
-            onOpenInteractive = { open(SettingsPage.INTERACTIVE) },
+            onOpenTavernHelper = { open(SettingsPage.TAVERN_HELPER) },
             onOpenAuthorsNote = { open(SettingsPage.AUTHORS_NOTE) },
             onOpenData = { open(SettingsPage.DATA) },
         )
-        SettingsPage.INTERACTIVE -> ExtensionsScreen(onBack = ::goBack)
         SettingsPage.VOICE -> VoiceScreen(onBack = ::goBack)
         SettingsPage.SERVICES -> ServicesScreen(onBack = ::goBack)
         SettingsPage.QUICK_REPLIES -> QuickRepliesScreen(onBack = ::goBack)
