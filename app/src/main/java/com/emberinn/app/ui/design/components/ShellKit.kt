@@ -459,6 +459,7 @@ fun FloatHub(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val c = EmberTheme.colors
     var open by remember { mutableStateOf(false) }
@@ -506,7 +507,10 @@ fun FloatHub(
                 .clip(CircleShape)
                 .background(c.surface.copy(alpha = 0.96f))
                 .border(1.dp, c.lineStrong, CircleShape)
-                .clickable { open = !open },
+                .combinedClickable(
+                    onClick = { open = !open },
+                    onLongClick = { open = false; onLongPress?.invoke() },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

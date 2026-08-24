@@ -70,6 +70,7 @@ fun MainScreen() {
     var openName by rememberSaveable { mutableStateOf("") }
     var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
     var settingsDeepLink by rememberSaveable { mutableStateOf<String?>(null) }
+    var showGlobalSearch by rememberSaveable { mutableStateOf(false) }
     val homeVm: HomeViewModel = viewModel()
 
     fun openSession(id: String) {
@@ -227,7 +228,7 @@ fun MainScreen() {
                 onSelectDestination = { selectedDest = it },
             )
         }
-        // 悬浮主钮浮在内容上（§三范式）：静默圆粒 + 展开竖栈；各屏自管底部留白
+        // 悬浮主钮浮在内容上（§三范式）：静默圆粒 + 展开竖栈；长按=全域搜索
         FloatHub(
             items = Destinations.map { HubItem(it.label, it.icon) },
             selected = selectedDest,
@@ -237,7 +238,42 @@ fun MainScreen() {
                 .padding(end = 20.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 14.dp),
+            onLongPress = { showGlobalSearch = true },
         )
+
+        if (showGlobalSearch) {
+            com.emberinn.app.ui.design.components.GlobalSearchPanel(
+                entriesProvider = { q ->
+                    val r = homeVm.search(q)
+                    buildList {
+                        r.characters.forEach { ch ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(ch.name, "角色卡", FaIcons.Mask, "角色") {
+                                openDetailId = ch.id
+                            })
+                        }
+                        r.sessions.forEach { se ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(se.name, "对话", FaIcons.Comments, "对话") {
+                                openSession(se.id)
+                                openName = se.name
+                            })
+                        }
+                        r.worldInfo.forEach { wi ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(wi.key, wi.characterName, FaIcons.BookOpen, "世界书") {
+                                settingsDeepLink = "worldinfo"
+                                selectedDest = 3
+                            })
+                        }
+                        r.settings.forEach { st ->
+                            add(com.emberinn.app.ui.design.components.SearchEntry(st.label, st.description, FaIcons.Gear, "设置") {
+                                if (st.route != null) settingsDeepLink = st.route
+                                selectedDest = 3
+                            })
+                        }
+                    }
+                },
+                onDismiss = { showGlobalSearch = false },
+            )
+        }
     }
 }
 
