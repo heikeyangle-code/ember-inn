@@ -16,7 +16,9 @@
     <link rel="stylesheet" href="official/css/fontawesome.min.css">
     <link rel="stylesheet" href="official/css/solid.min.css">
     <link rel="stylesheet" href="official/css/brands.min.css">
-    <link rel="stylesheet" href="official/css/style.css">
+    <!-- 官方主样式在站点根（public/style.css），其头部 @import url(css/*.css) 相对自身解析；
+         这里保持同构布局：style.css 置 official/ 根、16 个子样式表置 official/css/，导入链逐字生效 -->
+    <link rel="stylesheet" href="official/style.css">
     <link rel="stylesheet" href="official/css/mobile-styles.css">
     <link rel="stylesheet" href="official/css/toggle-dependent.css">
     <!-- 官方弹层样式（lightbox img_enlarged 走 .popup dialog 体系，chats.js expandMessageMedia） -->

@@ -1,6 +1,7 @@
 package com.emberinn.app.renderer
 
 import android.content.Context
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
@@ -78,6 +79,20 @@ class KernelWebViewPool(
     /** C3 输入区页面级状态：随主题/崩溃重建一起全量同步（applyPageSetup） */
     data class InputState(val generating: Boolean = false, val swiping: Boolean = false)
     @Volatile private var currentInputState: InputState = InputState()
+
+    /** 黑匣子：内核页创建/加载/握手任一环失败的宿主通知（此前全部静默吞掉 → 白屏无线索） */
+    private val errorListeners = mutableListOf<(String) -> Unit>()
+    fun addErrorListener(l: (String) -> Unit) { synchronized(errorListeners) { errorListeners.add(l) } }
+    fun removeErrorListener(l: (String) -> Unit) { synchronized(errorListeners) { errorListeners.remove(l) } }
+
+    /** 黑匣子上报：logcat 常驻 + 宿主监听者（主线程回调，可直接弹 toast）。 */
+    fun reportError(message: String, error: Throwable? = null) {
+        Log.e(TAG, message, error)
+        scope.launch(Dispatchers.Main) {
+            val full = message + (error?.let { "：${it.message}" } ?: "")
+            synchronized(errorListeners) { errorListeners.toList() }.forEach { it(full) }
+        }
+    }
 
     /** 生成/滑动状态变更入口：广播到全部存活实例并记为页面状态 */
     fun updateInputState(generating: Boolean, swiping: Boolean = false) {
@@ -172,7 +187,7 @@ class KernelWebViewPool(
 
     fun preload() {
         scope.launch(Dispatchers.Main) {
-            repeat(warmup) { runCatching { createAndWarm() } }
+            repeat(warmup) { runCatching { createAndWarm() }.onFailure { reportError("内核实例预热失败", it) } }
         }
     }
 
@@ -252,8 +267,14 @@ class KernelWebViewPool(
      * 必须在主线程调用。
      */
     private suspend fun createAndWarm(): PooledWebView {
+        val webView = try {
+            WebView(context)
+        } catch (t: Throwable) {
+            reportError("WebView 创建失败（系统 WebView 服务不可用/损坏?）", t)
+            throw t
+        }
         val instance = PooledWebView(
-            webView = WebView(context),
+            webView = webView,
             loader = assetLoader,
         )
         synchronized(all) { all.add(instance) }
@@ -279,16 +300,47 @@ class KernelWebViewPool(
                 assetLoader,
                 instance.webView.context,
                 onRenderProcessGone = { handleProcessGone(instance) },
+                onLoadError = { reportError(it) },
             )
+            // 黑匣子：页面 console 全量转发 logcat（未捕获异常以 Uncaught 前缀同走此路）
+            web.webChromeClient = object : android.webkit.WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                    consoleMessage?.let {
+                        val level = it.level()
+                        if (level != android.webkit.ConsoleMessage.MessageLevel.DEBUG &&
+                            level != android.webkit.ConsoleMessage.MessageLevel.TIP
+                        ) {
+                            Log.w(
+                                TAG,
+                                "[console:$level] ${it.message()} " +
+                                    "(${it.sourceId()?.substringAfterLast('/') ?: "?"}:${it.lineNumber()})",
+                            )
+                        }
+                    }
+                    return true
+                }
+            }
         }
         suspendCancellableCoroutine { cont ->
-            // 桥回调（后台线程）仅置位 ready；此处主线程轮询避免跨线程续体竞争
+            // 桥回调（后台线程）仅置位 ready；此处主线程轮询避免跨线程续体竞争。
+            // 黑匣子：超时不再无限死等（此前 kernelReady 不到 → 挂起永久 → 整页空白无任何线索）
             val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            val deadline = System.currentTimeMillis() + READY_TIMEOUT_MS
             val check = object : Runnable {
                 override fun run() {
                     when {
                         instance.ready -> cont.resume(instance)
                         !cont.isActive -> Unit
+                        System.currentTimeMillis() >= deadline -> {
+                            synchronized(all) { all.remove(instance) }
+                            runCatching { instance.webView.destroy() }
+                            cont.resumeWithException(
+                                IllegalStateException(
+                                    "kernelReady 超时(${READY_TIMEOUT_MS / 1000}s)：页面未加载或 JS 未执行" +
+                                        "（严格模式开启？主帧加载失败？见上方 logcat）",
+                                ),
+                            )
+                        }
                         else -> handler.postDelayed(this, 50)
                     }
                 }
@@ -310,12 +362,12 @@ class KernelWebViewPool(
                 existing.busy = true
                 block(existing)
             } else if (synchronized(all) { all.size } < maxSize) {
-                val fresh = runCatching { createAndWarm() }.getOrNull() ?: return@launch
+                val fresh = runCatching { createAndWarm() }.onFailure { reportError("内核实例创建失败", it) }.getOrNull() ?: return@launch
                 fresh.busy = true
                 block(fresh)
             } else {
                 // 池满兜底：直接新建不设限（内存压力由系统回收机制与 release 端控制）
-                val fresh = runCatching { createAndWarm() }.getOrNull() ?: return@launch
+                val fresh = runCatching { createAndWarm() }.onFailure { reportError("内核实例创建失败", it) }.getOrNull() ?: return@launch
                 fresh.busy = true
                 block(fresh)
             }
@@ -346,5 +398,11 @@ class KernelWebViewPool(
             synchronized(all) { all.clear() }
             idle.clear()
         }
+    }
+
+    companion object {
+        private const val TAG = "EmberInnKernel"
+        /** kernelReady 等待上限：正常冷启动 <2s；超时即视为页面加载/JS 执行失败（黑匣子上报后销毁实例） */
+        private const val READY_TIMEOUT_MS = 15_000L
     }
 }

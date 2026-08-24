@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
@@ -94,12 +96,32 @@ class KernelWebViewClient(
     private val assetLoader: WebViewAssetLoader,
     private val context: Context,
     private val onRenderProcessGone: (() -> Unit)? = null,
+    /** 黑匣子：主帧加载失败回调（此前静默 → 整页白屏无任何线索） */
+    private val onLoadError: ((String) -> Unit)? = null,
 ) : WebViewClientCompat() {
 
     override fun shouldInterceptRequest(
         view: WebView,
         request: WebResourceRequest,
     ) = assetLoader.shouldInterceptRequest(request.url)
+
+    override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+        super.onReceivedError(view, request, error)
+        if (request.isForMainFrame && onLoadError != null) {
+            onLoadError("内核页加载失败 ${error.errorCode}：${error.description} @${request.url}")
+        }
+    }
+
+    override fun onReceivedHttpError(
+        view: WebView,
+        request: WebResourceRequest,
+        errorResponse: WebResourceResponse,
+    ) {
+        super.onReceivedHttpError(view, request, errorResponse)
+        if (request.isForMainFrame && onLoadError != null) {
+            onLoadError("内核页 HTTP ${errorResponse.statusCode} @${request.url}")
+        }
+    }
 
     override fun shouldOverrideUrlLoading(
         view: WebView,

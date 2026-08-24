@@ -238,6 +238,11 @@ fun ChatScreen(
             mainHandler.post { handleHostAction(context, action, value) }
         }
         kernelPool.addUiActionListener(uiAction)
+        // 黑匣子：内核页创建/加载/握手失败 → toast 显性告知（此前静默 = 全空白无线索）
+        val kernelErrorHandler: (String) -> Unit = { msg ->
+            Toast.makeText(context, "渲染内核故障：$msg", Toast.LENGTH_LONG).show()
+        }
+        kernelPool.addErrorListener(kernelErrorHandler)
         StApiShimInstaller.install(
             kernelPool,
             vm,
@@ -254,6 +259,7 @@ fun ChatScreen(
         )
         onDispose {
             kernelPool.removeUiActionListener(uiAction)
+            kernelPool.removeErrorListener(kernelErrorHandler)
             StApiShimInstaller.uninstall(kernelPool)
             kernelPool.destroyAll()
         }
