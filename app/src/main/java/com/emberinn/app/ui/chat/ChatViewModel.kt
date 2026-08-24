@@ -1220,7 +1220,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             "worldBookHits=${_worldHits.value.size}${_worldHits.value.take(6).joinToString("/", prefix = "[", postfix = "]") { it.name }}",
             "contextUsage=${ctx?.first ?: "-"}/${ctx?.second ?: "-"}",
             "persona=${_activePersona.value?.name.orEmpty().ifBlank { "无" }}",
-            "provider=${profile?.name.orEmpty().ifBlank { "未配置" }} protocol=${profile?.protocol ?: "-"} model=${profile?.model.orEmpty().ifBlank { "-" }}",
+            "provider=${profile?.name.orEmpty().ifBlank { "未配置" }} source=${profile?.providerId ?: "-"} model=${profile?.model.orEmpty().ifBlank { "-" }}",
             "samplerPreset=${preset.ifBlank { "无" }}",
             "encodeTags=${com.emberinn.app.ui.settings.AppearancePrefs.encodeTags(getApplication())}" +
                 " fixMarkdown=${com.emberinn.app.ui.settings.AppearancePrefs.fixMarkdown(getApplication())}",

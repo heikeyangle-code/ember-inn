@@ -457,29 +457,25 @@ RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系�
 - kernelReady 超时 15s 销毁误杀慢加载实例→30s 且只对调用方报错，实例留池继续加载。
 - TH 脚本卡不转 iframe：管线类名为 custom-language-js（encodeStyleTags 前缀），逐 token 匹配。
 
-### 9.2 未解主诉：冷启动慢且不稳定（最高优先级）
-现象：进聊天页数秒~20s+ 出画面，时好时坏；同机浏览器跑官方 SillyTavern 不卡 → **App 特有问题，
-与 WebView 本身无关**。css-bundle.css（style.css+16 导入逐字内联，scripts/bundle-official-css.mjs
-再生成）已把样式请求 17→1，但用户实测仍慢 → CSS 不是唯一主犯。待查嫌疑（按可能性）：
-①内核池在进入 ChatScreen 才 remember+preload——应提前到 App 启动（安全方式待定）；
-②OfficialThemeManager/样式包对实例的 applyPageSetup 重复触发；③kernelPayloads 每次重组
-全量重建+renderChat 全量清建（签名守卫只挡了无变化 tick）；④AssetLoader 单请求拦截开销。
-诊断工具已备：右上角「内核体检」全字段 JSON（含 viewport/容器尺寸/bodyClass/样式包/
-payloadCount）+ logcat tag `EmberInnKernel`（attach 时打印 slot/view 尺寸）。下步：给诊断加
-分段计时（CSS 解析/JS 求值/首条挂载毫秒数），用数据定位，禁止盲改。
+### 9.2 内核稳定化（2026-08-25 已根治，勿回退）
+- 冷启动空白 8~10s：池建在 ChatScreen remember 里=每次进聊天重载整页+旧池泄漏挤爆渲染进程。
+  已改 KernelPoolHolder 进程级单例（MainActivity 入口预热，首帧后 600ms，单实例串行红线）。
+- 开场白 1~2s 消失只剩背景：渲染签名守卫跨实例复用（重挂后新页空 DOM 被旧签名跳过）+
+  双实例互踩（acquire 异步期效果重跑）。已修：签名按 host 重置 remember(host) + AtomicBoolean
+  挂载守卫（20s 安全阀）。体检事件史实证闭环。
+- 卡 17 开场白不渲染：角色正则放行开关不触发 DisplayCacheVersion.bump（聊天页持旧空脚本表
+  直到重启）。已修：放行/收回即 bump。体检 firstTextLen=11 实证。
+- 消息按钮全装死：describeAction 按"第一个 mes_ 前缀"取动作名，而按钮首类恒为通用样式
+  mes_button → 全部上报成 mes_button。已改官方模板 34 动作白名单精确匹配；mes_bookmark
+  宿主新接（读 extra.bookmark_link 复用打开确认弹窗）。冒充/继续语义已对官方核实一致
+  （冒充结果进输入框可改再发=L5465；继续=引擎差分锁定）。
+- 滚动顿挫：贴底状态每帧过桥挤占主线程，已限流 50ms。上下文/世界书胶囊已按用户要求删除。
+- 体检=三层报告：引擎生效全景（正则链/世界书/上下文/人设/提供商/预设/开关真值）+
+  内核 X 光 + 诊断事件史（创建/就绪/崩溃/渲染/清空/console 错误，80 条环形）。
 
-### 9.2b 最新复现（2026-08-24 晚，最高优先级）
-最新全量修复构建：进页 8~10s 出正文 → 约 1 秒后正文消失只剩背景；Azure 纯官方主题下
-同样复现 → **排除主题/样式包/GPU 因素，为宿主侧逻辑 bug**。主嫌疑排序：
-①VM messages 二次发射空表（ChatStore 缓存失效与异步落盘竞态）→ renderChat([]) 清空；
-②渲染进程仍偶发 gone（与主题无关的内存/驱动因素）→ 崩溃自愈重挂后加载失败；
-③AndroidView 重组时序把已挂实例摘除。
-已加定位日志（复现一次即可判别）：RenderKernel.renderChat 打印载荷数；
-render.js clearMessages 时 console.error('clearMessages')——两者对照即知「谁在清」。
-
-### 9.3 原生组件欠账
-- 聊天顶框 ChatTopBar 完全重做（任务 #6）：缩小面积/Ember 令牌化/智能显隐/与内核页层叠修正
-  （用户反馈顶部突兀、底部黑边）。注意 topBarPad 测量反馈回路曾异常。
+### 9.3 原生组件现状
+- ChatTopBar 重做 v1（49cd747b）：去实底 Surface（主题 bg 72% 实铺是发黑根因），
+  近透明 0.38+调用点细模糊，高度砍半。智能显隐未做（用户未确认要）。
 - 「选择模型」常驻提示条已删：发送时无模型才 toast+跳设置（用户拍板，勿恢复常驻 UI）。
 
 ### 9.4 酒馆助手（任务 #5）
