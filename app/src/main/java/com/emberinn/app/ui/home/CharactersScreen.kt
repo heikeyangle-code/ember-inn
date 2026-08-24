@@ -49,7 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.widget.Toast
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.components.EmberHaptics
@@ -63,6 +62,7 @@ import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.SheetRow
 import com.emberinn.app.ui.icons.FaIcons
+import com.emberinn.engine.card.CardFormat
 
 /**
  * 角色库（DESIGN_SYSTEM §4.3 海报墙定稿）：
@@ -376,4 +376,22 @@ private fun EmptyLibrary(onImport: () -> Unit, onDirectChat: () -> Unit) {
             ShellActionButton(label = "直接开聊") { onDirectChat() }
         }
     }
+}
+
+
+private fun displayName(context: android.content.Context, uri: android.net.Uri): String? = runCatching {
+    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) c.getString(0) else null
+    }
+}.getOrNull()
+
+private fun detectFormat(name: String?, mime: String?): CardFormat = when {
+    name?.endsWith(".png", ignoreCase = true) == true -> CardFormat.PNG
+    name?.endsWith(".charx", ignoreCase = true) == true -> CardFormat.CHARX
+    name?.endsWith(".byaf", ignoreCase = true) == true -> CardFormat.BYAF
+    name?.endsWith(".yaml", ignoreCase = true) == true || name?.endsWith(".yml", ignoreCase = true) == true -> CardFormat.YAML
+    name?.endsWith(".json", ignoreCase = true) == true -> CardFormat.JSON
+    mime == "image/png" -> CardFormat.PNG
+    mime?.contains("json", ignoreCase = true) == true -> CardFormat.JSON
+    else -> CardFormat.JSON
 }

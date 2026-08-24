@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
