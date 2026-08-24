@@ -7,9 +7,14 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
+package com.emberinn.app.ui.design.components
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -304,25 +310,25 @@ fun HeroCard(
 
 /**
  * 海报砖（§4.3）：原始纵横比 + 下缘悬浮名牌（名牌垫页底实底再半透，文字永远可读）。
- * ghost=true 时是「＋」导入幽灵位。
+ * ghost=true 时是「＋」导入幽灵位；onLongClick 供长按菜单（置顶/导出/删除）。
  */
 @Composable
 fun PosterTile(
     name: String,
     avatarPath: String?,
-    width: Dp,
     aspect: Float = 0.70f,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     ghost: Boolean = false,
+    width: Dp? = null,
 ) {
     val c = EmberTheme.colors
+    val base = if (width != null) Modifier.width(width).height(width / aspect) else Modifier.fillMaxWidth().heightIn(min = 1.dp).aspectRatio(aspect)
     Box(
-        modifier = Modifier
-            .width(width)
-            .height(width / aspect)
+        modifier = base
             .clip(RoundedCornerShape(14.dp))
             .then(if (ghost) Modifier.border(1.dp, c.line, RoundedCornerShape(14.dp)) else Modifier.background(c.surfaceSink))
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         if (ghost) {
             Icon(
@@ -336,7 +342,7 @@ fun PosterTile(
                 model = avatarPath?.let { File(it) },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(width / aspect),
+                modifier = Modifier.matchParentSize(),
             )
             Box(
                 modifier = Modifier

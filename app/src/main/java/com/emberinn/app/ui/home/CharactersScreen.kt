@@ -211,45 +211,36 @@ fun CharactersScreen(
                 onDirectChat = { onOpenChat(vm.newSession(null, "AI 对话")) },
             )
         } else {
+            // 海报墙（DESIGN_SYSTEM §4.3）：双列瀑布，纵横比随卡面哈希错落；长按=置顶/导出/删除
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topBarPad + 8.dp, bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    AiChatCard(onClick = { EmberHaptics.select(haptic); onOpenChat(vm.newSession(null, "AI 对话")) })
-                }
-                if (recentSessions.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        EmberSectionHeader("最近聊过")
-                    }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(recentSessions, key = { it.id }) { session ->
-                                RecentChatCard(
-                                    session = session,
-                                    avatarPath = characters.firstOrNull { it.id == session.characterId }?.avatarPath,
-                                    preview = vm.lastMessage(session.id),
-                                    onClick = { EmberHaptics.select(haptic); onOpenChat(session) },
-                                )
-                            }
-                        }
-                    }
-                }
                 if (filtered.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        EmberSectionHeader("我的角色")
-                    }
                     items(filtered, key = { it.id }) { record ->
-                        CharacterCard(
-                            record = record,
-                            preview = vm.lastMessageFor(record.id),
-                            onClick = { EmberHaptics.select(haptic); onOpenChat(vm.openOrResume(record.id, record.name)) },
-                            onMenu = { menuRecord = record },
+                        val aspect = remember(record.id) {
+                            listOf(0.70f, 0.62f, 0.78f)[kotlin.math.abs(record.id.hashCode()) % 3]
+                        }
+                        com.emberinn.app.ui.design.components.PosterTile(
+                            name = record.name,
+                            avatarPath = record.avatarPath,
+                            aspect = aspect,
+                            onClick = { EmberHaptics.select(haptic); onOpenDetail(record) },
+                            onLongClick = { menuRecord = record },
                         )
                     }
+                }
+                item {
+                    com.emberinn.app.ui.design.components.PosterTile(
+                        name = "导入角色卡",
+                        avatarPath = null,
+                        aspect = 0.70f,
+                        ghost = true,
+                        onClick = { importLauncher.launch(arrayOf("*/*")) },
+                    )
                 }
             }
         }
