@@ -4,26 +4,26 @@
 > 与 App 存储层自动比对，未命中的 61 个人工 triage 成三类。
 > 口径：**等价**=语义已被其他实现覆盖；**缺口**=官方有而 App 无，列入待办；**登记**=有意不实现（附原因）。
 
-## 一、真缺口（待补，按影响排序）
+## 一、真缺口（按影响排序；✅=已落地）
 
-| 官方键 | 说明 | 补法草案 |
+| 官方键 | 说明 | 状态 / 补法 |
 |---|---|---|
-| `smooth_streaming` + `_speed` + `_no_think` | 流式打字机平滑输出（速度档/思考块不平滑） | StreamingThrottler 旁加逐字符出速控制，设置入用户设置 |
-| `stream_fade_in` | 流式文本渐显 | 内核流式行 CSS 或节流透明度 |
-| `send_on_enter` | 回车发送开关（桌面键盘场景） | 移动端软键盘 action 判定，设置默认关 |
-| `play_message_sound` / `play_sound_unfocused` | 消息音效（前台/仅后台） | SoundPool 短音 + 通知渠道提示音两档 |
-| `allow_name1_display` | 用户消息保留 `用户名:` 前缀显示 | 与 allow_name2_display 并列一开关 |
-| `spoiler_free_mode` | 防剧透模式（隐藏正文点开显示） | 消息行折叠态，点击展开 |
-| `auto_save_msg_edits` | 编辑后自动保存（免确认） | 编辑保存链路旁路确认 |
-| `auto_scroll_chat_to_bottom` | 新消息自动滚底开关 | 聊天滚动策略接 chatScroll.atBottom |
-| `quick_continue` / `quick_impersonate` | 输入区旁快捷继续/冒充钮 | 聊天输入区动作位（对齐官方 quick actions 位点） |
-| 标签域：`auto_sort_tags` `tag_sort_mode` `tag_import_setting` `import_card_tags` `sort_rule` | 角色/群聊标签管理器 | 官方 tags.html 面板对齐导入（书架筛选 chips 的数据源） |
-| `sort_order` | 角色列表排序（字母/日期/随机…） | 书架排序选择器 |
-| `disable_group_trimming` | 群聊不裁剪成员卡 | GroupLoop 开关透传引擎 |
-| `wi_key_input_plaintext` | 世界书 key 输入纯文本模式（禁正则高亮） | 世界书编辑器输入框开关 |
-| `world_import_dialog` | 导入世界书弹确认对话框 | WorldStore 导入路径加确认 |
-| `persona_sort_order` | 人设列表排序 | 人设横向卡列排序 |
-| `fuzzy_search` | 全局模糊搜索（Fuse 权重） | 人设搜索已登记近似；扩到全域搜索面板 |
+| `smooth_streaming` + `_speed` + `_no_think` | 流式打字机平滑输出 | ✅ 逐字揭示移植 sse-stream.js L93-105（延迟公式+标点加权），设置入用户设置「流式输出」组；no_think 登记边界：reasoning 独立通道本就不平滑 |
+| `auto_scroll_chat_to_bottom` | 新消息自动滚底开关 | ✅ 官方同键名入 BehaviorSettings，生成开始不再强制贴底（script.js:2715 同语义） |
+| `world_import_dialog` | 导入世界书确认对话框 | ✅ 导入暂存+AlertDialog 确认（同名覆盖提示） |
+| `stream_fade_in` | 流式文本渐显 | 待做：内核流式行 CSS 过渡 |
+| `send_on_enter` | 回车发送开关 | 待做：输入区已进内核 DOM，需经桥下发 power_user 标志 |
+| `play_message_sound` / `play_sound_unfocused` | 消息音效 | 待做：SoundPool 两档 |
+| `allow_name1_display` | 用户名前缀剥离开关 | **改判引擎差分级**：官方消费点在 Generate 响应清理（L6437/6512 wrongName），对应引擎 CleanUpMessage——PROTECTED 区须走差分流程，不可 UI 直补 |
+| `spoiler_free_mode` | 防剧透模式 | 待做：消息折叠态 |
+| `auto_save_msg_edits` | 编辑自动保存 | 待做 |
+| `quick_continue` / `quick_impersonate` | 快捷继续/冒充钮 | 待做：输入区动作位 |
+| 标签域五键 | 标签管理器 | 待做（书架筛选数据源） |
+| `sort_order` | 角色列表排序 | 待做：书架排序选择器 |
+| `disable_group_trimming` | 群聊不裁剪成员卡 | 待做：GroupLoop 开关透传 |
+| `wi_key_input_plaintext` | 世界书 key 纯文本输入 | 待做 |
+| `persona_sort_order` | 人设排序 | 待做 |
+| `fuzzy_search` | 模糊搜索权重 | 待做：全域搜索面板接 Fuse 口径 |
 
 ## 二、等价覆盖（键名不同或由其他机制承担）
 
