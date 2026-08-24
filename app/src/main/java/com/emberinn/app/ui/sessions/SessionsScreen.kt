@@ -236,7 +236,7 @@ fun SessionsScreen(
                     Text(
                         "生成模式",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row {
@@ -255,7 +255,7 @@ fun SessionsScreen(
                     Text(
                         "激活策略",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row {
@@ -270,7 +270,7 @@ fun SessionsScreen(
                     Text(
                         "选择成员（至少 2 个）",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     characters.forEach { character ->
@@ -292,7 +292,7 @@ fun SessionsScreen(
                             Text(
                                 if (character.id in groupMemberIds) "✓" else "",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = EmberTheme.colors.accent,
                             )
                         }
                     }
@@ -300,7 +300,7 @@ fun SessionsScreen(
                         Text(
                             "还没有角色卡，先去角色页导入。",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = EmberTheme.colors.lineStrong,
                         )
                     }
                 }
@@ -351,7 +351,7 @@ fun SessionsScreen(
                     EmberHaptics.reject(haptic)
                     vm.delete(session); deleteTarget = null
                     Toast.makeText(context, "已删除：${session.name}", Toast.LENGTH_SHORT).show()
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) { Text("取消") }
@@ -431,7 +431,7 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
         modifier = Modifier
             .size(60.dp)
             .clip(corner)
-            .border(1.5.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.45f), corner),
+            .border(1.5.dp, (seed ?: EmberTheme.colors.accent).copy(alpha = 0.45f), corner),
         contentAlignment = Alignment.Center,
     ) {
         if (avatarFile != null) {
@@ -449,11 +449,11 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                         Brush.linearGradient(
                             if (seed != null) {
                                 listOf(
-                                    lerp(seed, MaterialTheme.colorScheme.surfaceContainerLow, 0.55f),
-                                    lerp(seed, MaterialTheme.colorScheme.surfaceContainerLow, 0.80f),
+                                    lerp(seed, EmberTheme.colors.surface, 0.55f),
+                                    lerp(seed, EmberTheme.colors.surface, 0.80f),
                                 )
                             } else {
-                                listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)
+                                listOf(EmberTheme.colors.accentContainer, EmberTheme.colors.surface2)
                             },
                         ),
                     ),
@@ -463,7 +463,7 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                     Icon(
                         FaIcons.User,
                         contentDescription = null,
-                        tint = seed ?: MaterialTheme.colorScheme.primary,
+                        tint = seed ?: EmberTheme.colors.accent,
                         modifier = Modifier.size(20.dp),
                     )
                 } else {
@@ -471,7 +471,7 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                         text = name.take(1),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = seed ?: MaterialTheme.colorScheme.primary,
+                        color = seed ?: EmberTheme.colors.accent,
                     )
                 }
             }
@@ -500,7 +500,7 @@ private fun NewChatSheet(
                 Text(
                     text = "选择一个角色",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = EmberTheme.colors.accent,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                 )
                 characters.forEach { character ->
@@ -515,7 +515,7 @@ private fun NewChatSheet(
                             Text(
                                 character.description.ifBlank { "角色卡" }.take(40),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkMute,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -540,13 +540,13 @@ private fun CharacterAvatar(character: CharacterRecord) {
             modifier = Modifier.size(36.dp).clip(CircleShape),
         )
     } else {
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(36.dp)) {
+        Surface(shape = CircleShape, color = EmberTheme.colors.surfaceSink, modifier = Modifier.size(36.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     character.name.take(1).ifBlank { "?" },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = EmberTheme.colors.accent,
                 )
             }
         }
