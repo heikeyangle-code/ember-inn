@@ -14,7 +14,7 @@ const dom = new JSDOM(`<!DOCTYPE html><html><body class="light-theme"><style id=
     runScripts: 'dangerously', pretendToBeVisual: true,
 });
 const { window } = dom;
-for (const f of ['js/showdown.min.js','js/css-tools.min.js','js/dompurify.min.js','js/highlight.min.js','js/st-extensions.js','js/render.js'])
+for (const f of ['js/showdown.min.js','js/css-tools.min.js','js/dompurify.min.js','js/highlight.min.js','js/st-extensions.js','js/audio-player.js','js/render.js'])
     window.eval(readFileSync(`${K}/${f}`, 'utf8'));
 
 let pass = 0, fail = 0;
@@ -29,6 +29,60 @@ const root = () => window.document.documentElement;
         const bg1 = d.createElement('div'); bg1.id = 'bg1';
         d.body.insertBefore(bg1, d.body.firstChild);
     }
+    // 官方媒体模板（kernel.html 同源：index.html L7670-7727）
+    if (!d.getElementById('message_image_template')) {
+        d.body.insertAdjacentHTML('beforeend', `
+<div id="message_image_template" class="template_element">
+    <div class="mes_media_container mes_img_container">
+        <div class="mes_img_controls">
+            <div title="Expand and zoom" class="right_menu_button fa-lg fa-solid fa-magnifying-glass mes_media_enlarge"></div>
+            <div title="Caption" class="right_menu_button fa-lg fa-solid fa-envelope-open-text mes_img_caption"></div>
+            <div title="Delete" class="right_menu_button fa-lg fa-solid fa-trash-can mes_media_delete"></div>
+        </div>
+        <img class="mes_img" src="" />
+    </div>
+</div>
+<div id="message_video_template" class="template_element">
+    <div class="mes_media_container mes_video_container">
+        <div class="mes_video_controls">
+            <div title="Expand and zoom" class="right_menu_button fa-lg fa-solid fa-magnifying-glass mes_media_enlarge"></div>
+            <div title="Caption" class="right_menu_button fa-lg fa-solid fa-envelope-open-text mes_img_caption"></div>
+            <div title="Delete" class="right_menu_button fa-lg fa-solid fa-trash-can mes_media_delete"></div>
+        </div>
+        <video class="mes_video" controls preload="metadata"></video>
+    </div>
+</div>
+<div id="message_gallery_controls" class="template_element">
+    <div class="mes_img_swipes">
+        <div title="Swipe left" class="right_menu_button fa-lg fa-solid fa-chevron-left mes_img_swipe_left"></div>
+        <div class="mes_img_swipe_counter">1/1</div>
+        <div title="Swipe right" class="right_menu_button fa-lg fa-solid fa-chevron-right mes_img_swipe_right"></div>
+    </div>
+</div>
+<div id="message_audio_template" class="template_element">
+    <div class="mes_media_container mes_audio_container audio-player">
+        <audio class="mes_audio" preload="auto" hidden></audio>
+        <div class="audio-player-header">
+            <div class="audio-player-title">Audio</div>
+            <div class="right_menu_button mes_media_delete fa-fw fa-solid fa-trash-can" title="Delete"></div>
+        </div>
+        <div class="audio-player-controls">
+            <button class="audio-player-play-pause right_menu_button fa-fw fa-solid fa-play" title="Play"></button>
+            <div class="audio-player-time">
+                <span class="audio-player-current-time">0:00</span>
+                <span class="audio-player-time-separator">/</span>
+                <span class="audio-player-total-time">0:00</span>
+            </div>
+            <div class="audio-player-progress">
+                <div class="audio-player-progress-bar"></div>
+            </div>
+            <div class="audio-player-volume-control">
+                <button class="audio-player-volume right_menu_button fa-fw fa-solid fa-volume-high" title="Mute"></button>
+            </div>
+        </div>
+    </div>
+</div>`);
+}
     if (!d.getElementById('form_sheld')) {
         const sheld = d.createElement('div'); sheld.id = 'sheld';
         sheld.innerHTML = '<div id="form_sheld"><div id="dialogue_del_mes"></div>'
@@ -263,9 +317,30 @@ t('滑动: 非末滑无 last_swipe', swNode.classList.contains('last_swipe'), fa
 t('滑动: 计数零宽空格格式', doc.querySelector('.mes[mesid="sw1"] .swipes-counter').textContent, `1​/​2`);
 await window.Kernel.renderMessage({
     mesid: 'sw1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
-    lastMessage: true, swipeCount: 2, currentSwipe: 1,
+    lastMessage: true, swipeCount: 2, currentSwipe: 1, overswipe: 'regenerate',
 });
-t('滑动: 末滑加 last_swipe', doc.querySelector('.mes[mesid="sw1"]').classList.contains('last_swipe'), true);
+t('滑动: 末滑加 last_swipe(regenerate)', doc.querySelector('.mes[mesid="sw1"]').classList.contains('last_swipe'), true);
+// 官方 L9232 运算符优先级：(isLastSwipe && regenerate) || edit_generate —— edit_generate 不看 isLastSwipe
+await window.Kernel.renderMessage({
+    mesid: 'sw1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    lastMessage: true, swipeCount: 2, currentSwipe: 0, overswipe: 'edit_generate',
+});
+t('滑动: edit_generate 非末滑也挂 last_swipe(官方优先级)', doc.querySelector('.mes[mesid="sw1"]').classList.contains('last_swipe'), true);
+// pristine_greeting：chevrons 常显（无变体也 swipes_visible），不挂 last_swipe
+await window.Kernel.renderMessage({
+    mesid: 'sw3', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    lastMessage: true, swipeCount: 1, currentSwipe: 0, overswipe: 'pristine_greeting',
+});
+const swPri = doc.querySelector('.mes[mesid="sw3"]');
+t('滑动: pristine_greeting 单变体也可见 chevron', swPri.classList.contains('swipes_visible'), true);
+t('滑动: pristine_greeting 无 last_swipe', swPri.classList.contains('last_swipe'), false);
+// extra.swipeable === false：整体不可滑（isMessageSwipeable 闸门）
+await window.Kernel.renderMessage({
+    mesid: 'sw4', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    lastMessage: true, swipeCount: 2, currentSwipe: 0, overswipe: 'regenerate', swipeable: false,
+});
+const swOff = doc.querySelector('.mes[mesid="sw4"]');
+t('滑动: extra.swipeable=false 全关', swOff.classList.contains('swipes_visible') || swOff.classList.contains('last_swipe'), false);
 // 官方 isMessageSwipeable：用户消息不可滑（无 swipes_visible / 计数留空）
 await window.Kernel.renderMessage({
     mesid: 'sw2', mes: 'x', chName: '我', isUser: true, isSystem: false,
@@ -292,6 +367,213 @@ hint.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 body().dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 t('按钮排: expandMessageActions 常显不收起', exBtns.classList.contains('visible'), true);
 body().classList.remove('expandMessageActions');
+
+
+// ---------- 9. 九项边界金测试（gallery/lightbox/编辑/show-more/lastInContext/timer/overswipe） ----------
+// 边界1 官方画廊（appendMediaToMessage script.js L2371-2384 + onImageSwiped chats.js）
+await window.Kernel.renderChat([
+    { mesid: 'g1', mes: '图库消息', chName: 'A', isUser: false,
+      mediaDisplay: 'gallery', mediaIndex: 0,
+      media: [
+        { url: '/media/a.png', type: 'image', title: '' },
+        { url: '/media/b.png', type: 'image', title: '' },
+      ] },
+]);
+const gNode = doc.querySelector('.mes[mesid="g1"]');
+t('边界1: data-media-display=gallery', gNode.getAttribute('data-media-display'), 'gallery');
+const gBlock = gNode.querySelector('.mes_media_wrapper .mes_img_container.img_swipes');
+t('边界1: GALLERY 单容器带 img_swipes 类', !!gBlock, true);
+t('边界1: GALLERY 只挂当前一张图', gNode.querySelectorAll('.mes_img').length, 1);
+t('边界1: 计数格式 i+1/n', gNode.querySelector('.mes_img_swipe_counter').textContent, '1/2');
+t('边界1: 切图条左右键存在',
+    !!gNode.querySelector('.mes_img_swipe_left') && !!gNode.querySelector('.mes_img_swipe_right'), true);
+// LIST：全部平铺，容器无 img_swipes 类（CSS 隐藏条）
+await window.Kernel.renderMessage({
+    mesid: 'g1', mes: '图库消息', chName: 'A', isUser: false,
+    mediaDisplay: 'list', mediaIndex: 1,
+    media: [
+        { url: '/media/a.png', type: 'image', title: '' },
+        { url: '/media/b.png', type: 'image', title: '' },
+    ],
+});
+t('边界1: LIST 全量挂载', doc.querySelectorAll('.mes[mesid="g1"] .mes_img').length, 2);
+t('边界1: LIST 容器无 img_swipes 类',
+    doc.querySelectorAll('.mes[mesid="g1"] .mes_media_container.img_swipes').length, 0);
+// 无媒体移除属性（jQuery attr(null)）
+await window.Kernel.renderMessage({ mesid: 'g2', mes: '无媒体', chName: 'A', isUser: false });
+t('边界1: 无媒体移除 data-media-display',
+    doc.querySelector('.mes[mesid="g2"]').hasAttribute('data-media-display'), false);
+// 图片加载失败 → alt=''+.error（官方 onError L2213-2216）
+{
+    const errImg = doc.querySelector('.mes[mesid="g1"] .mes_img');
+    errImg.dispatchEvent(new window.Event('error'));
+    t('边界1: 加载失败置 .error + alt=""',
+        errImg.classList.contains('error') && errImg.getAttribute('alt') === '', true);
+}
+
+// 边界1 图库切换（onImageSwiped chats.js L2061-2102）：点击右键 → 本地重建 + 桥接最终下标
+{
+    let swiped = null;
+    window.AndroidKernel = {
+        postMessage(json) { const m = JSON.parse(json); if (m.messageAction === 'mes_img_swipe') swiped = m; },
+    };
+    await window.Kernel.renderMessage({
+        mesid: 'g3', mes: '切换', chName: 'A', isUser: false,
+        mediaDisplay: 'gallery', mediaIndex: 0,
+        media: [
+            { url: '/media/a.png', type: 'image' },
+            { url: '/media/b.png', type: 'image' },
+        ],
+    });
+    doc.querySelector('.mes[mesid="g3"] .mes_img_swipe_right')
+        .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界1: 右切桥接 mes_img_swipe value=1', swiped && swiped.value, '1');
+    t('边界1: 切换后计数更新', doc.querySelector('.mes[mesid="g3"] .mes_img_swipe_counter').textContent, '2/2');
+    // 回绕：再右切回 0
+    doc.querySelector('.mes[mesid="g3"] .mes_img_swipe_right')
+        .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界1: 末图右切回绕到 0', doc.querySelector('.mes[mesid="g3"] .mes_img_swipe_counter').textContent, '1/2');
+}
+
+// 边界2 lightbox（callPopup large_dialogue_popup.transparent_dialogue_popup + img_enlarged 结构）
+{
+    await window.Kernel.renderMessage({
+        mesid: 'lb1', mes: '放大', chName: 'A', isUser: false,
+        mediaDisplay: 'list', media: [{ url: '/media/big.png', type: 'image' }],
+    });
+    doc.querySelector('.mes[mesid="lb1"] .mes_media_enlarge')
+        .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const dlg = doc.querySelector('dialog.popup.large_dialogue_popup.transparent_dialogue_popup');
+    t('边界2: dialog 三类齐全', !!dlg, true);
+    t('边界2: container>holder>img.img_enlarged 结构',
+        !!(dlg && dlg.querySelector('.img_enlarged_container > .img_enlarged_holder > img.img_enlarged')), true);
+    t('边界2: 关闭键 data-result=0',
+        !!(dlg && dlg.querySelector('.popup-button-close[data-result="0"]')), true);
+    t('边界2: dialog width/height 内联 unset',
+        !!(dlg && dlg.style.width === 'unset' && dlg.style.height === 'unset'), true);
+    // 官方 L962-964：放大镜打开时立即触发 click → 初始即为放大态；再点取消
+    const bigImg = dlg.querySelector('img.img_enlarged');
+    t('边界2: 放大镜打开初始即 zoomed', bigImg.classList.contains('zoomed'), true);
+    bigImg.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界2: 再点取消 zoomed', bigImg.classList.contains('zoomed'), false);
+    t('边界2: 点图不关闭', !!doc.querySelector('dialog.popup.large_dialogue_popup'), true);
+    dlg.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界2: 点空白关闭（closing 动画或移除）',
+        doc.querySelectorAll('dialog.popup.large_dialogue_popup').length <= 1, true);
+}
+
+// 边界3 行内编辑（官方 messageEdit script.js L8157-8250）
+{
+    await window.Kernel.renderMessage({
+        mesid: 'e1', mes: '编辑前的显示文本', chName: 'A', isUser: false,
+        rawMes: '  原始 mes 文本  ',
+    });
+    let saved = null;
+    window.AndroidKernel = {
+        postMessage(json) {
+            const m = JSON.parse(json);
+            if (m.messageAction === 'mes_edit_save' || m.messageAction === 'mes_edit_cancel') saved = m;
+        },
+    };
+    window.Kernel.beginEditMessage('e1');
+    const ta = doc.querySelector('.mes[mesid="e1"] #curEditTextarea');
+    t('边界3: curEditTextarea 存在', !!ta, true);
+    t('边界3: 初值=trimSpaces(rawMes)', ta ? ta.value : null, '原始 mes 文本');
+    t('边界3: 无 .editing 类（官方状态在变量）',
+        doc.querySelector('.mes[mesid="e1"]').classList.contains('editing'), false);
+    const nodeE1 = doc.querySelector('.mes[mesid="e1"]');
+    t('边界3: 常规按钮排内联隐藏', nodeE1.querySelector('.mes_buttons').style.display, 'none');
+    t('边界3: 编辑按钮排 inline-flex', nodeE1.querySelector('.mes_edit_buttons').style.display, 'inline-flex');
+    // 保存桥接
+    ta.value = '改好的文本';
+    nodeE1.querySelector('.mes_edit_done').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界3: mes_edit_done 桥接保存值', saved && saved.messageAction, 'mes_edit_save');
+    t('边界3: 保存值透传', saved && saved.value, '改好的文本');
+    // ESC 取消：不桥接（官方 cancel 本地恢复，auto_save 默认关）
+    window.Kernel.beginEditMessage('e1');
+    const ta2 = doc.querySelector('.mes[mesid="e1"] #curEditTextarea');
+    saved = null;
+    doc.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    t('边界3: ESC 不桥接保存（本地取消）', saved, null);
+    t('边界3: ESC 移除编辑框',
+        !doc.querySelector('.mes[mesid="e1"] #curEditTextarea'), true);
+    t('边界3: ESC 恢复按钮排显示',
+        doc.querySelector('.mes[mesid="e1"] .mes_buttons').style.display !== 'none', true);
+}
+
+
+
+// 边界5 show more（printMessages/showMoreMessages script.js L1431-1486）
+{
+    const many = [];
+    for (let i = 0; i < 8; i++) {
+        many.push({ mesid: 'p' + i, mes: '消息' + i, chName: 'A', isUser: false });
+    }
+    await window.Kernel.renderChat(many, { showMore: true });
+    const btn = doc.getElementById('show_more_messages');
+    t('边界5: 顶部挂 #show_more_messages', !!btn, true);
+    t('边界5: 按钮文案官方硬编码', btn ? btn.textContent : null, 'Show more messages');
+    t('边界5: 位于 #chat 首子节点', doc.querySelector('#chat').firstElementChild, btn);
+    // 点击 → hostRequest 桥接
+    let more = null;
+    const prevPost = window.AndroidKernel.postMessage;
+    window.AndroidKernel.postMessage = function (json) {
+        const m = JSON.parse(json);
+        if (m.hostAction === 'show_more_messages') more = m;
+    };
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    t('边界5: 点击桥 hostRequest show_more_messages', !!more, true);
+    // prependMessages：插到按钮之后、不动其余节点、首条 mesid 正确
+    await window.Kernel.prependMessages([
+        { mesid: 'q0', mes: '更早0', chName: 'A', isUser: false },
+        { mesid: 'q1', mes: '更早1', chName: 'A', isUser: false },
+    ]);
+    const chatChildren = [...doc.querySelector('#chat').children];
+    t('边界5: 批次插在按钮后', chatChildren[1].getAttribute('mesid'), 'q0');
+    t('边界5: 原有节点未动', chatChildren[chatChildren.length - 1].getAttribute('mesid'), 'p7');
+    // 到顶移除按钮
+    await window.Kernel.renderChat(many, { showMore: false });
+    t('边界5: 无截断不挂按钮', !doc.getElementById('show_more_messages'), true);
+}
+
+// 边界6 lastInContext（setInContextMessages script.js L6022-6041）
+{
+    await window.Kernel.renderChat([
+        { mesid: 'l0', mes: 'a', chName: 'A', isUser: true },
+        { mesid: 'l1', mes: 'b', chName: 'A', isUser: false, isSystem: true },   // 排除
+        { mesid: 'l2', mes: 'c', chName: 'A', isUser: false, lastInContext: true },
+        { mesid: 'l3', mes: 'd', chName: 'A', isUser: true },
+    ]);
+    t('边界6: 第 -N 匹配节点带类',
+        doc.querySelector('.mes[mesid="l2"]').classList.contains('lastInContext'), true);
+    t('边界6: 其余节点无类',
+        ['l0', 'l1', 'l3'].every(id => !doc.querySelector(`.mes[mesid="${id}"]`).classList.contains('lastInContext')), true);
+}
+
+// 边界4 timer（formatGenerationTimer script.js L2681-2706 + onProgressStreaming L3672）
+{
+    await window.Kernel.renderMessage({
+        mesid: 't1', mes: '计时', chName: 'A', isUser: false,
+        timerValue: '1.2s',
+        timerTitle: 'Generation queued: 12:34:56 7 Jan 2021\nReply received: 12:34:57 7 Jan 2021\nTime to generate: 1.2 seconds\nToken rate: 5.000 t/s',
+    });
+    const tm = doc.querySelector('.mes[mesid="t1"] .mes_timer');
+    t('边界4: .mes_timer 文本=timerValue', tm ? tm.textContent : null, '1.2s');
+    t('边界4: title 六行英文', (tm ? tm.title : '').includes('Token rate: 5.000 t/s'), true);
+    // 流式 updateStreaming 直写 timer
+    await window.Kernel.renderChat([{ mesid: 't2', mes: '', chName: 'A', isUser: false }]);
+    // 与 RenderKernel.updateStreaming 生成的一段式 JS 完全一致（Kotlin 侧组合后 evaluateJavascript）
+    {
+        const esc = JSON.stringify('流式…'), tv = JSON.stringify('3.4s'), tt = JSON.stringify('Time to generate: 3.4 seconds');
+        window.eval(`(function(){var m=document.querySelector('.mes[mesid="t2"]');if(!m)return;` +
+            `var el=m.querySelector('.mes_text');` +
+            `if(el){el.innerHTML=window.Kernel.formatText(${esc},{});}` +
+            `var tm=m.querySelector('.mes_timer');if(tm){tm.textContent=${tv},tm.title=${tt};}})();`);
+    }
+    const tm2 = doc.querySelector('.mes[mesid="t2"] .mes_timer');
+    t('边界4: 流式 tick 更新 timerValue', tm2 ? tm2.textContent : null, '3.4s');
+    t('边界4: 流式 tick 更新 title', tm2 ? tm2.title : null, 'Time to generate: 3.4 seconds');
+}
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail ? 1 : 0);

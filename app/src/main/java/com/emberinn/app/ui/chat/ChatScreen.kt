@@ -121,6 +121,7 @@ import com.emberinn.app.data.ThemeState
 import com.emberinn.app.renderer.ChatDisplayMode
 import com.emberinn.app.renderer.KernelHostAction
 import com.emberinn.app.renderer.KernelMessagePayload
+import com.emberinn.app.renderer.KernelProtocol
 import com.emberinn.app.renderer.KernelMediaPayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
@@ -161,6 +162,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -376,8 +379,6 @@ fun ChatScreen(
     var groupMode by rememberSaveable { mutableStateOf(vm.group?.generationMode ?: GroupGenerationMode.APPEND) }
     var groupStrategy by rememberSaveable { mutableStateOf(vm.group?.activationStrategy ?: "natural") }
     var imagePrompt by remember { mutableStateOf("") }
-    var editIndex by remember { mutableStateOf<MsgTarget?>(null) }
-    var editDraft by remember { mutableStateOf("") }
     var deleteTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var deleteSwipeTargetIndex by remember { mutableStateOf<MsgTarget?>(null) }
     var swipePickerIndex by remember { mutableStateOf<MsgTarget?>(null) }
@@ -574,6 +575,147 @@ fun ChatScreen(
     // 官方 swipe/生成目标是 chat.length-1 且非用户非系统（isMessageSwipeable）。
     val lastAiIndex = messages.indexOfLast { el -> !isUser(el) && !isSystem(el) }
 
+    // 边界6/边界5 官方状态输入
+    val lastInContextCount by vm.lastInContextCount.collectAsState()
+    val historyWindowExtra by vm.historyWindowExtra.collectAsState()
+
+    // 边界5 printMessages（script.js:12495-12508）：count=chat_truncation||∞（0=全部）；
+    // 窗口取尾部 N 条，mesid 保持原始索引；超窗时顶部挂 #show_more_messages。
+    // derivedStateOf：show more 处理器持有旧闭包实例也能读到最新窗口（delegated 读）。
+    val truncation = themeManager.shellSettings().chatTruncation
+    val chatFromIndex by remember(truncation) {
+        derivedStateOf {
+            val windowSize = if (truncation > 0) truncation + historyWindowExtra else Int.MAX_VALUE
+            if (messages.size > windowSize) messages.size - windowSize else 0
+        }
+    }
+    val showMoreFlag = truncation > 0 && chatFromIndex > 0
+
+    // 边界6 setInContextMessages（script.js:6022-6041）：全部移除后只给第 -N 个匹配节点加
+    // .lastInContext（选择器 `.mes:not([is_system="true"]), .mes.toolCall`——tool_invocations
+    // 为数组即 toolCall，官方 L2624 只判 Array.isArray）；无匹配回退首条显示消息。
+    val licTarget: Int? by derivedStateOf {
+        lastInContextCount?.let { n ->
+            var remaining = n
+            var found: Int? = null
+            for (i in messages.size - 1 downTo chatFromIndex) {
+                val el = messages[i]
+                // 与载荷同构：is_system 属性来自 formatAsSystem（系统名消息）
+                val sys = isSystem(el) && nameOf(el, isUser(el)) == SYSTEM_USER_NAME
+                val extraObj = el.jsonObject["extra"] as? JsonObject
+                val toolCall = extraObj?.get("tool_invocations") is kotlinx.serialization.json.JsonArray
+                if (!sys || toolCall) {
+                    remaining--
+                    if (remaining == 0) { found = i; break }
+                }
+            }
+            found ?: chatFromIndex.takeIf { messages.isNotEmpty() }
+        }
+    }
+
+    /** 单条消息 → 官方模板载荷；窗口外返回 null（边界5 截断）。show more 批次构造共用。 */
+    fun messagePayloadOf(index: Int, el: JsonElement): KernelMessagePayload? {
+        val user = isUser(el)
+        val system = isSystem(el)
+        val mediaItems = mediaOf(el)
+        val name = nameOf(el, user)
+        val formatAsSystem = system && name == SYSTEM_USER_NAME
+        val reasoningSrc = if (!user && !system && showThoughtsNow) {
+            (el.jsonObject["extra"] as? JsonObject)?.get("reasoning")
+                ?.jsonPrimitive?.contentOrNull
+                ?: if (index == lastAiIndex) {
+                    if (isStreaming) {
+                        DisplayPipeline.balanceStreamingDelimiters(
+                            streamingReasoning,
+                            isFinal = !isStreaming,
+                        ).let { balanced ->
+                            val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                            if (AppearancePrefs.encodeTags(context)) {
+                                com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
+                            } else fixed
+                        }
+                    } else lastReasoning
+                } else null
+        } else null
+        val reasoningDisplay = reasoningSrc?.takeIf { it.isNotBlank() }
+            ?.let { vm.displayReasoningText(it) }
+        return KernelMessagePayload(
+            mesid = "m-${index}",
+            mes = vm.kernelDisplayTextOf(index),
+            chName = name,
+            isUser = user,
+            isSystem = formatAsSystem,
+            avatarUrl = if (user) {
+                kernelAvatarUrlOf(activePersona?.avatarPath)
+            } else {
+                kernelAvatarUrlOf(vm.avatarPathOf(index) ?: vm.avatarPath)
+            },
+            timestamp = timeOf(el),
+            tokenCount = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("token_count")?.jsonPrimitive?.contentOrNull,
+            reasoning = reasoningDisplay?.takeIf { it.isNotBlank() },
+            media = mediaItems.map {
+                KernelMediaPayload(
+                    url = if (it.url.startsWith("data:")) it.url else kernelAvatarUrlOf(it.url).orEmpty(),
+                    type = it.type,
+                    title = it.title,
+                )
+            },
+            mediaDisplay = extraDisplayOf(el)?.takeIf { display ->
+                display == com.emberinn.engine.media.MediaDisplay.LIST ||
+                    display == com.emberinn.engine.media.MediaDisplay.GALLERY
+            } ?: themeManager.shellSettings().mediaDisplay,
+            ghost = system && name != SYSTEM_USER_NAME,
+            swipeCount = vm.swipeCountOf(el),
+            currentSwipe = vm.currentSwipeOf(el),
+            lastMessage = index == messages.lastIndex,
+            messageIndex = index,
+            type = (el.jsonObject["extra"] as? JsonObject)?.get("type")
+                ?.jsonPrimitive?.contentOrNull.orEmpty(),
+            bookmarkLink = (el.jsonObject["extra"] as? JsonObject)?.get("bookmark_link")
+                ?.jsonPrimitive?.contentOrNull,
+            forceAvatar = (el.jsonObject["extra"] as? JsonObject)?.get("force_avatar") != null,
+            smallSysMes = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("isSmallSys")?.jsonPrimitive?.booleanOrNull == true,
+            // 官方 script.js L2603：`${extra.api} - ${extra.model}`（api 空则只 model）
+            apiModelTitle = run {
+                val ex = el.jsonObject["extra"] as? JsonObject
+                val api = ex?.get("api")?.jsonPrimitive?.contentOrNull.orEmpty()
+                val model = ex?.get("model")?.jsonPrimitive?.contentOrNull ?: ""
+                when {
+                    api.isNotEmpty() && model.isNotEmpty() -> "$api - $model"
+                    api.isNotEmpty() -> api
+                    else -> model
+                }
+            },
+            // 边界4 timer：官方 formatGenerationTimer（script.js:2681）逐行移植
+            timerValue = generationTimerOf(el)?.first,
+            timerTitle = generationTimerOf(el)?.second,
+            // 边界3 messageEdit：textarea 初值 = trimSpaces(mes) 原文（引擎处理前）
+            rawMes = el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull,
+            // 边界3 reasoning 编辑初值 = extra.reasoning 原文
+            reasoningRaw = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("reasoning")?.jsonPrimitive?.contentOrNull,
+            // 官方 extra.inline_image：===false 时正文 .mes_text.inline_media 隐藏
+            inlineImage = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("inline_image")?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+                ?.booleanOrNull,
+            // 官方 getMediaIndex：extra.media_index 图库当前下标
+            mediaIndex = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("media_index")?.jsonPrimitive?.intOrNull ?: 0,
+            // 边界7 pristine 重滑：getOverswipeBehavior 枚举（VM 侧优先级链）
+            overswipe = vm.overswipeOf(index, el),
+            // 官方 isMessageSwipeable 的 !(extra.swipeable === false) 闸门
+            swipeable = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("swipeable")?.let { it as? JsonPrimitive }?.booleanOrNull,
+            // 官方媒体 title 兜底：attachment.title || mes.extra.title || ''（script.js L2204）
+            extraTitle = (el.jsonObject["extra"] as? JsonObject)
+                ?.get("title")?.jsonPrimitive?.contentOrNull,
+            // 边界6 lastInContext 虚线：第 -N 个匹配节点
+            lastInContext = index == licTarget,
+        )
+    }
+
     // 整页壳 C2：官方 #chat 全量同步。这里只做 Kotlin 状态 → 官方模板载荷的纯映射；
     // 文本/头像/时间/token/reasoning 均沿用现有引擎与显示管线，避免在 UI 层重写逻辑。
     val kernelPayloads = remember(
@@ -587,75 +729,12 @@ fun ChatScreen(
         showThoughtsNow,
         lastReasoning,
         currentName,
+        lastInContextCount,
+        historyWindowExtra,
     ) {
-        items.map { item ->
+        items.mapNotNull { item ->
             when (item) {
-                is ChatItem.Message -> {
-                    val el = item.element
-                    val user = isUser(el)
-                    val system = isSystem(el)
-                    val mediaItems = mediaOf(el)
-                    val name = nameOf(el, user)
-                    val formatAsSystem = system && name == SYSTEM_USER_NAME
-                    val reasoningSrc = if (!user && !system && showThoughtsNow) {
-                        (el.jsonObject["extra"] as? JsonObject)?.get("reasoning")
-                            ?.jsonPrimitive?.contentOrNull
-                            ?: if (item.index == lastAiIndex) {
-                                if (isStreaming) {
-                                    DisplayPipeline.balanceStreamingDelimiters(
-                                        streamingReasoning,
-                                        isFinal = !isStreaming,
-                                    ).let { balanced ->
-                                        val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
-                                        if (AppearancePrefs.encodeTags(context)) {
-                                            com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
-                                        } else fixed
-                                    }
-                                } else lastReasoning
-                            } else null
-                    } else null
-                    val reasoningDisplay = reasoningSrc?.takeIf { it.isNotBlank() }
-                        ?.let { vm.displayReasoningText(it) }
-                    KernelMessagePayload(
-                        mesid = "m-${item.index}",
-                        mes = vm.kernelDisplayTextOf(item.index),
-                        chName = name,
-                        isUser = user,
-                        isSystem = formatAsSystem,
-                        avatarUrl = if (user) {
-                            kernelAvatarUrlOf(activePersona?.avatarPath)
-                        } else {
-                            kernelAvatarUrlOf(vm.avatarPathOf(item.index) ?: vm.avatarPath)
-                        },
-                        timestamp = timeOf(el),
-                        tokenCount = (el.jsonObject["extra"] as? JsonObject)
-                            ?.get("token_count")?.jsonPrimitive?.contentOrNull,
-                        reasoning = reasoningDisplay?.takeIf { it.isNotBlank() },
-                        media = mediaItems.map {
-                            KernelMediaPayload(
-                                url = if (it.url.startsWith("data:")) it.url else kernelAvatarUrlOf(it.url).orEmpty(),
-                                type = it.type,
-                                title = it.title,
-                            )
-                        },
-                        mediaDisplay = extraDisplayOf(el)?.takeIf { display ->
-                            display == com.emberinn.engine.media.MediaDisplay.LIST ||
-                                display == com.emberinn.engine.media.MediaDisplay.GALLERY
-                        } ?: themeManager.shellSettings().mediaDisplay,
-                        ghost = system && name != SYSTEM_USER_NAME,
-                        swipeCount = vm.swipeCountOf(el),
-                        currentSwipe = vm.currentSwipeOf(el),
-                        lastMessage = item.index == messages.lastIndex,
-                        messageIndex = item.index,
-                        type = (el.jsonObject["extra"] as? JsonObject)?.get("type")
-                            ?.jsonPrimitive?.contentOrNull.orEmpty(),
-                        bookmarkLink = (el.jsonObject["extra"] as? JsonObject)?.get("bookmark_link")
-                            ?.jsonPrimitive?.contentOrNull,
-                        forceAvatar = (el.jsonObject["extra"] as? JsonObject)?.get("force_avatar") != null,
-                        smallSysMes = (el.jsonObject["extra"] as? JsonObject)
-                            ?.get("isSmallSys")?.jsonPrimitive?.booleanOrNull == true,
-                    )
-                }
+                is ChatItem.Message -> messagePayloadOf(item.index, item.element)
                 ChatItem.Streaming -> {
                     val streamingIndex = messages.size
                     val streamingDisplay = DisplayPipeline.balanceStreamingDelimiters(
@@ -728,8 +807,13 @@ fun ChatScreen(
                 } else fixed
             }
             val reasoning = vm.streamingReasoning.value.takeIf { it.isNotBlank() }?.let(::polish)
+            // 边界4：流中 .mes_timer 每 tick 重算（官方 onProgressStreaming L3672-3678 同构）
+            val timer = vm.liveStreamTimer()
             kernelPool.acquireSingle { pooled ->
-                RenderKernel(pooled).updateStreaming("m-${vm.messages.value.size}", polish(raw), reasoning)
+                RenderKernel(pooled).updateStreaming(
+                    "m-${vm.messages.value.size}", polish(raw), reasoning,
+                    timerValue = timer?.first, timerTitle = timer?.second,
+                )
             }
         }
     }
@@ -772,8 +856,6 @@ fun ChatScreen(
         reasoningExpanded = false
         reasoningExpandedMap.clear()
         menuMessageIndex = null
-        editIndex = null
-        editDraft = ""
         deleteTargetIndex = null
         deleteSwipeTargetIndex = null
         swipePickerIndex = null
@@ -868,6 +950,25 @@ fun ChatScreen(
                 KernelHostAction.CHAT_DELETE_CANCEL -> {
                     deleteMode = false
                     deleteCheckIndex = null
+                }
+                // 边界5 官方 showMoreMessages（script.js:12517-12556）：批次=chat_truncation||∞；
+                // firstId=clamp(首显mesid-count,0)；插到 #show_more_messages 之后；firstId==0
+                // 时按钮移除。内核侧已做锚点插入+视口内高度差回滚，宿主只扩窗+喂批次载荷。
+                KernelHostAction.SHOW_MORE_MESSAGES -> {
+                    val total = messages.size
+                    val tr = themeManager.shellSettings().chatTruncation
+                    val currentFirst = if (total > tr + historyWindowExtra) total - (tr + historyWindowExtra) else 0
+                    if (tr > 0 && total > tr && currentFirst > 0) {
+                        val newFirst = (currentFirst - tr).coerceAtLeast(0)
+                        if (newFirst < currentFirst) {
+                            val batch = messages.subList(newFirst, currentFirst)
+                                .mapIndexedNotNull { off, el -> messagePayloadOf(newFirst + off, el) }
+                            kernelPool.acquireSingle { pooled ->
+                                RenderKernel(pooled).prependMessages(batch)
+                            }
+                            vm.extendHistoryWindow(currentFirst - newFirst)
+                        }
+                    }
                 }
             }
         }
@@ -989,6 +1090,7 @@ fun ChatScreen(
                     payloads = kernelPayloads,
                     followBottom = followBottom,
                     draftProvider = { input },
+                    showMore = showMoreFlag,
                     onAtBottomChanged = { atBottom ->
                         if (!atBottom) followBottom = false
                     },
@@ -998,17 +1100,14 @@ fun ChatScreen(
                         }
                     },
                     onTextClick = { mesid ->
-                        // 官方 click_to_edit（chats.js L2292）：主题开关开启时点击正文进编辑
+                        // 边界3 click_to_edit（chats.js L2292）：主题开关开启时点击正文进内核编辑
                         if (themeManager.shellSettings().clickToEdit) {
-                            mesid.removePrefix("m-").toIntOrNull()?.let { index ->
-                                messages.getOrNull(index)?.let {
-                                    editIndex = MsgTarget(index, it)
-                                    editDraft = textOf(it)
-                                }
+                            kernelPool.acquireSingle { pooled ->
+                                RenderKernel(pooled).beginEditMessage(mesid)
                             }
                         }
                     },
-                    onMessageAction = { mesid, action, _ ->
+                    onMessageAction = { mesid, action, value ->
                         val index = mesid.removePrefix("m-").toIntOrNull()
                         val el = index?.let { messages.getOrNull(it) }
                         if (el == null) return@ChatKernelShell
@@ -1020,8 +1119,10 @@ fun ChatScreen(
                                 Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                             }
                             "mes_edit" -> {
-                                editIndex = MsgTarget(index, el)
-                                editDraft = textOf(el)
+                                // 边界3：官方 messageEdit——内核进入行内编辑，草稿初值随载荷 rawMes 下发
+                                kernelPool.acquireSingle { pooled ->
+                                    RenderKernel(pooled).beginEditMessage(mesid)
+                                }
                             }
                             "mes_create_bookmark" -> {
                                 bookmarkDraftName = vm.defaultBookmarkName()
@@ -1040,6 +1141,30 @@ fun ChatScreen(
                                 embedPicker.launch(arrayOf("*/*"))
                             }
                             "mes_swipe_picker" -> swipePickerIndex = MsgTarget(index, el)
+                            // ---- 边界1 官方画廊（chats.js onImageSwiped 桥接）：内核已本地重建 DOM，
+                            //      宿主只持久化 extra.media_index，不再全量刷新（避免闪烁）----
+                            "mes_img_swipe" -> value?.toIntOrNull()?.let { vm.setMediaIndex(index, it, refresh = false) }
+                            "mes_media_delete" -> value?.toIntOrNull()?.let { vm.deleteMedia(index, it) }
+                            // ---- 边界3 官方编辑模式（messageEdit/messageEditDone 桥接）----
+                            "mes_edit_save" -> vm.editMessage(index, value.orEmpty())
+                            "mes_edit_delete" -> vm.deleteMessage(index)
+                            // mes_edit_move：value = JSON {delta, draft}——先存草稿再移位（原子，见 VM 注释）
+                            "mes_edit_move" -> runCatching {
+                                val obj = KernelProtocol.json.parseToJsonElement(value.orEmpty()).jsonObject
+                                val delta = obj["delta"]?.jsonPrimitive?.intOrNull ?: return@runCatching
+                                vm.editAndMove(index, obj["draft"]?.jsonPrimitive?.contentOrNull, delta)
+                            }
+                            // mes_edit_copy：复制含未保存草稿 → 复制后内核在同一 mesid 重新进入编辑
+                            // （插入点在 index+1，既有索引不变）
+                            "mes_edit_copy" -> run {
+                                vm.duplicateMessage(index, value ?: textOf(el))
+                                kernelPool.acquireSingle { pooled ->
+                                    RenderKernel(pooled).beginEditMessage(mesid)
+                                }
+                            }
+                            // 边界3 reasoning 行内编辑（官方 messageReasoning 语义）
+                            "mes_reasoning_add" -> vm.setReasoning(index, "")
+                            "mes_reasoning_save" -> vm.setReasoning(index, value.orEmpty())
                             "del_checkbox" -> if (deleteMode) {
                                 deleteCheckIndex = index
                                 kernelPool.acquireSingle { RenderKernel(it).selectDeleteFrom(mesid) }
@@ -1269,7 +1394,11 @@ fun ChatScreen(
                         menuMessageIndex = null
                     }
                     MenuRow(FaIcons.Pencil, "编辑这条消息") {
-                        editIndex = MsgTarget(index, el); editDraft = text; menuMessageIndex = null
+                        menuMessageIndex = null
+                        // 边界3：与官方 mes_edit 按钮同路——内核行内编辑（messageEdit）
+                        kernelPool.acquireSingle { pooled ->
+                            RenderKernel(pooled).beginEditMessage("m-$index")
+                        }
                     }
                     MenuRow(FaIcons.TrashCan, "删除这条消息", danger = true) {
                         // 官方 openMessageDelete：进入删除模式，勾选从该条截断到末尾。
@@ -1456,38 +1585,6 @@ fun ChatScreen(
             )
         } else {
             LaunchedEffect(target) { deleteSwipeTargetIndex = null }
-        }
-    }
-
-    editIndex?.let { target ->
-        val index = target.resolve(messages)
-        if (index != null) {
-            AlertDialog(
-                onDismissRequest = { editIndex = null },
-                title = { Text("编辑消息") },
-                text = {
-                    EmberTextField(
-                        value = editDraft,
-                        onValueChange = { editDraft = it },
-                        minLines = 3,
-                        maxLines = 8,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        // 保存前重定位：弹层打开期间列表刷新则按身份找回，失配放弃（防写错消息）
-                        val cur = target.resolve(messages)
-                        if (cur != null) vm.editMessage(cur, editDraft)
-                        editIndex = null
-                    }) { Text("保存") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { editIndex = null }) { Text("取消") }
-                },
-            )
-        } else {
-            LaunchedEffect(target) { editIndex = null }
         }
     }
 
@@ -4076,6 +4173,51 @@ private fun timeOf(el: JsonElement): String {
 /** 是否系统消息（/hide 隐藏、/comment 注释等；官方 coreChat 过滤 is_system）。 */
 private fun isSystem(el: JsonElement): Boolean =
     el.jsonObject["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+
+/**
+ * 官方 formatGenerationTimer 逐行移植（script.js:2681-2706）：
+ * timerValue = `${seconds.toFixed(1)}s`；title 四~六行英文（moment 'HH:mm:ss D MMM YYYY'）。
+ * gen_started/gen_finished 是 new Date() 落盘（ISO UTC）；NaN/负差值 → 空 timerValue、title 保留。
+ * 官方 moment 无时区后缀按本地解析，ISO 带时区按原值——这里统一 Instant/OffsetDateTime 双路。
+ */
+private fun generationTimerOf(el: JsonElement): Pair<String, String>? {
+    val obj = el.jsonObject
+    val startRaw = obj["gen_started"]?.jsonPrimitive?.contentOrNull ?: return null
+    val finishRaw = obj["gen_finished"]?.jsonPrimitive?.contentOrNull ?: return null
+    if (startRaw.isEmpty() || finishRaw.isEmpty()) return null
+    fun parse(raw: String) = runCatching {
+        java.time.OffsetDateTime.parse(raw).toInstant()
+    }.recoverCatching { java.time.Instant.parse(raw) }
+        .recoverCatching {
+            java.time.LocalDateTime.parse(raw.replace(' ', 'T'))
+                .toInstant(java.time.ZoneOffset.UTC)
+        }.getOrNull() ?: return null
+    val start = parse(startRaw) ?: return null
+    val finish = parse(finishRaw) ?: return null
+    val seconds = java.time.Duration.between(start, finish).toMillis() / 1000.0
+    // moment 默认 'en' locale：D=不补零日、MMM=英文月缩写
+    val dateFormat = DateTimeFormatter.ofPattern("HH:mm:ss d MMM uuuu", java.util.Locale.ENGLISH)
+    val zone = ZoneId.systemDefault()
+    val tokenCount = obj["extra"]?.let { ex ->
+        (ex as? JsonObject)?.get("token_count")?.jsonPrimitive?.doubleOrNull
+    } ?: 0.0
+    val reasoningDuration = (obj["extra"] as? JsonObject)?.get("reasoning_duration")
+        ?.jsonPrimitive?.doubleOrNull
+    val timeToFirstToken = (obj["extra"] as? JsonObject)?.get("time_to_first_token")
+        ?.jsonPrimitive?.doubleOrNull
+    val timerTitle = listOfNotNull(
+        "Generation queued: ${start.atZone(zone).format(dateFormat)}",
+        "Reply received: ${finish.atZone(zone).format(dateFormat)}",
+        "Time to generate: $seconds seconds",
+        timeToFirstToken?.takeIf { it != 0.0 }?.let { "Time to first token: ${it / 1000} seconds" },
+        reasoningDuration?.takeIf { it > 0 }?.let { "Time to think: ${it / 1000} seconds" },
+        tokenCount.takeIf { it > 0 }
+            ?.let { "Token rate: ${String.format(java.util.Locale.US, "%.3f", it / seconds)} t/s" },
+    ).joinToString("\n").trim()
+    if (seconds < 0) return "" to timerTitle
+    return String.format(java.util.Locale.US, "%.1f", seconds) + "s" to timerTitle
+}
+
 
 
 /** CFG Scale 设置弹层（官方 scripts/cfg-scale.js 三档：会话/角色/全局 + 合并来源/深度/分隔符）。 */

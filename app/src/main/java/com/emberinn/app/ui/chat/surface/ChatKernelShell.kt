@@ -39,6 +39,8 @@ fun ChatKernelShell(
     /** C3：新内核实例挂载（含崩溃自愈重挂）后把宿主草稿写回 #send_textarea */
     draftProvider: () -> String = { "" },
     deleteMode: Boolean = false,
+    /** 边界5 长聊天截断：顶部挂官方 #show_more_messages（script.js printMessages） */
+    showMore: Boolean = false,
 ) {
     var host by remember { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
     var slot by remember { mutableStateOf<FrameLayout?>(null) }
@@ -98,9 +100,9 @@ fun ChatKernelShell(
         }
     }
 
-    LaunchedEffect(host, payloads, followBottom) {
+    LaunchedEffect(host, payloads, followBottom, showMore) {
         val kernel = host?.let(::RenderKernel) ?: return@LaunchedEffect
-        kernel.renderChat(payloads)
+        kernel.renderChat(payloads, showMore)
         if (followBottom) kernel.scrollToBottom()
     }
 

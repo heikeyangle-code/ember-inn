@@ -17,10 +17,18 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval("window.Kernel.renderMessage($json);", onDone)
     }
 
-    /** 整页壳 C2：全量同步官方 #chat；payload 顺序即聊天顺序。 */
-    fun renderChat(payloads: List<KernelMessagePayload>, onDone: (() -> Unit)? = null) {
+    /** 整页壳 C2：全量同步官方 #chat；payload 顺序即聊天顺序。
+     *  showMore=true 时顶部挂 #show_more_messages（边界5 长聊天截断，script.js printMessages）。 */
+    fun renderChat(payloads: List<KernelMessagePayload>, showMore: Boolean = false, onDone: (() -> Unit)? = null) {
         val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
-        eval("window.Kernel.renderChat($json);", onDone)
+        eval("window.Kernel.renderChat($json,{showMore:${if (showMore) "true" else "false"}});", onDone)
+    }
+
+    /** 边界5 show more：把上一批消息插到 #show_more_messages 之后（官方 showMoreMessages
+     *  的按钮锚点插入 + 视口内高度差回滚），不动其余节点。 */
+    fun prependMessages(payloads: List<KernelMessagePayload>) {
+        val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
+        eval("window.Kernel.prependMessages($json);")
     }
 
     /** 官方 #chat 滚动接管（C1/C2）。 */
@@ -64,19 +72,37 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval(js)
     }
 
-    /** C5 官方 onProgressStreaming 同构：原地更新流式行 .mes_text（+可选 .mes_reasoning），
-     *  不重建其余消息节点；节流由调用方控制，流结束走 renderChat 权威同步 */
-    fun updateStreaming(mesid: String, text: String, reasoning: String? = null) {
+    /** C5 官方 onProgressStreaming 同构：原地更新流式行 .mes_text（+可选 .mes_reasoning/.mes_timer），
+     *  不重建其余消息节点；节流由调用方控制，流结束走 renderChat 权威同步。
+     *  timer 直写对应官方 script.js L3673-3677（onProgressStreaming 每 chunk 重算 mes_timer）。 */
+    fun updateStreaming(
+        mesid: String,
+        text: String,
+        reasoning: String? = null,
+        timerValue: String? = null,
+        timerTitle: String? = null,
+    ) {
         val escaped = jsonEsc(text)
         val reasoningJs = if (reasoning != null) {
             val r = jsonEsc(reasoning)
             "var rd=m.querySelector('.mes_reasoning');if(rd){rd.textContent=$r;}"
         } else ""
+        val timerJs = if (timerValue != null) {
+            val tv = jsonEsc(timerValue)
+            val tt = if (timerTitle != null) ",tm.title=${jsonEsc(timerTitle)}" else ""
+            "var tm=m.querySelector('.mes_timer');if(tm){tm.textContent=$tv$tt;}"
+        } else ""
         eval(
             "(function(){var m=document.querySelector('.mes[mesid=\"$mesid\"]');if(!m)return;" +
                 "var el=m.querySelector('.mes_text');" +
-                "if(el){el.innerHTML=window.Kernel.formatText($escaped,{});}$reasoningJs})();",
+                "if(el){el.innerHTML=window.Kernel.formatText($escaped,{});}$reasoningJs$timerJs})();",
         )
+    }
+
+    /** 边界3 click_to_edit 桥：宿主判定开关与选区后让内核进入行内编辑（messageEdit 同构） */
+    fun beginEditMessage(mesid: String) {
+        val escaped = jsonEsc(mesid)
+        eval("window.Kernel.beginEditMessage($escaped);")
     }
 
     /** 应用官方主题 JSON（34 字段 → CSS 变量 + custom_css + body 类开关）。

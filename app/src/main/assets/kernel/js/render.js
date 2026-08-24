@@ -24,6 +24,8 @@
         encodeTags: false,                // power_user.encode_tags 默认 false（power-user.js L301，HTML 卡片可渲染的前提）
         markdownEscapeStrings: '',        // power_user.markdown_escape_strings 默认 ''
         allowName2Display: false,         // power_user.allow_name2_display 默认 false
+        trimSpaces: true,                 // power_user.trim_spaces 默认 true（messageEdit 填充用）
+        autoSaveEdits: false,             // power_user.auto_save_msg_edits 默认 false（power-user.js L149）
         externalMediaAllowed: true,       // [EmberInn] 放开模式：外链媒体始终允许
     }, window.KernelConfig || {});
 
@@ -471,67 +473,22 @@
         var ghostEl = node.querySelector('.mes_ghost');
         if (ghostEl) { ghostEl.style.display = payload.ghost ? '' : 'none'; }
 
-        // 官方 refreshSwipeButtons / isMessageSwipeable 语义（script.js L9123-9152）：
-        // 可滑=最后一条且非用户/非 smallSys；swipes_visible=有 >1 变体（左箭头随之显）；
-        // last_swipe=已到末位变体（overswipe 缺省 REGENERATE → 右箭头兜底常显，style.css L1341-1343）。
-        // 计数带零宽空格 formatSwipeCounter L9875：`n​/​total`。
-        var swipeCount = Number(payload.swipeCount || 0);
-        var currentSwipe = Number(payload.currentSwipe || 0);
-        var swipeable = !!payload.lastMessage && !payload.isUser && !payload.isSystem && !payload.smallSysMes;
-        node.classList.toggle('swipes_visible', swipeable && swipeCount > 1);
-        node.classList.toggle('last_swipe', swipeable && (swipeCount - 1 <= currentSwipe));
-        node.classList.toggle('last_mes', !!payload.lastMessage);
-        var counterEl = node.querySelector('.swipes-counter');
-        if (counterEl) { counterEl.textContent = (currentSwipe + 1) + '​/​' + swipeCount; }
+        // 官方 setInContextMessages（script.js L6024-6042）：上下文边界虚线（border-top dotted）
+        node.classList.toggle('lastInContext', !!payload.lastInContext);
 
-        // 官方媒体容器：图片直接进 .mes_media_wrapper；音视频沿用原生控件语义。
-        var mediaWrapper = node.querySelector('.mes_media_wrapper');
-        if (mediaWrapper) {
-            mediaWrapper.innerHTML = '';
-            var mediaDisplay = payload.mediaDisplay || 'list';
-            node.setAttribute('data-media-display', mediaDisplay);
-            (payload.media || []).forEach(function (item, index) {
-                var block;
-                if (item.type === 'image') {
-                    block = document.createElement('div');
-                    block.className = 'mes_media_container mes_img_container';
-                    block.setAttribute('data-index', index);
-                    var img = document.createElement('img');
-                    img.className = 'mes_img';
-                    img.src = item.url;
-                    if (item.title) { img.title = item.title; }
-                    block.appendChild(img);
-                } else if (item.type === 'video') {
-                    block = document.createElement('div');
-                    block.className = 'mes_media_container mes_video_container';
-                    block.setAttribute('data-index', index);
-                    var video = document.createElement('video');
-                    video.className = 'mes_video';
-                    video.src = item.url;
-                    video.controls = true;
-                    video.preload = 'metadata';
-                    block.appendChild(video);
-                } else if (item.type === 'audio') {
-                    block = document.createElement('div');
-                    block.className = 'mes_media_container mes_audio_container audio-player';
-                    block.setAttribute('data-index', index);
-                    var audio = document.createElement('audio');
-                    audio.className = 'mes_audio';
-                    audio.src = item.url;
-                    audio.controls = true;
-                    audio.preload = 'metadata';
-                    block.appendChild(audio);
-                } else {
-                    return;
-                }
-                mediaWrapper.appendChild(block);
-            });
-            var hasMedia = (payload.media || []).length > 0;
-            var textElForMedia = node.querySelector('.mes_text');
-            if (textElForMedia) {
-                textElForMedia.classList.toggle('inline_media', hasMedia && payload.mediaDisplay === 'inline');
-            }
-        }
+        // 官方 refreshSwipeButtons / isMessageSwipeable / getOverswipeBehavior 语义
+        // （script.js L9123-9249）：可滑=最后一条且非 user 且非 smallSys；
+        // last_swipe=末位变体且 overswipe ∈ {regenerate, edit_generate}；
+        // swipes_visible=有 >1 变体或 pristine greeting（chevron 恒显）。
+        // 计数带零宽空格 formatSwipeCounter L9875：`n​/​total`。
+        applySwipeClasses(node, payload);
+
+        // 官方 appendMediaToMessage（script.js L2157-2412）移植：GALLERY 单图+切图条 /
+        // LIST 全量平铺 / data-media-display 属性面 / inline_image===false 隐藏正文。
+        mountMessageMedia(node, payload);
+
+        // 运行时状态缓存：画廊切换 / 行内编辑 / 取消恢复都从这里取最近渲染载荷
+        messageState[payload.mesid] = payload;
 
         chat.appendChild(node);
         reportHeight(payload.mesid, node.scrollHeight);
@@ -542,6 +499,27 @@
             // 官方 script.js L11806：操作按钮排展开是纯内核 DOM 状态，不上报宿主
             var hintEl = ev.target.closest ? ev.target.closest('.extraMesButtonsHint') : null;
             if (hintEl) { expandExtraMesButtons(hintEl); return; }
+            // 官方 chats.js 委托表（L2348-2375）：画廊切图 / lightbox（.mes_img、放大镜）/ 删除媒体
+            var imgSwipeEl = ev.target.closest ? ev.target.closest('.mes_img_swipe_left, .mes_img_swipe_right') : null;
+            if (imgSwipeEl) {
+                onImageSwiped(payload.mesid, imgSwipeEl.classList.contains('mes_img_swipe_left') ? 'left' : 'right');
+                return;
+            }
+            var enlargeEl = ev.target.closest ? ev.target.closest('.mes_media_enlarge') : null;
+            var mediaEl = ev.target.closest ? ev.target.closest('.mes_img, .mes_video') : null;
+            if (enlargeEl || mediaEl) {
+                expandMessageMedia(payload.mesid, mediaIndexOfTarget(ev.target, payload.mesid), !!enlargeEl);
+                return;
+            }
+            if (ev.target.closest && ev.target.closest('.mes_media_delete')) {
+                bridgeSend({
+                    type: 'click',
+                    mesid: payload.mesid,
+                    messageAction: 'mes_media_delete',
+                    value: String(mediaIndexOfTarget(ev.target, payload.mesid)),
+                });
+                return;
+            }
             var actionEl = ev.target.closest ?
                 ev.target.closest('[class*="mes_"], .swipe_left, .swipe_right, .del_checkbox') : null;
             // 官方删除模式点击整条 .mes：从该条截断到末尾；普通模式不吞消息链接点击。
@@ -557,6 +535,9 @@
                     target: describeTarget(ev.target),
                 });
             } else {
+                // 官方 click_to_edit gate（chats.js L2292）：有选中文本或已存在编辑框时不报正文点击
+                if (document.querySelector('.edit_textarea')) { return; }
+                if (window.getSelection && String(window.getSelection())) { return; }
                 bridgeSend({ type: 'click', mesid: payload.mesid, target: describeTarget(ev.target) });
             }
         });
@@ -599,6 +580,7 @@
                 if (resizeObserver) { resizeObserver.unobserve(existing); }
                 existing.remove();
             }
+            delete messageState[payload.mesid];
             return mountMessage(tpl, payload);
         });
     }
@@ -606,8 +588,9 @@
     /**
      * 全量同步整个聊天（整页壳 C1）：清空重建，payloads 顺序即聊天顺序。
      * 切聊天 / 首挂载走这里；增量渲染走 renderMessage（模板缓存后两者均同步可用）。
+     * opts.showMore：顶部挂 #show_more_messages（边界5 长聊天截断）。
      */
-    function renderChat(payloads) {
+    function renderChat(payloads, opts) {
         return loadTemplate().then(function (tpl) {
             clearMessages();
             var last = null;
@@ -616,6 +599,7 @@
             Array.prototype.forEach.call(document.querySelectorAll('#chat .mes'), function (n, i, all) {
                 n.classList.toggle('last_mes', i === all.length - 1);
             });
+            setShowMoreButton(!!(opts && opts.showMore));
             return last;
         });
     }
@@ -635,13 +619,18 @@
         bridgeSend({ type: 'height', mesid: mesid, height: h });
     }
 
-    /** 清空全部消息节点：先解除高度观察再移除，防止 ResizeObserver 强持有已摘除 DOM */
+    /** 清空全部消息节点：先解除高度观察再移除，防止 ResizeObserver 强持有已摘除 DOM；
+     *  运行时载荷缓存与编辑态一并复位（切聊天/全量重建语义）。 */
     function clearMessages() {
         var chat = document.getElementById('chat');
         Array.prototype.forEach.call(chat.querySelectorAll('.mes'), function (n) {
             if (resizeObserver) { resizeObserver.unobserve(n); }
             n.remove();
         });
+        messageState = {};
+        thisEditMesId = null;
+        reasoningEditing = false;
+        setShowMoreButton(false);
     }
 
     function describeTarget(el) {
@@ -1047,18 +1036,710 @@
     }
 
     // ------------------------------------------------------------------
-    // 公开 API
+    // 边界1 画廊 / 边界2 lightbox / 边界5 show more / 边界3 行内编辑
+    // 官方基线：chats.js appendMediaToMessage/onImageSwiped/expandMessageMedia、
+    // script.js printMessages/showMoreMessages/messageEdit*、popup.js 弹层机制
     // ------------------------------------------------------------------
+
+    /** mesid → 最近渲染载荷（画廊切换/行内编辑/取消恢复的数据源） */
+    var messageState = {};
+    /** 编辑态互斥（官方模块级 this_edit_mes_id，script.js L610；无 .editing 类） */
+    var thisEditMesId = null;
+    var thisEditMesChname = '';
+    var reasoningEditing = false;
+
+    function numericMesid(mesid) {
+        var n = Number(String(mesid).replace(/^m-/, ''));
+        return isNaN(n) ? -1 : n;
+    }
+
+    function maxMessageIndex() {
+        var max = -1;
+        Object.keys(messageState).forEach(function (mid) {
+            var idx = Number(messageState[mid].messageIndex);
+            if (!isNaN(idx) && idx > max) { max = idx; }
+        });
+        return max;
+    }
+
+    function getMediaDisplayOf(payload) {
+        return payload.mediaDisplay === 'gallery' ? 'gallery' : 'list';
+    }
+
+    function mediaIndexOfTarget(target, mesid) {
+        var container = target.closest ? target.closest('.mes_media_container') : null;
+        if (!container) { return 0; }
+        var idx = Number(container.getAttribute('data-index'));
+        return isNaN(idx) ? 0 : idx;
+    }
+
+    function clampMediaIndex(payload) {
+        var len = (payload.media || []).length;
+        var idx = Number(payload.mediaIndex || 0);
+        if (isNaN(idx) || idx < 0) { idx = 0; }
+        if (len > 0 && idx > len - 1) { idx = len - 1; }
+        return idx;
+    }
+
+    /** 单个媒体块：官方 appendMediaAttachment 三分支（script.js L2218-2300）——
+     *  image/video/audio 各自 clone 官方模板，data-index/src/title、loadeddata→error 类，
+     *  audio 另行实例化原版 AudioPlayer（scripts/audio-player.js 原样内联于 kernel.js 载荷）。 */
+    function buildMediaBlock(item, index, extraTitle) {
+        var block;
+        if (item.type === 'video') {
+            // 官方 appendVideoAttachment（L2231-2258）
+            var tplVideo = document.getElementById('message_video_template');
+            if (tplVideo) {
+                block = tplVideo.querySelector('.mes_video_container').cloneNode(true);
+            } else {
+                block = document.createElement('div');
+                block.className = 'mes_media_container mes_video_container';
+                var vOnly = document.createElement('video');
+                vOnly.className = 'mes_video';
+                vOnly.controls = true;
+                vOnly.setAttribute('preload', 'metadata');
+                block.appendChild(vOnly);
+            }
+            block.setAttribute('data-index', String(index));
+            var video = block.querySelector('.mes_video');
+            video.setAttribute('src', item.url);
+            video.setAttribute('title', item.title || extraTitle || ''); // L2240: attachment.title || mes.extra.title || ''
+            var vFail = function () { video.classList.add('error'); };
+            if (video.readyState >= 2 /* HAVE_CURRENT_DATA */) { /* loaded */ }
+            else {
+                video.addEventListener('loadeddata', function () { /* onLoad: no-op resolve */ });
+                video.addEventListener('error', vFail);
+            }
+        } else if (item.type === 'audio') {
+            // 官方 appendAudioAttachment（L2263-2300）：模板 clone + AudioPlayer 实例化
+            var tplAudio = document.getElementById('message_audio_template');
+            if (tplAudio) {
+                block = tplAudio.querySelector('.mes_audio_container').cloneNode(true);
+            } else {
+                block = document.createElement('div');
+                block.className = 'mes_media_container mes_audio_container audio-player';
+                var aOnly = document.createElement('audio');
+                aOnly.className = 'mes_audio';
+                aOnly.setAttribute('preload', 'auto');
+                aOnly.setAttribute('hidden', '');
+                block.appendChild(aOnly);
+            }
+            block.setAttribute('data-index', String(index));
+            var audioEl = block.querySelector('.mes_audio');
+            audioEl.setAttribute('src', item.url);
+            audioEl.setAttribute('title', item.title || extraTitle || ''); // L2271
+            var aFail = function () { audioEl.classList.add('error'); };
+            if (audioEl.readyState >= 2 /* HAVE_CURRENT_DATA */) { /* loaded */ }
+            else {
+                audioEl.addEventListener('loadeddata', function () { /* onLoad */ });
+                audioEl.addEventListener('error', aFail);
+            }
+            if (window.AudioPlayer) { new window.AudioPlayer(audioEl, block); }
+        } else {
+            // 图片走官方模板 clone（含 mes_img_controls 放大/Caption/删除三键）
+            var tplImg = document.getElementById('message_image_template');
+            if (tplImg) {
+                block = tplImg.querySelector('.mes_img_container').cloneNode(true);
+            } else {
+                block = document.createElement('div');
+                block.className = 'mes_media_container mes_img_container';
+                var imgOnly = document.createElement('img');
+                imgOnly.className = 'mes_img';
+                block.appendChild(imgOnly);
+            }
+            block.setAttribute('data-index', String(index));
+            var img = block.querySelector('.mes_img');
+            img.setAttribute('src', item.url);
+            img.setAttribute('title', item.title || extraTitle || ''); // L2204
+            // 官方 load/error 状态（L2207-2216）：成功去 alt/.error，失败置 alt=''+.error
+            var settle = function () { img.removeAttribute('alt'); img.classList.remove('error'); };
+            var fail = function () { img.setAttribute('alt', ''); img.classList.add('error'); };
+            if (img.complete && img.naturalWidth > 0) { settle(); }
+            else {
+                img.addEventListener('load', settle);
+                img.addEventListener('error', fail);
+            }
+        }
+        return block;
+    }
+
+    /** appendMediaToMessage 移植：GALLERY 只挂当前图+切图条（单图也渲染 "1/1"），
+     *  LIST 全量平铺不带 img_swipes 类；无媒体时移除 data-media-display。 */
+    function mountMessageMedia(node, payload) {
+        var wrapper = node.querySelector('.mes_media_wrapper');
+        if (!wrapper) { return; }
+        wrapper.innerHTML = '';
+        var media = payload.media || [];
+        var hasMedia = media.length > 0;
+
+        // jQuery attr(null) 语义：无媒体移除属性（style.css L647 display 切换按钮随之隐藏）
+        if (hasMedia) {
+            node.setAttribute('data-media-display', getMediaDisplayOf(payload));
+        } else {
+            node.removeAttribute('data-media-display');
+        }
+
+        if (hasMedia && getMediaDisplayOf(payload) === 'gallery') {
+            var mediaIndex = clampMediaIndex(payload);
+            var selected = media[mediaIndex];
+            var block = buildMediaBlock(selected, mediaIndex, payload.extraTitle);
+            block.classList.add('img_swipes'); // script.js L2377：GALLERY 容器加 img_swipes
+            var tplGallery = document.getElementById('message_gallery_controls');
+            if (tplGallery) {
+                var controls = tplGallery.querySelector('.mes_img_swipes').cloneNode(true);
+                controls.querySelector('.mes_img_swipe_counter').textContent =
+                    (mediaIndex + 1) + '/' + media.length; // 计数格式 `${i+1}/${n}`（L2374）
+                block.appendChild(controls);
+            }
+            wrapper.appendChild(block);
+        } else if (hasMedia) {
+            media.forEach(function (item, index) {
+                wrapper.appendChild(buildMediaBlock(item, index, payload.extraTitle));
+            });
+        }
+
+        // inline_image === false 时隐藏正文（style.css .mes_text.inline_media:not(:has(.edit_textarea))）
+        var textEl = node.querySelector('.mes_text');
+        if (textEl) {
+            textEl.classList.toggle('inline_media', hasMedia && payload.inlineImage === false);
+        }
+    }
+
+    /** 画廊左右切换（chats.js onImageSwiped L2061-2102）：双向循环 wrap-around；
+     *  fa-fade 守卫照抄（官方从未真正添加该类，恒 false）；DOM 本地重建 + 桥报宿主落盘。 */
+    function onImageSwiped(mesid, direction) {
+        var state = messageState[mesid];
+        if (!state) { return; }
+        var media = state.media || [];
+        if (!media.length) { return; }                       // 官方 warn+return
+        if (getMediaDisplayOf(state) !== 'gallery') { return; } // 仅 GALLERY 可切（L2084）
+        var current = clampMediaIndex(state);
+        var newIndex;
+        if (direction === 'left') {
+            newIndex = current === 0 ? media.length - 1 : current - 1;
+        } else {
+            newIndex = current === media.length - 1 ? 0 : current + 1;
+        }
+        state.mediaIndex = newIndex;
+        rebuildMediaForMessage(mesid); // SCROLL_BEHAVIOR.ADJUST 补偿滚动
+        bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_img_swipe', value: String(newIndex) });
+    }
+
+    /** 单消息媒体重建（appendMediaToMessage 默认 ADJUST：scrollHeight 差值补回 scrollTop） */
+    function rebuildMediaForMessage(mesid) {
+        var node = document.querySelector('.mes[mesid="' + mesid + '"]');
+        var state = messageState[mesid];
+        if (!node || !state) { return; }
+        var chat = document.getElementById('chat');
+        var prevHeight = chat ? chat.scrollHeight : 0;
+        mountMessageMedia(node, state);
+        if (chat) { chat.scrollTop += chat.scrollHeight - prevHeight; }
+    }
+
+    // ---- 边界2 lightbox（chats.js expandMessageMedia L875-967 + popup.js 弹层机制）----
+
+    function openLightboxDialog(mediaElement, title) {
+        var dlg = document.createElement('dialog');
+        dlg.className = 'popup large_dialogue_popup transparent_dialogue_popup';
+        var body = document.createElement('div');
+        body.className = 'popup-body';
+        var content = document.createElement('div');
+        content.className = 'popup-content';
+        body.appendChild(content);
+        dlg.appendChild(body);
+        var closeBtn = document.createElement('div');
+        closeBtn.className = 'popup-button-close right_menu_button fa-solid fa-circle-xmark';
+        closeBtn.setAttribute('data-result', '0');
+        closeBtn.setAttribute('title', 'Close popup');
+        dlg.appendChild(closeBtn);
+
+        var holder = document.createElement('div');
+        holder.className = 'img_enlarged_holder';
+        holder.appendChild(mediaElement);
+        var container = document.createElement('div');
+        container.className = 'img_enlarged_container';
+        container.appendChild(holder);
+
+        // zoom toggle 单向语义（L929-934）：未放大 IMG → 放大；否则取消 zoomed；VIDEO 恒不放大
+        mediaElement.addEventListener('click', function (event) {
+            var shouldZoom = !mediaElement.classList.contains('zoomed') && mediaElement.nodeName === 'IMG';
+            mediaElement.classList.toggle('zoomed', shouldZoom);
+            event.stopPropagation();
+        });
+
+        if (String(title || '').trim().length > 0) {
+            var pre = document.createElement('pre');
+            var code = document.createElement('code');
+            code.className = 'img_enlarged_title txt';
+            code.textContent = title;
+            // 官方 chats.js L953-955：标题点击不冒泡（不触发 dialog 关闭）
+            code.addEventListener('click', function (event) { event.stopPropagation(); });
+            pre.appendChild(code);
+            container.appendChild(pre);
+            addCopyButtonToCode(code); // 标题复制按钮（addCopyToCodeBlocks 同构）
+        }
+
+        content.appendChild(container);
+
+        // chats.js L956-957：压过 .large_dialogue_popup 尺寸
+        dlg.style.width = 'unset';
+        dlg.style.height = 'unset';
+        // 点 dialog 内任意处关闭；媒体/标题 stopPropagation 不关只切 zoom（L958-960）
+        dlg.addEventListener('click', function () { closeLightbox(dlg); });
+        dlg.addEventListener('cancel', function (ev) { ev.preventDefault(); closeLightbox(dlg); }); // ESC
+
+        document.body.appendChild(dlg);
+        if (typeof dlg.showModal === 'function') {
+            dlg.setAttribute('opening', '');
+            try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
+            finishAnimation(dlg, 'opening');
+        } else {
+            dlg.setAttribute('open', ''); // jsdom 等无 showModal 环境
+        }
+    }
+
+    function finishAnimation(dlg, attr) {
+        var done = function () {
+            dlg.removeAttribute(attr);
+            dlg.removeEventListener('animationend', done);
+        };
+        dlg.addEventListener('animationend', done);
+        setTimeout(done, 400); // 动画事件不触发（reduced-motion/jsdom）兜底
+    }
+
+    function closeLightbox(dlg) {
+        if (dlg.hasAttribute('closing')) { return; }
+        dlg.setAttribute('closing', '');
+        var finalize = function () {
+            if (typeof dlg.close === 'function') { try { dlg.close(); } catch (e) { /* already closed */ } }
+            dlg.remove();
+        };
+        var once = function () { finalize(); };
+        dlg.addEventListener('animationend', once, { once: true });
+        setTimeout(once, 300); // pop-out 动画时长兜底
+    }
+
+    /** chats.js expandMessageMedia：type 分流 image/video、audio 拒绝、title 展示 */
+    function expandMessageMedia(mesid, mediaIndex, startZoomed) {
+        var state = messageState[mesid];
+        if (!state) { return; }
+        var attachment = (state.media || [])[mediaIndex];
+        if (!attachment) { return; }
+        if (attachment.type === 'audio') { return; } // 官方 warn+return
+
+        var mediaElement;
+        if (attachment.type === 'video') {
+            mediaElement = document.createElement('video');
+            mediaElement.className = 'img_enlarged';
+            mediaElement.src = attachment.url;
+            mediaElement.controls = true;
+            mediaElement.autoplay = true;
+        } else {
+            mediaElement = document.createElement('img');
+            mediaElement.className = 'img_enlarged';
+            mediaElement.src = attachment.url;
+        }
+
+        openLightboxDialog(mediaElement, attachment.title || state.title || '');
+        // .mes_media_enlarge 处理器立即 .click()（jQuery 触发 zoom 监听器）→ 打开即放大态
+        if (startZoomed) {
+            mediaElement.dispatchEvent(new MouseEvent('click'));
+        }
+    }
+
+    // ---- 边界5 长聊天截断（script.js printMessages/showMoreMessages L1431-1486）----
+
+    function setShowMoreButton(on) {
+        var chat = document.getElementById('chat');
+        if (!chat) { return; }
+        var btn = document.getElementById('show_more_messages');
+        if (on && !btn) {
+            btn = document.createElement('div');
+            btn.id = 'show_more_messages';
+            btn.textContent = 'Show more messages'; // 官方硬编码英文，无 i18n key
+            chat.insertBefore(btn, chat.firstChild);
+        } else if (!on && btn) {
+            btn.remove();
+        }
+    }
+
+    function initShowMoreClick() {
+        document.addEventListener('click', function (ev) {
+            if (ev.target && ev.target.id === 'show_more_messages') {
+                ev.stopPropagation();
+                ev.preventDefault();
+                bridgeSend({ type: 'hostRequest', hostAction: 'show_more_messages' });
+            }
+        });
+    }
+
+    /** showMoreMessages 的内核半边：上一批插到按钮之后（按钮不在则 prepend）；
+     *  按钮在视口内才按高度差回滚（官方 isElementInViewport gate）。 */
+    function prependMessages(list) {
+        return loadTemplate().then(function (tpl) {
+            var chat = document.getElementById('chat');
+            if (!chat || !(list || []).length) { return null; }
+            var btn = document.getElementById('show_more_messages');
+            var prevHeight = chat.scrollHeight;
+            var scrollTopBefore = chat.scrollTop;
+            var frag = document.createDocumentFragment();
+            (list || []).forEach(function (p) { frag.appendChild(mountMessage(tpl, p)); });
+            if (btn) { btn.after(frag); } else { chat.insertBefore(frag, chat.firstChild); }
+            var delta = chat.scrollHeight - prevHeight;
+            var inViewport = false;
+            try {
+                var rect = (btn || chat).getBoundingClientRect();
+                inViewport = !btn || (rect.top >= 0 && rect.top <= (window.innerHeight || 800));
+            } catch (e) { /* 无布局环境忽略 */ }
+            if (!btn || inViewport) { chat.scrollTop = scrollTopBefore + delta; }
+            return list.length;
+        });
+    }
+
+    // ---- 边界3 行内编辑（script.js messageEdit* L8079-8377 + chats.js click_to_edit）----
+
+    function trimSpaces(text) {
+        if (window.KernelConfig.trimSpaces === false) { return String(text); }
+        return String(text == null ? '' : text).replace(/^\s+/, '').replace(/\s+$/, '');
+    }
+
+    function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
+
+    /** click_to_edit 桥入口（宿主判定开关后调用）；.mes_edit 点击同路 */
+    function beginEditMessage(mesid) {
+        if (document.body.classList.contains('delete-mode')) { return; } // 删除模式优先（L11779）
+        if (thisEditMesId != null && thisEditMesId !== mesid) {
+            finishEdit(thisEditMesId, 'save'); // 官方切换语义：点另一条=自动确认旧的（L11784）
+        }
+        messageEdit(mesid);
+    }
+
+    function messageEdit(mesid) {
+        var node = document.querySelector('.mes[mesid="' + cssEsc(mesid) + '"]');
+        var state = messageState[mesid];
+        if (!node || !state) { return; }
+
+        thisEditMesId = mesid;
+        thisEditMesChname = state.chName || '';
+        refreshSwipeClasses(); // 被编辑消息及其上方 chevron 全隐（isMessageSwipeable L9126）
+
+        var chatEl = document.getElementById('chat');
+        var scrollPos = chatEl ? chatEl.scrollTop : 0;
+        var mesBlock = node.querySelector('.mes_block');
+        var mesText = mesBlock ? mesBlock.querySelector('.mes_text') : null;
+        if (mesText) {
+            // 缓存当前格式化 HTML：cancel/done 的本地恢复源（宿主权威刷新随后覆盖）
+            state.cachedDisplayHtml = mesText.innerHTML;
+            mesText.innerHTML = '';
+        }
+        var buttons = mesBlock ? mesBlock.querySelector('.mes_buttons') : null;
+        if (buttons) { buttons.style.display = 'none'; }           // inline none（L8203）
+        var editButtons = mesBlock ? mesBlock.querySelector('.mes_edit_buttons') : null;
+        if (editButtons) { editButtons.style.display = 'inline-flex'; } // inline inline-flex（L8204）
+
+        // reasoning 联动进入编辑（messageEdit L8212-8215 的 :visible 等价：有内容即可编）
+        if (reasoningRawOf(state)) { beginReasoningEdit(node); }
+
+        var ta = document.createElement('textarea');
+        ta.id = 'curEditTextarea';
+        ta.className = 'edit_textarea mdHotkeys';
+        ta.dataset.macros = ''; // 官方逐字段（L8221-8225）
+        if (mesText) { mesText.appendChild(ta); }
+        var value = trimSpaces(state.rawMes != null ? state.rawMes : (state.mes || ''));
+        ta.value = value;
+        if (!(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'))) {
+            ta.style.height = '0px';
+            ta.style.height = ta.scrollHeight + 'px'; // field-sizing 兜底测高（L8230-8233）
+        }
+        ta.focus();
+        ta.setSelectionRange(value.length, value.length); // 光标置末尾
+        if (chatEl && numericMesid(mesid) >= maxMessageIndex()) {
+            chatEl.scrollTop = scrollPos; // 编辑最后一条时恢复滚动位置（L8238）
+        }
+        updateEditArrowClasses();
+    }
+
+    function editingTextarea() {
+        return document.getElementById('curEditTextarea');
+    }
+
+    function reasoningRawOf(state) {
+        if (state.reasoningRaw != null) { return String(state.reasoningRaw); }
+        return state.reasoning ? String(state.reasoning) : '';
+    }
+
+    function beginReasoningEdit(node, initialValue) {
+        var details = node.querySelector('.mes_reasoning_details');
+        if (!details || details.querySelector('.reasoning_edit_textarea')) { return; }
+        details.open = true;
+        var ta = document.createElement('textarea');
+        ta.className = 'edit_textarea mdHotkeys reasoning_edit_textarea';
+        var state = messageState[node.getAttribute('mesid')] || {};
+        ta.value = initialValue != null ? String(initialValue) : reasoningRawOf(state);
+        details.insertBefore(ta, details.querySelector('.mes_reasoning')); // 官方：建于 .mes_reasoning 之前
+        if (!(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'))) {
+            ta.style.height = '0px';
+            ta.style.height = ta.scrollHeight + 'px';
+        }
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        reasoningEditing = true;
+        // 有 reasoning 编辑框时官方经 :has() 隐藏展示面（style.css L487-500），无需手动清理
+    }
+
+    function closeReasoningEdit(node) {
+        var details = node ? node.querySelector('.mes_reasoning_details') : null;
+        var ta = details ? details.querySelector('.reasoning_edit_textarea') : null;
+        if (ta) { ta.remove(); }
+        reasoningEditing = !!document.querySelector('.reasoning_edit_textarea');
+    }
+
+    function restoreEditorChrome(node, state) {
+        var mesBlock = node.querySelector('.mes_block');
+        var mesText = mesBlock ? mesBlock.querySelector('.mes_text') : null;
+        if (mesText) {
+            mesText.innerHTML = state.cachedDisplayHtml != null ? state.cachedDisplayHtml : mesText.innerHTML;
+        }
+        var editButtons = mesBlock ? mesBlock.querySelector('.mes_edit_buttons') : null;
+        if (editButtons) { editButtons.style.display = 'none'; }
+        var buttons = mesBlock ? mesBlock.querySelector('.mes_buttons') : null;
+        if (buttons) { buttons.style.display = ''; }
+        closeReasoningEdit(node);
+    }
+
+    /** done/cancel 公共出口：save 走桥（宿主引擎管线后权威刷新），cancel 本地丢弃恢复 */
+    function finishEdit(mesid, mode) {
+        var node = document.querySelector('.mes[mesid="' + cssEsc(mesid) + '"]');
+        var state = messageState[mesid];
+        if (!node || !state) { return; }
+        var ta = editingTextarea();
+        var text = ta ? ta.value : (node.querySelector('.mes_text') || {}).textContent || '';
+
+        if (mode === 'save' && reasoningEditing) {
+            var rTa = node.querySelector('.reasoning_edit_textarea');
+            if (rTa) { bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_reasoning_save', value: rTa.value }); }
+        }
+
+        restoreEditorChrome(node, state);
+        if (mode === 'save') {
+            bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_edit_save', value: text });
+        }
+        thisEditMesId = null;
+        thisEditMesChname = '';
+        updateEditArrowClasses();
+        refreshSwipeClasses(); // showSwipeButtons（done/cancel 共同尾调）
+    }
+
+    function closeMessageEditor() {
+        if (thisEditMesId == null) { return; }
+        finishEdit(thisEditMesId, 'cancel'); // auto_save 关 → ESC 全部取消（丢改动）
+    }
+
+    /** updateEditArrowClasses（script.js L9427-9449）：up/down 越界 disabled，copy/delete 解锁 */
+    function updateEditArrowClasses() {
+        if (thisEditMesId == null) { return; }
+        var node = document.querySelector('.mes[mesid="' + cssEsc(thisEditMesId) + '"]');
+        if (!node) { return; }
+        var idx = numericMesid(thisEditMesId);
+        var up = node.querySelector('.mes_edit_up');
+        var down = node.querySelector('.mes_edit_down');
+        if (up) { up.classList.toggle('disabled', idx <= 0); }
+        if (down) { down.classList.toggle('disabled', idx >= maxMessageIndex()); }
+        ['.mes_edit_copy', '.mes_edit_delete'].forEach(function (sel) {
+            var b = node.querySelector(sel);
+            if (b) { b.classList.remove('disabled'); }
+        });
+    }
+
+    /** refreshSwipeClasses：编辑抑制重算全部节点（被编辑消息及上方 chevron 隐匿，L9126 条件
+     *  messageId > this_edit_mes_id 才可滑）。mountMessage 的单节点路径与这里共用 applySwipeClasses。 */
+    function refreshSwipeClasses() {
+        var editIdx = thisEditMesId != null ? numericMesid(thisEditMesId) : null;
+        Object.keys(messageState).forEach(function (mid) {
+            var node = document.querySelector('.mes[mesid="' + cssEsc(mid) + '"]');
+            if (node) { applySwipeClasses(node, messageState[mid], editIdx); }
+        });
+    }
+
+    /** 官方 refreshSwipeButtons/isMessageSwipeable/getOverswipeBehavior 组合判定。
+     *  suppressBelowOrEqualId：行内编辑中的消息序号（其上全部不可滑）。 */
+    function applySwipeClasses(node, payload, suppressBelowOrEqualId) {
+        var swipeCount = Number(payload.swipeCount || 0);
+        var currentSwipe = Number(payload.currentSwipe || 0);
+        // 官方 isMessageSwipeable（script.js:9123-9147）：末条 && !isSmallSys &&
+        // !(extra.swipeable === false) && !is_user && messageId > this_edit_mes_id。
+        // （swipeState!=EDITING 分支核心代码永不触发，仅扩展赋值。）
+        var swipeable = !!payload.lastMessage && !payload.isUser && !payload.smallSysMes &&
+            payload.swipeable !== false &&
+            (suppressBelowOrEqualId == null || numericMesid(payload.mesid) > suppressBelowOrEqualId);
+        var overswipe = payload.overswipe || '';
+        var isLastSwipe = Math.max(swipeCount - 1, 0) <= currentSwipe; // (swipes?.length ?? 1)-1 <= swipe_id ?? 0
+        var hasSwipes = swipeCount > 1;
+        var pristineGreeting = overswipe === 'pristine_greeting';
+        // 官方 L9232-9235 原样：&& 优先于 || —— (isLastSwipe && regenerate) || edit_generate
+        var isOverswipeable = (isLastSwipe && overswipe === 'regenerate') || overswipe === 'edit_generate';
+        node.classList.toggle('swipes_visible', swipeable && (hasSwipes || pristineGreeting));
+        node.classList.toggle('last_swipe', swipeable && isOverswipeable);
+        node.classList.toggle('last_mes', !!payload.lastMessage);
+        var counterEl = node.querySelector('.swipes-counter');
+        if (counterEl) {
+            counterEl.textContent = swipeable ? (currentSwipe + 1) + '​/​' + swipeCount : '';
+        }
+    }
+
+    /** 编辑框 autofit 兜底 + 自动保存监听（官方 document input 委托 L11151/L11800）。
+     *  auto_save_msg_edits 官方默认 false——KernelConfig 未开时不自动保存。 */
+    function initEditListeners() {
+        var cssAutofit = window.CSS && CSS.supports && CSS.supports('field-sizing', 'content');
+        document.addEventListener('input', function (e) {
+            var t = e.target;
+            if (!(t instanceof HTMLTextAreaElement)) { return; }
+            if (t.classList.contains('edit_textarea')) {
+                if (!cssAutofit) {
+                    var chat = document.getElementById('chat');
+                    var top = chat ? chat.scrollTop : 0;
+                    t.style.height = '0px';
+                    t.style.height = (t.scrollHeight + 4) + 'px';
+                    if (chat) { chat.scrollTop = top; }
+                }
+                if (window.KernelConfig.autoSaveEdits && t.id === 'curEditTextarea' && thisEditMesId != null) {
+                    bridgeSend({ type: 'click', mesid: thisEditMesId, messageAction: 'mes_edit_save', value: t.value });
+                }
+            }
+        });
+        // ESC：auto_save 关 → 全部取消；composing 跳过；完成后焦点回输入框（L12267-12284）
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || e.isComposing) { return; }
+            var editVisible = !!editingTextarea() || document.querySelector('.reasoning_edit_textarea');
+            if (!editVisible) { return; }
+            closeMessageEditor();
+            var sendTa = document.getElementById('send_textarea');
+            if (sendTa) { sendTa.focus(); }
+        });
+        // 编辑按钮委托表（L11873-11933 + reasoning 按钮）
+        document.addEventListener('click', function (ev) {
+            var btn = ev.target.closest ? ev.target.closest(
+                '.mes_edit_done,.mes_edit_cancel,.mes_edit_up,.mes_edit_down,.mes_edit_copy,' +
+                '.mes_edit_delete,.mes_edit_add_reasoning,.mes_reasoning_edit_done,' +
+                '.mes_reasoning_edit_cancel,.mes_reasoning_delete,.mes_reasoning_edit') : null;
+            if (!btn) { return; }
+            var node = btn.closest('.mes');
+            if (!node) { return; }
+            var mesid = node.getAttribute('mesid');
+
+            if (btn.classList.contains('mes_reasoning_edit')) {
+                beginReasoningEdit(node); return;
+            }
+            if (btn.classList.contains('mes_reasoning_edit_done')) {
+                var rTa = node.querySelector('.reasoning_edit_textarea');
+                if (rTa) { bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_reasoning_save', value: rTa.value }); }
+                closeReasoningEdit(node);
+                return;
+            }
+            if (btn.classList.contains('mes_reasoning_edit_cancel')) {
+                closeReasoningEdit(node);
+                return;
+            }
+            if (btn.classList.contains('mes_reasoning_delete')) {
+                closeReasoningEdit(node);
+                bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_reasoning_save', value: '' });
+                return;
+            }
+            if (btn.classList.contains('mes_edit_done')) {
+                if (thisEditMesId != null) { finishEdit(thisEditMesId, 'save'); }
+                return;
+            }
+            if (btn.classList.contains('mes_edit_cancel')) {
+                if (thisEditMesId != null) { finishEdit(thisEditMesId, 'cancel'); }
+                return;
+            }
+            if (btn.classList.contains('mes_edit_add_reasoning')) {
+                var state = messageState[mesid] || {};
+                if (reasoningRawOf(state)) {
+                    bridgeSend({ type: 'hostRequest', hostAction: 'toast', value: 'Reasoning already exists for this message' });
+                    return;
+                }
+                node.classList.add('reasoning');
+                var details = node.querySelector('.mes_reasoning_details');
+                if (details) { details.open = true; }
+                beginReasoningEdit(node, ''); // 空值起编；确认时桥存 extra.reasoning
+                return;
+            }
+            // 结构操作（up/down/copy/delete）：数据变更一律桥回宿主执行
+            var ta = editingTextarea();
+            var draft = ta ? ta.value : null;
+            if (btn.classList.contains('mes_edit_up') || btn.classList.contains('mes_edit_down')) {
+                if (thisEditMesId == null) { return; }
+                var delta = btn.classList.contains('mes_edit_up') ? -1 : 1;
+                var idx = numericMesid(thisEditMesId);
+                if (idx + delta < 0 || idx + delta > maxMessageIndex()) { return; } // 边界 guard（L11879）
+                bridgeSend({
+                    type: 'click', mesid: mesid, messageAction: 'mes_edit_move',
+                    value: JSON.stringify({ delta: delta, draft: draft }),
+                });
+                return;
+            }
+            if (btn.classList.contains('mes_edit_copy')) {
+                bridgeSend({
+                    type: 'click', mesid: mesid, messageAction: 'mes_edit_copy',
+                    value: draft != null ? draft : ((messageState[mesid] || {}).rawMes || ''),
+                });
+                return;
+            }
+            if (btn.classList.contains('mes_edit_delete')) {
+                bridgeSend({ type: 'click', mesid: mesid, messageAction: 'mes_edit_delete', value: '' });
+            }
+        });
+    }
+
+    /** 官方 addCopyToCodeBlocks 的复制行为补全：pointerup 复制 + toast（此前只有按钮没有接线） */
+    function initCodeCopy() {
+        document.addEventListener('pointerup', function (ev) {
+            var btn = ev.target.closest ? ev.target.closest('.code-copy') : null;
+            if (!btn) { return; }
+            var code = btn.closest('code');
+            if (!code) { return; }
+            ev.stopPropagation();
+            var text = Array.prototype.filter.call(code.childNodes, function (n) { return n !== btn; })
+                .map(function (n) { return n.textContent; }).join('');
+            copyTextAndNotify(text);
+        });
+    }
+
+    function copyTextAndNotify(text) {
+        var notify = function () { bridgeSend({ type: 'hostRequest', hostAction: 'toast', value: 'Copied!' }); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(notify, function () { legacyCopy(text); notify(); });
+        } else {
+            legacyCopy(text);
+            notify();
+        }
+    }
+
+    function legacyCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) { /* no-op */ }
+        ta.remove();
+    }
+
+
     window.Kernel = {
         formatText: formatText,          // DOM 黄金对比入口：返回 HTML 字符串
         renderMessage: renderMessage,    // 生产入口：upsert 单条消息
         renderChat: renderChat,          // 整页壳 C1：全量同步（清空重建，payloads 有序）
+        prependMessages: prependMessages, // 边界5：show more 批量前插（按钮锚点+滚动补偿）
         scrollToBottom: scrollToBottom,  // 官方 #chat 滚动接管（C1/C2）
         setDeleteMode: setDeleteMode,
         selectDeleteFrom: selectDeleteFrom,
         setInputText: setInputText,      // C3：宿主 → #send_textarea（草稿下发/冒充流式/发送后清空）
         setInputState: setInputState,    // C3：生成/滑动状态 → data-generating/mes_stop/hideAllSwipeButtons
         setBackground: setBackground,    // C4：官方 #bg1 背景图（会话级 > 全局，宿主解析 URL）
+        beginEditMessage: beginEditMessage, // 边界3：click_to_edit / .mes_edit 桥入口
         applyTheme: applyTheme,
         applyStylePack: applyStylePack,  // 第三方主题整包 CSS（无则纯官方行为）
         clear: clearMessages,
@@ -1066,5 +1747,8 @@
     };
     initInputArea();
     initExtraMesButtonsOutsideClose();
+    initShowMoreClick();
+    initEditListeners();
+    initCodeCopy();
     bridgeSend({ type: 'kernelReady' });
 })();

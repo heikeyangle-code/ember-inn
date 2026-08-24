@@ -19,6 +19,8 @@
     <link rel="stylesheet" href="official/css/style.css">
     <link rel="stylesheet" href="official/css/mobile-styles.css">
     <link rel="stylesheet" href="official/css/toggle-dependent.css">
+    <!-- 官方弹层样式（lightbox img_enlarged 走 .popup dialog 体系，chats.js expandMessageMedia） -->
+    <link rel="stylesheet" href="official/css/popup.css">
     <style id="custom-style" type="text/css"></style>
     <style id="app-host-actions-style">
         /* 整页壳官方化：官方消息按钮/swipe/删除框全部保留。
@@ -132,6 +134,65 @@
         </div>
     </div>
 
+    <!-- 官方媒体模板（index.html L7670/L7692 逐字节）：appendMediaToMessage clone 源 -->
+    <div id="message_image_template" class="template_element">
+        <div class="mes_media_container mes_img_container">
+            <div class="mes_img_controls">
+                <div title="Expand and zoom" class="right_menu_button fa-lg fa-solid fa-magnifying-glass mes_media_enlarge" data-i18n="[title]Expand and zoom"></div>
+                <div title="Caption" class="right_menu_button fa-lg fa-solid fa-envelope-open-text mes_img_caption" data-i18n="[title]Caption"></div>
+                <div title="Delete" class="right_menu_button fa-lg fa-solid fa-trash-can mes_media_delete" data-i18n="[title]Delete"></div>
+            </div>
+            <img class="mes_img" src="" />
+        </div>
+    </div>
+
+    <!-- 官方 index.html L7687-7698 原样（缩进适配） -->
+    <div id="message_video_template" class="template_element">
+        <div class="mes_media_container mes_video_container">
+            <div class="mes_video_controls">
+                <div title="Expand and zoom" class="right_menu_button fa-lg fa-solid fa-magnifying-glass mes_media_enlarge" data-i18n="[title]Expand and zoom"></div>
+                <div title="Caption" class="right_menu_button fa-lg fa-solid fa-envelope-open-text mes_img_caption" data-i18n="[title]Caption"></div>
+                <div title="Delete" class="right_menu_button fa-lg fa-solid fa-trash-can mes_media_delete" data-i18n="[title]Delete"></div>
+            </div>
+            <video class="mes_video" controls preload="metadata"></video>
+        </div>
+    </div>
+
+    <div id="message_gallery_controls" class="template_element">
+        <div class="mes_img_swipes">
+            <div title="Swipe left" class="right_menu_button fa-lg fa-solid fa-chevron-left mes_img_swipe_left" data-i18n="[title]Swipe left"></div>
+            <div class="mes_img_swipe_counter">1/1</div>
+            <div title="Swipe right" class="right_menu_button fa-lg fa-solid fa-chevron-right mes_img_swipe_right" data-i18n="[title]Swipe right"></div>
+        </div>
+    </div>
+
+    <!-- 官方 index.html L7700-7727 原样（缩进适配）。注意：官方 file-form.css 的播放器样式
+         并未被 index.html 引用——官方消息内音频就是无专属样式 + AudioPlayer 行为，照抄不加。 -->
+    <div id="message_audio_template" class="template_element">
+        <div class="mes_media_container mes_audio_container audio-player">
+            <audio class="mes_audio" preload="auto" hidden></audio>
+            <div class="audio-player-header">
+                <div class="audio-player-title">Audio</div>
+                <div class="right_menu_button mes_media_delete fa-fw fa-solid fa-trash-can" title="Delete" data-i18n="[title]Delete"></div>
+            </div>
+            <div class="audio-player-controls">
+                <button class="audio-player-play-pause right_menu_button fa-fw fa-solid fa-play" title="Play" data-i18n="[title]Play"></button>
+                <div class="audio-player-time">
+                    <span class="audio-player-current-time">0:00</span>
+                    <span class="audio-player-time-separator">/</span>
+                    <span class="audio-player-total-time">0:00</span>
+                </div>
+                <div class="audio-player-progress">
+                    <div class="audio-player-progress-bar"></div>
+                </div>
+                <div class="audio-player-volume-control">
+                    <button class="audio-player-volume right_menu_button fa-fw fa-solid fa-volume-high" title="Mute" data-i18n="[title]Mute"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/audio-player.js"></script>
     <script src="js/showdown.min.js"></script>
     <script src="js/css-tools.min.js"></script>
     <script src="js/dompurify.min.js"></script>

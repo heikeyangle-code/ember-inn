@@ -328,6 +328,18 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private val _worldHits = MutableStateFlow<List<WorldHitView>>(emptyList())
     val worldHits: StateFlow<List<WorldHitView>> = _worldHits
 
+    /** 官方 setInContextMessages 输入：最近一次生成进入上下文的消息条数；null=本会话尚未生成过。 */
+    private val _lastInContextCount = MutableStateFlow<Int?>(null)
+    val lastInContextCount: StateFlow<Int?> = _lastInContextCount
+
+    /** 边界5 show more 已扩载条数（初始 0=仅 chat_truncation 窗口；点击递增；0 截断=全部）。 */
+    private val _historyWindowExtra = MutableStateFlow(0)
+    val historyWindowExtra: StateFlow<Int> = _historyWindowExtra
+
+    fun extendHistoryWindow(step: Int) {
+        _historyWindowExtra.value = _historyWindowExtra.value + step
+    }
+
     /** 上次发送的上下文占用（已用 token, 上限），聊天页显示占比胶囊。 */
     private val _contextUsage = MutableStateFlow<Pair<Int, Int>?>(null)
     private val _logprobs = MutableStateFlow<List<LogprobsEngine.TokenLogprobs>?>(null)
@@ -1866,6 +1878,31 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private var streamStartedAt: String = java.time.Instant.now().toString()
     /** 官方 time_to_first_token：首个流式 delta 到达时刻（毫秒）。 */
     private var firstDeltaAt: Long? = null
+
+    /**
+     * 官方 onProgressStreaming 每 tick 的 .mes_timer 喂数（script.js:3672-3678）：
+     * formatGenerationTimer(timeStarted, currentTime, currentTokenCount, …)——流中 currentTokenCount
+     * 恒为 0（L3638 isFinal 才计），故无 Token rate 行；reasoning 计时本 App 未跟踪，行省略。
+     * 返回 (timerValue, timerTitle)；非流式或起点缺失返回 null。
+     */
+    fun liveStreamTimer(): Pair<String, String>? {
+        if (!_isStreaming.value || _isImpersonating.value) return null
+        val started = runCatching { java.time.Instant.parse(streamStartedAt) }.getOrNull() ?: return null
+        val now = java.time.Instant.now()
+        val seconds = java.time.Duration.between(started, now).toMillis() / 1000.0
+        val dateFormat = java.time.format.DateTimeFormatter
+            .ofPattern("HH:mm:ss d MMM uuuu", java.util.Locale.ENGLISH)
+            .withZone(java.time.ZoneId.systemDefault())
+        val ttfMs = firstDeltaAt?.let { java.time.Duration.between(started, java.time.Instant.ofEpochMilli(it)).toMillis() }
+        val title = listOfNotNull(
+            "Generation queued: ${dateFormat.format(started)}",
+            "Reply received: ${dateFormat.format(now)}",
+            "Time to generate: $seconds seconds",
+            ttfMs?.takeIf { it != 0L }?.let { "Time to first token: ${it / 1000.0} seconds" },
+        ).joinToString("\n").trim()
+        val value = if (seconds < 0) "" else String.format(java.util.Locale.US, "%.1f", seconds) + "s"
+        return value to title
+    }
     private var streamContinueMode = false
     /** 当前流是否“滑动生成新变体”（对齐官方 Generate('swipe')：结果追加进最后一条 swipes，不新增消息）。 */
     @Volatile
@@ -2390,8 +2427,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         refreshMessages()
     }
 
-    /** 图库模式左右滑：更新消息 extra.media_index（对齐官方 gallery media_index）。 */
-    fun setMediaIndex(messageIndex: Int, mediaIndex: Int) {
+    /** 图库模式左右滑：更新消息 extra.media_index（对齐官方 gallery media_index）。
+     *  refresh=false 供内核桥回路径使用——内核已本地重建媒体 DOM，这里只落盘。 */
+    fun setMediaIndex(messageIndex: Int, mediaIndex: Int, refresh: Boolean = true) {
         val list = chatStore.messages(sessionId).toMutableList()
         if (messageIndex !in list.indices) return
         val el = list[messageIndex].jsonObject
@@ -2399,7 +2437,88 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         extra["media_index"] = JsonPrimitive(mediaIndex)
         list[messageIndex] = JsonObject(el + ("extra" to JsonObject(extra)))
         chatStore.replace(sessionId, list)
+        if (refresh) refreshMessages()
+    }
+
+    /** 官方 chats.js deleteMessageMedia：删除 extra.media[index]，media_index 收敛到界内。 */
+    fun deleteMedia(messageIndex: Int, mediaIndex: Int) {
+        val list = chatStore.messages(sessionId).toMutableList()
+        if (messageIndex !in list.indices) return
+        val el = list[messageIndex].jsonObject
+        val extra = (el["extra"] as? JsonObject)?.toMutableMap() ?: return
+        val media = (extra["media"] as? JsonArray ?: return).toMutableList()
+        if (mediaIndex !in media.indices) return
+        media.removeAt(mediaIndex)
+        extra["media"] = JsonArray(media)
+        // 官方 getMediaIndex 越界回落语义：删后下标收敛，空数组时移除游标
+        val curIdx = extra["media_index"]?.jsonPrimitive?.intOrNull
+        when {
+            media.isEmpty() -> extra.remove("media_index")
+            curIdx != null && curIdx > media.lastIndex -> extra["media_index"] = JsonPrimitive(media.lastIndex)
+        }
+        list[messageIndex] = JsonObject(el + ("extra" to JsonObject(extra)))
+        chatStore.replace(sessionId, list)
+        markTainted()
         refreshMessages()
+    }
+
+    /** 官方 mes_edit_copy：深拷贝本条插到其后；text 非空时以编辑框草稿覆盖 mes（官方克隆编辑中实时内容）。 */
+    fun duplicateMessage(index: Int, text: String? = null) {
+        if (_isStreaming.value) return
+        if (text.isNullOrBlank()) {
+            chatStore.duplicateMessage(sessionId, index)
+        } else {
+            val list = chatStore.messages(sessionId).toMutableList()
+            if (index !in list.indices) return
+            val clone = list[index].jsonObject.toMutableMap()
+            clone["mes"] = JsonPrimitive(text)
+            clone["send_date"] = JsonPrimitive(humanizedDateTime())
+            list.add(index + 1, JsonObject(clone))
+            chatStore.replace(sessionId, list)
+            markTainted()
+        }
+        refreshMessages()
+    }
+
+    /** 官方 messageEditMove 时若该消息在编辑中：官方 DOM 移动保住编辑框与未存内容；
+     *  本项目全量同步架构等价净状态 = 先落盘草稿再交换。 */
+    fun editAndMove(index: Int, draft: String?, delta: Int) {
+        if (_isStreaming.value) return
+        if (!draft.isNullOrBlank()) editMessage(index, draft)
+        moveMessage(index, delta)
+    }
+
+    /** 官方 reasoning 编辑确认/删除：写回 extra.reasoning（空串=无思考块）。 */
+    fun setReasoning(messageIndex: Int, value: String) {
+        chatStore.setExtraValue(sessionId, messageIndex, "reasoning", value)
+        markTainted()
+        refreshMessages()
+    }
+
+    /** 官方 chat_metadata.tainted：生成/发送/编辑/删除后置位——pristine 开场白 overswipe 判定输入。 */
+    private fun markTainted() {
+        val meta = chatStore.metadata(sessionId).toMutableMap()
+        meta["tainted"] = JsonPrimitive(true)
+        chatStore.saveMetadata(sessionId, JsonObject(meta))
+    }
+
+    private fun isTainted(): Boolean =
+        chatStore.metadata(sessionId)["tainted"]?.jsonPrimitive?.booleanOrNull == true
+
+    /** 官方 getOverswipeBehavior（script.js L9163-9181）：显式 extra.overswipe_behavior >
+     *  swipeable===false / isSmallSys 拒绝 > pristine greeting 循环 > 非 user/system 重生成 > 其余循环。 */
+    fun overswipeOf(index: Int, el: JsonElement): String {
+        val obj = el.jsonObject
+        val extra = obj["extra"] as? JsonObject
+        (extra?.get("overswipe_behavior")?.jsonPrimitive?.contentOrNull)?.let { return it }
+        // 官方严格 === false：字符串 "false" 不触发（script.js:9152）
+        if (extra?.get("swipeable")?.jsonPrimitive?.booleanOrNull == false) return "none"
+        if (extra?.get("isSmallSys")?.jsonPrimitive?.booleanOrNull == true) return "none"
+        if (index == 0 && !isTainted()) return "pristine_greeting"
+        val isUserMsg = obj["is_user"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        val isSysMsg = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+        if (!isUserMsg && !isSysMsg) return "regenerate"
+        return "loop"
     }
 
     /** 当前 swipes 下标（UI 计数 chip 用）。 */
@@ -2423,6 +2542,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun deleteMessage(index: Int) {
         if (_isStreaming.value) return
         chatStore.removeAt(sessionId, index)
+        markTainted() // 官方 deleteLastMessage 内 chat_metadata.tainted = true（script.js:1659）
         refreshMessages()
         // 官方 deleteLastMessage：MESSAGE_DELETED(chat.length)，参数为删除后的新长度（script.js:1609）
         kernelEvents.tryEmit("message_deleted" to listOf(chatStore.messages(sessionId).size.toString()))
@@ -2591,6 +2711,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val (cleaned, bias) = extractEditBias(regexed)
         val processed = MacroEngine.substitute(cleaned, env)
         chatStore.updateMessage(sessionId, index, processed, bias = bias)
+        markTainted() // 官方 updateMessage 内 chat_metadata.tainted = true（script.js:8131）
         refreshMessages()
         // 官方 messageEditDone：先 MESSAGE_EDITED 后 MESSAGE_UPDATED，同参 messageId（script.js:8345/8371）
         kernelEvents.tryEmit("message_edited" to listOf(index.toString()))
@@ -3374,6 +3495,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             pendingToolCalls = null
         }
         streamStartedAt = java.time.Instant.now().toString()
+        // 官方 setInContextMessages 输入：进入上下文的历史条数（is_system 排除、toolCall 例外
+        // 与 prepare 的 coreChat 过滤同构；swipe/regenerate/continue 型官方 +1 由内核侧计数对齐）
+        if (!previewOnly) {
+            _lastInContextCount.value = history.count { el ->
+                val obj = el.jsonObject
+                val isSys = obj["is_system"]?.jsonPrimitive?.let { it.booleanOrNull ?: (it.content == "true") } == true
+                val hasTools = (obj["extra"] as? JsonObject)?.get("tool_invocations")?.jsonArray?.isNotEmpty() == true
+                !isSys || hasTools
+            } + if (type == "swipe" || type == "regenerate" || type == "continue") 1 else 0
+            markTainted() // 官方 Generate 内 chat_metadata.tainted = true（L4288）
+        }
         _streamingText.value = ""
         _streamingReasoning.value = ""
         synchronized(streamingTextBuffer) { streamingTextBuffer.clear() }

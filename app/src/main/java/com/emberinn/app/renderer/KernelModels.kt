@@ -64,6 +64,26 @@ data class KernelMessagePayload(
     val apiModelTitle: String? = null,
     val timerValue: String? = null,
     val timerTitle: String? = null,
+    /** 官方 messageEdit 填入 curEditTextarea 的原始文本（trimSpaces(editMessage.mes)）；
+     *  null 时内核退回用 mes（引擎处理后文本）兜底 */
+    val rawMes: String? = null,
+    /** 官方 extra.reasoning 原文（reasoning 编辑 textarea 初值；与显示版 reasoning 分离） */
+    val reasoningRaw: String? = null,
+    /** 官方 getMediaDisplay 结果：list|gallery（宿主已解析 extra.media_display → 全局 → list 回落链） */
+    // mediaDisplay 字段见上
+    /** 官方 getMediaIndex：extra.media_index（图库当前下标，缺省 0） */
+    val mediaIndex: Int = 0,
+    /** 官方 extra.inline_image：===false 时正文隐藏（.mes_text.inline_media）；null=未设置 */
+    @SerialName("inlineImage") val inlineImage: Boolean? = null,
+    /** 官方 getOverswipeBehavior 枚举：loop|pristine_greeting|regenerate|edit_generate|none；
+     *  驱动 refreshSwipeButtons 的 last_swipe/swipes_visible 精确语义 */
+    val overswipe: String? = null,
+    /** 官方 isMessageSwipeable 的 !(extra.swipeable === false) 闸门；null=未设置（可滑） */
+    @SerialName("swipeable") val swipeable: Boolean? = null,
+    /** 官方 setInContextMessages 的 .lastInContext 标记（border-top 虚线） */
+    val lastInContext: Boolean = false,
+    /** 官方 mes.extra.title：媒体 title 兜底链 `attachment.title || mes.extra.title || ''` */
+    @SerialName("extraTitle") val extraTitle: String? = null,
 )
 
 /** 官方消息附件的最小跨桥载荷（URL 已由 App 层解析为可访问路径/data URL） */
@@ -189,4 +209,7 @@ object KernelHostAction {
     const val CHAT_CONTINUE = "chat_continue"         // #mes_continue
     const val CHAT_DELETE_CONFIRM = "chat_delete_confirm" // #dialogue_del_mes_ok
     const val CHAT_DELETE_CANCEL = "chat_delete_cancel"   // #dialogue_del_mes_cancel
+
+    /** 边界5 长聊天截断：#show_more_messages 点击（官方 script.js:12517 showMoreMessages） */
+    const val SHOW_MORE_MESSAGES = "show_more_messages"
 }

@@ -60,6 +60,8 @@ class OfficialThemeManager(private val context: Context) {
         val clickToEdit: Boolean = false,           // 点击消息正文进编辑
         /** 媒体展示全局默认：list / gallery（MEDIA_DISPLAY 枚举） */
         val mediaDisplay: String = "list",
+        /** 长聊天截断条数（官方 power_user.chat_truncation 默认 100，滑条 0-1000 step5；0=全部） */
+        val chatTruncation: Int = 100,
     ) {
         /** 官方 toastr_position → Android Toast 重力（官方 toastr 六位置语义，缺省 top-center） */
         val toastrGravity: Int
@@ -257,6 +259,7 @@ class OfficialThemeManager(private val context: Context) {
             } ?: "toast-top-center",
             clickToEdit = bool("click_to_edit") ?: false,
             mediaDisplay = str("media_display")?.takeIf { it == "gallery" || it == "list" } ?: "list",
+            chatTruncation = num("chat_truncation")?.toInt()?.coerceIn(0, 1000) ?: 100,
         )
     }
 
