@@ -48,6 +48,9 @@ fun ChatKernelShell(
 ) {
     var host by remember { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
     var slot by remember { mutableStateOf<FrameLayout?>(null) }
+    // acquire 进行中守卫：acquireSingle 异步，完成前 LaunchedEffect 可能重跑（slot/mountEpoch 变化），
+    // 不守卫会连发两次创建——双实例互踩、release 清空对方刚渲染的内容（体检事件史实证）
+    val acquiring = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
     // 官方单页没有“每条一行一个页面”的竞态；保留崩溃 epoch 即可让 acquire 回调重新挂新实例。
     var mountEpoch by remember { mutableIntStateOf(0) }
     val disposed = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
@@ -103,7 +106,16 @@ fun ChatKernelShell(
             current.webView.requestLayout()
             return@LaunchedEffect
         }
+        // acquire 进行中守卫：acquireSingle 异步，完成前 LaunchedEffect 可能重跑
+        // （slot/mountEpoch 变化）——不守卫会连发两次创建，双实例互踩、
+        // release 清掉对方刚渲染的内容（体检事件史实证：成对创建+renderChat 后紧跟 clearMessages）
+        if (!acquiring.compareAndSet(false, true)) { return@LaunchedEffect }
+        // 安全阀：acquire 失败路径不回调 block，20s 后解除守卫允许重试
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            acquiring.set(false)
+        }, 20_000L)
         pool.acquireSingle { pooled ->
+            acquiring.set(false)
             if (disposed.get()) {
                 pool.release(pooled)
                 return@acquireSingle

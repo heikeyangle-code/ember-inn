@@ -459,6 +459,9 @@ fun CharacterDetailScreen(
                                     if (on && key !in list) list += key
                                     if (!on) list.remove(key)
                                     GlobalRegexPrefs.saveCharacterAllowed(context, list)
+                                    // 显示管线缓存了脚本表：放行/收回必须整体失效，
+                                    // 否则聊天页拿着旧空表直到重启（卡17开场白不渲染的根因）
+                                    com.emberinn.app.data.DisplayCacheVersion.bump()
                                 },
                             )
                         }
