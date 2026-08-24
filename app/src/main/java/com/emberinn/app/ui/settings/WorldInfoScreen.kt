@@ -19,8 +19,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +64,8 @@ fun WorldInfoScreen(onBack: () -> Unit) {
     var addingEntry by remember { mutableStateOf(false) }
     var overflowAlert by remember { mutableStateOf(WorldInfoPrefs.overflowAlert(context)) }
     var exportTarget by remember { mutableStateOf<String?>(null) }
+    // 官方 world_import_dialog：导入前确认（同名覆盖提示）
+    var pendingImport by remember { mutableStateOf<Pair<String, String>?>(null) }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             runCatching {
@@ -69,7 +73,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                     if (it.moveToFirst()) it.getString(0) else "world.json"
                 } ?: "world.json"
                 val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }?.toString(Charsets.UTF_8).orEmpty()
-                if (worldStore.importWorld(displayName, text)) worlds = worldStore.list()
+                if (text.isNotBlank()) pendingImport = displayName to text
             }
         }
     }
@@ -276,6 +280,20 @@ fun WorldInfoScreen(onBack: () -> Unit) {
     }
 
     val editing = editingWorld
+    pendingImport?.let { (name, text) ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text("导入世界书") },
+            text = { Text("确定导入「$name」？同名世界将被覆盖。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (worldStore.importWorld(name, text)) worlds = worldStore.list()
+                    pendingImport = null
+                }) { Text("导入") }
+            },
+            dismissButton = { TextButton(onClick = { pendingImport = null }) { Text("取消") } },
+        )
+    }
     if (editing != null && (addingEntry || editingEntryIdx != null)) {
         val current = worlds.firstOrNull { it.name == editing }
         val initial = if (addingEntry) {
