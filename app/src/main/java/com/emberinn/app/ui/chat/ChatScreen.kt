@@ -647,7 +647,7 @@ fun ChatScreen(
         // 官方每条消息只调一次 formatGenerationTimer（script.js:2586 解构 {timerValue,timerTitle}）
         val genTimer = generationTimerOf(el)
         return KernelMessagePayload(
-            mesid = "m-${index}"
+            mesid = "m-${index}",
             mes = vm.kernelDisplayTextOf(index),
             chName = name,
             isUser = user,
