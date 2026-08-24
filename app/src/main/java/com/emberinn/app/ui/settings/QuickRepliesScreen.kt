@@ -1,17 +1,10 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.design.components.EmptyState
-import com.emberinn.app.ui.components.EmberPrimaryButton
-import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberSecondaryButton
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,16 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,13 +28,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmberSwitch
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.emberinn.engine.slash.QuickReplySlot
 
 /**
@@ -55,6 +50,7 @@ import com.emberinn.engine.slash.QuickReplySlot
  */
 @Composable
 fun QuickRepliesScreen(onBack: () -> Unit) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     val store = remember { QuickReplyStore(context) }
     var presetName by remember { mutableStateOf(store.activeName().ifBlank { store.presets().firstOrNull()?.name ?: "default" }) }
@@ -75,6 +71,15 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
         slots = next
     }
 
+    fun loadDraft(slot: QuickReplySlot?) {
+        if (slot == null) return
+        draftLabel = slot.label
+        draftMes = slot.mes
+        draftEnabled = slot.enabled
+        draftAutomationId = slot.automationId
+        draftPreventAutoExecute = slot.preventAutoExecute
+    }
+
     fun switchPreset(name: String) {
         presetName = name
         store.setActive(name)
@@ -88,26 +93,29 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp),
         ) {
-            Text("全局快捷回复", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "字段对齐官方 Quick Reply 扩展：目录多预设（data/default-user/quick-replies/*.json）。槽位 = 斜杠链 mes + label + 启用。",
-                style = MaterialTheme.typography.bodySmall,
-                color = EmberTheme.colors.inkMute,
-                modifier = Modifier.padding(top = 4.dp),
+                color = c.inkMute,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             )
-            FlowRow(
-                verticalArrangement = Arrangement.Center,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) {
+            GroupLabel("预设")
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box {
-                    FilterChip(
-                        selected = false,
-                        onClick = { presetMenuExpanded = true },
-                        label = { Text("预设：${presetName}") },
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(c.surfaceSink)
+                            .clickable { presetMenuExpanded = true }
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
+                    ) {
+                        Text("当前：$presetName", color = c.ink, fontSize = 14.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Icon(FaIcons.ChevronDown, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(13.dp))
+                    }
                     DropdownMenu(expanded = presetMenuExpanded, onDismissRequest = { presetMenuExpanded = false }) {
                         store.presets().forEach { p ->
                             DropdownMenuItem(
@@ -120,107 +128,103 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                EmberSecondaryButton(label = "新建预设", onClick = {
+                Spacer(Modifier.width(10.dp))
+                ShellActionButton(label = "新建预设") {
                     draftPresetName = ""
                     showPresetDialog = true
-                }, minHeight = 40.dp)
+                }
                 if (store.presets().size > 1) {
-                    TextButton(onClick = {
+                    Spacer(Modifier.width(10.dp))
+                    Text("删除当前", color = c.danger, fontSize = 13.sp, modifier = Modifier.clickable {
                         store.delete(presetName)
                         val next = store.presets().firstOrNull()?.name ?: "default"
                         switchPreset(next)
-                    }) { Text("删除当前") }
+                    }.padding(4.dp))
                 }
             }
+            GroupLabel("槽位")
             if (slots.isEmpty()) {
-                EmptyState(
-                    title = "还没有快捷回复",
-                    body = "点下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
-                    compact = true,
-                    modifier = Modifier.padding(top = 12.dp),
+                Text(
+                    "还没有快捷回复。点下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
+                    color = c.inkMute,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp),
                 )
             }
-            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                slots.forEach { slot ->
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surface,
-                        modifier = Modifier.fillMaxWidth(),
+            slots.forEachIndexed { index, slot ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                loadDraft(slot)
+                                editing = index
+                            },
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f).clickable {
-                                    editing = slots.indexOfFirst { it.label == slot.label }.takeIf { it >= 0 }
-                                    editing?.let {
-                                        draftLabel = slot.label
-                                        draftMes = slot.mes
-                                        draftEnabled = slot.enabled
-                                        draftAutomationId = slot.automationId
-                                        draftPreventAutoExecute = slot.preventAutoExecute
-                                    }
-                                },
-                            ) {
-                                Text(
-                                    slot.label.ifBlank { "（未命名）" },
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (slot.label.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkMute,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            IconButton(onClick = {
-                                editing = slots.indexOfFirst { it.label == slot.label }.takeIf { it >= 0 }
-                                editing?.let {
-                                    draftLabel = slot.label
-                                    draftMes = slot.mes
-                                    draftEnabled = slot.enabled
-                                    draftAutomationId = slot.automationId
-                                    draftPreventAutoExecute = slot.preventAutoExecute
-                                }
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
-                            }
-                            IconButton(onClick = {
-                                persist(slots.filterNot { it.label == slot.label })
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
-                            }
-                            EmberSwitch(
-                                checked = slot.enabled,
-                                onChange = { on ->
-                                    persist(slots.map { if (it.label == slot.label) it.copy(enabled = on) else it })
-                                },
-                            )
-                        }
+                        Text(
+                            slot.label.ifBlank { "（未命名）" },
+                            color = if (slot.label.isBlank()) c.inkMute else c.ink,
+                            fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
+                            color = c.inkMute,
+                            fontSize = 12.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        FaIcons.Pencil,
+                        contentDescription = "编辑",
+                        tint = c.inkMute,
+                        modifier = Modifier
+                            .size(17.dp)
+                            .clickable {
+                                loadDraft(slot)
+                                editing = index
+                            }
+                            .padding(2.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        FaIcons.TrashCan,
+                        contentDescription = "删除",
+                        tint = c.danger,
+                        modifier = Modifier
+                            .size(17.dp)
+                            .clickable { persist(slots.filterNot { it.label == slot.label }) }
+                            .padding(2.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    EmberSwitch(
+                        checked = slot.enabled,
+                        onChange = { on ->
+                            persist(slots.map { if (it.label == slot.label) it.copy(enabled = on) else it })
+                        },
+                    )
                 }
             }
-            EmberPrimaryButton(
-                label = "新增快捷回复",
-                onClick = {
-                    adding = true
-                    draftLabel = ""
-                    draftMes = ""
-                    draftEnabled = true
-                    draftAutomationId = ""
-                    draftPreventAutoExecute = false
-                },
-                icon = FaIcons.Plus,
-                expandWidth = true,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-            Spacer(Modifier.height(12.dp))
+            ShellActionButton(
+                label = "＋ 新增快捷回复",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                adding = true
+                draftLabel = ""
+                draftMes = ""
+                draftEnabled = true
+                draftAutomationId = ""
+                draftPreventAutoExecute = false
+            }
+            Spacer(Modifier.height(120.dp))
         }
     }
     }
@@ -281,7 +285,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text("启用", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftEnabled, onChange = { draftEnabled = it })
                     }
                     ShellInput(
@@ -295,7 +299,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("自动执行期间禁止嵌套自动执行", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text("自动执行期间禁止嵌套自动执行", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftPreventAutoExecute, onChange = { draftPreventAutoExecute = it })
                     }
                 }
