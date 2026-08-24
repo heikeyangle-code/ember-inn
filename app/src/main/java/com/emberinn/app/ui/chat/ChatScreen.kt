@@ -263,7 +263,7 @@ fun ChatScreen(
             override fun saveWorldRaw(name: String, content: String): Boolean =
                 runCatching { worlds.importWorld("$name.json", content) }.getOrDefault(false)
             override fun createWorld(name: String): Boolean = runCatching { worlds.create(name); true }.getOrDefault(false)
-            override fun deleteWorld(name: String): Boolean = worlds.delete(name)
+            override fun deleteWorld(name: String): Boolean = runCatching { worlds.delete(name); true }.getOrDefault(false)
             override fun chatWorldName(): String? = vm.chatWorld()
             override fun setChatWorldName(name: String?) { name?.let(vm::setChatWorld) }
         }
