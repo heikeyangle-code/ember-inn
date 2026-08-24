@@ -195,6 +195,7 @@ fun ShellInput(
     modifier: Modifier = Modifier,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
         androidx.compose.foundation.text.KeyboardOptions.Default,
+    singleLine: Boolean = true,
 ) {
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
@@ -213,7 +214,7 @@ fun ShellInput(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                singleLine = true,
+                singleLine = singleLine,
                 textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
                 cursorBrush = SolidColor(c.accent),
                 keyboardOptions = keyboardOptions,

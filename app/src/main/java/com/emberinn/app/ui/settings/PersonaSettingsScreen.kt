@@ -22,14 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,14 +35,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.PersonaStore
-import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import java.io.File
 
@@ -66,6 +65,7 @@ private val PERSONA_POSITIONS = listOf(
  */
 @Composable
 fun PersonaSettingsScreen(onBack: () -> Unit) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     val store = remember { PersonaStore(context) }
     var personas by remember { mutableStateOf(store.list()) }
@@ -117,46 +117,39 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
                 onBack = onBack,
                 sky = settingsSky,
                 trailing = {
-                    IconButton(onClick = { editNew = true; editTarget = null }) {
-                        Icon(FaIcons.Plus, contentDescription = "新建人设")
-                    }
+                    Icon(
+                        FaIcons.Plus,
+                        contentDescription = "新建人设",
+                        tint = c.accent,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { editNew = true; editTarget = null }
+                            .padding(2.dp),
+                    )
                 },
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 if (message != null) {
                     item {
-                        Text(message!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(message!!, color = c.accent, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
                 if (personas.isEmpty()) {
                     item {
-                        Card(
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text("还没有人设", style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "点右上角 + 新建；描述支持 {{char}}/{{user}} 宏",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 4.dp),
-                                )
-                            }
+                            Text("还没有人设", color = c.ink, fontSize = 16.sp)
+                            Text("点右上角 + 新建；描述支持 {{char}}/{{user}} 宏", color = c.inkMute, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
                 items(personas, key = { it.id }) { persona ->
-                    PersonaCard(
+                    PersonaRow(
                         persona = persona,
                         isActive = persona.id == activeId,
                         isDefault = persona.id == defaultId,
@@ -167,13 +160,9 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
                     )
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        TextButton(onClick = { exportLauncher.launch("personas.json") }, modifier = Modifier.weight(1f)) {
-                            Text("导出")
-                        }
-                        TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }, modifier = Modifier.weight(1f)) {
-                            Text("导入")
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
+                        ShellActionButton("导出官方格式", onClick = { exportLauncher.launch("personas.json") }, modifier = Modifier.weight(1f))
+                        ShellActionButton("导入", onClick = { importLauncher.launch(arrayOf("application/json")) }, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -205,7 +194,7 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     store.save(personas.filterNot { it.id == target.id })
-                    if (activeId == target.id || personas.size == 1) refresh() else refresh()
+                    refresh()
                     deleteTarget = null
                     message = "已删除人设"
                 }) { Text("删除") }
@@ -216,7 +205,7 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PersonaCard(
+private fun PersonaRow(
     persona: Persona,
     isActive: Boolean,
     isDefault: Boolean,
@@ -225,19 +214,17 @@ private fun PersonaCard(
     onSetDefault: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val c = EmberTheme.colors
     var menu by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-            else MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
+    Box {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (isActive) c.surface2 else Color.Transparent)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 11.dp),
         ) {
             if (persona.avatarPath.isNotBlank() && File(persona.avatarPath).exists()) {
                 AsyncImage(
@@ -247,41 +234,37 @@ private fun PersonaCard(
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(c.surfaceSink),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(FaIcons.User, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                    Icon(FaIcons.User, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(19.dp))
                 }
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(persona.name.ifBlank { "未命名" }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text(persona.name.ifBlank { "未命名" }, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     if (isActive) {
-                        Tag("当前", MaterialTheme.colorScheme.primary)
+                        Tag("当前", c.accent)
                     }
                     if (isDefault) {
-                        Tag("默认", MaterialTheme.colorScheme.tertiary)
+                        Tag("默认", c.inkMute)
                     }
                 }
                 persona.title.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(it, color = c.accent, fontSize = 12.sp)
                 }
                 persona.description.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(it, color = c.inkMute, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
             Box {
-                IconButton(onClick = { menu = true }) {
-                    Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(18.dp))
-                }
+                Icon(
+                    FaIcons.EllipsisVertical,
+                    contentDescription = "更多",
+                    tint = c.inkMute,
+                    modifier = Modifier.size(18.dp).clickable { menu = true }.padding(2.dp),
+                )
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("编辑") }, onClick = { menu = false; onEdit() })
                     DropdownMenuItem(text = { Text("设为默认") }, onClick = { menu = false; onSetDefault() })
@@ -294,14 +277,15 @@ private fun PersonaCard(
 
 @Composable
 private fun Tag(text: String, color: androidx.compose.ui.graphics.Color) {
+    val c = EmberTheme.colors
     Box(
         modifier = Modifier
-            .padding(start = 6.dp)
+            .padding(start = 7.dp)
             .clip(RoundedCornerShape(999.dp))
-            .background(color.copy(alpha = 0.14f))
-            .padding(horizontal = 6.dp, vertical = 1.dp),
+            .background(color.copy(alpha = 0.13f))
+            .padding(horizontal = 7.dp, vertical = 1.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.labelSmall, color = color)
+        Text(text, fontSize = 10.sp, color = if (color == c.inkMute) c.inkMute else color, letterSpacing = 0.5.sp)
     }
 }
 
@@ -320,30 +304,36 @@ private fun PersonaEditDialog(initial: Persona?, onDismiss: () -> Unit, onSave: 
         title = { Text(if (initial == null) "新建人设" else "编辑人设") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                EmberTextField(value = name, onValueChange = { name = it }, label = { Text("名称（{{user}}）") }, singleLine = true)
-                EmberTextField(value = title, onValueChange = { title = it }, label = { Text("标题（可选）") }, singleLine = true)
-                EmberTextField(
+                ShellInput(value = name, onValueChange = { name = it }, label = "名称（{{user}}）")
+                ShellInput(value = title, onValueChange = { title = it }, label = "标题（可选）")
+                ShellInput(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("描述（支持 {{char}}/{{user}} 宏）") },
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    label = "描述（支持 {{char}}/{{user}} 宏）",
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Box {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        modifier = Modifier.fillMaxWidth().clickable { positionMenu = true },
-                    ) {
+                    val dc = EmberTheme.colors
+                    Column {
+                        Text("注入位置", fontSize = 12.sp, color = dc.inkMute)
+                        Spacer(Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(dc.surfaceSink)
+                                .clickable { positionMenu = true }
+                                .padding(horizontal = 13.dp, vertical = 12.dp),
                         ) {
                             Text(
                                 PERSONA_POSITIONS.firstOrNull { it.first == position }?.second ?: "提示词内",
-                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 14.sp,
+                                color = dc.ink,
                                 modifier = Modifier.weight(1f),
                             )
-                            Icon(FaIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Icon(FaIcons.ChevronDown, contentDescription = null, tint = dc.inkMute, modifier = Modifier.size(13.dp))
                         }
                     }
                     DropdownMenu(expanded = positionMenu, onDismissRequest = { positionMenu = false }) {
@@ -356,11 +346,10 @@ private fun PersonaEditDialog(initial: Persona?, onDismiss: () -> Unit, onSave: 
                     }
                 }
                 if (position == 4) {
-                    EmberTextField(
+                    ShellInput(
                         value = depth,
-                        onValueChange = { depth = it.filter { c -> c.isDigit() } },
-                        label = { Text("注入深度") },
-                        singleLine = true,
+                        onValueChange = { depth = it.filter { ch -> ch.isDigit() } },
+                        label = "注入深度",
                     )
                 }
             }
