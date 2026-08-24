@@ -94,7 +94,7 @@ fun Modifier.glassEdgeHighlight(dark: Boolean, atTop: Boolean): Modifier = drawW
 fun EmberSkeletonBox(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(12.dp),
-    base: Color = MaterialTheme.colorScheme.primary,
+    base: Color = EmberTheme.colors.accent,
 ) {
     val transition = rememberInfiniteTransition(label = "ember-shimmer")
     val progress by transition.animateFloat(

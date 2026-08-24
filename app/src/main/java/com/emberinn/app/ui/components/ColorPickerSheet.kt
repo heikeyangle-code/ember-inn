@@ -139,7 +139,7 @@ fun ColorPickerDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .emberShadow(color = current.copy(alpha = 0.45f), radius = 10.dp, spread = 1.dp, offset = DpOffset(0.dp, 3.dp), alpha = 0.5f)
                         .background(current)
-                        .border(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), RoundedCornerShape(12.dp)),
+                        .border(1.dp, EmberTheme.colors.surface.copy(alpha = 0.7f), RoundedCornerShape(12.dp)),
                 )
                 Spacer(Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -147,7 +147,7 @@ fun ColorPickerDialog(
                     Text(
                         current.toHex(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                         fontFamily = FontFamily.Monospace,
                     )
                 }
@@ -201,7 +201,7 @@ fun ColorPickerDialog(
                             .background(color)
                             .border(
                                 if (selected) 2.5.dp else 1.dp,
-                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                if (selected) EmberTheme.colors.accent else EmberTheme.colors.line,
                                 CircleShape,
                             )
                             .clickable { applyHex(color.toHex()) },
@@ -305,7 +305,7 @@ private fun ChannelRow(label: String, r: Float, g: Float, b: Float, onChange: (F
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(22.dp),
         )
         GradientSlider(
@@ -327,7 +327,7 @@ private fun ChannelRow(label: String, r: Float, g: Float, b: Float, onChange: (F
         Text(
             ((if (label == "R") r else if (label == "G") g else b) * 255).toInt().toString(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(34.dp),
             textAlign = TextAlign.End,
         )

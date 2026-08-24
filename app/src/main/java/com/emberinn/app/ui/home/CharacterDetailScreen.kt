@@ -221,7 +221,7 @@ fun CharacterDetailScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // 顶栏：玻璃 + 边缘高光，返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
             Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
+                color = EmberTheme.colors.surface.copy(alpha = 0.16f),
                 shadowElevation = 1.dp,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -247,7 +247,7 @@ fun CharacterDetailScreen(
                     Text(
                         if (dirty) "有未保存的修改" else "角色详情与编辑",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (dirty) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (dirty) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                     )
                 }
                 Box {
@@ -280,8 +280,8 @@ fun CharacterDetailScreen(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("删除角色", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(FaIcons.TrashCan, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            text = { Text("删除角色", color = EmberTheme.colors.danger) },
+                            leadingIcon = { Icon(FaIcons.TrashCan, contentDescription = null, tint = EmberTheme.colors.danger) },
                             onClick = {
                                 showMenu = false
                                 confirmDelete = true
@@ -307,14 +307,14 @@ fun CharacterDetailScreen(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .emberShadow(
-                                        color = (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.4f),
+                                        color = (seed ?: EmberTheme.colors.accent).copy(alpha = 0.4f),
                                         radius = 14.dp,
                                         spread = 1.dp,
                                         offset = DpOffset(0.dp, 5.dp),
                                         alpha = 0.45f,
                                     )
                                     .clip(CircleShape)
-                                    .border(2.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.5f), CircleShape),
+                                    .border(2.dp, (seed ?: EmberTheme.colors.accent).copy(alpha = 0.5f), CircleShape),
                             )
                         } else {
                             Box(
@@ -322,20 +322,20 @@ fun CharacterDetailScreen(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .emberShadow(
-                                        color = (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.4f),
+                                        color = (seed ?: EmberTheme.colors.accent).copy(alpha = 0.4f),
                                         radius = 14.dp,
                                         spread = 1.dp,
                                         offset = DpOffset(0.dp, 5.dp),
                                         alpha = 0.45f,
                                     )
                                     .clip(CircleShape)
-                                    .border(2.dp, (seed ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.5f), CircleShape)
+                                    .border(2.dp, (seed ?: EmberTheme.colors.accent).copy(alpha = 0.5f), CircleShape)
                                     .background(
                                     Brush.linearGradient(
                                         if (seed != null) {
-                                            listOf(lerp(seed, MaterialTheme.colorScheme.surface, 0.55f), seed)
+                                            listOf(lerp(seed, EmberTheme.colors.surface, 0.55f), seed)
                                         } else {
-                                            listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.primary)
+                                            listOf(EmberTheme.colors.surface, EmberTheme.colors.accent)
                                         },
                                     ),
                                 ),
@@ -344,7 +344,7 @@ fun CharacterDetailScreen(
                                     record.name.take(1),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = EmberTheme.colors.ink,
                                 )
                             }
                         }
@@ -353,7 +353,7 @@ fun CharacterDetailScreen(
                             Text(
                                 fields.description.ifBlank { "（无描述）" },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkMute,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -397,7 +397,7 @@ fun CharacterDetailScreen(
                             Text(
                                 "没有备用开场白。点击下方按钮新增，新会话可从备用开场白开始。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = EmberTheme.colors.lineStrong,
                                 modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                             )
                         }
@@ -424,7 +424,7 @@ fun CharacterDetailScreen(
                             Text(
                                 "没有该卡正则。新增后需在下文开启“允许此角色应用该卡正则”才会生效（对齐官方 data.extensions.regex_scripts + character_allowed_regex）。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = EmberTheme.colors.lineStrong,
                                 modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                             )
                         }
@@ -451,7 +451,7 @@ fun CharacterDetailScreen(
                                 Text(
                                     "对齐官方 character_allowed_regex：不勾选时该卡正则不会生效。",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
+                                    color = EmberTheme.colors.lineStrong,
                                 )
                             }
                             EmberSwitch(
@@ -478,7 +478,7 @@ fun CharacterDetailScreen(
                             Text(
                                 "没有该卡变量。变量以 {{getvar::键}} 在提示词/宏里引用（README 自定义扩展）。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = EmberTheme.colors.lineStrong,
                                 modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                             )
                         }
@@ -510,12 +510,12 @@ fun CharacterDetailScreen(
                                 Text(
                                     "模型 / 上下文 / 采样（本角色覆盖全局）",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = EmberTheme.colors.accent,
                                 )
                                 Text(
                                     modelOverride.summary(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -523,7 +523,7 @@ fun CharacterDetailScreen(
                             Icon(
                                 if (modelOverrideExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
+                                tint = EmberTheme.colors.lineStrong,
                             )
                         }
                         if (modelOverrideExpanded) {
@@ -540,7 +540,7 @@ fun CharacterDetailScreen(
                                             dirty = true
                                         },
                                         modifier = Modifier.weight(1f),
-                                    ) { Text("清除（跟随全局）", color = MaterialTheme.colorScheme.error) }
+                                    ) { Text("清除（跟随全局）", color = EmberTheme.colors.danger) }
                                 }
                             }
                         }
@@ -557,12 +557,12 @@ fun CharacterDetailScreen(
                                 Text(
                                     "seed / 背景 / 形状 / 字体 / 风格 / 浅深锁定",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = EmberTheme.colors.accent,
                                 )
                                 Text(
                                     themeRecipe.summary(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -570,7 +570,7 @@ fun CharacterDetailScreen(
                             Icon(
                                 if (themeRecipeExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
+                                tint = EmberTheme.colors.lineStrong,
                             )
                         }
                         if (themeRecipeExpanded) {
@@ -586,7 +586,7 @@ fun CharacterDetailScreen(
                                         dirty = true
                                     },
                                     modifier = Modifier.weight(1f),
-                                ) { Text("恢复全局", color = MaterialTheme.colorScheme.error) }
+                                ) { Text("恢复全局", color = EmberTheme.colors.danger) }
                             }
                         }
                     }
@@ -605,7 +605,7 @@ fun CharacterDetailScreen(
                             fields.depthPrompt.ifBlank { "深度 ${fields.depthPromptDepth} · 角色 ${fields.depthPromptRole}" },
                         ) { editingDepth = true }
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Text("话痨程度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
+                            Text("话痨程度", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.width(90.dp))
                             EmberSlider(
                                 value = fields.talkativeness,
                                 onValueChange = { fields = fields.copy(talkativeness = it); dirty = true },
@@ -620,7 +620,7 @@ fun CharacterDetailScreen(
                                     else -> "话多"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.width(40.dp),
                             )
                         }
@@ -654,17 +654,17 @@ fun CharacterDetailScreen(
                                 Text(
                                     if (worldBookExpanded) "点击收起" else "共 ${entries.size} 条 · 点击展开",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
+                                    color = EmberTheme.colors.lineStrong,
                                 )
                             }
                             Icon(
                                 if (worldBookExpanded) FaIcons.ChevronUp else FaIcons.ChevronDown,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
+                                tint = EmberTheme.colors.lineStrong,
                             )
                         }
                         if (worldBookExpanded) {
-                            Text("关联外置世界（data.extensions.world）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+                            Text("关联外置世界（data.extensions.world）", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
                             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
                                 FilterChip(selected = worldLink.isEmpty(), onClick = {
                                     worldLink = ""
@@ -686,7 +686,7 @@ fun CharacterDetailScreen(
                                 Text(
                                     "没有世界书条目。新增关键词条目后，聊到关键词时内容会自动注入上下文。",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
+                                    color = EmberTheme.colors.lineStrong,
                                     modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
                                 )
                             }
@@ -715,7 +715,7 @@ fun CharacterDetailScreen(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
             shape = RoundedCornerShape(24.dp),
             shadowElevation = 12.dp,
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            color = EmberTheme.colors.surface2,
         ) {
             Button(
                 onClick = save,
@@ -908,7 +908,7 @@ fun CharacterDetailScreen(
                     addingEntry = false
                     editingEntryIdx = null
                     confirmDeleteEntry = false
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDeleteEntry = false }) { Text("取消") }
@@ -1104,25 +1104,25 @@ fun CharacterDetailScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("形状", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Text("形状", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "跟随全局", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
                             FilterChip(selected = tShape == v, onClick = { tShape = v }, label = { Text(label) })
                         }
                     }
-                    Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Text("字体", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "系统", "serif" to "衬线", "source" to "思源宋体").forEach { (v, label) ->
                             FilterChip(selected = tFont == v, onClick = { tFont = v }, label = { Text(label) })
                         }
                     }
-                    Text("风格档位", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Text("风格档位", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "跟随全局", "airy" to "轻盈", "calm" to "沉静", "vivid" to "鲜明").forEach { (v, label) ->
                             FilterChip(selected = tStyle == v, onClick = { tStyle = v }, label = { Text(label) })
                         }
                     }
-                    Text("浅深锁定", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    Text("浅深锁定", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "跟随全局", "system" to "跟随系统", "light" to "浅色", "dark" to "深色").forEach { (v, label) ->
                             FilterChip(selected = tLock == v, onClick = { tLock = v }, label = { Text(label) })
@@ -1189,7 +1189,7 @@ fun CharacterDetailScreen(
                     confirmDelete = false
                     vm.delete(record)
                     onBack()
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text("取消") }
@@ -1207,11 +1207,11 @@ private fun SectionCard(
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = EmberTheme.colors.surface,
         modifier = Modifier
             .fillMaxWidth()
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                color = EmberTheme.colors.accent.copy(alpha = 0.12f),
                 radius = 10.dp,
                 offset = DpOffset(0.dp, 4.dp),
                 alpha = 0.06f,
@@ -1233,7 +1233,7 @@ private fun SectionHeader(title: String, count: String? = null) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         if (count != null) {
             Spacer(Modifier.width(8.dp))
-            Text(count, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(count, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
         }
     }
 }
@@ -1242,13 +1242,13 @@ private fun SectionHeader(title: String, count: String? = null) {
 private fun StatChip(text: String, seed: Color? = null) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceVariant, 0.84f) }
-            ?: MaterialTheme.colorScheme.surfaceVariant,
+        color = seed?.let { lerp(it, EmberTheme.colors.surface2, 0.84f) }
+            ?: EmberTheme.colors.surface2,
     ) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = if (seed != null) lerp(seed, MaterialTheme.colorScheme.onSurfaceVariant, 0.45f) else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (seed != null) lerp(seed, EmberTheme.colors.inkMute, 0.45f) else EmberTheme.colors.inkMute,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
@@ -1261,16 +1261,16 @@ private fun FieldRow(label: String, value: String, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
             Text(
                 value.ifBlank { "（空）" },
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                color = if (value.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (value.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.inkMute,
             )
         }
-        Icon(FaIcons.Pencil, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+        Icon(FaIcons.Pencil, contentDescription = "编辑$label", modifier = Modifier.size(18.dp), tint = EmberTheme.colors.lineStrong)
     }
     HorizontalDivider()
 }
@@ -1285,10 +1285,10 @@ private fun GreetingRow(text: String, onEdit: () -> Unit, onDelete: () -> Unit) 
             Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(16.dp), tint = EmberTheme.colors.lineStrong)
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(16.dp), tint = EmberTheme.colors.danger)
         }
     }
     HorizontalDivider()
@@ -1298,7 +1298,7 @@ private fun GreetingRow(text: String, onEdit: () -> Unit, onDelete: () -> Unit) 
 private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = if (entry.enabled) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = if (entry.enabled) EmberTheme.colors.surface else EmberTheme.colors.surface2.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Row(
@@ -1310,7 +1310,7 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
                     Text(
                         entry.keys.ifBlank { "（无触发词）" },
                         style = MaterialTheme.typography.titleSmall,
-                        color = if (entry.keys.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                        color = if (entry.keys.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
@@ -1320,10 +1320,10 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
                         Text(
                             "恒",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkMute,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(EmberTheme.colors.surface2)
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         )
                     }
@@ -1332,10 +1332,10 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
                         Text(
                             "选",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkMute,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(EmberTheme.colors.surface2)
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         )
                     }
@@ -1344,20 +1344,20 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
                 Text(
                     entry.content.ifBlank { entry.comment.ifBlank { "（空内容）" } },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     "插入顺序 ${entry.insertionOrder}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = EmberTheme.colors.lineStrong,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(FaIcons.Pencil, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(FaIcons.Pencil, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = EmberTheme.colors.lineStrong)
             }
             EmberSwitch(checked = entry.enabled, onChange = { onToggle() })
         }
@@ -1434,7 +1434,7 @@ fun WorldEntryEditorSheet(
             Text(
                 "聊到触发词时，内容自动注入上下文。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
             ShellInput(
@@ -1474,7 +1474,7 @@ fun WorldEntryEditorSheet(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            Text("位置（官方 world_info_position）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("位置（官方 world_info_position）", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("角色前(0)" to 0, "角色后(1)" to 1, "AN上(2)" to 2, "AN下(3)" to 3).forEach { (label, v) ->
                     FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
@@ -1638,7 +1638,7 @@ fun WorldEntryEditorSheet(
                     FilledTonalButton(
                         onClick = onDelete,
                         modifier = Modifier.weight(1f),
-                    ) { Text("删除条目", color = MaterialTheme.colorScheme.error) }
+                    ) { Text("删除条目", color = EmberTheme.colors.danger) }
                 }
                 Button(
                     onClick = {
@@ -1713,7 +1713,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = if (script.disabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerLow,
+        color = if (script.disabled) EmberTheme.colors.surface2.copy(alpha = 0.5f) else EmberTheme.colors.surface,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Row(
@@ -1724,7 +1724,7 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
                 Text(
                     script.scriptName.ifBlank { "（未命名正则）" },
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (script.scriptName.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                    color = if (script.scriptName.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1732,14 +1732,14 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
                 Text(
                     script.findRegex.ifBlank { "（空匹配式）" },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     "替换为 ${script.replaceString.ifBlank { "（空）" }}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = EmberTheme.colors.lineStrong,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
@@ -1747,7 +1747,7 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(FaIcons.Pencil, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                Icon(FaIcons.Pencil, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = EmberTheme.colors.lineStrong)
             }
             EmberSwitch(checked = !script.disabled, onChange = { onToggle() })
         }
@@ -1800,7 +1800,7 @@ private fun RegexEditorSheet(
             Text(
                 "字段对齐官方 RegexScriptData（char-data.js），保存进 data.extensions.regex_scripts。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
             ShellInput(
@@ -1835,7 +1835,7 @@ private fun RegexEditorSheet(
             Text(
                 "应用位置",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = EmberTheme.colors.accent,
                 modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1874,7 +1874,7 @@ private fun RegexEditorSheet(
             Text(
                 "匹配式宏替换",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = EmberTheme.colors.accent,
                 modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -1892,7 +1892,7 @@ private fun RegexEditorSheet(
                     FilledTonalButton(
                         onClick = onDelete,
                         modifier = Modifier.weight(1f),
-                    ) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    ) { Text("删除", color = EmberTheme.colors.danger) }
                 }
                 Button(
                     onClick = {
@@ -1936,23 +1936,23 @@ private fun SimpleEditRow(
             Text(
                 title.ifBlank { "（空）" },
                 style = MaterialTheme.typography.titleSmall,
-                color = if (title.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                color = if (title.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 subtitle.ifBlank { "（空）" },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
-            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+            Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
-            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+            Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
         }
     }
     HorizontalDivider()

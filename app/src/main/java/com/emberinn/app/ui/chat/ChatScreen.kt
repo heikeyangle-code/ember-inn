@@ -558,7 +558,7 @@ fun ChatScreen(
                 Text(
                     "图片 / 视频 / 音频、URL，或直接生成图片",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(top = 2.dp),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -1461,17 +1461,17 @@ fun ChatScreen(
                 Text(
                     "本次发送注入的世界书条目（点击状态胶囊打开）",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                 )
                 Spacer(Modifier.size(10.dp))
                 if (worldHits.isEmpty()) {
-                    Text("没有命中条目", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("没有命中条目", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-                        WorldHitLight(MaterialTheme.colorScheme.primary, "常驻")
-                        WorldHitLight(MaterialTheme.colorScheme.secondary, "关键词")
+                        WorldHitLight(EmberTheme.colors.accent, "常驻")
+                        WorldHitLight(EmberTheme.colors.accent, "关键词")
                         WorldHitLight(Color(0xFFE09A3E), "概率")
-                        WorldHitLight(MaterialTheme.colorScheme.tertiary, "向量")
+                        WorldHitLight(EmberTheme.colors.ai, "向量")
                     }
                     worldHits.forEach { hit ->
                         val hitLabel = when {
@@ -1481,10 +1481,10 @@ fun ChatScreen(
                             else -> "关键词命中"
                         }
                         val lightColor = when {
-                            hit.constant -> MaterialTheme.colorScheme.primary
-                            hit.vectorized -> MaterialTheme.colorScheme.tertiary
+                            hit.constant -> EmberTheme.colors.accent
+                            hit.vectorized -> EmberTheme.colors.ai
                             hit.useProbability -> Color(0xFFE09A3E)
-                            else -> MaterialTheme.colorScheme.secondary
+                            else -> EmberTheme.colors.accent
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1505,7 +1505,7 @@ fun ChatScreen(
                                         "${hit.tokens} token",
                                     ).filterNotNull().joinToString(" · "),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -1539,7 +1539,7 @@ fun ChatScreen(
                     Text(
                         gradeText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                 }
             }
@@ -1708,7 +1708,7 @@ fun ChatScreen(
                 TextButton(onClick = {
                     showConvertGroupConfirm = false
                     vm.convertToGroup()?.let { onSwitchSession(it) }
-                }) { Text("转换", color = MaterialTheme.colorScheme.primary) }
+                }) { Text("转换", color = EmberTheme.colors.accent) }
             },
             dismissButton = {
                 TextButton(onClick = { showConvertGroupConfirm = false }) { Text("取消") }
@@ -1730,7 +1730,7 @@ fun ChatScreen(
                         if (cur != null) vm.deleteMessage(cur)
                         deleteTargetIndex = null
                         Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
-                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    }) { Text("删除", color = EmberTheme.colors.danger) }
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteTargetIndex = null }) { Text("取消") }
@@ -1759,7 +1759,7 @@ fun ChatScreen(
                             Toast.makeText(context, "已删除该回复", Toast.LENGTH_SHORT).show()
                         }
                         deleteSwipeTargetIndex = null
-                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    }) { Text("删除", color = EmberTheme.colors.danger) }
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteSwipeTargetIndex = null }) { Text("取消") }
@@ -1911,7 +1911,7 @@ fun ChatScreen(
                         .clickable { vm.setShowThoughtsQuick(!showThoughtsNow) }
                         .padding(horizontal = 20.dp, vertical = 6.dp),
                 ) {
-                    Icon(FaIcons.Brain, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(FaIcons.Brain, contentDescription = null, tint = EmberTheme.colors.inkMute)
                     Spacer(Modifier.size(12.dp))
                     Text(
                         "显示思考过程（show_thoughts）",
@@ -2059,7 +2059,7 @@ fun ChatScreen(
                         if (id == vm.currentSessionId) onBack()
                     },
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
+                        contentColor = EmberTheme.colors.danger,
                     ),
                 ) { Text("删除") }
             },
@@ -2106,13 +2106,13 @@ fun ChatScreen(
                                         Text(
                                             promptSectionLabel(key),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = EmberTheme.colors.inkMute,
                                             modifier = Modifier.weight(1f),
                                         )
                                         Text(
                                             "$value t",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = EmberTheme.colors.accent,
                                         )
                                     }
                                 }
@@ -2121,7 +2121,7 @@ fun ChatScreen(
                         Text(
                             "Token 合计：${preview.tokens}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = EmberTheme.colors.accent,
                         )
                         Spacer(Modifier.size(8.dp))
                         HorizontalDivider()
@@ -2169,13 +2169,13 @@ fun ChatScreen(
                     Text(
                         "Tokens: $anTokens · 下次插入：${anNext ?: "禁用"}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                     Text(
                         "注入位置",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2194,7 +2194,7 @@ fun ChatScreen(
                     Text(
                         "角色（role）",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2275,7 +2275,7 @@ fun ChatScreen(
             title = { Text("群聊设置") },
             text = {
                 Column {
-                    Text("生成模式", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("生成模式", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         FilterChip(
                             selected = groupMode == GroupGenerationMode.APPEND,
@@ -2289,7 +2289,7 @@ fun ChatScreen(
                             label = { Text("轮流（SWAP）") },
                         )
                     }
-                    Text("激活策略", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                    Text("激活策略", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 8.dp))
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         FilterChip(
                             selected = groupStrategy == "natural",
@@ -2306,7 +2306,7 @@ fun ChatScreen(
                     Text(
                         "APPEND=本轮全员依次回复；SWAP=上一发言人之后轮流。策略切换对下一轮生效。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -2359,7 +2359,7 @@ fun ChatScreen(
                     Text(
                         "还没有人设。新建后，人设描述会注入提示词（官方 Persona Management 语义）。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
                 }
@@ -2384,23 +2384,23 @@ fun ChatScreen(
                             Text(
                                 p.name.ifBlank { "（未命名）" },
                                 style = MaterialTheme.typography.titleSmall,
-                                color = if (activePersona?.id == p.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                color = if (activePersona?.id == p.id) EmberTheme.colors.accent else EmberTheme.colors.ink,
                             )
                             if (p.description.isNotBlank()) {
                                 Text(
                                     p.description,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
                         if (activePersona?.id == p.id) {
-                            Text("当前", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("当前", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                         }
                         if (defaultPersona?.id == p.id) {
-                            Text("默认", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                            Text("默认", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                         }
                         IconButton(
                             onClick = { vm.setDefaultPersona(p.id) },
@@ -2410,7 +2410,7 @@ fun ChatScreen(
                                 FaIcons.Star,
                                 contentDescription = "设为人设默认",
                                 modifier = Modifier.size(16.dp),
-                                tint = if (defaultPersona?.id == p.id) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                                tint = if (defaultPersona?.id == p.id) EmberTheme.colors.accent else EmberTheme.colors.lineStrong,
                             )
                         }
                         IconButton(
@@ -2421,7 +2421,7 @@ fun ChatScreen(
                                 FaIcons.Copy,
                                 contentDescription = "复制人设",
                                 modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.outline,
+                                tint = EmberTheme.colors.lineStrong,
                             )
                         }
                         IconButton(onClick = {
@@ -2437,10 +2437,10 @@ fun ChatScreen(
                             personaDraftConnectChar = p.connections.any { it.type == "character" && it.id == vm.characterId }
                             personaDraftConnectGroup = p.connections.any { it.type == "group" && it.id == vm.group?.id }
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(FaIcons.Pencil, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                            Icon(FaIcons.Pencil, contentDescription = "编辑人设", modifier = Modifier.size(16.dp), tint = EmberTheme.colors.lineStrong)
                         }
                         IconButton(onClick = { vm.deletePersona(p.id) }, modifier = Modifier.size(32.dp)) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除人设", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除人设", modifier = Modifier.size(16.dp), tint = EmberTheme.colors.danger)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -2527,7 +2527,7 @@ fun ChatScreen(
                     Text(
                         "注入位置",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2550,7 +2550,7 @@ fun ChatScreen(
                     Text(
                         "角色（role）",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2622,7 +2622,7 @@ fun ChatScreen(
                         Text(
                             "连接（绑定角色/群聊时自动使用）",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = EmberTheme.colors.accent,
                             modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2744,7 +2744,7 @@ fun ChatScreen(
                     Text(
                         "还没有书签。长按消息 → 创建书签，把当前聊天存档下来。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
                 }
@@ -2760,7 +2760,7 @@ fun ChatScreen(
                         IconButton(onClick = {
                             vm.deleteBookmark(name)
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除书签", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除书签", modifier = Modifier.size(16.dp), tint = EmberTheme.colors.danger)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -2782,14 +2782,14 @@ fun ChatScreen(
                 Text(
                     "把文本文件放进数据银行，发送消息时会按官方 vectors 扩展分块检索，把相关内容注入提示词（设置→服务→向量 开启）。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 if (dataBank.isEmpty()) {
                     Text(
                         "还没有文件。点下面“添加文件”选一个 txt / md 文档。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
                 }
@@ -2800,7 +2800,7 @@ fun ChatScreen(
                     ) {
                         Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         TextButton(onClick = { vm.removeDataBankFile(name) }) {
-                            Text("删除", color = MaterialTheme.colorScheme.error)
+                            Text("删除", color = EmberTheme.colors.danger)
                         }
                     }
                 }
@@ -2866,7 +2866,7 @@ fun ChatScreen(
                     Text(
                         "该消息没有分节明细：明细只在生成（发送/继续/变体）时记录，官方 itemized-prompts 同语义。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                     TextButton(onClick = { tokenStatsIndex = null }) { Text("关闭") }
                 } else {
@@ -2884,12 +2884,12 @@ fun ChatScreen(
                     Text(
                         "API/模型：${entry.providerName} – ${entry.model}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "预设：${entry.presetName.ifBlank { "默认" }} · 分词器：${entry.tokenizer}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                     Spacer(Modifier.size(8.dp))
                     // 官方 itemizationText.html：五分类 + 百分比图（角色定义/世界书/聊天历史/扩展/bias）
@@ -2901,7 +2901,7 @@ fun ChatScreen(
                                 .width(18.dp)
                                 .height(160.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                                .background(EmberTheme.colors.surfaceSink),
                         ) {
                             cats.forEach { c ->
                                 Box(
@@ -2925,7 +2925,7 @@ fun ChatScreen(
                                     Text(
                                         "${c.tokens} t（${c.tokens * 100 / catTotal}%）",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = EmberTheme.colors.ink,
                                     )
                                 }
                                 c.subRows.forEach { (sub, tokens) ->
@@ -2933,13 +2933,13 @@ fun ChatScreen(
                                         Text(
                                             "-- $sub",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = EmberTheme.colors.inkMute,
                                             modifier = Modifier.weight(1f),
                                         )
                                         Text(
                                             "$tokens",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = EmberTheme.colors.inkMute,
                                         )
                                     }
                                 }
@@ -2957,17 +2957,17 @@ fun ChatScreen(
                     Text(
                         "Max Context（上下文-回复）：${entry.maxContext - entry.maxTokens}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "Padding：0",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "Actual Max Context Allowed：${entry.maxContext - entry.maxTokens}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                     )
                     Spacer(Modifier.size(8.dp))
                     HorizontalDivider()
@@ -2995,14 +2995,14 @@ fun ChatScreen(
                                     Text(
                                         "${sec.role} · ${sec.tokens}t",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = EmberTheme.colors.accent,
                                     )
                                 }
                                 if (expanded) {
                                     Text(
                                         sec.content.ifBlank { "（无内容）" },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = EmberTheme.colors.inkMute,
                                     )
                                 }
                             }
@@ -3041,7 +3041,7 @@ fun ChatScreen(
                                         color = when (tag) {
                                             '+' -> Color(0xFF7CB342)
                                             '-' -> Color(0xFFE57373)
-                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            else -> EmberTheme.colors.inkMute
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                     )
@@ -3087,7 +3087,7 @@ fun ChatScreen(
                             Text(
                                 "${i + 1}.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (current) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                             )
                             Spacer(Modifier.widthIn(min = 8.dp))
                             Text(
@@ -3098,7 +3098,7 @@ fun ChatScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             if (current) {
-                                Text("✓", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                Text("✓", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.accent)
                             }
                         }
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -3117,7 +3117,7 @@ fun ChatScreen(
                 TextButton(onClick = {
                     vm.openBookmark(name)
                     bookmarkToOpen = null
-                }) { Text("打开", color = MaterialTheme.colorScheme.error) }
+                }) { Text("打开", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { bookmarkToOpen = null }) { Text("取消") }
@@ -3241,7 +3241,7 @@ fun ChatScreen(
                     vm.clearSession()
                     showClearConfirm = false
                     Toast.makeText(context, "已清空", Toast.LENGTH_SHORT).show()
-                }) { Text("清空", color = MaterialTheme.colorScheme.error) }
+                }) { Text("清空", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
@@ -3368,22 +3368,22 @@ private fun ContextCapsule(
 ) {
     val ratio = if (max <= 0) 0f else used.toFloat() / max
     val grade = when {
-        ratio >= 0.90f -> MaterialTheme.colorScheme.error
+        ratio >= 0.90f -> EmberTheme.colors.danger
         ratio >= 0.75f -> Color(0xFFEF6C00)
         ratio >= 0.50f -> Color(0xFFF9A825)
         else -> Color(0xFF2E7D32)
     }
     // 世界书命中存在即高亮主色，无命中置灰（常驻胶囊，弱化但不消失）
     val worldColor = if (worldHits > 0) {
-        MaterialTheme.colorScheme.primary
+        EmberTheme.colors.accent
     } else {
-        MaterialTheme.colorScheme.outlineVariant
+        EmberTheme.colors.line
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f))
+            .background(EmberTheme.colors.surface2.copy(alpha = 0.65f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         // 上下文区：圆环 + 百分比 + token 明细
@@ -3396,7 +3396,7 @@ private fun ContextCapsule(
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
                 color = grade,
-                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                trackColor = EmberTheme.colors.line.copy(alpha = 0.4f),
             )
             Spacer(Modifier.size(6.dp))
             Text(
@@ -3409,7 +3409,7 @@ private fun ContextCapsule(
             Text(
                 "上下文 ${formatTokens(used)}/${formatTokens(max)}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
             )
         }
         // 细分隔线：上下文 | 世界书命中 同囊区隔
@@ -3418,7 +3418,7 @@ private fun ContextCapsule(
             modifier = Modifier
                 .width(1.dp)
                 .height(14.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                .background(EmberTheme.colors.line.copy(alpha = 0.35f)),
         )
         Spacer(Modifier.size(8.dp))
         // 世界书命中区：书图标 + 命中数，点击开命中面板
@@ -3437,7 +3437,7 @@ private fun ContextCapsule(
                 if (worldHits > 0) "×$worldHits" else "—",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (worldHits > 0) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (worldHits > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                color = if (worldHits > 0) EmberTheme.colors.accent else EmberTheme.colors.line,
             )
         }
     }
@@ -3477,13 +3477,13 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
             Text("角色详情", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
             fields.forEach { (label, value) ->
                 Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                     Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 8, overflow = TextOverflow.Ellipsis)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             }
             if (fields.isEmpty()) {
-                Text("该卡暂无可用字段", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("该卡暂无可用字段", color = EmberTheme.colors.inkMute)
             }
         }
     }
@@ -3494,7 +3494,7 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
 private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = EmberTheme.colors.surfaceSink,
         modifier = Modifier.widthIn(max = 180.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)) {
@@ -3507,10 +3507,10 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.secondaryContainer),
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(EmberTheme.colors.surface),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (media.type == "video") "▶" else "♪", color = MaterialTheme.colorScheme.secondary)
+                    Text(if (media.type == "video") "▶" else "♪", color = EmberTheme.colors.accent)
                 }
             }
             Spacer(Modifier.size(6.dp))
@@ -3652,7 +3652,7 @@ private fun MessageActionIcon(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
+    tint: Color = EmberTheme.colors.inkMute.copy(alpha = 0.66f),
 ) {
     // 官方 mes_button 移动端等价：无底色小图标钮（28dp 触达 / 15dp 视觉），与正文拉开层级
     Box(
@@ -3672,7 +3672,7 @@ private fun MenuSectionLabel(title: String) {
     Text(
         title,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = EmberTheme.colors.accent,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
     )
 }
@@ -3703,7 +3703,7 @@ private fun PastChatRow(
             Icon(
                 FaIcons.Comments,
                 contentDescription = null,
-                tint = if (entry.isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (entry.isCurrent) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.size(8.dp))
@@ -3711,13 +3711,13 @@ private fun PastChatRow(
                 entry.record.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (entry.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (entry.isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = if (entry.isCurrent) EmberTheme.colors.accent else EmberTheme.colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             if (entry.isCurrent) {
-                Text("当前", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text("当前", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                 Spacer(Modifier.size(8.dp))
             }
             // 行内操作（官方 past_chat_template 右侧按钮组）
@@ -3731,14 +3731,14 @@ private fun PastChatRow(
                 Icon(FaIcons.FileLines, contentDescription = "导出纯文本", modifier = Modifier.size(14.dp))
             }
             androidx.compose.material3.IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
-                Icon(FaIcons.Skull, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(14.dp))
+                Icon(FaIcons.Skull, contentDescription = "删除", tint = EmberTheme.colors.danger, modifier = Modifier.size(14.dp))
             }
         }
         entry.preview?.let { preview ->
             Text(
                 preview,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -3747,7 +3747,7 @@ private fun PastChatRow(
             Text(
                 "${entry.messageCount} 💬  $dateText",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
             )
         }
     }
@@ -3804,7 +3804,7 @@ private fun ChatComposerOverlays(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp),
                     ) {
-                        Text("显示：", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("显示：", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
                         Spacer(Modifier.width(8.dp))
                         FilterChip(
                             selected = pendingDisplay != "gallery",
@@ -3833,7 +3833,7 @@ private fun ChatComposerOverlays(
                 // 补全弹层：Surface 投影 + 主题表面色，命令名匹配段用角色 accent 高亮
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
+                    color = EmberTheme.colors.surface2.copy(alpha = 0.98f),
                     shadowElevation = 6.dp,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -3841,7 +3841,7 @@ private fun ChatComposerOverlays(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 220.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(16.dp)),
+                            .border(1.dp, EmberTheme.colors.line.copy(alpha = 0.55f), RoundedCornerShape(16.dp)),
                         contentPadding = PaddingValues(vertical = 4.dp),
                     ) {
                         itemsIndexed(slashMatches, key = { _, pair -> pair.first }) { _, (name, desc) ->
@@ -3880,13 +3880,13 @@ private fun ChatComposerOverlays(
                                     nameAnnotated,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    color = EmberTheme.colors.ink,
                                 )
                                 Spacer(Modifier.size(10.dp))
                                 Text(
                                     desc,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f),
@@ -3918,7 +3918,7 @@ private fun ChatComposerOverlays(
 private fun QuickReplyChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f),
+        color = EmberTheme.colors.surface2.copy(alpha = 0.62f),
         modifier = modifier.clip(RoundedCornerShape(999.dp)).clickable(onClick = onClick),
     ) {
         Row(
@@ -3928,14 +3928,14 @@ private fun QuickReplyChip(label: String, onClick: () -> Unit, modifier: Modifie
             Icon(
                 FaIcons.PaperPlane,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = EmberTheme.colors.inkMute,
                 modifier = Modifier.size(13.dp),
             )
             Spacer(Modifier.width(5.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 maxLines = 1,
             )
         }
@@ -3962,15 +3962,15 @@ private fun AttachSheetRow(
         Box(
             modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))
                 .background(
-                    if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                    if (enabled) EmberTheme.colors.surface.copy(alpha = 0.55f)
+                    else EmberTheme.colors.surfaceSink,
                 ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.outline,
+                tint = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.lineStrong,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -3979,13 +3979,13 @@ private fun AttachSheetRow(
             Text(
                 title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.inkMute,
             )
             if (subtitle.isNotBlank()) {
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                 )
             }
         }
@@ -3993,7 +3993,7 @@ private fun AttachSheetRow(
             Icon(
                 FaIcons.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
+                tint = EmberTheme.colors.lineStrong,
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -4015,7 +4015,7 @@ private fun WorldHitLight(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
         Spacer(Modifier.size(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
     }
 }
 
@@ -4372,7 +4372,7 @@ private fun CfgScaleSheet(
             Text(
                 "强度 >1 时生效：负向提示不进消息，正向提示按深度注入；openai 不发送 guidance。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Spacer(Modifier.height(14.dp))
@@ -4398,7 +4398,7 @@ private fun CfgScaleSheet(
             ShellInput(value = globalPos, onValueChange = { globalPos = it }, label = "正向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
-            Text("合并来源（cfg_prompt_combine）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text("合并来源（cfg_prompt_combine）", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -4458,7 +4458,7 @@ private fun CfgScaleSheet(
 
 @Composable
 private fun CfgSectionTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    Text(title, style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
     Spacer(Modifier.height(6.dp))
 }
 
@@ -4469,7 +4469,7 @@ private fun CfgScaleRow(label: String, value: Float, range: kotlin.ranges.Closed
         Text(
             "%.2f".format(value),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(48.dp),
         )
     }
@@ -4497,7 +4497,7 @@ private fun LogprobsSheet(
             Text(
                 "点击 token 查看备选；数据来自本条 AI 回复的流式响应（内存保留最近一条）。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Spacer(Modifier.height(12.dp))
@@ -4505,10 +4505,10 @@ private fun LogprobsSheet(
                 Text(
                     "没有数据：需在 提供商与模型 → 请求 token 概率 开启后重新生成。",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                 )
             } else {
-                Text("${logprobs.size} 个 token", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("${logprobs.size} 个 token", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -4518,8 +4518,8 @@ private fun LogprobsSheet(
                         val sel = selected == i
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (sel) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            color = if (sel) EmberTheme.colors.surface
+                            else EmberTheme.colors.surface2,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { selected = if (sel) null else i },
@@ -4527,8 +4527,8 @@ private fun LogprobsSheet(
                             Text(
                                 lp.token.ifBlank { "␣" },
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (sel) EmberTheme.colors.ink
+                                else EmberTheme.colors.inkMute,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                             )
                         }
@@ -4540,7 +4540,7 @@ private fun LogprobsSheet(
                     Text(
                         "备选（${lp.token.ifBlank { "␣" }}）",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                     )
                     Spacer(Modifier.height(6.dp))
                     lp.topLogprobs.sortedBy { it.second }.forEach { (tok, prob) ->
@@ -4556,7 +4556,7 @@ private fun LogprobsSheet(
                             Text(
                                 "%.2f".format(prob),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.width(56.dp),
                             )
                         }

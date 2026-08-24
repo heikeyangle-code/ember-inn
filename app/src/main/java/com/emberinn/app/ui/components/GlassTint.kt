@@ -17,7 +17,7 @@ import com.skydoves.cloudy.cloudy
 /** 玻璃色调：官方主题桥接的舞台染色（EmberTheme.stageTint ← blur_tint_color）> EmberDS surface。
  *  无本地覆盖——官方主题切换即时生效；alpha 由调用方按各玻璃面的透明度叠加（0.38-0.52）。 */
 @Composable
-fun glassTint(base: Color = MaterialTheme.colorScheme.surface): Color =
+fun glassTint(base: Color = EmberTheme.colors.surface): Color =
     EmberTheme.stageTint ?: base
 
 /** 全局玻璃默认参数：顶栏/输入栏统一 tint 透明度，模糊半径下限，
@@ -51,7 +51,7 @@ fun Modifier.emberGlass(
 ): Modifier {
     if (sky == null) return this
     val context = LocalContext.current
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val dark = EmberTheme.colors.bg.luminance() < 0.5f
     val tint = glassTint()
     // 官方主题字段唯一数据源：fast_ui_mode（true=no-blur 关玻璃）+ blur_strength（0-30 px）。
     // 对齐官方：power_user 常驻内存仅属性读取——这里也只在主题变更时解析一次，不逐帧重解析。
@@ -60,7 +60,7 @@ fun Modifier.emberGlass(
     val shell = remember(shellThemeJson) { themeManager.shellSettings() }
     val blurRadius = shell.blurStrength.toInt()
     val baseCoat = Modifier
-        .background(MaterialTheme.colorScheme.background)
+        .background(EmberTheme.colors.bg)
         .background(tint.copy(alpha = tintAlpha))
     return this
         .glassEdgeHighlight(dark = dark, atTop = atTop)

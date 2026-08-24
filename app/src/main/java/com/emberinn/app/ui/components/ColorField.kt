@@ -54,20 +54,20 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                     .size(38.dp)
                     .clip(swatchShape)
                     .emberShadow(
-                        color = (effective ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.4f),
+                        color = (effective ?: EmberTheme.colors.accent).copy(alpha = 0.4f),
                         radius = 9.dp,
                         spread = 1.dp,
                         offset = DpOffset(0.dp, 3.dp),
                         alpha = 0.45f,
                     )
                     .background(
-                        effective ?: MaterialTheme.colorScheme.surfaceContainerHighest,
+                        effective ?: EmberTheme.colors.surfaceSink,
                     )
                     .border(1.dp, Color.White.copy(alpha = 0.5f), swatchShape),
                 contentAlignment = Alignment.Center,
             ) {
                 if (current == null) {
-                    Text("—", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("—", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.inkMute)
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -80,14 +80,14 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                         else -> "跟随主题"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     fontFamily = FontFamily.Monospace,
                 )
             }
             Icon(
                 FaIcons.Pencil,
                 contentDescription = "选色",
-                tint = MaterialTheme.colorScheme.primary,
+                tint = EmberTheme.colors.accent,
                 modifier = Modifier.size(16.dp).padding(end = 4.dp),
             )
         }
@@ -103,7 +103,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
         Text(
             hint,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkMute,
             modifier = Modifier.padding(top = 4.dp),
         )
     }

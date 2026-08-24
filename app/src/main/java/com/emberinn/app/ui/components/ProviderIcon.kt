@@ -31,7 +31,7 @@ fun ProviderIcon(
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surface2,
     ) {
         AsyncImage(
             model = "file:///android_asset/icons/$icon",
@@ -45,14 +45,14 @@ fun ProviderIcon(
 @Composable
 fun TextAvatar(text: String, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+        modifier = modifier.clip(CircleShape).background(EmberTheme.colors.surfaceSink),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text.take(1).uppercase(),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = EmberTheme.colors.ink,
         )
     }
 }

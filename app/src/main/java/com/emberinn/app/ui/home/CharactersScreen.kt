@@ -189,7 +189,7 @@ fun CharactersScreen(
                     .offset(x = (-130).dp, y = 60.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f), Color.Transparent),
+                            listOf(EmberTheme.colors.accent.copy(alpha = 0.06f), Color.Transparent),
                         ),
                     ),
             )
@@ -304,7 +304,7 @@ fun CharactersScreen(
                     Text(
                         "下载后自动识别格式并入库。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -365,7 +365,7 @@ fun CharactersScreen(
                 Text(
                     "世界书条目 · ${hit.characterName}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = EmberTheme.colors.accent,
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
                 )
                 Text(hit.key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -389,7 +389,7 @@ fun CharactersScreen(
                     EmberHaptics.reject(haptic)
                     vm.delete(record); deleteTarget = null
                     Toast.makeText(context, "已删除：${record.name}", Toast.LENGTH_SHORT).show()
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) { Text("取消") }
@@ -467,7 +467,7 @@ private fun SearchGroupHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = EmberTheme.colors.accent,
         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
     )
 }
@@ -476,7 +476,7 @@ private fun SearchGroupHeader(title: String) {
 private fun CharacterSearchRow(record: CharacterRecord, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surface2,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -487,12 +487,12 @@ private fun CharacterSearchRow(record: CharacterRecord, onClick: () -> Unit) {
                 Text(
                     record.description.ifBlank { "暂无简介" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text("去聊天", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text("去聊天", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
         }
     }
 }
@@ -501,7 +501,7 @@ private fun CharacterSearchRow(record: CharacterRecord, onClick: () -> Unit) {
 private fun SessionSearchRow(session: SessionRecord, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surface2,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -509,9 +509,9 @@ private fun SessionSearchRow(session: SessionRecord, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(session.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("会话记录", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("会话记录", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
             }
-            Text("打开", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text("打开", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
         }
     }
 }
@@ -520,7 +520,7 @@ private fun SessionSearchRow(session: SessionRecord, onClick: () -> Unit) {
 private fun WorldInfoSearchRow(hit: WorldInfoHit, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surface2,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -531,12 +531,12 @@ private fun WorldInfoSearchRow(hit: WorldInfoHit, onClick: () -> Unit) {
                 Text(
                     hit.content.take(60),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(hit.characterName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(hit.characterName, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
         }
     }
 }
@@ -545,7 +545,7 @@ private fun WorldInfoSearchRow(hit: WorldInfoHit, onClick: () -> Unit) {
 private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surface2,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -553,10 +553,10 @@ private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(hit.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(hit.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(hit.description, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.lineStrong, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -565,7 +565,7 @@ private fun SettingsSearchRow(hit: SettingsHit, onClick: () -> Unit) {
 private fun SearchAvatar(name: String, isRole: Boolean) {
     Surface(
         shape = CircleShape,
-        color = if (isRole) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        color = if (isRole) EmberTheme.colors.surface else EmberTheme.colors.surface,
         modifier = Modifier.size(36.dp),
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -573,7 +573,7 @@ private fun SearchAvatar(name: String, isRole: Boolean) {
                 Icon(
                     FaIcons.User,
                     contentDescription = null,
-                    tint = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    tint = if (isRole) EmberTheme.colors.accent else EmberTheme.colors.accent,
                     modifier = Modifier.size(15.dp),
                 )
             } else {
@@ -581,7 +581,7 @@ private fun SearchAvatar(name: String, isRole: Boolean) {
                     name.take(1),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isRole) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    color = if (isRole) EmberTheme.colors.accent else EmberTheme.colors.accent,
                 )
             }
         }
@@ -597,9 +597,9 @@ private fun HomeTopBar(
 ) {
     Surface(
         color = if (glass) {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.14f)
+            EmberTheme.colors.surface.copy(alpha = 0.14f)
         } else {
-            MaterialTheme.colorScheme.background.copy(alpha = 0.92f)
+            EmberTheme.colors.bg.copy(alpha = 0.92f)
         },
         shape = RoundedCornerShape(18.dp),
         modifier = modifier,
@@ -639,7 +639,7 @@ private fun GlassFab(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(FaIcons.Plus, contentDescription = "导入角色卡", tint = MaterialTheme.colorScheme.primary)
+        Icon(FaIcons.Plus, contentDescription = "导入角色卡", tint = EmberTheme.colors.accent)
     }
 }
 
@@ -661,12 +661,12 @@ private fun AiChatCard(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .glassEdgeHighlight(dark = MaterialTheme.colorScheme.background.luminance() < 0.5f, atTop = true)
+                .glassEdgeHighlight(dark = EmberTheme.colors.bg.luminance() < 0.5f, atTop = true)
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
-                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.75f),
+                            EmberTheme.colors.surface.copy(alpha = 0.95f),
+                            EmberTheme.colors.surface2.copy(alpha = 0.75f),
                         ),
                     ),
                 ),
@@ -676,20 +676,20 @@ private fun AiChatCard(onClick: () -> Unit) {
                     modifier = Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        .background(EmberTheme.colors.accent.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         FaIcons.WandMagicSparkles,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = EmberTheme.colors.accent,
                         modifier = Modifier.size(18.dp),
                     )
                 }
                 Spacer(Modifier.size(12.dp))
                 Column {
                     Text("AI 对话", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text("不用角色卡，直接聊天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("不用角色卡，直接聊天", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
                 }
             }
         }
@@ -712,7 +712,7 @@ private fun RecentChatCard(
             alpha = 0.10f,
         ),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface2),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -729,9 +729,9 @@ private fun RecentChatCard(
             } else {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(EmberTheme.colors.surface),
                 ) {
-                    Text(session.name.take(1), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(session.name.take(1), style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 }
             }
             Spacer(Modifier.size(10.dp))
@@ -740,7 +740,7 @@ private fun RecentChatCard(
                 Text(
                     preview ?: "继续聊天",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -754,8 +754,8 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
     // README 角色卡驱动主题（第二层）：每张卡一眼不同——卡片底色带该卡 seed 的极淡 tint
     //（克制：混入 86% 底色，只体现"每卡专属氛围"，不喧宾夺主），名字用 seed、无头像占位用 seed 渐变
     val seed = record.seedColor?.let { Color(it.toInt()) }
-    val cardColor = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceVariant, 0.86f) }
-        ?: MaterialTheme.colorScheme.surfaceVariant
+    val cardColor = seed?.let { lerp(it, EmberTheme.colors.surface2, 0.86f) }
+        ?: EmberTheme.colors.surface2
     // README 清单 8：形状语言区分角色——每卡按自身主题配方 shape 取角（无配方=16dp 圆润）
     val cardRecipe = remember(record) { CharacterCardEdit.readThemeRecipe(record.rawJson) }
     val corner = when (cardRecipe.shape) {
@@ -785,7 +785,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
             ),
         shape = RoundedCornerShape(corner),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, EmberTheme.colors.line.copy(alpha = 0.22f)),
     ) {
         Box {
             Column {
@@ -802,20 +802,20 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                             Brush.linearGradient(
                                 if (seed != null) {
                                     listOf(
-                                        lerp(seed, MaterialTheme.colorScheme.surfaceVariant, 0.62f),
-                                        lerp(seed, MaterialTheme.colorScheme.surfaceVariant, 0.85f),
+                                        lerp(seed, EmberTheme.colors.surface2, 0.62f),
+                                        lerp(seed, EmberTheme.colors.surface2, 0.85f),
                                     )
                                 } else {
                                     listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.tertiaryContainer,
+                                        EmberTheme.colors.surface,
+                                        EmberTheme.colors.surface2,
                                     )
                                 },
                             ),
                         ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(record.name.take(1).ifBlank { "?" }, style = MaterialTheme.typography.displaySmall, color = seed ?: MaterialTheme.colorScheme.primary)
+                        Text(record.name.take(1).ifBlank { "?" }, style = MaterialTheme.typography.displaySmall, color = seed ?: EmberTheme.colors.accent)
                     }
                 }
                 Column(modifier = Modifier.padding(10.dp)) {
@@ -824,13 +824,13 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                             record.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = seed ?: MaterialTheme.colorScheme.onSurface,
+                            color = seed ?: EmberTheme.colors.ink,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
                         if (record.pinned) {
-                            Icon(FaIcons.Star, contentDescription = "置顶", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                            Icon(FaIcons.Star, contentDescription = "置顶", tint = EmberTheme.colors.accent, modifier = Modifier.size(14.dp))
                         }
                         IconButton(onClick = onMenu, modifier = Modifier.size(24.dp)) {
                             Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(16.dp))
@@ -840,7 +840,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
                         // README：卡片显示最近消息预览；无会话时回退简介
                         preview?.takeIf { it.isNotBlank() } ?: record.description.ifBlank { "暂无简介" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkMute,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -856,7 +856,7 @@ private fun CharacterCard(record: CharacterRecord, preview: String?, onClick: ()
  */
 @Composable
 private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
-    val theme = MaterialTheme.colorScheme
+    val theme = EmberTheme.colors
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -884,7 +884,7 @@ private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
         Text(
             "导入 SillyTavern 角色卡，开始你的第一个故事",
             style = MaterialTheme.typography.bodyMedium,
-            color = theme.onSurfaceVariant,
+            color = theme.inkMute,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(22.dp))
@@ -899,14 +899,14 @@ private fun EmptyHome(onImport: () -> Unit, onDirectChat: () -> Unit) {
             Text(
                 "暂不导入，先和 AI 聊聊",
                 style = MaterialTheme.typography.labelLarge,
-                color = theme.primary,
+                color = theme.accent,
             )
         }
         Spacer(Modifier.height(2.dp))
         Text(
             "支持 PNG · JSON · CharX · BYAF · YAML",
             style = MaterialTheme.typography.labelSmall,
-            color = theme.onSurfaceVariant.copy(alpha = 0.75f),
+            color = theme.inkMute.copy(alpha = 0.75f),
         )
     }
 }
@@ -919,8 +919,8 @@ private fun EmptySlotCard(
     alpha: Float,
     hero: Boolean = false,
 ) {
-    val theme = MaterialTheme.colorScheme
-    val strokeColor = if (hero) theme.primary.copy(alpha = 0.55f) else theme.outlineVariant.copy(alpha = 0.9f)
+    val theme = EmberTheme.colors
+    val strokeColor = if (hero) theme.accent.copy(alpha = 0.55f) else theme.line.copy(alpha = 0.9f)
     val shape = RoundedCornerShape(20.dp)
     Box(
         contentAlignment = Alignment.Center,
@@ -931,8 +931,8 @@ private fun EmptySlotCard(
             .alpha(alpha)
             .clip(shape)
             .background(
-                if (hero) theme.primary.copy(alpha = 0.07f)
-                else theme.surfaceContainerHigh.copy(alpha = 0.45f),
+                if (hero) theme.accent.copy(alpha = 0.07f)
+                else theme.surface2.copy(alpha = 0.45f),
             )
             .drawBehind {
                 drawRoundRect(
@@ -946,9 +946,9 @@ private fun EmptySlotCard(
             },
     ) {
         if (hero) {
-            Icon(FaIcons.Plus, contentDescription = null, tint = theme.primary.copy(alpha = 0.85f), modifier = Modifier.size(26.dp))
+            Icon(FaIcons.Plus, contentDescription = null, tint = theme.accent.copy(alpha = 0.85f), modifier = Modifier.size(26.dp))
         } else {
-            Icon(FaIcons.User, contentDescription = null, tint = theme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
+            Icon(FaIcons.User, contentDescription = null, tint = theme.inkMute.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
         }
     }
 }

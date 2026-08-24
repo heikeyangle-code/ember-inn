@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Font Awesome 6 solid 图标集（官方 SVG path / 逐图标 viewBox）。
- * 用法：Icon(imageVector = FaIcons.PaperPlane, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+ * 用法：Icon(imageVector = FaIcons.PaperPlane, tint = EmberTheme.colors.inkMute)
  */
 object FaIcons {
 

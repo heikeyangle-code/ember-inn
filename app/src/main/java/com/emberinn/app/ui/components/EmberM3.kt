@@ -87,7 +87,7 @@ fun EmberTextField(
     shape: Shape = MaterialTheme.shapes.large,
     colors: TextFieldColors = EmberTextFieldDefaults.colors(),
     /** 聚焦光环颜色：null=不加光环；默认主题主色，聊天输入框传角色 seed 的 accent。 */
-    focusGlow: Color? = MaterialTheme.colorScheme.primary,
+    focusGlow: Color? = EmberTheme.colors.accent,
 ) {
     val source = interactionSource ?: remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
@@ -146,16 +146,16 @@ fun EmberTextField(
 object EmberTextFieldDefaults {
     @Composable
     fun colors(
-        focusedContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.58f),
-        unfocusedContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.34f),
-        disabledContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.14f),
-        errorContainerColor: Color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
+        focusedContainerColor: Color = EmberTheme.colors.surface2.copy(alpha = 0.58f),
+        unfocusedContainerColor: Color = EmberTheme.colors.surface2.copy(alpha = 0.34f),
+        disabledContainerColor: Color = EmberTheme.colors.surface2.copy(alpha = 0.14f),
+        errorContainerColor: Color = EmberTheme.colors.danger.copy(alpha = 0.45f),
         focusedIndicatorColor: Color = Color.Transparent,
         unfocusedIndicatorColor: Color = Color.Transparent,
         disabledIndicatorColor: Color = Color.Transparent,
         errorIndicatorColor: Color = Color.Transparent,
-        cursorColor: Color = MaterialTheme.colorScheme.primary,
-        errorCursorColor: Color = MaterialTheme.colorScheme.error,
+        cursorColor: Color = EmberTheme.colors.accent,
+        errorCursorColor: Color = EmberTheme.colors.danger,
     ): TextFieldColors = TextFieldDefaults.colors(
         focusedContainerColor = focusedContainerColor,
         unfocusedContainerColor = unfocusedContainerColor,
@@ -167,13 +167,13 @@ object EmberTextFieldDefaults {
         unfocusedIndicatorColor = unfocusedIndicatorColor,
         disabledIndicatorColor = disabledIndicatorColor,
         errorIndicatorColor = errorIndicatorColor,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
-        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        errorLabelColor = MaterialTheme.colorScheme.error,
-        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedLabelColor = EmberTheme.colors.accent,
+        unfocusedLabelColor = EmberTheme.colors.inkMute,
+        errorLabelColor = EmberTheme.colors.danger,
+        focusedPlaceholderColor = EmberTheme.colors.inkMute.copy(alpha = 0.7f),
+        unfocusedPlaceholderColor = EmberTheme.colors.inkMute.copy(alpha = 0.55f),
+        focusedLeadingIconColor = EmberTheme.colors.accent,
+        unfocusedLeadingIconColor = EmberTheme.colors.inkMute,
     )
 }
 
@@ -193,7 +193,7 @@ fun EmberGlassFab(
         modifier = modifier
             .size(56.dp)
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                color = EmberTheme.colors.accent.copy(alpha = 0.28f),
                 radius = 12.dp,
                 offset = DpOffset(0.dp, 5.dp),
                 alpha = 0.14f,
@@ -203,7 +203,7 @@ fun EmberGlassFab(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.primary)
+        Icon(icon, contentDescription = contentDescription, tint = EmberTheme.colors.accent)
     }
 }
 
@@ -220,7 +220,7 @@ fun EmberSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     steps: Int = 0,
     enabled: Boolean = true,
-    accent: Color = MaterialTheme.colorScheme.primary,
+    accent: Color = EmberTheme.colors.accent,
 ) {
     Slider(
         value = value,
@@ -232,7 +232,7 @@ fun EmberSlider(
         colors = SliderDefaults.colors(
             thumbColor = accent,
             activeTrackColor = accent.copy(alpha = 0.85f),
-            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            inactiveTrackColor = EmberTheme.colors.surfaceSink,
             activeTickColor = Color.Transparent,
             inactiveTickColor = Color.Transparent,
         ),
@@ -250,8 +250,8 @@ fun EmberInputIcon(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    container: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f),
+    tint: Color = EmberTheme.colors.inkMute,
+    container: Color = EmberTheme.colors.surface2.copy(alpha = 0.55f),
     ghost: Boolean = false,
 ) {
     if (ghost) {
@@ -264,7 +264,7 @@ fun EmberInputIcon(
             Icon(
                 icon,
                 contentDescription = contentDescription,
-                tint = if (enabled) tint else MaterialTheme.colorScheme.outlineVariant,
+                tint = if (enabled) tint else EmberTheme.colors.line,
                 modifier = Modifier.size(19.dp),
             )
         }
@@ -276,8 +276,8 @@ fun EmberInputIcon(
             colors = IconButtonDefaults.filledTonalIconButtonColors(
                 containerColor = container,
                 contentColor = tint,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.28f),
-                disabledContentColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledContainerColor = EmberTheme.colors.surface2.copy(alpha = 0.28f),
+                disabledContentColor = EmberTheme.colors.line,
             ),
         ) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
@@ -302,7 +302,7 @@ fun EmberBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = EmberTheme.colors.surface,
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -310,7 +310,7 @@ fun EmberBottomSheet(
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
+                    .background(EmberTheme.colors.line.copy(alpha = 0.65f)),
             )
         },
         content = content,
@@ -331,7 +331,7 @@ fun EmberPrimaryButton(
     expandWidth: Boolean = false,
     minHeight: Dp = 52.dp,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
+    val primary = EmberTheme.colors.accent
     val shape = RoundedCornerShape(18.dp)
     val gradient = Brush.linearGradient(listOf(primary, lerp(primary, Color.Black, 0.16f)))
     Box(
@@ -347,7 +347,7 @@ fun EmberPrimaryButton(
             .clip(shape)
             .then(
                 if (enabled) Modifier.background(gradient)
-                else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                else Modifier.background(EmberTheme.colors.surfaceSink),
             )
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -357,7 +357,7 @@ fun EmberPrimaryButton(
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.inkMute,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(8.dp))
@@ -366,7 +366,7 @@ fun EmberPrimaryButton(
                 label,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.inkMute,
             )
         }
     }
@@ -392,7 +392,7 @@ fun EmberSecondaryButton(
             .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
             .height(minHeight)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f))
+            .background(EmberTheme.colors.surface2.copy(alpha = 0.88f))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -401,7 +401,7 @@ fun EmberSecondaryButton(
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (enabled) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(8.dp))
@@ -410,7 +410,7 @@ fun EmberSecondaryButton(
                 label,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (enabled) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
             )
         }
     }
@@ -435,16 +435,16 @@ fun EmberMenuRow(
     onClick: () -> Unit,
 ) {
     val tint = when {
-        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-        danger -> MaterialTheme.colorScheme.error
+        !enabled -> EmberTheme.colors.inkMute.copy(alpha = 0.38f)
+        danger -> EmberTheme.colors.danger
         iconTint != null -> iconTint
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> EmberTheme.colors.inkMute
     }
     val container = when {
-        !enabled -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.20f)
-        danger -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+        !enabled -> EmberTheme.colors.surface2.copy(alpha = 0.20f)
+        danger -> EmberTheme.colors.danger.copy(alpha = 0.12f)
         iconContainer != null -> iconContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+        else -> EmberTheme.colors.surface2.copy(alpha = 0.72f)
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -469,16 +469,16 @@ fun EmberMenuRow(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = when {
-                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    danger -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.onSurface
+                    !enabled -> EmberTheme.colors.inkMute.copy(alpha = 0.38f)
+                    danger -> EmberTheme.colors.danger
+                    else -> EmberTheme.colors.ink
                 },
             )
             if (subtitle != null) {
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    color = EmberTheme.colors.inkMute.copy(alpha = 0.8f),
                     maxLines = 1,
                 )
             }
@@ -487,7 +487,7 @@ fun EmberMenuRow(
             Icon(
                 FaIcons.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = EmberTheme.colors.inkMute.copy(alpha = 0.5f),
                 modifier = Modifier.size(14.dp),
             )
         }
@@ -512,7 +512,7 @@ fun EmberSectionHeader(
             modifier = Modifier
                 .size(width = 4.dp, height = 16.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
+                .background(EmberTheme.colors.accent),
         )
         Spacer(Modifier.width(8.dp))
         Text(
