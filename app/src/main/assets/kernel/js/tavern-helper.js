@@ -238,12 +238,21 @@
     // 管线实际类名形如 "custom-js custom-language-js"（encodeStyleTags 前缀），逐 token 匹配
     var RUNNABLE_LANG = /^(?:custom-)?(?:language-)?(?:js|javascript|ts|typescript)$/i;
 
+    /** 前端卡判定（util/is_frontend.ts 逐字语义）：内容含任一标志即界面卡，
+     *  与围栏语言标签无关——```html/无语言围栏的完整 HTML 文档都算 */
+    function isFrontendContent(text) {
+        return ['html>', '<head>', '<body'].some(function (tag) {
+            return text.indexOf(tag) !== -1;
+        });
+    }
+
     function shouldRunNode(node) {
         var toks = (node.className || '').split(/\s+/);
         for (var i = 0; i < toks.length; i++) {
             if (toks[i] && RUNNABLE_LANG.test(toks[i])) { return true; }
         }
-        return false;
+        // 前端卡路径：语言标签不是 js/ts 但内容是完整 HTML 文档（市面界面卡主流形态）
+        return isFrontendContent(node.textContent || '');
     }
 
     function isGenerating() {
