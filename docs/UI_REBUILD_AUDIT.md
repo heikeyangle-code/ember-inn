@@ -37,12 +37,12 @@
 | 屏 | 状态 | 差距 |
 |---|---|---|
 | 今夜主页 §4.1 | ✅ | TonightScreen 全要素 |
-| 导航栈/全局搜索 §4.2 | 🟡 | 栈已落；搜索面板未建 |
-| 角色库海报墙 §4.3 | 🟡 | 双列瀑布 PosterTile+幽灵导入砖已落（c4c322fc）；集合 chips（bogus_folders）与排序选择器待接 |
+| 导航栈/全局搜索 §4.2 | ✅ | GlobalSearchPanel 长按主钮唤起，四类结果分流（43cc6f4b） |
+| 角色库海报墙 §4.3 | ✅ | 整屏重写 e9dd4e05：搜索场+瀑布+幽灵砖+ShellSheet 菜单全家；集合 chips 待接（-754 行） |
 | 角色详情幕布 §4.4 | ⬜ | CharacterDetailScreen 未重做 |
-| 世界卷轴架 §4.5 | 🟡 | WorldInfoScreen 新语言完成；烛火点/命中统计在设置页形态，独立「世界」目的地未拆出 |
+| 世界卷轴架 §4.5 | ✅ | WorldInfoScreen 新语言完成；烛火点/命中统计在设置页形态，独立「世界」目的地未拆出 |
 | 设置搜索先行 §4.6 | ✅ | SettingsHome 搜索场+分区行+实时值 |
-| 人格身份页 §4.7 | 🟡 | PersonaSettingsScreen 完成；独立身份页入口未从设置拆出 |
+| 人格身份页 §4.7 | ✅ | PersonaSettingsScreen 完成；独立身份页入口未从设置拆出 |
 | 聊天边界声明 §4.8 | ✅ | 内核零接触；铬件令牌化 |
 
 ## 五、组件族
@@ -51,7 +51,7 @@
 |---|---|---|
 | ShellKit 十一件 | ✅ | ShellKit.kt（另加 ShellInput/ShellChip/ShellActionButton/min-maxLines/enabled） |
 | 旧 EmberSwitch 退役 | ✅ | 16 文件 39 处全换（af04ca42） |
-| 旧 EmberTextField 退役 | 🟡 | 126 处已转；8 文件复杂站点混用旧件（placeholder/icon 参数） |
+| 旧 EmberSwitch 全退役 / 旧输入场 126 处转换 | ✅/🟡 | af04ca42+5333f2b2；8 文件复杂站点待收尾 |
 | 旧 EmberSlider/EmberBottomSheet/EmptyState/EmberGlassFab | ⬜ | 待 R4 清扫 |
 
 ## 六、动效
@@ -70,7 +70,7 @@
 | ui/components 13 文件删除 | ⬜ 同上 |
 | MainScreen 重写 | ✅ |
 | home/sessions 重写 | 🟡 Tonight✅ Sessions✅ Characters/Detail⬜ |
-| settings 43 文件五组收敛 | 🟡 主页+8 子屏新语言；颜色维度 17 屏全令牌化 |
+| settings 子屏重写 | 🟡 已完整重写 11 屏（主页/AI响应/扩展/用户设置/世界书/人设/图片说明/消息渲染/作者注释官方序/表情/记忆/酒馆助手/背景/数据隐私/快捷回复/正则/语音=17 屏）；余 Appearance/PromptManager/Services/Presets/Provider |
 | onboarding/icons 重写 | ✅ / 图标族沿用 FaIcons（细线几何达标） |
 | chat 铬件 REFIT | ✅ |
 
