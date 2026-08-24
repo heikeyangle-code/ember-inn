@@ -550,7 +550,6 @@
                 startX = ev.touches[0].clientX; startY = ev.touches[0].clientY;
                 timer = setTimeout(function () {
                     timer = null;
-                    console.error('[longpress] fire mesid=' + payload.mesid);
                     bridgeSend({ type: 'longPress', mesid: payload.mesid, target: null });
                 }, 500);
             }, { passive: true });
@@ -863,27 +862,8 @@
     (function watchChatScroll() {
         var chat = document.getElementById('chat');
         if (!chat) { return; }
-        // 滚动测量（诊断用，走 console→体检事件史）：手势首帧/末帧+采样速度，单次手势≤12 行
-        var sLastTop = -1, sLastT = 0, sSamples = 0, sEndTimer = null;
-        function scrollSample() {
-            var now = Date.now();
-            if (sLastTop < 0) {
-                console.error('[scroll] start top=' + Math.round(chat.scrollTop) + ' h=' + chat.scrollHeight);
-                sSamples = 0;
-            } else if (sSamples < 10 && now - sLastT > 0) {
-                var v = Math.round((chat.scrollTop - sLastTop) * 1000 / (now - sLastT));
-                if (sSamples % 3 === 0) { console.error('[scroll] v=' + v + 'px/s top=' + Math.round(chat.scrollTop)); }
-                sSamples++;
-            }
-            sLastTop = chat.scrollTop; sLastT = now;
-            if (sEndTimer) { clearTimeout(sEndTimer); }
-            sEndTimer = setTimeout(function () {
-                console.error('[scroll] end top=' + Math.round(chat.scrollTop) + ' samples=' + sSamples);
-                sLastTop = -1;
-            }, 220);
-        }
+        var scrollReportTimer = null, lastScrollReport = 0;
         chat.addEventListener('scroll', function () {
-            scrollSample();
             if (document.body.classList.contains('waifuMode')) {
                 scrollLock = true;
                 bridgeSend({ type: 'chatScroll', atBottom: atBottom });
@@ -893,7 +873,18 @@
             var atBottom = Math.abs(chat.scrollHeight - chat.clientHeight - chat.scrollTop) < 5;
             if (scrollLock && atBottom) { scrollLock = false; }
             if (!scrollLock && !atBottom) { scrollLock = true; }
-            bridgeSend({ type: 'chatScroll', atBottom: !scrollLock });
+            // 限流 50ms：此状态只驱动跳底浮标，每帧过桥在低端机上挤占主线程（滚动顿挫主嫌）
+            var nowTs = Date.now();
+            if (!scrollReportTimer && nowTs - lastScrollReport > 50) {
+                lastScrollReport = nowTs;
+                bridgeSend({ type: 'chatScroll', atBottom: !scrollLock });
+            } else if (!scrollReportTimer) {
+                scrollReportTimer = setTimeout(function () {
+                    scrollReportTimer = null;
+                    lastScrollReport = Date.now();
+                    bridgeSend({ type: 'chatScroll', atBottom: !scrollLock });
+                }, 50);
+            }
         }, { passive: true });
     })();
 
