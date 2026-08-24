@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.components
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat

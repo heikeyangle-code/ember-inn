@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.components
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background

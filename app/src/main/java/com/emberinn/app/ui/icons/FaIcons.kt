@@ -3,6 +3,7 @@
 // 功能入口与官方 index.html / script.js 使用的 fa- 图标一一对应（见生成脚本映射注释）。
 package com.emberinn.app.ui.icons
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector

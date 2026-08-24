@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.components
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
