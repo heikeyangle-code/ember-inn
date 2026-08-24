@@ -11,7 +11,6 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
-import androidx.webkit.WebViewClientCompat
 import com.emberinn.app.ui.settings.RenderPrefs
 import java.io.File
 
@@ -98,7 +97,7 @@ class KernelWebViewClient(
     private val onRenderProcessGone: (() -> Unit)? = null,
     /** 黑匣子：主帧加载失败回调（此前静默 → 整页白屏无任何线索） */
     private val onLoadError: ((String) -> Unit)? = null,
-) : WebViewClientCompat() {
+) : android.webkit.WebViewClient() {
 
     override fun shouldInterceptRequest(
         view: WebView,

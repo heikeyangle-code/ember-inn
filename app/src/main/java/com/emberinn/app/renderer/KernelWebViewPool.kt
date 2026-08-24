@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.resumeWithException
 import com.emberinn.app.ui.settings.RenderPrefs
 import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.coroutines.resume
@@ -306,7 +307,7 @@ class KernelWebViewPool(
             web.webChromeClient = object : android.webkit.WebChromeClient() {
                 override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
                     consoleMessage?.let {
-                        val level = it.level()
+                        val level = it.messageLevel()
                         if (level != android.webkit.ConsoleMessage.MessageLevel.DEBUG &&
                             level != android.webkit.ConsoleMessage.MessageLevel.TIP
                         ) {
