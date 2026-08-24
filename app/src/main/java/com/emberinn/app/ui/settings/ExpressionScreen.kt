@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ExpressionStore
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.design.EmberTheme
@@ -85,7 +85,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = prefs.enabled, onCheckedChange = { prefs = prefs.copy(enabled = it); save() })
+                        EmberSwitch(checked = prefs.enabled, onChange = { prefs = prefs.copy(enabled = it); save() })
                     }
                     EmberTextField(
                         value = prefs.fallbackExpression,
@@ -96,11 +96,11 @@ fun ExpressionScreen(onBack: () -> Unit) {
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                         Text("多立绘随机（allowMultiple）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = prefs.allowMultiple, onCheckedChange = { prefs = prefs.copy(allowMultiple = it); save() })
+                        EmberSwitch(checked = prefs.allowMultiple, onChange = { prefs = prefs.copy(allowMultiple = it); save() })
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Text("避免与上一张重复（rerollIfSame）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = prefs.rerollIfSame, onCheckedChange = { prefs = prefs.copy(rerollIfSame = it); save() })
+                        EmberSwitch(checked = prefs.rerollIfSame, onChange = { prefs = prefs.copy(rerollIfSame = it); save() })
                     }
                 }
                 item {

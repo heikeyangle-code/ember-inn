@@ -2,7 +2,7 @@
 
 package com.emberinn.app.ui.home
 
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
 
@@ -455,7 +455,7 @@ fun CharacterDetailScreen(
                             }
                             EmberSwitch(
                                 checked = regexAllowed,
-                                onCheckedChange = { on ->
+                                onChange = { on ->
                                     regexAllowed = on
                                     val list = GlobalRegexPrefs.characterAllowedRegex(context).toMutableList()
                                     val key = "${record.id}.png"
@@ -1358,7 +1358,7 @@ private fun WorldEntryRow(entry: WorldEntryDraft, onEdit: () -> Unit, onToggle: 
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(FaIcons.Pencil, contentDescription = "编辑条目", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
-            EmberSwitch(checked = entry.enabled, onCheckedChange = { onToggle() })
+            EmberSwitch(checked = entry.enabled, onChange = { onToggle() })
         }
     }
 }
@@ -1704,7 +1704,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onCheckedChange)
+        EmberSwitch(checked = checked, onChange = onCheckedChange)
     }
 }
 
@@ -1748,7 +1748,7 @@ private fun RegexRow(script: CharacterRegexScript, onEdit: () -> Unit, onToggle:
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(FaIcons.Pencil, contentDescription = "编辑正则", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
             }
-            EmberSwitch(checked = !script.disabled, onCheckedChange = { onToggle() })
+            EmberSwitch(checked = !script.disabled, onChange = { onToggle() })
         }
     }
 }

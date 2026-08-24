@@ -18,7 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

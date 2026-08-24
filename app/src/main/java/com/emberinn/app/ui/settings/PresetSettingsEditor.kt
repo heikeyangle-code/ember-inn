@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.prompt.InstructSettings
 import com.emberinn.engine.prompt.NamesBehavior
@@ -160,6 +160,6 @@ private fun EditSwitch(label: String, checked: Boolean, onChange: (Boolean) -> U
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall)
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }

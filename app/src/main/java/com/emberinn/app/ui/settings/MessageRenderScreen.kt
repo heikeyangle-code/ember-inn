@@ -21,7 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 
 /**
@@ -64,7 +64,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             Text("折叠连续换行", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                             EmberSwitch(
                                 checked = collapse,
-                                onCheckedChange = {
+                                onChange = {
                                     collapse = it
                                     RenderPrefs.setCollapseNewlines(context, it)
                                 },
@@ -114,6 +114,6 @@ private fun RenderSwitchRow(label: String, hint: String, checked: Boolean, onCha
             Text(label, style = MaterialTheme.typography.bodyLarge)
             Text(hint, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
         }
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }

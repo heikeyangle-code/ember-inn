@@ -2,7 +2,7 @@ package com.emberinn.app.ui.settings
 
 
 import android.widget.Toast
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.data.ComfyWorkflowStore
 import com.emberinn.app.data.PromptTemplateStore
 import com.emberinn.app.data.StyleStore
@@ -812,7 +812,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }
 

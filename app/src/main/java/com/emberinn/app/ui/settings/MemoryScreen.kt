@@ -1,6 +1,6 @@
 package com.emberinn.app.ui.settings
 
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -154,6 +154,6 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }

@@ -74,7 +74,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile
 import com.emberinn.engine.provider.ProviderSpec
@@ -1379,7 +1379,7 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }
 

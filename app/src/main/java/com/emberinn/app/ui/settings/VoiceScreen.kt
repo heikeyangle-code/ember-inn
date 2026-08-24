@@ -3,7 +3,7 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.data.TtsBackendRegistry
 import com.emberinn.app.data.TtsReader
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberSlider
 import android.speech.tts.TextToSpeech
@@ -145,7 +145,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             color = EmberTheme.colors.inkVariant,
                         )
                     }
-                    EmberSwitch(checked = enabled, onCheckedChange = { enabled = it; save() })
+                    EmberSwitch(checked = enabled, onChange = { enabled = it; save() })
                 }
             }
 
@@ -346,7 +346,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
                         Text("朗读前正则过滤", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = applyRegex, onCheckedChange = { applyRegex = it; save() })
+                        EmberSwitch(checked = applyRegex, onChange = { applyRegex = it; save() })
                     }
                     if (applyRegex) {
                         EmberTextField(
@@ -413,7 +413,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }
 

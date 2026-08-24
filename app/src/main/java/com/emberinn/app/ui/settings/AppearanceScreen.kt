@@ -1,7 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberToasts
 import com.emberinn.app.ui.components.EmberSlider
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -327,7 +327,7 @@ internal fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, on
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
         }
-        EmberSwitch(checked = checked, onCheckedChange = onToggle)
+        EmberSwitch(checked = checked, onChange = onToggle)
     }
 }
 

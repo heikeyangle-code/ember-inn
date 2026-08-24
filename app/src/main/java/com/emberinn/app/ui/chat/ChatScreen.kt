@@ -133,7 +133,7 @@ import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.emberGlass
@@ -1878,7 +1878,7 @@ fun ChatScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )
-                    EmberSwitch(checked = showThoughtsNow, onCheckedChange = { vm.setShowThoughtsQuick(it) })
+                    EmberSwitch(checked = showThoughtsNow, onChange = { vm.setShowThoughtsQuick(it) })
                 }
                 if (vm.group != null) {
                     MenuRow(FaIcons.Users, "群聊设置") {
@@ -4385,7 +4385,7 @@ private fun CfgScaleSheet(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("群聊使用角色 CFG", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                EmberSwitch(checked = groupCharOverride, onCheckedChange = { groupCharOverride = it })
+                EmberSwitch(checked = groupCharOverride, onChange = { groupCharOverride = it })
             }
             Spacer(Modifier.height(16.dp))
             EmberPrimaryButton(

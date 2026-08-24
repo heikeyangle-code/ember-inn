@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.ui.components.EmberBottomSheet
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.prompt.PromptCollection
 import com.emberinn.engine.prompt.PromptItem
@@ -278,7 +278,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 }
                                 EmberSwitch(
                                     checked = entry.enabled,
-                                    onCheckedChange = { on ->
+                                    onChange = { on ->
                                         order = order.mapIndexed { j, e -> if (j == i) e.copy(enabled = on) else e }
                                         PromptManagerPrefs.saveOrder(context, null, order)
                                     },
@@ -508,7 +508,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("禁止覆盖（forbid_overrides）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = forbid, onCheckedChange = { forbid = it })
+                        EmberSwitch(checked = forbid, onChange = { forbid = it })
                     }
                     if (resettable) {
                         TextButton(onClick = {
@@ -672,7 +672,7 @@ private fun PromptRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = EmberTheme.colors.lineStrong,
             )
-            EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onCheckedChange = onToggleOrder)
+            EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onChange = onToggleOrder)
             if (onInspect != null) {
                 IconButton(onClick = onInspect, modifier = Modifier.size(38.dp)) {
                     Text("查", style = MaterialTheme.typography.bodyMedium, color = EmberTheme.colors.accent)

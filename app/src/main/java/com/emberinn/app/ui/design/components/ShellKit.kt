@@ -369,7 +369,7 @@ fun CandleDot(lit: Boolean) {
 
 /** 自绘开关：轨道=强调/弱墨两态，滑块=页底色。无 M3 Switch 的标准安卓味。 */
 @Composable
-fun EmberSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
+fun EmberSwitch(checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val c = EmberTheme.colors
     val thumbX by animateDpAsState(
         targetValue = if (checked) 22.dp else 2.dp,
@@ -381,15 +381,21 @@ fun EmberSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
             .width(46.dp)
             .height(26.dp)
             .clip(CircleShape)
-            .background(if (checked) c.accent else c.ink.copy(alpha = 0.16f))
-            .clickable { onChange(!checked) },
+            .background(
+                when {
+                    !enabled -> if (checked) c.accent.copy(alpha = 0.4f) else c.ink.copy(alpha = 0.08f)
+                    checked -> c.accent
+                    else -> c.ink.copy(alpha = 0.16f)
+                },
+            )
+            .clickable(enabled = enabled) { onChange(!checked) },
     ) {
         Box(
             Modifier
                 .offset(x = thumbX)
                 .size(22.dp)
                 .clip(CircleShape)
-                .background(c.bg)
+                .background(if (enabled) c.bg else c.bg.copy(alpha = 0.55f))
                 .align(Alignment.CenterStart),
         )
     }

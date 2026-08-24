@@ -2,7 +2,7 @@ package com.emberinn.app.ui.settings
 
 
 import com.emberinn.app.ui.design.components.EmptyState
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -114,7 +114,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 }
                 EmberSwitch(
                     checked = regexEnabled,
-                    onCheckedChange = { on ->
+                    onChange = { on ->
                         regexEnabled = on
                         GlobalRegexPrefs.saveEnabled(context, on)
                     },
@@ -182,7 +182,7 @@ fun RegexScreen(onBack: () -> Unit) {
                             }
                             EmberSwitch(
                                 checked = !script.disabled,
-                                onCheckedChange = { on ->
+                                onChange = { on ->
                                     persist(scripts.mapIndexed { i, s -> if (i == index) s.copy(disabled = !on) else s })
                                 },
                             )
@@ -257,7 +257,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     EmberSwitch(
                         checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
-                        onCheckedChange = { on ->
+                        onChange = { on ->
                             if (activePreset.isBlank()) return@EmberSwitch
                             val next = if (on) (presetAllowedOpenAI + activePreset).distinct() else presetAllowedOpenAI - activePreset
                             presetAllowedOpenAI = next
@@ -310,7 +310,7 @@ fun RegexScreen(onBack: () -> Unit) {
                             }
                             EmberSwitch(
                                 checked = !script.disabled,
-                                onCheckedChange = { on ->
+                                onChange = { on ->
                                     val list = presetSets[activePreset].orEmpty().mapIndexed { j, s -> if (j == i) s.copy(disabled = !on) else s }
                                     savePresetSetsState(presetSets + (activePreset to list))
                                 },
@@ -406,7 +406,7 @@ fun RegexScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
                         Text("禁用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        EmberSwitch(checked = draftDisabled, onCheckedChange = { draftDisabled = it })
+                        EmberSwitch(checked = draftDisabled, onChange = { draftDisabled = it })
                     }
                 }
             },

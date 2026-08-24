@@ -1,6 +1,6 @@
 package com.emberinn.app.ui.settings
 
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,7 +53,7 @@ fun CaptionScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    EmberSwitch(checked = s.enabled, onCheckedChange = { s = s.copy(enabled = it); save() })
+                    EmberSwitch(checked = s.enabled, onChange = { s = s.copy(enabled = it); save() })
                 }
                 Text("来源", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                 Row(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -93,14 +93,14 @@ fun CaptionScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("聊天内显示图片（show_in_chat）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    EmberSwitch(checked = s.showInChat, onCheckedChange = { s = s.copy(showInChat = it); save() })
+                    EmberSwitch(checked = s.showInChat, onChange = { s = s.copy(showInChat = it); save() })
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Text("发送前人工确认（refine_mode）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    EmberSwitch(checked = s.refineMode, onCheckedChange = { s = s.copy(refineMode = it); save() })
+                    EmberSwitch(checked = s.refineMode, onChange = { s = s.copy(refineMode = it); save() })
                 }
                 Text(
                     "refine_mode 当前登记为 UI 开关；App 侧确认弹层未接。prompt_ask（每次询问提示词）暂未接。",

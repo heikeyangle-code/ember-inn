@@ -38,7 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.engine.prompt.ContextSettings
@@ -462,7 +462,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 ) {
                     EmberSwitch(
                         checked = prefs.bindPresetToConnection,
-                        onCheckedChange = {
+                        onChange = {
                             prefs = prefs.copy(bindPresetToConnection = it)
                             PresetPrefsStore.save(context, prefs)
                         },
@@ -492,7 +492,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 Text("context_derived（连接模型时按元数据派生 context 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 EmberSwitch(
                     checked = applied.contextDerived,
-                    onCheckedChange = { applied = applied.copy(contextDerived = it); PresetSettingsStore.update(context, applied) },
+                    onChange = { applied = applied.copy(contextDerived = it); PresetSettingsStore.update(context, applied) },
                 )
             }
             Row(
@@ -502,7 +502,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 Text("instruct_derived（连接模型时按元数据派生 instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 EmberSwitch(
                     checked = applied.instructDerived,
-                    onCheckedChange = { applied = applied.copy(instructDerived = it); PresetSettingsStore.update(context, applied) },
+                    onChange = { applied = applied.copy(instructDerived = it); PresetSettingsStore.update(context, applied) },
                 )
             }
             Row(
@@ -512,7 +512,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 Text("bind_model_templates（切换模型时自动激活绑定的 context/instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 EmberSwitch(
                     checked = applied.bindModelTemplates,
-                    onCheckedChange = { applied = applied.copy(bindModelTemplates = it); PresetSettingsStore.update(context, applied) },
+                    onChange = { applied = applied.copy(bindModelTemplates = it); PresetSettingsStore.update(context, applied) },
                 )
             }
             Row(
@@ -522,7 +522,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 Text("context_size_derived（koboldcpp/llamacpp 连接时按后端 n_ctx 自动改上下文，官方默认关）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 EmberSwitch(
                     checked = applied.contextSizeDerived,
-                    onCheckedChange = { applied = applied.copy(contextSizeDerived = it); PresetSettingsStore.update(context, applied) },
+                    onChange = { applied = applied.copy(contextSizeDerived = it); PresetSettingsStore.update(context, applied) },
                 )
             }
             var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
@@ -544,7 +544,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 Text("显示回复前缀（show_user_prompt_bias，官方默认开）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 EmberSwitch(
                     checked = afBehavior.showUserPromptBias,
-                    onCheckedChange = {
+                    onChange = {
                         afBehavior = afBehavior.copy(showUserPromptBias = it)
                         BehaviorPrefs.save(context, afBehavior)
                     },
