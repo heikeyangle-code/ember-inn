@@ -1,7 +1,10 @@
 package com.emberinn.app.ui.settings
 
 
-import com.emberinn.app.ui.design.components.EmptyState
+import androidx.compose.ui.unit.sp
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellChip
 import com.emberinn.app.ui.design.components.EmberSwitch
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -19,12 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,11 +91,11 @@ fun RegexScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("全局正则", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+            GroupLabel("全局正则")
             Text(
                 "对齐官方 regex 扩展 GLOBAL 分桶：先跑全局、再跑该卡正则（该卡在角色详情页编辑）；仅影响发送内容，不落盘改写。",
-                style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
+                fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -105,11 +103,11 @@ fun RegexScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("启用正则脚本", style = MaterialTheme.typography.bodyMedium)
+                    Text("启用正则脚本", color = EmberTheme.colors.ink, fontSize = 15.sp)
                     Text(
                         "关闭后所有位点不应用正则（官方 disabledExtensions.regex）。",
-                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
+                        fontSize = 12.sp,
                     )
                 }
                 EmberSwitch(
@@ -121,93 +119,49 @@ fun RegexScreen(onBack: () -> Unit) {
                 )
             }
             if (scripts.isEmpty()) {
-                EmptyState(
-                    title = "还没有全局正则",
-                    body = "可用来统一清理输入输出，例如去掉“*”强调。点下方按钮新增第一条。",
-                    compact = true,
-                    modifier = Modifier.padding(top = 12.dp),
+                Text(
+                    "还没有全局正则。可用来统一清理输入输出，例如去掉“*”强调。点下方按钮新增第一条。",
+                    color = EmberTheme.colors.inkMute,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 4.dp),
                 )
             }
             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 scripts.forEachIndexed { index, script ->
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surface,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f).clickable {
-                                    editing = index
-                                    draftName = script.scriptName
-                                    draftFind = script.findRegex
-                                    draftReplace = script.replaceString
-                                    draftDisabled = script.disabled
-                                    draftPlacement = script.placement
-                                },
-                            ) {
-                                Text(
-                                    script.scriptName.ifBlank { "（未命名）" },
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (script.scriptName.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    script.findRegex.ifBlank { "（空匹配式）" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkMute,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            IconButton(onClick = {
-                                editing = index
-                                draftName = script.scriptName
-                                draftFind = script.findRegex
-                                draftReplace = script.replaceString
-                                draftDisabled = script.disabled
-                                draftPlacement = script.placement
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
-                            }
-                            IconButton(onClick = {
-                                persist(scripts.filterIndexed { i, _ -> i != index })
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
-                            }
-                            EmberSwitch(
-                                checked = !script.disabled,
-                                onChange = { on ->
-                                    persist(scripts.mapIndexed { i, s -> if (i == index) s.copy(disabled = !on) else s })
-                                },
-                            )
-                        }
-                    }
+                    RegexRow(
+                        name = script.scriptName,
+                        find = script.findRegex,
+                        enabled = !script.disabled,
+                        onClick = {
+                            editing = index
+                            draftName = script.scriptName
+                            draftFind = script.findRegex
+                            draftReplace = script.replaceString
+                            draftDisabled = script.disabled
+                            draftPlacement = script.placement
+                        },
+                        onDelete = { persist(scripts.filterIndexed { i, _ -> i != index }) },
+                        onToggle = { on -> persist(scripts.mapIndexed { i, s -> if (i == index) s.copy(disabled = !on) else s }) },
+                    )
                 }
             }
-            Button(
-                onClick = {
-                    adding = true
-                    draftName = ""
-                    draftFind = ""
-                    draftReplace = ""
-                    draftDisabled = false
-                    draftPlacement = listOf(1, 2)
-                },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) { Text("＋ 新增全局正则") }
+            ShellActionButton(
+                label = "＋ 新增全局正则",
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            ) {
+                adding = true
+                draftName = ""
+                draftFind = ""
+                draftReplace = ""
+                draftDisabled = false
+                draftPlacement = listOf(1, 2)
+            }
 
-            Spacer(Modifier.height(16.dp))
-            Text("预设正则", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+            GroupLabel("预设正则")
             Text(
                 "对齐官方 preset 扩展：脚本存于预设的 regex_scripts 扩展字段；App 用命名预设集模拟，允许列表按官方 preset_allowed_regex[api]（App 固定 openai）。",
-                style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
+                fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -222,7 +176,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { addPresetSet() }) { Text("新建") }
+                ShellActionButton(label = "新建") { addPresetSet() }
             }
             if (presetSets.isNotEmpty()) {
                 Row(
@@ -230,31 +184,27 @@ fun RegexScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 ) {
                     presetSets.keys.sorted().forEach { name ->
-                        FilterChip(
-                            selected = activePreset == name,
-                            onClick = {
-                                activePreset = name
-                                GlobalRegexPrefs.saveActivePresetSet(context, name)
-                            },
-                            label = { Text(name) },
-                        )
+                        ShellChip(name, selected = activePreset == name) {
+                            activePreset = name
+                            GlobalRegexPrefs.saveActivePresetSet(context, name)
+                        }
                     }
                 }
                 // 官方 RegexPresetManager.applyPreset + change 事件：显式“应用”按钮把选中预设集设为激活，
                 // bump DisplayCacheVersion → ChatScreen 版本监听即时用新预设重算消息显示。
-                Button(
+                ShellActionButton(
+                    label = "应用此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）",
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     enabled = activePreset.isNotBlank(),
-                    onClick = {
-                        GlobalRegexPrefs.saveActivePresetSet(context, activePreset)
-                        Toast.makeText(context, "已应用预设：$activePreset", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) { Text("应用此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）") }
+                ) {
+                    GlobalRegexPrefs.saveActivePresetSet(context, activePreset)
+                    Toast.makeText(context, "已应用预设：$activePreset", Toast.LENGTH_SHORT).show()
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 ) {
-                    Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                     EmberSwitch(
                         checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
                         onChange = { on ->
@@ -266,72 +216,42 @@ fun RegexScreen(onBack: () -> Unit) {
                     )
                 }
                 presetSets[activePreset].orEmpty().forEachIndexed { i, script ->
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surface,
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    script.scriptName.ifBlank { "（未命名）" },
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (script.scriptName.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    script.findRegex.ifBlank { "（空匹配式）" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkMute,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            IconButton(onClick = {
-                                presetEditingIndex = i
-                                draftName = script.scriptName
-                                draftFind = script.findRegex
-                                draftReplace = script.replaceString
-                                draftDisabled = script.disabled
-                                draftPlacement = script.placement
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
-                            }
-                            IconButton(onClick = {
-                                val list = presetSets[activePreset].orEmpty().filterIndexed { j, _ -> j != i }
-                                savePresetSetsState(presetSets + (activePreset to list))
-                            }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
-                            }
-                            EmberSwitch(
-                                checked = !script.disabled,
-                                onChange = { on ->
-                                    val list = presetSets[activePreset].orEmpty().mapIndexed { j, s -> if (j == i) s.copy(disabled = !on) else s }
-                                    savePresetSetsState(presetSets + (activePreset to list))
-                                },
-                            )
-                        }
-                    }
+                    RegexRow(
+                        name = script.scriptName,
+                        find = script.findRegex,
+                        enabled = !script.disabled,
+                        onClick = {
+                            presetEditingIndex = i
+                            draftName = script.scriptName
+                            draftFind = script.findRegex
+                            draftReplace = script.replaceString
+                            draftDisabled = script.disabled
+                            draftPlacement = script.placement
+                        },
+                        onDelete = {
+                            val list = presetSets[activePreset].orEmpty().filterIndexed { j, _ -> j != i }
+                            savePresetSetsState(presetSets + (activePreset to list))
+                        },
+                        onToggle = { on ->
+                            val list = presetSets[activePreset].orEmpty().mapIndexed { j, s -> if (j == i) s.copy(disabled = !on) else s }
+                            savePresetSetsState(presetSets + (activePreset to list))
+                        },
+                    )
                 }
-                Button(
-                    onClick = {
-                        addingPreset = true
-                        adding = false
-                        editing = null
-                        presetEditingIndex = null
-                        draftName = ""
-                        draftFind = ""
-                        draftReplace = ""
-                        draftDisabled = false
-                        draftPlacement = listOf(1, 2)
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) { Text("＋ 新增预设正则") }
+                ShellActionButton(
+                    label = "＋ 新增预设正则",
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                ) {
+                    addingPreset = true
+                    adding = false
+                    editing = null
+                    presetEditingIndex = null
+                    draftName = ""
+                    draftFind = ""
+                    draftReplace = ""
+                    draftDisabled = false
+                    draftPlacement = listOf(1, 2)
+                }
             }
             Spacer(Modifier.height(12.dp))
         }
@@ -381,31 +301,23 @@ fun RegexScreen(onBack: () -> Unit) {
                     )
                     Text(
                         "生效位点",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = EmberTheme.colors.accent,
+                        color = EmberTheme.colors.inkMute,
+                        fontSize = 12.sp,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = 1 in draftPlacement,
-                            onClick = {
-                                draftPlacement = if (1 in draftPlacement) draftPlacement - 1 else draftPlacement + 1
-                            },
-                            label = { Text("用户输入") },
-                        )
-                        FilterChip(
-                            selected = 2 in draftPlacement,
-                            onClick = {
-                                draftPlacement = if (2 in draftPlacement) draftPlacement - 2 else draftPlacement + 2
-                            },
-                            label = { Text("AI 输出") },
-                        )
+                        ShellChip("用户输入", selected = 1 in draftPlacement) {
+                            draftPlacement = if (1 in draftPlacement) draftPlacement - 1 else draftPlacement + 1
+                        }
+                        ShellChip("AI 输出", selected = 2 in draftPlacement) {
+                            draftPlacement = if (2 in draftPlacement) draftPlacement - 2 else draftPlacement + 2
+                        }
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("禁用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text("禁用", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftDisabled, onChange = { draftDisabled = it })
                     }
                 }

@@ -431,17 +431,18 @@ fun ShellChip(label: String, selected: Boolean, onClick: () -> Unit) {
 fun ShellActionButton(
     label: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val c = EmberTheme.colors
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(c.surface2)
-            .clickable(onClick = onClick)
+            .background(if (enabled) c.surface2 else c.surface.copy(alpha = 0.5f))
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 9.dp),
     ) {
-        Text(label, color = c.ink, fontSize = 13.sp)
+        Text(label, color = if (enabled) c.ink else c.inkMute, fontSize = 13.sp)
     }
 }
 
