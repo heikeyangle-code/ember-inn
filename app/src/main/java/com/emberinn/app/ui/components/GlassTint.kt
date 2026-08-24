@@ -3,6 +3,9 @@ package com.emberinn.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -50,8 +53,11 @@ fun Modifier.emberGlass(
     val context = LocalContext.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val tint = glassTint()
-    // 官方主题字段唯一数据源：fast_ui_mode（true=no-blur 关玻璃）+ blur_strength（0-30 px）
-    val shell = com.emberinn.app.data.OfficialThemeManager.shared(context).shellSettings()
+    // 官方主题字段唯一数据源：fast_ui_mode（true=no-blur 关玻璃）+ blur_strength（0-30 px）。
+    // 对齐官方：power_user 常驻内存仅属性读取——这里也只在主题变更时解析一次，不逐帧重解析。
+    val themeManager = com.emberinn.app.data.OfficialThemeManager.shared(context)
+    val shellThemeJson by themeManager.currentThemeJson.collectAsState()
+    val shell = remember(shellThemeJson) { themeManager.shellSettings() }
     val blurRadius = shell.blurStrength.toInt()
     val baseCoat = Modifier
         .background(MaterialTheme.colorScheme.background)

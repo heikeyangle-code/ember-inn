@@ -582,7 +582,12 @@ fun ChatScreen(
     // 边界5 printMessages（script.js:12495-12508）：count=chat_truncation||∞（0=全部）；
     // 窗口取尾部 N 条，mesid 保持原始索引；超窗时顶部挂 #show_more_messages。
     // derivedStateOf：show more 处理器持有旧闭包实例也能读到最新窗口（delegated 读）。
-    val truncation = themeManager.shellSettings().chatTruncation
+    // 官方 power_user 是启动加载一次的内存对象，渲染路径只做属性读取（script.js printMessages 读
+    // power_user.chat_truncation、getMediaDisplay 读 power_user.media_display 均 O(1)，从不重复解析）。
+    // 对齐：主题 JSON 仅变更时解析一次，重组/流式 tick 零成本。
+    val shellThemeJson by themeManager.currentThemeJson.collectAsState()
+    val themeShell = remember(shellThemeJson) { themeManager.shellSettings() }
+    val truncation = themeShell.chatTruncation
     val chatFromIndex by remember(truncation) {
         derivedStateOf {
             val windowSize = if (truncation > 0) truncation + historyWindowExtra else Int.MAX_VALUE
@@ -639,8 +644,10 @@ fun ChatScreen(
         } else null
         val reasoningDisplay = reasoningSrc?.takeIf { it.isNotBlank() }
             ?.let { vm.displayReasoningText(it) }
+        // 官方每条消息只调一次 formatGenerationTimer（script.js:2586 解构 {timerValue,timerTitle}）
+        val genTimer = generationTimerOf(el)
         return KernelMessagePayload(
-            mesid = "m-${index}",
+            mesid = "m-${index}"
             mes = vm.kernelDisplayTextOf(index),
             chName = name,
             isUser = user,
@@ -664,7 +671,7 @@ fun ChatScreen(
             mediaDisplay = extraDisplayOf(el)?.takeIf { display ->
                 display == com.emberinn.engine.media.MediaDisplay.LIST ||
                     display == com.emberinn.engine.media.MediaDisplay.GALLERY
-            } ?: themeManager.shellSettings().mediaDisplay,
+            } ?: themeShell.mediaDisplay,
             ghost = system && name != SYSTEM_USER_NAME,
             swipeCount = vm.swipeCountOf(el),
             currentSwipe = vm.currentSwipeOf(el),
@@ -689,8 +696,8 @@ fun ChatScreen(
                 }
             },
             // 边界4 timer：官方 formatGenerationTimer（script.js:2681）逐行移植
-            timerValue = generationTimerOf(el)?.first,
-            timerTitle = generationTimerOf(el)?.second,
+            timerValue = genTimer?.first,
+            timerTitle = genTimer?.second,
             // 边界3 messageEdit：textarea 初值 = trimSpaces(mes) 原文（引擎处理前）
             rawMes = el.jsonObject["mes"]?.jsonPrimitive?.contentOrNull,
             // 边界3 reasoning 编辑初值 = extra.reasoning 原文
@@ -731,6 +738,7 @@ fun ChatScreen(
         currentName,
         lastInContextCount,
         historyWindowExtra,
+        shellThemeJson,
     ) {
         items.mapNotNull { item ->
             when (item) {
@@ -956,7 +964,7 @@ fun ChatScreen(
                 // 时按钮移除。内核侧已做锚点插入+视口内高度差回滚，宿主只扩窗+喂批次载荷。
                 KernelHostAction.SHOW_MORE_MESSAGES -> {
                     val total = messages.size
-                    val tr = themeManager.shellSettings().chatTruncation
+                    val tr = themeShell.chatTruncation
                     val currentFirst = if (total > tr + historyWindowExtra) total - (tr + historyWindowExtra) else 0
                     if (tr > 0 && total > tr && currentFirst > 0) {
                         val newFirst = (currentFirst - tr).coerceAtLeast(0)
@@ -1101,7 +1109,7 @@ fun ChatScreen(
                     },
                     onTextClick = { mesid ->
                         // 边界3 click_to_edit（chats.js L2292）：主题开关开启时点击正文进内核编辑
-                        if (themeManager.shellSettings().clickToEdit) {
+                        if (themeShell.clickToEdit) {
                             kernelPool.acquireSingle { pooled ->
                                 RenderKernel(pooled).beginEditMessage(mesid)
                             }
