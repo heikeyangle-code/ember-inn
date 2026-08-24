@@ -2,6 +2,7 @@ package com.emberinn.app.ui.settings
 
 
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.components.EmberToasts
 import com.emberinn.app.ui.components.EmberSlider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -96,9 +97,9 @@ fun AppearanceScreen(
                 val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
                     ?: error("无法读取文件")
                 val name = official.import(text)
-                Toast.show(context, "已导入主题：$name")
+                EmberToasts.show(context, "已导入主题：$name")
             }.onFailure { e ->
-                Toast.show(context, "导入失败：${e.message}")
+                EmberToasts.show(context, "导入失败：${e.message}")
             }
         }
     }
@@ -107,9 +108,9 @@ fun AppearanceScreen(
         if (uri != null && name != null) {
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { it.write(official.export(name)?.toByteArray()) }
-                Toast.show(context, "已导出：${name}.json")
+                EmberToasts.show(context, "已导出：${name}.json")
             }.onFailure { e ->
-                Toast.show(context, "导出失败：${e.message}")
+                EmberToasts.show(context, "导出失败：${e.message}")
             }
         }
         pendingExport = null
@@ -264,7 +265,7 @@ fun AppearanceScreen(
             confirmButton = {
                 TextButton(onClick = {
                     val ok = official.delete(name)
-                    Toast.show(context, if (ok) "已删除" else "删除失败")
+                    EmberToasts.show(context, if (ok) "已删除" else "删除失败")
                     confirmDelete = null
                 }) { Text("删除", color = EmberTheme.colors.danger) }
             },
@@ -507,7 +508,8 @@ private fun ThemeTuneGroup() {
 /** 颜色十项 + 自定义 CSS：官方主题颜色类字段的调节入口（hex 文本，点应用写回主题）。 */
 @Composable
 private fun ColorCssGroup(obj: JsonObject?) {
-    val manager = remember { OfficialThemeManager.shared(LocalContext.current) }
+    val context = LocalContext.current
+    val manager = remember(context) { OfficialThemeManager.shared(context) }
     val colorFields = listOf(
         "main_text_color" to "主文字",
         "italics_text_color" to "斜体文字",

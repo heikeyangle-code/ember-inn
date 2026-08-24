@@ -87,6 +87,13 @@ class KernelWebViewPool(
         }
     }
 
+    /** C3 草稿/冒充流式下发：#send_textarea 全实例广播（内核回发 inputChanged 镜像收敛宿主态） */
+    fun pushInputText(text: String) {
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { RenderKernel(it).pushInputText(text) }
+        }
+    }
+
     // C4 官方背景：页面级状态（崩溃重建/新实例随 applyPageSetup 恢复）
     @Volatile private var currentBackgroundUrl: String? = null
     @Volatile private var currentBackgroundFitting: String? = null

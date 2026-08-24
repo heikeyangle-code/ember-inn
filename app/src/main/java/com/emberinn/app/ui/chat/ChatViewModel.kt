@@ -1692,13 +1692,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
             seedColor = character?.let { it.seedColor ?: nameHashSeed(it.name) },
         )
         _chatBackground.value = chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
-            ?: character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson).background }?.ifBlank { null }
     }
 
     /** 聊天背景：会话锁定（chat_metadata.custom_background）优先，否则角色主题配方 background。 */
     private val _chatBackground = MutableStateFlow(
-        chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull
-            ?: character?.let { CharacterCardEdit.readThemeRecipe(it.rawJson).background }?.ifBlank { null },
+        chatStore.metadata(sessionId)["custom_background"]?.jsonPrimitive?.contentOrNull,
     )
     val chatBackground: StateFlow<String?> = _chatBackground
 

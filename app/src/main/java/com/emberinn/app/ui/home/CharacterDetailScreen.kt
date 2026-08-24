@@ -1973,7 +1973,6 @@ private fun ModelOverride.isEmpty(): Boolean =
 private fun ThemeRecipe.summary(): String {
     val parts = mutableListOf<String>()
     if (seed.isNotBlank()) parts += "seed $seed"
-    if (background.isNotBlank()) parts += "背景图"
     if (shape == "square") parts += "方正"
     if (shape == "rounded") parts += "圆润"
     if (shape == "circle") parts += "浑圆"
@@ -1989,4 +1988,4 @@ private fun ThemeRecipe.summary(): String {
 
 /** 是否完全未设置（跟随全局）。 */
 private fun ThemeRecipe.isEmpty(): Boolean =
-    seed.isBlank() && background.isBlank() && shape.isBlank() && font.isBlank() && style.isBlank() && lockMode.isBlank()
+    seed.isBlank() && shape.isBlank() && font.isBlank() && style.isBlank() && lockMode.isBlank()

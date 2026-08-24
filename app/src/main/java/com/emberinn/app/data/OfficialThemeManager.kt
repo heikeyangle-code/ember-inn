@@ -37,6 +37,7 @@ class OfficialThemeManager(private val context: Context) {
         val avatarStyle: Int = 0,          // 0 圆 / 1 大矩形 / 2 方形 / 3 圆角
         val compactInputArea: Boolean = false,
         val fastUiMode: Boolean = true,    // 官方默认 true：no-blur 快速模式
+        val blurStrength: Int = 10,        // 官方默认 10（power-user.js L156），滑条 0-30
         val noShadows: Boolean = false,
         val waifuMode: Boolean = false,
         val reducedMotion: Boolean = false,
@@ -233,6 +234,7 @@ class OfficialThemeManager(private val context: Context) {
             avatarStyle = num("avatar_style") ?: 0,
             compactInputArea = bool("compact_input_area") ?: false,
             fastUiMode = bool("fast_ui_mode") ?: true,
+            blurStrength = num("blur_strength")?.coerceIn(0, 30) ?: 10,
             noShadows = bool("noShadows") ?: false,
             waifuMode = bool("waifuMode") ?: false,
             reducedMotion = bool("reduced_motion") ?: false,

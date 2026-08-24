@@ -715,7 +715,8 @@ fun ChatScreen(
     LaunchedEffect(isStreaming, isImpersonating) {
         if (!isStreaming || isImpersonating) return@LaunchedEffect
         var lastPush = 0L
-        vm.streamingText.conflate().collect { raw ->
+        // StateFlow 本身即 conflate 语义（新值胜出），显式 .conflate() 对 StateFlow 无效且被编译器拒绝
+        vm.streamingText.collect { raw ->
             val now = android.os.SystemClock.elapsedRealtime()
             if (now - lastPush < 120) return@collect
             lastPush = now
