@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
@@ -39,7 +40,7 @@ fun AppliedPresetEditor(
                 EditMulti("story_string（上下文模板）", c.storyString) { onChange(state.copy(context = c.copy(storyString = it))) }
                 EditText("example_separator（示例分隔符）", c.exampleSeparator) { onChange(state.copy(context = c.copy(exampleSeparator = it))) }
                 EditText("chat_start", c.chatStart) { onChange(state.copy(context = c.copy(chatStart = it))) }
-                Text("story_string_position（官方 select：0=默认顶部 / 1=In-chat @ Depth）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute, modifier = Modifier.padding(top = 6.dp))
+                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0 to "0（默认顶部）", 1 to "1（In-chat @ Depth）").forEach { (v, label) ->
                         FilterChip(
@@ -76,7 +77,7 @@ fun AppliedPresetEditor(
                 EditText("stop_sequence", i.stopSequence) { onChange(state.copy(instruct = i.copy(stopSequence = it))) }
                 EditText("user_alignment_message", i.userAlignmentMessage) { onChange(state.copy(instruct = i.copy(userAlignmentMessage = it))) }
                 EditText("activation_regex", i.activationRegex) { onChange(state.copy(instruct = i.copy(activationRegex = it))) }
-                Text("names_behavior（官方 select：none/force/always）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute, modifier = Modifier.padding(top = 6.dp))
+                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("none" to "Never", "force" to "Groups and Past Personas", "always" to "Always").forEach { (v, label) ->
                         FilterChip(
@@ -121,7 +122,7 @@ private fun EditText(label: String, value: String, onChange: (String) -> Unit) {
     EmberTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
         singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
     )
@@ -132,7 +133,7 @@ private fun EditMulti(label: String, value: String, onChange: (String) -> Unit) 
     EmberTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
         minLines = 2,
         maxLines = 5,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -143,7 +144,7 @@ private fun EditMulti(label: String, value: String, onChange: (String) -> Unit) 
 private fun EditInt(label: String, value: Int, onChange: (Int) -> Unit) {
     // 标签上置、输入框全宽：避免长说明把输入框挤成窄条（“被说明文字压变形”）
     Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
+        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
         EmberTextField(
             value = value.toString(),
             onValueChange = { it.toIntOrNull()?.let(onChange) },
@@ -160,7 +161,7 @@ private fun EditSwitch(label: String, checked: Boolean, onChange: (Boolean) -> U
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.bodySmall)
+        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
         EmberSwitch(checked = checked, onChange = onChange)
     }
 }

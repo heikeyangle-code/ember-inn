@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
@@ -122,10 +123,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("语音朗读（TTS）", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+            color = EmberTheme.colors.ink, fontSize = 15.sp,
             Text(
                 "对齐官方 TTS 设置；官方 1.18 无语音输入（STT）。在线语音提供商在 P3 引擎层接入，本机引擎可直接试听。",
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = 12.sp,
                 color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -140,10 +141,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("启用朗读", style = MaterialTheme.typography.bodyLarge)
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         Text(
                             "聊天自动朗读将在后续版本接入；启用后本页试听可用",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.inkMute,
                         )
                     }
@@ -159,7 +160,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                 Column {
                     Text(
                         "引擎与语音",
-                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 15.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
@@ -168,10 +169,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
-                        Text("引擎", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         Text(
                             tts.value?.defaultEngine?.substringAfterLast('.') ?: "Android 系统 TTS",
-                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 14.sp,
                             color = EmberTheme.colors.inkMute,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -187,14 +188,14 @@ fun VoiceScreen(onBack: () -> Unit) {
                     if (!ready) {
                         Text(
                             "正在初始化本机语音引擎…",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.lineStrong,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     } else if (voices.isEmpty()) {
                         Text(
                             "本机没有可用的语音，请在系统设置中安装或启用语音合成",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.danger,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
@@ -202,10 +203,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("语速", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            color = EmberTheme.colors.ink, fontSize = 15.sp,
                             Text(
                                 "%.2f".format(rate) + (if (rate == 1.0f) " · 正常" else ""),
-                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 14.sp,
                                 color = EmberTheme.colors.inkMute,
                             )
                         }
@@ -217,7 +218,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         )
                         Text(
                             "0.5 慢速 — 2.0 快速（Android 系统支持范围，1.0 为正常）",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.inkMute,
                         )
                     }
@@ -240,13 +241,13 @@ fun VoiceScreen(onBack: () -> Unit) {
                 Column {
                     Text(
                         "在线 TTS 提供商",
-                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 15.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Text(
                         "对照官方 TTS 扩展 27 个后端；选择后聊天朗读将走该后端（系统 TTS 仅用于本页试听）",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
@@ -301,7 +302,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         if (voicesLoading) {
                             Text(
                                 "正在加载语音列表…",
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 12.sp,
                                 color = EmberTheme.colors.lineStrong,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
@@ -327,13 +328,13 @@ fun VoiceScreen(onBack: () -> Unit) {
                 Column {
                     Text(
                         "朗读选项",
-                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 15.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Text(
                         "字段对齐官方 TTS 扩展；聊天自动朗读在 P3 接入，以下配置先持久化",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
@@ -347,7 +348,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
-                        Text("朗读前正则过滤", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         EmberSwitch(checked = applyRegex, onChange = { applyRegex = it; save() })
                     }
                     if (applyRegex) {
@@ -382,16 +383,16 @@ private fun VoicePickerRow(
             .clickable(enabled = enabled, onClick = { expanded = true })
             .padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
-        Text("语音", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        color = EmberTheme.colors.ink, fontSize = 15.sp,
         Text(
             current.ifBlank { "跟随系统默认" },
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = EmberTheme.colors.inkMute,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkMute)
+        color = EmberTheme.colors.ink, fontSize = 17.sp,
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("跟随系统默认") },
@@ -414,7 +415,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        color = EmberTheme.colors.ink, fontSize = 15.sp,
         EmberSwitch(checked = checked, onChange = onChange)
     }
 }
@@ -434,16 +435,16 @@ private fun ProviderPickerRow(
             .clickable(onClick = { expanded = true })
             .padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
-        Text("提供商", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        color = EmberTheme.colors.ink, fontSize = 15.sp,
         Text(
             label,
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = EmberTheme.colors.inkMute,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkMute)
+        color = EmberTheme.colors.ink, fontSize = 17.sp,
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (id, name) ->
                 DropdownMenuItem(
@@ -466,7 +467,7 @@ private fun KeyRow(
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            color = EmberTheme.colors.ink, fontSize = 15.sp,
             androidx.compose.material3.TextButton(onClick = { onVisibleChange(!visible) }) {
                 Text(if (visible) "隐藏" else "显示")
             }

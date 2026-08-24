@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.icons.FaIcons
 
@@ -68,19 +69,19 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
                 contentAlignment = Alignment.Center,
             ) {
                 if (current == null) {
-                    Text("—", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.inkMute)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 }
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                color = EmberTheme.colors.ink, fontSize = 14.sp, fontWeight = FontWeight.androidx,
                 Text(
                     when {
                         current != null -> draft.ifBlank { "#RRGGBB" }
                         fallback != null -> fallback.toHex() + " · 跟随主题"
                         else -> "跟随主题"
                     },
-                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 11.sp,
                     color = EmberTheme.colors.inkMute,
                     fontFamily = FontFamily.Monospace,
                 )
@@ -103,7 +104,7 @@ fun ColorField(label: String, hint: String, value: String, onSave: (String) -> U
         )
         Text(
             hint,
-            style = MaterialTheme.typography.bodySmall,
+            fontSize = 12.sp,
             color = EmberTheme.colors.inkMute,
             modifier = Modifier.padding(top = 4.dp),
         )

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
@@ -51,7 +52,7 @@ fun TextAvatar(text: String, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = text.take(1).uppercase(),
-            style = MaterialTheme.typography.titleMedium,
+            color = EmberTheme.colors.ink, fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = EmberTheme.colors.ink,
         )

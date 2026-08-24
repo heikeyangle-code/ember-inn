@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
@@ -178,10 +179,10 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 item {
                     Surface(shape = RoundedCornerShape(18.dp), color = EmberTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("说明", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+                            color = EmberTheme.colors.ink, fontSize = 15.sp,
                             Text(
                                 "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 12.sp,
                                 color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
@@ -189,14 +190,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                 }
                 item {
-                    Text("全局顺序（官方 global 策略，character_id=100000）", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+                    color = EmberTheme.colors.ink, fontSize = 15.sp,
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
                         TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }
                         if (resetConfirming) {
-                            Text("确认恢复官方默认顺序？", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.danger, modifier = Modifier.padding(start = 4.dp))
+                            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                             TextButton(onClick = {
                                 PromptManagerPrefs.resetOrderToDefault(context)
                                 order = PromptManagerPrefs.order(context)
@@ -211,19 +212,19 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("注入顺序", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent, modifier = Modifier.weight(1f))
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         Text(
                             "总 Token：${PromptAssemblyCache.lastMessages?.sumOf { it.tokens } ?: 0}",
-                            style = MaterialTheme.typography.labelMedium,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.accent,
                         )
                     }
                 }
                 if (order.isEmpty()) {
-                    item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute) }
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 }
                 importMessage?.let {
-                    item { Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.danger) }
+                    color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                 }
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
@@ -273,10 +274,10 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 },
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                Text("≡", style = MaterialTheme.typography.bodyLarge, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
-                                Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
+                                fontSize = 15.sp,
+                                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(entry.identifier, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    color = EmberTheme.colors.ink, fontSize = 14.sp, fontWeight = FontWeight.FontWeight,
                                 }
                                 EmberSwitch(
                                     checked = entry.enabled,
@@ -292,7 +293,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                         PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
-                                    Text("↑", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
+                                    color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                                 }
                                 IconButton(onClick = {
                                     if (i < order.lastIndex) {
@@ -300,12 +301,12 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                         PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
-                                    Text("↓", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
+                                    color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                                 }
                                 IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
                                     PromptManagerPrefs.saveOrder(context, null, order)
-                                }, modifier = Modifier.size(30.dp)) { Text("×", color = EmberTheme.colors.danger, style = MaterialTheme.typography.labelMedium) }
+                                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                             }
                         }
                     }
@@ -340,7 +341,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("提示项", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         TextButton(onClick = {
                             editTarget = PromptItem(identifier = "", name = "", content = "")
                             showEdit = true
@@ -441,13 +442,13 @@ fun PromptManagerScreen(onBack: () -> Unit) {
             ) {
                 Text(
                     if (isNew) "新增提示项" else "编辑提示项",
-                    style = MaterialTheme.typography.titleMedium,
+                    color = EmberTheme.colors.ink, fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(8.dp))
                     Text(
                         "identifier（自动生成，只读）：$promptId",
-                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 11.sp,
                         color = EmberTheme.colors.lineStrong,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -463,14 +464,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("角色（官方 role）", style = MaterialTheme.typography.labelMedium)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("system" to "system", "user" to "user", "assistant" to "assistant").forEach { (v, label) ->
                             FilterChip(selected = role == v, onClick = { role = v }, label = { Text(label) })
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text("注入位置（官方 injection_position）", style = MaterialTheme.typography.labelMedium)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("0" to "Relative（相对顺序）", "1" to "In-chat（对话内）").forEach { (v, label) ->
                             FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
@@ -495,7 +496,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("注入触发（官方 injection_trigger，多选；空=全部）", style = MaterialTheme.typography.labelMedium)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(triggerOptions) { (v, label) ->
                             FilterChip(
@@ -509,7 +510,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("禁止覆盖（forbid_overrides）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        color = EmberTheme.colors.ink, fontSize = 15.sp,
                         EmberSwitch(checked = forbid, onChange = { forbid = it })
                     }
                     if (resettable) {
@@ -565,14 +566,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
             ) {
                 Text(
                     "检查：${inspected.name.ifBlank { inspected.identifier }}",
-                    style = MaterialTheme.typography.titleMedium,
+                    color = EmberTheme.colors.ink, fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.size(6.dp))
                 if (msgs.isEmpty()) {
                     Text(
                         "该提示项在最近一次总装中没有消息。先发送一条消息或使用聊天菜单的“提示词预览（dryRun）”后，这里才会列出内容（官方 PromptManager.messages 同语义）。",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.inkMute,
                     )
                 } else {
@@ -581,12 +582,12 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                                 Text(
                                     "${m.role} · ${m.tokens}t",
-                                    style = MaterialTheme.typography.labelMedium,
+                                    fontSize = 12.sp,
                                     color = EmberTheme.colors.accent,
                                 )
                                 Text(
                                     m.content.ifBlank { "（无内容）" },
-                                    style = MaterialTheme.typography.bodySmall,
+                                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
                             }
@@ -644,25 +645,25 @@ private fun PromptRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.name.ifBlank { item.identifier }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    color = EmberTheme.colors.ink, fontSize = 14.sp, fontWeight = FontWeight.FontWeight,
                     icons.forEach { (icon, title) ->
                         Spacer(Modifier.width(4.dp))
-                        Text(icon, style = MaterialTheme.typography.labelSmall)
+                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(item.identifier, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
+                    color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                     if (item.injectionPosition == 1 && item.injectionDepth != null) {
                         Spacer(Modifier.width(6.dp))
-                        Text("@ ${item.injectionDepth}", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
+                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                     }
                     if (!userDefined) {
                         Spacer(Modifier.width(6.dp))
-                        Text("默认", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.ai)
+                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
                     }
                 }
                 Text(
                     item.content.ifBlank { "（空内容）" },
-                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 11.sp,
                     color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -671,18 +672,18 @@ private fun PromptRow(
             Spacer(Modifier.width(8.dp))
             Text(
                 if (tokens > 0) "$tokens" else "-",
-                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp,
                 color = EmberTheme.colors.lineStrong,
             )
             EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onChange = onToggleOrder)
             if (onInspect != null) {
                 IconButton(onClick = onInspect, modifier = Modifier.size(38.dp)) {
-                    Text("查", style = MaterialTheme.typography.bodyMedium, color = EmberTheme.colors.accent)
+                    color = EmberTheme.colors.ink, fontSize = 14.sp,
                 }
             }
             if (userDefined && onDelete != null) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
-                    Text("×", color = EmberTheme.colors.danger, style = MaterialTheme.typography.labelMedium)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 }
             }
         }

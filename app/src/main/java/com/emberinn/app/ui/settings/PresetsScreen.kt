@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.ui.design.components.EmberSwitch
@@ -469,14 +470,14 @@ fun PresetsScreen(onBack: () -> Unit) {
                     )
                     Text(
                         "绑定到连接",
-                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 11.sp,
                         color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(start = 8.dp),
                     )
                     importMessage?.let {
                         Text(
                             it,
-                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 11.sp,
                             color = EmberTheme.colors.lineStrong,
                             modifier = Modifier.padding(start = 8.dp),
                         )
@@ -484,12 +485,12 @@ fun PresetsScreen(onBack: () -> Unit) {
                 }
             }
             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
-            Text("Advanced Formatting（官方 power-user 派生/绑定设置）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
+            color = EmberTheme.colors.ink, fontSize = 15.sp,
             Row(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
-                Text("context_derived（连接模型时按元数据派生 context 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 EmberSwitch(
                     checked = applied.contextDerived,
                     onChange = { applied = applied.copy(contextDerived = it); PresetSettingsStore.update(context, applied) },
@@ -499,7 +500,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
-                Text("instruct_derived（连接模型时按元数据派生 instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 EmberSwitch(
                     checked = applied.instructDerived,
                     onChange = { applied = applied.copy(instructDerived = it); PresetSettingsStore.update(context, applied) },
@@ -509,7 +510,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
-                Text("bind_model_templates（切换模型时自动激活绑定的 context/instruct 模板）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 EmberSwitch(
                     checked = applied.bindModelTemplates,
                     onChange = { applied = applied.copy(bindModelTemplates = it); PresetSettingsStore.update(context, applied) },
@@ -519,14 +520,14 @@ fun PresetsScreen(onBack: () -> Unit) {
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
-                Text("context_size_derived（koboldcpp/llamacpp 连接时按后端 n_ctx 自动改上下文，官方默认关）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 EmberSwitch(
                     checked = applied.contextSizeDerived,
                     onChange = { applied = applied.copy(contextSizeDerived = it); PresetSettingsStore.update(context, applied) },
                 )
             }
             var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
-            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute, modifier = Modifier.padding(top = 6.dp))
+            color = EmberTheme.colors.inkMute, fontSize = 11.sp,
             ShellInput(
                 value = afBehavior.userPromptBias,
                 onValueChange = {
@@ -541,7 +542,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             ) {
-                Text("显示回复前缀（show_user_prompt_bias，官方默认开）", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                 EmberSwitch(
                     checked = afBehavior.showUserPromptBias,
                     onChange = {
@@ -659,7 +660,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             Text(
                 "采样预设应用到“提供商与模型”详情页；reasoning 预设的 prefix/suffix/separator 进总装与显示；" +
                     "context/instruct/sysprompt 已按官方语义保存，运行时消费点等 textgen 协议后端接入（登记）。",
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = 12.sp,
                 color = EmberTheme.colors.lineStrong,
                 modifier = Modifier.padding(top = 12.dp),
             )
@@ -810,7 +811,7 @@ fun PresetsScreen(onBack: () -> Unit) {
             title = { Text("是否导出连接数据？") },
             text = {
                 Column {
-                    Text("包括所选源、模型等 API 连接面板设置；API Key 永不会导出。", style = MaterialTheme.typography.bodySmall)
+                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
                     androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
@@ -871,7 +872,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                         ) {
                             Text(
                                 sectionLabel(key),
-                                style = MaterialTheme.typography.bodyMedium,
+                                color = EmberTheme.colors.ink, fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(if (checked) "✓" else "", color = EmberTheme.colors.accent)
@@ -911,7 +912,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                         ) {
                             Text(
                                 sectionLabel(key),
-                                style = MaterialTheme.typography.bodyMedium,
+                                color = EmberTheme.colors.ink, fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(if (checked) "✓" else "", color = EmberTheme.colors.accent)
@@ -1064,23 +1065,23 @@ private fun PresetSection(
     ) {
         Text(
             if (expanded) "▼" else "▶",
-            style = MaterialTheme.typography.labelMedium,
+            fontSize = 12.sp,
             color = EmberTheme.colors.lineStrong,
         )
         Spacer(Modifier.width(6.dp))
         Text(
             title,
-            style = MaterialTheme.typography.titleSmall,
+            color = EmberTheme.colors.ink, fontSize = 15.sp,
             modifier = Modifier.weight(1f),
         )
         Text(
             "当前：${selected.ifBlank { "默认" }}",
-            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp,
             color = EmberTheme.colors.accent,
         )
         Text(
             "（${items.size}）",
-            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp,
             color = EmberTheme.colors.lineStrong,
         )
     }

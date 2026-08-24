@@ -235,7 +235,7 @@ fun SessionsScreen(
                     )
                     Text(
                         "生成模式",
-                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -254,7 +254,7 @@ fun SessionsScreen(
                     }
                     Text(
                         "激活策略",
-                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -269,7 +269,7 @@ fun SessionsScreen(
                     }
                     Text(
                         "选择成员（至少 2 个）",
-                        style = MaterialTheme.typography.labelMedium,
+                        fontSize = 12.sp,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -286,12 +286,12 @@ fun SessionsScreen(
                         ) {
                             Text(
                                 character.name,
-                                style = MaterialTheme.typography.bodyLarge,
+                                color = EmberTheme.colors.ink, fontSize = 15.sp,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
                                 if (character.id in groupMemberIds) "✓" else "",
-                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = 17.sp,
                                 color = EmberTheme.colors.accent,
                             )
                         }
@@ -299,7 +299,7 @@ fun SessionsScreen(
                     if (characters.isEmpty()) {
                         Text(
                             "还没有角色卡，先去角色页导入。",
-                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = EmberTheme.colors.lineStrong,
                         )
                     }
@@ -323,7 +323,7 @@ fun SessionsScreen(
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     session.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    color = EmberTheme.colors.ink, fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
@@ -469,7 +469,7 @@ private fun SessionAvatar(name: String, character: CharacterRecord?, seed: Color
                 } else {
                     Text(
                         text = name.take(1),
-                        style = MaterialTheme.typography.titleLarge,
+                        color = EmberTheme.colors.ink, fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = seed ?: EmberTheme.colors.accent,
                     )
@@ -490,7 +490,7 @@ private fun NewChatSheet(
         Column(modifier = Modifier.padding(bottom = 28.dp)) {
             Text(
                 text = "新建对话",
-                style = MaterialTheme.typography.titleMedium,
+                color = EmberTheme.colors.ink, fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
@@ -499,7 +499,7 @@ private fun NewChatSheet(
             if (characters.isNotEmpty()) {
                 Text(
                     text = "选择一个角色",
-                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 12.sp,
                     color = EmberTheme.colors.accent,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                 )
@@ -511,10 +511,10 @@ private fun NewChatSheet(
                         CharacterAvatar(character)
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(character.name, style = MaterialTheme.typography.bodyLarge)
+                            color = EmberTheme.colors.ink, fontSize = 15.sp,
                             Text(
                                 character.description.ifBlank { "角色卡" }.take(40),
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 12.sp,
                                 color = EmberTheme.colors.inkMute,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -544,7 +544,7 @@ private fun CharacterAvatar(character: CharacterRecord) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     character.name.take(1).ifBlank { "?" },
-                    style = MaterialTheme.typography.titleSmall,
+                    color = EmberTheme.colors.ink, fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = EmberTheme.colors.accent,
                 )
