@@ -622,6 +622,7 @@
     /** 清空全部消息节点：先解除高度观察再移除，防止 ResizeObserver 强持有已摘除 DOM；
      *  运行时载荷缓存与编辑态一并复位（切聊天/全量重建语义）。 */
     function clearMessages() {
+        console.error('clearMessages called; stack=' + new Error().stack);
         var chat = document.getElementById('chat');
         Array.prototype.forEach.call(chat.querySelectorAll('.mes'), function (n) {
             if (resizeObserver) { resizeObserver.unobserve(n); }

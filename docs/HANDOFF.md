@@ -469,14 +469,13 @@ payloadCount）+ logcat tag `EmberInnKernel`（attach 时打印 slot/view 尺寸
 分段计时（CSS 解析/JS 求值/首条挂载毫秒数），用数据定位，禁止盲改。
 
 ### 9.2b 最新复现（2026-08-24 晚，最高优先级）
-最新全量修复构建上：进页 8~10s 出正文 → **正文显示约 1 秒后突然消失，只剩背景**；
-失败 toast（预热/创建）间歇出现。判读：先渲染后消失 = 渲染进程在首帧合成阶段崩溃的
-典型时序（handleProcessGone→销毁→重挂新实例→重新加载）。头号嫌疑：css-bundle 使
-Moonlit 玻璃主题(backdrop-filter 大面积+样式包)首次完整生效，触发该机 GPU/驱动崩溃。
-**判别实验（一分钟）**：外观切 Azure 纯官方主题（无样式包）重进——不再闪白即坐实
-GPU×玻璃合成崩溃；对策候选：a) 沿用官方 fast_ui_mode(no-blur) 语义按设备分级默认；
-b) 检测 renderer 反复 gone 后自动降级无模糊（自愈式,不改主题定义本身）。
-次级嫌疑：renderChat 清空后二次空载荷（VM refresh 竞态）→ 加桥侧日志可分辨。
+最新全量修复构建：进页 8~10s 出正文 → 约 1 秒后正文消失只剩背景；Azure 纯官方主题下
+同样复现 → **排除主题/样式包/GPU 因素，为宿主侧逻辑 bug**。主嫌疑排序：
+①VM messages 二次发射空表（ChatStore 缓存失效与异步落盘竞态）→ renderChat([]) 清空；
+②渲染进程仍偶发 gone（与主题无关的内存/驱动因素）→ 崩溃自愈重挂后加载失败；
+③AndroidView 重组时序把已挂实例摘除。
+已加定位日志（复现一次即可判别）：RenderKernel.renderChat 打印载荷数；
+render.js clearMessages 时 console.error('clearMessages')——两者对照即知「谁在清」。
 
 ### 9.3 原生组件欠账
 - 聊天顶框 ChatTopBar 完全重做（任务 #6）：缩小面积/Ember 令牌化/智能显隐/与内核页层叠修正

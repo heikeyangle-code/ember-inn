@@ -21,6 +21,7 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
      *  showMore=true 时顶部挂 #show_more_messages（边界5 长聊天截断，script.js printMessages）。 */
     fun renderChat(payloads: List<KernelMessagePayload>, showMore: Boolean = false, onDone: ((String?) -> Unit)? = null) {
         val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
+        android.util.Log.e("EmberInnKernel", "renderChat payloads=${payloads.size} showMore=$showMore")
         eval("window.Kernel.renderChat($json,{showMore:${if (showMore) "true" else "false"}});", onDone)
     }
 
