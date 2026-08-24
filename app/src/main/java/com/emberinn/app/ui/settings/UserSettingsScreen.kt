@@ -111,6 +111,11 @@ fun UserSettingsScreen(
                             hint = "message_token_count_enabled：消息气泡显示 token 数（默认关）",
                             checked = behavior.messageTokenCount,
                         ) { saveBehavior(behavior.copy(messageTokenCount = it)) }
+                        UserSwitchRow(
+                            label = "新消息自动滚到最新",
+                            hint = "auto_scroll_chat_to_bottom：生成时自动贴底跟随（默认开）",
+                            checked = behavior.autoScrollChatToBottom,
+                        ) { saveBehavior(behavior.copy(autoScrollChatToBottom = it)) }
                     }
                 }
                 item {

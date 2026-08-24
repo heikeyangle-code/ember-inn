@@ -79,6 +79,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.emberinn.app.ui.settings.BehaviorPrefs
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
@@ -1095,8 +1096,10 @@ fun ChatScreen(
 
     // 官方 generate() 开头 scrollLock = false：任何生成类型（发送/继续/重生成/变体/冒充/群聊轮次）
     // 开始时恢复自动贴底跟随——用户上滑看历史时点重新生成，官方会回到最新并跟随。
+    // 官方 auto_scroll_chat_to_bottom=关 时 scrollChatToBottom 直接 return（script.js:2715）：不自动跟。
+    val autoScrollChatToBottom = remember { BehaviorPrefs.load(context).autoScrollChatToBottom }
     LaunchedEffect(generationEpoch) {
-        if (generationEpoch > 0) followBottom = true
+        if (generationEpoch > 0 && autoScrollChatToBottom) followBottom = true
     }
     // 显示设置（encode_tags/正则/行为）变更即时生效：DisplayCacheVersion bump → VM 清缓存 + 全表行重算。
     // key=vm 同上：VM 更换时重订阅，collect 回调不落在旧实例上。

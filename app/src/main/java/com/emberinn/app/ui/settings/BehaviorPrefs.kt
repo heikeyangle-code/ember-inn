@@ -14,6 +14,8 @@ data class BehaviorSettings(
     val stripExamples: Boolean = false,
     val namesAsStopStrings: Boolean = true,
     val messageTokenCount: Boolean = false,
+    /** 官方 power_user.auto_scroll_chat_to_bottom（默认开）：新消息自动滚到最新。 */
+    val autoScrollChatToBottom: Boolean = true,
     val autoSwipe: Boolean = false,
     val autoSwipeMinimumLength: Int = 0,
     val autoSwipeBlacklist: Set<String> = emptySet(),
@@ -54,6 +56,7 @@ object BehaviorPrefs {
             stripExamples = p.getBoolean("strip_examples", false),
             namesAsStopStrings = p.getBoolean("names_as_stop_strings", true),
             messageTokenCount = p.getBoolean("message_token_count_enabled", false),
+            autoScrollChatToBottom = p.getBoolean("auto_scroll_chat_to_bottom", true),
             autoSwipe = p.getBoolean("auto_swipe", false),
             autoSwipeMinimumLength = p.getInt("auto_swipe_minimum_length", 0),
             autoSwipeBlacklist = (p.getStringSet("auto_swipe_blacklist", emptySet()) ?: emptySet()).toSet(),
@@ -73,6 +76,7 @@ object BehaviorPrefs {
             .putBoolean("strip_examples", s.stripExamples)
             .putBoolean("names_as_stop_strings", s.namesAsStopStrings)
             .putBoolean("message_token_count_enabled", s.messageTokenCount)
+            .putBoolean("auto_scroll_chat_to_bottom", s.autoScrollChatToBottom)
             .putBoolean("auto_swipe", s.autoSwipe)
             .putInt("auto_swipe_minimum_length", s.autoSwipeMinimumLength)
             .putStringSet("auto_swipe_blacklist", s.autoSwipeBlacklist)
