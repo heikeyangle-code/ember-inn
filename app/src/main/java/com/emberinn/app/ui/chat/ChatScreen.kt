@@ -871,14 +871,15 @@ fun ChatScreen(
         // 每字延迟=(100-speed)×0.4ms，逗号/换行 ×12.5、句末标点 ×25；关=整段直出。
         // no_think 登记边界：本 App reasoning 走独立通道本就不做字符平滑，开关仅存档。
         var shown = 0L
-        var budget = 0f
-        fun charDelay(ch: Char): Float {
+        var budget = 0L
+        fun charDelayMs(ch: Char): Long {
             val base = ((100 - behaviorSmooth.smoothStreamingSpeed).coerceIn(1, 100)) * 0.4f
-            return when (ch) {
+            val v = when (ch) {
                 ',', '\n' -> base * 12.5f
                 '.', '!', '?' -> base * 25f
                 else -> base
             } / 10f   // 收集节拍为 120ms 级（官方逐字 setTimeout），整体提速一个量级保持手感
+            return v.toLong().coerceAtLeast(1L)
         }
         // StateFlow 本身即 conflate 语义（新值胜出），显式 .conflate() 对 StateFlow 无效且被编译器拒绝
         vm.streamingText.collect { raw ->
@@ -889,10 +890,10 @@ fun ChatScreen(
             val visible = when {
                 !behaviorSmooth.smoothStreaming -> raw.also { shown = it.length.toLong() }
                 else -> {
-                    budget += gap.coerceAtMost(600f)
+                    budget += gap.coerceAtMost(600L)
                     var end = shown.toInt()
-                    while (end < raw.length && budget >= charDelay(raw[end])) {
-                        budget -= charDelay(raw[end]); end++
+                    while (end < raw.length && budget >= charDelayMs(raw[end])) {
+                        budget -= charDelayMs(raw[end]).toLong(); end++
                     }
                     shown = end.toLong()
                     raw.substring(0, end)
