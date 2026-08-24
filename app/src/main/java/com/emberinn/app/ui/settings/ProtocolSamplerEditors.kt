@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
@@ -156,7 +155,7 @@ object ProtocolSamplerEditors {
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                color = EmberTheme.colors.ink, fontSize = 15.sp,
+                Text(title, style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 fields.forEach { f ->
                     when (f) {
                         is Num -> {

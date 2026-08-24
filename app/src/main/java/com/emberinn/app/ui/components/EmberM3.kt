@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.skydoves.cloudy.Sky
 import com.emberinn.app.ui.icons.FaIcons
@@ -366,7 +365,7 @@ fun EmberPrimaryButton(
             }
             Text(
                 label,
-                color = EmberTheme.colors.ink, fontSize = 13.sp,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.inkMute,
             )
@@ -410,7 +409,7 @@ fun EmberSecondaryButton(
             }
             Text(
                 label,
-                color = EmberTheme.colors.ink, fontSize = 13.sp,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = if (enabled) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
             )
@@ -468,7 +467,7 @@ fun EmberMenuRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 label,
-                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = when {
                     !enabled -> EmberTheme.colors.inkMute.copy(alpha = 0.38f)
@@ -479,7 +478,7 @@ fun EmberMenuRow(
             if (subtitle != null) {
                 Text(
                     subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute.copy(alpha = 0.8f),
                     maxLines = 1,
                 )
@@ -519,7 +518,7 @@ fun EmberSectionHeader(
         Spacer(Modifier.width(8.dp))
         Text(
             title,
-            color = EmberTheme.colors.ink, fontSize = 17.sp,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f, fill = false),
         )

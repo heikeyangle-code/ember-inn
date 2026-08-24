@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.data.FontManager
@@ -326,8 +325,8 @@ internal fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, on
             .padding(vertical = 6.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            fontSize = 15.sp,
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
         }
         EmberSwitch(checked = checked, onChange = onToggle)
     }
@@ -539,7 +538,7 @@ private fun ColorCssGroup(obj: JsonObject?) {
             OutlinedTextField(
                 value = drafts[key] ?: "",
                 onValueChange = { drafts = drafts + (key to it) },
-                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),

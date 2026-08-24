@@ -71,7 +71,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
 import com.emberinn.app.ui.components.EmberTextField
@@ -125,7 +124,7 @@ fun ProviderListScreen(
         if (profiles.isNotEmpty()) {
             Text(
                 "我的连接",
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.titleSmall,
                 color = EmberTheme.colors.accent,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
             )
@@ -178,12 +177,12 @@ private fun ProfileChip(
         ) {
             Text(
                 profile.name.ifBlank { profile.providerId },
-                color = EmberTheme.colors.ink, fontSize = 13.sp,
+                style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (active) {
-                color = EmberTheme.colors.ink, fontSize = 13.sp,
+                Text(" ✓", style = MaterialTheme.typography.labelLarge)
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                 Icon(
@@ -226,7 +225,7 @@ private fun ProviderCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         spec.displayName,
-                        color = EmberTheme.colors.ink, fontSize = 17.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -241,7 +240,7 @@ private fun ProviderCard(
                     ) {
                         Text(
                             if (configured) "已配置" else "未配置",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = if (configured) {
                                 EmberTheme.colors.ink
                             } else {
@@ -253,7 +252,7 @@ private fun ProviderCard(
                 }
                 Text(
                     spec.description,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -344,10 +343,10 @@ fun ProviderDetailScreen(
                 ProviderIcon(spec.icon, spec.displayName, modifier = Modifier.size(52.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    color = EmberTheme.colors.ink, fontSize = 18.sp,
+                    Text(spec.displayName, style = MaterialTheme.typography.titleLarge)
                     Text(
                         spec.description,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -385,7 +384,7 @@ fun ProviderDetailScreen(
             if (spec.regionVariants.isNotEmpty()) {
                 Text(
                     "区域",
-                    color = EmberTheme.colors.ink, fontSize = 15.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 14.dp),
                 )
                 Row(
@@ -435,10 +434,10 @@ fun ProviderDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
-                    color = EmberTheme.colors.ink, fontSize = 15.sp,
+                    Text("默认模型", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Text(
                         selectedModel.ifBlank { "未选择" },
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = EmberTheme.colors.inkMute,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -467,7 +466,7 @@ fun ProviderDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                color = EmberTheme.colors.ink, fontSize = 15.sp,
+                Text("采样预设（官方 sampler-${com.emberinn.app.ui.settings.PresetSettingsStore.samplerPresetType(context)}）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Box {
                     TextButton(onClick = { showSamplerPreset = true }) {
                         Text(if (samplerPresetName.isBlank()) "Default" else samplerPresetName)
@@ -513,7 +512,7 @@ fun ProviderDetailScreen(
                 SwitchRow("allow_fallbacks", sampler.allowFallbacks, vm::setAllowFallbacks)
                 Text(
                     "middleout",
-                    color = EmberTheme.colors.ink, fontSize = 15.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 14.dp),
                 )
                 Row(
@@ -548,7 +547,7 @@ fun ProviderDetailScreen(
                 sampler.requestTokenProbabilities,
                 vm::setRequestTokenProbabilities,
             )
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("reasoning_effort（推理强度）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("auto", "min", "low", "medium", "high", "max").forEach { value ->
                     FilterChip(
@@ -558,7 +557,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("verbosity（详细程度，gpt-5 系）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("auto", "low", "medium", "high").forEach { value ->
                     FilterChip(
@@ -572,11 +571,11 @@ fun ProviderDetailScreen(
             }
             CollapsibleSection("预设联动与提示词（oai_settings：bias/names/提示词/工具开关）") {
             // ---- 官方 oai_settings 其余预设联动字段 ----
-            color = EmberTheme.colors.ink, fontSize = 15.sp,
+            Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
             //      onLogitBiasPresetImportFileChange / onLogitBiasPresetExportClick / createLogitBiasListItem）----
-            color = EmberTheme.colors.ink, fontSize = 13.sp,
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("Logit Bias 预设（官方 openai_logit_bias）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
+            Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
                     FilterChip(
@@ -668,13 +667,13 @@ fun ProviderDetailScreen(
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                         Text(
                             "编辑 bias 预设：$presetName",
-                            color = EmberTheme.colors.ink, fontSize = 17.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.size(6.dp))
                         Text(
                             "文本或 [token ids]；数值 -100 ~ 100（官方 openai_logit_bias 模板）",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = EmberTheme.colors.inkMute,
                         )
                         Spacer(Modifier.size(8.dp))
@@ -712,7 +711,7 @@ fun ProviderDetailScreen(
                     }
                 }
             }
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
                     FilterChip(
@@ -722,8 +721,8 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            color = EmberTheme.colors.ink, fontSize = 13.sp,
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("消息角色与续写（names_behavior/continue_postfix/use_sysprompt/squash_system_messages）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
+            Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
                     FilterChip(
@@ -733,7 +732,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("continue_postfix（继续生成后缀）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("" to "无", " " to "空格", "\n" to "换行", "\n\n" to "双换行").forEach { (v, label) ->
                     FilterChip(
@@ -753,7 +752,7 @@ fun ProviderDetailScreen(
                 sampler.squashSystemMessages,
                 vm::setSquashSystemMessages,
             )
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("inline_image_quality（内联图片质量）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("auto", "low", "high").forEach { value ->
                     FilterChip(
@@ -763,7 +762,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("tool_reasoning_mode（工具推理链）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("disabled", "since_last_user", "active_chain").forEach { value ->
                     FilterChip(
@@ -773,7 +772,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            color = EmberTheme.colors.ink, fontSize = 13.sp,
+            Text("工具与媒体（function_calling/tool_reasoning_mode/media_inlining/web_search/request_images）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             SwitchRow("media_inlining（媒体 data URL 内联，官方默认开）", sampler.mediaInlining, vm::setMediaInlining)
             SwitchRow("function_calling（工具调用总开关，官方默认关）", sampler.functionCalling, vm::setFunctionCalling)
             SwitchRow("show_thoughts（显示推理内容，官方默认开）", sampler.showThoughts, vm::setShowThoughts)
@@ -783,7 +782,7 @@ fun ProviderDetailScreen(
             // 官方 request_images 块（data-source=makersuite,vertexai）：仅 Gemini 源显示
             if (spec.id in setOf("google", "vertexai")) {
                 SwitchRow("request_images（请求内联图片，官方默认关）", sampler.requestImages, vm::setRequestImages)
-                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                Text("request_image_resolution（分辨率）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("", "1K", "2K", "4K").forEach { value ->
                         FilterChip(
@@ -793,7 +792,7 @@ fun ProviderDetailScreen(
                         )
                     }
                 }
-                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                Text("request_image_aspect_ratio（宽高比）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("", "1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3").forEach { value ->
                         FilterChip(
@@ -804,8 +803,8 @@ fun ProviderDetailScreen(
                     }
                 }
             }
-            fontSize = 13.sp,
-            color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+            Text("提示词模板（Prompts）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
+            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
             PromptQuickEdit(context, "main", "Main Prompt")
             PromptQuickEdit(context, "nsfw", "Auxiliary Prompt")
             PromptQuickEdit(context, "jailbreak", "Post-History Instructions")
@@ -895,7 +894,7 @@ fun ProviderDetailScreen(
             )
             CollapsibleSection("连接高级（Advanced：代理/custom/azure/vertex/nanogpt/模型排序）") {
             // ---- 官方 oai_settings 连接类字段（settingsToUpdate isConnection=true） ----
-            color = EmberTheme.colors.ink, fontSize = 15.sp,
+            Text("连接高级设置（官方连接字段）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             SwitchRow("bypass_status_check（跳过状态检查）", bypassStatusCheck, vm::setBypassStatusCheck)
             // 官方 openai_show_external_models 只在 OpenAI 面板；其余源不显示
             if (spec.id == "openai") {
@@ -904,7 +903,7 @@ fun ProviderDetailScreen(
             // 官方 #model_sorting_form 只对 openrouter/chutes/electronhub/nanogpt/aimlapi 显示
             if (spec.id in setOf("openrouter", "chutes", "electronhub", "nanogpt", "aimlapi")) {
                 SwitchRow("group_models（按提供商分组）", groupModels, vm::setGroupModels)
-                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                Text("sort_models（模型排序）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("alphabetically", "pricing.prompt", "pricing.completion", "context_length").forEach { value ->
                         FilterChip(
@@ -939,7 +938,7 @@ fun ProviderDetailScreen(
             var proxySelected by remember { mutableStateOf("") }
             var showProxyNew by remember { mutableStateOf(false) }
             var proxyNewName by remember { mutableStateOf("") }
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("代理预设（官方 proxies 列表，全局）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 proxies.forEach { preset ->
                     FilterChip(
@@ -1017,7 +1016,7 @@ fun ProviderDetailScreen(
                 label = "custom_include_headers（YAML 请求头，仅 custom 源）",
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("custom_prompt_post_processing（消息合并模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("", "merge", "merge_tools", "semi", "semi_tools", "strict", "strict_tools", "single").forEach { value ->
                     FilterChip(
@@ -1044,7 +1043,7 @@ fun ProviderDetailScreen(
                 )
             }
             if (spec.id == "vertexai") {
-                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                Text("vertexai_auth_mode（认证方式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("express" to "Express（API Key）", "full" to "Full（服务账号）").forEach { (value, label) ->
                         FilterChip(
@@ -1067,7 +1066,7 @@ fun ProviderDetailScreen(
                     var saStatus by remember { mutableStateOf<String?>(null) }
                     Text(
                         "服务账号 JSON（官方要求 type/project_id/private_key/client_email/client_id，type=service_account）",
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                     ShellInput(
@@ -1091,12 +1090,12 @@ fun ProviderDetailScreen(
                     if (vertexaiServiceAccountJson.isNotBlank() && saStatus == null) {
                         Text(
                             "已保存服务账号",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = EmberTheme.colors.accent,
                         )
                     }
                     saStatus?.let {
-                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.danger)
                     }
                 }
             }
@@ -1133,7 +1132,7 @@ fun ProviderDetailScreen(
             message?.let {
                 Text(
                     it,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = if (it.startsWith("连接失败") || it.contains("不对")) {
                         EmberTheme.colors.danger
                     } else {
@@ -1239,7 +1238,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
         ) {
-            color = EmberTheme.colors.ink, fontSize = 17.sp,
+            Text("选择模型", style = MaterialTheme.typography.titleMedium)
             EmberTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -1253,7 +1252,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                     if (isHeader) {
                         Text(
                             label,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.labelLarge,
                             color = EmberTheme.colors.accent,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
@@ -1276,7 +1275,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                     ) {
                         Text(
                             label,
-                            color = EmberTheme.colors.ink, fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isSel) androidx.compose.ui.text.font.FontWeight.SemiBold else null,
                             modifier = Modifier.weight(1f),
                             maxLines = 2,
@@ -1290,7 +1289,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                                     .clip(CircleShape)
                                     .background(EmberTheme.colors.accent),
                             ) {
-                                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                                Text("✓", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.ink)
                             }
                         }
                     }
@@ -1334,11 +1333,11 @@ private fun TopBar(
             Icon(FaIcons.ArrowLeft, contentDescription = "返回")
         }
         Column(modifier = Modifier.weight(1f)) {
-            color = EmberTheme.colors.ink, fontSize = 18.sp,
+            Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) {
                 Text(
                     subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1380,7 +1379,7 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
-        color = EmberTheme.colors.ink, fontSize = 15.sp,
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         EmberSwitch(checked = checked, onChange = onChange)
     }
 }
@@ -1402,13 +1401,13 @@ private fun CollapsibleSection(
     ) {
         Text(
             if (expanded) "▼" else "▶",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             color = EmberTheme.colors.lineStrong,
         )
         Spacer(Modifier.width(6.dp))
         Text(
             title,
-            fontSize = 15.sp,
+            style = MaterialTheme.typography.titleSmall,
             color = EmberTheme.colors.accent,
             modifier = Modifier.weight(1f),
         )

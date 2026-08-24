@@ -108,7 +108,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -555,10 +554,10 @@ fun ChatScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
             ) {
-                color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+                Text("添加附件与工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     "图片 / 视频 / 音频、URL，或直接生成图片",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(top = 2.dp),
                 )
@@ -1440,7 +1439,7 @@ fun ChatScreen(
                 ) {
                     Text(
                         kernelDiagReport.orEmpty(),
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     )
                 }
@@ -1457,16 +1456,16 @@ fun ChatScreen(
     if (worldPanel) {
         EmberBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-                color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+                Text("世界书命中", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.size(4.dp))
                 Text(
                     "本次发送注入的世界书条目（点击状态胶囊打开）",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                 )
                 Spacer(Modifier.size(10.dp))
                 if (worldHits.isEmpty()) {
-                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                    Text("没有命中条目", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                         WorldHitLight(EmberTheme.colors.accent, "常驻")
@@ -1497,7 +1496,7 @@ fun ChatScreen(
                             )
                             Spacer(Modifier.size(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                color = EmberTheme.colors.ink, fontSize = 14.sp, fontWeight = FontWeight.FontWeight,
+                                Text(hit.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
                                 Text(
                                     listOf(
                                         hitLabel,
@@ -1505,7 +1504,7 @@ fun ChatScreen(
                                         hit.positionLabel,
                                         "${hit.tokens} token",
                                     ).filterNotNull().joinToString(" · "),
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
@@ -1523,7 +1522,7 @@ fun ChatScreen(
         if (usage != null) {
             EmberBottomSheet(onDismissRequest = { contextDetail = false }, sheetState = rememberModalBottomSheetState()) {
                 Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-                    color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+                    Text("上下文占用", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.size(12.dp))
                     val (used, max) = usage
                     val pct = if (max <= 0) 0 else (used * 100 / max)
@@ -1533,13 +1532,13 @@ fun ChatScreen(
                         pct >= 50 -> "黄色：过半，留意后续消息长度"
                         else -> "绿色：空间充足"
                     }
-                    color = EmberTheme.colors.ink, fontSize = 14.sp,
-                    color = EmberTheme.colors.ink, fontSize = 14.sp,
-                    color = EmberTheme.colors.ink, fontSize = 14.sp, fontWeight = FontWeight.FontWeight,
+                    Text("已用：${formatTokens(used)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("上限：${formatTokens(max)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("占比：$pct%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.size(8.dp))
                     Text(
                         gradeText,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                     )
                 }
@@ -1563,7 +1562,7 @@ fun ChatScreen(
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         if (isUserMsg) "我的消息" else msgName.ifBlank { currentName },
-                        color = EmberTheme.colors.ink, fontSize = 17.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
@@ -1784,7 +1783,7 @@ fun ChatScreen(
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "会话菜单",
-                    color = EmberTheme.colors.ink, fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
@@ -1916,7 +1915,7 @@ fun ChatScreen(
                     Spacer(Modifier.size(12.dp))
                     Text(
                         "显示思考过程（show_thoughts）",
-                        color = EmberTheme.colors.ink, fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )
                     EmberSwitch(checked = showThoughtsNow, onChange = { vm.setShowThoughtsQuick(it) })
@@ -1970,7 +1969,7 @@ fun ChatScreen(
                 ) {
                     Text(
                         "管理聊天文件",
-                        color = EmberTheme.colors.ink, fontSize = 17.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f),
                     )
@@ -2106,13 +2105,13 @@ fun ChatScreen(
                                     ) {
                                         Text(
                                             promptSectionLabel(key),
-                                            fontSize = 11.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = EmberTheme.colors.inkMute,
                                             modifier = Modifier.weight(1f),
                                         )
                                         Text(
                                             "$value t",
-                                            fontSize = 11.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = EmberTheme.colors.accent,
                                         )
                                     }
@@ -2121,7 +2120,7 @@ fun ChatScreen(
                         }
                         Text(
                             "Token 合计：${preview.tokens}",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = EmberTheme.colors.accent,
                         )
                         Spacer(Modifier.size(8.dp))
@@ -2137,7 +2136,7 @@ fun ChatScreen(
                     ) {
                         Text(
                             promptPreview?.text ?: "（正在总装…）",
-                            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -2169,13 +2168,13 @@ fun ChatScreen(
                     val anNext = remember(anInterval) { vm.nextAnInsertion(anInterval) }
                     Text(
                         "Tokens: $anTokens · 下次插入：${anNext ?: "禁用"}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                     Text(
                         "注入位置",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -2194,7 +2193,7 @@ fun ChatScreen(
                     )
                     Text(
                         "角色（role）",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -2214,14 +2213,14 @@ fun ChatScreen(
                     if (vm.character != null) {
                         Text(
                             "角色备注（${vm.character?.name}）",
-                            color = EmberTheme.colors.ink, fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.padding(top = 14.dp),
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                         ) {
-                            color = EmberTheme.colors.ink, fontSize = 15.sp,
+                            Text("启用角色备注（useChara）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                             androidx.compose.material3.Switch(
                                 checked = charaNoteUse,
                                 onCheckedChange = { charaNoteUse = it },
@@ -2276,7 +2275,7 @@ fun ChatScreen(
             title = { Text("群聊设置") },
             text = {
                 Column {
-                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                    Text("生成模式", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         FilterChip(
                             selected = groupMode == GroupGenerationMode.APPEND,
@@ -2290,7 +2289,7 @@ fun ChatScreen(
                             label = { Text("轮流（SWAP）") },
                         )
                     }
-                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                    Text("激活策略", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 8.dp))
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         FilterChip(
                             selected = groupStrategy == "natural",
@@ -2306,7 +2305,7 @@ fun ChatScreen(
                     }
                     Text(
                         "APPEND=本轮全员依次回复；SWAP=上一发言人之后轮流。策略切换对下一轮生效。",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(top = 8.dp),
                     )
@@ -2330,7 +2329,7 @@ fun ChatScreen(
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "人设",
-                    color = EmberTheme.colors.ink, fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
@@ -2359,7 +2358,7 @@ fun ChatScreen(
                 if (filteredPersonas.isEmpty()) {
                     Text(
                         "还没有人设。新建后，人设描述会注入提示词（官方 Persona Management 语义）。",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
@@ -2384,13 +2383,13 @@ fun ChatScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 p.name.ifBlank { "（未命名）" },
-                                fontSize = 15.sp,
+                                style = MaterialTheme.typography.titleSmall,
                                 color = if (activePersona?.id == p.id) EmberTheme.colors.accent else EmberTheme.colors.ink,
                             )
                             if (p.description.isNotBlank()) {
                                 Text(
                                     p.description,
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
@@ -2398,10 +2397,10 @@ fun ChatScreen(
                             }
                         }
                         if (activePersona?.id == p.id) {
-                            color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                            Text("当前", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                         }
                         if (defaultPersona?.id == p.id) {
-                            color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                            Text("默认", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                         }
                         IconButton(
                             onClick = { vm.setDefaultPersona(p.id) },
@@ -2527,7 +2526,7 @@ fun ChatScreen(
                     )
                     Text(
                         "注入位置",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -2550,7 +2549,7 @@ fun ChatScreen(
                     }
                     Text(
                         "角色（role）",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -2591,7 +2590,7 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        color = EmberTheme.colors.ink, fontSize = 15.sp,
+                        Text("人设世界书（官方 lorebook，参与扫描）", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         Box {
                             TextButton(onClick = { personaShowLorePicker = true }) {
                                 Text(if (personaDraftLorebook.isBlank()) "未选择" else personaDraftLorebook)
@@ -2622,7 +2621,7 @@ fun ChatScreen(
                     if (vm.character != null || vm.group != null) {
                         Text(
                             "连接（绑定角色/群聊时自动使用）",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             color = EmberTheme.colors.accent,
                             modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                         )
@@ -2736,7 +2735,7 @@ fun ChatScreen(
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "书签",
-                    color = EmberTheme.colors.ink, fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
@@ -2744,7 +2743,7 @@ fun ChatScreen(
                 if (bookmarks.isEmpty()) {
                     Text(
                         "还没有书签。长按消息 → 创建书签，把当前聊天存档下来。",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
@@ -2757,7 +2756,7 @@ fun ChatScreen(
                             bookmarkToOpen = name
                         }.padding(horizontal = 20.dp, vertical = 8.dp),
                     ) {
-                        color = EmberTheme.colors.ink, fontSize = 15.sp,
+                        Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         IconButton(onClick = {
                             vm.deleteBookmark(name)
                         }, modifier = Modifier.size(32.dp)) {
@@ -2775,21 +2774,21 @@ fun ChatScreen(
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "数据银行（向量检索）",
-                    color = EmberTheme.colors.ink, fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
                 Text(
                     "把文本文件放进数据银行，发送消息时会按官方 vectors 扩展分块检索，把相关内容注入提示词（设置→服务→向量 开启）。",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 if (dataBank.isEmpty()) {
                     Text(
                         "还没有文件。点下面“添加文件”选一个 txt / md 文档。",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     )
@@ -2799,7 +2798,7 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                     ) {
-                        color = EmberTheme.colors.ink, fontSize = 15.sp,
+                        Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         TextButton(onClick = { vm.removeDataBankFile(name) }) {
                             Text("删除", color = EmberTheme.colors.danger)
                         }
@@ -2859,14 +2858,14 @@ fun ChatScreen(
                 var showDiff by remember { mutableStateOf(false) }
                 Text(
                     "提示词分节明细（Prompt Itemization）",
-                    color = EmberTheme.colors.ink, fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
                 if (entry == null) {
                     Spacer(Modifier.size(8.dp))
                     Text(
                         "该消息没有分节明细：明细只在生成（发送/继续/变体）时记录，官方 itemized-prompts 同语义。",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = EmberTheme.colors.inkMute,
                     )
                     TextButton(onClick = { tokenStatsIndex = null }) { Text("关闭") }
@@ -2884,12 +2883,12 @@ fun ChatScreen(
                     }
                     Text(
                         "API/模型：${entry.providerName} – ${entry.model}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "预设：${entry.presetName.ifBlank { "默认" }} · 分词器：${entry.tokenizer}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.inkMute,
                     )
                     Spacer(Modifier.size(8.dp))
@@ -2919,13 +2918,13 @@ fun ChatScreen(
                                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
                                     Text(
                                         c.label,
-                                        fontSize = 11.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = c.color,
                                         modifier = Modifier.weight(1f),
                                     )
                                     Text(
                                         "${c.tokens} t（${c.tokens * 100 / catTotal}%）",
-                                        fontSize = 11.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = EmberTheme.colors.ink,
                                     )
                                 }
@@ -2933,13 +2932,13 @@ fun ChatScreen(
                                     Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp)) {
                                         Text(
                                             "-- $sub",
-                                            fontSize = 11.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = EmberTheme.colors.inkMute,
                                             modifier = Modifier.weight(1f),
                                         )
                                         Text(
                                             "$tokens",
-                                            fontSize = 11.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = EmberTheme.colors.inkMute,
                                         )
                                     }
@@ -2952,22 +2951,22 @@ fun ChatScreen(
                     Spacer(Modifier.size(6.dp))
                     Text(
                         "总 Token：${entry.totalTokens}",
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         "Max Context（上下文-回复）：${entry.maxContext - entry.maxTokens}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "Padding：0",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.inkMute,
                     )
                     Text(
                         "Actual Max Context Allowed：${entry.maxContext - entry.maxTokens}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = EmberTheme.colors.accent,
                     )
                     Spacer(Modifier.size(8.dp))
@@ -2975,7 +2974,7 @@ fun ChatScreen(
                     Spacer(Modifier.size(6.dp))
                     Text(
                         "分节消息（identifier / role / tokens，点击展开内容）",
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp)) {
                         itemsIndexed(entry.sections) { _, sec ->
@@ -2989,20 +2988,20 @@ fun ChatScreen(
                                 Row {
                                     Text(
                                         sec.identifier.ifBlank { "（无标识）" },
-                                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.weight(1f),
                                     )
                                     Text(
                                         "${sec.role} · ${sec.tokens}t",
-                                        fontSize = 11.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = EmberTheme.colors.accent,
                                     )
                                 }
                                 if (expanded) {
                                     Text(
                                         sec.content.ifBlank { "（无内容）" },
-                                        fontSize = 12.sp,
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = EmberTheme.colors.inkMute,
                                     )
                                 }
@@ -3012,20 +3011,20 @@ fun ChatScreen(
                     if (showRaw) {
                         HorizontalDivider()
                         Spacer(Modifier.size(6.dp))
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        Text("原文（raw prompt）：", style = MaterialTheme.typography.labelMedium)
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 240.dp)
                                 .verticalScroll(rememberScrollState()),
                         ) {
-                            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                            Text(entry.rawPrompt, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     if (showDiff && prev != null) {
                         HorizontalDivider()
                         Spacer(Modifier.size(6.dp))
-                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                        Text("与上一条（${prev.messageIndex}）的差异：", style = MaterialTheme.typography.labelMedium)
                         val wordDiff = wordDiffAnnotated(prev.rawPrompt, entry.rawPrompt)
                         Column(
                             modifier = Modifier
@@ -3034,7 +3033,7 @@ fun ChatScreen(
                                 .verticalScroll(rememberScrollState()),
                         ) {
                             if (wordDiff != null) {
-                                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                                Text(wordDiff, style = MaterialTheme.typography.bodySmall)
                             } else {
                                 simpleLineDiff(prev.rawPrompt, entry.rawPrompt).forEach { (tag, line) ->
                                     Text(
@@ -3044,7 +3043,7 @@ fun ChatScreen(
                                             '-' -> Color(0xFFE57373)
                                             else -> EmberTheme.colors.inkMute
                                         },
-                                        color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                                        style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
                             }
@@ -3070,7 +3069,7 @@ fun ChatScreen(
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         "回复变体（${currentSwipe + 1}/${variants.size}）",
-                        color = EmberTheme.colors.ink, fontSize = 17.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
@@ -3087,19 +3086,19 @@ fun ChatScreen(
                         ) {
                             Text(
                                 "${i + 1}.",
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = if (current) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                             )
                             Spacer(Modifier.widthIn(min = 8.dp))
                             Text(
                                 text,
-                                color = EmberTheme.colors.ink, fontSize = 15.sp,
+                                style = MaterialTheme.typography.bodyLarge,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
                             if (current) {
-                                color = EmberTheme.colors.ink, fontSize = 17.sp,
+                                Text("✓", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.accent)
                             }
                         }
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -3291,7 +3290,7 @@ private fun ChatTopBar(
             Spacer(Modifier.size(8.dp))
             Text(
                 text = name,
-                color = EmberTheme.colors.ink, fontSize = 15.sp,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = E.ink,
                 maxLines = 1,
@@ -3350,7 +3349,7 @@ private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: I
             } else {
                 Text(
                     text = name.take(1),
-                    color = EmberTheme.colors.ink, fontSize = 15.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = accent,
                 )
@@ -3402,14 +3401,14 @@ private fun ContextCapsule(
             Spacer(Modifier.size(6.dp))
             Text(
                 "${(ratio * 100).toInt()}%",
-                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = grade,
             )
             Spacer(Modifier.size(5.dp))
             Text(
                 "上下文 ${formatTokens(used)}/${formatTokens(max)}",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = EmberTheme.colors.inkMute,
             )
         }
@@ -3436,7 +3435,7 @@ private fun ContextCapsule(
             Spacer(Modifier.size(4.dp))
             Text(
                 if (worldHits > 0) "×$worldHits" else "—",
-                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (worldHits > 0) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (worldHits > 0) EmberTheme.colors.accent else EmberTheme.colors.line,
             )
@@ -3475,11 +3474,11 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
         Column(
             modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp).fillMaxWidth(),
         ) {
-            color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+            Text("角色详情", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
             fields.forEach { (label, value) ->
                 Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
-                    color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
+                    Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 8, overflow = TextOverflow.Ellipsis)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             }
@@ -3517,7 +3516,7 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
             Spacer(Modifier.size(6.dp))
             Text(
                 text = media.title.ifBlank { if (media.type == "image") "图片" else if (media.type == "video") "视频" else "音频" },
-                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
@@ -3672,7 +3671,7 @@ private fun MessageActionIcon(
 private fun MenuSectionLabel(title: String) {
     Text(
         title,
-        fontSize = 12.sp,
+        style = MaterialTheme.typography.labelMedium,
         color = EmberTheme.colors.accent,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
     )
@@ -3710,7 +3709,7 @@ private fun PastChatRow(
             Spacer(Modifier.size(8.dp))
             Text(
                 entry.record.name,
-                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (entry.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (entry.isCurrent) EmberTheme.colors.accent else EmberTheme.colors.ink,
                 maxLines = 1,
@@ -3718,7 +3717,7 @@ private fun PastChatRow(
                 modifier = Modifier.weight(1f),
             )
             if (entry.isCurrent) {
-                color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                Text("当前", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
                 Spacer(Modifier.size(8.dp))
             }
             // 行内操作（官方 past_chat_template 右侧按钮组）
@@ -3738,7 +3737,7 @@ private fun PastChatRow(
         entry.preview?.let { preview ->
             Text(
                 preview,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -3747,7 +3746,7 @@ private fun PastChatRow(
         Row {
             Text(
                 "${entry.messageCount} 💬  $dateText",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = EmberTheme.colors.inkMute,
             )
         }
@@ -3805,7 +3804,7 @@ private fun ChatComposerOverlays(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp),
                     ) {
-                        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+                        Text("显示：", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
                         Spacer(Modifier.width(8.dp))
                         FilterChip(
                             selected = pendingDisplay != "gallery",
@@ -3874,19 +3873,19 @@ private fun ChatComposerOverlays(
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(accent.copy(alpha = 0.16f)),
                                 ) {
-                                    color = EmberTheme.colors.inkMute, fontSize = 12.sp, fontWeight = FontWeight.FontWeight,
+                                    Text("/", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 }
                                 Spacer(Modifier.size(10.dp))
                                 Text(
                                     nameAnnotated,
-                                    color = EmberTheme.colors.ink, fontSize = 14.sp,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = EmberTheme.colors.ink,
                                 )
                                 Spacer(Modifier.size(10.dp))
                                 Text(
                                     desc,
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = EmberTheme.colors.inkMute,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -3935,7 +3934,7 @@ private fun QuickReplyChip(label: String, onClick: () -> Unit, modifier: Modifie
             Spacer(Modifier.width(5.dp))
             Text(
                 label,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelMedium,
                 color = EmberTheme.colors.inkMute,
                 maxLines = 1,
             )
@@ -3979,13 +3978,13 @@ private fun AttachSheetRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 title,
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 color = if (enabled) EmberTheme.colors.ink else EmberTheme.colors.inkMute,
             )
             if (subtitle.isNotBlank()) {
                 Text(
                     subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = EmberTheme.colors.inkMute,
                 )
             }
@@ -4016,7 +4015,7 @@ private fun WorldHitLight(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
         Spacer(Modifier.size(4.dp))
-        color = EmberTheme.colors.inkMute, fontSize = 11.sp,
+        Text(label, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
     }
 }
 
@@ -4369,10 +4368,10 @@ private fun CfgScaleSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
         ) {
-            color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+            Text("CFG Scale（引导缩放）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 "强度 >1 时生效：负向提示不进消息，正向提示按深度注入；openai 不发送 guidance。",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -4399,7 +4398,7 @@ private fun CfgScaleSheet(
             ShellInput(value = globalPos, onValueChange = { globalPos = it }, label = "正向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
-            color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+            Text("合并来源（cfg_prompt_combine）", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -4415,17 +4414,17 @@ private fun CfgScaleSheet(
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                Text("插入深度", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 ShellInput(value = depth, onValueChange = { depth = it.filter { c -> c.isDigit() } }, label = "0=追加末条", singleLine = true, modifier = Modifier.width(150.dp))
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                Text("分隔符（JSON 字符串）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 EmberTextField(value = separator, onValueChange = { separator = it }, label = { Text("例：\"\\n\"") }, singleLine = true, modifier = Modifier.width(150.dp))
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                Text("群聊使用角色 CFG", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 EmberSwitch(checked = groupCharOverride, onChange = { groupCharOverride = it })
             }
             Spacer(Modifier.height(16.dp))
@@ -4459,17 +4458,17 @@ private fun CfgScaleSheet(
 
 @Composable
 private fun CfgSectionTitle(title: String) {
-    color = EmberTheme.colors.ink, fontSize = 15.sp,
+    Text(title, style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
     Spacer(Modifier.height(6.dp))
 }
 
 @Composable
 private fun CfgScaleRow(label: String, value: Float, range: kotlin.ranges.ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        color = EmberTheme.colors.ink, fontSize = 14.sp,
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text(
             "%.2f".format(value),
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(48.dp),
         )
@@ -4494,10 +4493,10 @@ private fun LogprobsSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
         ) {
-            color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+            Text("Token 概率（logprobs）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 "点击 token 查看备选；数据来自本条 AI 回复的流式响应（内存保留最近一条）。",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -4505,11 +4504,11 @@ private fun LogprobsSheet(
             if (logprobs.isNullOrEmpty()) {
                 Text(
                     "没有数据：需在 提供商与模型 → 请求 token 概率 开启后重新生成。",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = EmberTheme.colors.inkMute,
                 )
             } else {
-                color = EmberTheme.colors.inkMute, fontSize = 12.sp,
+                Text("${logprobs.size} 个 token", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -4527,7 +4526,7 @@ private fun LogprobsSheet(
                         ) {
                             Text(
                                 lp.token.ifBlank { "␣" },
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = if (sel) EmberTheme.colors.ink
                                 else EmberTheme.colors.inkMute,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
@@ -4540,7 +4539,7 @@ private fun LogprobsSheet(
                     val lp = logprobs[idx]
                     Text(
                         "备选（${lp.token.ifBlank { "␣" }}）",
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.titleSmall,
                         color = EmberTheme.colors.accent,
                     )
                     Spacer(Modifier.height(6.dp))
@@ -4551,12 +4550,12 @@ private fun LogprobsSheet(
                         ) {
                             Text(
                                 tok.ifBlank { "␣" },
-                                color = EmberTheme.colors.ink, fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
                                 "%.2f".format(prob),
-                                fontSize = 11.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.width(56.dp),
                             )

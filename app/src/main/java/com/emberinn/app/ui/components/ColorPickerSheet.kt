@@ -45,7 +45,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
@@ -145,10 +144,10 @@ fun ColorPickerDialog(
                 )
                 Spacer(Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    color = EmberTheme.colors.ink, fontSize = 17.sp, fontWeight = FontWeight.FontWeight,
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         current.toHex(),
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = EmberTheme.colors.inkMute,
                         fontFamily = FontFamily.Monospace,
                     )
@@ -306,7 +305,7 @@ private fun ChannelRow(label: String, r: Float, g: Float, b: Float, onChange: (F
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Text(
             label,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(22.dp),
         )
@@ -328,7 +327,7 @@ private fun ChannelRow(label: String, r: Float, g: Float, b: Float, onChange: (F
         )
         Text(
             ((if (label == "R") r else if (label == "G") g else b) * 255).toInt().toString(),
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = EmberTheme.colors.inkMute,
             modifier = Modifier.width(34.dp),
             textAlign = TextAlign.End,
