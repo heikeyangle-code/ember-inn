@@ -973,7 +973,11 @@ fun ChatScreen(
                     if (!isStreaming && (text.isNotEmpty() || pendingMedia.isNotEmpty())) {
                         followBottom = true
                         haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                        val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
+                        val accepted = if (!providerConfigured) {
+                            Toast.makeText(context, "还没配置模型", Toast.LENGTH_SHORT).show()
+                            onOpenSettings()
+                            false
+                        } else vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
                         if (accepted) {
                             input = ""
                             pendingDisplay = null
@@ -1076,7 +1080,6 @@ fun ChatScreen(
         }
     }
 
-    var modelBannerDismissed by remember { mutableStateOf(false) }
     val sky = rememberSky()
     val density = LocalDensity.current
     // 整页壳 C2：行级外观偏好退役；布局/气泡/密度由官方主题 CSS 接管。
@@ -1131,12 +1134,7 @@ fun ChatScreen(
                 .imePadding()
                 .padding(top = maxOf(topBarPad, 64.dp)),
         ) {
-            if (!providerConfigured && !modelBannerDismissed) {
-                UnconfiguredBanner(
-                    onOpenSettings = onOpenSettings,
-                    onDismiss = { modelBannerDismissed = true },
-                )
-            }
+
 
             // 整页壳 C2/C3：官方 #sheld/#chat/#form_sheld 全量接管消息区 + 输入区；
             // 原生侧只保留悬浮附件行（上下文胶囊/待发媒体/快捷回复/斜杠补全）。
@@ -3252,30 +3250,6 @@ private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: I
                     color = accent,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun UnconfiguredBanner(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    val c = com.emberinn.app.ui.design.EmberTheme.colors
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = c.accentBg,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("还没配置模型", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = c.ink)
-                Text("点此选择模型后开始对话", style = MaterialTheme.typography.bodySmall, color = c.inkSoft)
-            }
-            TextButton(onClick = onOpenSettings) { Text("去配置", color = c.accent) }
-            TextButton(onClick = onDismiss) { Text("知道了", color = c.inkSoft) }
         }
     }
 }
