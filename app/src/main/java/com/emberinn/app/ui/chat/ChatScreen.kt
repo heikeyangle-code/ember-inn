@@ -181,6 +181,27 @@ private sealed interface ChatItem {
     data object ReasoningOnly : ChatItem
 }
 
+private const val SYSTEM_USER_NAME = "SillyTavern System"
+
+/** 内核站内源 origin（appassets.androidplatform.net，与 KernelProtocol.KERNEL_URL 同域） */
+private const val KERNEL_ORIGIN = "https://appassets.androidplatform.net"
+
+/**
+ * 内核页头像 URL：仅当路径位于已暴露的站内根时可解析——
+ * 角色 avatars → /avatars/<file>；persona-avatars → /pavatars/<file>。
+ * 其余路径返回 null，内核模板按官方缺省头像渲染。
+ */
+internal fun kernelAvatarUrlOf(path: String?): String? {
+    val f = path?.let { File(it) } ?: return null
+    val prefix = when (f.parentFile?.name) {
+        "avatars" -> "/avatars/"
+        "persona-avatars" -> "/pavatars/"
+        "media" -> com.emberinn.app.renderer.KernelWebViewFactory.MEDIA_PREFIX
+        else -> return null
+    }
+    return "$KERNEL_ORIGIN$prefix${f.name}"
+}
+
 @Composable
 fun ChatScreen(
     sessionId: String,
