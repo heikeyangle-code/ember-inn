@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellChip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.EmberTheme
 
 /**
@@ -56,22 +57,15 @@ fun TavernHelperScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item {
-                    Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = EmberTheme.colors.surface2,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("这是什么", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                            Text("这是什么", color = EmberTheme.colors.accent, fontSize = 13.sp)
                             Text(
                                 "兼容酒馆助手(JS-Slash-Runner)生态：消息里的 js/ts 代码块在" +
                                     "同源沙箱 iframe 中运行，可直接调用 getVariables / triggerSlash / " +
                                     "getChatMessages / eventOn 等酒馆助手同名 API。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkSoft,
+                                color = EmberTheme.colors.inkMute,
+                                fontSize = 12.sp,
                             )
-                        }
-                    }
                 }
                 item {
                     GroupLabel("脚本执行")
@@ -124,14 +118,10 @@ fun TavernHelperScreen(onBack: () -> Unit) {
                             "最近 5 层" to 5,
                             "最近 10 层" to 10,
                         ).forEach { (label, value) ->
-                            FilterChip(
-                                selected = cfg.depth == value,
-                                onClick = {
-                                    TavernHelperPrefs.setDepth(context, value)
-                                    commit()
-                                },
-                                label = { Text(label) },
-                            )
+                            ShellChip(label, selected = cfg.depth == value) {
+                                TavernHelperPrefs.setDepth(context, value)
+                                commit()
+                            }
                         }
                     }
                 }
@@ -149,14 +139,10 @@ fun TavernHelperScreen(onBack: () -> Unit) {
                             "仅脚本折叠" to TavernHelperPrefs.COLLAPSE_FRONTEND_ONLY,
                             "全部折叠" to TavernHelperPrefs.COLLAPSE_ALL,
                         ).forEach { (label, value) ->
-                            FilterChip(
-                                selected = cfg.collapseCodeBlock == value,
-                                onClick = {
-                                    TavernHelperPrefs.setCollapseCodeBlock(context, value)
-                                    commit()
-                                },
-                                label = { Text(label) },
-                            )
+                            ShellChip(label, selected = cfg.collapseCodeBlock == value) {
+                                TavernHelperPrefs.setCollapseCodeBlock(context, value)
+                                commit()
+                            }
                         }
                     }
                 }
