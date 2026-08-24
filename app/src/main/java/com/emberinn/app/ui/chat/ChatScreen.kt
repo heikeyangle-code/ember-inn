@@ -1328,27 +1328,8 @@ fun ChatScreen(
             // 原生底部不再有任何常驻栏——列里只剩整页壳 + 悬浮附件行。
         }
 
-        // 沉浸顶栏（V2 §5.2 聊天页）：贴底阅读时完整显示；向上翻历史淡出，留渐变遮罩保顶部消息可读
-        val topBarSolid by remember { derivedStateOf { followBottom } }
-        val topBarAlpha by animateFloatAsState(
-            targetValue = if (topBarSolid) 1f else 0f,
-            animationSpec = tween(180),
-            label = "chatTopBarAlpha",
-        )
-        if (topBarAlpha < 1f) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(maxOf(topBarPad, 64.dp) + 20.dp)
-                    .graphicsLayer { alpha = 1f - topBarAlpha }
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(EmberTheme.colors.bg.copy(alpha = 0.88f), Color.Transparent),
-                        ),
-                    ),
-            )
-        }
+        // 沉浸顶栏（2026-08-25 用户定稿）：常驻不消失（原 followBottom 驱动的淡出会整条蒸发）、
+        // 无底线、底部渐隐融入内容——不再是方块条
         ChatTopBar(
             name = currentName,
             avatarPath = vm.avatarPath,
@@ -1360,7 +1341,6 @@ fun ChatScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .graphicsLayer { alpha = topBarAlpha }
                 .onSizeChanged { topBarHeight = it.height }
                 .emberGlass(sky = sky, atTop = false, blurEnabled = glassBlurActive),
         )
@@ -3240,23 +3220,19 @@ private fun ChatTopBar(
     onAuthorsNote: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // 悬浮薄玻璃条（2026-08-25 重做）：不再实铺 Surface——主题 bg 一深就成黑盖板；
-    // 近透明主题底(0.38)+模糊(调用点 emberGlass)+极细底线，高度砍半，chrome 退后
+    // 悬浮薄玻璃条（2026-08-25 用户定稿）：无底线、底部渐隐融入内容、常驻不消失；
+    // 底色只取主题令牌低透明度，杜绝实底盖板
     val E = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .background(E.bg.copy(alpha = 0.38f))
-            .drawBehind {
-                drawLine(
-                    color = E.line.copy(alpha = 0.6f),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width, size.height),
-                    strokeWidth = 0.5.dp.toPx(),
-                )
-            }
-            .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
+            .background(
+                Brush.verticalGradient(
+                    listOf(E.bg.copy(alpha = 0.55f), E.bg.copy(alpha = 0.0f)),
+                ),
+            )
+            .padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 10.dp)
             .heightIn(min = 44.dp),
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
