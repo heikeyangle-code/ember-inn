@@ -1,14 +1,11 @@
 package com.emberinn.app.ui.settings
 
-import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,13 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.SettingsSnapshotStore
 import java.io.File
@@ -47,6 +41,7 @@ import java.util.zip.ZipOutputStream
 /** 数据与隐私：备份（导出 zip）/ 数据位置 / 清除全部（二次确认）。README：数据透明 + 可撤销有确认。 */
 @Composable
 fun DataPrivacyScreen(onBack: () -> Unit) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
 
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -85,8 +80,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
         SettingsTopBar(title = "数据与隐私", onBack = onBack, sky = settingsSky)
 
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
         ) {
             DataRow(
                 icon = FaIcons.FileLines,
@@ -122,31 +116,38 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                 },
             )
             snapshots.forEach { name ->
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = EmberTheme.colors.surface2,
-                    modifier = Modifier.fillMaxWidth(),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, vertical = 7.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
-                        }
-                        TextButton(onClick = { confirmRestoreName = name }) { Text("恢复") }
-                        IconButton(onClick = {
-                            SettingsSnapshotStore.delete(context, name)
-                            snapshots = SettingsSnapshotStore.list(context)
-                            Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除快照", tint = EmberTheme.colors.danger)
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(name, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text("设置快照", color = c.inkMute, fontSize = 12.sp)
                     }
+                    Text(
+                        "恢复",
+                        color = c.accent,
+                        fontSize = 13.sp,
+                        modifier = Modifier.clickable { confirmRestoreName = name }.padding(6.dp),
+                    )
+                    Icon(
+                        FaIcons.TrashCan,
+                        contentDescription = "删除快照",
+                        tint = c.danger,
+                        modifier = Modifier
+                            .size(17.dp)
+                            .clickable {
+                                SettingsSnapshotStore.delete(context, name)
+                                snapshots = SettingsSnapshotStore.list(context)
+                                Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(2.dp),
+                    )
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(120.dp))
         }
     }
 
@@ -238,40 +239,21 @@ private fun DataRow(
     trailing: String? = null,
     onClick: () -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = EmberTheme.colors.surface2,
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 11.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (danger) EmberTheme.colors.danger else EmberTheme.colors.accent,
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (danger) EmberTheme.colors.danger else EmberTheme.colors.ink,
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkMute,
-                )
-            }
-            trailing?.let {
-                Spacer(Modifier.width(8.dp))
-                Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = if (danger) c.danger else c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(subtitle, color = c.inkMute, fontSize = 12.sp)
+        }
+        trailing?.let {
+            Spacer(Modifier.width(8.dp))
+            Text(it, color = if (enabled) c.accent else c.inkMute, fontSize = 13.sp)
         }
     }
 }
