@@ -394,6 +394,37 @@ fun EmberSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
+/** 自绘选择粒：选中=操作面实底+墨字，未选=发丝缘+弱墨。无 M3 FilterChip 味。 */
+@Composable
+fun ShellChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val c = EmberTheme.colors
+    val shape = RoundedCornerShape(999.dp)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .then(if (selected) Modifier.background(c.surface2) else Modifier.border(1.dp, c.line, shape))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 7.dp),
+    ) {
+        Text(label, color = if (selected) c.ink else c.inkMute, fontSize = 12.sp)
+    }
+}
+
+/** 小型操作钮：操作面实底圆角粒（新建/导入/新增类）。 */
+@Composable
+fun ShellActionButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = EmberTheme.colors
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(c.surface2)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+    ) {
+        Text(label, color = c.ink, fontSize = 13.sp)
+    }
+}
+
 /** 导航栈条目（FloatHub 内部用）。 */
 data class HubItem(val label: String, val icon: ImageVector)
 

@@ -1,33 +1,25 @@
 package com.emberinn.app.ui.settings
 
 
-import androidx.compose.foundation.clickable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.data.WorldStore
-import com.emberinn.app.data.WorldEntryDraft
-import com.emberinn.app.ui.home.WorldEntryEditorSheet
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TextButton
-import com.emberinn.app.ui.icons.FaIcons
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,14 +28,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.emberinn.app.data.WorldStore
+import com.emberinn.app.data.WorldEntryDraft
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmberSwitch
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellChip
+import com.emberinn.app.ui.design.components.ShellInput
+import com.emberinn.app.ui.home.WorldEntryEditorSheet
+import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.engine.worldinfo.WorldInfoSettings
 
 /** 世界书扫描设置（对齐官方 World Info 面板；App 聊天扫描用同一份配置）。 */
 @Composable
 fun WorldInfoScreen(onBack: () -> Unit) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     var settings by remember { mutableStateOf(WorldInfoPrefs.read(context)) }
     var includeNames by remember { mutableStateOf(WorldInfoPrefs.includeNames(context)) }
@@ -89,14 +93,14 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
-            Text("扫描设置", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            GroupLabel("扫描设置")
             Text(
                 "字段对齐官方 World Info 面板；作用于角色卡内嵌世界书的聊天扫描。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
+                color = c.inkMute,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             )
             NumberRow("深度（depth）", settings.depth.toString()) { v ->
                 settings = settings.copy(depth = v.toIntOrNull() ?: 2); save()
@@ -123,135 +127,150 @@ fun WorldInfoScreen(onBack: () -> Unit) {
             ToggleRow("扫描带名字（include_names）", includeNames) { includeNames = it; WorldInfoPrefs.saveIncludeNames(context, it) }
             ToggleRow("预算溢出提示（overflow_alert）", overflowAlert) { overflowAlert = it; WorldInfoPrefs.saveOverflowAlert(context, it) }
             Text(
-                "高级：分组评分、时间效果、角色过滤等字段由角色卡条目自身控制。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp),
+                "高级：分组评分、时间效果、角色过滤等字段由角色卡条目自身控制。改动立即保存，下次发送消息生效。",
+                color = c.inkMute,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp, top = 10.dp),
             )
+            GroupLabel("外置世界（worlds/*.json）")
             Text(
-                "改动立即保存，下次发送消息生效。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(top = 4.dp),
+                "官方双轨：内嵌卡书（角色详情页）+ 外置世界文件。角色卡用 data.extensions.world 关联（详情页），聊天 metadata.world_info 指定，下方勾选「全局」的世界始终生效。",
+                color = c.inkMute,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
             )
-            Text("外置世界（worlds/*.json）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-            Text(
-                "官方双轨：内嵌卡书（角色详情页）+ 外置世界文件。角色卡用 data.extensions.world 关联（详情页），聊天 metadata.world_info 指定，下方“全局”勾选的世界始终生效。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                EmberTextField(
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                ShellInput(
                     value = newWorldName,
                     onValueChange = { newWorldName = it },
-                    label = { Text("新建世界名") },
-                    singleLine = true,
+                    label = "新建世界名",
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = {
+                ShellActionButton("新建") {
                     val name = newWorldName.trim()
                     if (name.isNotEmpty()) {
                         worldStore.create(name)
                         worlds = worldStore.list()
                         newWorldName = ""
                     }
-                }) { Text("新建") }
+                }
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { importLauncher.launch("application/json") }) { Text("导入") }
+                ShellActionButton("导入") { importLauncher.launch("application/json") }
             }
             val currentEditing = editingWorld
             if (currentEditing != null) {
                 val w = worlds.firstOrNull { it.name == currentEditing }
                 if (w != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                        TextButton(onClick = { editingWorld = null; editingEntryIdx = null; addingEntry = false }) { Text("← 返回世界列表") }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                        Text(
+                            "← 返回世界列表",
+                            color = c.accent,
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .clickable { editingWorld = null; editingEntryIdx = null; addingEntry = false }
+                                .padding(4.dp),
+                        )
                         Spacer(Modifier.weight(1f))
-                        Text("${w.displayName}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("${w.displayName}", color = c.ink, fontSize = 14.sp)
                     }
                     if (editingDrafts.isEmpty()) {
                         Text(
                             "没有条目。点下方新增，字段与内嵌世界书编辑器完全一致（官方全字段）。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
+                            color = c.inkMute,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 6.dp),
                         )
                     }
                     editingDrafts.forEachIndexed { i, e ->
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
                             Text(
                                 e.keys.ifBlank { "（无触发词）" },
-                                style = MaterialTheme.typography.bodyMedium,
+                                color = c.ink,
+                                fontSize = 14.sp,
                                 modifier = Modifier.weight(1f).clickable { editingEntryIdx = i },
                             )
-                            IconButton(onClick = { editingEntryIdx = i }) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑条目")
-                            }
-                            IconButton(onClick = {
-                                editingDrafts = editingDrafts.filterIndexed { j, _ -> j != i }
-                                worldStore.saveDrafts(currentEditing, w.displayName, editingDrafts)
-                                worlds = worldStore.list()
-                            }) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除条目", tint = MaterialTheme.colorScheme.error)
-                            }
+                            Icon(
+                                FaIcons.Pencil,
+                                contentDescription = "编辑条目",
+                                tint = c.inkMute,
+                                modifier = Modifier.size(17.dp).clickable { editingEntryIdx = i }.padding(2.dp),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Icon(
+                                FaIcons.TrashCan,
+                                contentDescription = "删除条目",
+                                tint = c.danger,
+                                modifier = Modifier
+                                    .size(17.dp)
+                                    .clickable {
+                                        editingDrafts = editingDrafts.filterIndexed { j, _ -> j != i }
+                                        worldStore.saveDrafts(currentEditing, w.displayName, editingDrafts)
+                                        worlds = worldStore.list()
+                                    }
+                                    .padding(2.dp),
+                            )
                         }
                     }
-                    Button(onClick = { addingEntry = true }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        Text("＋ 新增条目（官方全字段）")
-                    }
+                    ShellActionButton("＋ 新增条目（官方全字段）", modifier = Modifier.padding(top = 8.dp)) { addingEntry = true }
                 }
             } else {
                 worlds.forEach { w ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        FilterChip(
-                            selected = w.name in globalSelect,
-                            onClick = {
-                                globalSelect = if (w.name in globalSelect) globalSelect - w.name else globalSelect + w.name
-                                WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
-                            },
-                            label = { Text("全局") },
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("${w.displayName}（${w.entryCount} 条）", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        IconButton(onClick = {
-                            editingWorld = w.name
-                            editingDrafts = worldStore.drafts(w.name)
-                        }) {
-                            Icon(FaIcons.Pencil, contentDescription = "编辑世界条目")
-                        }
-                        IconButton(onClick = {
-                            exportTarget = w.name
-                            exportLauncher.launch("${w.name}.json")
-                        }) {
-                            Icon(FaIcons.FileLines, contentDescription = "导出世界")
-                        }
-                        IconButton(onClick = {
-                            worldStore.delete(w.name)
-                            worlds = worldStore.list()
-                            globalSelect = globalSelect - w.name
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        ShellChip("全局", selected = w.name in globalSelect) {
+                            globalSelect = if (w.name in globalSelect) globalSelect - w.name else globalSelect + w.name
                             WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
-                        }) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除世界", tint = MaterialTheme.colorScheme.error)
                         }
+                        Spacer(Modifier.width(9.dp))
+                        Text("${w.displayName}（${w.entryCount} 条）", color = c.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Icon(
+                            FaIcons.Pencil, contentDescription = "编辑世界条目", tint = c.inkMute,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable {
+                                    editingWorld = w.name
+                                    editingDrafts = worldStore.drafts(w.name)
+                                }
+                                .padding(2.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Icon(
+                            FaIcons.FileLines, contentDescription = "导出世界", tint = c.inkMute,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable {
+                                    exportTarget = w.name
+                                    exportLauncher.launch("${w.name}.json")
+                                }
+                                .padding(2.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Icon(
+                            FaIcons.TrashCan, contentDescription = "删除世界", tint = c.danger,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable {
+                                    worldStore.delete(w.name)
+                                    worlds = worldStore.list()
+                                    globalSelect = globalSelect - w.name
+                                    WorldInfoPrefs.saveGlobalSelect(context, globalSelect.toList())
+                                }
+                                .padding(2.dp),
+                        )
                     }
                 }
             }
-            Text("插入策略", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            GroupLabel("插入策略")
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
                 listOf("角色优先(1)" to 1, "全局优先(2)" to 2, "均匀(0)" to 0).forEach { (label, v) ->
-                    FilterChip(
-                        selected = strategy == v,
-                        onClick = {
-                            strategy = v
-                            WorldInfoPrefs.saveInsertionStrategy(context, v)
-                        },
-                        label = { Text(label) },
-                        modifier = Modifier.padding(end = 6.dp),
-                    )
+                    ShellChip(label, selected = strategy == v) {
+                        strategy = v
+                        WorldInfoPrefs.saveInsertionStrategy(context, v)
+                    }
+                    Spacer(Modifier.width(7.dp))
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(120.dp))
         }
     }
     }
@@ -307,23 +326,23 @@ fun WorldInfoScreen(onBack: () -> Unit) {
 
 @Composable
 private fun NumberRow(label: String, value: String, onChange: (String) -> Unit) {
-    EmberTextField(
+    ShellInput(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
+        label = label,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val c = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        EmberSwitch(checked = checked, onCheckedChange = onChange)
+        Text(label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        EmberSwitch(checked = checked, onChange = onChange)
     }
 }
