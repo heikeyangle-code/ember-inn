@@ -310,12 +310,12 @@ private fun PreferenceGroup(content: @Composable androidx.compose.foundation.lay
 }
 
 @Composable
-private fun GroupLabel(text: String) {
+internal fun GroupLabel(text: String) {
     InkText(text, tier = InkTier.Soft, sizeSp = 13f, fontWeight = FontWeight.Medium)
 }
 
 @Composable
-private fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+internal fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

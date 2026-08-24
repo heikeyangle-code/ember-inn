@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.ui.design.EmberTheme
 
 /**
  * 酒馆助手（TH 兼容层）独立页——用户拍板：调整项不进现有外观/渲染页。
@@ -56,17 +57,17 @@ fun TavernHelperScreen(onBack: () -> Unit) {
                 item {
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surface2,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("这是什么", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("这是什么", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                             Text(
                                 "兼容酒馆助手(JS-Slash-Runner)生态：消息里的 js/ts 代码块在" +
                                     "同源沙箱 iframe 中运行，可直接调用 getVariables / triggerSlash / " +
                                     "getChatMessages / eventOn 等酒馆助手同名 API。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkSoft,
                             )
                         }
                     }

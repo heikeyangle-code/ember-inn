@@ -83,14 +83,12 @@ object TavernHelperPrefs {
         current = save(context) { it.putBoolean("script_enabled", enabled) }
     }
 
-    companion object {
-        /** TH collapse_code_block 三枚举（src/type/settings.ts） */
-        const val COLLAPSE_NONE = "none"
-        const val COLLAPSE_FRONTEND_ONLY = "frontend_only"
-        const val COLLAPSE_ALL = "all"
-        val COLLAPSE_OPTIONS = listOf(COLLAPSE_NONE, COLLAPSE_FRONTEND_ONLY, COLLAPSE_ALL)
+    /** TH collapse_code_block 三枚举（src/type/settings.ts） */
+    const val COLLAPSE_NONE = "none"
+    const val COLLAPSE_FRONTEND_ONLY = "frontend_only"
+    const val COLLAPSE_ALL = "all"
+    val COLLAPSE_OPTIONS = listOf(COLLAPSE_NONE, COLLAPSE_FRONTEND_ONLY, COLLAPSE_ALL)
 
-        /** 配置变更版本流：聊天页据此向内核页重发 tavern_helper_config */
-        val revision = MutableStateFlow(0)
-    }
+    /** 配置变更版本流：聊天页据此向内核页重发 tavern_helper_config */
+    val revision = MutableStateFlow(0)
 }
