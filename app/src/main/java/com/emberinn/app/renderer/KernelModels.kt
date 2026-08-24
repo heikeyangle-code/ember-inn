@@ -138,6 +138,8 @@ data class KernelEvent(
     val value: String? = null,
     // ---- chatScroll（整页壳 C1）：#chat 滚动容器贴底状态，驱动跳底浮标显隐 ----
     val atBottom: Boolean? = null,
+    // ---- inputChanged（C3）：#send_textarea 输入镜像（宿主持有草稿真值）----
+    val text: String? = null,
 )
 
 @Serializable
@@ -157,6 +159,9 @@ object KernelEventType {
     const val SHIM_REQUEST = "shimRequest"
     const val HOST_REQUEST = "hostRequest"
     const val CHAT_SCROLL = "chatScroll"
+    /** C3 官方输入区：#send_textarea 内容镜像 / #form_sheld 高度回报（驱动原生悬浮附件行） */
+    const val INPUT_CHANGED = "inputChanged"
+    const val INPUT_HEIGHT = "inputHeight"
 }
 
 /**
@@ -174,4 +179,14 @@ object KernelHostAction {
     const val SAVE_MEDIA = "saveMedia"
     const val SAVE_DATA_URL = "saveDataUrl"
     const val VIBRATE = "vibrate"
+
+    // ---- C3 官方输入区（#form_sheld）控件 → 宿主动作（官方 script.js 点击语义的桥接版）----
+    const val CHAT_SEND = "chat_send"                 // #send_but → sendTextareaMessage
+    const val CHAT_INTERRUPT = "chat_interrupt"       // #mes_stop → 中断生成
+    const val CHAT_OPTIONS = "chat_options"           // #options_button → 会话菜单
+    const val CHAT_ATTACH = "chat_attach"             // #attach_button（Ember 附件入口，leftSendForm 同款样式）
+    const val CHAT_IMPERSONATE = "chat_impersonate"   // #mes_impersonate
+    const val CHAT_CONTINUE = "chat_continue"         // #mes_continue
+    const val CHAT_DELETE_CONFIRM = "chat_delete_confirm" // #dialogue_del_mes_ok
+    const val CHAT_DELETE_CANCEL = "chat_delete_cancel"   // #dialogue_del_mes_cancel
 }

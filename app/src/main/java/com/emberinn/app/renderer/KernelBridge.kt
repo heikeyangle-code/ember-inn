@@ -25,6 +25,10 @@ class KernelBridge(
         fun onHostAction(action: String, value: String) {}
         /** #chat 滚动贴底状态（整页壳 C1/C2）：true=在底部（跳底浮标隐藏） */
         fun onChatScroll(atBottom: Boolean) {}
+        /** C3 官方输入区：#send_textarea 内容变化镜像（草稿真值在宿主） */
+        fun onInputChanged(text: String) {}
+        /** C3 官方输入区：#form_sheld 高度回报（CSS px ≈ Compose dp，驱动悬浮附件行内边距） */
+        fun onInputHeight(heightPx: Float) {}
     }
 
     @JavascriptInterface
@@ -53,6 +57,10 @@ class KernelBridge(
                 event.hostAction?.let { action -> callbacks.onHostAction(action, event.value ?: "") }
             KernelEventType.CHAT_SCROLL ->
                 event.atBottom?.let { callbacks.onChatScroll(it) }
+            KernelEventType.INPUT_CHANGED ->
+                callbacks.onInputChanged(event.text ?: "")
+            KernelEventType.INPUT_HEIGHT ->
+                callbacks.onInputHeight(event.height ?: 0f)
         }
     }
 }

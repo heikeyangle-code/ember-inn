@@ -31,6 +31,8 @@ object KernelWebViewFactory {
     const val PERSONA_AVATARS_PREFIX = "/pavatars/"
     /** 消息附件站内源：filesDir/media → /media/（整页壳官方 <img>/<video>/<audio> 直引） */
     const val MEDIA_PREFIX = "/media/"
+    /** C4 官方背景站内源：filesDir/backgrounds → /backgrounds/（内核页 #bg1 background-image） */
+    const val BACKGROUNDS_PREFIX = "/backgrounds/"
 
     /** 导入主题包站内源：filesDir/themes → /themefiles/...（第三方整包 style.css 由样式包引用） */
     const val THEME_FILES_PREFIX = "/themefiles/"
@@ -45,6 +47,7 @@ object KernelWebViewFactory {
             .addPathHandler(AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "avatars")))
             .addPathHandler(PERSONA_AVATARS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "persona-avatars")))
             .addPathHandler(MEDIA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "media")))
+            .addPathHandler(BACKGROUNDS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "backgrounds").apply { mkdirs() }))
             .addPathHandler(THEME_FILES_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "themes").apply { mkdirs() }))
             .build()
     }

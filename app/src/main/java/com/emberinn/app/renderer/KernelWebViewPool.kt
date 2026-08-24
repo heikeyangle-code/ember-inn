@@ -49,10 +49,14 @@ class KernelWebViewPool(
     private val crashListeners = mutableListOf<() -> Unit>()
     /** #chat 滚动贴底状态（整页壳 C1/C2）：驱动跳底浮标显隐 */
     private val chatScrollListeners = mutableListOf<(Boolean) -> Unit>()
+    /** C3 官方输入区：#send_textarea 草稿镜像 + #form_sheld 高度回报 */
+    private val inputListeners = mutableListOf<(String) -> Unit>()
+    private val inputHeightListeners = mutableListOf<(Float) -> Unit>()
 
     fun addHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.add(l) } }
     fun removeHeightListener(l: (mesid: String, heightDp: Float) -> Unit) { synchronized(heightListeners) { heightListeners.remove(l) } }
     fun addClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.add(l) } }
+    fun removeClickListener(l: (mesid: String, target: KernelClickTarget?) -> Unit) { synchronized(clickListeners) { clickListeners.remove(l) } }
     fun addMessageActionListener(l: (mesid: String, action: String, value: String) -> Unit) {
         synchronized(messageActionListeners) { messageActionListeners.add(l) }
     }
@@ -66,6 +70,35 @@ class KernelWebViewPool(
     fun removeCrashListener(l: () -> Unit) { synchronized(crashListeners) { crashListeners.remove(l) } }
     fun addChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.add(l) } }
     fun removeChatScrollListener(l: (atBottom: Boolean) -> Unit) { synchronized(chatScrollListeners) { chatScrollListeners.remove(l) } }
+    fun addInputListener(l: (String) -> Unit) { synchronized(inputListeners) { inputListeners.add(l) } }
+    fun removeInputListener(l: (String) -> Unit) { synchronized(inputListeners) { inputListeners.remove(l) } }
+    fun addInputHeightListener(l: (Float) -> Unit) { synchronized(inputHeightListeners) { inputHeightListeners.add(l) } }
+    fun removeInputHeightListener(l: (Float) -> Unit) { synchronized(inputHeightListeners) { inputHeightListeners.remove(l) } }
+
+    /** C3 输入区页面级状态：随主题/崩溃重建一起全量同步（applyPageSetup） */
+    data class InputState(val generating: Boolean = false, val swiping: Boolean = false)
+    @Volatile private var currentInputState: InputState = InputState()
+
+    /** 生成/滑动状态变更入口：广播到全部存活实例并记为页面状态 */
+    fun updateInputState(generating: Boolean, swiping: Boolean = false) {
+        currentInputState = InputState(generating, swiping)
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { RenderKernel(it).setInputState(generating, swiping) }
+        }
+    }
+
+    // C4 官方背景：页面级状态（崩溃重建/新实例随 applyPageSetup 恢复）
+    @Volatile private var currentBackgroundUrl: String? = null
+    @Volatile private var currentBackgroundFitting: String? = null
+
+    /** 背景变更入口（backgrounds.js onChatChanged 同构）：url=null 清除，fitting 可选 cover/contain/stretch/center */
+    fun updateBackground(url: String?, fitting: String? = null) {
+        currentBackgroundUrl = url
+        currentBackgroundFitting = fitting
+        scope.launch(Dispatchers.Main) {
+            synchronized(all) { all.toList() }.forEach { RenderKernel(it).setBackground(url, fitting) }
+        }
+    }
 
     /** 整页壳 C2：单实例宿主专用；语义上仍复用池，但聊天页不再并发占用多个内核页。 */
     fun acquireSingle(block: (PooledWebView) -> Unit) = acquire(block)
@@ -126,6 +159,8 @@ class KernelWebViewPool(
         currentThemeJson?.let(kernel::applyThemeRaw)
         kernel.setBodyClasses(currentBodyClasses)
         kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref)
+        kernel.setInputState(currentInputState.generating, currentInputState.swiping)
+        currentBackgroundUrl?.let { kernel.setBackground(it, currentBackgroundFitting) }
     }
 
     fun preload() {
@@ -193,6 +228,14 @@ class KernelWebViewPool(
 
             override fun onChatScroll(atBottom: Boolean) {
                 synchronized(chatScrollListeners) { chatScrollListeners.toList() }.forEach { it(atBottom) }
+            }
+
+            override fun onInputChanged(text: String) {
+                synchronized(inputListeners) { inputListeners.toList() }.forEach { it(text) }
+            }
+
+            override fun onInputHeight(heightPx: Float) {
+                synchronized(inputHeightListeners) { inputHeightListeners.toList() }.forEach { it(heightPx) }
             }
         })
     }

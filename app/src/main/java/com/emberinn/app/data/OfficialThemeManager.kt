@@ -31,19 +31,19 @@ class OfficialThemeManager(private val context: Context) {
         val bundled: Boolean,
     )
 
-    /** 壳层可读的主题派生设置（与 power-user.js 语义一致） */
+    /** 壳层可读的主题派生设置（与 power-user.js 语义一致；缺字段回落官方默认值） */
     data class ShellSettings(
-        val chatDisplay: Int = 0,          // 0 平铺 / 1 气泡 / 2 文档
-        val avatarStyle: Int = 0,          // 0 默认 / 1 大矩形 / 2 方形
+        val chatDisplay: Int = 0,          // 0 平铺 / 1 气泡 / 2 文档（3..7 Moonlit 扩展）
+        val avatarStyle: Int = 0,          // 0 圆 / 1 大矩形 / 2 方形 / 3 圆角
         val compactInputArea: Boolean = false,
-        val fastUiMode: Boolean = false,   // no-blur
+        val fastUiMode: Boolean = true,    // 官方默认 true：no-blur 快速模式
         val noShadows: Boolean = false,
         val waifuMode: Boolean = false,
         val reducedMotion: Boolean = false,
         val timestampsEnabled: Boolean = true,
         val timerEnabled: Boolean = true,
         val messageTokenCountEnabled: Boolean = false,
-        val mesIdDisplayEnabled: Boolean = true,
+        val mesIdDisplayEnabled: Boolean = false,   // 官方默认关
         val hideChatAvatars: Boolean = false,
         val expandMessageActions: Boolean = false,
         val showSwipeNumAllMessages: Boolean = false,
@@ -54,7 +54,23 @@ class OfficialThemeManager(private val context: Context) {
         val zoomedAvatarMagnification: Boolean = false,
         val fontScale: Double = 1.0,
         val chatWidth: Double = 50.0,
-    )
+        /** toast-top-left/center/right × top/bottom 六枚举，官方默认 toast-top-center */
+        val toastrPosition: String = "toast-top-center",
+        val clickToEdit: Boolean = false,           // 点击消息正文进编辑
+        /** 媒体展示全局默认：list / gallery（MEDIA_DISPLAY 枚举） */
+        val mediaDisplay: String = "list",
+    ) {
+        /** 官方 toastr_position → Android Toast 重力（官方 toastr 六位置语义，缺省 top-center） */
+        val toastrGravity: Int
+            get() = when (toastrPosition) {
+                "toast-top-left" -> android.view.Gravity.TOP or android.view.Gravity.START
+                "toast-top-right" -> android.view.Gravity.TOP or android.view.Gravity.END
+                "toast-bottom-left" -> android.view.Gravity.BOTTOM or android.view.Gravity.START
+                "toast-bottom-right" -> android.view.Gravity.BOTTOM or android.view.Gravity.END
+                "toast-bottom-center" -> android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+                else -> android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+            }
+    }
     private val json = Json { ignoreUnknownKeys = true }
     private val themesDir: File get() = File(context.filesDir, "themes").apply { mkdirs() }
 
@@ -211,18 +227,19 @@ class OfficialThemeManager(private val context: Context) {
             ?: return ShellSettings()
         fun num(k: String) = obj[k]?.jsonPrimitive?.intOrNull
         fun bool(k: String) = obj[k]?.jsonPrimitive?.booleanOrNull
+        fun str(k: String) = obj[k]?.jsonPrimitive?.contentOrNull
         return ShellSettings(
             chatDisplay = num("chat_display") ?: 0,
             avatarStyle = num("avatar_style") ?: 0,
             compactInputArea = bool("compact_input_area") ?: false,
-            fastUiMode = bool("fast_ui_mode") ?: false,
+            fastUiMode = bool("fast_ui_mode") ?: true,
             noShadows = bool("noShadows") ?: false,
             waifuMode = bool("waifuMode") ?: false,
             reducedMotion = bool("reduced_motion") ?: false,
             timestampsEnabled = bool("timestamps_enabled") ?: true,
             timerEnabled = bool("timer_enabled") ?: true,
             messageTokenCountEnabled = bool("message_token_count_enabled") ?: false,
-            mesIdDisplayEnabled = bool("mesIDDisplay_enabled") ?: true,
+            mesIdDisplayEnabled = bool("mesIDDisplay_enabled") ?: false,
             hideChatAvatars = bool("hideChatAvatars_enabled") ?: false,
             expandMessageActions = bool("expand_message_actions") ?: false,
             showSwipeNumAllMessages = bool("show_swipe_num_all_messages") ?: false,
@@ -233,6 +250,11 @@ class OfficialThemeManager(private val context: Context) {
             zoomedAvatarMagnification = bool("zoomed_avatar_magnification") ?: false,
             fontScale = obj["font_scale"]?.jsonPrimitive?.doubleOrNull ?: 1.0,
             chatWidth = obj["chat_width"]?.jsonPrimitive?.doubleOrNull ?: 50.0,
+            toastrPosition = str("toastr_position")?.takeIf {
+                it in TOASTR_POSITIONS
+            } ?: "toast-top-center",
+            clickToEdit = bool("click_to_edit") ?: false,
+            mediaDisplay = str("media_display")?.takeIf { it == "gallery" || it == "list" } ?: "list",
         )
     }
 
@@ -242,6 +264,29 @@ class OfficialThemeManager(private val context: Context) {
         val ok = File(loc.path).delete()
         if (ok) reload()
         return ok
+    }
+
+    /**
+     * 官方主题字段写回（外观页「主题微调」= 官方 User Settings 面板语义）：
+     * 合并进当前主题 JSON 并持久化，流自动重发 → 内核 applyTheme 即时生效。
+     * 内置主题是只读资源——首次修改 copy-on-write 落到 filesDir/themes/（同名覆盖定位），
+     * 与官方"主题即文件、改面板即存文件"行为一致。
+     */
+    fun updateFields(values: Map<String, kotlinx.serialization.json.JsonElement>) {
+        if (values.isEmpty()) return
+        val raw = _currentThemeJson.value ?: return
+        val obj = runCatching { json.parseToJsonElement(raw) }.getOrNull() as? JsonObject ?: return
+        val merged = JsonObject(obj.toMutableMap().apply { putAll(values) })
+        val loc = locators[_currentName.value] ?: return
+        if (loc.bundled) {
+            File(themesDir, sanitize(loc.meta.fileName)).writeText(merged.toString())
+            reload() // filesDir 同名条目后注册，locator 覆盖为用户副本
+            select(_currentName.value, persist = true)
+        } else {
+            File(loc.path).writeText(merged.toString())
+            _currentThemeJson.value = merged.toString()
+        }
+        _currentStylePack.value = detectStylePack()
     }
 
     fun export(name: String): String? = readRaw(name)
@@ -290,6 +335,12 @@ class OfficialThemeManager(private val context: Context) {
             "main_text_color", "blur_tint_color", "chat_tint_color", "quote_text_color",
             "italics_text_color", "border_color", "user_mes_blur_tint_color",
             "bot_mes_blur_tint_color", "custom_css", "chat_display",
+        )
+
+        /** 官方 toastr 六位置枚举（power-user.js toastPositionClasses） */
+        val TOASTR_POSITIONS = setOf(
+            "toast-top-left", "toast-top-center", "toast-top-right",
+            "toast-bottom-left", "toast-bottom-center", "toast-bottom-right",
         )
 
         /** 进程级共享实例：壳层（根主题桥）、聊天页、外观页共用同一份状态流，切主题即时全局生效。 */

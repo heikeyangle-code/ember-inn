@@ -416,6 +416,7 @@ class ChatRepository(private val context: Context) {
             model = effectiveModel,
             maxContextTokens = effectiveContextWindow,
             maxTokens = effectiveMaxTokens,
+            powerUserMediaDisplay = OfficialThemeManager.shared(context).shellSettings().mediaDisplay,
             type = type,
             userPrompts = userPrompts,
             userOrder = userOrder,

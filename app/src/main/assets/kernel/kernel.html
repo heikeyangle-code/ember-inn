@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="official/css/brands.min.css">
     <link rel="stylesheet" href="official/css/style.css">
     <link rel="stylesheet" href="official/css/mobile-styles.css">
+    <link rel="stylesheet" href="official/css/toggle-dependent.css">
     <style id="custom-style" type="text/css"></style>
     <style id="app-host-actions-style">
         /* 整页壳官方化：官方消息按钮/swipe/删除框全部保留。
@@ -58,7 +59,7 @@
         body.fullchat #sheld {
             position: fixed !important;
             inset: 0 !important;
-            width: 100% !important;
+            width: var(--sheldWidth, 100vw) !important;
             height: 100% !important;
             max-height: none !important;
             margin: 0 !important;
@@ -74,11 +75,60 @@
     </style>
 </head>
 <body class="light-theme">
-    <!-- 官方 style.css 与主题包依赖 #sheld > #chat 层级（#sheld 背景/padding/移动端铺满规则），
-         结构同构；壳级定位差异由 app-host-shell-style 嵌入态覆盖处理 -->
+    <!-- C4 官方背景层（index.html L53 / backgrounds.css）：#sheld 的 backdrop-filter 玻璃语义直接作用于它 -->
+    <div id="bg1"></div>
+    <!-- 官方 style.css 与主题包依赖 #sheld > #chat > #form_sheld 层级（#sheld 背景/padding/
+         移动端铺满规则、#form_sheld 底部输入区），结构逐字节同构 index.html L8069-8113；
+         壳级定位差异由 app-host-shell-style fullchat 覆盖处理。
+         文案按应用语言（中文）本地化；DOM/类名/title 结构保持官方原样。 -->
     <div id="sheld">
+        <div id="sheldheader" class="fa-solid fa-grip drag-grabber"></div>
         <div id="chat">
-            <div id="mes_stop" class="fa-solid fa-circle-stop stop_generation_button" title="Abort generation" style="display:none;"></div>
+        </div>
+        <div id="form_sheld">
+            <div id="dialogue_del_mes">
+                <div id="dialogue_del_mes_ok" data-i18n="Delete" class="menu_button">删除</div>
+                <div id="dialogue_del_mes_cancel" data-i18n="Cancel" class="menu_button">取消</div>
+            </div>
+            <div id="send_form" class="no-connection">
+                <form id="file_form" class="wide100p displayNone">
+                    <div class="file_attached">
+                        <input id="file_form_input" type="file" multiple hidden>
+                        <input id="embed_file_input" type="file" multiple hidden>
+                        <i class="fa-solid fa-file-alt"></i>
+                        <span class="file_name">File Name</span>
+                        <span class="file_size">File Size</span>
+                        <button id="file_form_reset" type="reset" class="menu_button" title="移除文件" data-i18n="[title]Remove the file">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                </form>
+                <div id="nonQRFormItems">
+                    <div id="leftSendForm" class="alignContentCenter">
+                        <div id="options_button" class="fa-solid fa-bars interactable"></div>
+                        <!-- Ember 附件入口：复用官方 #leftSendForm>div 官方样式；无官方同位控件 -->
+                        <div id="attach_button" class="fa-solid fa-paperclip interactable"></div>
+                    </div>
+                    <textarea id="send_textarea" name="text" class="mdHotkeys" placeholder="输入消息…" autocomplete="off"></textarea>
+                    <div id="rightSendForm" class="alignContentCenter">
+                        <div id="stscript_continue" title="继续执行脚本" class="stscript_btn stscript_continue" data-i18n="[title]Continue script execution">
+                            <i class="fa-solid fa-play"></i>
+                        </div>
+                        <div id="stscript_pause" title="暂停脚本执行" class="stscript_btn stscript_pause" data-i18n="[title]Pause script execution">
+                            <i class="fa-solid fa-pause"></i>
+                        </div>
+                        <div id="stscript_stop" title="中止脚本执行" class="stscript_btn stscript_stop" data-i18n="[title]Abort script execution">
+                            <i class="fa-solid fa-stop"></i>
+                        </div>
+                        <div id="mes_stop" title="中断请求" class="mes_stop" data-i18n="[title]Abort request">
+                            <i class="fa-solid fa-circle-stop"></i>
+                        </div>
+                        <div id="mes_impersonate" class="fa-solid fa-user-secret interactable displayNone" title="让 AI 代写你的发言" data-i18n="[title]Ask AI to write your message for you" tabindex="0"></div>
+                        <div id="mes_continue" class="fa-fw fa-solid fa-arrow-right interactable displayNone" title="继续上一条消息" data-i18n="[title]Continue the last message"></div>
+                        <div id="send_but" class="fa-solid fa-paper-plane interactable displayNone" title="发送消息" data-i18n="[title]Send a message"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

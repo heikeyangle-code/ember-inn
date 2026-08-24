@@ -22,18 +22,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +41,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -79,66 +73,48 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 import com.emberinn.app.data.DisplayPipeline
-import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
@@ -149,26 +125,19 @@ import com.emberinn.app.renderer.KernelMediaPayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
 import com.emberinn.app.renderer.StApiShimInstaller
-import com.emberinn.app.ui.chat.surface.MessageKernelRow
 import com.emberinn.app.ui.chat.surface.ChatKernelShell
 import com.emberinn.app.ui.components.EmberBottomSheet
-import com.emberinn.app.ui.components.EmberInputIcon
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberTextFieldDefaults
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.emberGlass
-import com.emberinn.app.ui.components.emberShadow
-import com.emberinn.app.ui.components.parseHexColor
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
-import com.emberinn.app.ui.settings.ExpressionPrefs
-import com.emberinn.engine.expression.ExpressionApi
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.prompt.CfgPromptEngine
@@ -182,6 +151,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -204,28 +174,6 @@ private sealed interface ChatItem {
     /** 思考过程但没有可挂载的 AI 消息（空正文场景），独立成卡，避免思考完就消失。 */
     data object ReasoningOnly : ChatItem
 }
-
-/** 一条消息在组合期的派生字段缓存（元素不变即复用，流式 tick 不重复解析）。 */
-private data class ChatItemDerived(
-    val isUser: Boolean,
-    val isSystem: Boolean,
-    val text: String,
-    /** 本条消息自己的思考（官方 reasoning 扩展：逐条存 extra.reasoning，各自渲染折叠块）。 */
-    val reasoning: String?,
-    val media: List<MediaAttachment>,
-    val mediaDisplay: String?,
-    val mediaIndex: Int?,
-    val name: String,
-    val time: String,
-    val swipeCount: Int,
-    val curSwipe: Int,
-    /** 按消息 extra.force_avatar/original_avatar 解析的头像（官方 sendas avatar= 渲染）。 */
-    val avatarPath: String?,
-)
-
-/** 消息附件列表的稳定包装：Compose 把 List 视为不稳定参数，包一层 @Immutable 让 MessageRow 可跳过重组。 */
-@Immutable
-private data class ChatMedia(val items: List<MediaAttachment>)
 
 @Composable
 fun ChatScreen(
@@ -252,6 +200,10 @@ fun ChatScreen(
     val lastReasoning by vm.lastReasoning.collectAsState()
     val showThoughtsNow by vm.showThoughts.collectAsState()
     val pendingMedia by vm.pendingMedia.collectAsState()
+    // C5 渲染 bug 修复：流式文本必须以 Compose State 收集——此前只读 .value，
+    // 快照不追踪 StateFlow，流式期间无人触发重组，内核页整场不刷新
+    val streamingText by vm.streamingText.collectAsState()
+    val streamingReasoning by vm.streamingReasoning.collectAsState()
     val worldHits by vm.worldHits.collectAsState()
     val contextUsage by vm.contextUsage.collectAsState()
     val promptPreview by vm.promptPreview.collectAsState()
@@ -626,8 +578,8 @@ fun ChatScreen(
     // 文本/头像/时间/token/reasoning 均沿用现有引擎与显示管线，避免在 UI 层重写逻辑。
     val kernelPayloads = remember(
         messages,
-        vm.streamingText.value,
-        vm.streamingReasoning.value,
+        streamingText,
+        streamingReasoning,
         isStreaming,
         displayRevision,
         activePersona?.avatarPath,
@@ -651,7 +603,7 @@ fun ChatScreen(
                             ?: if (item.index == lastAiIndex) {
                                 if (isStreaming) {
                                     DisplayPipeline.balanceStreamingDelimiters(
-                                        vm.streamingReasoning.value,
+                                        streamingReasoning,
                                         isFinal = !isStreaming,
                                     ).let { balanced ->
                                         val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
@@ -689,7 +641,7 @@ fun ChatScreen(
                         mediaDisplay = extraDisplayOf(el)?.takeIf { display ->
                             display == com.emberinn.engine.media.MediaDisplay.LIST ||
                                 display == com.emberinn.engine.media.MediaDisplay.GALLERY
-                        } ?: "list",
+                        } ?: themeManager.shellSettings().mediaDisplay,
                         ghost = system && name != SYSTEM_USER_NAME,
                         swipeCount = vm.swipeCountOf(el),
                         currentSwipe = vm.currentSwipeOf(el),
@@ -707,7 +659,7 @@ fun ChatScreen(
                 ChatItem.Streaming -> {
                     val streamingIndex = messages.size
                     val streamingDisplay = DisplayPipeline.balanceStreamingDelimiters(
-                        vm.streamingText.value,
+                        streamingText,
                         isFinal = !isStreaming,
                     ).let { balanced ->
                         val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
@@ -722,7 +674,7 @@ fun ChatScreen(
                         avatarUrl = kernelAvatarUrlOf(vm.avatarPath),
                         // 官方流式思考块随同一条消息渲染；payload 变化触发 renderChat 权威同步。
                         reasoning = DisplayPipeline.balanceStreamingDelimiters(
-                            vm.streamingReasoning.value,
+                            streamingReasoning,
                             isFinal = !isStreaming,
                         ).takeIf { it.isNotBlank() }?.let { balanced ->
                             val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
@@ -753,6 +705,30 @@ fun ChatScreen(
                         avatarUrl = kernelAvatarUrlOf(vm.avatarPath),
                     )
                 }
+            }
+        }
+    }
+
+    // C5 官方流式语义（onProgressStreaming）：只原地更新流式行的 .mes_text/.mes_reasoning，
+    // 不重建整个 #chat——每 tick 全量 renderChat 会重挂全部消息节点，图片重载、滚动抖动。
+    // 节流 ~120ms；结束后的权威渲染由 messages/isStreaming 变化触发 renderChat 完成。
+    LaunchedEffect(isStreaming, isImpersonating) {
+        if (!isStreaming || isImpersonating) return@LaunchedEffect
+        var lastPush = 0L
+        vm.streamingText.conflate().collect { raw ->
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastPush < 120) return@collect
+            lastPush = now
+            fun polish(s: String): String {
+                val balanced = DisplayPipeline.balanceStreamingDelimiters(s, isFinal = false)
+                val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
+                return if (AppearancePrefs.encodeTags(context)) {
+                    com.emberinn.engine.prompt.MessageFormattingEngine.encodeTags(fixed)
+                } else fixed
+            }
+            val reasoning = vm.streamingReasoning.value.takeIf { it.isNotBlank() }?.let(::polish)
+            kernelPool.acquireSingle { pooled ->
+                RenderKernel(pooled).updateStreaming("m-${vm.messages.value.size}", polish(raw), reasoning)
             }
         }
     }
@@ -850,6 +826,78 @@ fun ChatScreen(
     // 斜杠命令清单随 VM 重建（会话切换后 vm 实例更换，避免持有旧实例快照）
     val slashCommands = remember(vm) { vm.slashCommandList() }
 
+    // ------------------------------------------------------------------------
+    // C3 官方输入区（内核 #form_sheld）接线：
+    //   - 草稿真值在宿主：inputChanged 镜像回写 input（冒充流式期间不回写，textarea 由宿主推流）
+    //   - 表单高度回报驱动悬浮附件行内边距（CSS px ≈ Compose dp，同密度缩放）
+    //   - chat_* 控件动作（send_but/mes_stop/options_button/dialogue_del_mes 等）→ 会话流程
+    // ------------------------------------------------------------------------
+    var kernelFormHeight by remember { mutableStateOf(0f) }
+    DisposableEffect(kernelPool) {
+        val inputListener: (String) -> Unit = { text ->
+            if (!isImpersonating) input = text
+        }
+        val heightListener: (Float) -> Unit = { px -> kernelFormHeight = px }
+        val actionListener: (String, String) -> Unit = { action, _ ->
+            when (action) {
+                KernelHostAction.CHAT_SEND -> {
+                    val text = input.trim()
+                    if (!isStreaming && (text.isNotEmpty() || pendingMedia.isNotEmpty())) {
+                        followBottom = true
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                        val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
+                        if (accepted) {
+                            input = ""
+                            pendingDisplay = null
+                            kernelPool.pushInputText("")
+                        }
+                    }
+                }
+                KernelHostAction.CHAT_INTERRUPT -> if (isStreaming) vm.stop()
+                KernelHostAction.CHAT_OPTIONS -> showMore = true
+                KernelHostAction.CHAT_ATTACH -> showAttachOptions = true
+                KernelHostAction.CHAT_IMPERSONATE -> if (!isStreaming && !isImpersonating) vm.impersonate()
+                KernelHostAction.CHAT_CONTINUE -> if (!isStreaming && vm.canContinueGeneration()) vm.continueGeneration()
+                KernelHostAction.CHAT_DELETE_CONFIRM -> {
+                    deleteCheckIndex?.let { vm.truncateFrom(it) }
+                    deleteMode = false
+                    deleteCheckIndex = null
+                    followBottom = true
+                }
+                KernelHostAction.CHAT_DELETE_CANCEL -> {
+                    deleteMode = false
+                    deleteCheckIndex = null
+                }
+            }
+        }
+        kernelPool.addInputListener(inputListener)
+        kernelPool.addInputHeightListener(heightListener)
+        kernelPool.addUiActionListener(actionListener)
+        onDispose {
+            kernelPool.removeInputListener(inputListener)
+            kernelPool.removeInputHeightListener(heightListener)
+            kernelPool.removeUiActionListener(actionListener)
+        }
+    }
+    // 生成状态 → 官方 body[data-generating]（隐藏发送/继续/冒充 + last_mes 按钮排）+ #mes_stop 显隐
+    LaunchedEffect(isStreaming) {
+        kernelPool.updateInputState(generating = isStreaming)
+    }
+    // 官方冒充：流式正文实时写入 #send_textarea（StreamingProcessor L3600-3603 同构，含 VM 侧逐 tick 清洗）；
+    // 结束后成品留在草稿框（官方不自动发送），inputChanged 镜像在冒充期间被抑制
+    var lastImpersonationText by remember { mutableStateOf("") }
+    LaunchedEffect(isImpersonating) {
+        if (isImpersonating) {
+            lastImpersonationText = ""
+            vm.impersonationDraft.collect { text ->
+                lastImpersonationText = text
+                kernelPool.pushInputText(text)
+            }
+        } else if (lastImpersonationText.isNotEmpty()) {
+            input = lastImpersonationText
+        }
+    }
+
     // 每次进入聊天页重新读盘：配置模型后返回不再显示“没配置模型”；设置页改快捷回复后同步刷新。
     // key=vm：导航复用组合而 VM 实例更换时重启副作用，避免协程持有旧 VM 引用（刷新打到旧会话）。
     LaunchedEffect(vm) {
@@ -880,7 +928,6 @@ fun ChatScreen(
     }
 
     val sky = rememberSky()
-    val keyboardController = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
     // 整页壳 C2：行级外观偏好退役；布局/气泡/密度由官方主题 CSS 接管。
     var topBarHeight by remember { mutableStateOf(0) }
@@ -893,52 +940,32 @@ fun ChatScreen(
             // README 返回手势：左右边缘滑动退出
             .edgeSwipeBack(onBack = onBack),
     ) {
-        // 静态背景层：氛围渐变 + 光晕 + 显式/头像背景。作为顶栏/输入栏毛玻璃的静态模糊源；
-        // 不再把消息列表当 sky 源，避免每次滚动/键盘动画都重捕整屏模糊（滚动/收键盘卡顿主因）。
-        // EmberDS 舞台：低饱和近黑中性底；氛围渐变/宝石光晕/金属微光/画布纹理全部退役
+        // 静态背景层：作为顶栏毛玻璃的静态模糊源（sky）。聊天背景已迁入内核官方 #bg1（C4），
+        // 由 #sheld/#send_form 的 backdrop-filter 官方语义消费 blur_strength。
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .sky(sky)
                 .background(EmberTheme.colors.bg)
                 .background((EmberTheme.stageTint ?: Color.Transparent).copy(alpha = 0.30f)),
-        ) {
-        // 聊天背景：显式背景（会话 chat_metadata.custom_background / 角色主题配方）> 角色头像玻璃背景 > 舞台底色兑底
-        // 可读性遮罩：深色叠黑、浅色叠纸白；模糊/遮罩强度全局可调（外观与主题）
-        val glassOn = AppearancePrefs.chatBgAvatarGlass(context)
-        val bgBlur = AppearancePrefs.chatBgBlur(context)
-        val darkSurface = isDarkThemeSurface()
-        val bgScrim = if (darkSurface) {
-            AppearancePrefs.chatBgScrimDark(context) / 100f
-        } else {
-            AppearancePrefs.chatBgScrimLight(context) / 100f
-        }
-        val scrimBase = if (darkSurface) {
-            parseHexColor(AppearancePrefs.chatBgScrimDarkColor(context)) ?: Color.Black
-        } else {
-            parseHexColor(AppearancePrefs.chatBgScrimLightColor(context)) ?: Color.White
-        }
-        val bgPath = chatBackground?.takeIf { java.io.File(it).exists() }
-            ?: if (glassOn) vm.avatarPath?.takeIf { java.io.File(it).exists() } else null
-        if (bgPath != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(java.io.File(bgPath)).size(1200).build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (bgBlur > 0) Modifier.blur(bgBlur.dp) else Modifier),
-            )
-            if (bgScrim > 0f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(scrimBase.copy(alpha = scrimBase.alpha * bgScrim)),
-                )
-            }
-        }
+        ) // 静态背景层结束
 
-        } // 静态背景层结束
+        // C4 官方背景系统：会话级 custom_background > 全局背景 > 纯主题底色
+        LaunchedEffect(chatBackground) {
+            val bgFile = chatBackground?.takeIf { java.io.File(it).exists() }
+                ?: AppearancePrefs.globalBackground(context)
+                    .takeIf { it.isNotBlank() && java.io.File(it).exists() }
+            val url = bgFile?.let { path ->
+                if (path.contains("/media/")) {
+                    com.emberinn.app.renderer.KernelWebViewFactory.MEDIA_PREFIX +
+                        java.io.File(path).name
+                } else {
+                    com.emberinn.app.renderer.KernelWebViewFactory.BACKGROUNDS_PREFIX +
+                        java.io.File(path).name
+                }
+            }
+            kernelPool.updateBackground(url)
+        }
 
         // 消息列表 + 输入栏同一列：列表 weight(1f) 占满剩余空间，输入栏沉底；imePadding 只作用这一列
         Column(
@@ -953,18 +980,31 @@ fun ChatScreen(
                 UnconfiguredBanner(onOpenSettings = onOpenSettings)
             }
 
-            // 整页壳 C2：官方 #sheld/#chat 接管消息区滚动；原生输入栏继续由 C3 处理。
+            // 整页壳 C2/C3：官方 #sheld/#chat/#form_sheld 全量接管消息区 + 输入区；
+            // 原生侧只保留悬浮附件行（上下文胶囊/待发媒体/快捷回复/斜杠补全）。
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 ChatKernelShell(
                     pool = kernelPool,
                     payloads = kernelPayloads,
                     followBottom = followBottom,
+                    draftProvider = { input },
                     onAtBottomChanged = { atBottom ->
                         if (!atBottom) followBottom = false
                     },
                     onLongPress = { mesid ->
                         mesid.removePrefix("m-").toIntOrNull()?.let { index ->
                             messages.getOrNull(index)?.let { menuMessageIndex = MsgTarget(index, it) }
+                        }
+                    },
+                    onTextClick = { mesid ->
+                        // 官方 click_to_edit（chats.js L2292）：主题开关开启时点击正文进编辑
+                        if (themeManager.shellSettings().clickToEdit) {
+                            mesid.removePrefix("m-").toIntOrNull()?.let { index ->
+                                messages.getOrNull(index)?.let {
+                                    editIndex = MsgTarget(index, it)
+                                    editDraft = textOf(it)
+                                }
+                            }
                         }
                     },
                     onMessageAction = { mesid, action, _ ->
@@ -1009,6 +1049,33 @@ fun ChatScreen(
                     deleteMode = deleteMode,
                 )
 
+                // C3 悬浮附件行：上下文胶囊 / 待发媒体 / 快捷回复 / 斜杠补全，
+                // 底部内边距跟随内核 #form_sheld 实测高度，永远悬在官方输入区上方
+                ChatComposerOverlays(
+                    accent = accent,
+                    input = input,
+                    onInputReplace = { text ->
+                        input = text
+                        kernelPool.pushInputText(text)
+                    },
+                    formHeightDp = kernelFormHeight,
+                    isStreaming = isStreaming,
+                    worldHitsCount = worldHits.size,
+                    contextUsage = contextUsage,
+                    onOpenWorldPanel = { worldPanel = true },
+                    onOpenContextDetail = { contextDetail = true },
+                    pendingMedia = pendingMedia,
+                    pendingDisplay = pendingDisplay,
+                    onDisplayChange = { pendingDisplay = it },
+                    onRemoveMedia = { index -> vm.removePendingMedia(index) },
+                    quickReplies = quickReplies,
+                    onQuickReply = { label -> vm.runQuickReply(label) },
+                    slashCommands = slashCommands,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                )
+
                 // jump-to-bottom 浮标：官方 #chat scroll 事件驱动显隐，点击回到最新
                 if (!followBottom) {
                     Surface(
@@ -1018,7 +1085,7 @@ fun ChatScreen(
                         shadowElevation = 3.dp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 10.dp),
+                            .padding(bottom = kernelFormHeight.dp + 10.dp),
                     ) {
                         IconButton(onClick = {
                             followBottom = true
@@ -1035,79 +1102,8 @@ fun ChatScreen(
                 }
             }
 
-            // 官方 #dialogue_del_mes（Delete/Cancel）：删除模式时输入栏替换为确认条
-            if (deleteMode) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 2.dp) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                    ) {
-                        Text(
-                            if (deleteCheckIndex == null) "点选一条消息：从该条起全部删除"
-                            else "将从第 ${deleteCheckIndex!! + 1} 条起全部删除",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = { deleteMode = false; deleteCheckIndex = null }) { Text("取消") }
-                        TextButton(
-                            enabled = deleteCheckIndex != null,
-                            onClick = {
-                                deleteCheckIndex?.let { vm.truncateFrom(it) }
-                                deleteMode = false
-                                deleteCheckIndex = null
-                                followBottom = true
-                            },
-                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                        ) { Text("删除") }
-                    }
-                }
-            } else {
-                ChatInputBar(
-                accent = accent,
-                input = input,
-                impersonating = isImpersonating,
-                impersonationDraft = vm.impersonationDraft,
-                onInputChange = { input = it },
-                pendingMedia = pendingMedia,
-                pendingDisplay = pendingDisplay,
-                onDisplayChange = { pendingDisplay = it },
-                onRemoveMedia = { index -> vm.removePendingMedia(index) },
-                isStreaming = isStreaming,
-                canQuickContinue = !isStreaming && vm.canContinueGeneration(),
-                worldHitsCount = worldHits.size,
-                contextUsage = contextUsage,
-                onOpenWorldPanel = { worldPanel = true },
-                onOpenContextDetail = { contextDetail = true },
-                quickReplies = quickReplies,
-                onQuickReply = { label -> vm.runQuickReply(label) },
-                onQuickContinue = { vm.continueGeneration() },
-                onQuickImpersonate = { vm.impersonate() },
-                onSend = {
-                    val text = input.trim()
-                    if (text.isNotEmpty() || pendingMedia.isNotEmpty()) {
-                        followBottom = true
-                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                        val accepted = vm.send(text, media = pendingMedia, mediaDisplay = pendingDisplay)
-                        if (accepted) {
-                            input = ""
-                            pendingDisplay = null
-                            keyboardController?.hide()
-                        }
-                    }
-                },
-                onStop = { vm.stop() },
-                onAttach = {
-                    showAttachOptions = true
-                },
-                slashCommands = slashCommands,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .emberGlass(sky = sky, atTop = true, blurEnabled = glassBlurActive),
-                )
-            }
+            // C3：删除确认条（#dialogue_del_mes）与作曲行（#send_form）都在内核页内，
+            // 原生底部不再有任何常驻栏——列里只剩整页壳 + 悬浮附件行。
         }
 
         // 沉浸顶栏（V2 §5.2 聊天页）：贴底阅读时完整显示；向上翻历史淡出，留渐变遮罩保顶部消息可读
@@ -3127,663 +3123,6 @@ internal fun kernelAvatarUrlOf(path: String?): String? {
     return "$KERNEL_ORIGIN$prefix${f.name}"
 }
 
-@Composable
-private fun MessageRow(
-    modifier: Modifier = Modifier,
-    isUser: Boolean,
-    isSystem: Boolean = false,
-    kernelPool: KernelWebViewPool? = null,
-    mesid: String = "",
-    kernelText: String? = null,
-    text: String,
-    media: ChatMedia,
-    mediaDisplay: String? = null,
-    mediaIndex: Int? = null,
-    onMediaIndexChange: (Int) -> Unit = {},
-    reasoning: String?,
-    reasoningExpanded: Boolean = false,
-    onReasoningToggle: () -> Unit = {},
-    name: String,
-    time: String,
-    avatarPath: String?,
-    spritePath: String? = null,
-    tokenCount: String? = null,
-    accent: Color,
-    dateLabel: String?,
-    showActions: Boolean,
-    swipeCount: Int = 0,
-    curSwipe: Int = 0,
-    isPrevSameSender: Boolean = true,
-    aiBubble: Boolean = false,
-    onImageToggle: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
-    onSwipePicker: () -> Unit = {},
-    onEdit: () -> Unit = {},
-    onMore: () -> Unit = {},
-    onBookmark: () -> Unit = {},
-    /** LLM 表情分类回调（官方 getExpressionLabel LLM 分支；null=不支持）。 */
-    onClassifyExpression: ((String, (String?) -> Unit) -> Unit)? = null,
-    classifyEnabled: Boolean = false,
-    /** 官方删除模式（del_checkbox）：非 null 时行首显示勾选框，单选，勾中即 this_del_mes。 */
-    deleteCheck: Boolean? = null,
-    onDeleteCheck: (() -> Unit)? = null,
-    onLongPress: () -> Unit,
-) {
-    val context = LocalContext.current
-    if (deleteCheck != null && onDeleteCheck != null) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            androidx.compose.material3.Checkbox(
-                checked = deleteCheck,
-                onCheckedChange = { onDeleteCheck() },
-                modifier = Modifier.padding(start = 2.dp, top = 6.dp),
-            )
-            Box(modifier = Modifier.weight(1f)) {
-                MessageRowContent(
-                    modifier = Modifier,
-                    isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
-                    mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
-                    reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
-                    name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
-                    tokenCount = tokenCount, accent = accent, dateLabel = dateLabel, showActions = false,
-                    swipeCount = 0, curSwipe = curSwipe, isPrevSameSender = isPrevSameSender, aiBubble = aiBubble,
-                    onImageToggle = onImageToggle, onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight,
-                    onSwipePicker = onSwipePicker, onEdit = onEdit, onMore = onMore, onBookmark = onBookmark,
-                    onClassifyExpression = onClassifyExpression, classifyEnabled = classifyEnabled,
-                    onLongPress = onLongPress,
-                )
-            }
-        }
-        return
-    }
-    MessageRowContent(
-        modifier = modifier,
-        isUser = isUser, isSystem = isSystem, kernelPool = kernelPool, mesid = mesid, kernelText = kernelText, text = text, media = media,
-        mediaDisplay = mediaDisplay, mediaIndex = mediaIndex, onMediaIndexChange = onMediaIndexChange,
-        reasoning = reasoning, reasoningExpanded = reasoningExpanded, onReasoningToggle = onReasoningToggle,
-        name = name, time = time, avatarPath = avatarPath, spritePath = spritePath,
-        tokenCount = tokenCount, accent = accent, dateLabel = dateLabel, showActions = showActions,
-        swipeCount = swipeCount, curSwipe = curSwipe, isPrevSameSender = isPrevSameSender, aiBubble = aiBubble,
-        onImageToggle = onImageToggle, onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight,
-        onSwipePicker = onSwipePicker, onEdit = onEdit, onMore = onMore, onBookmark = onBookmark,
-        onClassifyExpression = onClassifyExpression, classifyEnabled = classifyEnabled,
-        onLongPress = onLongPress,
-    )
-}
-
-@Composable
-private fun MessageRowContent(
-    modifier: Modifier = Modifier,
-    isUser: Boolean,
-    isSystem: Boolean = false,
-    kernelPool: KernelWebViewPool? = null,
-    mesid: String = "",
-    kernelText: String? = null,
-    text: String,
-    media: ChatMedia,
-    mediaDisplay: String? = null,
-    mediaIndex: Int? = null,
-    onMediaIndexChange: (Int) -> Unit = {},
-    reasoning: String?,
-    reasoningExpanded: Boolean = false,
-    onReasoningToggle: () -> Unit = {},
-    name: String,
-    time: String,
-    avatarPath: String?,
-    spritePath: String? = null,
-    tokenCount: String? = null,
-    accent: Color,
-    dateLabel: String?,
-    showActions: Boolean,
-    swipeCount: Int = 0,
-    curSwipe: Int = 0,
-    isPrevSameSender: Boolean = true,
-    aiBubble: Boolean = false,
-    onImageToggle: () -> Unit = {},
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
-    onSwipePicker: () -> Unit = {},
-    onEdit: () -> Unit = {},
-    onMore: () -> Unit = {},
-    onBookmark: () -> Unit = {},
-    onClassifyExpression: ((String, (String?) -> Unit) -> Unit)? = null,
-    classifyEnabled: Boolean = false,
-    onLongPress: () -> Unit,
-) {
-    val context = LocalContext.current
-    // 官方 messageFormatting：仅 'SillyTavern System' 命名的系统消息按系统格式化（跳过引号/encode/正则）；
-    // Note 评论等 is_system 消息正文按普通消息格式化（样式仍按系统灰字）
-    val formatAsSystem = isSystem && name == SYSTEM_USER_NAME
-    // 表情精灵：AI 消息按正文分类选立绘（官方 expressions getExpressionLabel + chooseSpriteForExpression）。
-    // none API → 直接 fallback；LLM API → 先 fallback，异步分类完成后用标签重选（官方异步设置 sprite DOM 的等价）。
-    val expressionPrefs = remember(text, name) { if (isUser) null else ExpressionPrefs.load(context) }
-    var classified by remember(text, name) { mutableStateOf<String?>(null) }
-    val classifier = onClassifyExpression
-    if (expressionPrefs?.enabled == true && expressionPrefs.api == ExpressionApi.LLM &&
-        classifier != null && classifyEnabled
-    ) {
-        LaunchedEffect(text, name) {
-            if (classified == null) classifier(text) { classified = it }
-        }
-    }
-    val spriteFile = remember(text, name, isUser, spritePath, classified) {
-        if (isUser) {
-            null
-        } else {
-            val stored = spritePath?.let { File(it).takeIf { f -> f.exists() } }
-            if (stored != null) {
-                stored
-            } else {
-                val prefs = expressionPrefs ?: ExpressionPrefs.load(context)
-                if (!prefs.enabled) {
-                    null
-                } else {
-                    val store = ExpressionStore(context)
-                    val expression = when {
-                        prefs.api == ExpressionApi.LLM && classified != null -> classified!!
-                        else -> prefs.fallbackExpression
-                    }
-                    val groups = com.emberinn.engine.expression.ExpressionEngine.groupSprites(
-                        store.sprites(name),
-                        prefs.customLabels,
-                    )
-                    com.emberinn.engine.expression.ExpressionEngine.chooseSprite(
-                        folderName = name,
-                        expression = expression,
-                        spriteCache = mapOf(name to groups),
-                        settings = com.emberinn.engine.expression.ExpressionEngine.ExpressionSettings(
-                            fallbackExpression = prefs.fallbackExpression.ifBlank { null },
-                            allowMultiple = prefs.allowMultiple,
-                            rerollIfSame = prefs.rerollIfSame,
-                            customLabels = prefs.customLabels,
-                        ),
-                    )?.imageSrc?.let { File(it).takeIf { f -> f.exists() } }
-                }
-            }
-        }
-    }
-    // 官方主题字段经 ShellTheme 推导进令牌（无本地覆盖）：气泡底/描边/弱化文字直接取 EmberDS
-    val c = EmberTheme.colors
-    val userBubbleColor = c.accentBg
-    val botBubbleColor = c.surface
-    val bubbleBorder = BorderStroke(0.5.dp, c.line)
-    val emColor = c.inkMute
-
-    // 全 DOM 行判定：内核就绪即整行交官方模板（头像/名字/时间戳/正文一体，官方移动端结构）；
-    // 原生只保留宿主交互面（思考卡/操作条/媒体/手势）。用户消息按 P6 开关分流省池槽位。
-    val useKernel = kernelPool != null && mesid.isNotEmpty() && kernelText != null
-    val kernelAvatarUrl = remember(avatarPath) { kernelAvatarUrlOf(avatarPath) }
-    // 长按菜单 + AI 消息横滑手势：全 DOM 行与原生回退路径共用
-    var bubbleModifier = Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
-    if (!isUser && !isSystem && swipeCount >= 1) {
-        val threshold = with(LocalDensity.current) { 56.dp.toPx() }
-        bubbleModifier = bubbleModifier.then(
-            Modifier.pointerInput(Unit) {
-                var total = 0f
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (total > threshold) onSwipeLeft()
-                        else if (total < -threshold) onSwipeRight()
-                        total = 0f
-                    },
-                ) { change, dragAmount ->
-                    change.consume()
-                    total += dragAmount
-                }
-            },
-        )
-    }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        // 间距层级：不同发言者之间留白更大，同一发言者连续消息收紧（纸面对话流而非堆砌）
-        if (dateLabel == null && !isPrevSameSender) {
-            Spacer(Modifier.size(7.dp))
-        }
-        if (dateLabel != null) {
-            Text(
-                text = dateLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = emColor,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-            )
-        }
-        Row(
-        modifier = Modifier.fillMaxWidth().padding(top = if (isUser) 12.dp else 0.dp),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-    ) {
-        if (useKernel) {
-            // 全 DOM 行：官方模板承担头像/名字/时间戳/token 计数；原生只留交互面。
-            Column(modifier = Modifier.fillMaxWidth().then(bubbleModifier)) {
-                // 思考块随行进内核官方 .mes_reasoning DOM（主题 CSS 接管样式，details 原生折叠展开）
-                MessageKernelRow(
-                    pool = kernelPool!!,
-                    payload = KernelMessagePayload(
-                        mesid = mesid,
-                        mes = kernelText!!,
-                        chName = name,
-                        isUser = isUser,
-                        isSystem = formatAsSystem,
-                        avatarUrl = kernelAvatarUrl,
-                        timestamp = time,
-                        tokenCount = tokenCount,
-                        reasoning = reasoning?.takeIf { it.isNotBlank() },
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    onLongPress = onLongPress,
-                )
-                if (spriteFile != null) {
-                    AsyncImage(
-                        model = spriteFile,
-                        contentDescription = "表情精灵",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .padding(top = 3.dp)
-                            .size(34.dp),
-                    )
-                }
-                if (!isSystem && (swipeCount >= 1 || showActions)) {
-                    Spacer(Modifier.size(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        if (swipeCount >= 1) {
-                            MessageActionIcon(FaIcons.ChevronLeft, "上一个回复", onSwipeLeft)
-                            Text(
-                                text = "${curSwipe + 1}/${swipeCount}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable(onClick = onSwipePicker)
-                                    .padding(horizontal = 4.dp, vertical = 3.dp),
-                            )
-                            MessageActionIcon(FaIcons.ChevronRight, "下一个回复", onSwipeRight)
-                        }
-                        if (showActions) {
-                            if (swipeCount >= 1) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 6.dp)
-                                        .size(width = 1.dp, height = 12.dp)
-                                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                )
-                            }
-                            MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
-                            MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
-                            MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
-                        }
-                    }
-                }
-                if (media.items.isNotEmpty()) {
-                    Spacer(Modifier.size(8.dp))
-                    MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
-                }
-            }
-        } else {
-        if (!isUser) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 36)
-                if (spriteFile != null) {
-                    AsyncImage(
-                        model = spriteFile,
-                        contentDescription = "表情精灵",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .padding(top = 3.dp)
-                            .size(34.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.size(10.dp))
-        }
-        Column(
-            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-            // 气泡自适应：内容 hug 宽度 + 上限封顶（用户 320dp / AI 气泡 340dp），
-            // 纸面模式（无气泡）保持整行铺满便于长文阅读
-            modifier = when {
-                isUser -> Modifier.widthIn(max = 320.dp)
-                aiBubble -> Modifier.widthIn(max = 340.dp)
-                else -> Modifier.fillMaxWidth()
-            },
-        ) {
-            // 官方 .ch_name 行：名字 + mes_ghost + 时间戳靠左（不 fillMaxWidth，否则会把 hug 气泡撑到上限）
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = when {
-                        isUser || isSystem -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> accent
-                    },
-                    fontWeight = FontWeight.Medium,
-                    fontStyle = if (isSystem) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 220.dp),
-                )
-                // 官方 mes_ghost：被用户隐藏（不进提示词）的消息在名字旁标记；'SillyTavern System' 真系统消息不带
-                if (isSystem && name != SYSTEM_USER_NAME) {
-                    Spacer(Modifier.size(5.dp))
-                    Icon(
-                        FaIcons.EyeSlash,
-                        contentDescription = "此消息对 AI 不可见",
-                        tint = emColor.copy(alpha = 0.85f),
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = emColor,
-                )
-                if (tokenCount != null) {
-                    Spacer(Modifier.size(6.dp))
-                    Text(
-                        text = "· ${tokenCount}t",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = emColor,
-                    )
-                }
-                // mes_buttons（⋯/flag/pencil）移至消息底部操作条，与变体箭头同行
-            }
-            // 思考过程：一个卡，正文上方，默认折叠，点开展开（流式/生成完共用同一状态）
-            if (!reasoning.isNullOrBlank()) {
-                Spacer(Modifier.size(4.dp))
-                ReasoningCard(
-                    text = reasoning,
-                    expanded = reasoningExpanded,
-                    onToggle = onReasoningToggle,
-                )
-            }
-            Spacer(Modifier.size(3.dp))
-            // 手势修饰符已上提至函数级（全 DOM 行与原生回退共用）
-            if (isUser) {
-                // 用户消息保留右侧胶囊：对话分隔锚点，和 AI 纯文本流形成对比
-                Surface(
-                    shape = RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp),
-                    color = userBubbleColor,
-                    border = bubbleBorder,
-                    modifier = bubbleModifier,
-                ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                        // 原生回退路径（内核未就绪/池满）：短文本为主的过渡显示
-                        StreamingMarkdown(content = text, fillWidth = false)
-                    }
-                }
-            } else if (aiBubble) {
-                // README 气泡样式=bubble：AI 也带低对比气泡（hug 内容，上限由外层列宽封顶）
-                Surface(
-                    shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp),
-                    color = botBubbleColor,
-                    border = bubbleBorder,
-                    modifier = bubbleModifier,
-                ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
-                        StreamingMarkdown(content = text, fillWidth = false)
-                    }
-                }
-            } else {
-                // AI 消息去气泡：纯 markdown 文本流，靠留白分隔（纸面阅读感）
-                Box(modifier = bubbleModifier) {
-                    StreamingMarkdown(content = text)
-                }
-            }
-            // 底部操作条（对齐官方 swipes-counter：n/total + 左右箭头）；
-            // mes_buttons（⋯ 更多 / flag 书签 / pencil 编辑）与之同行，仅最后一条 AI 显示。
-            // 重做：去掉胶囊容器与逐图标底色块——裸小图标一排，安静自然不抢正文
-            if (!isSystem && (swipeCount >= 1 || showActions)) {
-                Spacer(Modifier.size(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    if (swipeCount >= 1) {
-                        MessageActionIcon(FaIcons.ChevronLeft, "上一个回复", onSwipeLeft)
-                        // 官方 swipes-counter 可点击：tap 打开 swipe picker（跳转任意变体）
-                        Text(
-                            text = "${curSwipe + 1}/${swipeCount}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable(onClick = onSwipePicker)
-                                .padding(horizontal = 4.dp, vertical = 3.dp),
-                        )
-                        MessageActionIcon(FaIcons.ChevronRight, "下一个回复", onSwipeRight)
-                    }
-                    if (showActions) {
-                        if (swipeCount >= 1) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 6.dp)
-                                    .size(width = 1.dp, height = 12.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            )
-                        }
-                        MessageActionIcon(FaIcons.EllipsisVertical, "更多操作", onMore)
-                        MessageActionIcon(FaIcons.Flag, "创建书签（存档到此）", onBookmark)
-                        MessageActionIcon(FaIcons.Pencil, "编辑", onEdit)
-                    }
-                }
-            }
-            if (media.items.isNotEmpty()) {
-                Spacer(Modifier.size(8.dp))
-                MessageMedia(media = media.items, display = mediaDisplay, index = mediaIndex, onIndexChange = onMediaIndexChange, onImageToggle = onImageToggle)
-            }
-        }
-        }
-    }
-    }
-}
-
-@Composable
-private fun StreamingRow(
-    modifier: Modifier = Modifier,
-    text: String,
-    reasoning: String = "",
-    reasoningExpanded: Boolean = false,
-    onReasoningToggle: () -> Unit = {},
-    name: String,
-    avatarPath: String?,
-    accent: Color,
-    impersonating: Boolean = false,
-    kernelPool: KernelWebViewPool? = null,
-    mesid: String = "",
-) {
-    if (kernelPool != null && mesid.isNotEmpty() && !impersonating) {
-        // 内核流式（§3.4）：整行交官方模板（头像/名字随行），120ms 节流轻量更新，
-        // 流结束由 payload 权威重渲收尾；冒充草稿走下方原生轻量路径（临时预览不占池槽位）
-        Column(modifier = modifier.fillMaxWidth()) {
-            if (reasoning.isNotBlank()) {
-                ReasoningCard(
-                    text = reasoning,
-                    expanded = reasoningExpanded,
-                    onToggle = onReasoningToggle,
-                    streaming = true,
-                )
-                Spacer(Modifier.size(6.dp))
-            }
-            MessageKernelRow(
-                pool = kernelPool,
-                payload = KernelMessagePayload(
-                    mesid = mesid,
-                    mes = text.ifEmpty { "…" },
-                    chName = name,
-                    isUser = false,
-                    isSystem = false,
-                    avatarUrl = kernelAvatarUrlOf(avatarPath),
-                ),
-                streamingText = text,
-                modifier = Modifier.fillMaxWidth(),
-                onLongPress = null,
-            )
-        }
-    } else {
-        val transition = rememberInfiniteTransition(label = "caret")
-        val caretAlpha by transition.animateFloat(
-            initialValue = 0.3f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
-            label = "caretAlpha",
-        )
-        val caretScale by transition.animateFloat(
-            initialValue = 0.75f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(750), RepeatMode.Reverse),
-            label = "caretScale",
-        )
-        Row(
-            modifier = modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-        ) {
-            RoleAvatar(avatarPath = if (impersonating) null else avatarPath, name = if (impersonating) "我" else name, accent = if (impersonating) MaterialTheme.colorScheme.secondary else accent, size = 36)
-            Spacer(Modifier.size(10.dp))
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = if (impersonating) "冒充草稿 · 我" else name,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (impersonating) MaterialTheme.colorScheme.secondary else accent,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.size(4.dp))
-                // 流式思考：同一个卡，默认折叠，点开展开看实时思考过程
-                if (reasoning.isNotBlank()) {
-                    ReasoningCard(
-                        text = reasoning,
-                        expanded = reasoningExpanded,
-                        onToggle = onReasoningToggle,
-                        streaming = true,
-                    )
-                    Spacer(Modifier.size(6.dp))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StreamingMarkdown(
-                        content = text.ifEmpty { "…" },
-                    )
-                    // 呼吸圆点光标：AI 身份暖金点睛（DESIGN_SYSTEM §三.2）
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 4.dp, end = 2.dp)
-                            .size(6.dp)
-                            .graphicsLayer {
-                                scaleX = caretScale
-                                scaleY = caretScale
-                                this.alpha = caretAlpha
-                            }
-                            .background(EmberTheme.colors.ai, CircleShape),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** 流式轻量渲染：流式中不跑完整 Markdown 管线（整段重解析空转，高概率被丢弃），
- *  只做粗粒度着色（标题→粗体、**粗**、*斜*、~~删~~、~下划线~、行内码、六种引号对、链接）。
- *  生成结束后由内核 renderMessage 一次性权威重渲染，视觉与最终一致。 */
-@Composable
-private fun StreamingMarkdown(content: String, fillWidth: Boolean = true) {
-    // 颜色读 ShellTheme 推导令牌：正文=ink(main_text_color)、引用/下划线=accent(quote_text_color)、斜体=inkMute(italics_text_color)
-    val c = EmberTheme.colors
-    val styled = remember(content, c) {
-        streamingStyledText(content, c.ink, c.accent, c.inkMute, c.accent)
-    }
-    Text(
-        text = styled,
-        style = chatTextStyle(),
-        modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier,
-    )
-}
-
-/** 轻量流式着色（见 StreamingMarkdown）。 */
-private fun streamingStyledText(
-    raw: String,
-    bodyColor: Color,
-    quoteColor: Color,
-    emColor: Color,
-    underlineColor: Color,
-): AnnotatedString {
-    // 流式未闭合定界符补齐：**bold → **bold**，让下面的正则整段吞掉标记（否则流式中会露 `**` 等符号）
-    val closed = closeStreamingDelimiters(raw)
-    val cleaned = Regex("""(?m)^\s{0,3}(#{1,6})\s+(.+)$""").replace(closed) { m -> "**${m.groupValues[2]}**" }
-    val out = AnnotatedString.Builder()
-    out.pushStyle(SpanStyle(color = bodyColor))
-    val pattern = Regex(
-        """\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|~~([^~\n]+)~~|(?<!~)~([^~\n]+)~(?!~)|`([^`\n]+)`|"([^"]*)"|“([^”]*)”|«([^»]*)»|「([^」]*)」|『([^』]*)』|＂([^＂]*)＂|\[([^\]\n]+)\]\(([^)\n]+)\)""",
-    )
-    var last = 0
-    for (m in pattern.findAll(cleaned)) {
-        out.append(cleaned.substring(last, m.range.first))
-        val g = m.groupValues
-        when {
-            g[1].isNotEmpty() -> {
-                out.pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                out.append(g[1])
-                out.pop()
-            }
-            g[2].isNotEmpty() -> {
-                out.pushStyle(SpanStyle(color = emColor, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
-                out.append(g[2])
-                out.pop()
-            }
-            g[3].isNotEmpty() -> {
-                out.pushStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
-                out.append(g[3])
-                out.pop()
-            }
-            g[4].isNotEmpty() -> {
-                out.pushStyle(SpanStyle(color = underlineColor, textDecoration = TextDecoration.Underline))
-                out.append(g[4])
-                out.pop()
-            }
-            g[5].isNotEmpty() -> {
-                out.pushStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
-                out.append(g[5])
-                out.pop()
-            }
-            else -> {
-                val isLink = m.value.startsWith("[")
-                out.pushStyle(SpanStyle(color = quoteColor, fontWeight = if (isLink) FontWeight.Medium else null))
-                out.append(if (isLink) g[12] else m.value)
-                out.pop()
-            }
-        }
-        last = m.range.last + 1
-    }
-    out.append(cleaned.substring(last))
-    return out.toAnnotatedString()
-}
-
-/** 流式未闭合定界符补齐（App 增强，仅流式中间态；官方 1.18 流式是每 tick 全量 messageFormatting，
- *  未闭合时同样露符号。这里补上闭合符让轻量渲染器吞掉标记，最终态仍由内核全量渲染一致）。 */
-private fun closeStreamingDelimiters(text: String): String {
-    var out = text
-    // ** 与 * 分开计数：** 优先（**bold 有一个 ** → 补 **；*italic 有一个 * → 补 *）
-    val doubleStars = Regex("\\*\\*").findAll(text).count()
-    val totalStars = text.count { it == '*' }
-    val singleStars = totalStars - doubleStars * 2
-    if (doubleStars % 2 == 1) out += "**"
-    else if (singleStars % 2 == 1) out += "*"
-    val doubleTilde = Regex("~~").findAll(text).count()
-    val totalTilde = text.count { it == '~' }
-    val singleTilde = totalTilde - doubleTilde * 2
-    if (doubleTilde % 2 == 1) out += "~~"
-    else if (singleTilde % 2 == 1) out += "~"
-    if (text.count { it == '`' } % 2 == 1) out += "`"
-    for ((open, close) in listOf(
-        "\"" to "\"", "“" to "”", "«" to "»", "「" to "」", "『" to "』", "＂" to "＂",
-    )) {
-        if (text.count { it == open[0] } > text.count { it == close[0] }) out += close
-    }
-    // 链接：[text](url 未闭合 → 补 )
-    val lastLinkOpen = text.lastIndexOf("](")
-    if (lastLinkOpen >= 0 && text.indexOf(")", lastLinkOpen + 2) == -1) out += ")"
-    return out
-}
-
 /**
  * 合并后的上下文胶囊：圆环进度 + token/上限 + 百分比（绿→黄→橙→红分级）｜世界书命中数，
  * 两端同一胶囊。数据实时取自引擎 `onPrepared`（wiResult.activated + result.counts/maxContextTokens），
@@ -3959,192 +3298,10 @@ private fun PendingMediaChip(media: MediaAttachment, onRemove: () -> Unit) {
     }
 }
 
-/** 消息附件渲染：图片/GIF 用 Coil3（coil-gif），音视频用 Media3 ExoPlayer（README 渲染规范）。
- *  gallery = 官方 extra.media_display=GALLERY：多图单张显示 + 左右滑切（media_index 落盘）+ 圆点计数；
- *  list / 缺省 = 全部纵向排列。 */
-@Composable
-private fun MessageMedia(
-    media: List<MediaAttachment>,
-    display: String? = null,
-    index: Int? = null,
-    onIndexChange: (Int) -> Unit = {},
-    onImageToggle: () -> Unit = {},
-) {
-    val images = media.filter { it.type == "image" }
-    val others = media.filter { it.type != "image" }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        if (display == "gallery" && images.size > 1) {
-            val safeIndex = (index ?: 0).coerceIn(0, images.lastIndex)
-            val image = images[safeIndex]
-            val threshold = with(LocalDensity.current) { 48.dp.toPx() }
-            var dragTotal by remember { mutableStateOf(0f) }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onImageToggle)
-                    .pointerInput(images.size, safeIndex) {
-                        detectHorizontalDragGestures(
-                            onHorizontalDrag = { change, amount ->
-                                change.consume()
-                                dragTotal += amount
-                            },
-                            onDragEnd = {
-                                if (dragTotal < -threshold && safeIndex < images.lastIndex) {
-                                    onIndexChange(safeIndex + 1)
-                                } else if (dragTotal > threshold && safeIndex > 0) {
-                                    onIndexChange(safeIndex - 1)
-                                }
-                                dragTotal = 0f
-                            },
-                            onDragCancel = { dragTotal = 0f },
-                        )
-                    },
-            ) {
-                AsyncImage(
-                    model = mediaModel(image.url),
-                    contentDescription = image.title.ifBlank { "图片" },
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 320.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-            ) {
-                repeat(images.size) { i ->
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(if (i == safeIndex) 7.dp else 5.dp)
-                            .background(
-                                if (i == safeIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                CircleShape,
-                            ),
-                    )
-                }
-            }
-        } else {
-            // 官方渲染：.mes_img 内联大图（max-width:100%、max-height:40vh、圆角 5px）；
-            // 点击图片在 LIST ↔ GALLERY 间切换（官方 chats.js switchMessageMediaDisplay）
-            media.forEach { m ->
-                when (m.type) {
-                    "image" -> AsyncImage(
-                        model = mediaModel(m.url),
-                        contentDescription = m.title.ifBlank { "图片" },
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 320.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable(onClick = onImageToggle),
-                    )
-                    else -> MediaPlayer(m.url, isAudio = m.type == "audio")
-                }
-            }
-        }
-        // 图库模式：图片在图库区显示，非图媒体（音视频）统一在下方列出一次
-        if (display == "gallery" && images.size > 1) {
-            others.forEach { m -> MediaPlayer(m.url, isAudio = m.type == "audio") }
-        }
-    }
-}
-
 /** 读取消息 extra.media_display（list/gallery）。 */
 private fun extraDisplayOf(el: JsonElement): String? =
     (el.jsonObject["extra"] as? JsonObject)?.get("media_display")?.jsonPrimitive?.contentOrNull
         ?.takeIf { it == "list" || it == "gallery" }
-
-/** 读取消息 extra.media_index（gallery 当前选中，缺省 0）。 */
-private fun extraIndexOf(el: JsonElement): Int? =
-    (el.jsonObject["extra"] as? JsonObject)?.get("media_index")?.jsonPrimitive?.content?.toIntOrNull()
-
-@Composable
-private fun MediaPlayer(url: String, isAudio: Boolean) {
-    val context = LocalContext.current
-    val player = remember(url) {
-        ExoPlayer.Builder(context).build().apply {
-            val uri = if (url.startsWith("data:")) Uri.parse(url) else Uri.fromFile(File(url))
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
-        }
-    }
-    DisposableEffect(player) {
-        onDispose { player.release() }
-    }
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                this.player = player
-                useController = true
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-            }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = if (isAudio) 56.dp else 120.dp, max = 320.dp)
-            .clip(RoundedCornerShape(12.dp)),
-    )
-}
-
-/** 思考过程：唯一的一个卡，正文上方；受控展开（流式/生成完共用同一状态），默认折叠。
- *  【待办 Commit 4】迁入内核官方 .mes_reasoning DOM，由主题 CSS 直接接管样式。
- *  streaming=true 时用轻量流式渲染（不跑完整管线，否则每 tick 全量解析卡死滑动），并限高滚动。 */
-@Composable
-private fun ReasoningCard(text: String, expanded: Boolean, onToggle: () -> Unit, streaming: Boolean = false) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .combinedClickable(onClick = onToggle)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (expanded) "思考过程 ▾" else "思考过程 ▸",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-        if (expanded) {
-            Spacer(Modifier.size(5.dp))
-            if (streaming) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    StreamingMarkdown(content = text.ifEmpty { "…" })
-                }
-            } else {
-                StreamingMarkdown(content = text.ifEmpty { "…" })
-            }
-        }
-    }
-}
-
-/** 聊天正文样式：官方 font_scale 单一缩放（power_user.font_scale，默认 1）。
- *  层级/行高/字重/代码字号交还主题 CSS——内核是权威渲染管线；原生仅流式过渡态使用。 */
-@Composable
-private fun chatTextStyle(): androidx.compose.ui.text.TextStyle {
-    val context = LocalContext.current
-    val manager = remember { OfficialThemeManager.shared(context) }
-    val name by manager.currentName.collectAsState()
-    val scale = remember(name) { manager.shellSettings().fontScale.toFloat().coerceIn(0.25f, 3f) }
-    val base = MaterialTheme.typography.bodyMedium
-    return remember(scale, base) {
-        base.copy(fontSize = (16f * scale).sp, lineHeight = (16f * scale * 1.55f).sp)
-    }
-}
-
-/** 深色表面判断：App 已强制暗基底，此判断保留给玻璃边缘高光等明暗二态逻辑。 */
-@Composable
-private fun isDarkThemeSurface(): Boolean =
-    MaterialTheme.colorScheme.background.luminance() < 0.5f
 
 /**
  * 宿主能力白名单处理（V2 §5.3；动作面与 st-api-shim.js AppBridge/toastr 对齐）。
@@ -4187,9 +3344,12 @@ private fun handleHostAction(context: Context, action: String, value: String) {
             val payload = parseJsonPayload(value)
             val message = payload?.get("message")?.jsonPrimitive?.contentOrNull ?: value
             val type = payload?.get("type")?.jsonPrimitive?.contentOrNull ?: "info"
-            // 官方 toastr：error/warning 停留更久 → LENGTH_LONG 近似
-            val duration = if (type == "error" || type == "warning") Toast.LENGTH_LONG else Toast.LENGTH_SHORT
-            Toast.makeText(context, message, duration).show()
+            // 官方 toastr：error/warning 停留更久 → LENGTH_LONG；位置由主题 toastr_position 驱动
+            com.emberinn.app.ui.components.EmberToasts.show(
+                context,
+                message,
+                long = type == "error" || type == "warning",
+            )
         }
         KernelHostAction.SAVE_MEDIA -> runCatching {
             // 卡脚本常把 canvas.toDataURL() 结果直接传 saveMedia——data:URL 走解码落盘路径
@@ -4363,36 +3523,31 @@ private fun PastChatRow(
     }
 }
 
+/**
+ * C3 悬浮附件行：原生侧仅存的输入区配套 UI（上下文胶囊 / 待发媒体 / 快捷回复 / 斜杠补全）。
+ * 作曲行本体是内核 #send_form（官方 DOM + 官方 CSS，含主题 compact/waifuMode 语义）；
+ * 本行悬浮在它上方，底部内边距跟随内核 #form_sheld 实测高度自动让位。
+ */
 @Composable
-private fun ChatInputBar(
+private fun ChatComposerOverlays(
     accent: Color,
     input: String,
-    onInputChange: (String) -> Unit,
-    pendingMedia: List<MediaAttachment>,
-    pendingDisplay: String?,
-    onDisplayChange: (String?) -> Unit,
-    onRemoveMedia: (Int) -> Unit,
+    onInputReplace: (String) -> Unit,
+    formHeightDp: Float,
     isStreaming: Boolean,
-    canQuickContinue: Boolean,
     worldHitsCount: Int,
     contextUsage: Pair<Int, Int>?,
     onOpenWorldPanel: () -> Unit,
     onOpenContextDetail: () -> Unit,
+    pendingMedia: List<MediaAttachment>,
+    pendingDisplay: String?,
+    onDisplayChange: (String?) -> Unit,
+    onRemoveMedia: (Int) -> Unit,
     quickReplies: List<QuickReplySlot>,
     onQuickReply: (String) -> Unit,
-    onQuickContinue: () -> Unit,
-    onQuickImpersonate: () -> Unit,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-    onAttach: () -> Unit,
     slashCommands: List<Pair<String, String>> = emptyList(),
-    impersonating: Boolean = false,
-    impersonationDraft: kotlinx.coroutines.flow.StateFlow<String> = kotlinx.coroutines.flow.MutableStateFlow(""),
     modifier: Modifier = Modifier,
 ) {
-    // 官方冒充：流式正文实时写输入框（聊天区不显示）；
-    // 每 tick 先过 clean(isImpersonate)+定界符补齐（官方 onProgressStreaming L3616），输入框不显示裸流
-    val impersonationClean by impersonationDraft.collectAsState()
     // 斜杠补全：输入以 / 开头且第一个词未完成时，按已输入字母过滤（前缀优先，其次包含），最多 12 条
     val slashMatches = remember(input, slashCommands) {
         val show = input.startsWith("/") && input.length > 1 && !input.substring(1).contains(' ')
@@ -4406,38 +3561,29 @@ private fun ChatInputBar(
                 .take(12)
         }
     }
-    // EmberDS 输入栏：ChatAreaTheme.inputBg 浮在舞台之上，lineStrong 上分界（§6.1 输入区独立配色）
-    val barColor = EmberTheme.chat.inputBg ?: EmberTheme.colors.surface
-    Surface(
-        color = barColor,
-        shadowElevation = 0.dp,
-        modifier = modifier,
+    // 悬浮列：底边距 = 内核表单实测高度（官方 #form_sheld），随键盘/多行增高自动上移
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier.padding(start = 12.dp, end = 12.dp, bottom = (formHeightDp.dp + 6.dp)),
     ) {
-        Column {
-            // 发丝线：消息区/输入区分界
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(EmberTheme.colors.lineStrong),
-            )
-            // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，常驻输入栏顶部（不占消息区）
-            if (!isStreaming && contextUsage != null) {
-                val (used, max) = contextUsage
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp),
-                ) {
-                    ContextCapsule(
-                        used = used,
-                        max = max,
-                        worldHits = worldHitsCount,
-                        onOpenContext = onOpenContextDetail,
-                        onOpenWorld = onOpenWorldPanel,
-                    )
-                }
+        // README 状态可见：上下文占比 + 世界书命中合并为单个胶囊，悬浮在官方输入区上方
+        if (!isStreaming && contextUsage != null) {
+            val (used, max) = contextUsage
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                ContextCapsule(
+                    used = used,
+                    max = max,
+                    worldHits = worldHitsCount,
+                    onOpenContext = onOpenContextDetail,
+                    onOpenWorld = onOpenWorldPanel,
+                )
             }
+        }
             if (pendingMedia.isNotEmpty()) {
                 if (pendingMedia.count { it.type == "image" } > 1) {
                     Row(
@@ -4460,9 +3606,9 @@ private fun ChatInputBar(
                     }
                 }
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     itemsIndexed(pendingMedia, key = { i, media -> "$i-${media.url.take(24)}" }) { index, media ->
                         PendingMediaChip(media = media, onRemove = { onRemoveMedia(index) })
@@ -4475,9 +3621,7 @@ private fun ChatInputBar(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
                     shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     LazyColumn(
                         modifier = Modifier
@@ -4505,7 +3649,7 @@ private fun ChatInputBar(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onInputChange("/$name ") }
+                                    .clickable { onInputReplace("/$name ") }
                                     .padding(horizontal = 12.dp, vertical = 9.dp),
                             ) {
                                 Box(
@@ -4537,126 +3681,21 @@ private fun ChatInputBar(
                         }
                     }
                 }
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(2.dp))
             }
             val enabledReplies = quickReplies.filter { it.enabled }
             if (enabledReplies.isNotEmpty()) {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     items(enabledReplies, key = { it.label }) { slot ->
                         QuickReplyChip(slot.label.ifBlank { "（未命名）" }, onClick = { onQuickReply(slot.label) })
                     }
                 }
             }
-            // —— 作曲行（DESIGN_SYSTEM §6.2）：一体化输入卡。
-            // 工具收进卡内左缘（幽灵纯图标）、正文无边框透明、发送/停止独立在卡右——
-            // 三层嵌套容器收敛成"一张卡 + 一个动作"，输入区只保留一条视觉主线。——
-            val chatC = EmberTheme.chat
-            // ChatAreaTheme 允许皮肤缺省字段：逐项解析到 EmberDS 令牌兜底（颜色链：皮肤>令牌）
-            val ccT = EmberTheme.colors
-            val inputBgC = chatC.inputBg ?: ccT.surface
-            val inputBorderC = chatC.inputBorder ?: ccT.line
-            val inputAccentC = chatC.inputAccent ?: ccT.accent
-            val placeholderC = chatC.inputPlaceholder ?: ccT.inkMute
-            val buttonIconC = chatC.buttonIcon ?: ccT.inkSoft
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(inputBgC)
-                        .border(0.5.dp, inputBorderC, RoundedCornerShape(24.dp)),
-                ) {
-                    // 卡内工具簇：附件 + 冒充 + 继续（官方 rightSendForm 的移动端等价）
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 2.dp, top = 2.dp),
-                    ) {
-                        EmberInputIcon(
-                            onClick = onAttach,
-                            icon = FaIcons.Plus,
-                            contentDescription = "附件与工具",
-                            tint = buttonIconC,
-                            ghost = true,
-                        )
-                        if (!isStreaming) {
-                            EmberInputIcon(
-                                onClick = onQuickImpersonate,
-                                icon = FaIcons.UserSecret,
-                                contentDescription = "冒充用户发言",
-                                tint = inputAccentC.copy(alpha = 0.85f),
-                                ghost = true,
-                            )
-                            if (canQuickContinue) {
-                                EmberInputIcon(
-                                    onClick = onQuickContinue,
-                                    icon = FaIcons.ArrowRight,
-                                    contentDescription = "继续生成",
-                                    tint = inputAccentC.copy(alpha = 0.85f),
-                                    ghost = true,
-                                )
-                            }
-                        }
-                    }
-                    EmberTextField(
-                        value = if (impersonating) impersonationClean else input,
-                        onValueChange = if (impersonating) { _ -> } else onInputChange,
-                        placeholder = {
-                            Text(
-                                if (impersonating) "正在代写你的发言…" else "输入消息…",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = placeholderC,
-                            )
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        maxLines = 4,
-                        colors = EmberTextFieldDefaults.colors(
-                            cursorColor = inputAccentC,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                        ),
-                        focusGlow = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 44.dp, max = 160.dp)
-                            .padding(horizontal = 4.dp),
-                    )
-                }
-                if (!isStreaming) {
-                    val canSend = input.isNotBlank() || pendingMedia.isNotEmpty()
-                    ChatSendButton(accent = inputAccentC, canSend = canSend, onSend = onSend)
-                } else {
-                    ChatStopButton(onStop = onStop)
-                }
-            }
-        }
-    }
-
-}
-
-/** 停止生成：danger 实心圆钮（EmberDS 语义色，与发送钮同尺寸对位）。 */
-@Composable
-private fun ChatStopButton(onStop: () -> Unit) {
-    val c = EmberTheme.colors
-    IconButton(onClick = onStop, modifier = Modifier.size(44.dp)) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(c.danger),
-        ) {
-            Icon(FaIcons.CircleStop, contentDescription = "停止生成", tint = Color.White, modifier = Modifier.size(19.dp))
-        }
+            // 作曲行本体 = 内核 #send_form（官方 DOM/CSS）；原生侧到此为止。
     }
 }
 
@@ -4742,54 +3781,6 @@ private fun AttachSheetRow(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(16.dp),
-            )
-        }
-    }
-}
-
-/** 发送按钮：保留角色 seed 取色（accent 底 + 自适应亮/暗图标），升级为 38dp 圆钮 + accent 柔光。 */
-@Composable
-private fun ChatSendButton(accent: Color, canSend: Boolean, onSend: () -> Unit) {
-    val onAccent = if (accent.luminance() > 0.5f) Color.Black.copy(alpha = 0.8f) else Color.White
-    // 对角渐变替代纯色：深色主色亮端在上、浅色主色暗端在下，光照方向与停止钮/发丝线一致
-    val sendBrush = if (accent.luminance() > 0.5f) {
-        Brush.linearGradient(listOf(accent, lerp(accent, Color.Black, 0.18f)))
-    } else {
-        Brush.linearGradient(listOf(lerp(accent, Color.White, 0.22f), accent))
-    }
-    IconButton(
-        onClick = onSend,
-        enabled = canSend,
-        modifier = Modifier.size(42.dp),
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(38.dp)
-                .then(
-                    if (canSend) {
-                        Modifier.emberShadow(
-                            color = accent.copy(alpha = 0.45f),
-                            radius = 10.dp,
-                            spread = 1.dp,
-                            offset = DpOffset(0.dp, 3.dp),
-                            alpha = 0.4f,
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .clip(CircleShape)
-                .background(
-                    if (canSend) sendBrush
-                    else SolidColor(EmberTheme.colors.lineStrong),
-                ),
-        ) {
-            Icon(
-                FaIcons.PaperPlane,
-                contentDescription = "发送",
-                tint = if (canSend) onAccent else EmberTheme.colors.inkMute,
-                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -5029,11 +4020,55 @@ private fun dateLabelOf(el: JsonElement): String? {
     }.getOrNull()
 }
 
+/**
+ * 官方 utils.js parseTimestamp + script.js L2582 `.format('LL LT')` 同构：
+ * 输入四形态——Unix 毫秒、ISO 8601、humanized（2024-7-12@01h31m37s500ms，UTC）、
+ * 英文月名（June 19, 2023 2:20pm，本地时区）；输出 zh-cn 'LL LT'＝「yyyy年M月d日 HH:mm」。
+ */
 private fun timeOf(el: JsonElement): String {
     val raw = el.jsonObject["send_date"]?.jsonPrimitive?.contentOrNull ?: return ""
+    val zone = ZoneId.systemDefault()
+
+    // humanized 三变体合一（空格可有可无，毫秒段可选）；官方按 UTC 处理
+    val humanized = Regex("(\\d{4})-(\\d{1,2})-(\\d{1,2})\\s*@\\s*(\\d{1,2})h\\s*(\\d{1,2})m\\s*(\\d{1,2})s(?:\\s*(\\d{1,3})ms)?")
+        .find(raw)?.destructured
+    if (humanized != null) {
+        val (y, mo, d, h, mi, s) = humanized
+        return runCatching {
+            java.time.LocalDateTime.of(y.toInt(), mo.toInt(), d.toInt(), h.toInt(), mi.toInt(), s.toInt())
+                .atOffset(java.time.ZoneOffset.UTC).atZoneSameInstant(zone)
+                .format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm"))
+        }.getOrDefault("")
+    }
+
+    // 英文月名变体；官方 moment 无时区标记按本地时间解析
+    val meridiem = Regex("([A-Za-z]+)\\s(\\d{1,2}),\\s(\\d{4})\\s(\\d{1,2}):(\\d{1,2})(am|pm)", RegexOption.IGNORE_CASE)
+        .find(raw)?.destructured
+    if (meridiem != null) {
+        val (mon, day, year, hour, min, mer) = meridiem
+        val months = listOf(
+            "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+            "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+        )
+        val monthIdx = months.indexOfFirst { it.startsWith(mon.uppercase().take(3)) }
+        if (monthIdx >= 0) {
+            return runCatching {
+                val h24 = if (mer.equals("pm", true)) (hour.toInt() % 12) + 12 else hour.toInt() % 12
+                java.time.LocalDateTime.of(year.toInt(), monthIdx + 1, day.toInt(), h24, min.toInt())
+                    .atZone(zone)
+                    .format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm"))
+            }.getOrDefault("")
+        }
+    }
+
+    // Unix 毫秒（官方 /^\d+$/ 分支）与 ISO 8601
     return runCatching {
-        Instant.parse(raw).atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("HH:mm"))
+        val instant = if (raw.matches(Regex("\\d+"))) {
+            Instant.ofEpochMilli(raw.toLong())
+        } else {
+            Instant.parse(raw)
+        }
+        instant.atZone(zone).format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm"))
     }.getOrDefault("")
 }
 

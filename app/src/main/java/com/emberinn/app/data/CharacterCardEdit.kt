@@ -102,7 +102,6 @@ data class WorldEntryDraft(
 /** 角色级主题配方（README 承诺：seed/背景/形状/字体/风格档位/浅深锁定，角色卡驱动主题；官方无对应字段）。 */
 data class ThemeRecipe(
     val seed: String = "",
-    val background: String = "",
     val shape: String = "",        // "" 跟随全局 / "square" 4dp / "rounded" 16dp / "circle" 24dp
     val font: String = "",         // "" 系统 / "serif" 衬线 / "source" 思源宋体
     val style: String = "",        // "" 跟随全局 / "airy" / "calm" / "vivid"
@@ -583,7 +582,6 @@ object CharacterCardEdit {
         fun str(key: String): String = (o[key] as? JsonPrimitive)?.contentOrNull ?: ""
         ThemeRecipe(
             seed = str("seed"),
-            background = str("background"),
             shape = str("shape"),
             font = str("font"),
             style = str("style"),
@@ -595,14 +593,12 @@ object CharacterCardEdit {
     fun applyThemeRecipe(raw: String, r: ThemeRecipe): String = updateData(raw) { data ->
         val m = data.toMutableMap()
         val ext = (m["extensions"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
-        val empty = r.seed.isBlank() && r.background.isBlank() && r.shape.isBlank() &&
-            r.font.isBlank() && r.style.isBlank() && r.lockMode.isBlank()
+        val empty = r.seed.isBlank() && r.shape.isBlank() && r.font.isBlank() && r.style.isBlank() && r.lockMode.isBlank()
         if (empty) {
             ext.remove("emberinn_theme_recipe")
         } else {
             ext["emberinn_theme_recipe"] = buildJsonObject {
                 if (r.seed.isNotBlank()) put("seed", JsonPrimitive(r.seed))
-                if (r.background.isNotBlank()) put("background", JsonPrimitive(r.background))
                 if (r.shape.isNotBlank()) put("shape", JsonPrimitive(r.shape))
                 if (r.font.isNotBlank()) put("font", JsonPrimitive(r.font))
                 if (r.style.isNotBlank()) put("style", JsonPrimitive(r.style))
@@ -615,7 +611,6 @@ object CharacterCardEdit {
     /** 主题配方 → JSON 文本（导出/分享）。 */
     fun themeRecipeToJson(r: ThemeRecipe): String = buildJsonObject {
         if (r.seed.isNotBlank()) put("seed", JsonPrimitive(r.seed))
-        if (r.background.isNotBlank()) put("background", JsonPrimitive(r.background))
         if (r.shape.isNotBlank()) put("shape", JsonPrimitive(r.shape))
         if (r.font.isNotBlank()) put("font", JsonPrimitive(r.font))
         if (r.style.isNotBlank()) put("style", JsonPrimitive(r.style))
@@ -627,7 +622,6 @@ object CharacterCardEdit {
         val o = json.parseToJsonElement(text).jsonObject
         ThemeRecipe(
             seed = o["seed"]?.jsonPrimitive?.contentOrNull ?: "",
-            background = o["background"]?.jsonPrimitive?.contentOrNull ?: "",
             shape = o["shape"]?.jsonPrimitive?.contentOrNull ?: "",
             font = o["font"]?.jsonPrimitive?.contentOrNull ?: "",
             style = o["style"]?.jsonPrimitive?.contentOrNull ?: "",

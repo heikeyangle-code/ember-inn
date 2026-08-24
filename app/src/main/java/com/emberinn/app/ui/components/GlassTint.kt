@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.settings.AppearancePrefs
 import com.skydoves.cloudy.Sky
 import com.skydoves.cloudy.cloudy
 
@@ -51,6 +50,9 @@ fun Modifier.emberGlass(
     val context = LocalContext.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val tint = glassTint()
+    // 官方主题字段唯一数据源：fast_ui_mode（true=no-blur 关玻璃）+ blur_strength（0-30 px）
+    val shell = com.emberinn.app.data.OfficialThemeManager.shared(context).shellSettings()
+    val blurRadius = shell.blurStrength.toInt()
     val baseCoat = Modifier
         .background(MaterialTheme.colorScheme.background)
         .background(tint.copy(alpha = tintAlpha))
@@ -58,10 +60,10 @@ fun Modifier.emberGlass(
         .glassEdgeHighlight(dark = dark, atTop = atTop)
         .then(baseCoat)
         .then(
-            if (AppearancePrefs.backgroundBlur(context) && blurEnabled) {
+            if (!shell.fastUiMode && blurEnabled && blurRadius > 0) {
                 Modifier.cloudy(
                     sky = sky,
-                    radius = AppearancePrefs.blurStrength(context).coerceAtLeast(EmberGlassDefaults.MIN_RADIUS),
+                    radius = blurRadius,
                     tint = tint.copy(alpha = tintAlpha),
                 )
             } else {

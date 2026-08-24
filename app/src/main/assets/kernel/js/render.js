@@ -396,10 +396,20 @@
         if (payload.smallSysMes) { node.classList.add('smallSysMes'); }
         if (payload.toolCall) { node.classList.add('toolCall'); }
 
-        if (payload.avatarUrl) {
-            var img = node.querySelector('.mesAvatarWrapper .avatar img');
-            if (img) { img.src = payload.avatarUrl; }
+        // 官方 script.js L2646-2650：头像加载失败兜底为 missing-avatar 占位。
+        // 无条件挂监听（模板空 src 不触发 error），再按 payload 下发真实 src。
+        var avatarImg = node.querySelector('.mesAvatarWrapper .avatar img');
+        if (avatarImg && !avatarImg.dataset.errBound) {
+            avatarImg.dataset.errBound = '1';
+            avatarImg.addEventListener('error', function () {
+                avatarImg.style.display = 'none';
+                if (avatarImg.parentElement) {
+                    avatarImg.parentElement.innerHTML =
+                        '<div class="missing-avatar fa-solid fa-user-slash"></div>';
+                }
+            });
         }
+        if (payload.avatarUrl && avatarImg) { avatarImg.src = payload.avatarUrl; }
         var nameEl = node.querySelector('.name_text');
         if (nameEl) { nameEl.textContent = payload.chName || ''; }
         var tsEl = node.querySelector('.timestamp');
@@ -461,15 +471,18 @@
         var ghostEl = node.querySelector('.mes_ghost');
         if (ghostEl) { ghostEl.style.display = payload.ghost ? '' : 'none'; }
 
-        // 官方 swipes_visible / swipes-counter：仅最后一条非用户/系统消息由宿主判定可滑。
-        // 官方按钮 DOM 保留，交互事件仍报宿主，避免桥层重复实现官方状态机。
+        // 官方 refreshSwipeButtons / isMessageSwipeable 语义（script.js L9123-9152）：
+        // 可滑=最后一条且非用户/非 smallSys；swipes_visible=有 >1 变体（左箭头随之显）；
+        // last_swipe=已到末位变体（overswipe 缺省 REGENERATE → 右箭头兜底常显，style.css L1341-1343）。
+        // 计数带零宽空格 formatSwipeCounter L9875：`n​/​total`。
         var swipeCount = Number(payload.swipeCount || 0);
         var currentSwipe = Number(payload.currentSwipe || 0);
-        var swipeable = !!payload.lastMessage && !payload.isUser && !payload.isSystem && swipeCount > 1 && !window.__kernelStreaming;
-        node.classList.toggle('swipes_visible', swipeable);
+        var swipeable = !!payload.lastMessage && !payload.isUser && !payload.isSystem && !payload.smallSysMes;
+        node.classList.toggle('swipes_visible', swipeable && swipeCount > 1);
+        node.classList.toggle('last_swipe', swipeable && (swipeCount - 1 <= currentSwipe));
         node.classList.toggle('last_mes', !!payload.lastMessage);
         var counterEl = node.querySelector('.swipes-counter');
-        if (counterEl) { counterEl.textContent = swipeable ? (currentSwipe + 1) + '/' + swipeCount : ''; }
+        if (counterEl) { counterEl.textContent = (currentSwipe + 1) + '​/​' + swipeCount; }
 
         // 官方媒体容器：图片直接进 .mes_media_wrapper；音视频沿用原生控件语义。
         var mediaWrapper = node.querySelector('.mes_media_wrapper');
@@ -526,6 +539,9 @@
 
         // 点击上报（链接/交互元素由 WebViewClient 外链逻辑处理，这里报宿主决策）
         node.addEventListener('click', function (ev) {
+            // 官方 script.js L11806：操作按钮排展开是纯内核 DOM 状态，不上报宿主
+            var hintEl = ev.target.closest ? ev.target.closest('.extraMesButtonsHint') : null;
+            if (hintEl) { expandExtraMesButtons(hintEl); return; }
             var actionEl = ev.target.closest ?
                 ev.target.closest('[class*="mes_"], .swipe_left, .swipe_right, .del_checkbox') : null;
             // 官方删除模式点击整条 .mes：从该条截断到末尾；普通模式不吞消息链接点击。
@@ -706,9 +722,38 @@
         var root = document.documentElement;
         function set(k, v) { root.style.setProperty(k, v); }
 
-        if (theme.main_text_color) {
-            set('--SmartThemeBodyColor', theme.main_text_color);
-            var m = theme.main_text_color.match(/\(([^)]+)\)/);
+        // 官方默认值兜底（power-user.js power_user 初始值）：主题 JSON 缺字段时按官方默认
+        // 生效，而不是"不加类"——手写/裁剪 JSON 的行为才能与官方一致。
+        var OFFICIAL_DEFAULTS = {
+            blur_strength: 10,
+            shadow_width: 2,
+            font_scale: 1,
+            fast_ui_mode: true,
+            waifuMode: false,
+            avatar_style: 0,
+            chat_display: 0,
+            noShadows: false,
+            chat_width: 50,
+            timer_enabled: true,
+            timestamps_enabled: true,
+            timestamp_model_icon: false,
+            mesIDDisplay_enabled: false,
+            hideChatAvatars_enabled: false,
+            message_token_count_enabled: false,
+            expand_message_actions: false,
+            enableZenSliders: false,
+            enableLabMode: false,
+            hotswap_enabled: true,
+            reduced_motion: false,
+            compact_input_area: false,
+            show_swipe_num_all_messages: false,
+        };
+        function val(k) { return (k in theme) ? theme[k] : OFFICIAL_DEFAULTS[k]; }
+
+        var mainColor = val('main_text_color');
+        if (mainColor) {
+            set('--SmartThemeBodyColor', mainColor);
+            var m = String(mainColor).match(/\(([^)]+)\)/);
             if (m) {
                 var parts = m[1].split(',');
                 set('--SmartThemeCheckboxBgColorR', parts[0]);
@@ -717,32 +762,31 @@
                 set('--SmartThemeCheckboxBgColorA', parts[3]);
             }
         }
-        if (theme.italics_text_color) set('--SmartThemeEmColor', theme.italics_text_color);
-        if (theme.underline_text_color) set('--SmartThemeUnderlineColor', theme.underline_text_color);
-        if (theme.quote_text_color) set('--SmartThemeQuoteColor', theme.quote_text_color);
-        if (theme.blur_tint_color) set('--SmartThemeBlurTintColor', theme.blur_tint_color);
-        if (theme.chat_tint_color) set('--SmartThemeChatTintColor', theme.chat_tint_color);
-        if (theme.user_mes_blur_tint_color) set('--SmartThemeUserMesBlurTintColor', theme.user_mes_blur_tint_color);
-        if (theme.bot_mes_blur_tint_color) set('--SmartThemeBotMesBlurTintColor', theme.bot_mes_blur_tint_color);
-        if (theme.shadow_color) set('--SmartThemeShadowColor', theme.shadow_color);
-        if (theme.border_color) set('--SmartThemeBorderColor', theme.border_color);
-        if (theme.blur_strength != null) set('--blurStrength', String(theme.blur_strength));
-        if (theme.shadow_width != null) set('--shadowWidth', String(theme.shadow_width));
-        if (theme.font_scale != null) set('--fontScale', String(theme.font_scale));
-        if (theme.chat_width != null) set('--sheldWidth', theme.chat_width + 'vw');
+        var italicsColor = val('italics_text_color'); if (italicsColor) set('--SmartThemeEmColor', italicsColor);
+        var underlineColor = val('underline_text_color'); if (underlineColor) set('--SmartThemeUnderlineColor', underlineColor);
+        var quoteColor = val('quote_text_color'); if (quoteColor) set('--SmartThemeQuoteColor', quoteColor);
+        var blurTintColor = val('blur_tint_color'); if (blurTintColor) set('--SmartThemeBlurTintColor', blurTintColor);
+        var chatTintColor = val('chat_tint_color'); if (chatTintColor) set('--SmartThemeChatTintColor', chatTintColor);
+        var userMesTint = val('user_mes_blur_tint_color'); if (userMesTint) set('--SmartThemeUserMesBlurTintColor', userMesTint);
+        var botMesTint = val('bot_mes_blur_tint_color'); if (botMesTint) set('--SmartThemeBotMesBlurTintColor', botMesTint);
+        var shadowColor = val('shadow_color'); if (shadowColor) set('--SmartThemeShadowColor', shadowColor);
+        var borderColor = val('border_color'); if (borderColor) set('--SmartThemeBorderColor', borderColor);
+        set('--blurStrength', String(val('blur_strength')));
+        set('--shadowWidth', String(val('shadow_width')));
+        set('--fontScale', String(val('font_scale')));
+        set('--sheldWidth', val('chat_width') + 'vw');
 
-        // custom_css 直接注入（官方 applyCustomCSS 同构）
+        // custom_css 直接注入（官方 applyCustomCSS 同构；缺字段=空串=无自定义）
+        var customCss = ('custom_css' in theme) ? (theme.custom_css || '') : '';
         var style = document.getElementById('custom-style');
-        if (style) { style.innerHTML = theme.custom_css || ''; }
+        if (style) { style.innerHTML = customCss; }
 
-        // 官方 compact_input_area → #send_form.compact（power-user.js switchCompactInputArea）。
-        // C3 前输入区不在内核 DOM；类先落在 body 供主题过渡规则使用，C3 后同步到真实表单。
-        if ('compact_input_area' in theme) {
-            document.body.classList.toggle('compact-input-area', !!theme.compact_input_area);
-        }
+        // 官方 compact_input_area → #send_form.compact（power-user.js switchCompactInputArea L529-532）
+        var sendForm = document.getElementById('send_form');
+        if (sendForm) { sendForm.classList.toggle('compact', !!val('compact_input_area')); }
 
         // 开关型字段 → body 类同步（与 power-user.js applyPowerUserSettings 逐项同构）
-        // 官方语义：每次应用全量同步，先移除后按当前值添加
+        // 官方语义：每次应用全量同步，先移除后按当前值（含缺字段时的官方默认值）添加
         var classSync = [
             // [字段, 类名, 取值语义]  true=真时加类 / inverted=假时加类 / value=枚举映射
             ['fast_ui_mode', 'no-blur', 'true'],
@@ -766,25 +810,21 @@
         managedClasses.forEach(function (cls) { document.body.classList.remove(cls); });
         classSync.forEach(function (item) {
             var field = item[0], cls = item[1], mode = item[2];
-            if (!(field in theme)) return;
-            var v = theme[field];
+            var v = val(field);
             var on = mode === 'true' ? !!v : !v;
             if (on) document.body.classList.add(cls);
         });
         // 头像形状：avatar_style 0 圆 / 1 矩形大头像 / 2 方形 / 3 圆角（官方 avatar_styles 枚举 L95-100）
-        if ('avatar_style' in theme) {
-            if (theme.avatar_style === 1) document.body.classList.add('big-avatars');
-            else if (theme.avatar_style === 2) document.body.classList.add('square-avatars');
-            else if (theme.avatar_style === 3) document.body.classList.add('rounded-avatars');
-        }
+        var avatarStyle = val('avatar_style');
+        if (avatarStyle === 1) document.body.classList.add('big-avatars');
+        else if (avatarStyle === 2) document.body.classList.add('square-avatars');
+        else if (avatarStyle === 3) document.body.classList.add('rounded-avatars');
         // 消息布局：chat_display 0 平铺 / 1 气泡(bubblechat) / 2 文档(documentstyle)；
         // 3..7 = Moonlit Echoes 扩展布局，映射已对上游扩展 index.js initChatDisplaySwitcher
         // 逐项核实（3=echostyle/4=whisperstyle/5=hushstyle/6=ripplestyle/7=tidestyle），
         // 全量同步语义与上游一致。样式包未加载时这些类为惰性。
-        if ('chat_display' in theme) {
-            var layoutClass = chatDisplayToClass(theme.chat_display);
-            if (layoutClass) { document.body.classList.add(layoutClass); }
-        }
+        var layoutClass = chatDisplayToClass(val('chat_display'));
+        if (layoutClass) { document.body.classList.add(layoutClass); }
 
         bridgeSend({ type: 'themeApplied' });
     }
@@ -847,23 +887,137 @@
     })();
 
     // ------------------------------------------------------------------
+    // 官方输入区（#form_sheld）管理（C3）
+    // RA_checkOnlineStatus connected 分支 / showStopButton / openMessageDelete 同构；
+    // 控件点击经 hostRequest 桥接宿主执行，草稿真值在宿主侧。
+    // ------------------------------------------------------------------
+    var deleteModeActive = false;
+    /** hideSwipeButtons/showSwipeButtons 合成语义：生成中或删除模式隐藏 chevron
+     *  （script.js refreshSwipeButtons 的 body.hideAllSwipeButtons + openMessageDelete 调用点） */
+    function syncHideSwipes() {
+        var generating = document.body.getAttribute('data-generating') === 'true';
+        document.body.classList.toggle('hideAllSwipeButtons', generating || deleteModeActive);
+    }
+
+    // 官方 script.js L11806-11834：点省略号展开 .extraMesButtons（hint 隐藏、按钮排 display:flex）。
+    // 动画由官方 CSS transition（.mes_buttons all var(--animation-duration-2x)）承担，这里只切状态。
+    function expandExtraMesButtons(hint) {
+        var buttons = hint.parentElement.querySelector('.extraMesButtons');
+        if (!buttons || buttons.classList.contains('visible')) { return; }
+        hint.style.display = 'none';
+        buttons.classList.add('visible');
+        buttons.style.display = 'flex';
+    }
+
+    // 官方 script.js L11835-11868：点击按钮排/省略号以外区域收起全部已展开排；
+    // expand_message_actions（body.expandMessageActions）开启时按钮排常显，不参与收起。
+    function initExtraMesButtonsOutsideClose() {
+        document.addEventListener('click', function (ev) {
+            if (document.body.classList.contains('expandMessageActions')) { return; }
+            if (ev.target.closest && ev.target.closest('.extraMesButtons, .extraMesButtonsHint')) { return; }
+            var visible = document.querySelectorAll('.extraMesButtons.visible');
+            for (var i = 0; i < visible.length; i++) {
+                visible[i].classList.remove('visible');
+                visible[i].style.display = 'none';
+            }
+            var hints = document.querySelectorAll('.extraMesButtonsHint');
+            for (var j = 0; j < hints.length; j++) { hints[j].style.display = ''; }
+        });
+    }
+
+    function initInputArea() {
+        var form = document.getElementById('send_form');
+        if (!form || form.dataset.inputBooted) { return; }
+        form.dataset.inputBooted = '1';
+        // 连接态：EmberInn 恒为已连接（RA_checkOnlineStatus connected 分支 L339-348：
+        // 去 no-connection；send_but/mes_continue/mes_impersonate 去 displayNone）
+        form.classList.remove('no-connection');
+        ['send_but', 'mes_continue', 'mes_impersonate'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) { el.classList.remove('displayNone'); }
+        });
+        // 控件 → 宿主动作（官方各 click 处理器的桥接等价）
+        function on(id, action) {
+            var el = document.getElementById(id);
+            if (el) { el.addEventListener('click', function () { bridgeSend({ type: 'hostRequest', hostAction: action }); }); }
+        }
+        on('send_but', 'chat_send');
+        on('mes_stop', 'chat_interrupt');
+        on('options_button', 'chat_options');
+        on('attach_button', 'chat_attach');
+        on('mes_impersonate', 'chat_impersonate');
+        on('mes_continue', 'chat_continue');
+        on('dialogue_del_mes_ok', 'chat_delete_confirm');
+        on('dialogue_del_mes_cancel', 'chat_delete_cancel');
+        var ta = document.getElementById('send_textarea');
+        if (ta) {
+            ta.addEventListener('input', function () {
+                bridgeSend({ type: 'inputChanged', text: ta.value });
+            });
+        }
+        // #form_sheld 高度回报：原生悬浮附件/快捷回复行动态内边距（CSS px ≈ Compose dp）
+        var sheld = document.getElementById('form_sheld');
+        if (sheld && 'ResizeObserver' in window) {
+            var reportFormHeight = function () {
+                bridgeSend({ type: 'inputHeight', height: sheld.offsetHeight });
+            };
+            new ResizeObserver(reportFormHeight).observe(sheld);
+            requestAnimationFrame(reportFormHeight);
+        }
+    }
+
+    /** 官方写法同构：$('#send_textarea').val(x)[0].dispatchEvent(new Event('input',{bubbles:true})) */
+    function setInputText(text) {
+        var ta = document.getElementById('send_textarea');
+        if (!ta) { return; }
+        ta.value = (text == null) ? '' : String(text);
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    /**
+     * 生成/滑动状态（deactivateSendButtons/unblockGeneration 的 DOM 面）：
+     * body[data-generating]/[data-swiping] 经 style.css 隐藏 send_but/mes_continue/
+     * mes_impersonate 与 last_mes 按钮排；showStopButton/hideStopButton 切 #mes_stop。
+     */
+    function setInputState(state) {
+        state = state || {};
+        if ('generating' in state) {
+            document.body.setAttribute('data-generating', state.generating ? 'true' : 'false');
+            var stop = document.getElementById('mes_stop');
+            if (stop) { stop.style.display = state.generating ? 'flex' : 'none'; }
+            syncHideSwipes();
+        }
+        if ('swiping' in state) {
+            document.body.setAttribute('data-swiping', state.swiping ? 'true' : 'false');
+        }
+    }
+
+    // ------------------------------------------------------------------
     // 官方删除模式（openMessageDelete / dialogue_del_mes cancel-ok 的 DOM 状态）
     // ------------------------------------------------------------------
     function setDeleteMode(enabled) {
         var chat = document.getElementById('chat');
-        if (!chat) { return; }
-        Array.prototype.forEach.call(chat.querySelectorAll('.mes'), function (node) {
-            var checkbox = node.querySelector(':scope > .del_checkbox');
-            var forBox = node.querySelector(':scope > .for_checkbox');
-            if (!checkbox || !forBox) { return; }
-            checkbox.style.display = enabled ? 'grid' : 'none';
-            forBox.style.display = enabled ? 'none' : 'block';
-            if (!enabled) {
-                node.classList.remove('selected');
-                checkbox.checked = false;
-            }
-        });
+        if (chat) {
+            Array.prototype.forEach.call(chat.querySelectorAll('.mes'), function (node) {
+                var checkbox = node.querySelector(':scope > .del_checkbox');
+                var forBox = node.querySelector(':scope > .for_checkbox');
+                if (!checkbox || !forBox) { return; }
+                checkbox.style.display = enabled ? 'grid' : 'none';
+                forBox.style.display = enabled ? 'none' : 'block';
+                if (!enabled) {
+                    node.classList.remove('selected');
+                    checkbox.checked = false;
+                }
+            });
+        }
         document.body.classList.toggle('delete-mode', !!enabled);
+        // 官方 openMessageDelete：确认条显示、输入表单隐藏；取消/确认恢复样式表默认 display
+        var dlg = document.getElementById('dialogue_del_mes');
+        if (dlg) { dlg.style.display = enabled ? 'block' : 'none'; }
+        var form = document.getElementById('send_form');
+        if (form) { form.style.display = enabled ? 'none' : ''; }
+        deleteModeActive = !!enabled;
+        syncHideSwipes();
     }
 
     function selectDeleteFrom(mesid) {
@@ -880,6 +1034,19 @@
     }
 
     // ------------------------------------------------------------------
+    // C4 官方背景（backgrounds.js onChatChanged 同构）：#bg1 background-image；
+    // 会话级锁定 > 全局背景由宿主解析后下发。blur/染色不在此做——官方语义是
+    // #sheld/#send_form 的 backdrop-filter 消费 --SmartThemeBlurStrength。
+    // ------------------------------------------------------------------
+    function setBackground(url, fitting) {
+        var bg = document.getElementById('bg1');
+        if (!bg) { return; }
+        bg.style.backgroundImage = url ? 'url("' + String(url).replace(/"/g, '\\"') + '")' : 'none';
+        bg.classList.remove('cover', 'contain', 'stretch', 'center');
+        if (fitting) { bg.classList.add(String(fitting)); }
+    }
+
+    // ------------------------------------------------------------------
     // 公开 API
     // ------------------------------------------------------------------
     window.Kernel = {
@@ -889,10 +1056,15 @@
         scrollToBottom: scrollToBottom,  // 官方 #chat 滚动接管（C1/C2）
         setDeleteMode: setDeleteMode,
         selectDeleteFrom: selectDeleteFrom,
+        setInputText: setInputText,      // C3：宿主 → #send_textarea（草稿下发/冒充流式/发送后清空）
+        setInputState: setInputState,    // C3：生成/滑动状态 → data-generating/mes_stop/hideAllSwipeButtons
+        setBackground: setBackground,    // C4：官方 #bg1 背景图（会话级 > 全局，宿主解析 URL）
         applyTheme: applyTheme,
         applyStylePack: applyStylePack,  // 第三方主题整包 CSS（无则纯官方行为）
         clear: clearMessages,
         ready: true,
     };
+    initInputArea();
+    initExtraMesButtonsOutsideClose();
     bridgeSend({ type: 'kernelReady' });
 })();

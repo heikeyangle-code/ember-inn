@@ -39,12 +39,43 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval("window.Kernel.selectDeleteFrom($escaped);")
     }
 
-    /** 流式更新：节流由调用方控制；流中轻量更新 .mes_text，流结束后调用 [renderMessage] 权威重渲 */
-    fun updateStreamingText(mesid: String, text: String) {
+    /** C3：宿主 → #send_textarea（草稿下发 / 冒充流式 / 发送后清空）。
+     *  内核会补发 inputChanged 镜像，宿主状态自然收敛。 */
+    fun pushInputText(text: String) {
         val escaped = jsonEsc(text)
+        eval("window.Kernel.setInputText($escaped);")
+    }
+
+    /** C3：生成/滑动状态 → body[data-generating]/[data-swiping] + #mes_stop 显隐 */
+    fun setInputState(generating: Boolean, swiping: Boolean = false) {
+        val js = "window.Kernel.setInputState({generating:$generating,swiping:$swiping});"
+        eval(js)
+    }
+
+    /** C4：官方 #bg1 背景（backgrounds.js onChatChanged 同构）；url=null 清除 */
+    fun setBackground(url: String?, fitting: String? = null) {
+        val js = buildString {
+            append("window.Kernel.setBackground(")
+            append(if (url != null) jsonEsc(url) else "null")
+            append(",")
+            append(if (fitting != null) jsonEsc(fitting) else "null")
+            append(");")
+        }
+        eval(js)
+    }
+
+    /** C5 官方 onProgressStreaming 同构：原地更新流式行 .mes_text（+可选 .mes_reasoning），
+     *  不重建其余消息节点；节流由调用方控制，流结束走 renderChat 权威同步 */
+    fun updateStreaming(mesid: String, text: String, reasoning: String? = null) {
+        val escaped = jsonEsc(text)
+        val reasoningJs = if (reasoning != null) {
+            val r = jsonEsc(reasoning)
+            "var rd=m.querySelector('.mes_reasoning');if(rd){rd.textContent=$r;}"
+        } else ""
         eval(
-            "(function(){var el=document.querySelector('.mes[mesid=\"$mesid\"] .mes_text');" +
-                "if(el){el.innerHTML=window.Kernel.formatText($escaped,{});}})();",
+            "(function(){var m=document.querySelector('.mes[mesid=\"$mesid\"]');if(!m)return;" +
+                "var el=m.querySelector('.mes_text');" +
+                "if(el){el.innerHTML=window.Kernel.formatText($escaped,{});}$reasoningJs})();",
         )
     }
 

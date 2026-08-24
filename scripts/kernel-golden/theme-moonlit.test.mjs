@@ -22,6 +22,21 @@ const t = (n, a, e) => { if (a === e) { pass++; console.log(`  ✓ ${n}`); } els
 const body = () => window.document.body;
 const root = () => window.document.documentElement;
 
+// 输入区/背景层骨架（真实内核页由 kernel.html 提供；本 jsdom 壳默认只含 #chat）
+{
+    const d = window.document;
+    if (!d.getElementById('bg1')) {
+        const bg1 = d.createElement('div'); bg1.id = 'bg1';
+        d.body.insertBefore(bg1, d.body.firstChild);
+    }
+    if (!d.getElementById('form_sheld')) {
+        const sheld = d.createElement('div'); sheld.id = 'sheld';
+        sheld.innerHTML = '<div id="form_sheld"><div id="dialogue_del_mes"></div>'
+            + '<div id="send_form" class="no-connection"><div id="mes_stop" style="display:none"></div></div></div>';
+        d.body.appendChild(sheld);
+    }
+}
+
 // ---------- 1. 官方格式主题 JSON 全字段应用 ----------
 const glimmer = JSON.parse(readFileSync(`${ME}/Glimmer.json`, 'utf8'));
 window.Kernel.applyTheme(glimmer);
@@ -126,18 +141,16 @@ window.Kernel.scrollToBottom(true);
 // kernel.html 整页壳模式块存在（C2 宿主将切 body.fullchat）
 const kernelHtml = readFileSync(`${K}/kernel.html`, 'utf8');
 t('kernel.html: body.fullchat 恢复官方滚动语义', kernelHtml.includes('body.fullchat #chat'), true);
-// 真机回归：Moonlit #chat 的渐变 mask 在 Android WebView 整页壳路径可能裁成全空白。
-// fullchat 覆盖块必须显式禁用 mask，消息可见性优先；后续真机审计后再评估恢复方式。
-t('kernel.html: fullchat 禁用 #chat mask-image 防空白',
-  /body\.fullcat|#chat[\s\S]*-webkit-mask-image:\s*none/.test(kernelHtml) &&
-  /body\.fullcat|#chat[\s\S]*(?<!-webkit-)mask-image:\s*none/.test(kernelHtml),
-  true);
-// 官方主题字段 compact_input_area 的类语义已登记，供 C3 前主题过渡/C3 后真实表单使用。
-t('applyTheme: compact_input_area → body 类', (() => {
+// 官方主题兼容：#chat 的 mask-image 属于主题包装饰语义，整页壳覆盖块不得无差别禁用。
+t('kernel.html: fullchat 不劫持主题 #chat mask-image', !kernelHtml.includes('mask-image: none'), true);
+// 官方 power-user.js switchCompactInputArea L529-532：compact_input_area 切的是
+// #send_form 的 compact 类（非 body 类）；C3 后 #send_form 已在内核 DOM。
+t('applyTheme: compact_input_area → #send_form.compact', (() => {
     window.Kernel.applyTheme({ main_text_color: '#ccc', compact_input_area: true });
-    const on = body().classList.contains('compact-input-area');
+    const form = window.document.getElementById('send_form');
+    const on = form.classList.contains('compact');
     window.Kernel.applyTheme({ main_text_color: '#ccc', compact_input_area: false });
-    return on && !body().classList.contains('compact-input-area');
+    return on && !form.classList.contains('compact');
 })(), true);
 
 // Moonlit style.css 中引用的官方选择器逐一在内核 DOM 中存在
@@ -211,6 +224,74 @@ t('enableLabMode=true → body 类', body().classList.contains('enableLabMode'),
 window.Kernel.applyTheme({ ...moonlit, avatar_style: 0, enableLabMode: false, chat_display: 0 });
 t('avatar_style=0 圆形：三形状类全清', ['big-avatars','square-avatars','rounded-avatars'].every(c => !body().classList.contains(c)), true);
 t('enableLabMode=false 类移除', body().classList.contains('enableLabMode'), false);
+
+// ---------- 8. 官方对齐补遗（C3 输入区状态 / C4 背景 / 头像兜底 / 按钮排 / 滑动语义）----------
+// C3：setInputState（showStopButton L3469 + RA_checkOnlineStatus data-generating 语义）
+window.Kernel.setInputState({ generating: true });
+t('输入区: 生成中 data-generating=true', body().getAttribute('data-generating'), 'true');
+t('输入区: 生成中 mes_stop 显示', doc.getElementById('mes_stop').style.display, 'flex');
+t('输入区: 生成中隐藏 chevron(hideAllSwipeButtons)', body().classList.contains('hideAllSwipeButtons'), true);
+window.Kernel.setInputState({ generating: false });
+t('输入区: 结束后 mes_stop 隐藏', doc.getElementById('mes_stop').style.display, 'none');
+t('输入区: 结束后恢复 chevron', body().classList.contains('hideAllSwipeButtons'), false);
+
+// C4：setBackground（backgrounds.js forceSetBackground 同构；null 清除）
+window.Kernel.setBackground('/backgrounds/a.png', 'contain');
+const bgEl = doc.getElementById('bg1');
+t('背景: #bg1 backgroundImage 下发', bgEl.style.backgroundImage, 'url("/backgrounds/a.png")');
+t('背景: fitting 类 contain', bgEl.classList.contains('contain'), true);
+window.Kernel.setBackground(null, null);
+t('背景: null 清除为 none', bgEl.style.backgroundImage, 'none');
+t('背景: fitting 类清除', ['cover','contain','stretch','center'].some(c => bgEl.classList.contains(c)), false);
+
+// 头像加载失败兜底（官方 script.js L2646-2650 missing-avatar）
+await window.Kernel.renderMessage({
+    mesid: 'av1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    avatarUrl: '/avatars/broken.png',
+});
+doc.querySelector('.mes[mesid="av1"] .avatar img').dispatchEvent(new window.Event('error'));
+t('头像: 加载失败兜底 missing-avatar', q('.mes[mesid="av1"] .missing-avatar.fa-user-slash'), true);
+
+// 滑动语义（refreshSwipeButtons/isMessageSwipeable L9123-9152）：计数 ZWSP 分隔 + last_swipe
+await window.Kernel.renderMessage({
+    mesid: 'sw1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    lastMessage: true, swipeCount: 2, currentSwipe: 0,
+});
+const swNode = doc.querySelector('.mes[mesid="sw1"]');
+t('滑动: 多 swipe 可见(swipes_visible)', swNode.classList.contains('swipes_visible'), true);
+t('滑动: 非末滑无 last_swipe', swNode.classList.contains('last_swipe'), false);
+t('滑动: 计数零宽空格格式', doc.querySelector('.mes[mesid="sw1"] .swipes-counter').textContent, `1​/​2`);
+await window.Kernel.renderMessage({
+    mesid: 'sw1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+    lastMessage: true, swipeCount: 2, currentSwipe: 1,
+});
+t('滑动: 末滑加 last_swipe', doc.querySelector('.mes[mesid="sw1"]').classList.contains('last_swipe'), true);
+// 官方 isMessageSwipeable：用户消息不可滑（无 swipes_visible / 计数留空）
+await window.Kernel.renderMessage({
+    mesid: 'sw2', mes: 'x', chName: '我', isUser: true, isSystem: false,
+    lastMessage: true, swipeCount: 2, currentSwipe: 0,
+});
+const swUser = doc.querySelector('.mes[mesid="sw2"]');
+t('滑动: 用户消息不可滑', swUser.classList.contains('swipes_visible'), false);
+
+// 按钮排展开/点外收起（官方 script.js L11806-11868）
+await window.Kernel.renderMessage({
+    mesid: 'ex1', mes: 'x', chName: 'A', isUser: false, isSystem: false,
+});
+const hint = doc.querySelector('.mes[mesid="ex1"] .extraMesButtonsHint');
+hint.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+const exBtns = doc.querySelector('.mes[mesid="ex1"] .extraMesButtons');
+t('按钮排: 省略号点击展开 visible', exBtns.classList.contains('visible'), true);
+t('按钮排: 展开后 hint 隐藏', hint.style.display, 'none');
+body().dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+t('按钮排: 点击外侧收起并还原 hint',
+    !exBtns.classList.contains('visible') && exBtns.style.display === 'none' && hint.style.display === '', true);
+// expandMessageActions 开启时不收起（toggle-dependent.css L472 常显语义）
+body().classList.add('expandMessageActions');
+hint.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+body().dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+t('按钮排: expandMessageActions 常显不收起', exBtns.classList.contains('visible'), true);
+body().classList.remove('expandMessageActions');
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail ? 1 : 0);

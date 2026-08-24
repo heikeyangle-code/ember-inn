@@ -21,7 +21,7 @@ import com.emberinn.app.renderer.RenderKernel
 /**
  * 整页壳 C2：聊天消息区唯一 WebView 宿主。
  *
- * 与嵌入态 [MessageKernelRow] 不同，这里不池化、不裁剪、不做行级高度契约；
+ * 与旧嵌入态行不同，这里不池化、不裁剪、不做行级高度契约；
  * 官方 #sheld/#chat 层级和滚动语义完整交给内核页。Kotlin 侧只保存 raw 文本，
  * 崩溃自愈时全量重渲即可恢复。
  */
@@ -34,6 +34,10 @@ fun ChatKernelShell(
     onAtBottomChanged: (Boolean) -> Unit = {},
     onLongPress: (String) -> Unit = {},
     onMessageAction: (String, String, String) -> Unit = { _, _, _ -> },
+    /** 官方 click_to_edit：主题开关打开时点击 .mes_text 进入编辑（chats.js L2292 语义） */
+    onTextClick: (String) -> Unit = {},
+    /** C3：新内核实例挂载（含崩溃自愈重挂）后把宿主草稿写回 #send_textarea */
+    draftProvider: () -> String = { "" },
     deleteMode: Boolean = false,
 ) {
     var host by remember { mutableStateOf<KernelWebViewPool.PooledWebView?>(null) }
@@ -48,9 +52,13 @@ fun ChatKernelShell(
         val actionListener: (String, String, String) -> Unit = { mesid, action, value ->
             onMessageAction(mesid, action, value)
         }
+        val textClickListener: (String, com.emberinn.app.renderer.KernelClickTarget?) -> Unit = { mesid, target ->
+            if (target?.cls == "mes_text") onTextClick(mesid)
+        }
         pool.addChatScrollListener(scrollListener)
         pool.addLongPressListener(longPressListener)
         pool.addMessageActionListener(actionListener)
+        pool.addClickListener(textClickListener)
         val crashListener: () -> Unit = {
             host = null
             mountEpoch++
@@ -61,6 +69,7 @@ fun ChatKernelShell(
             pool.removeChatScrollListener(scrollListener)
             pool.removeLongPressListener(longPressListener)
             pool.removeMessageActionListener(actionListener)
+            pool.removeClickListener(textClickListener)
             pool.removeCrashListener(crashListener)
             host?.let(pool::release)
         }
@@ -84,6 +93,8 @@ fun ChatKernelShell(
                 ),
             )
             host = pooled
+            // C3：草稿回填（applyPageSetup 不携带草稿，挂载点单独下发）
+            RenderKernel(pooled).pushInputText(draftProvider())
         }
     }
 

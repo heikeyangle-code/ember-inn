@@ -22,9 +22,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -210,18 +220,9 @@ fun AppearanceScreen(
                     }
                 }
 
-                // ---------------- 头像与文字 ----------------
+                // ---------------- 官方主题字段微调（=官方 User Settings 面板，写回主题 JSON） ----------------
                 item {
-                }
-
-                // ---------------- 玻璃 ----------------
-                item {
-                    BlurGroup(onChanged = { AppearanceBus.notifyChanged() })
-                }
-
-                // ---------------- 消息外观 ----------------
-                item {
-                    MessageAppearanceGroup(onChanged = { AppearanceBus.notifyChanged() })
+                    ThemeTuneGroup()
                 }
             }
         }
@@ -329,74 +330,238 @@ private fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, onT
     }
 }
 
-/** 背景模糊组（玻璃总开关 + 强度）。 */
+/** 滑条行（官方 User Settings 滑条语义）：拖动本地态、松手才写回主题 JSON。 */
 @Composable
-private fun BlurGroup(onChanged: () -> Unit) {
-    val context = LocalContext.current
-    var blur by remember { mutableStateOf(AppearancePrefs.backgroundBlur(context)) }
-    var blurStrength by remember { mutableStateOf(AppearancePrefs.blurStrength(context)) }
-    PreferenceGroup {
-        SwitchPrefRow(
-            title = "背景模糊（玻璃表面）",
-            subtitle = "顶栏 / 输入栏 / 浮层的毛玻璃总开关",
-            checked = blur,
-            onToggle = { blur = it; AppearancePrefs.saveBackgroundBlur(context, it); onChanged() },
+private fun SliderPrefRow(
+    title: String,
+    initial: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    format: (Float) -> String,
+    enabled: Boolean = true,
+    onCommit: (Float) -> Unit,
+) {
+    var v by remember(initial) { mutableStateOf(initial) }
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            InkText(title, tier = InkTier.Soft, sizeSp = 13f, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            InkText(format(v), tier = InkTier.Mute, sizeSp = 11f)
+        }
+        Slider(
+            value = v,
+            onValueChange = { v = it },
+            onValueChangeFinished = { onCommit(v) },
+            valueRange = range,
+            steps = steps,
+            enabled = enabled,
         )
-        if (blur) {
-            // 下限 14 = EmberGlassDefaults.MIN_RADIUS（再低玻璃观感消失）
-            InkText("模糊强度", tier = InkTier.Soft, sizeSp = 13f, fontWeight = FontWeight.Medium)
-            EmberSlider(
-                value = blurStrength.coerceAtLeast(14).toFloat(),
-                onValueChange = { blurStrength = it.toInt(); AppearancePrefs.saveBlurStrength(context, it.toInt()); onChanged() },
-                valueRange = 14f..40f,
+    }
+}
+
+/**
+ * 官方主题字段微调面板（= 官方 User Settings 的主题子集）：
+ * 字段/枚举/滑条范围逐项对照 power-user.js getThemeObject 与 index.html 滑条 min/max；
+ * 写回当前主题 JSON（OfficialThemeManager.updateFields），内置主题首次修改 copy-on-write。
+ * 官方主题 JSON 是唯一数据源——这里不再有第二套外观存储。
+ */
+@Composable
+private fun ThemeTuneGroup() {
+    val context = LocalContext.current
+    val manager = remember { OfficialThemeManager.shared(context) }
+    val themeJson by manager.currentThemeJson.collectAsState()
+    val obj = remember(themeJson) {
+        runCatching { Json.parseToJsonElement(themeJson ?: "{}").jsonObject }.getOrNull()
+    }
+
+    fun boolVal(key: String, def: Boolean): Boolean =
+        obj?.get(key)?.let { (it as? JsonPrimitive)?.booleanOrNull } ?: def
+    fun numVal(key: String, def: Double): Double =
+        obj?.get(key)?.let { (it as? JsonPrimitive)?.doubleOrNull } ?: def
+    fun strVal(key: String, def: String): String =
+        obj?.get(key)?.let { (it as? JsonPrimitive)?.contentOrNull } ?: def
+    fun setField(key: String, value: JsonElement) = manager.updateFields(mapOf(key to value))
+    fun setBool(key: String, v: Boolean) = setField(key, JsonPrimitive(v))
+    fun setInt(key: String, v: Int) = setField(key, JsonPrimitive(v))
+
+    val fastUi = boolVal("fast_ui_mode", true)
+    val noShadows = boolVal("noShadows", false)
+
+    PreferenceGroup {
+        GroupLabel("消息布局与头像")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf(0 to "平铺", 1 to "气泡", 2 to "文档").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = numVal("chat_display", 0.0).toInt() == v,
+                    onClick = { setInt("chat_display", v) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        GroupLabel("头像样式")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf(0 to "圆形", 1 to "大图", 2 to "方形", 3 to "圆角").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = numVal("avatar_style", 0.0).toInt() == v,
+                    onClick = { setInt("avatar_style", v) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        GroupLabel("提示弹窗位置（toastr_position）")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf(
+                "toast-top-left" to "左上", "toast-top-center" to "上中", "toast-top-right" to "右上",
+                "toast-bottom-left" to "左下", "toast-bottom-center" to "下中", "toast-bottom-right" to "右下",
+            ).forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = strVal("toastr_position", "toast-top-center") == v,
+                    onClick = { setField("toastr_position", JsonPrimitive(v)) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        GroupLabel("媒体附件展示")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf("list" to "列表", "gallery" to "画廊").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = strVal("media_display", "list") == v,
+                    onClick = { setField("media_display", JsonPrimitive(v)) },
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(10.dp))
+
+    PreferenceGroup {
+        GroupLabel("缩放与尺寸（官方滑条范围）")
+        SliderPrefRow(
+            title = "字体缩放 font_scale",
+            initial = numVal("font_scale", 1.0).toFloat(),
+            range = 0.5f..1.5f,
+            steps = 99,
+            format = { "%.2fx".format(it) },
+            onCommit = { setField("font_scale", JsonPrimitive(it.toDouble())) },
+        )
+        SliderPrefRow(
+            title = "模糊强度 blur_strength",
+            initial = numVal("blur_strength", 10.0).toFloat(),
+            range = 0f..30f,
+            steps = 29,
+            format = { "${it.toInt()} px" },
+            enabled = !fastUi,
+            onCommit = { setField("blur_strength", JsonPrimitive(it.toInt())) },
+        )
+        SliderPrefRow(
+            title = "阴影宽度 shadow_width",
+            initial = numVal("shadow_width", 2.0).toFloat(),
+            range = 0f..5f,
+            steps = 4,
+            format = { "${it.toInt()} px" },
+            enabled = !noShadows,
+            onCommit = { setField("shadow_width", JsonPrimitive(it.toInt())) },
+        )
+        SliderPrefRow(
+            title = "聊天宽度 chat_width",
+            initial = numVal("chat_width", 50.0).toFloat(),
+            range = 25f..100f,
+            steps = 74,
+            format = { "${it.toInt()}%" },
+            onCommit = { setField("chat_width", JsonPrimitive(it.toInt())) },
+        )
+    }
+
+    Spacer(Modifier.height(10.dp))
+
+    PreferenceGroup {
+        GroupLabel("显示开关")
+        SwitchPrefRow("快速模式（无模糊）", "fast_ui_mode：开=关掉全部毛玻璃", fastUi) { setBool("fast_ui_mode", it) }
+        SwitchPrefRow("无阴影模式", "noShadows", noShadows) { setBool("noShadows", it) }
+        SwitchPrefRow("视觉小说模式", "waifuMode：聊天区收到底部，顶部留立绘空间", boolVal("waifuMode", false)) { setBool("waifuMode", it) }
+        SwitchPrefRow("减弱动画", "reduced_motion", boolVal("reduced_motion", false)) { setBool("reduced_motion", it) }
+        SwitchPrefRow("显示时间戳", "timestamps_enabled", boolVal("timestamps_enabled", true)) { setBool("timestamps_enabled", it) }
+        SwitchPrefRow("时间戳旁模型图标", "timestamp_model_icon", boolVal("timestamp_model_icon", false)) { setBool("timestamp_model_icon", it) }
+        SwitchPrefRow("显示消息计时器", "timer_enabled", boolVal("timer_enabled", true)) { setBool("timer_enabled", it) }
+        SwitchPrefRow("显示 token 计数", "message_token_count_enabled", boolVal("message_token_count_enabled", false)) { setBool("message_token_count_enabled", it) }
+        SwitchPrefRow("显示楼层号", "mesIDDisplay_enabled（官方默认关）", boolVal("mesIDDisplay_enabled", false)) { setBool("mesIDDisplay_enabled", it) }
+        SwitchPrefRow("隐藏聊天头像", "hideChatAvatars_enabled", boolVal("hideChatAvatars_enabled", false)) { setBool("hideChatAvatars_enabled", it) }
+        SwitchPrefRow("展开全部消息按钮", "expand_message_actions", boolVal("expand_message_actions", false)) { setBool("expand_message_actions", it) }
+        SwitchPrefRow("所有消息显示滑动箭头", "show_swipe_num_all_messages", boolVal("show_swipe_num_all_messages", false)) { setBool("show_swipe_num_all_messages", it) }
+        SwitchPrefRow("紧凑输入区", "compact_input_area", boolVal("compact_input_area", false)) { setBool("compact_input_area", it) }
+        SwitchPrefRow("头像热替换", "hotswap_enabled", boolVal("hotswap_enabled", true)) { setBool("hotswap_enabled", it) }
+        SwitchPrefRow("Zen 滑条", "enableZenSliders", boolVal("enableZenSliders", false)) { setBool("enableZenSliders", it) }
+        SwitchPrefRow("Lab 模式", "enableLabMode", boolVal("enableLabMode", false)) { setBool("enableLabMode", it) }
+        SwitchPrefRow("点击正文进入编辑", "click_to_edit", boolVal("click_to_edit", false)) { setBool("click_to_edit", it) }
+    }
+
+    Spacer(Modifier.height(10.dp))
+
+    ColorCssGroup(obj)
+}
+
+/** 颜色十项 + 自定义 CSS：官方主题颜色类字段的调节入口（hex 文本，点应用写回主题）。 */
+@Composable
+private fun ColorCssGroup(obj: JsonObject?) {
+    val manager = remember { OfficialThemeManager.shared(LocalContext.current) }
+    val colorFields = listOf(
+        "main_text_color" to "主文字",
+        "italics_text_color" to "斜体文字",
+        "underline_text_color" to "下划线文字",
+        "quote_text_color" to "引用文字",
+        "blur_tint_color" to "模糊色调",
+        "chat_tint_color" to "聊天色调",
+        "user_mes_blur_tint_color" to "用户消息底色",
+        "bot_mes_blur_tint_color" to "AI 消息底色",
+        "shadow_color" to "阴影色",
+        "border_color" to "边框色",
+    )
+    var drafts by remember(obj) {
+        mutableStateOf(colorFields.associate { (k, _) ->
+            k to (obj?.get(k)?.let { (it as? JsonPrimitive)?.contentOrNull } ?: "")
+        })
+    }
+    var cssDraft by remember(obj) {
+        mutableStateOf(obj?.get("custom_css")?.let { (it as? JsonPrimitive)?.contentOrNull } ?: "")
+    }
+
+    PreferenceGroup {
+        GroupLabel("颜色（官方主题色板，hex/rgba）")
+        colorFields.forEach { (key, label) ->
+            OutlinedTextField(
+                value = drafts[key] ?: "",
+                onValueChange = { drafts = drafts + (key to it) },
+                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
             )
-            InkText("半径 $blurStrength px", tier = InkTier.Mute, sizeSp = 11f)
         }
-    }
-}
-
-/** 气泡样式 / 密度 / 沉浸模式组。 */
-@Composable
-private fun MessageAppearanceGroup(onChanged: () -> Unit) {
-    val context = LocalContext.current
-    var bubbleStyle by remember { mutableStateOf(AppearancePrefs.bubbleStyle(context)) }
-    var density by remember { mutableStateOf(AppearancePrefs.density(context)) }
-    var immersive by remember { mutableStateOf(AppearancePrefs.immersiveActions(context)) }
-    PreferenceGroup {
-        GroupLabel("气泡样式")
-        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-            listOf("paper" to "纸面", "bubble" to "气泡").forEach { (v, label) ->
-                EmberChip(
-                    label = label,
-                    selected = bubbleStyle == v,
-                    onClick = { bubbleStyle = v; AppearancePrefs.saveBubbleStyle(context, v); onChanged() },
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        GroupLabel("密度")
-        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-            listOf("comfortable" to "舒适", "compact" to "紧凑").forEach { (v, label) ->
-                EmberChip(
-                    label = label,
-                    selected = density == v,
-                    onClick = { density = v; AppearancePrefs.saveDensity(context, v); onChanged() },
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        SwitchPrefRow(
-            title = "沉浸模式",
-            subtitle = "隐藏消息常驻操作按钮：开 = 全部操作收进长按菜单",
-            checked = immersive,
-            onToggle = { immersive = it; AppearancePrefs.setImmersiveActions(context, it); onChanged() },
+        Spacer(Modifier.height(8.dp))
+        GroupLabel("自定义 CSS（custom_css）")
+        OutlinedTextField(
+            value = cssDraft,
+            onValueChange = { cssDraft = it },
+            textStyle = MaterialTheme.typography.bodySmall,
+            minLines = 3,
+            maxLines = 8,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         )
-    }
-}
-
-/** Toast 简写。 */
-private object Toast {
-    fun show(context: android.content.Context, msg: String) {
-        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            TextButton(onClick = {
+                val updates = buildMap<String, JsonElement> {
+                    colorFields.forEach { (k, _) ->
+                        val v = drafts[k]?.trim().orEmpty()
+                        if (v.isNotEmpty()) put(k, JsonPrimitive(v))
+                    }
+                    if (cssDraft.isNotBlank()) put("custom_css", JsonPrimitive(cssDraft))
+                }
+                if (updates.isNotEmpty()) manager.updateFields(updates)
+            }) { Text("应用到当前主题") }
+        }
     }
 }

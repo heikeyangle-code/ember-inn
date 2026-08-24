@@ -180,6 +180,8 @@ class ChatPromptFactory {
         audioInlining: Boolean = false,
         chatMetadata: JsonObject? = null,
         chatCompletionSource: String = "openai",
+        /** 官方 power_user.media_display 主题级默认（extra.media_display 缺失时回退），调用方注入 */
+        powerUserMediaDisplay: String? = null,
         /** 官方 CFG Scale（cfg-scale.js）：全局/角色/会话配置；仅 textgen/novel 请求体消费 guidance。 */
         cfgGlobal: CfgPromptEngine.CfgGlobal = CfgPromptEngine.CfgGlobal(),
         cfgChara: CfgPromptEngine.CfgChara? = null,
@@ -560,7 +562,8 @@ class ChatPromptFactory {
                 // 对齐官方 script.js getMediaDisplay：extra 优先、无效回退 LIST（不再手写白名单）
                 mediaDisplay = MediaEngine.getMediaDisplay(
                     extraMediaDisplay = extra?.get("media_display")?.jsonPrimitive?.contentOrNull,
-                    powerUserMediaDisplay = null,
+                    // media_display 全局默认：官方 power_user.media_display 由主题管理器派生，调用方注入
+                    powerUserMediaDisplay = powerUserMediaDisplay,
                 ),
                 // 对齐官方 getMediaIndex：数字/字符串原样、越界/负数/NaN 回退 0，null 透传
                 mediaIndex = MediaEngine.getMediaIndex(

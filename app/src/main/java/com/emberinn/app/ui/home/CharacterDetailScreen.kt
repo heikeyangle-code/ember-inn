@@ -145,27 +145,6 @@ fun CharacterDetailScreen(
     var showMenu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
-    val themeBgPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        uri?.let { u ->
-            runCatching {
-                val bytes = context.contentResolver.openInputStream(u)?.use { it.readBytes() } ?: return@runCatching
-                val ext = when (context.contentResolver.getType(u)) {
-                    "image/png" -> "png"
-                    "image/gif" -> "gif"
-                    "image/webp" -> "webp"
-                    else -> "jpg"
-                }
-                val file = java.io.File(context.filesDir, "assets/theme-bg-${record.id}.$ext")
-                file.parentFile?.mkdirs()
-                file.writeBytes(bytes)
-                themeRecipe = themeRecipe.copy(background = file.absolutePath)
-                dirty = true
-            }
-        }
-    }
-
     val themeRecipeImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -173,9 +152,7 @@ fun CharacterDetailScreen(
             runCatching {
                 val text = context.contentResolver.openInputStream(u)?.use { it.readBytes() }?.toString(Charsets.UTF_8).orEmpty()
                 val imported = CharacterCardEdit.themeRecipeFromJson(text)
-                themeRecipe = imported.copy(
-                    background = imported.background.takeIf { java.io.File(it).exists() } ?: "",
-                )
+                themeRecipe = imported
                 dirty = true
                 Toast.makeText(context, "已导入主题配方", Toast.LENGTH_SHORT).show()
             }.onFailure {
@@ -1120,41 +1097,6 @@ fun CharacterDetailScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("背景", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = { themeBgPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
-                            Text(if (themeRecipe.background.isBlank()) "选择背景图" else "更换背景图")
-                        }
-                        if (themeRecipe.background.isNotBlank()) {
-                            FilledTonalButton(onClick = { themeRecipe = themeRecipe.copy(background = ""); dirty = true }, modifier = Modifier.weight(1f)) {
-                                Text("清除", color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                        val bgScope = rememberCoroutineScope()
-                        FilledTonalButton(
-                            onClick = {
-                                bgScope.launch {
-                                    val path = withContext(Dispatchers.IO) {
-                                        ImageGenClient().generate(
-                                            context,
-                                            "低饱和渐变氛围背景，柔和光晕，适合聊天界面，无文字无人物",
-                                        )
-                                    }
-                                    if (path != null) {
-                                        themeRecipe = themeRecipe.copy(background = path)
-                                        dirty = true
-                                    } else {
-                                        Toast.makeText(context, "背景生成失败：请先配置 设置→服务→图像", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("AI 生成背景（用图像服务）")
-                        }
-                    }
                     Text("形状", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("" to "跟随全局", "square" to "方正 4dp", "rounded" to "圆润 16dp", "circle" to "浑圆 24dp").forEach { (v, label) ->
@@ -1184,7 +1126,6 @@ fun CharacterDetailScreen(
                             onClick = {
                                 val draft = ThemeRecipe(
                                     seed = tSeed.trim(),
-                                    background = themeRecipe.background,
                                     shape = tShape,
                                     font = tFont,
                                     style = tStyle,
@@ -1215,7 +1156,6 @@ fun CharacterDetailScreen(
                 TextButton(onClick = {
                     themeRecipe = ThemeRecipe(
                         seed = tSeed.trim(),
-                        background = themeRecipe.background,
                         shape = tShape,
                         font = tFont,
                         style = tStyle,
