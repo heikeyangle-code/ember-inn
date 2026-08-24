@@ -120,6 +120,34 @@ fun UserSettingsScreen(
                 }
                 item {
                     Column {
+                        GroupLabel("流式输出")
+                        UserSwitchRow(
+                            label = "平滑流式",
+                            hint = "smooth_streaming：逐字揭示代替整段蹦出（默认关）",
+                            checked = behavior.smoothStreaming,
+                        ) { saveBehavior(behavior.copy(smoothStreaming = it)) }
+                        if (behavior.smoothStreaming) {
+                            ShellInput(
+                                value = behavior.smoothStreamingSpeed.toString(),
+                                onValueChange = { v ->
+                                    saveBehavior(
+                                        behavior.copy(smoothStreamingSpeed = v.filter { ch -> ch.isDigit() }.toIntOrNull()?.coerceIn(1, 100) ?: 50),
+                                    )
+                                },
+                                label = "速度（1-100，官方默认 50，越大越快）",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            UserSwitchRow(
+                                label = "思考块不平滑",
+                                hint = "smooth_streaming_no_think（默认关；本 App 思考走独立通道已不平滑，仅存档）",
+                                checked = behavior.smoothStreamingNoThink,
+                            ) { saveBehavior(behavior.copy(smoothStreamingNoThink = it)) }
+                        }
+                    }
+                }
+                item {
+                    Column {
                         GroupLabel("自动滑动 / 自动续写")
                         UserSwitchRow(
                             label = "自动续写",

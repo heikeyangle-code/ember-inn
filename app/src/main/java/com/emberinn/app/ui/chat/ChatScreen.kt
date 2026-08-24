@@ -863,14 +863,41 @@ fun ChatScreen(
     // C5 官方流式语义（onProgressStreaming）：只原地更新流式行的 .mes_text/.mes_reasoning，
     // 不重建整个 #chat——每 tick 全量 renderChat 会重挂全部消息节点，图片重载、滚动抖动。
     // 节流 ~120ms；结束后的权威渲染由 messages/isStreaming 变化触发 renderChat 完成。
+    val behaviorSmooth = remember { BehaviorPrefs.load(context) }
     LaunchedEffect(isStreaming, isImpersonating) {
         if (!isStreaming || isImpersonating) return@LaunchedEffect
         var lastPush = 0L
+        // 官方 smooth_streaming（sse-stream.js L93-105）：逐字揭示，
+        // 每字延迟=(100-speed)×0.4ms，逗号/换行 ×12.5、句末标点 ×25；关=整段直出。
+        // no_think 登记边界：本 App reasoning 走独立通道本就不做字符平滑，开关仅存档。
+        var shown = 0L
+        var budget = 0f
+        fun charDelay(ch: Char): Float {
+            val base = ((100 - behaviorSmooth.smoothStreamingSpeed).coerceIn(1, 100)) * 0.4f
+            return when (ch) {
+                ',', '\n' -> base * 12.5f
+                '.', '!', '?' -> base * 25f
+                else -> base
+            } / 10f   // 收集节拍为 120ms 级（官方逐字 setTimeout），整体提速一个量级保持手感
+        }
         // StateFlow 本身即 conflate 语义（新值胜出），显式 .conflate() 对 StateFlow 无效且被编译器拒绝
         vm.streamingText.collect { raw ->
             val now = android.os.SystemClock.elapsedRealtime()
-            if (now - lastPush < 120) return@collect
+            val gap = (now - lastPush).coerceAtLeast(0)
+            if (now - lastPush < 120 && raw.length <= shown) return@collect
             lastPush = now
+            val visible = when {
+                !behaviorSmooth.smoothStreaming -> raw.also { shown = it.length.toLong() }
+                else -> {
+                    budget += gap.coerceAtMost(600f)
+                    var end = shown.toInt()
+                    while (end < raw.length && budget >= charDelay(raw[end])) {
+                        budget -= charDelay(raw[end]); end++
+                    }
+                    shown = end.toLong()
+                    raw.substring(0, end)
+                }
+            }
             fun polish(s: String): String {
                 val balanced = DisplayPipeline.balanceStreamingDelimiters(s, isFinal = false)
                 val fixed = com.emberinn.engine.prompt.FixMarkdown.fix(balanced, forDisplay = true)
@@ -883,7 +910,7 @@ fun ChatScreen(
             val timer = vm.liveStreamTimer()
             kernelPool.acquireSingle { pooled ->
                 RenderKernel(pooled).updateStreaming(
-                    "m-${vm.messages.value.size}", polish(raw), reasoning,
+                    "m-${vm.messages.value.size}", polish(visible), reasoning,
                     timerValue = timer?.first, timerTitle = timer?.second,
                 )
             }
