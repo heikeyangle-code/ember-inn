@@ -42,6 +42,8 @@ object StApiShimInstaller {
         clipboardReader: (() -> String)? = null,
         /** 变量族 global 作用域存储；null 时 shim 端 global 调用报错（能力未接） */
         globalVariables: GlobalVariableStore? = null,
+        /** 酒馆助手宿主能力面（th.* 方法）；组合根组装，Bridge 模块自包含 */
+        tavernHelperHost: TavernHelperBridge.Host? = null,
     ) {
         pool.shimHandler = { method, paramsJson, respond ->
             scope.launch {
@@ -74,8 +76,8 @@ object StApiShimInstaller {
                             """{"ok":true,"value":${jsonEncode(vm.shimSubstitute(text))}}"""
                         }
                         "host.clipboard" -> """{"ok":true,"value":${jsonEncode(clipboardReader?.invoke() ?: "")}}"""
-                        // 酒馆助手兼容层（th.*）：独立模块，非 TH 方法回 null 走兜底
-                        else -> TavernHelperBridge.handle(vm, method, paramsJson)
+                        // 酒馆助手兼容层（th.*）：独立模块经 Host 接口注入；非 TH 方法回 null 走兜底
+                        else -> tavernHelperHost?.let { TavernHelperBridge.handle(it, method, paramsJson) }
                             ?: """{"ok":false,"error":"unsupported method: $method"}"""
                     })
                 } catch (e: Throwable) {

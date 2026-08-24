@@ -2539,6 +2539,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 通用消息整表变换原语（扩展兼容层经此组合自有结构操作；Store/VM 不感知具体扩展业务） */
+    fun mutateChatMessages(transform: (List<JsonElement>) -> List<JsonElement>) {
+        if (_isStreaming.value) return
+        chatStore.mutateMessages(sessionId, transform)
+        refreshMessages()
+    }
+
     fun deleteMessage(index: Int) {
         if (_isStreaming.value) return
         chatStore.removeAt(sessionId, index)

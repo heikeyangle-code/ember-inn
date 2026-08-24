@@ -709,6 +709,14 @@ class ChatStore(private val context: Context) {
         get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
     }
 
+    /** 通用整表变换原语（扩展层自有结构操作经此组合，Store 不感知具体业务）：
+     *  transform 收到当前消息表，返回新表；缓存+落盘+updatedAt 与其余写路径同规约。 */
+    fun mutateMessages(sessionId: String, transform: (List<JsonElement>) -> List<JsonElement>) {
+        val updated = transform(messages(sessionId))
+        writeMessages(sessionId, updated)
+        get(sessionId)?.let { upsert(it.copy(updatedAt = System.currentTimeMillis())) }
+    }
+
     fun sessionName(sessionId: String): String = get(sessionId)?.name ?: ""
 
     /** 附件 chat 源的 chatFile 名（对应官方 session.file_name，用于按 chat 源隔离附件目录）。 */

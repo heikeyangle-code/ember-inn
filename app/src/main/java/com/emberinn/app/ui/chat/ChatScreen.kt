@@ -244,9 +244,20 @@ fun ChatScreen(
             Toast.makeText(context, "渲染内核故障：$msg", Toast.LENGTH_LONG).show()
         }
         kernelPool.addErrorListener(kernelErrorHandler)
+        // 酒馆助手宿主能力面：组合根组装（Bridge 模块自包含，VM 零 TH 感知）
+        val thHost = object : TavernHelperBridge.Host {
+            override fun editMessage(index: Int, text: String) = vm.editMessage(index, text)
+            override fun deleteMessage(index: Int) = vm.deleteMessage(index)
+            override fun chatMetadataJson() = vm.shimChatMetadata()
+            override fun contextSnapshotJson() = vm.shimContextSnapshot()
+            override fun isStreaming(): Boolean = vm.isStreaming.value
+            override fun mutateMessages(transform: (List<kotlinx.serialization.json.JsonElement>) -> List<kotlinx.serialization.json.JsonElement>) =
+                vm.mutateChatMessages(transform)
+        }
         StApiShimInstaller.install(
             kernelPool,
             vm,
+            tavernHelperHost = thHost,
             clipboardReader = {
                 // shim 线程（Default）→ 主线程读剪贴板（API29+ 聚焦要求）；异常回空串
                 runCatching {
