@@ -88,16 +88,15 @@ object AppearancePrefs {
         backgroundRevision.value++
     }
 
-    companion object {
-        const val FITTING_CLASSIC = "classic"
-        /** 官方 backgrounds.js L1634 四类 + classic（无类，#bg1 样式表默认） */
-        val FITTINGS = listOf("classic", "cover", "contain", "stretch", "center")
+    const val FITTING_CLASSIC = "classic"
 
-        /**
-         * 背景设置版本号：全局背景/适配变更即自增。聊天页 LaunchedEffect 以此为键——
-         * 此前只认会话级 custom_background，改完全局背景返回聊天页不刷新。
-         * 会话级变更走 VM StateFlow 自带通知，不经此通道。
-         */
-        val backgroundRevision = kotlinx.coroutines.flow.MutableStateFlow(0)
-    }
+    /** 官方 backgrounds.js L1634 四类 + classic（无类，#bg1 样式表默认） */
+    val FITTINGS = listOf("classic", "cover", "contain", "stretch", "center")
+
+    /**
+     * 背景设置版本号：全局背景/适配变更即自增。聊天页 LaunchedEffect 以此为键——
+     * 此前只认会话级 custom_background，改完全局背景返回聊天页不刷新。
+     * 会话级变更走 VM StateFlow 自带通知，不经此通道。
+     */
+    val backgroundRevision = kotlinx.coroutines.flow.MutableStateFlow(0)
 }

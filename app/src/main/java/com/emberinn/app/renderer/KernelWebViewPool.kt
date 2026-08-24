@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.resumeWithException
+import kotlin.coroutines.resumeWithException
 import com.emberinn.app.ui.settings.RenderPrefs
 import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.coroutines.resume
