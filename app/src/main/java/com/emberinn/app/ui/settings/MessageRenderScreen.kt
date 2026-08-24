@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,7 +48,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                 var fixMarkdown by remember { mutableStateOf(AppearancePrefs.fixMarkdown(context)) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = EmberTheme.colors.surfaceContainerLow,
+                    color = EmberTheme.colors.surface,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {

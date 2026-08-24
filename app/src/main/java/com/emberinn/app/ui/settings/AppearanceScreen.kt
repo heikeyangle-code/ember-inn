@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.components.GroupLabel
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberToasts
 import com.emberinn.app.ui.components.EmberSlider

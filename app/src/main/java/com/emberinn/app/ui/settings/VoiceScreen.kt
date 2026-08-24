@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.data.TtsBackendRegistry
 import com.emberinn.app.data.TtsReader
@@ -131,7 +132,7 @@ fun VoiceScreen(onBack: () -> Unit) {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Row(
@@ -152,7 +153,7 @@ fun VoiceScreen(onBack: () -> Unit) {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {
@@ -233,7 +234,7 @@ fun VoiceScreen(onBack: () -> Unit) {
             // 在线 TTS 提供商（27 后端，对照官方 tts/settings.html 的 provider 选项 + TtsBackendRegistry 注册表）
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {
@@ -320,7 +321,7 @@ fun VoiceScreen(onBack: () -> Unit) {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {

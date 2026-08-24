@@ -168,7 +168,7 @@ private fun ProfileChip(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = if (active) EmberTheme.colors.surface else EmberTheme.colors.surfaceVariant,
+        color = if (active) EmberTheme.colors.surface else EmberTheme.colors.surface2,
         modifier = Modifier.clickable(onClick = onSwitch),
     ) {
         Row(
@@ -213,7 +213,7 @@ private fun ProviderCard(
                 alpha = 0.08f,
             ),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -235,7 +235,7 @@ private fun ProviderCard(
                         color = if (configured) {
                             EmberTheme.colors.surface
                         } else {
-                            EmberTheme.colors.surfaceVariant
+                            EmberTheme.colors.surface2
                         },
                     ) {
                         Text(

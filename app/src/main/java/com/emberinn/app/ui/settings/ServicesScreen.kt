@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import android.widget.Toast
 import com.emberinn.app.ui.design.components.EmberSwitch
@@ -780,7 +781,7 @@ private fun VectorCard() {
 private fun ServiceCard(title: String, content: @Composable () -> Unit) {
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
     ) {
         Column {

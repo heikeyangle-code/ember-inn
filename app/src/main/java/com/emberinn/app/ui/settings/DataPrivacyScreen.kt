@@ -124,7 +124,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             snapshots.forEach { name ->
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = EmberTheme.colors.surfaceVariant,
+                    color = EmberTheme.colors.surface2,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -240,7 +240,7 @@ private fun DataRow(
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = EmberTheme.colors.surfaceVariant,
+        color = EmberTheme.colors.surface2,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick),

@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField

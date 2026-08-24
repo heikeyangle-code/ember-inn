@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.GroupLabel
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

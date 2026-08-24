@@ -132,7 +132,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 scripts.forEachIndexed { index, script ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
@@ -268,7 +268,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 presetSets[activePreset].orEmpty().forEachIndexed { i, script ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) {
                         Row(

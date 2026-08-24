@@ -151,7 +151,7 @@ object ProtocolSamplerEditors {
         var dirty by remember { mutableStateOf(false) }
         Surface(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-            color = EmberTheme.colors.surfaceContainerLow,
+            color = EmberTheme.colors.surface,
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {

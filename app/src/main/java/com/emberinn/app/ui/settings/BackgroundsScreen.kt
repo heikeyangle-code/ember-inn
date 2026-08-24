@@ -103,7 +103,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                 item {
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -125,7 +125,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     // 官方 #background_fitting 五档（backgrounds.js setFittingClass L1632-1638）
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -160,7 +160,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     val active = f.absolutePath == currentBg
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -199,7 +199,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     item {
                         Surface(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                            color = EmberTheme.colors.surfaceContainerLow,
+                            color = EmberTheme.colors.surface,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(

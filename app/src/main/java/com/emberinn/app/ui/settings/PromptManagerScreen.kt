@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -175,7 +176,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Surface(shape = RoundedCornerShape(18.dp), color = EmberTheme.colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = RoundedCornerShape(18.dp), color = EmberTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text("说明", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                             Text(
@@ -229,7 +230,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         val isDragging = draggingOrderId == entry.identifier
                         Surface(
                             shape = RoundedCornerShape(14.dp),
-                            color = EmberTheme.colors.surfaceContainerLow,
+                            color = EmberTheme.colors.surface,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .zIndex(if (isDragging) 1f else 0f)
@@ -633,7 +634,7 @@ private fun PromptRow(
     val forceToggle = forceEdit + setOf("main", "chatHistory", "dialogueExamples")
     val editAllowed = item.identifier in forceEdit || !item.marker
     val toggleAllowed = !(item.marker && item.identifier !in forceToggle)
-    Surface(shape = RoundedCornerShape(14.dp), color = EmberTheme.colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(14.dp), color = EmberTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier

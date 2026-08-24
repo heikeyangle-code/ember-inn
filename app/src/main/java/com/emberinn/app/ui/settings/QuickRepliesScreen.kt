@@ -144,7 +144,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 slots.forEach { slot ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = EmberTheme.colors.surfaceContainerLow,
+                        color = EmberTheme.colors.surface,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
