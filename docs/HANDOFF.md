@@ -445,3 +445,40 @@ RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系�
 - push 自动触发 CI，必要时 `gh workflow run 328789880 --ref main`；GitHub 网络不稳定失败重试。
 - 沙箱会话重置会丢 GitHub 凭证（gh auth/token）：push 失败先查 `gh auth status`，缺凭证就 `gh auth login` 或临时 PAT，不要反复盲推。
 - 删除类操作先确认；大改动保持小步提交。
+
+## 9. 内核稳定化与性能（在办，2026-08-24）
+
+### 9.1 已根治（勿回退）
+- 白屏三根因：①#sheld 高度塌缩→fullchat 覆盖块长手属性显式+flex 镜像官方；②WebView 视口
+  0×0→AndroidView 重组重建容器后旧槽失联，ChatKernelShell 挂载前校验 parent===target 重挂；
+  ③宽度锁死 var(--sheldWidth)=50vw 只剩左半屏→fullchat 改 width:auto+left/right 双锚定。
+- 渲染进程崩溃循环（渲染 1s 即白+失败提示刷屏）：Warmer(建即毁)与双实例并发预热引发，
+  已回退删除。**教训：低端机禁止并发建 WebView、禁止建即毁预热。**
+- kernelReady 超时 15s 销毁误杀慢加载实例→30s 且只对调用方报错，实例留池继续加载。
+- TH 脚本卡不转 iframe：管线类名为 custom-language-js（encodeStyleTags 前缀），逐 token 匹配。
+
+### 9.2 未解主诉：冷启动慢且不稳定（最高优先级）
+现象：进聊天页数秒~20s+ 出画面，时好时坏；同机浏览器跑官方 SillyTavern 不卡 → **App 特有问题，
+与 WebView 本身无关**。css-bundle.css（style.css+16 导入逐字内联，scripts/bundle-official-css.mjs
+再生成）已把样式请求 17→1，但用户实测仍慢 → CSS 不是唯一主犯。待查嫌疑（按可能性）：
+①内核池在进入 ChatScreen 才 remember+preload——应提前到 App 启动（安全方式待定）；
+②OfficialThemeManager/样式包对实例的 applyPageSetup 重复触发；③kernelPayloads 每次重组
+全量重建+renderChat 全量清建（签名守卫只挡了无变化 tick）；④AssetLoader 单请求拦截开销。
+诊断工具已备：右上角「内核体检」全字段 JSON（含 viewport/容器尺寸/bodyClass/样式包/
+payloadCount）+ logcat tag `EmberInnKernel`（attach 时打印 slot/view 尺寸）。下步：给诊断加
+分段计时（CSS 解析/JS 求值/首条挂载毫秒数），用数据定位，禁止盲改。
+
+### 9.3 原生组件欠账
+- 聊天顶框 ChatTopBar 完全重做（任务 #6）：缩小面积/Ember 令牌化/智能显隐/与内核页层叠修正
+  （用户反馈顶部突兀、底部黑边）。注意 topBarPad 测量反馈回路曾异常。
+- 「选择模型」常驻提示条已删：发送时无模型才 toast+跳设置（用户拍板，勿恢复常驻 UI）。
+
+### 9.4 酒馆助手（任务 #5）
+- 31/184：事件/宏/消息族/变量族/世界书族 13 函数/版本常量/沙箱 iframe 运行时/独立设置页。
+- 架构定稿见 docs/TAVERN_HELPER.md（引擎仓为真值、转换在 JS、Host 接口注入，零耦合红线）。
+- 关键未解：TH 卡多在消息里写裸 <script>，官方净化器会剥掉——现 DOM 扫描抓不到；
+  需改为从载荷 rawMes **原文**提取脚本块（TH 官方即读原始消息自建 iframe）。
+
+### 9.5 用户红线（多次强调）
+- 主题视觉与酒馆官方 1:1，任何影响美观的折中一律不接受（is-scrolling 模糊挂起已被否决撤销）；
+  架构改动需可扩展、扩展模块不得与既有文件耦合（Host 接口注入模式为准）。
