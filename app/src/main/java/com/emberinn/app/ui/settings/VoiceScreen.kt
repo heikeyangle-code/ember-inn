@@ -3,6 +3,8 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
 import com.emberinn.app.data.TtsBackendRegistry
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.ui.design.components.EmberSwitch
@@ -23,9 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -45,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 /**
@@ -151,20 +151,15 @@ fun VoiceScreen(onBack: () -> Unit) {
                 }
             }
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            ) {
-                Column {
+GroupLabel("引擎与语音")
+
                     Text(
                         "引擎与语音",
                         style = MaterialTheme.typography.titleSmall,
                         color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    Row(
+                                        Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
@@ -177,7 +172,6 @@ fun VoiceScreen(onBack: () -> Unit) {
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     VoicePickerRow(
                         current = voice,
                         voices = voices.map { it.name },
@@ -199,8 +193,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("语速", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                             Text(
@@ -221,23 +214,17 @@ fun VoiceScreen(onBack: () -> Unit) {
                             color = EmberTheme.colors.inkMute,
                         )
                     }
-                    Button(
-                        onClick = ::playSample,
+                    ShellActionButton(
+                        label = "试听本机语音",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                         enabled = ready && voices.isNotEmpty() && enabled,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                    ) {
-                        Text("试听本机语音")
-                    }
-                }
-            }
+                    ) { playSample() }
+                
+
 
             // 在线 TTS 提供商（27 后端，对照官方 tts/settings.html 的 provider 选项 + TtsBackendRegistry 注册表）
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            ) {
-                Column {
+GroupLabel("在线 TTS 提供商")
+
                     Text(
                         "在线 TTS 提供商",
                         style = MaterialTheme.typography.titleSmall,
@@ -306,8 +293,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         } else if (externalVoices.isNotEmpty()) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            VoicePickerRow(
+                                                        VoicePickerRow(
                                 current = voice,
                                 voices = externalVoices,
                                 enabled = true,
@@ -316,15 +302,11 @@ fun VoiceScreen(onBack: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.height(4.dp))
-                }
-            }
+                
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            ) {
-                Column {
+
+GroupLabel("朗读选项")
+
                     Text(
                         "朗读选项",
                         style = MaterialTheme.typography.titleSmall,
@@ -342,8 +324,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                     ToggleRow("按段落朗读", narrateByParagraphs) { narrateByParagraphs = it; save() }
                     ToggleRow("跳过代码块", skipCodeblocks) { skipCodeblocks = it; save() }
                     ToggleRow("跳过提示标签（*动作*）", skipTags) { skipTags = it; save() }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    Row(
+                                        Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
                     ) {
@@ -360,8 +341,8 @@ fun VoiceScreen(onBack: () -> Unit) {
                         )
                     }
                     Spacer(Modifier.height(4.dp))
-                }
-            }
+                
+
         }
     }
     }
@@ -409,8 +390,7 @@ private fun VoicePickerRow(
 
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-    Row(
+        Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
@@ -463,8 +443,7 @@ private fun KeyRow(
     onValueChange: (String) -> Unit,
     label: String,
 ) {
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             androidx.compose.material3.TextButton(onClick = { onVisibleChange(!visible) }) {
