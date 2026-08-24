@@ -155,7 +155,7 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
               function h(id){var e=document.getElementById(id);if(!e)return 'MISSING';
                 var cs=getComputedStyle(e);return Math.round(e.getBoundingClientRect().height)+'px/'
                   +cs.display+'/'+cs.position;}
-              return JSON.stringify({
+              var __d=JSON.stringify({
                 ready:!!(window.Kernel&&window.Kernel.ready),
                 mesCount:document.querySelectorAll('#chat .mes').length,
                 sheld:h('sheld'),chat:h('chat'),form:h('form_sheld'),
@@ -163,6 +163,8 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
                 href:location.href,
                 payloadCount:$payloadCount
               });
+              console.error(__d);
+              return __d;
             })()
         """.trimIndent()
         eval(js) { onResult(it ?: "eval-no-callback") }
