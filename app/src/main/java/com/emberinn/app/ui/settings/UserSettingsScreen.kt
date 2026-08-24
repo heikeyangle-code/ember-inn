@@ -65,7 +65,7 @@ fun UserSettingsScreen(
 
     SettingsGlassPage { settingsSky ->
         Column(modifier = Modifier.fillMaxSize()) {
-            SettingsTopBar(title = "用户设置", subtitle = "UI 主题 · 聊天处理 · 自动化", onBack = onBack, sky = settingsSky)
+            SettingsTopBar(title = "用户设置", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),

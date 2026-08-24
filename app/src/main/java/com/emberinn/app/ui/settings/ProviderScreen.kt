@@ -107,7 +107,7 @@ fun ProviderListScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsTopBar(
             title = "提供商与模型",
-            subtitle = "${vm.providers.size} 家服务商，点卡片配置",
+            subtitle = "${vm.providers.size} 家服务商",
             onBack = onBack,
             sky = settingsSky,
         )

@@ -113,7 +113,6 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize()) {
             SettingsTopBar(
                 title = "人设管理",
-                subtitle = "当前人设进入提示词（{{user}} 与描述注入）",
                 onBack = onBack,
                 sky = settingsSky,
                 trailing = {
