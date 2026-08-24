@@ -4,6 +4,7 @@ import com.emberinn.app.ui.settings.TavernHelperPrefs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -64,10 +65,14 @@ object TavernHelperBridge {
             val elements = p["elements"]?.jsonArray?.toList() ?: return errMsg("th.message.create 需要 elements")
             // 官方 createChatMessages：position 缺省 after_last；before_first=插队首；
             // {message_id:n}=插到该层之前（appendInPlace 语义）
-            val at: Int? = when (val pos = p["position"]) {
-                null, "after_last" -> null
-                "before_first" -> 0
-                is JsonObject -> pos["message_id"]?.jsonPrimitive?.intOrNull
+            val at: Int? = when (val raw = p["position"]) {
+                null -> null
+                is JsonObject -> raw["message_id"]?.jsonPrimitive?.intOrNull
+                is JsonPrimitive -> when (raw.contentOrNull) {
+                    "after_last", null -> null
+                    "before_first" -> 0
+                    else -> return errMsg("position 仅支持 after_last/before_first/{message_id}")
+                }
                 else -> return errMsg("position 仅支持 after_last/before_first/{message_id}")
             }
             host.mutateMessages { list ->

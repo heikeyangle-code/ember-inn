@@ -126,6 +126,7 @@ import com.emberinn.app.renderer.KernelMediaPayload
 import com.emberinn.app.renderer.KernelWebViewPool
 import com.emberinn.app.renderer.RenderKernel
 import com.emberinn.app.renderer.StApiShimInstaller
+import com.emberinn.app.renderer.TavernHelperBridge
 import com.emberinn.app.ui.chat.surface.ChatKernelShell
 import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow

@@ -12,14 +12,14 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
     private val web: WebView get() = pooled.webView
 
     /** 渲染一条消息（引擎已完成宏/正则前处理的 mes 文本） */
-    fun renderMessage(payload: KernelMessagePayload, onDone: (() -> Unit)? = null) {
+    fun renderMessage(payload: KernelMessagePayload, onDone: ((String?) -> Unit)? = null) {
         val json = KernelProtocol.json.encodeToString(KernelMessagePayload.serializer(), payload)
         eval("window.Kernel.renderMessage($json);", onDone)
     }
 
     /** 整页壳 C2：全量同步官方 #chat；payload 顺序即聊天顺序。
      *  showMore=true 时顶部挂 #show_more_messages（边界5 长聊天截断，script.js printMessages）。 */
-    fun renderChat(payloads: List<KernelMessagePayload>, showMore: Boolean = false, onDone: (() -> Unit)? = null) {
+    fun renderChat(payloads: List<KernelMessagePayload>, showMore: Boolean = false, onDone: ((String?) -> Unit)? = null) {
         val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
         eval("window.Kernel.renderChat($json,{showMore:${if (showMore) "true" else "false"}});", onDone)
     }
@@ -145,7 +145,7 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
         eval(js)
     }
 
-    fun clear(onDone: (() -> Unit)? = null) = eval("window.Kernel.clear();", onDone)
+    fun clear(onDone: ((String?) -> Unit)? = null) = eval("window.Kernel.clear();", onDone)
 
     /** X 光诊断（白屏排查）：回传内核页关键 DOM 事实的 JSON 字符串。
      *  ready/mesCount/sheldH/chatH/formH/formDisplay/bodyClass/payloadLen */
