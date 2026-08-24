@@ -74,7 +74,9 @@ object StApiShimInstaller {
                             """{"ok":true,"value":${jsonEncode(vm.shimSubstitute(text))}}"""
                         }
                         "host.clipboard" -> """{"ok":true,"value":${jsonEncode(clipboardReader?.invoke() ?: "")}}"""
-                        else -> """{"ok":false,"error":"unsupported method: $method"}"""
+                        // 酒馆助手兼容层（th.*）：独立模块，非 TH 方法回 null 走兜底
+                        else -> TavernHelperBridge.handle(vm, method, paramsJson)
+                            ?: """{"ok":false,"error":"unsupported method: $method"}"""
                     })
                 } catch (e: Throwable) {
                     respond("""{"ok":false,"error":${jsonEncode(e.message ?: e.toString())}}""")

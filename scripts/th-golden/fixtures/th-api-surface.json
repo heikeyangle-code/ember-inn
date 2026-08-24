@@ -1,0 +1,742 @@
+{
+  "baseline": "JS-Slash-Runner src/function exports",
+  "total": 184,
+  "functions": [
+    {
+      "name": "_appendInexistentScriptButtons",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_deleteVariable",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_errorCatched",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "_eventClearAll",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventClearEvent",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventClearListener",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventEmit",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventEmitAndWait",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventMakeFirst",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventMakeLast",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventOn",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventOnButton",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventOnce",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_eventRemoveListener",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "_getAllVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_getButtonEvent",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_getCurrentMessageId",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "_getIframeName",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "_getScriptButtons",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_getScriptId",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "_getScriptInfo",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_getScriptName",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_getVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_initializeGlobal",
+      "source": "src/function/global.ts"
+    },
+    {
+      "name": "_insertOrAssignVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_insertVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_registerMacroLike",
+      "source": "src/function/macro_like.ts"
+    },
+    {
+      "name": "_reloadIframe",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "_replaceScriptButtons",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_replaceScriptInfo",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_replaceVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_updateScriptButtonsWith",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "_updateVariablesWith",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "_waitGlobalInitialized",
+      "source": "src/function/global.ts"
+    },
+    {
+      "name": "appendAudioList",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "builtin",
+      "source": "src/function/builtin.ts"
+    },
+    {
+      "name": "createCharacter",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "createChatMessages",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "createLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "createLorebookEntries",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "createLorebookEntry",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "createOrReplaceCharacter",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "createOrReplacePersona",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "createOrReplacePreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "createOrReplaceWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "createPersona",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "createPreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "createWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "createWorldbookEntries",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "default_preset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "deleteCharacter",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "deleteChatMessages",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "deleteLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "deleteLorebookEntries",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "deleteLorebookEntry",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "deletePersona",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "deletePreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "deleteVariable",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "deleteWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "deleteWorldbookEntries",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "errorCatched",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "formatAsDisplayedMessage",
+      "source": "src/function/displayed_message.ts"
+    },
+    {
+      "name": "formatAsTavernRegexedString",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "from_tavern_regex",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "get_store_by_type",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "get_tavern_regexes_without_clone",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "get_variables_without_clone",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "getAllEnabledScriptButtons",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "getAudioList",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "getAudioSettings",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "getCharacter",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "getCharacterIds",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "getCharacterNames",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "getCharAvatarPath",
+      "source": "src/function/raw_character.ts"
+    },
+    {
+      "name": "getCharData",
+      "source": "src/function/raw_character.ts"
+    },
+    {
+      "name": "getCharLorebooks",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getCharWorldbookNames",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "getChatHistoryBrief",
+      "source": "src/function/raw_character.ts"
+    },
+    {
+      "name": "getChatHistoryDetail",
+      "source": "src/function/raw_character.ts"
+    },
+    {
+      "name": "getChatLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getChatMessages",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "getChatWorldbookName",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "getCurrentAudio",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "getCurrentCharacterId",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "getCurrentCharacterName",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "getCurrentCharPrimaryLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getCurrentPersonaId",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getCurrentPersonaName",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getExtensionInstallationInfo",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "getExtensionType",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "getGlobalWorldbookNames",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "getLastMessageId",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "getLoadedPresetName",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "getLorebookEntries",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "getLorebooks",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getLorebookSettings",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getMessageId",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "getOrCreateChatLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "getOrCreateChatWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "getPersona",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getPersonaAvatarPath",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getPersonaIds",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getPersonaNames",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "getPreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "getPresetNames",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "getScriptTrees",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "getTavernHelperExtensionId",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "getTavernHelperVersion",
+      "source": "src/function/version.ts"
+    },
+    {
+      "name": "getTavernRegexes",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "getTavernVersion",
+      "source": "src/function/version.ts"
+    },
+    {
+      "name": "getVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "getWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "getWorldbookNames",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "handle_url_to_title",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "iframe_events",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "importRawCharacter",
+      "source": "src/function/import_raw.ts"
+    },
+    {
+      "name": "importRawChat",
+      "source": "src/function/import_raw.ts"
+    },
+    {
+      "name": "importRawPreset",
+      "source": "src/function/import_raw.ts"
+    },
+    {
+      "name": "importRawTavernRegex",
+      "source": "src/function/import_raw.ts"
+    },
+    {
+      "name": "importRawWorldbook",
+      "source": "src/function/import_raw.ts"
+    },
+    {
+      "name": "initializeGlobal",
+      "source": "src/function/global.ts"
+    },
+    {
+      "name": "initTavernHelperObject",
+      "source": "src/function/index.ts"
+    },
+    {
+      "name": "injectPrompts",
+      "source": "src/function/inject.ts"
+    },
+    {
+      "name": "insertOrAssignVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "insertVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "installExtension",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "isAdmin",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "isCharacterTavernRegexesEnabled",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "isInstalledExtension",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "isPresetNormalPrompt",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "isPresetPlaceholderPrompt",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "isPresetSystemPrompt",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "loadPreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "macros",
+      "source": "src/function/macro_like.ts"
+    },
+    {
+      "name": "pauseAudio",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "playAudio",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "rebindCharWorldbooks",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "rebindChatWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "rebindGlobalWorldbooks",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "refreshOneMessage",
+      "source": "src/function/displayed_message.ts"
+    },
+    {
+      "name": "registerMacroLike",
+      "source": "src/function/macro_like.ts"
+    },
+    {
+      "name": "registerVariableSchema",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "reinstallExtension",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "renamePreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "render_character",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "render_tavern_regexes",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "render_tavern_regexes_debounced",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "replaceAudioList",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "replaceCharacter",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "replaceLorebookEntries",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "replacePersona",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "replacePreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "replaceScriptTrees",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "replaceTavernRegexes",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "replaceVariables",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "replaceWorldbook",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "retrieveDisplayedMessage",
+      "source": "src/function/displayed_message.ts"
+    },
+    {
+      "name": "rotateChatMessages",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "setAudioSettings",
+      "source": "src/function/audio.ts"
+    },
+    {
+      "name": "setChatLorebook",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "setChatMessage",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "setChatMessages",
+      "source": "src/function/chat_message.ts"
+    },
+    {
+      "name": "setCurrentCharLorebooks",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "setLorebookEntries",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "setLorebookSettings",
+      "source": "src/function/lorebook.ts"
+    },
+    {
+      "name": "setPreset",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "substitudeMacros",
+      "source": "src/function/util.ts"
+    },
+    {
+      "name": "tavern_events",
+      "source": "src/function/event.ts"
+    },
+    {
+      "name": "to_tavern_regex",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "triggerSlash",
+      "source": "src/function/slash.ts"
+    },
+    {
+      "name": "uninjectPrompts",
+      "source": "src/function/inject.ts"
+    },
+    {
+      "name": "uninstallExtension",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "unregisterMacroLike",
+      "source": "src/function/macro_like.ts"
+    },
+    {
+      "name": "updateCharacterWith",
+      "source": "src/function/character.ts"
+    },
+    {
+      "name": "updateExtension",
+      "source": "src/function/extension.ts"
+    },
+    {
+      "name": "updateLorebookEntriesWith",
+      "source": "src/function/lorebook_entry.ts"
+    },
+    {
+      "name": "updatePersonaWith",
+      "source": "src/function/persona.ts"
+    },
+    {
+      "name": "updatePresetWith",
+      "source": "src/function/preset.ts"
+    },
+    {
+      "name": "updateScriptTreesWith",
+      "source": "src/function/script.ts"
+    },
+    {
+      "name": "updateTavernHelper",
+      "source": "src/function/version.ts"
+    },
+    {
+      "name": "updateTavernRegexesWith",
+      "source": "src/function/tavern_regex.ts"
+    },
+    {
+      "name": "updateVariablesWith",
+      "source": "src/function/variables.ts"
+    },
+    {
+      "name": "updateWorldbookWith",
+      "source": "src/function/worldbook.ts"
+    },
+    {
+      "name": "waitGlobalInitialized",
+      "source": "src/function/global.ts"
+    }
+  ]
+}

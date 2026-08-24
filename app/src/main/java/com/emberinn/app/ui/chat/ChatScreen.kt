@@ -139,6 +139,7 @@ import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
+import com.emberinn.app.ui.settings.TavernHelperPrefs
 import com.emberinn.engine.group.GroupGenerationMode
 import com.emberinn.engine.media.MediaAttachment
 import com.emberinn.engine.prompt.CfgPromptEngine
@@ -274,6 +275,12 @@ fun ChatScreen(
         // 官方 getChatResult：打开的聊天恰有 1 条消息（开场白）→ MESSAGE_RECEIVED(0,'first_message')（script.js:7646）
         if (vm.messages.value.size == 1) {
             kernelPool.emitEvent("message_received", listOf("0", "\"first_message\""))
+        }
+    }
+    // 酒馆助手配置下发：collect 首值即推当前配置，之后设置页每次变更自动重发
+    LaunchedEffect(kernelPool) {
+        TavernHelperPrefs.revision.collect {
+            kernelPool.emitEvent("tavern_helper_config", listOf(TavernHelperPrefs.current.toJsonString()))
         }
     }
     val themeManager = remember { OfficialThemeManager.shared(context) }

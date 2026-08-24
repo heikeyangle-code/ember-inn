@@ -1,0 +1,9 @@
+{
+  "name": "th-golden",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen": "node gen-contract.mjs",
+    "test": "node contract.test.mjs"
+  }
+}

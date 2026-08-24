@@ -60,7 +60,7 @@ import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.components.EmberTextField
 
-private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, RENDER, EXTENSIONS, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
+private enum class SettingsPage { HOME, AI_RESPONSE, PROVIDERS, PROVIDER_DETAIL, ADVANCED_FORMATTING, WORLD_INFO, USER_SETTINGS, APPEARANCE, BACKGROUNDS, PERSONAS, RENDER, EXTENSIONS, TAVERN_HELPER, INTERACTIVE, VOICE, SERVICES, QUICK_REPLIES, MEMORY, CAPTION, EXPRESSION, REGEX, DATA, ABOUT, AUTHORS_NOTE, PRESETS, PROMPT_MANAGER }
 
 /** 设置入口：对照官方 SillyTavern 移动端 8 分区抽屉（AI 响应配置 / API 连接 / 高级格式化 / 世界书 / 用户设置 / 背景 / 扩展 / 人设管理）。 */
 @Composable
@@ -157,6 +157,7 @@ fun SettingsScreen(
         SettingsPage.BACKGROUNDS -> BackgroundsScreen(onBack = ::goBack)
         SettingsPage.PERSONAS -> PersonaSettingsScreen(onBack = ::goBack)
         SettingsPage.RENDER -> MessageRenderScreen(onBack = ::goBack)
+        SettingsPage.TAVERN_HELPER -> TavernHelperScreen(onBack = ::goBack)
         SettingsPage.EXTENSIONS -> ExtensionsHubScreen(
             onBack = ::goBack,
             onOpenServices = { open(SettingsPage.SERVICES) },
@@ -195,6 +196,7 @@ fun SettingsScreen(
             onOpenUserSettings = { open(SettingsPage.USER_SETTINGS) },
             onOpenBackgrounds = { open(SettingsPage.BACKGROUNDS) },
             onOpenExtensionsHub = { open(SettingsPage.EXTENSIONS) },
+            onOpenTavernHelper = { open(SettingsPage.TAVERN_HELPER) },
             onOpenPersonas = { open(SettingsPage.PERSONAS) },
             onOpenRender = { open(SettingsPage.RENDER) },
             onOpenVoice = { open(SettingsPage.VOICE) },
@@ -242,6 +244,7 @@ private fun SettingsHome(
     onOpenUserSettings: () -> Unit,
     onOpenBackgrounds: () -> Unit,
     onOpenExtensionsHub: () -> Unit,
+    onOpenTavernHelper: () -> Unit,
     onOpenPersonas: () -> Unit,
     onOpenRender: () -> Unit,
     onOpenVoice: () -> Unit,
@@ -280,6 +283,7 @@ private fun SettingsHome(
         OfficialSection("用户设置", "UI 主题 · 个性化 · 聊天/消息处理 · 自动滑动/续写", FaIcons.User, sectionHue.primary) { onOpenUserSettings() },
         OfficialSection("背景", "聊天背景 · 模糊 · 遮罩", FaIcons.Image, Color(0xFF8E24AA)) { onOpenBackgrounds() },
         OfficialSection("扩展", "翻译 · 图像 · 向量 · TTS · 快捷回复 · 正则 · 记忆 …", FaIcons.WandMagicSparkles, Color(0xFFFB8C00)) { onOpenExtensionsHub() },
+        OfficialSection("酒馆助手", "前端卡脚本沙箱 · 变量 / 消息 API（TH 兼容层）", FaIcons.WandMagicSparkles, Color(0xFF00897B)) { onOpenTavernHelper() },
         OfficialSection("人设管理", "用户设定 · 描述 · 位置 · 连接", FaIcons.User, sectionHue.secondary) { onOpenPersonas() },
     )
 

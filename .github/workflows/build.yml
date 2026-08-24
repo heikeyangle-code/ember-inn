@@ -12,6 +12,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/**'
       - 'scripts/kernel-golden/**'
+      - 'scripts/th-golden/**'
       - 'scripts/source-scan/**'
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - 'gradle.properties'
       - '.github/workflows/**'
       - 'scripts/kernel-golden/**'
+      - 'scripts/th-golden/**'
       - 'scripts/source-scan/**'
 
 jobs:
@@ -48,6 +50,8 @@ jobs:
         run: cd scripts/kernel-golden && npm ci && npm test
       - name: Kernel DOM golden tests (Puppeteer/Chromium, V2 §六.2)
         run: cd scripts/kernel-golden && npm run test:dom
+      - name: TavernHelper contract tests (jsdom)
+        run: cd scripts/th-golden && npm install --no-save jsdom@24 && node contract.test.mjs
       - name: Token gate (业务层禁直读 M3 colorScheme, DESIGN_SYSTEM §六)
         run: node scripts/source-scan/check-tokens.mjs
 
