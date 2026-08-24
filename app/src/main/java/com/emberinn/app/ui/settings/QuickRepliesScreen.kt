@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.QuickReplyStore
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.slash.QuickReplySlot
@@ -89,11 +90,11 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("全局快捷回复", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("全局快捷回复", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "字段对齐官方 Quick Reply 扩展：目录多预设（data/default-user/quick-replies/*.json）。槽位 = 斜杠链 mes + label + 启用。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
             FlowRow(
@@ -143,7 +144,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 slots.forEach { slot ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
@@ -165,14 +166,14 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                 Text(
                                     slot.label.ifBlank { "（未命名）" },
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = if (slot.label.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                                    color = if (slot.label.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkVariant,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -188,12 +189,12 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                     draftPreventAutoExecute = slot.preventAutoExecute
                                 }
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
                             }
                             IconButton(onClick = {
                                 persist(slots.filterNot { it.label == slot.label })
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
                             }
                             EmberSwitch(
                                 checked = slot.enabled,

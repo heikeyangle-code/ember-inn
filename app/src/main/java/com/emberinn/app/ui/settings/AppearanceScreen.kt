@@ -325,7 +325,7 @@ internal fun SwitchPrefRow(title: String, subtitle: String, checked: Boolean, on
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
         }
         EmberSwitch(checked = checked, onCheckedChange = onToggle)
     }

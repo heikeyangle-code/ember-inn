@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberSwitch
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.InstructSettings
@@ -469,14 +470,14 @@ fun PresetsScreen(onBack: () -> Unit) {
                     Text(
                         "绑定到连接",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                         modifier = Modifier.padding(start = 8.dp),
                     )
                     importMessage?.let {
                         Text(
                             it,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = EmberTheme.colors.lineStrong,
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
@@ -525,7 +526,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 )
             }
             var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
-            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkVariant, modifier = Modifier.padding(top = 6.dp))
             EmberTextField(
                 value = afBehavior.userPromptBias,
                 onValueChange = {
@@ -659,7 +660,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 "采样预设应用到“提供商与模型”详情页；reasoning 预设的 prefix/suffix/separator 进总装与显示；" +
                     "context/instruct/sysprompt 已按官方语义保存，运行时消费点等 textgen 协议后端接入（登记）。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = EmberTheme.colors.lineStrong,
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
@@ -745,7 +746,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 TextButton(onClick = {
                     pendingDeleteUser = null
                     deleteUserPreset(type, name)
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = { TextButton(onClick = { pendingDeleteUser = null }) { Text("取消") } },
         )
@@ -873,7 +874,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(if (checked) "✓" else "", color = MaterialTheme.colorScheme.primary)
+                            Text(if (checked) "✓" else "", color = EmberTheme.colors.accent)
                         }
                     }
                 }
@@ -913,7 +914,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(if (checked) "✓" else "", color = MaterialTheme.colorScheme.primary)
+                            Text(if (checked) "✓" else "", color = EmberTheme.colors.accent)
                         }
                     }
                 }
@@ -1064,7 +1065,7 @@ private fun PresetSection(
         Text(
             if (expanded) "▼" else "▶",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline,
+            color = EmberTheme.colors.lineStrong,
         )
         Spacer(Modifier.width(6.dp))
         Text(
@@ -1075,12 +1076,12 @@ private fun PresetSection(
         Text(
             "当前：${selected.ifBlank { "默认" }}",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = EmberTheme.colors.accent,
         )
         Text(
             "（${items.size}）",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
+            color = EmberTheme.colors.lineStrong,
         )
     }
     if (expanded) {
@@ -1117,7 +1118,7 @@ private fun PresetSection(
             if (onExport != null) {
                 TextButton(onClick = onExport) { Text("导出") }
             }
-            TextButton(onClick = onDeleteUser, enabled = selected.isNotBlank()) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = onDeleteUser, enabled = selected.isNotBlank()) { Text("删除", color = EmberTheme.colors.danger) }
             if (onRestore != null) {
                 TextButton(onClick = onRestore) { Text("恢复默认") }
             }

@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -123,7 +124,7 @@ fun ProviderListScreen(
             Text(
                 "我的连接",
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = EmberTheme.colors.accent,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
             )
             LazyRow(
@@ -166,7 +167,7 @@ private fun ProfileChip(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (active) EmberTheme.colors.accentContainer else EmberTheme.colors.surfaceVariant,
         modifier = Modifier.clickable(onClick = onSwitch),
     ) {
         Row(
@@ -186,7 +187,7 @@ private fun ProfileChip(
                 Icon(
                     FaIcons.XMark,
                     contentDescription = "删除连接",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = EmberTheme.colors.inkVariant,
                     modifier = Modifier.size(14.dp),
                 )
             }
@@ -205,13 +206,13 @@ private fun ProviderCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .emberShadow(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                color = EmberTheme.colors.accent.copy(alpha = 0.14f),
                 radius = 10.dp,
                 offset = DpOffset(0.dp, 4.dp),
                 alpha = 0.08f,
             ),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -231,18 +232,18 @@ private fun ProviderCard(
                     Surface(
                         shape = RoundedCornerShape(999.dp),
                         color = if (configured) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            EmberTheme.colors.accentContainer
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            EmberTheme.colors.surfaceVariant
                         },
                     ) {
                         Text(
                             if (configured) "已配置" else "未配置",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (configured) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
+                                EmberTheme.colors.inkContainer
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                EmberTheme.colors.inkVariant
                             },
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                         )
@@ -251,13 +252,13 @@ private fun ProviderCard(
                 Text(
                     spec.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkVariant, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -345,7 +346,7 @@ fun ProviderDetailScreen(
                     Text(
                         spec.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -422,7 +423,7 @@ fun ProviderDetailScreen(
                     .padding(top = 14.dp)
                     .clickable { showModelSheet = true }
                     .emberShadow(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        color = EmberTheme.colors.accent.copy(alpha = 0.14f),
                         radius = 10.dp,
                         offset = DpOffset(0.dp, 4.dp),
                         alpha = 0.08f,
@@ -436,12 +437,12 @@ fun ProviderDetailScreen(
                     Text(
                         selectedModel.ifBlank { "未选择" },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(4.dp))
-            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkVariant, modifier = Modifier.size(20.dp))
                 }
             }
             }
@@ -572,7 +573,7 @@ fun ProviderDetailScreen(
             Text("预设联动设置（官方 oai_settings）", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 14.dp))
             // ---- 官方 bias 预设弹窗（openai.js createNewLogitBiasPreset / onLogitBiasPresetDeleteClick /
             //      onLogitBiasPresetImportFileChange / onLogitBiasPresetExportClick / createLogitBiasListItem）----
-            Text("Logit Bias 预设（官方 openai_logit_bias）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("Logit Bias 预设（官方 openai_logit_bias）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             Text("bias_preset_selected（logit_bias 预设）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sampler.biasPresets.keys.forEach { name ->
@@ -653,7 +654,7 @@ fun ProviderDetailScreen(
                         TextButton(onClick = {
                             vm.deleteBiasPreset(sampler.biasPresetSelected)
                             showBiasDelete = false
-                        }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                        }) { Text("删除", color = EmberTheme.colors.danger) }
                     },
                     dismissButton = { TextButton(onClick = { showBiasDelete = false }) { Text("取消") } },
                 )
@@ -672,7 +673,7 @@ fun ProviderDetailScreen(
                         Text(
                             "文本或 [token ids]；数值 -100 ~ 100（官方 openai_logit_bias 模板）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                         )
                         Spacer(Modifier.size(8.dp))
                         LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
@@ -701,7 +702,7 @@ fun ProviderDetailScreen(
                                     )
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = true) }, enabled = index > 0) { Text("↑") }
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = false) }, enabled = index < entries.lastIndex) { Text("↓") }
-                                    TextButton(onClick = { vm.removeBiasEntry(presetName, entry.id) }) { Text("删", color = MaterialTheme.colorScheme.error) }
+                                    TextButton(onClick = { vm.removeBiasEntry(presetName, entry.id) }) { Text("删", color = EmberTheme.colors.danger) }
                                 }
                             }
                         }
@@ -719,7 +720,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            Text("消息角色与续写（names_behavior/continue_postfix/use_sysprompt/squash_system_messages）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("消息角色与续写（names_behavior/continue_postfix/use_sysprompt/squash_system_messages）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             Text("names_behavior（消息名字模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(-1 to "NONE", 0 to "DEFAULT", 1 to "COMPLETION", 2 to "CONTENT").forEach { (v, label) ->
@@ -770,7 +771,7 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            Text("工具与媒体（function_calling/tool_reasoning_mode/media_inlining/web_search/request_images）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
+            Text("工具与媒体（function_calling/tool_reasoning_mode/media_inlining/web_search/request_images）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
             SwitchRow("media_inlining（媒体 data URL 内联，官方默认开）", sampler.mediaInlining, vm::setMediaInlining)
             SwitchRow("function_calling（工具调用总开关，官方默认关）", sampler.functionCalling, vm::setFunctionCalling)
             SwitchRow("show_thoughts（显示推理内容，官方默认开）", sampler.showThoughts, vm::setShowThoughts)
@@ -801,8 +802,8 @@ fun ProviderDetailScreen(
                     }
                 }
             }
-            Text("提示词模板（Prompts）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp))
-            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("提示词模板（Prompts）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
+            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkVariant)
             PromptQuickEdit(context, "main", "Main Prompt")
             PromptQuickEdit(context, "nsfw", "Auxiliary Prompt")
             PromptQuickEdit(context, "jailbreak", "Post-History Instructions")
@@ -1089,11 +1090,11 @@ fun ProviderDetailScreen(
                         Text(
                             "已保存服务账号",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = EmberTheme.colors.accent,
                         )
                     }
                     saStatus?.let {
-                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.danger)
                     }
                 }
             }
@@ -1132,9 +1133,9 @@ fun ProviderDetailScreen(
                     it,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (it.startsWith("连接失败") || it.contains("不对")) {
-                        MaterialTheme.colorScheme.error
+                        EmberTheme.colors.danger
                     } else {
-                        MaterialTheme.colorScheme.primary
+                        EmberTheme.colors.accent
                     },
                     modifier = Modifier.padding(top = 10.dp),
                 )
@@ -1183,7 +1184,7 @@ fun ProviderDetailScreen(
                     existing?.let { vm.deleteProfile(it.id) }
                     confirmDelete = false
                     onBack()
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text("取消") }
@@ -1251,7 +1252,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                         Text(
                             label,
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = EmberTheme.colors.accent,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                         return@itemsIndexed
@@ -1263,7 +1264,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                if (isSel) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else Color.Transparent,
+                                if (isSel) EmberTheme.colors.accentContainer.copy(alpha = 0.45f) else Color.Transparent,
                             )
                             .clickable {
                                 vm.selectModel(modelId)
@@ -1285,9 +1286,9 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                                 modifier = Modifier
                                     .size(22.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
+                                    .background(EmberTheme.colors.accent),
                             ) {
-                                Text("✓", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
+                                Text("✓", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.ink)
                             }
                         }
                     }
@@ -1336,7 +1337,7 @@ private fun TopBar(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1400,13 +1401,13 @@ private fun CollapsibleSection(
         Text(
             if (expanded) "▼" else "▶",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline,
+            color = EmberTheme.colors.lineStrong,
         )
         Spacer(Modifier.width(6.dp))
         Text(
             title,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = EmberTheme.colors.accent,
             modifier = Modifier.weight(1f),
         )
     }

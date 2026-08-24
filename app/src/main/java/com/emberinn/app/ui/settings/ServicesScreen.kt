@@ -120,11 +120,11 @@ fun ServicesScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("翻译 · 图像 · 向量", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("翻译 · 图像 · 向量", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "字段对齐官方扩展设置；翻译 / 图像执行层已接入，向量检索已 1:1 接线。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
             TranslateCard()
@@ -385,7 +385,7 @@ private fun ComfyWorkflowSection() {
         Text(
             "占位符：%prompt% / %negative_prompt% / %model% / %seed% / %steps% / %width% / %height% / %sampler% / %scheduler% / %scale% / %denoise% / %clip_skip% / %vae%",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             modifier = Modifier.padding(top = 2.dp),
         )
     }
@@ -407,7 +407,7 @@ private fun ComfyWorkflowSection() {
                     Text(
                         "占位符：%prompt% / %negative_prompt% / %model% / %seed% / %steps% / %width% / %height% / %sampler% / %scheduler% / %scale% / %denoise% / %clip_skip% / %vae%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -557,7 +557,7 @@ private fun StyleSection(
         Text(
             "选中样式会应用到上方提示词前缀/负向（官方 onStyleSelect）；「保存当前」用当前前缀/负向新建或覆盖同名样式。",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             modifier = Modifier.padding(top = 2.dp),
         )
     }
@@ -656,12 +656,12 @@ private fun PromptTemplatesSection() {
         ) {
             Text("图像提示词模板（${templates.size}）", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.weight(1f))
-            Text(if (expanded) "收起 ▾" else "展开 ▴", color = MaterialTheme.colorScheme.primary)
+            Text(if (expanded) "收起 ▾" else "展开 ▴", color = EmberTheme.colors.accent)
         }
         Text(
             "官方 13 个 generationMode 预设提示词（getQuietPrompt 使用），可编辑；点「恢复默认」还原官方原文。",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             modifier = Modifier.padding(top = 2.dp),
         )
         if (expanded) {
@@ -767,7 +767,7 @@ private fun VectorCard() {
             Text(
                 "本地离线嵌入无需联网，适合隐私场景；效果弱于云端嵌入。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
@@ -779,14 +779,14 @@ private fun VectorCard() {
 private fun ServiceCard(title: String, content: @Composable () -> Unit) {
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
     ) {
         Column {
             Text(
                 title,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = EmberTheme.colors.accent,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
             content()
@@ -800,7 +800,7 @@ private fun ServiceNote(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = EmberTheme.colors.inkVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
     )
 }
@@ -855,12 +855,12 @@ private fun MenuPicker(label: String, value: String, options: List<DropdownOptio
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkVariant)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 DropdownMenuItem(

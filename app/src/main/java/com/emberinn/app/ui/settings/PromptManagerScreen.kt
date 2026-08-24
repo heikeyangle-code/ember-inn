@@ -174,27 +174,27 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = RoundedCornerShape(18.dp), color = EmberTheme.colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("说明", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("说明", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                             Text(
                                 "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkVariant,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
                     }
                 }
                 item {
-                    Text("全局顺序（官方 global 策略，character_id=100000）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("全局顺序（官方 global 策略，character_id=100000）", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         TextButton(onClick = { exportLauncher.launch("st-prompts-${java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MM_dd_yyyy"))}.json") }) { Text("导出全部") }
                         TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) { Text("导入") }
                         if (resetConfirming) {
-                            Text("确认恢复官方默认顺序？", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 4.dp))
+                            Text("确认恢复官方默认顺序？", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.danger, modifier = Modifier.padding(start = 4.dp))
                             TextButton(onClick = {
                                 PromptManagerPrefs.resetOrderToDefault(context)
                                 order = PromptManagerPrefs.order(context)
@@ -209,26 +209,26 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("注入顺序", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                        Text("注入顺序", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent, modifier = Modifier.weight(1f))
                         Text(
                             "总 Token：${PromptAssemblyCache.lastMessages?.sumOf { it.tokens } ?: 0}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = EmberTheme.colors.accent,
                         )
                     }
                 }
                 if (order.isEmpty()) {
-                    item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant) }
                 }
                 importMessage?.let {
-                    item { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                    item { Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.danger) }
                 }
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
                         val isDragging = draggingOrderId == entry.identifier
                         Surface(
                             shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            color = EmberTheme.colors.surfaceContainerLow,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .zIndex(if (isDragging) 1f else 0f)
@@ -271,8 +271,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 },
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                Text("≡", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline, modifier = Modifier.width(24.dp))
-                                Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline, modifier = Modifier.width(24.dp))
+                                Text("≡", style = MaterialTheme.typography.bodyLarge, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
+                                Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(entry.identifier, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                 }
@@ -290,7 +290,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                         PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
-                                    Text("↑", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("↑", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
                                 }
                                 IconButton(onClick = {
                                     if (i < order.lastIndex) {
@@ -298,12 +298,12 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                         PromptManagerPrefs.saveOrder(context, null, order)
                                     }
                                 }, modifier = Modifier.size(26.dp)) {
-                                    Text("↓", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("↓", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
                                 }
                                 IconButton(onClick = {
                                     order = order.filterIndexed { j, _ -> j != i }
                                     PromptManagerPrefs.saveOrder(context, null, order)
-                                }, modifier = Modifier.size(30.dp)) { Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
+                                }, modifier = Modifier.size(30.dp)) { Text("×", color = EmberTheme.colors.danger, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
                     }
@@ -338,7 +338,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 }
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("提示项", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("提示项", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                         TextButton(onClick = {
                             editTarget = PromptItem(identifier = "", name = "", content = "")
                             showEdit = true
@@ -403,7 +403,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     prompts = prompts.filterNot { it.identifier == doomed.identifier }
                     PromptManagerPrefs.savePrompts(context, prompts)
                     deleteTarget = null
-                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = EmberTheme.colors.danger) }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("取消") } },
         )
@@ -446,7 +446,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Text(
                         "identifier（自动生成，只读）：$promptId",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = EmberTheme.colors.lineStrong,
                     )
                     Spacer(Modifier.height(8.dp))
                     EmberTextField(value = name, onValueChange = { name = it }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -571,7 +571,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Text(
                         "该提示项在最近一次总装中没有消息。先发送一条消息或使用聊天菜单的“提示词预览（dryRun）”后，这里才会列出内容（官方 PromptManager.messages 同语义）。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                     )
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
@@ -580,7 +580,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                 Text(
                                     "${m.role} · ${m.tokens}t",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = EmberTheme.colors.accent,
                                 )
                                 Text(
                                     m.content.ifBlank { "（无内容）" },
@@ -632,7 +632,7 @@ private fun PromptRow(
     val forceToggle = forceEdit + setOf("main", "chatHistory", "dialogueExamples")
     val editAllowed = item.identifier in forceEdit || !item.marker
     val toggleAllowed = !(item.marker && item.identifier !in forceToggle)
-    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(14.dp), color = EmberTheme.colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -648,20 +648,20 @@ private fun PromptRow(
                         Text(icon, style = MaterialTheme.typography.labelSmall)
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(item.identifier, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    Text(item.identifier, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
                     if (item.injectionPosition == 1 && item.injectionDepth != null) {
                         Spacer(Modifier.width(6.dp))
-                        Text("@ ${item.injectionDepth}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Text("@ ${item.injectionDepth}", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.lineStrong)
                     }
                     if (!userDefined) {
                         Spacer(Modifier.width(6.dp))
-                        Text("默认", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                        Text("默认", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.ai)
                     }
                 }
                 Text(
                     item.content.ifBlank { "（空内容）" },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -670,17 +670,17 @@ private fun PromptRow(
             Text(
                 if (tokens > 0) "$tokens" else "-",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = EmberTheme.colors.lineStrong,
             )
             EmberSwitch(checked = enabledInOrder, enabled = toggleAllowed, onCheckedChange = onToggleOrder)
             if (onInspect != null) {
                 IconButton(onClick = onInspect, modifier = Modifier.size(38.dp)) {
-                    Text("查", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("查", style = MaterialTheme.typography.bodyMedium, color = EmberTheme.colors.accent)
                 }
             }
             if (userDefined && onDelete != null) {
                 IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
-                    Text("×", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                    Text("×", color = EmberTheme.colors.danger, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }

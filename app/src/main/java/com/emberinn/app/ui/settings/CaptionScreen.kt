@@ -41,11 +41,11 @@ fun CaptionScreen(onBack: () -> Unit) {
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                Text("图片描述", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("图片描述", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 Text(
                     "对齐官方 caption 扩展：添加图片后，聊天输入区点“图片描述”生成描述并发送（sendCaptionedMessage 语义）。multimodal 用当前模型；local/extras/horde 走 sourceUrl 代理端点。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Row(
@@ -55,7 +55,7 @@ fun CaptionScreen(onBack: () -> Unit) {
                     Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.enabled, onCheckedChange = { s = s.copy(enabled = it); save() })
                 }
-                Text("来源", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("来源", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                 Row(modifier = Modifier.padding(vertical = 8.dp)) {
                     FilterChip(selected = s.source == "multimodal", onClick = { s = s.copy(source = "multimodal"); save() }, label = { Text("Multimodal") })
                     Spacer(Modifier.width(8.dp))
@@ -105,7 +105,7 @@ fun CaptionScreen(onBack: () -> Unit) {
                 Text(
                     "refine_mode 当前登记为 UI 开关；App 侧确认弹层未接。prompt_ask（每次询问提示词）暂未接。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = EmberTheme.colors.lineStrong,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Spacer(Modifier.height(16.dp))

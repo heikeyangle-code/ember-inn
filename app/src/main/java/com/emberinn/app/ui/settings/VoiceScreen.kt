@@ -120,17 +120,17 @@ fun VoiceScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("语音朗读（TTS）", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("语音朗读（TTS）", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "对齐官方 TTS 设置；官方 1.18 无语音输入（STT）。在线语音提供商在 P3 引擎层接入，本机引擎可直接试听。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Row(
@@ -142,7 +142,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             "聊天自动朗读将在后续版本接入；启用后本页试听可用",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                         )
                     }
                     EmberSwitch(checked = enabled, onCheckedChange = { enabled = it; save() })
@@ -151,14 +151,14 @@ fun VoiceScreen(onBack: () -> Unit) {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {
                     Text(
                         "引擎与语音",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -170,7 +170,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             tts.value?.defaultEngine?.substringAfterLast('.') ?: "Android 系统 TTS",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -186,14 +186,14 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             "正在初始化本机语音引擎…",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = EmberTheme.colors.lineStrong,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     } else if (voices.isEmpty()) {
                         Text(
                             "本机没有可用的语音，请在系统设置中安装或启用语音合成",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
+                            color = EmberTheme.colors.danger,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     }
@@ -204,7 +204,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             Text(
                                 "%.2f".format(rate) + (if (rate == 1.0f) " · 正常" else ""),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkVariant,
                             )
                         }
                         EmberSlider(
@@ -216,7 +216,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             "0.5 慢速 — 2.0 快速（Android 系统支持范围，1.0 为正常）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                         )
                     }
                     Button(
@@ -232,20 +232,20 @@ fun VoiceScreen(onBack: () -> Unit) {
             // 在线 TTS 提供商（27 后端，对照官方 tts/settings.html 的 provider 选项 + TtsBackendRegistry 注册表）
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {
                     Text(
                         "在线 TTS 提供商",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Text(
                         "对照官方 TTS 扩展 27 个后端；选择后聊天朗读将走该后端（系统 TTS 仅用于本页试听）",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     ProviderPickerRow(
@@ -300,7 +300,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             Text(
                                 "正在加载语音列表…",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = EmberTheme.colors.lineStrong,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         } else if (externalVoices.isNotEmpty()) {
@@ -319,20 +319,20 @@ fun VoiceScreen(onBack: () -> Unit) {
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
                 Column {
                     Text(
                         "朗读选项",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                     Text(
                         "字段对齐官方 TTS 扩展；聊天自动朗读在 P3 接入，以下配置先持久化",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     ToggleRow("自动朗读回复", autoGeneration) { autoGeneration = it; save() }
@@ -384,12 +384,12 @@ private fun VoicePickerRow(
         Text(
             current.ifBlank { "跟随系统默认" },
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkVariant)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("跟随系统默认") },
@@ -436,12 +436,12 @@ private fun ProviderPickerRow(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = EmberTheme.colors.inkVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkVariant)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (id, name) ->
                 DropdownMenuItem(

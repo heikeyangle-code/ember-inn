@@ -44,11 +44,11 @@ fun MemoryScreen(onBack: () -> Unit) {
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                Text("摘要设置", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("摘要设置", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 Text(
                     "字段对齐官方 memory 扩展（settings.html）。总结源当前支持 main（当前模型）；extras/webllm 未接。聊天 ⋮ 菜单可立即总结。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 ToggleRow("冻结记忆（memoryFrozen）", s.memoryFrozen) { s = s.copy(memoryFrozen = it); save() }
@@ -73,7 +73,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
 
-                Text("注入位置", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("注入位置", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 ChipRow(
                     listOf("角色后(0)" to 0, "深度注入(1)" to 1, "角色前(2)" to 2, "不注入(-1)" to -1),
                     s.position,
@@ -87,7 +87,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                 }
                 ToggleRow("包含世界书扫描（scan）", s.scan) { s = s.copy(scan = it); save() }
 
-                Text("总结条件", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("总结条件", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 NumberRow("摘要词数上限（promptWords）", s.promptWords.toString()) { v ->
                     s = s.copy(promptWords = v.toIntOrNull() ?: 200); save()
                 }
@@ -104,7 +104,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                     s = s.copy(overrideResponseLength = v.toIntOrNull() ?: 0); save()
                 }
 
-                Text("总结构建器", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("总结构建器", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 ChipRow(
                     listOf("DEFAULT(0)" to 0, "RAW 阻塞(1)" to 1, "RAW 非阻塞(2)" to 2),
                     s.promptBuilder,
@@ -112,7 +112,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                 Text(
                     "DEFAULT=官方 generateQuietPrompt（当前上下文+quiet 提示）；RAW=官方 getRawSummaryPrompt + generateRaw。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Spacer(Modifier.height(16.dp))

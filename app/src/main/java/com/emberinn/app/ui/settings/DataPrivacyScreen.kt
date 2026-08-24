@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.edgeSwipeBack
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -123,7 +124,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             snapshots.forEach { name ->
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = EmberTheme.colors.surfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -132,7 +133,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
                         }
                         TextButton(onClick = { confirmRestoreName = name }) { Text("恢复") }
                         IconButton(onClick = {
@@ -140,7 +141,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                             snapshots = SettingsSnapshotStore.list(context)
                             Toast.makeText(context, "已删除快照", Toast.LENGTH_SHORT).show()
                         }) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除快照", tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除快照", tint = EmberTheme.colors.danger)
                         }
                     }
                 }
@@ -217,7 +218,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                     showClearConfirm = false
                     ProviderState.refresh(null)
                     Toast.makeText(context, "已清除全部本地数据", Toast.LENGTH_SHORT).show()
-                }) { Text("清除", color = MaterialTheme.colorScheme.error) }
+                }) { Text("清除", color = EmberTheme.colors.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
@@ -239,7 +240,7 @@ private fun DataRow(
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = EmberTheme.colors.surfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick),
@@ -251,7 +252,7 @@ private fun DataRow(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                tint = if (danger) EmberTheme.colors.danger else EmberTheme.colors.accent,
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -259,17 +260,17 @@ private fun DataRow(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    color = if (danger) EmberTheme.colors.danger else EmberTheme.colors.ink,
                 )
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = EmberTheme.colors.inkVariant,
                 )
             }
             trailing?.let {
                 Spacer(Modifier.width(8.dp))
-                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.accent)
             }
         }
     }

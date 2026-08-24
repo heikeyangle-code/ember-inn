@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.regex.RegexPipelineScript
@@ -92,11 +93,11 @@ fun RegexScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("全局正则", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("全局正则", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "对齐官方 regex 扩展 GLOBAL 分桶：先跑全局、再跑该卡正则（该卡在角色详情页编辑）；仅影响发送内容，不落盘改写。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -108,7 +109,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     Text(
                         "关闭后所有位点不应用正则（官方 disabledExtensions.regex）。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                     )
                 }
                 EmberSwitch(
@@ -131,7 +132,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 scripts.forEachIndexed { index, script ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
@@ -151,14 +152,14 @@ fun RegexScreen(onBack: () -> Unit) {
                                 Text(
                                     script.scriptName.ifBlank { "（未命名）" },
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = if (script.scriptName.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                                    color = if (script.scriptName.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     script.findRegex.ifBlank { "（空匹配式）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -172,12 +173,12 @@ fun RegexScreen(onBack: () -> Unit) {
                                 draftDisabled = script.disabled
                                 draftPlacement = script.placement
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
                             }
                             IconButton(onClick = {
                                 persist(scripts.filterIndexed { i, _ -> i != index })
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
                             }
                             EmberSwitch(
                                 checked = !script.disabled,
@@ -202,11 +203,11 @@ fun RegexScreen(onBack: () -> Unit) {
             ) { Text("＋ 新增全局正则") }
 
             Spacer(Modifier.height(16.dp))
-            Text("预设正则", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("预设正则", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
             Text(
                 "对齐官方 preset 扩展：脚本存于预设的 regex_scripts 扩展字段；App 用命名预设集模拟，允许列表按官方 preset_allowed_regex[api]（App 固定 openai）。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = EmberTheme.colors.inkVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -267,7 +268,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 presetSets[activePreset].orEmpty().forEachIndexed { i, script ->
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     ) {
                         Row(
@@ -278,14 +279,14 @@ fun RegexScreen(onBack: () -> Unit) {
                                 Text(
                                     script.scriptName.ifBlank { "（未命名）" },
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = if (script.scriptName.isBlank()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                                    color = if (script.scriptName.isBlank()) EmberTheme.colors.lineStrong else EmberTheme.colors.accent,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     script.findRegex.ifBlank { "（空匹配式）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = EmberTheme.colors.inkVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -299,13 +300,13 @@ fun RegexScreen(onBack: () -> Unit) {
                                 draftDisabled = script.disabled
                                 draftPlacement = script.placement
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.Pencil, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.outline)
+                                Icon(FaIcons.Pencil, contentDescription = "编辑预设正则", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.lineStrong)
                             }
                             IconButton(onClick = {
                                 val list = presetSets[activePreset].orEmpty().filterIndexed { j, _ -> j != i }
                                 savePresetSetsState(presetSets + (activePreset to list))
                             }, modifier = Modifier.size(34.dp)) {
-                                Icon(FaIcons.TrashCan, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(FaIcons.TrashCan, contentDescription = "删除预设正则", modifier = Modifier.size(17.dp), tint = EmberTheme.colors.danger)
                             }
                             EmberSwitch(
                                 checked = !script.disabled,
@@ -381,7 +382,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     Text(
                         "生效位点",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = EmberTheme.colors.accent,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

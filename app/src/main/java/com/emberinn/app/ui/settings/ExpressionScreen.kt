@@ -35,6 +35,7 @@ import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.ui.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import java.io.File
 
@@ -74,11 +75,11 @@ fun ExpressionScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Text("表情精灵", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("表情精灵", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                     Text(
                         "对齐官方 expressions 扩展：精灵按角色存放在 expressions/{角色名}/，AI 消息正文自动分类选图。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = EmberTheme.colors.inkVariant,
                     )
                 }
                 item {
@@ -103,7 +104,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                     }
                 }
                 item {
-                    Text("选择角色", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("选择角色", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.accent)
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         characters.take(8).forEach { c ->
                             FilterChip(
@@ -138,7 +139,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                             store.deleteSprite(selectedName, sprite.path)
                             sprites = store.sprites(selectedName)
                         }) {
-                            Icon(FaIcons.TrashCan, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
+                            Icon(FaIcons.TrashCan, contentDescription = "删除", tint = EmberTheme.colors.danger)
                         }
                     }
                 }
@@ -147,7 +148,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         Text(
                             "还没有精灵。文件名即表情标签（如 joy.png / sad-1.png），AI 消息正文会按表情词自动匹配。",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = EmberTheme.colors.lineStrong,
                         )
                     }
                 }

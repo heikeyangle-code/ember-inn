@@ -150,11 +150,11 @@ object ProtocolSamplerEditors {
         var dirty by remember { mutableStateOf(false) }
         Surface(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color = EmberTheme.colors.surfaceContainerLow,
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(title, style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                 fields.forEach { f ->
                     when (f) {
                         is Num -> {

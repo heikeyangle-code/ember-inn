@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.material3.Icon
 
@@ -97,7 +98,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
             Text(
                 "角色备注（按角色名编辑，聊天 ⋮ 作者注释里也可为当前角色设置）",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = EmberTheme.colors.lineStrong,
                 modifier = Modifier.padding(top = 12.dp),
             )
             prefs.charaNotes.forEach { (name, note) ->
@@ -110,7 +111,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                         Text(
                             if (note.useChara) "启用 · ${note.prompt.take(24)}" else "未启用",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                         )
                     }
                     IconButton(onClick = {

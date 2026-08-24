@@ -47,15 +47,15 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                 var fixMarkdown by remember { mutableStateOf(AppearancePrefs.fixMarkdown(context)) }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = EmberTheme.colors.surfaceContainerLow,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("行为与兼容", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("行为与兼容", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                         Text(
                             "对齐官方 power_user：折叠连续换行（collapse_newlines）、消息示例分隔符（context.example_separator，默认 ***）、标签转义与 Markdown 修复。",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = EmberTheme.colors.inkVariant,
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -112,7 +112,7 @@ private fun RenderSwitchRow(label: String, hint: String, checked: Boolean, onCha
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
         }
         EmberSwitch(checked = checked, onCheckedChange = onChange)
     }

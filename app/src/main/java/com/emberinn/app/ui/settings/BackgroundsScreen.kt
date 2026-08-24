@@ -102,15 +102,15 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                 item {
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("导入图片", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("导入图片", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                             Text(
                                 "从相册导入背景图；模糊/遮罩由主题控制。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkVariant,
                             )
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 TextButton(onClick = {
@@ -124,15 +124,15 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     // 官方 #background_fitting 五档（backgrounds.js setFittingClass L1632-1638）
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("适配方式", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("适配方式", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
                             Text(
                                 "classic=样式表默认；其余四档与官方 backgrounds.css 类同名。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkVariant,
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -159,7 +159,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     val active = f.absolutePath == currentBg
                     Surface(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = EmberTheme.colors.surfaceContainerLow,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -178,7 +178,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                                 Text(
                                     "使用中",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = EmberTheme.colors.accent,
                                     modifier = Modifier.padding(end = 8.dp),
                                 )
                             }
@@ -198,13 +198,13 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     item {
                         Surface(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            color = EmberTheme.colors.surfaceContainerLow,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
                                 "暂无背景图。首次进入会自动导入内置官方背景库。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = EmberTheme.colors.inkVariant,
                                 modifier = Modifier.padding(14.dp),
                             )
                         }
