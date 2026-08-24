@@ -1219,6 +1219,12 @@ fun ChatScreen(
                                 showBookmarkDialog = true
                             }
                             "mes_create_branch" -> vm.createBranch(index)?.let(onSwitchSession)
+                            "mes_bookmark" -> {
+                                // 官方 mes_bookmark：跳转到该消息指向的检查点聊天（extra.bookmark_link=存档名）
+                                val link = (el.jsonObject["extra"] as? JsonObject)
+                                    ?.get("bookmark_link")?.jsonPrimitive?.contentOrNull
+                                if (!link.isNullOrBlank()) { bookmarkToOpen = link }
+                            }
                             "mes_translate" -> vm.translateMessage(index)
                             "sd_message_gen" -> vm.generateImageForMessage(index)
                             "mes_narrate" -> vm.narrateMessage(index)
