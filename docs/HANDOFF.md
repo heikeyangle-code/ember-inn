@@ -468,6 +468,16 @@ RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系�
 payloadCount）+ logcat tag `EmberInnKernel`（attach 时打印 slot/view 尺寸）。下步：给诊断加
 分段计时（CSS 解析/JS 求值/首条挂载毫秒数），用数据定位，禁止盲改。
 
+### 9.2b 最新复现（2026-08-24 晚，最高优先级）
+最新全量修复构建上：进页 8~10s 出正文 → **正文显示约 1 秒后突然消失，只剩背景**；
+失败 toast（预热/创建）间歇出现。判读：先渲染后消失 = 渲染进程在首帧合成阶段崩溃的
+典型时序（handleProcessGone→销毁→重挂新实例→重新加载）。头号嫌疑：css-bundle 使
+Moonlit 玻璃主题(backdrop-filter 大面积+样式包)首次完整生效，触发该机 GPU/驱动崩溃。
+**判别实验（一分钟）**：外观切 Azure 纯官方主题（无样式包）重进——不再闪白即坐实
+GPU×玻璃合成崩溃；对策候选：a) 沿用官方 fast_ui_mode(no-blur) 语义按设备分级默认；
+b) 检测 renderer 反复 gone 后自动降级无模糊（自愈式,不改主题定义本身）。
+次级嫌疑：renderChat 清空后二次空载荷（VM refresh 竞态）→ 加桥侧日志可分辨。
+
 ### 9.3 原生组件欠账
 - 聊天顶框 ChatTopBar 完全重做（任务 #6）：缩小面积/Ember 令牌化/智能显隐/与内核页层叠修正
   （用户反馈顶部突兀、底部黑边）。注意 topBarPad 测量反馈回路曾异常。
