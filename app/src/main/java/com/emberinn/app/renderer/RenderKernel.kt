@@ -22,6 +22,7 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
     fun renderChat(payloads: List<KernelMessagePayload>, showMore: Boolean = false, onDone: ((String?) -> Unit)? = null) {
         val json = KernelProtocol.json.encodeToString(listAdapter, payloads)
         android.util.Log.e("EmberInnKernel", "renderChat payloads=${payloads.size} showMore=$showMore")
+        KernelDiagnostics.log("renderChat payloads=${payloads.size}${if (showMore) " showMore" else ""}")
         eval("window.Kernel.renderChat($json,{showMore:${if (showMore) "true" else "false"}});", onDone)
     }
 

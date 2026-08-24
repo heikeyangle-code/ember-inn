@@ -119,6 +119,9 @@ fun ChatKernelShell(
             )
             host = pooled
             onAttachedKernel(pooled)
+            com.emberinn.app.renderer.KernelDiagnostics.log(
+                "实例挂载 slot=${target.width}x${target.height} view=${pooled.webView.width}x${pooled.webView.height}",
+            )
             android.util.Log.e("EmberInnKernel",
                 "attach slot=${target.width}x${target.height} view=${pooled.webView.width}x${pooled.webView.height}")
             target.post {

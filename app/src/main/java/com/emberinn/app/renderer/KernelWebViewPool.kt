@@ -86,8 +86,9 @@ class KernelWebViewPool(
     fun addErrorListener(l: (String) -> Unit) { synchronized(errorListeners) { errorListeners.add(l) } }
     fun removeErrorListener(l: (String) -> Unit) { synchronized(errorListeners) { errorListeners.remove(l) } }
 
-    /** 黑匣子上报：logcat 常驻 + 宿主监听者（主线程回调，可直接弹 toast）。 */
+    /** 黑匣子上报：logcat 常驻 + 诊断事件史（内核体检面板可见）+ 宿主监听者。 */
     fun reportError(message: String, error: Throwable? = null) {
+        KernelDiagnostics.log("⚠ $message" + (error?.let { "：${it.message}" } ?: ""))
         Log.e(TAG, message, error)
         scope.launch(Dispatchers.Main) {
             val full = message + (error?.let { "：${it.message}" } ?: "")
@@ -214,6 +215,7 @@ class KernelWebViewPool(
             override fun onKernelReady() {
                 // JavascriptInterface 回调线程 → 标记就绪即可；等待方通过轮询/挂起恢复
                 instance.ready = true
+                KernelDiagnostics.log("kernelReady 握手成功")
             }
 
             override fun onHeightChanged(mesid: String, heightDp: Float) {
@@ -273,6 +275,7 @@ class KernelWebViewPool(
      */
     private suspend fun createAndWarm(): PooledWebView {
         val warmT0 = android.os.SystemClock.elapsedRealtime()
+        KernelDiagnostics.log("实例创建开始（预热/取用）")
         val webView = try {
             WebView(context)
         } catch (t: Throwable) {
@@ -316,11 +319,13 @@ class KernelWebViewPool(
                         if (level != android.webkit.ConsoleMessage.MessageLevel.DEBUG &&
                             level != android.webkit.ConsoleMessage.MessageLevel.TIP
                         ) {
-                            Log.w(
-                                TAG,
-                                "[console:$level] ${it.message()} " +
-                                    "(${it.sourceId()?.substringAfterLast('/') ?: "?"}:${it.lineNumber()})",
-                            )
+                            val text = "[console:$level] ${it.message()} " +
+                                "(${it.sourceId()?.substringAfterLast('/') ?: "?"}:${it.lineNumber()})"
+                            // ERROR 级进诊断事件史（JS 侧 clearMessages 栈/页面异常——体检面板可见）
+                            if (level == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                                KernelDiagnostics.log(text.take(300))
+                            }
+                            Log.w(TAG, text)
                         }
                     }
                     return true
@@ -358,6 +363,7 @@ class KernelWebViewPool(
         runCatching { applyPageSetup(instance) }
         idle.addLast(instance)
         Log.e(TAG, "内核实例预热完成 ${android.os.SystemClock.elapsedRealtime() - warmT0}ms（创建+加载+kernelReady）")
+        KernelDiagnostics.log("✓ 实例就绪，耗时 ${android.os.SystemClock.elapsedRealtime() - warmT0}ms")
         return instance
     }
 

@@ -1730,7 +1730,13 @@ fun ChatScreen(
                     showMore = false
                     val count = kernelPayloads.size
                     kernelPool.acquireSingle { pooled ->
-                        RenderKernel(pooled).diagnose(count) { json -> kernelDiagReport = json }
+                        RenderKernel(pooled).diagnose(count) { json ->
+                            // 黑匣子可见化：X 光快照 + 全量诊断事件史（创建/就绪/崩溃/渲染/清空/报错）
+                            val history = com.emberinn.app.renderer.KernelDiagnostics.dump()
+                            kernelDiagReport = if (history.isEmpty()) json else {
+                                json + "\n---- 诊断事件史（新→旧） ----\n" + history.joinToString("\n")
+                            }
+                        }
                     }
                 }
                 // ── 官方检查点组：back_to_main / new_bookmark / convert_to_group ──
