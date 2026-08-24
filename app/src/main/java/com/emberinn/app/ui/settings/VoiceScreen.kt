@@ -130,25 +130,19 @@ fun VoiceScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("启用朗读", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "聊天自动朗读将在后续版本接入；启用后本页试听可用",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkMute,
-                        )
-                    }
-                    EmberSwitch(checked = enabled, onChange = { enabled = it; save() })
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("启用朗读", color = EmberTheme.colors.ink, fontSize = 15.sp)
+                    Text(
+                        "聊天自动朗读将在后续版本接入；启用后本页试听可用",
+                        fontSize = 12.sp,
+                        color = EmberTheme.colors.inkMute,
+                    )
                 }
+                EmberSwitch(checked = enabled, onChange = { enabled = it; save() })
             }
 
 GroupLabel("引擎与语音")
