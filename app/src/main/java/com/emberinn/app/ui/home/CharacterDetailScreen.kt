@@ -118,7 +118,10 @@ fun CharacterDetailScreen(
     // 官方 regex 扩展 character_allowed_regex：该卡正则是否允许在本角色上生效
     // 用户要求默认打开；显式关闭后从允许列表移除（GlobalRegexPrefs）
     var regexAllowed by remember(record.id) {
-        mutableStateOf(true)
+        // 读真值：此前写死 true——开关显示开但列表从没写入，聊天页 scopedAllowed 永远 false
+        mutableStateOf(
+            "${record.id}.png" in GlobalRegexPrefs.characterAllowedRegex(context),
+        )
     }
     var variables by remember(record.id) { mutableStateOf(vm.readVariables(record)) }
     var modelOverride by remember(record.id) { mutableStateOf(vm.readModelOverride(record)) }

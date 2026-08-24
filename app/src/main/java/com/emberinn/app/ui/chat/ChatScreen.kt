@@ -1368,6 +1368,45 @@ fun ChatScreen(
     }
 
     var kernelDiagReport by remember { mutableStateOf<String?>(null) }
+
+    // 官方 checkCharEmbeddedRegexScripts 同构（regex/index.js L1606）：进聊天遇角色内嵌
+    // 正则未放行 → 弹一次确认；允许=写入放行列表+失效显示缓存；拒绝=记住不再问
+    var embeddedRegexAsk by remember { mutableStateOf(false) }
+    val embeddedChar = vm.character
+    LaunchedEffect(embeddedChar?.id) {
+        val c = embeddedChar ?: return@LaunchedEffect
+        if (!c.rawJson.contains("\"regex_scripts\"")) { return@LaunchedEffect }
+        val allowed = "${c.id}.png" in com.emberinn.app.ui.settings.GlobalRegexPrefs
+            .characterAllowedRegex(context)
+        val asked = context.getSharedPreferences("embedded_regex_ask", Context.MODE_PRIVATE)
+            .getBoolean("asked_${c.id}", false)
+        if (!allowed && !asked) {
+            embeddedRegexAsk = true
+            context.getSharedPreferences("embedded_regex_ask", Context.MODE_PRIVATE)
+                .edit().putBoolean("asked_${c.id}", true).apply()
+        }
+    }
+    if (embeddedRegexAsk && embeddedChar != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { embeddedRegexAsk = false },
+            title = { Text("角色内嵌正则脚本", fontWeight = FontWeight.SemiBold) },
+            text = { Text("「${embeddedChar.name}」自带界面美化/状态栏等内嵌正则脚本，允许使用吗？（官方同款一次性确认，之后可在角色详情修改）") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val list = com.emberinn.app.ui.settings.GlobalRegexPrefs
+                        .characterAllowedRegex(context).toMutableList()
+                    val key = "${embeddedChar.id}.png"
+                    if (key !in list) { list += key }
+                    com.emberinn.app.ui.settings.GlobalRegexPrefs.saveCharacterAllowed(context, list)
+                    com.emberinn.app.data.DisplayCacheVersion.bump()
+                    embeddedRegexAsk = false
+                }) { Text("允许") }
+            },
+            dismissButton = {
+                TextButton(onClick = { embeddedRegexAsk = false }) { Text("不允许") }
+            },
+        )
+    }
     if (kernelDiagReport != null) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { kernelDiagReport = null },
