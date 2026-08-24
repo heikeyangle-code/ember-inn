@@ -3,8 +3,13 @@ package com.emberinn.app.ui.design
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -20,7 +25,8 @@ import kotlinx.serialization.json.jsonPrimitive
  *  - quote_text_color（--SmartThemeQuoteColor）→ accent 三态
  *  - border_color → line（全透明时回退 ink 低 alpha——Moonlit 以阴影代替描边）
  *  - chat_tint_color / blur_tint_color → stageTint（聊天页渐变遮罩）
- * AI 身份三态与语义三色是壳层品牌常量：官方字段没有对应物。
+ * AI 三态不再用品牌金：由内容面（bot tint）向 ink 混合派生，随主题换装。
+ * 对比度守卫：ink≥4.5、弱墨/强调≥3.0，不足则向远离底色方向提到达标（最小干预）。
  */
 object ShellTheme {
 
@@ -28,6 +34,8 @@ object ShellTheme {
         val colors: EmberColors,
         val chat: ChatAreaTheme,
         val stageTint: Color?,
+        /** 统一毛玻璃档：blur_strength×1.2dp（上限 36）；fast_ui_mode=true → 0。 */
+        val blurRadius: Dp = 0.dp,
     )
 
     /** 合成底色：半透明面纱按官方 backdrop-filter 语义落到这层暗中性上。 */
@@ -40,6 +48,12 @@ object ShellTheme {
         fun col(key: String): Color? = obj?.get(key)?.let { el ->
             runCatching { el.jsonPrimitive.content }.getOrNull()?.let(::parseColor)
         }
+        val fastUiMode = obj?.get("fast_ui_mode")?.jsonPrimitive?.booleanOrNull
+        val blurStrength = obj?.get("blur_strength")?.jsonPrimitive?.floatOrNull ?: 10f
+        // 统一毛玻璃档：官方 blur_strength（0-30）→ dp；fast_ui_mode=true 直接关模糊
+        val blurRadius =
+            if (fastUiMode == true) 0.dp
+            else (blurStrength * 1.2f).dp.coerceIn(0.dp, 36.dp)
 
         val blurTint = col("blur_tint_color")
         val quote = col("quote_text_color")
@@ -52,8 +66,9 @@ object ShellTheme {
         val surface2 = col("user_mes_blur_tint_color")?.compositeOver(bg) ?: lift(bg, 0.10f)
         val sink = col("shadow_color")?.compositeOver(bg) ?: sinkOf(bg)
 
-        val ink = (mainText ?: Color(0xFFCCCCCC)).copy(alpha = 1f)
-        val inkMute = col("italics_text_color")?.copy(alpha = 1f) ?: ink.copy(alpha = 0.52f)
+        val ink = ensureContrast((mainText ?: Color(0xFFCCCCCC)).copy(alpha = 1f), bg, 4.5f)
+        val inkMute = col("italics_text_color")?.let { ensureContrast(it.copy(alpha = 1f), bg, 3f) }
+            ?: ink.copy(alpha = 0.52f)
 
         val borderRaw = col("border_color")
         val line = if (borderRaw != null && borderRaw.alpha > 0.02f) borderRaw else ink.copy(alpha = 0.12f)
@@ -61,7 +76,7 @@ object ShellTheme {
             if (borderRaw != null && borderRaw.alpha > 0.02f) borderRaw.copy(alpha = (borderRaw.alpha * 2f).coerceAtMost(0.5f))
             else ink.copy(alpha = 0.22f)
 
-        val accent = (quote ?: Color(0xFF51A0DE)).copy(alpha = 1f)
+        val accent = ensureContrast((quote ?: Color(0xFF51A0DE)).copy(alpha = 1f), bg, 3f)
 
         val colors = EmberColors(
             bg = bg,
@@ -78,9 +93,9 @@ object ShellTheme {
             accent = accent,
             accentSoft = accent.copy(alpha = 0x5C / 255f),
             accentBg = accent.copy(alpha = 0x1A / 255f),
-            ai = Color(0xFFE9C46A),
-            aiSoft = Color(0x5CE9C46A),
-            aiBg = Color(0x1AE9C46A),
+            ai = lerp(surface, ink, 0.30f),
+            aiSoft = lerp(surface, ink, 0.30f).copy(alpha = 0x5C / 255f),
+            aiBg = lerp(surface, ink, 0.30f).copy(alpha = 0x1A / 255f),
             success = Color(0xFF3D8F5A),
             warning = Color(0xFFC9A227),
             danger = Color(0xFFB34A4A),
@@ -97,7 +112,7 @@ object ShellTheme {
             topScrim = bg.copy(alpha = 0.88f),
             floatingInput = false,
         )
-        return Derived(colors, chat, blurTint)
+        return Derived(colors, chat, blurTint, blurRadius)
     }
 
     /** 官方 rgba()/hex 字符串 → Color；解析失败返回 null（官方存 rgba() 形态）。 */
@@ -124,6 +139,30 @@ object ShellTheme {
     /** 凹陷面：页底向阴影基色压暗一档。 */
     private fun sinkOf(c: Color): Color = lerp(c, Color.Black, 0.25f)
 
+    /** WCAG 相对亮度对比度。 */
+    internal fun contrastRatio(a: Color, b: Color): Float {
+        val la = a.luminance()
+        val lb = b.luminance()
+        val hi = maxOf(la, lb)
+        val lo = minOf(la, lb)
+        return (hi + 0.05f) / (lo + 0.05f)
+    }
+
+    /**
+     * 可读性守卫：fg 对 bg 达不到 target 就向远离底色方向逐档混合（每档 9%，最多 28 档）。
+     * 纯函数确定性——黑底黑字/白底白字这类离谱主题也能被拉到可读。
+     */
+    internal fun ensureContrast(fg: Color, bg: Color, target: Float): Color {
+        var c = fg.copy(alpha = 1f)
+        val towardDark = bg.luminance() >= 0.5f
+        var i = 0
+        while (contrastRatio(c, bg) < target && i < 28) {
+            c = if (towardDark) lerp(c, Color.Black, 0.09f) else lerp(c, Color.White, 0.09f)
+            i++
+        }
+        return c
+    }
+
     /** 月光默认板：MoonlitEchoes 字段推导结果常量化（无主题 JSON 时的壳层基线）。 */
     val FALLBACK: Derived = buildFallback()
 
@@ -131,6 +170,8 @@ object ShellTheme {
         val bg = Color(0xFF212121).compositeOver(NEUTRAL) // ≈ #1B1B1B
         val ink = Color(0xFFCCCCCC)
         val accent = Color(0xFF51A0DE)
+        val fbSurface = Color(0xFF232323)
+        val aiTone = lerp(fbSurface, ink, 0.30f)
         return Derived(
             colors = EmberColors(
                 bg = bg,
@@ -147,15 +188,16 @@ object ShellTheme {
                 accent = accent,
                 accentSoft = accent.copy(alpha = 0x5C / 255f),
                 accentBg = accent.copy(alpha = 0x1A / 255f),
-                ai = Color(0xFFE9C46A),
-                aiSoft = Color(0x5CE9C46A),
-                aiBg = Color(0x1AE9C46A),
+                ai = aiTone,
+                aiSoft = aiTone.copy(alpha = 0x5C / 255f),
+                aiBg = aiTone.copy(alpha = 0x1A / 255f),
                 success = Color(0xFF3D8F5A),
                 warning = Color(0xFFC9A227),
                 danger = Color(0xFFB34A4A),
             ),
             chat = ChatAreaTheme(null, null, null, null, null, null, null, null, null, false),
             stageTint = Color(0xA6212121),
+            blurRadius = 12.dp,
         )
     }
 }

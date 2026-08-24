@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                 chat = derived.chat,
                 stageTint = derived.stageTint,
                 reducedMotion = shell.reducedMotion,
+                blur = derived.blurRadius,
                 fontFamily = fontFamily,
                 radius = radius,
             ) {

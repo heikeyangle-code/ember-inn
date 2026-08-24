@@ -6,8 +6,6 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,33 +32,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
 import com.emberinn.app.data.SessionRecord
 import com.emberinn.app.ui.design.EmberTheme
-import com.emberinn.app.ui.design.components.InkText
-import com.emberinn.app.ui.design.components.InkTier
+import com.emberinn.app.ui.design.components.FloatHub
+import com.emberinn.app.ui.design.components.HubItem
 import com.emberinn.app.ui.home.HomeViewModel
+import com.emberinn.app.ui.home.TonightScreen
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.engine.card.CardFormat
-import androidx.compose.ui.unit.sp
 
-private data class TabSpec(val label: String, val icon: ImageVector)
+/** 导航四目的地（DESIGN_SYSTEM.md §三）：今夜 / 对话 / 角色 / 设置。 */
+private data class HubDest(val label: String, val icon: ImageVector)
 
-/**
- * 底部导航三域（DESIGN_SYSTEM §6.3 IA）：聊天居左、世界（角色+世界书）居中、设置居右。
- */
-private val Tabs = listOf(
-    TabSpec("聊天", FaIcons.Comments),
-    TabSpec("世界", FaIcons.Globe),
-    TabSpec("设置", FaIcons.Gear),
+private val Destinations = listOf(
+    HubDest("今夜", FaIcons.ClockRotateLeft),
+    HubDest("对话", FaIcons.Comments),
+    HubDest("角色", FaIcons.Mask),
+    HubDest("设置", FaIcons.Gear),
 )
 
 @Composable
@@ -67,7 +65,7 @@ fun MainScreen() {
     val context = LocalContext.current
     // README 启动行为：启动直接进入上次聊天（默认关）
     val initialLastSession = AppearancePrefs.openLastChat(context) && AppearancePrefs.lastSessionId(context).isNotBlank()
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var selectedDest by rememberSaveable { mutableIntStateOf(0) }
     var openSessionId by rememberSaveable { mutableStateOf(if (initialLastSession) AppearancePrefs.lastSessionId(context) else null) }
     var openName by rememberSaveable { mutableStateOf("") }
     var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -141,30 +139,32 @@ fun MainScreen() {
     if (sessionId != null) {
         val wide = LocalConfiguration.current.screenWidthDp >= 840
         if (wide) {
-            // 平板/折叠屏双栏：导航轨 + 左侧列表 + 右侧聊天
+            // 平板/折叠屏双栏：左缘导航轨 + 列表 + 聊天
             Row(modifier = Modifier.fillMaxSize()) {
-                NavigationRail(
-                    selected = selectedTab,
-                    onSelect = { selectedTab = it },
+                HubRail(
+                    selected = selectedDest,
+                    onSelect = { selectedDest = it },
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
                 ) {
-                    TabContent(
-                        selectedTab = selectedTab,
+                    DestContent(
+                        selected = selectedDest,
+                        homeVm = homeVm,
                         onOpenChat = { session ->
                             openSession(session.id)
                             openName = session.name
                         },
                         onOpenSettings = { route ->
-                            selectedTab = 2
+                            selectedDest = 3
                             if (route != null) settingsDeepLink = route
                         },
                         onOpenDetail = { record -> openDetailId = record.id },
                         settingsDeepLink = settingsDeepLink,
                         onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                        onSelectDestination = { selectedDest = it },
                     )
                 }
                 Box(
@@ -179,7 +179,7 @@ fun MainScreen() {
                         onOpenSettings = {
                             openSessionId = null
                             settingsDeepLink = "providers"
-                            selectedTab = 2
+                            selectedDest = 3
                         },
                         onSwitchSession = { session ->
                             openSession(session.id)
@@ -194,11 +194,11 @@ fun MainScreen() {
             sessionId = sessionId,
             name = openName,
             onBack = { openSessionId = null },
-            // 聊天页里跳设置：先退出聊天（否则被早退逻辑挡住），并深链到“提供商与模型”页
+            // 聊天页里跳设置：先退出聊天（否则被早退逻辑挡住），并深链到"提供商与模型"页
             onOpenSettings = {
                 openSessionId = null
                 settingsDeepLink = "providers"
-                selectedTab = 2
+                selectedDest = 3
             },
             onSwitchSession = { session ->
                 openSession(session.id)
@@ -209,47 +209,51 @@ fun MainScreen() {
     }
 
     Box(Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
-        // 状态栏内边距在此统一处理（旧 Scaffold innerPadding 的等价物）；各屏列表自留底栏空间
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            TabContent(
-                selectedTab = selectedTab,
+            DestContent(
+                selected = selectedDest,
+                homeVm = homeVm,
                 onOpenChat = { session ->
                     openSession(session.id)
                     openName = session.name
                 },
                 onOpenSettings = { route ->
-                    selectedTab = 2
+                    selectedDest = 3
                     if (route != null) settingsDeepLink = route
                 },
                 onOpenDetail = { record -> openDetailId = record.id },
                 settingsDeepLink = settingsDeepLink,
                 onSettingsDeepLinkConsumed = { settingsDeepLink = null },
+                onSelectDestination = { selectedDest = it },
             )
         }
-        // 底部导航浮在内容上（内容自管底部留白）
-        EmberBottomNav(
-            tabs = Tabs,
-            selected = selectedTab,
-            onSelect = { selectedTab = it },
-            modifier = Modifier.align(Alignment.BottomCenter),
+        // 悬浮主钮浮在内容上（§三范式）：静默圆粒 + 展开竖栈；各屏自管底部留白
+        FloatHub(
+            items = Destinations.map { HubItem(it.label, it.icon) },
+            selected = selectedDest,
+            onSelect = { selectedDest = it },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 14.dp),
         )
     }
 }
 
-/** 平板导航轨（EmberDS 版）。 */
+/** 平板左缘导航轨：与 FloatHub 同一目的地集合。 */
 @Composable
-private fun NavigationRail(selected: Int, onSelect: (Int) -> Unit) {
+private fun HubRail(selected: Int, onSelect: (Int) -> Unit) {
     val c = EmberTheme.colors
     Column(
         modifier = Modifier
             .fillMaxHeight()
-            .background(c.bgTint.copy(alpha = 0.5f))
+            .background(c.bgTint.copy(alpha = 0.4f))
             .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Tabs.forEachIndexed { index, tab ->
-            val active = selected == index
-            RailItem(tab.label, tab.icon, active) { onSelect(index) }
+        Destinations.forEachIndexed { index, dest ->
+            RailItem(dest.label, dest.icon, selected == index) { onSelect(index) }
             Spacer(Modifier.height(18.dp))
         }
     }
@@ -268,95 +272,32 @@ private fun RailItem(label: String, icon: ImageVector, active: Boolean, onClick:
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            color = tint,
-            fontSize = 11.sp,
-            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-        )
+        Text(label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
     }
 }
 
-/**
- * 玻璃底栏（EmberDS 版）：bg 半透明 + 发丝顶线，胶囊指示随选中淡入，
- * 选中态 accent 提亮、未选中弱化——chrome 退后。
- */
 @Composable
-private fun EmberBottomNav(
-    tabs: List<TabSpec>,
+private fun DestContent(
     selected: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val c = EmberTheme.colors
-    Column(modifier = modifier) {
-        // 发丝顶线：宽=屏宽、高=1dp。不能用 fillMaxSize()——会把最小高度锁成全屏高。
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(0.5.dp)
-                .background(c.line),
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(c.surface.copy(alpha = 0.88f))
-                .navigationBarsPadding()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            tabs.forEachIndexed { index, tab ->
-                val active = selected == index
-                val pillAlpha by animateFloatAsState(
-                    targetValue = if (active) 1f else 0f,
-                    animationSpec = tween(EmberTheme.motion.sheetMs),
-                    label = "navPill",
-                )
-                val tint = if (active) c.accent else c.inkMute
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onSelect(index) }
-                        .padding(vertical = 2.dp),
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(width = 56.dp, height = 30.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(c.accent.copy(alpha = 0.14f * pillAlpha)),
-                    ) {
-                        Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(19.dp))
-                    }
-                    Spacer(Modifier.height(3.dp))
-                    InkText(
-                        tab.label,
-                        tier = if (active) InkTier.Primary else InkTier.Mute,
-                        sizeSp = 11f,
-                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TabContent(
-    selectedTab: Int,
+    homeVm: HomeViewModel,
     onOpenChat: (SessionRecord) -> Unit,
     onOpenSettings: (String?) -> Unit,
     onOpenDetail: (com.emberinn.app.data.CharacterRecord) -> Unit,
     settingsDeepLink: String?,
     onSettingsDeepLinkConsumed: () -> Unit,
+    onSelectDestination: (Int) -> Unit = {},
 ) {
-    when (selectedTab) {
-        0 -> com.emberinn.app.ui.sessions.SessionsScreen(
+    when (selected) {
+        0 -> TonightScreen(
+            vm = homeVm,
+            onOpenChat = onOpenChat,
+            onOpenDetail = onOpenDetail,
+            onGoLibrary = { onSelectDestination(2) },
+        )
+        1 -> com.emberinn.app.ui.sessions.SessionsScreen(
             onOpenSession = onOpenChat,
         )
-        1 -> com.emberinn.app.ui.home.CharactersScreen(
+        2 -> com.emberinn.app.ui.home.CharactersScreen(
             onOpenChat = onOpenChat,
             onOpenSettings = onOpenSettings,
             onOpenDetail = onOpenDetail,
@@ -367,7 +308,6 @@ private fun TabContent(
         )
     }
 }
-
 
 private fun displayName(context: Context, uri: Uri): String? = runCatching {
     context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->

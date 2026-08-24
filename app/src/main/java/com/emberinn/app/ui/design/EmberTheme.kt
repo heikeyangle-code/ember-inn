@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -39,6 +40,9 @@ object EmberTheme {
 
     /** 减动画模式（官方主题 reduced_motion 桥）：全部动效降为 80ms fade（§七）。 */
     val reducedMotion: Boolean @Composable get() = LocalEmberReduced.current
+
+    /** 统一毛玻璃档（官方 blur_strength 桥，fast_ui_mode=true 时为 0）。 */
+    val blur: Dp @Composable get() = LocalEmberBlur.current
 }
 
 val LocalEmberColors = staticCompositionLocalOf { ShellTheme.FALLBACK.colors }
@@ -49,6 +53,7 @@ val LocalEmberChatTheme = staticCompositionLocalOf { ShellTheme.FALLBACK.chat }
 val LocalEmberDark = staticCompositionLocalOf { true }
 val LocalEmberStageTint = staticCompositionLocalOf<Color?> { ShellTheme.FALLBACK.stageTint }
 val LocalEmberReduced = staticCompositionLocalOf { false }
+val LocalEmberBlur = staticCompositionLocalOf { 12.dp }
 
 /** 圆角偏好四档 → 形状性格（外观页「全局圆角」实时生效）。 */
 fun shapesForRadius(radius: String): EmberShapes = when (radius) {
@@ -69,6 +74,7 @@ fun EmberTheme(
     chat: ChatAreaTheme,
     stageTint: Color?,
     reducedMotion: Boolean = false,
+    blur: Dp = 12.dp,
     fontFamily: FontFamily = FontFamily.Default,
     radius: String = "default",
     content: @Composable () -> Unit,
@@ -83,6 +89,7 @@ fun EmberTheme(
         LocalEmberDark provides dark,
         LocalEmberStageTint provides stageTint,
         LocalEmberReduced provides reducedMotion,
+        LocalEmberBlur provides blur,
     ) {
         MaterialTheme(
             colorScheme = mapToM3Scheme(colors, dark),
