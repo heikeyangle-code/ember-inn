@@ -298,7 +298,6 @@ class CharacterCardEditTest {
         """.trimIndent()
         val r = CharacterCardEdit.readThemeRecipe(card)
         assertEquals("#B23A2A", r.seed)
-        assertEquals("/data/bg.png", r.background)
         assertEquals("rounded", r.shape)
         assertEquals("lxgw", r.font)
         assertEquals("calm", r.style)
@@ -313,12 +312,11 @@ class CharacterCardEditTest {
         val cleared = CharacterCardEdit.applyThemeRecipe(saved, ThemeRecipe())
         val clearedRead = CharacterCardEdit.readThemeRecipe(cleared)
         assertEquals("", clearedRead.seed)
-        assertEquals("", clearedRead.background)
     }
 
     @Test
     fun `theme recipe json roundtrip for export and import`() {
-        val r = ThemeRecipe(seed = "#B23A2A", background = "/data/bg.png", shape = "circle", font = "source", style = "vivid", lockMode = "light")
+        val r = ThemeRecipe(seed = "#B23A2A", shape = "circle", font = "source", style = "vivid", lockMode = "light")
         val json = CharacterCardEdit.themeRecipeToJson(r)
         val back = CharacterCardEdit.themeRecipeFromJson(json)
         assertEquals(r, back)

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -15,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.ui.MainScreen
+import com.emberinn.app.ui.components.EmberToastHost
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.settings.AppearancePrefs
 
@@ -77,7 +79,11 @@ class MainActivity : ComponentActivity() {
                 fontFamily = fontFamily,
                 radius = radius,
             ) {
-                MainScreen()
+                Box {
+                    MainScreen()
+                    // 官方 toastr 应用内浮层：六位置随主题 toastr_position 全版本生效
+                    EmberToastHost()
+                }
             }
         }
     }
