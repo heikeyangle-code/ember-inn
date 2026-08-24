@@ -378,45 +378,6 @@ fun EmberPrimaryButton(
  * 与 EmberPrimaryButton 配套使用，弱化“开源默认按钮”观感。
  */
 @Composable
-fun EmberSecondaryButton(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    enabled: Boolean = true,
-    expandWidth: Boolean = false,
-    minHeight: Dp = 50.dp,
-) {
-    val shape = RoundedCornerShape(18.dp)
-    Box(
-        modifier = modifier
-            .then(if (expandWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(minHeight)
-            .clip(shape)
-            .background(EmberTheme.colors.surface2.copy(alpha = 0.88f))
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = if (enabled) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = if (enabled) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
-            )
-        }
-    }
-}
-
 /**
  * 全局统一菜单行（底部弹层/下拉菜单共用）：图标进 tonal 圆角块 + 主文案 + 可选副文案 +
  * 可选尾部徽记/箭头，危险行整行 error 化。替换各屏裸“图标+文字”的 MenuRow/SheetRow，
