@@ -421,9 +421,13 @@ fun ShellChip(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** 小型操作钮：操作面实底圆角粒（新建/导入/新增类）。 */
+/** 小型操作钮：操作面实底圆角粒（新建/导入/新增类）。modifier 在首位以支持尾随 lambda。 */
 @Composable
-fun ShellActionButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ShellActionButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     val c = EmberTheme.colors
     Box(
         modifier = modifier

@@ -161,8 +161,8 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
-                        ShellActionButton("导出官方格式", onClick = { exportLauncher.launch("personas.json") }, modifier = Modifier.weight(1f))
-                        ShellActionButton("导入", onClick = { importLauncher.launch(arrayOf("application/json")) }, modifier = Modifier.weight(1f))
+                        ShellActionButton(label = "导出官方格式", modifier = Modifier.weight(1f)) { exportLauncher.launch("personas.json") }
+                        ShellActionButton(label = "导入", modifier = Modifier.weight(1f)) { importLauncher.launch(arrayOf("application/json")) }
                     }
                 }
             }
