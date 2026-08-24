@@ -8,15 +8,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellChip
 import java.io.File
 
 /**
@@ -39,6 +41,7 @@ import java.io.File
  */
 @Composable
 fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     val bgDir = remember { File(context.filesDir, "backgrounds").apply { mkdirs() } }
     var files by remember { mutableStateOf(bgDir.listFiles()?.sortedBy { it.name.lowercase() } ?: emptyList()) }
@@ -97,93 +100,61 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
             SettingsTopBar(title = "背景", subtitle = "全局背景与适配 · 会话级在聊天页设置", onBack = onBack, sky = settingsSky)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp),
             ) {
                 item {
-                    Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = EmberTheme.colors.surface,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("导入图片", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
-                            Text(
-                                "从相册导入背景图；模糊/遮罩由主题控制。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkMute,
-                            )
-                            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                                TextButton(onClick = {
-                                    importPicker.launch(arrayOf("image/*"))
-                                }) { Text("选择图片…") }
-                            }
-                        }
-                    }
+                    GroupLabel("导入")
+                    Text(
+                        "从相册导入背景图；模糊/遮罩由主题控制。",
+                        color = c.inkMute,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                    )
+                    ShellActionButton(label = "选择图片…") { importPicker.launch(arrayOf("image/*")) }
                 }
                 item {
                     // 官方 #background_fitting 五档（backgrounds.js setFittingClass L1632-1638）
-                    Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                        color = EmberTheme.colors.surface,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("适配方式", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
-                            Text(
-                                "classic=样式表默认；其余四档与官方 backgrounds.css 类同名。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkMute,
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                            ) {
-                                AppearancePrefs.FITTINGS.forEach { option ->
-                                    FilterChip(
-                                        selected = fitting == option,
-                                        onClick = {
-                                            AppearancePrefs.saveGlobalBackgroundFitting(context, option)
-                                            refresh(currentBg, option)
-                                        },
-                                        label = { Text(option) },
-                                    )
-                                }
+                    GroupLabel("适配方式")
+                    Text(
+                        "classic=样式表默认；其余四档与官方 backgrounds.css 类同名。",
+                        color = c.inkMute,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        AppearancePrefs.FITTINGS.forEach { option ->
+                            ShellChip(option, selected = fitting == option) {
+                                AppearancePrefs.saveGlobalBackgroundFitting(context, option)
+                                refresh(currentBg, option)
                             }
                         }
                     }
                 }
+                item { GroupLabel("背景库") }
                 items(files.size) { index ->
                     val f = files[index]
                     val active = f.absolutePath == currentBg
-                    Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                        color = EmberTheme.colors.surface,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 AppearancePrefs.saveGlobalBackground(context, f.absolutePath)
                                 refresh(f.absolutePath, fitting)
-                            },
+                            }
+                            .padding(horizontal = 4.dp, vertical = 9.dp),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(f.name, style = MaterialTheme.typography.bodyMedium)
-                            }
-                            if (active) {
-                                Text(
-                                    "使用中",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = EmberTheme.colors.accent,
-                                    modifier = Modifier.padding(end = 8.dp),
-                                )
-                            }
-                            TextButton(onClick = {
+                        Column(Modifier.weight(1f)) {
+                            Text(f.name, color = if (active) c.accent else c.ink, fontSize = 15.sp)
+                        }
+                        if (active) {
+                            Text("使用中", color = c.accent, fontSize = 11.sp, modifier = Modifier.padding(end = 10.dp))
+                        }
+                        Text(
+                            "删除",
+                            color = c.danger,
+                            fontSize = 13.sp,
+                            modifier = Modifier.clickable {
                                 runCatching { f.delete() }
                                 if (active) {
                                     AppearancePrefs.saveGlobalBackground(context, "")
@@ -191,39 +162,36 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                                 }
                                 files = bgDir.listFiles()?.sortedBy { it.name.lowercase() } ?: emptyList()
                                 onAppearanceChanged()
-                            }) { Text("删除") }
-                        }
+                            },
+                        )
                     }
                 }
                 if (files.isEmpty()) {
                     item {
-                        Surface(
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                            color = EmberTheme.colors.surface,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
+                        Text(
+                            "暂无背景图。首次进入会自动导入内置官方背景库。",
+                            color = c.inkMute,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+                        )
+                    }
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                        if (currentBg.isNotBlank()) {
                             Text(
-                                "暂无背景图。首次进入会自动导入内置官方背景库。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkMute,
-                                modifier = Modifier.padding(14.dp),
+                                "清除全局背景",
+                                color = c.accent,
+                                fontSize = 13.sp,
+                                modifier = Modifier.clickable {
+                                    AppearancePrefs.saveGlobalBackground(context, "")
+                                    refresh("", fitting)
+                                },
                             )
                         }
                     }
                 }
-                item {
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (currentBg.isNotBlank()) {
-                            TextButton(onClick = {
-                                AppearancePrefs.saveGlobalBackground(context, "")
-                                refresh("", fitting)
-                            }) { Text("清除全局背景") }
-                        }
-                    }
-                }
+                item { Spacer(Modifier.height(120.dp)) }
             }
         }
     }
