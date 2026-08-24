@@ -1066,8 +1066,11 @@ fun ChatScreen(
                 .background((EmberTheme.stageTint ?: Color.Transparent).copy(alpha = 0.30f)),
         ) // 静态背景层结束
 
-        // C4 官方背景系统：会话级 custom_background > 全局背景 > 纯主题底色
-        LaunchedEffect(chatBackground) {
+        // C4 官方背景系统：会话级 custom_background > 全局背景 > 纯主题底色。
+        // fitting=官方 #background_fitting 全局档（classic 不加类，CSS 默认即官方 classic 语义）；
+        // 键含 backgroundRevision：设置页改全局背景/适配后返回聊天页即时生效。
+        val backgroundRevision by AppearancePrefs.backgroundRevision.collectAsState()
+        LaunchedEffect(chatBackground, backgroundRevision) {
             val bgFile = chatBackground?.takeIf { java.io.File(it).exists() }
                 ?: AppearancePrefs.globalBackground(context)
                     .takeIf { it.isNotBlank() && java.io.File(it).exists() }
@@ -1080,7 +1083,9 @@ fun ChatScreen(
                         java.io.File(path).name
                 }
             }
-            kernelPool.updateBackground(url)
+            val fitting = AppearancePrefs.globalBackgroundFitting(context)
+                .takeIf { it != AppearancePrefs.FITTING_CLASSIC }
+            kernelPool.updateBackground(url, fitting)
         }
 
         // 消息列表 + 输入栏同一列：列表 weight(1f) 占满剩余空间，输入栏沉底；imePadding 只作用这一列

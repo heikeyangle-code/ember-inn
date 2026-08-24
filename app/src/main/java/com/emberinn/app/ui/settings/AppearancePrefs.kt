@@ -71,5 +71,33 @@ object AppearancePrefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
             .putString("global_background", path)
             .apply()
+        backgroundRevision.value++
+    }
+
+    /** 官方 #background_fitting 五档（backgrounds.js setFittingClass）：classic=不加类（CSS 默认）。
+     *  官方存 settings.json 的 background_settings.fitting，App 侧等价存偏好。 */
+    fun globalBackgroundFitting(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getString("global_background_fitting", FITTING_CLASSIC) ?: FITTING_CLASSIC
+
+    fun saveGlobalBackgroundFitting(context: Context, fitting: String) {
+        val valid = fitting.takeIf { it in FITTINGS } ?: FITTING_CLASSIC
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("global_background_fitting", valid)
+            .apply()
+        backgroundRevision.value++
+    }
+
+    companion object {
+        const val FITTING_CLASSIC = "classic"
+        /** 官方 backgrounds.js L1634 四类 + classic（无类，#bg1 样式表默认） */
+        val FITTINGS = listOf("classic", "cover", "contain", "stretch", "center")
+
+        /**
+         * 背景设置版本号：全局背景/适配变更即自增。聊天页 LaunchedEffect 以此为键——
+         * 此前只认会话级 custom_background，改完全局背景返回聊天页不刷新。
+         * 会话级变更走 VM StateFlow 自带通知，不经此通道。
+         */
+        val backgroundRevision = kotlinx.coroutines.flow.MutableStateFlow(0)
     }
 }
