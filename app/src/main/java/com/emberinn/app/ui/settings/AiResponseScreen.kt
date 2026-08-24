@@ -2,7 +2,6 @@ package com.emberinn.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,13 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,9 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.components.EmberSlider
-import com.emberinn.app.ui.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
+import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.EmberSwitch
+import com.emberinn.app.ui.design.components.GroupLabel
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 
 /**
@@ -58,6 +56,7 @@ fun AiResponseScreen(
     onOpenPromptManager: () -> Unit,
     onOpenProviders: () -> Unit,
 ) {
+    val c = EmberTheme.colors
     val context = LocalContext.current
     val profiles by vm.profiles.collectAsState()
     val activeId by vm.activeId.collectAsState()
@@ -89,66 +88,60 @@ fun AiResponseScreen(
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 item {
-                    // 当前连接卡片（点击进 API 连接分区）
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenProviders),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    // 当前连接行（点击进 API 连接分区）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenProviders)
+                            .padding(horizontal = 4.dp, vertical = 9.dp),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(c.surface),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Box(
-                                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(FaIcons.Link, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(21.dp))
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    spec?.displayName ?: "API 连接",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                                Text(
-                                    active?.model?.ifBlank { "未选模型" } ?: "未配置",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Icon(FaIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(FaIcons.Link, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
                         }
+                        Spacer(Modifier.width(13.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(spec?.displayName ?: "API 连接", color = c.ink, fontSize = 15.sp)
+                            Text(
+                                active?.model?.ifBlank { "未选模型" } ?: "未配置",
+                                color = c.inkMute,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(14.dp))
                     }
                 }
                 item {
-                    AiSectionCard(title = "采样预设", subtitle = "按当前连接协议取预设目录，选择即应用") {
+                    Column {
+                        GroupLabel("采样预设")
                         Box {
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                modifier = Modifier.fillMaxWidth().clickable { presetMenu = true },
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(c.surfaceSink)
+                                    .clickable { presetMenu = true }
+                                    .padding(horizontal = 13.dp, vertical = 12.dp),
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                                ) {
-                                    Text(
-                                        presetName.ifBlank { "未选择" },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Icon(FaIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                                Text(
+                                    presetName.ifBlank { "未选择" },
+                                    color = c.ink,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Icon(FaIcons.ChevronDown, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(13.dp))
                             }
                             DropdownMenu(expanded = presetMenu, onDismissRequest = { presetMenu = false }) {
                                 presetNames.forEach { name ->
@@ -162,25 +155,24 @@ fun AiResponseScreen(
                                 }
                             }
                         }
-                        TextButtonRow(text = "管理全部预设（上下文 / 指导 / 系统提示 / 推理）", icon = FaIcons.Folder, onClick = onOpenPresets)
+                        ActionTextRow("管理全部预设（上下文 / 指导 / 系统提示 / 推理）", FaIcons.Folder, onOpenPresets)
                     }
                 }
                 item {
-                    AiSectionCard(title = "长度", subtitle = "上下文上限与单次回复长度（tokens）") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                            EmberTextField(
+                    Column {
+                        GroupLabel("长度")
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            ShellInput(
                                 value = contextWindow.toString(),
                                 onValueChange = vm::setContextWindow,
-                                label = { Text("上下文长度") },
-                                singleLine = true,
+                                label = "上下文长度",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                             )
-                            EmberTextField(
+                            ShellInput(
                                 value = maxTokens.toString(),
                                 onValueChange = vm::setMaxTokens,
-                                label = { Text("回复长度") },
-                                singleLine = true,
+                                label = "回复长度",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                             )
@@ -188,65 +180,46 @@ fun AiResponseScreen(
                     }
                 }
                 item {
-                    AiSectionCard(title = "采样器", subtitle = "官方滑块语义：点数值可手动输入") {
-                        SamplerSliderRow(
-                            label = "Temperature",
-                            value = sampler.temperature.toFloat(),
-                            range = 0f..2f,
-                            onChange = { vm.setTemperature(it.toDouble()) },
-                        )
-                        SamplerSliderRow(
-                            label = "Top-P",
-                            value = sampler.topP.toFloat(),
-                            range = 0f..1f,
-                            onChange = { vm.setTopP(it.toDouble()) },
-                        )
-                        SamplerSliderRow(
-                            label = "Presence Penalty",
-                            value = sampler.presencePenalty.toFloat(),
-                            range = -2f..2f,
-                            onChange = { vm.setPresencePenalty(it.toDouble()) },
-                        )
-                        SamplerSliderRow(
-                            label = "Frequency Penalty",
-                            value = sampler.frequencyPenalty.toFloat(),
-                            range = -2f..2f,
-                            onChange = { vm.setFrequencyPenalty(it.toDouble()) },
-                        )
+                    Column {
+                        GroupLabel("采样器")
+                        SamplerSliderRow("Temperature", sampler.temperature.toFloat(), 0f..2f) { vm.setTemperature(it.toDouble()) }
+                        SamplerSliderRow("Top-P", sampler.topP.toFloat(), 0f..1f) { vm.setTopP(it.toDouble()) }
+                        SamplerSliderRow("Presence Penalty", sampler.presencePenalty.toFloat(), -2f..2f) { vm.setPresencePenalty(it.toDouble()) }
+                        SamplerSliderRow("Frequency Penalty", sampler.frequencyPenalty.toFloat(), -2f..2f) { vm.setFrequencyPenalty(it.toDouble()) }
                     }
                 }
                 item {
-                    AiSectionCard(title = "流式与其他", subtitle = "流式输出与 Prompt Manager") {
+                    Column {
+                        GroupLabel("流式与其他")
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("流式输出", style = MaterialTheme.typography.bodyMedium)
-                                Text("打字机式逐步显示回复", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("流式输出", color = c.ink, fontSize = 15.sp)
+                                Text("打字机式逐步显示回复", color = c.inkMute, fontSize = 12.sp)
                             }
-                            EmberSwitch(checked = sampler.stream, onCheckedChange = vm::setStreaming)
+                            EmberSwitch(checked = sampler.stream, onChange = vm::setStreaming)
                         }
-                        TextButtonRow(text = "Prompt Manager（提示词编排）", icon = FaIcons.ListUl, onClick = onOpenPromptManager)
+                        ActionTextRow("Prompt Manager（提示词编排）", FaIcons.ListUl, onOpenPromptManager)
                         if (message != null) {
-                            Text(
-                                message!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
+                            Text(message!!, color = c.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
                 item {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxWidth().clickable { saveAll() },
+                    // 主操作：操作面实底胶囊
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .clip(RoundedCornerShape(26.dp))
+                            .background(c.surface2)
+                            .clickable { saveAll() }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
-                            Text("保存到当前连接", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                        }
+                        Text("保存到当前连接", color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -255,32 +228,12 @@ fun AiResponseScreen(
 }
 
 @Composable
-private fun AiSectionCard(title: String, subtitle: String, content: @Composable () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            content()
-        }
-    }
-}
-
-@Composable
 private fun SamplerSliderRow(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    val c = EmberTheme.colors
     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Text(
-                String.format("%.2f", value),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Text(label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(String.format("%.2f", value), color = c.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
         EmberSlider(
             value = value.coerceIn(range.start, range.endInclusive),
@@ -292,17 +245,17 @@ private fun SamplerSliderRow(label: String, value: Float, range: ClosedFloatingP
 }
 
 @Composable
-private fun TextButtonRow(text: String, icon: ImageVector, onClick: () -> Unit) {
+private fun ActionTextRow(text: String, icon: ImageVector, onClick: () -> Unit) {
+    val c = EmberTheme.colors
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 4.dp, vertical = 10.dp),
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        Icon(icon, contentDescription = null, tint = c.accent, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(9.dp))
+        Text(text, color = c.accent, fontSize = 13.sp)
     }
 }
