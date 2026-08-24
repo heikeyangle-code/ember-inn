@@ -195,8 +195,9 @@ ExpressionEngine（文件名→标签、图片元数据、分组排序、chooseS
 WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核 DOM 与官方同构，官方 style.css/主题/社区主题 CSS 原样生效。引擎层（差分锁定）负责宏/正则/reasoning 前处理；内核 render.js 负责 fixMarkdown 之后到 DOMPurify 为止的显示管线；壳层（EmberDS）负责聊天以外的全部界面。
 
 ### 4.2 内核资产（app/src/main/assets/kernel/）
-- kernel.html：CSP 全放行（用户决策）；官方 webfonts/fontawesome/style.css/mobile-styles.css/toggle-dependent.css；`<style id="custom-style">` 注入点；body.light-theme + 官方整页壳骨架 **#sheld > #chat + #form_sheld**（C3 输入区，同构 index.html L8069-8113，文案中文化）+ **#bg1**（C4 官方背景层）；app-host-actions-style 仅藏 reasoning 编辑按钮等宿主未接管项（官方消息按钮/swipe/删除框全部保留，交互经点击桥回宿主）
-- js/render.js（约 1070 行）：官方管线移植——fixMarkdown、encodeStyleTags/decodeStyleTags（css-tools）、引号包裹 6 种、\ufffe 标签内引号保护、DOMPurify 三 hooks（class 加 custom- 前缀豁免 fa-*、target=_blank+noopener、未知元素换行转 br）；滑动语义对齐 refreshSwipeButtons/isMessageSwipeable（swipes_visible/last_swipe/ZWSP 计数）、extraMesButtonsHint 展开/点外收起（script.js L11806/L11835）、头像失败兜底 missing-avatar（L2646-2650）
+- kernel.html：CSP 全放行（用户决策）；官方 webfonts/fontawesome/style.css/mobile-styles.css/toggle-dependent.css/**popup.css**（lightbox 走官方 .popup dialog 体系）；`<style id="custom-style">` 注入点；body.light-theme + 官方整页壳骨架 **#sheld > #chat + #form_sheld**（C3 输入区，同构 index.html L8069-8113，文案中文化）+ **#bg1**（C4 官方背景层）；app-host-actions-style 仅藏 reasoning 编辑按钮等宿主未接管项（官方消息按钮/swipe/删除框全部保留，交互经点击桥回宿主）；**官方媒体模板四件原样**（#message_image_template/#message_video_template/#message_gallery_controls/#message_audio_template，index.html L7670-7727）
+- js/render.js（约 1780 行）：官方管线移植——fixMarkdown、encodeStyleTags/decodeStyleTags（css-tools）、引号包裹 6 种、\ufffe 标签内引号保护、DOMPurify 三 hooks（class 加 custom- 前缀豁免 fa-*、target=_blank+noopener、未知元素换行转 br）；滑动语义对齐 refreshSwipeButtons/isMessageSwipeable/getOverswipeBehavior（isOverswipeable=`(isLastSwipe && regenerate) || edit_generate` 官方 &&优先于|| L9232-9235；swipes_visible=hasSwipes||pristineGreeting；extra.swipeable===false 严格闸门 L9152）、画廊 onImageSwiped 回绕（chats.js L2061-2102）、lightbox expandMessageMedia 三层结构 img_enlarged_container>holder>img（chats.js L900-967）、行内编辑 messageEdit（L8157-8250 curEditTextarea 填 trimSpaces(rawMes||mes)、save/cancel/copy/move/reasoning 经 uiAction 桥）、formatGenerationTimer（L2681-2706）、setInContextMessages 单标记 lastInContext（L6022-6041）、show more 分批 prepend（printMessages L12495/showMoreMessages L12517）、appendImage/Video/AudioAttachment 媒体挂载（L2196-2412 模板克隆+error 类+AudioPlayer 实例化）、extraMesButtonsHint 展开/点外收起（script.js L11806/L11835）、头像失败兜底 missing-avatar（L2646-2650）
+- js/audio-player.js：官方 scripts/audio-player.js 605 行逐字节移植（import formatTime 内联自 utils.js L975-983；`export class`→普通 class + window.AudioPlayer）。注意官方 file-form.css 的播放器样式**并未被 index.html 引用**——官方消息内音频就是无专属样式 + AudioPlayer 行为，照抄不补
 - 同版本库：showdown 2.1.0 / dompurify 3.4.2 / highlight 11.11.1 / css-tools 4.4.4
 - official/message-template.html：官方模板原样；**克隆内部 .mes 而非根节点**（template_element，对齐 script.js L447）
 
@@ -205,13 +206,15 @@ WebView 是唯一权威渲染器（否决原生 Compose 渲染路线）：内核
 |---|---|
 | formatText(mes, opts) | 返回 HTML 字符串（DOM 黄金对比入口） |
 | renderMessage(payload) | 生产入口；payload={mesid,mes,chName,isUser,isSystem,avatarUrl,timestamp,tokenCount,reasoning,swipeCount,currentSwipe,lastMessage,smallSysMes,type,bookmarkLink,forceAvatar,title,toolCall,media,timerValue,apiModelTitle…}。全 DOM 行：整条官方 .mes 模板由内核渲染 |
-| renderChat(payloads) | 整页壳 C1/C2：清空重建全量同步官方 #chat，payload 顺序即聊天顺序 |
+| renderChat(payloads, showMore=false) | 整页壳 C1/C2：清空重建全量同步官方 #chat，payload 顺序即聊天顺序；showMore=true 且首条未到顶时挂 div#show_more_messages（"Show more messages"，官方 printMessages L12495/showMoreMessages L12517） |
 | scrollToBottom(smooth) | 官方 scrollChatToBottom 接管（C1） |
 | setDeleteMode(enabled) / selectDeleteFrom(mesid) | 官方 openMessageDelete 的 DOM 状态部分 + 删除模式点击截断选择 |
+| prependMessages(payloads) | 官方 showMoreMessages 增量插入：button.after(frag)+视口相关 scrollTop 补偿（宿主点 Show more 时调，避免全量重渲） |
+| beginEditMessage(mesid) | 边界3 行内编辑模式：.editing 类 + curEditTextarea 填 trimSpaces(rawMes||mes)；保存/取消/复制/移动/删除/思考编辑经 uiAction mes_edit_* 桥回宿主 |
 | setInputText(text) | C3：宿主 → #send_textarea（草稿下发/冒充流式/发送后清空），派发合成 input 事件回镜像 |
 | setInputState({generating,swiping}) | C3：body[data-generating]/[data-swiping] + mes_stop 显隐 + hideAllSwipeButtons 合成 |
 | setBackground(url, fitting) | C4：#bg1 background-image + cover/contain/stretch/center 类；url=null 清除 |
-| updateStreaming(mesid,text,reasoning?) | C5：官方 onProgressStreaming 原地换 .mes_text innerHTML（+ .mes_reasoning），不重建其余节点 |
+| updateStreaming(mesid,text,reasoning?,timerValue?,timerTitle?) | C5+边界4：官方 onProgressStreaming 原地换 .mes_text innerHTML（+ .mes_reasoning），不重建其余节点；timerValue/timerTitle 直写 .mes_timer（formatGenerationTimer 形态） |
 | applyTheme(theme) | 官方主题全字段 → CSS 变量 + custom_css + body 类开关（compact_input_area → #send_form.compact，power-user.js L529-532 官方语义） |
 | applyStylePack(cfg) | 第三方样式包整包：{enabled,href,extensionHref,vars}——style.css 走 `<link id="style-pack-style">`、extension.css 兼容层独立 link、vars 逐键写入 documentElement CSS 变量（缺 `--` 自动补）；href 变更复用节点；enabled=false 零污染 |
 | clear() | 清空 #chat |
@@ -225,24 +228,31 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 - KernelBridge.kt：window.AndroidKernel；能力面=高度/点击/长按/shimRequest/hostAction 回传；无任意 Android API/文件系统通道
 - KernelWebViewFactory.kt：WebViewAssetLoader 统一 https origin appassets.androidplatform.net——assets/=内核页、/avatars/=角色头像（filesDir/avatars）、/pavatars/=人设头像（filesDir/persona-avatars）、/media/=消息附件（filesDir/media）、/backgrounds/=官方背景（C4，filesDir/backgrounds）、/themefiles/=导入主题 CSS（filesDir/themes）；JS/DOM storage 开、媒体自动播放、textZoom 固定 100、外链交系统浏览器
 - KernelWebViewPool.kt：预热 2、软上限 8、kernelReady 挂起等待（主线程轮询避免跨线程续体竞争）。池持有页面五态（themeJson/bodyClasses/stylePack/inputState/background），新建实例 ready 即套用，updateTheme/updateStylePack/updateInputState/updateBackground 广播全部存活实例；层叠顺序=applyThemeRaw→setBodyClasses→applyStylePack，与官方「power-user 设置→扩展主题 CSS」一致。body 类默认含 fullchat（整页壳：#sheld fixed 全屏、#chat 唯一滚动容器）+ app-host-actions（仅藏 reasoning 编辑按钮等宿主未接管项）；监听器面=height/click/messageAction/longPress/uiAction/chatScroll/crash/input/inputHeight
-- RenderKernel.kt：门面——renderMessage/renderChat/scrollToBottom/setDeleteMode/selectDeleteFrom/pushInputText/setInputState/setBackground/updateStreaming(官方 onProgressStreaming 原地换 .mes_text，替代旧 updateStreamingText)/applyThemeRaw/setBodyClasses(全量同步)/applyStylePack/emitEvent(官方 event_types 下发)/setChatDisplayMode/clear
+- RenderKernel.kt：门面——renderMessage/renderChat(showMore)/prependMessages/beginEditMessage/scrollToBottom/setDeleteMode/selectDeleteFrom/pushInputText/setInputState/setBackground/updateStreaming(text,reasoning,timerValue,timerTitle，官方 onProgressStreaming 原地换 .mes_text)/applyThemeRaw/setBodyClasses(全量同步)/applyStylePack/emitEvent(官方 event_types 下发)/setChatDisplayMode/clear
 
 ### 4.5 官方主题导入与管理（data/OfficialThemeManager.kt）
 - 内置：assets/themes/moonlit-echoes/（Glimmer/MoonlitEchoes 两套官方格式 + *-preset.json 扩展预设 + style.css 101KB + extension.css + AGPL-3.0 LICENSE）；默认主题=Glimmer
 - 导入：任意官方格式主题 JSON 无损保存（filesDir/themes/）；导出/删除/切换
-- currentThemeJson：原始 JSON StateFlow 直接喂内核；shellSettings() 派生壳层设置（chatDisplay/avatarStyle/compactInputArea 等 21 项供原生 UI 读）
+- currentThemeJson：原始 JSON StateFlow 直接喂内核；shellSettings() 派生壳层设置（chatDisplay/avatarStyle/compactInputArea/chatTruncation=chat_truncation coerceIn(0,1000) 等 22 项供原生 UI 读）
 - currentStylePack：StylePack(enabled/href/extensionHref/varsJson) StateFlow。detectStylePack() 探测主题目录的 style.css/extension.css 与 *-preset.json 的 settings 对象（逐键转 CSS 变量）；内置主题 href=/assets/themes/<dir>/…，导入包 href=/themefiles/…。零按名特判，任何含同构文件的目录同样生效
 - 官方 36 字段处置表见 docs/DESIGN_SYSTEM.md §二点六
 
 ### 4.6 Moonlit Echoes 兼容（首要审美标杆）
 其消息风格=body 类+官方 DOM 选择器 CSS（源码级核实）；内核 DOM 同构→style.css/extension.css 经 applyStylePack 整包装载（extension.css 含 .mes/#sheld 等聊天区选择器，故一并加载）。通用承诺：任何含 style.css(+extension.css)+*-preset.json 的官方/社区主题包走同一探测/装载路径。
 
-### 4.7 黄金测试（scripts/kernel-golden/，本地 jsdom 25+108+74+55=262 例全绿 + CI puppeteer-dom）
+### 4.7 黄金测试（scripts/kernel-golden/，本地 jsdom 25+155+74+55=309 例全绿 + CI puppeteer-dom）
 - kernel-format.test.mjs 25 例：markdown/引号包裹/DOMPurify hooks/style 前缀化/表格/官方扩展/name2/fixMarkdown/LaTeX 链
-- theme-moonlit.test.mjs 108 例：全字段落位、换主题全量同步、chat_display 0..7 全枚举+未知值安全、样式包 link/扩展层/变量/href 复用/禁用零污染、avatar_style 0..3、enableLabMode、Moonlit 选择器与内核 DOM 同构命中、compact_input_area→#send_form.compact 官方语义、setInputState/setBackground、头像失败兜底 missing-avatar、滑动 swipes_visible/last_swipe/ZWSP 计数、按钮排展开/点外收起/expandMessageActions 常显豁免
+- theme-moonlit.test.mjs 155 例：全字段落位、换主题全量同步、chat_display 0..7 全枚举+未知值安全、样式包 link/扩展层/变量/href 复用/禁用零污染、avatar_style 0..3、enableLabMode、Moonlit 选择器与内核 DOM 同构命中、compact_input_area→#send_form.compact 官方语义、setInputState/setBackground、头像失败兜底 missing-avatar、滑动 swipes_visible/last_swipe/ZWSP 计数+overswipe 三态（regenerate/edit_generate/pristine_greeting）+swipeable=false 闸门、按钮排展开/点外收起/expandMessageActions 常显豁免、**媒体三模板挂载/gallery 计数与回绕桥/lightbox 三层结构与放大链/行内编辑 save·ESC·按钮显隐/show more 挂载与 prepend 桥/lastInContext 单标记/formatGenerationTimer 文本与流式 tick**（九边界 ~48 例）
 - shim-api.test.mjs 74 例 / variables-shim.test.mjs 55 例：st-api-shim 协议与 TavernHelper 变量族
 - puppeteer-dom.test.mjs：CI kernel-golden job `test:dom` 步骤（headless Chromium 对 golden 逐字对比）
 - 运行：cd scripts/kernel-golden && npm install && npm test
+
+### 4.8 九项渲染边界对齐与宿主接线（commit 812b094c/8afe8d8b）
+- 载荷新字段（KernelModels.kt KernelMessagePayload）：rawMes/reasoningRaw/mediaIndex/inlineImage/overswipe/swipeable/lastInContext/timerValue/timerTitle/extraTitle
+- 宿主单一出口（ChatScreen.kt）：messagePayloadOf(index,el) 统一构造载荷（index<chatFromIndex 返 null）；chatFromIndex 用 remember(truncation){derivedStateOf}（chat_truncation+historyWindowExtra 窗口）、licTarget 用 derivedStateOf——**必须用 derivedStateOf 而非普通 val**：DisposableEffect(kernelPool) 里的监听器捕获的是初组合实例，普通 val 会冻结旧值（SHOW_MORE 批次被滤空的教训）；licTarget 对齐 setInContextMessages：单标记 + toolCall 豁免（Array.isArray(tool_invocations)，空数组也算）+ 回落首条可见消息
+- ChatViewModel：markTainted（editMessage/deleteMessage/startStream，官方六污染点子集 script.js:1659/4288/5846/8131/9323/11669）；overswipeOf 严格 `swipeable === false`（字符串 "false" 不触发，L9152）；liveStreamTimer 对齐 formatGenerationTimer（%.1fs US locale、title 五行英文、负差值空 value 保 title）
+- 行内编辑接线：原生编辑对话框退役——菜单「编辑」与 onTextClick(click_to_edit) 一律 kernelPool.acquireSingle{beginEditMessage("m-$index")}；uiAction 分支 mes_edit_save/delete/move/copy、mes_reasoning_add/save、mes_img_swipe(refresh=false)、mes_media_delete 全部落 vm
+- Show more 接线：uiAction show_more_messages → 按 truncation 切批 messagePayloadOf → prependMessages(batch) + vm.extendHistoryWindow(batch 大小)
 
 ## 5. App/UI 进度（V2 重构中）
 
@@ -426,6 +436,7 @@ RenderNodeCompose(615 行)、isStaticHtml 双轨、24 套旧 ThemePreset 体系�
 7. **EmberTheme 访问器全是 @Composable getter**：在 remember{}/LaunchedEffect{} lambda 里直接读会报 "@Composable invocations"——先在组合上下文读出局部变量再进 lambda（Motion.kt EnterFadeSlide 教训）。
 8. ChatAreaTheme 字段全部 Color? 可空：直接当 Color 用报类型不匹配，用 `?: EmberTheme.colors.xxx` 回落令牌；EmberTextFieldDefaults.colors() 无 focused/unfocusedPlaceholderColor 参数（placeholder 色由 placeholder composable 自己给）。
 9. 本机（Termux）无 gradle/Android SDK，任何编译验证只能 push 走 CI（`gh run list` / `gh run view <id> --log-failed`，网络不稳重试）；push 前用括号平衡自检 + grep 悬空引用兜底。
+10. 局部函数表达式体里禁止非局部 return——`fun parse(raw: String) = runCatching{...}.getOrNull() ?: return null` 报 "Returns are prohibited in functions with expression body"（CI ChatScreen.kt:4194 教训）：局部 helper 一律块体 + 显式可空返回类型，`?: return null` 只写在调用点。
 
 ### 7.2 注意事项
 - 兼容层 1:1，UI 层自由：数据格式、注入算法、宏展开、斜杠行为、导入导出必须与官方互读互通；界面/交互/主题自主。
