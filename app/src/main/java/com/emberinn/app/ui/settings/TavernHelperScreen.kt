@@ -66,6 +66,7 @@ fun TavernHelperScreen(onBack: () -> Unit) {
                                 color = EmberTheme.colors.inkMute,
                                 fontSize = 12.sp,
                             )
+                    }
                 }
                 item {
                     GroupLabel("脚本执行")

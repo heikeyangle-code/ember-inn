@@ -121,7 +121,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 4.dp, vertical = 7.dp),
+                        .padding(start = 4.dp, top = 7.dp, bottom = 7.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(name, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
