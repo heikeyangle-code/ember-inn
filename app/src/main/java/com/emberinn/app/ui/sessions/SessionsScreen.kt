@@ -11,6 +11,8 @@ import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.design.EmberTheme
 
 import com.emberinn.app.ui.design.components.ShellInput
+import com.emberinn.app.ui.design.components.ShellChip
+import com.emberinn.app.ui.design.components.AvatarCircle
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -70,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
@@ -146,27 +149,18 @@ fun SessionsScreen(
                 .background(EmberTheme.colors.bg),
         )
         Column(modifier = Modifier.fillMaxSize()) {
-            Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.16f),
-                shadowElevation = 1.dp,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .emberGlass(sky = sky, atTop = false),
+                    .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 6.dp),
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp)) {
-                    Text(
-                        text = "聊天",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "全部会话 · 长按可置顶 / 导出 / 删除",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = "对话",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Light,
+                    color = EmberTheme.colors.ink,
+                    letterSpacing = 1.sp,
+                )
             }
 
             if (sessions.isEmpty()) {
@@ -190,13 +184,20 @@ fun SessionsScreen(
             }
         }
 
-        EmberGlassFab(
-            icon = FaIcons.Plus,
-            contentDescription = "新建对话",
-            onClick = { EmberHaptics.select(haptic); showNewSheet = true },
-            sky = sky,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-        )
+        // 新建对话圆粒：与 FloatHub 同语言（内容面 + 发丝缘）
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = 24.dp)
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(EmberTheme.colors.surface.copy(alpha = 0.96f))
+                .border(1.dp, EmberTheme.colors.lineStrong, CircleShape)
+                .clickable { EmberHaptics.select(haptic); showNewSheet = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(FaIcons.Plus, contentDescription = "新建对话", tint = EmberTheme.colors.ink, modifier = Modifier.size(18.dp))
+        }
     }
 
     if (showNewSheet) {
@@ -258,17 +259,13 @@ fun SessionsScreen(
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row {
-                        FilterChip(
-                            selected = groupStrategy == "natural",
-                            onClick = { groupStrategy = "natural" },
-                            label = { Text("natural（点名/话痨）") },
-                        )
+                        ShellChip("natural（点名/话痨）", selected = groupStrategy == "natural") {
+                            groupStrategy = "natural"
+                        }
                         Spacer(Modifier.width(8.dp))
-                        FilterChip(
-                            selected = groupStrategy == "pooled",
-                            onClick = { groupStrategy = "pooled" },
-                            label = { Text("pooled（全体池）") },
-                        )
+                        ShellChip("pooled（全体池）", selected = groupStrategy == "pooled") {
+                            groupStrategy = "pooled"
+                        }
                     }
                     Text(
                         "选择成员（至少 2 个）",
@@ -371,101 +368,58 @@ private fun SessionRow(
     onClick: () -> Unit,
     onMenu: () -> Unit,
 ) {
-    // 每张会话卡带角色 seed：左侧 seed 竖条 + 克制投影（EmberDS：层次靠亮度阶梯，阴影只做轻浮起）
-    val seed = character?.seedColor?.let { Color(it.toInt()) }
-    val corner = RoundedCornerShape(18.dp)
-    val shadowBase = seed ?: EmberTheme.colors.accent
-    val avatarFile = character?.avatarPath?.let { File(it) }?.takeIf { it.exists() }
-    Surface(
-        shape = corner,
-        color = seed?.let { lerp(it, MaterialTheme.colorScheme.surfaceContainerLow, 0.90f) }
-            ?: MaterialTheme.colorScheme.surfaceContainerLow,
+    // 新语言：无卡片框的安静行——头像 + 名字 + 预览 + 时间；置顶星标用强调色，别无装饰
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(corner)
-            .emberShadow(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        shadowBase.copy(alpha = 0.14f),
-                        shadowBase.copy(alpha = 0.04f),
-                        Color.Transparent,
-                    ),
-                ),
-                radius = 12.dp,
-                spread = 1.dp,
-                offset = DpOffset(0.dp, 5.dp),
-            )
-            .combinedClickable(onClick = onClick, onLongClick = onMenu),
+            .combinedClickable(onClick = onClick, onLongClick = onMenu)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
     ) {
-        Box {
-            // 角色头像作为整卡淡背景（每张卡都不一样）；无头像时保留 seed tint 底
-            if (avatarFile != null) {
-                AsyncImage(
-                    model = avatarFile,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alpha = 0.15f,
-                    modifier = Modifier.matchParentSize().clip(corner),
+        AvatarCircle(character?.avatarPath, session.name, 42.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = session.name,
+                    color = c.ink,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-            }
-            // 左侧 seed 竖条：每卡专属色的视觉锚点
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(4.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(shadowBase, shadowBase.copy(alpha = 0.15f)),
-                        ),
-                    ),
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
-            ) {
-                SessionAvatar(name = session.name, character = character, seed = seed)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = session.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = seed ?: MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (session.pinned) {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(
-                                FaIcons.Star,
-                                contentDescription = "置顶",
-                                tint = seed ?: MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = preview?.take(80) ?: "还没有消息，点开打个招呼吧",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                if (session.pinned) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        FaIcons.Star,
+                        contentDescription = "置顶",
+                        tint = c.accent,
+                        modifier = Modifier.size(12.dp),
                     )
                 }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = timeLabel(session.updatedAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                IconButton(onClick = onMenu, modifier = Modifier.size(28.dp)) {
-                    Icon(FaIcons.EllipsisVertical, contentDescription = "更多", modifier = Modifier.size(18.dp))
-                }
             }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = preview?.take(80) ?: "还没有消息，点开打个招呼吧",
+                color = c.inkMute,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
+        Spacer(Modifier.width(8.dp))
+        Text(text = timeLabel(session.updatedAt), color = c.inkMute, fontSize = 11.sp)
+        Icon(
+            FaIcons.EllipsisVertical,
+            contentDescription = "更多",
+            tint = c.inkMute,
+            modifier = Modifier
+                .size(26.dp)
+                .clickable(onClick = onMenu)
+                .padding(5.dp),
+        )
     }
 }
 
