@@ -196,6 +196,8 @@ fun ShellInput(
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
         androidx.compose.foundation.text.KeyboardOptions.Default,
     singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
 ) {
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
@@ -214,10 +216,12 @@ fun ShellInput(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                singleLine = singleLine,
+                singleLine = if (maxLines > 1) false else singleLine,
                 textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
                 cursorBrush = SolidColor(c.accent),
                 keyboardOptions = keyboardOptions,
+                minLines = minLines,
+                maxLines = maxLines,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

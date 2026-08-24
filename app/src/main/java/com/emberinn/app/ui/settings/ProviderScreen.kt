@@ -8,6 +8,7 @@ import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -352,10 +353,10 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            EmberTextField(
+            ShellInput(
                 value = name,
                 onValueChange = vm::setProfileName,
-                label = { Text("名称") },
+                label = "名称",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
             )
@@ -400,19 +401,19 @@ fun ProviderDetailScreen(
                 }
             }
             if (spec.id == "workers-ai") {
-                EmberTextField(
+                ShellInput(
                     value = accountId,
                     onValueChange = vm::setAccountId,
-                    label = { Text("账户 ID") },
+                    label = "账户 ID",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
             }
             if (spec.id == "azure") {
-                EmberTextField(
+                ShellInput(
                     value = apiVersion,
                     onValueChange = vm::setApiVersion,
-                    label = { Text("API 版本") },
+                    label = "API 版本",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
@@ -526,17 +527,17 @@ fun ProviderDetailScreen(
                         )
                     }
                 }
-                EmberTextField(
+                ShellInput(
                     value = sampler.openRouterProviders.joinToString(", "),
                     onValueChange = vm::setOpenRouterProviders,
-                    label = { Text("providers（逗号分隔）") },
+                    label = "providers（逗号分隔）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
-                EmberTextField(
+                ShellInput(
                     value = sampler.openRouterQuantizations.joinToString(", "),
                     onValueChange = vm::setOpenRouterQuantizations,
-                    label = { Text("quantizations（逗号分隔）") },
+                    label = "quantizations（逗号分隔）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
@@ -630,10 +631,10 @@ fun ProviderDetailScreen(
                     onDismissRequest = { showBiasNew = false },
                     title = { Text("新建 bias 预设") },
                     text = {
-                        EmberTextField(
+                        ShellInput(
                             value = biasNewName,
                             onValueChange = { biasNewName = it },
-                            label = { Text("预设名（必须唯一）") },
+                            label = "预设名（必须唯一）",
                             singleLine = true,
                         )
                     },
@@ -807,87 +808,87 @@ fun ProviderDetailScreen(
             PromptQuickEdit(context, "main", "Main Prompt")
             PromptQuickEdit(context, "nsfw", "Auxiliary Prompt")
             PromptQuickEdit(context, "jailbreak", "Post-History Instructions")
-            EmberTextField(
+            ShellInput(
                 value = sampler.sendIfEmpty,
                 onValueChange = vm::setSendIfEmpty,
-                label = { Text("send_if_empty（末条 assistant 时补发）") },
+                label = "send_if_empty（末条 assistant 时补发）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.assistantPrefill,
                 onValueChange = vm::setAssistantPrefill,
-                label = { Text("assistant_prefill（Claude 继续预填）") },
+                label = "assistant_prefill（Claude 继续预填）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.newChatPrompt,
                 onValueChange = vm::setNewChatPrompt,
-                label = { Text("new_chat_prompt") },
+                label = "new_chat_prompt",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.newGroupChatPrompt,
                 onValueChange = vm::setNewGroupChatPrompt,
-                label = { Text("new_group_chat_prompt") },
+                label = "new_group_chat_prompt",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.newExampleChatPrompt,
                 onValueChange = vm::setNewExampleChatPrompt,
-                label = { Text("new_example_chat_prompt") },
+                label = "new_example_chat_prompt",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.continueNudgePrompt,
                 onValueChange = vm::setContinueNudgePrompt,
-                label = { Text("continue_nudge_prompt") },
+                label = "continue_nudge_prompt",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.wiFormat,
                 onValueChange = vm::setWiFormat,
-                label = { Text("wi_format（世界书 {0} 占位）") },
+                label = "wi_format（世界书 {0} 占位）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.scenarioFormat,
                 onValueChange = vm::setScenarioFormat,
-                label = { Text("scenario_format") },
+                label = "scenario_format",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.personalityFormat,
                 onValueChange = vm::setPersonalityFormat,
-                label = { Text("personality_format") },
+                label = "personality_format",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.groupNudgePrompt,
                 onValueChange = vm::setGroupNudgePrompt,
-                label = { Text("group_nudge_prompt") },
+                label = "group_nudge_prompt",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-                        EmberTextField(
+                        ShellInput(
                 value = sampler.impersonationPrompt,
                 onValueChange = vm::setImpersonationPrompt,
-                label = { Text("impersonation_prompt（冒充模式注入提示词）") },
+                label = "impersonation_prompt（冒充模式注入提示词）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sampler.assistantImpersonation,
                 onValueChange = vm::setAssistantImpersonation,
-                label = { Text("assistant_impersonation（Claude 冒充模式预填）") },
+                label = "assistant_impersonation（Claude 冒充模式预填）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -916,17 +917,17 @@ fun ProviderDetailScreen(
             IntRow("tool_call_recurse_limit（工具递归上限，官方默认 5）", sampler.toolCallRecurseLimit.toString()) { v ->
                 vm.setToolCallRecurseLimit(v.toIntOrNull() ?: 5)
             }
-            EmberTextField(
+            ShellInput(
                 value = reverseProxy,
                 onValueChange = vm::setReverseProxy,
-                label = { Text("reverse_proxy（官方代理地址）") },
+                label = "reverse_proxy（官方代理地址）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = proxyPassword,
                 onValueChange = vm::setProxyPassword,
-                label = { Text("proxy_password（代理 Key）") },
+                label = "proxy_password（代理 Key）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -967,10 +968,10 @@ fun ProviderDetailScreen(
                     onDismissRequest = { showProxyNew = false },
                     title = { Text("新建代理预设") },
                     text = {
-                        EmberTextField(
+                        ShellInput(
                             value = proxyNewName,
                             onValueChange = { proxyNewName = it },
-                            label = { Text("预设名（必须唯一）") },
+                            label = "预设名（必须唯一）",
                             singleLine = true,
                         )
                     },
@@ -989,30 +990,30 @@ fun ProviderDetailScreen(
                 )
             }
             if (spec.id == "custom") {
-                EmberTextField(
+                ShellInput(
                     value = customUrl,
                     onValueChange = vm::setCustomUrl,
-                    label = { Text("custom_url（自定义 API 地址）") },
+                    label = "custom_url（自定义 API 地址）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
             }
-            EmberTextField(
+            ShellInput(
                 value = customIncludeBody,
                 onValueChange = vm::setCustomIncludeBody,
-                label = { Text("custom_include_body（YAML 合并进请求体，仅 custom 源）") },
+                label = "custom_include_body（YAML 合并进请求体，仅 custom 源）",
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = customExcludeBody,
                 onValueChange = vm::setCustomExcludeBody,
-                label = { Text("custom_exclude_body（YAML 剔除字段，仅 custom 源）") },
+                label = "custom_exclude_body（YAML 剔除字段，仅 custom 源）",
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = customIncludeHeaders,
                 onValueChange = vm::setCustomIncludeHeaders,
-                label = { Text("custom_include_headers（YAML 请求头，仅 custom 源）") },
+                label = "custom_include_headers（YAML 请求头，仅 custom 源）",
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             Text("custom_prompt_post_processing（消息合并模式）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
@@ -1026,17 +1027,17 @@ fun ProviderDetailScreen(
                 }
             }
             if (spec.id == "azure") {
-                EmberTextField(
+                ShellInput(
                     value = azureDeploymentName,
                     onValueChange = vm::setAzureDeploymentName,
-                    label = { Text("azure_deployment_name") },
+                    label = "azure_deployment_name",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
-                EmberTextField(
+                ShellInput(
                     value = azureOpenaiModel,
                     onValueChange = vm::setAzureOpenaiModel,
-                    label = { Text("azure_openai_model") },
+                    label = "azure_openai_model",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
@@ -1053,10 +1054,10 @@ fun ProviderDetailScreen(
                     }
                 }
                 if (vertexaiAuthMode == "express") {
-                    EmberTextField(
+                    ShellInput(
                         value = vertexaiExpressProjectId,
                         onValueChange = vm::setVertexaiExpressProjectId,
-                        label = { Text("vertexai_express_project_id（非 us-central1 时必填）") },
+                        label = "vertexai_express_project_id（非 us-central1 时必填）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
@@ -1068,10 +1069,10 @@ fun ProviderDetailScreen(
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = saDraft,
                         onValueChange = { saDraft = it; saStatus = null },
-                        label = { Text("Service Account JSON") },
+                        label = "Service Account JSON",
                         minLines = 4,
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1099,10 +1100,10 @@ fun ProviderDetailScreen(
                 }
             }
             if (spec.id == "nanogpt") {
-                EmberTextField(
+                ShellInput(
                     value = nanogptProvider,
                     onValueChange = vm::setNanogptProvider,
-                    label = { Text("nanogpt_provider") },
+                    label = "nanogpt_provider",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )

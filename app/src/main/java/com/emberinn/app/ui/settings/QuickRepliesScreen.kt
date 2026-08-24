@@ -45,8 +45,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.slash.QuickReplySlot
 
 /**
@@ -230,10 +230,10 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             onDismissRequest = { showPresetDialog = false },
             title = { Text("新建快捷回复预设") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = draftPresetName,
                     onValueChange = { draftPresetName = it },
-                    label = { Text("预设名") },
+                    label = "预设名",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -262,17 +262,17 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             title = { Text(if (adding) "新增快捷回复" else "编辑快捷回复") },
             text = {
                 Column {
-                    EmberTextField(
+                    ShellInput(
                         value = draftLabel,
                         onValueChange = { draftLabel = it },
-                        label = { Text("按钮文案") },
+                        label = "按钮文案",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = draftMes,
                         onValueChange = { draftMes = it },
-                        label = { Text("斜杠链（如 /echo 你好）") },
+                        label = "斜杠链（如 /echo 你好）",
                         minLines = 2,
                         maxLines = 5,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -284,10 +284,10 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftEnabled, onChange = { draftEnabled = it })
                     }
-                    EmberTextField(
+                    ShellInput(
                         value = draftAutomationId,
                         onValueChange = { draftAutomationId = it },
-                        label = { Text("automationId（与世界书条目关联自动执行）") },
+                        label = "automationId（与世界书条目关联自动执行）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )

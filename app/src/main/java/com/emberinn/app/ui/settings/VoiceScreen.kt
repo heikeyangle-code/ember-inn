@@ -272,10 +272,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                     val backend = TtsBackendRegistry.get(ttsProvider)
                     if (backend != null) {
                         if (backend.defaultEndpoint.isNotBlank()) {
-                            EmberTextField(
+                            ShellInput(
                                 value = ttsEndpoint,
                                 onValueChange = { saveProvider(ttsProvider, it, ttsApiKey, ttsModel) },
-                                label = { Text("端点（默认 ${backend.defaultEndpoint}）") },
+                                label = "端点（默认 ${backend.defaultEndpoint}）",
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                             )
@@ -289,10 +289,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                                 label = "API Key",
                             )
                         }
-                        EmberTextField(
+                        ShellInput(
                             value = ttsModel,
                             onValueChange = { saveProvider(ttsProvider, ttsEndpoint, ttsApiKey, it) },
-                            label = { Text("模型 / 语音名（按后端要求）") },
+                            label = "模型 / 语音名（按后端要求）",
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                         )
@@ -349,10 +349,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                         EmberSwitch(checked = applyRegex, onChange = { applyRegex = it; save() })
                     }
                     if (applyRegex) {
-                        EmberTextField(
+                        ShellInput(
                             value = regexPattern,
                             onValueChange = { regexPattern = it; save() },
-                            label = { Text("正则（例：/[^\\u4e00-\\u9fa5a-zA-Z0-9\\s.,!?]/g）") },
+                            label = "正则（例：/[^\\u4e00-\\u9fa5a-zA-Z0-9\\s.,!?]/g）",
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         )

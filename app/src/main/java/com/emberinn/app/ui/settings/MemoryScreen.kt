@@ -53,10 +53,10 @@ fun MemoryScreen(onBack: () -> Unit) {
                 )
                 ToggleRow("冻结记忆（memoryFrozen）", s.memoryFrozen) { s = s.copy(memoryFrozen = it); save() }
                 ToggleRow("总结时跳过世界书（SkipWIAN）", s.skipWIAN) { s = s.copy(skipWIAN = it); save() }
-                EmberTextField(
+                ShellInput(
                     value = s.prompt,
                     onValueChange = { s = s.copy(prompt = it); save() },
-                    label = { Text("总结提示词（{{words}} 会被词数替换）") },
+                    label = "总结提示词（{{words}} 会被词数替换）",
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
@@ -65,10 +65,10 @@ fun MemoryScreen(onBack: () -> Unit) {
                         Text("恢复默认提示词")
                     }
                 }
-                EmberTextField(
+                ShellInput(
                     value = s.template,
                     onValueChange = { s = s.copy(template = it); save() },
-                    label = { Text("注入模板（{{summary}} 替换为摘要；留空=Summary: 文本）") },
+                    label = "注入模板（{{summary}} 替换为摘要；留空=Summary: 文本）",
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )

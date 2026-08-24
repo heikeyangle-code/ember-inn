@@ -449,7 +449,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         color = EmberTheme.colors.lineStrong,
                     )
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(value = name, onValueChange = { name = it }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    ShellInput(value = name, onValueChange = { name = it }, label = "名称", singleLine = true, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
                     EmberTextField(
                         value = content,
@@ -475,19 +475,19 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(
+                    ShellInput(
                         value = depth,
                         onValueChange = { depth = it.filter { c -> c.isDigit() } },
-                        label = { Text("注入深度 injection_depth（默认4，0=末条之后）") },
+                        label = "注入深度 injection_depth（默认4，0=末条之后）",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(
+                    ShellInput(
                         value = injectionOrder,
                         onValueChange = { injectionOrder = it.filter { c -> c.isDigit() } },
-                        label = { Text("注入顺序 injection_order（默认100）") },
+                        label = "注入顺序 injection_order（默认100）",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),

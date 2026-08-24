@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
 
 /**
  * 消息渲染行为开关：对齐官方 power_user 行为字段（折叠换行/示例分隔符/标签转义/Markdown 修复）与内核排障开关。
@@ -86,13 +85,13 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                             hint = "禁用 WebView JavaScript，只保留静态 HTML/CSS 兜底渲染（图片/样式正常、脚本与扩展桥全部失效）。默认关=全功能零打扰；开启后需重进聊天页生效",
                             checked = strictMode,
                         ) { strictMode = it; RenderPrefs.setStrictMode(context, it) }
-                        EmberTextField(
+                        ShellInput(
                             value = separator,
                             onValueChange = {
                                 separator = it
                                 RenderPrefs.setExampleSeparator(context, it)
                             },
-                            label = { Text("消息示例分隔符（example_separator）") },
+                            label = "消息示例分隔符（example_separator）",
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         )

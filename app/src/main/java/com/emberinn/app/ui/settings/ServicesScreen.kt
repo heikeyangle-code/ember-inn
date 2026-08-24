@@ -264,10 +264,10 @@ private fun ImageCard() {
             maxLines = 4,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
-        EmberTextField(
+        ShellInput(
             value = negativePrompt,
             onValueChange = { negativePrompt = it; saveAdvanced() },
-            label = { Text("负向提示（sd_negative_prompt）") },
+            label = "负向提示（sd_negative_prompt）",
             minLines = 2,
             maxLines = 4,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -281,10 +281,10 @@ private fun ImageCard() {
                 saveAdvanced()
             },
         )
-        EmberTextField(
+        ShellInput(
             value = steps.toString(),
             onValueChange = { steps = it.toIntOrNull() ?: 0; save() },
-            label = { Text("采样步数（steps）") },
+            label = "采样步数（steps）",
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -396,10 +396,10 @@ private fun ComfyWorkflowSection() {
             title = { Text("编辑 Workflow：$active") },
             text = {
                 Column {
-                    EmberTextField(
+                    ShellInput(
                         value = draftJson,
                         onValueChange = { draftJson = it },
-                        label = { Text("workflow JSON（API 格式，含占位符）") },
+                        label = "workflow JSON（API 格式，含占位符）",
                         minLines = 8,
                         maxLines = 16,
                         modifier = Modifier.fillMaxWidth(),
@@ -432,10 +432,10 @@ private fun ComfyWorkflowSection() {
             onDismissRequest = { newOpen = false },
             title = { Text("新建 Workflow") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = draftName,
                     onValueChange = { draftName = it },
-                    label = { Text("workflow 名（自动补 .json）") },
+                    label = "workflow 名（自动补 .json）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -463,10 +463,10 @@ private fun ComfyWorkflowSection() {
             onDismissRequest = { renameOpen = false },
             title = { Text("重命名 Workflow") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = draftName,
                     onValueChange = { draftName = it },
-                    label = { Text("新名字（自动补 .json）") },
+                    label = "新名字（自动补 .json）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -569,10 +569,10 @@ private fun StyleSection(
             text = {
                 Column {
                     Text("将用当前「提示词前缀 / 负向提示」保存为样式：", style = MaterialTheme.typography.bodySmall)
-                    EmberTextField(
+                    ShellInput(
                         value = draftName,
                         onValueChange = { draftName = it },
-                        label = { Text("样式名") },
+                        label = "样式名",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -598,10 +598,10 @@ private fun StyleSection(
             onDismissRequest = { renameOpen = false },
             title = { Text("重命名样式") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = draftName,
                     onValueChange = { draftName = it },
-                    label = { Text("新名字") },
+                    label = "新名字",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -676,13 +676,13 @@ private fun PromptTemplatesSection() {
                         templates = store.templates()
                     }) { Text("恢复默认") }
                 }
-                EmberTextField(
+                ShellInput(
                     value = text,
                     onValueChange = {
                         store.set(key, it)
                         templates = store.templates()
                     },
-                    label = { Text("模式 $key 模板") },
+                    label = "模式 $key 模板",
                     minLines = 2,
                     maxLines = 6,
                     modifier = Modifier.fillMaxWidth(),
@@ -916,10 +916,10 @@ private fun SendCard() {
     var sendIfEmpty by rememberSaveable { mutableStateOf(GenerationPrefs.sendIfEmpty(context)) }
     ServiceCard(title = "发送") {
         ServiceNote("官方 send_if_empty：当最后一条是 AI 回复且输入框为空时，用这段文本作为用户消息续聊；留空 = 关闭。")
-        EmberTextField(
+        ShellInput(
             value = sendIfEmpty,
             onValueChange = { sendIfEmpty = it; GenerationPrefs.saveSendIfEmpty(context, it) },
-            label = { Text("空输入时发送（send_if_empty）") },
+            label = "空输入时发送（send_if_empty）",
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )

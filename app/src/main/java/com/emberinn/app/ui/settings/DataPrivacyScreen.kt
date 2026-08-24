@@ -2,6 +2,7 @@ package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.SettingsSnapshotStore
-import com.emberinn.app.ui.components.EmberTextField
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -155,10 +155,10 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
             onDismissRequest = { showSnapshotDialog = false },
             title = { Text("新建设置快照") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = snapshotName,
                     onValueChange = { snapshotName = it },
-                    label = { Text("快照名称") },
+                    label = "快照名称",
                     singleLine = true,
                 )
             },

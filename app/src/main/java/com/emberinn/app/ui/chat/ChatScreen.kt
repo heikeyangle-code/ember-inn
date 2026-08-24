@@ -139,6 +139,7 @@ import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmptyState
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
 import com.emberinn.app.ui.settings.TavernHelperPrefs
@@ -2116,10 +2117,10 @@ fun ChatScreen(
             title = { Text("作者注释") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    EmberTextField(
+                    ShellInput(
                         value = anPrompt,
                         onValueChange = { anPrompt = it },
-                        label = { Text("注释内容（留空清除）") },
+                        label = "注释内容（留空清除）",
                         minLines = 3,
                         maxLines = 6,
                         modifier = Modifier.fillMaxWidth(),
@@ -2143,10 +2144,10 @@ fun ChatScreen(
                         FilterChip(selected = anPosition == 0, onClick = { anPosition = 0 }, label = { Text("提示词内") })
                         FilterChip(selected = anPosition == 1, onClick = { anPosition = 1 }, label = { Text("对话内") })
                     }
-                    EmberTextField(
+                    ShellInput(
                         value = anDepth.toString(),
                         onValueChange = { anDepth = it.toIntOrNull() ?: 4 },
-                        label = { Text("深度（对话内注入时生效）") },
+                        label = "深度（对话内注入时生效）",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2162,10 +2163,10 @@ fun ChatScreen(
                         FilterChip(selected = anRole == 1, onClick = { anRole = 1 }, label = { Text("用户") })
                         FilterChip(selected = anRole == 2, onClick = { anRole = 2 }, label = { Text("助手") })
                     }
-                    EmberTextField(
+                    ShellInput(
                         value = anInterval.toString(),
                         onValueChange = { anInterval = it.toIntOrNull() ?: 1 },
-                        label = { Text("注入间隔（每 N 条用户消息，官方 note_interval 默认 1）") },
+                        label = "注入间隔（每 N 条用户消息，官方 note_interval 默认 1）",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2192,10 +2193,10 @@ fun ChatScreen(
                                 FilterChip(selected = charaNotePosition == 1, onClick = { charaNotePosition = 1 }, label = { Text("前置") })
                                 FilterChip(selected = charaNotePosition == 2, onClick = { charaNotePosition = 2 }, label = { Text("后置") })
                             }
-                            EmberTextField(
+                            ShellInput(
                                 value = charaNotePrompt,
                                 onValueChange = { charaNotePrompt = it },
-                                label = { Text("角色备注内容") },
+                                label = "角色备注内容",
                                 minLines = 2,
                                 maxLines = 4,
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2469,17 +2470,17 @@ fun ChatScreen(
             title = { Text(if (target.name.isBlank()) "新建人设" else "编辑人设") },
             text = {
                 Column {
-                    EmberTextField(
+                    ShellInput(
                         value = personaDraftName,
                         onValueChange = { personaDraftName = it },
-                        label = { Text("人设名称") },
+                        label = "人设名称",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = personaDraftDesc,
                         onValueChange = { personaDraftDesc = it },
-                        label = { Text("描述（支持 {{char}}/{{user}} 宏）") },
+                        label = "描述（支持 {{char}}/{{user}} 宏）",
                         minLines = 3,
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2498,10 +2499,10 @@ fun ChatScreen(
                         FilterChip(selected = personaDraftPosition == 9, onClick = { personaDraftPosition = 9 }, label = { Text("不注入") })
                     }
                     if (personaDraftPosition == 4) {
-                        EmberTextField(
+                        ShellInput(
                             value = personaDraftDepth.toString(),
                             onValueChange = { personaDraftDepth = it.toIntOrNull() ?: 4 },
-                            label = { Text("深度（AT_DEPTH 时生效）") },
+                            label = "深度（AT_DEPTH 时生效）",
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2539,10 +2540,10 @@ fun ChatScreen(
                             TextButton(onClick = { personaDraftAvatar = "" }) { Text("清除") }
                         }
                     }
-                    EmberTextField(
+                    ShellInput(
                         value = personaDraftTitle,
                         onValueChange = { personaDraftTitle = it },
-                        label = { Text("标题（官方 title）") },
+                        label = "标题（官方 title）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
@@ -2641,10 +2642,10 @@ fun ChatScreen(
             onDismissRequest = { showImageDialog = false },
             title = { Text("图像生成") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = imagePrompt,
                     onValueChange = { imagePrompt = it },
-                    label = { Text("提示词（AUTOMATIC1111）") },
+                    label = "提示词（AUTOMATIC1111）",
                     minLines = 2,
                     maxLines = 5,
                     modifier = Modifier.fillMaxWidth(),
@@ -2669,10 +2670,10 @@ fun ChatScreen(
             onDismissRequest = { showBookmarkDialog = false },
             title = { Text("创建书签") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = bookmarkDraftName,
                     onValueChange = { bookmarkDraftName = it },
-                    label = { Text("书签名（当前聊天存档）") },
+                    label = "书签名（当前聊天存档）",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -3091,10 +3092,10 @@ fun ChatScreen(
             onDismissRequest = { vm.cancelCaptionFlow() },
             title = { Text("描述提示词（caption prompt_ask）") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = promptText,
                     onValueChange = { promptText = it },
-                    label = { Text("留空使用默认提示词") },
+                    label = "留空使用默认提示词",
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -3171,10 +3172,10 @@ fun ChatScreen(
             onDismissRequest = { vm.cancelImageRefine() },
             title = { Text("确认图像提示词（sd_refine_mode）") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = refineText,
                     onValueChange = { refineText = it },
-                    label = { Text("提示词（留空则用原内容）") },
+                    label = "提示词（留空则用原内容）",
                     minLines = 4,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth(),
@@ -4339,23 +4340,23 @@ private fun CfgScaleSheet(
 
             CfgSectionTitle("会话 CFG（本聊天）")
             CfgScaleRow("强度", chatScale, 1f..4f) { chatScale = it }
-            EmberTextField(value = chatNeg, onValueChange = { chatNeg = it }, label = { Text("负向提示（不进提示词）") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = chatNeg, onValueChange = { chatNeg = it }, label = "负向提示（不进提示词）", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            EmberTextField(value = chatPos, onValueChange = { chatPos = it }, label = { Text("正向提示（按深度注入）") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = chatPos, onValueChange = { chatPos = it }, label = "正向提示（按深度注入）", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
             CfgSectionTitle("角色 CFG（本角色）")
             CfgScaleRow("强度", charaScale, 1f..4f) { charaScale = it }
-            EmberTextField(value = charaNeg, onValueChange = { charaNeg = it }, label = { Text("负向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = charaNeg, onValueChange = { charaNeg = it }, label = "负向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            EmberTextField(value = charaPos, onValueChange = { charaPos = it }, label = { Text("正向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = charaPos, onValueChange = { charaPos = it }, label = "正向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
             CfgSectionTitle("全局 CFG")
             CfgScaleRow("强度", globalScale, 1f..4f) { globalScale = it }
-            EmberTextField(value = globalNeg, onValueChange = { globalNeg = it }, label = { Text("负向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = globalNeg, onValueChange = { globalNeg = it }, label = "负向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            EmberTextField(value = globalPos, onValueChange = { globalPos = it }, label = { Text("正向提示") }, minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
+            ShellInput(value = globalPos, onValueChange = { globalPos = it }, label = "正向提示", minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(16.dp))
             Text("合并来源（cfg_prompt_combine）", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -4375,7 +4376,7 @@ private fun CfgScaleSheet(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("插入深度", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                EmberTextField(value = depth, onValueChange = { depth = it.filter { c -> c.isDigit() } }, label = { Text("0=追加末条") }, singleLine = true, modifier = Modifier.width(150.dp))
+                ShellInput(value = depth, onValueChange = { depth = it.filter { c -> c.isDigit() } }, label = "0=追加末条", singleLine = true, modifier = Modifier.width(150.dp))
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {

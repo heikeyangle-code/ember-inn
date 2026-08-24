@@ -10,6 +10,7 @@ import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.design.EmberTheme
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,7 +74,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
-import com.emberinn.app.ui.components.EmberTextField
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberBottomSheet
@@ -225,10 +225,10 @@ fun SessionsScreen(
             title = { Text("新建群聊") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    EmberTextField(
+                    ShellInput(
                         value = groupName,
                         onValueChange = { groupName = it },
-                        label = { Text("群聊名称") },
+                        label = "群聊名称",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )

@@ -1,6 +1,5 @@
 package com.emberinn.app.ui.settings
 
-import com.emberinn.app.ui.components.EmberTextField
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.material3.Icon
 
@@ -44,10 +44,10 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             SettingsTopBar(title = "作者注释", onBack = onBack, sky = sky)
-            EmberTextField(
+            ShellInput(
                 value = prefs.defaultPrompt,
                 onValueChange = { prefs = prefs.copy(defaultPrompt = it) },
-                label = { Text("默认内容（聊天未设置时使用）") },
+                label = "默认内容（聊天未设置时使用）",
                 minLines = 3,
                 maxLines = 6,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -62,18 +62,18 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                 FilterChip(selected = prefs.defaultPosition == 1, onClick = { prefs = prefs.copy(defaultPosition = 1) }, label = { Text("对话内") })
                 FilterChip(selected = prefs.defaultPosition == 2, onClick = { prefs = prefs.copy(defaultPosition = 2) }, label = { Text("提示词前") })
             }
-            EmberTextField(
+            ShellInput(
                 value = prefs.defaultDepth.toString(),
                 onValueChange = { prefs = prefs.copy(defaultDepth = it.toIntOrNull() ?: 4) },
-                label = { Text("默认深度") },
+                label = "默认深度",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = prefs.defaultInterval.toString(),
                 onValueChange = { prefs = prefs.copy(defaultInterval = it.toIntOrNull() ?: 1) },
-                label = { Text("默认间隔（每 N 条用户消息）") },
+                label = "默认间隔（每 N 条用户消息）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

@@ -34,8 +34,8 @@ import com.emberinn.app.data.CharacterStore
 import com.emberinn.app.data.ExpressionStore
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberPrimaryButton
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import java.io.File
 
@@ -87,10 +87,10 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         Text("启用", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.enabled, onChange = { prefs = prefs.copy(enabled = it); save() })
                     }
-                    EmberTextField(
+                    ShellInput(
                         value = prefs.fallbackExpression,
                         onValueChange = { prefs = prefs.copy(fallbackExpression = it); save() },
-                        label = { Text("兜底表情（fallbackExpression；空=无）") },
+                        label = "兜底表情（fallbackExpression；空=无）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )

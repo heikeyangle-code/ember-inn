@@ -14,6 +14,7 @@ import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.data.CharacterCardEdit
 import com.emberinn.app.ui.design.EmberTheme
 
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import android.content.Context
 import android.net.Uri
@@ -302,10 +303,10 @@ fun CharactersScreen(
             title = { Text("从 URL 导入角色卡") },
             text = {
                 Column {
-                    EmberTextField(
+                    ShellInput(
                         value = urlDraft,
                         onValueChange = { urlDraft = it },
-                        label = { Text("角色卡直链（PNG / JSON / CharX）") },
+                        label = "角色卡直链（PNG / JSON / CharX）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )

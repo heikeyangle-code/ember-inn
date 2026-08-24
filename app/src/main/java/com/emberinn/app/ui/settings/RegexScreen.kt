@@ -39,8 +39,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.regex.RegexPipelineScript
 
 /** 全局正则脚本（对齐官方 regex 扩展 GLOBAL 分桶；聊天发送 USER_INPUT/AI_OUTPUT 位点生效）。 */
@@ -214,10 +214,10 @@ fun RegexScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                EmberTextField(
+                ShellInput(
                     value = newPresetName,
                     onValueChange = { newPresetName = it },
-                    label = { Text("新预设集名") },
+                    label = "新预设集名",
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
@@ -358,24 +358,24 @@ fun RegexScreen(onBack: () -> Unit) {
             },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    EmberTextField(
+                    ShellInput(
                         value = draftName,
                         onValueChange = { draftName = it },
-                        label = { Text("名称") },
+                        label = "名称",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = draftFind,
                         onValueChange = { draftFind = it },
-                        label = { Text("匹配式（支持 /pat/flags）") },
+                        label = "匹配式（支持 /pat/flags）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = draftReplace,
                         onValueChange = { draftReplace = it },
-                        label = { Text("替换串（留空=删除匹配）") },
+                        label = "替换串（留空=删除匹配）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )

@@ -84,6 +84,7 @@ import com.emberinn.app.data.WorldEntryDraft
 import com.emberinn.app.data.WorldStore
 import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.components.EmberBottomSheet
@@ -788,10 +789,10 @@ fun CharacterDetailScreen(
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = depth,
                         onValueChange = { depth = it.filter { c -> c.isDigit() } },
-                        label = { Text("注入深度") },
+                        label = "注入深度",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -959,17 +960,17 @@ fun CharacterDetailScreen(
             title = { Text("编辑变量") },
             text = {
                 Column {
-                    EmberTextField(
+                    ShellInput(
                         value = varDraftKey,
                         onValueChange = { varDraftKey = it },
-                        label = { Text("键（{{getvar::键}} 引用）") },
+                        label = "键（{{getvar::键}} 引用）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = varDraftValue,
                         onValueChange = { varDraftValue = it },
-                        label = { Text("值") },
+                        label = "值",
                         minLines = 2,
                         maxLines = 6,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1006,57 +1007,57 @@ fun CharacterDetailScreen(
             title = { Text("模型覆盖") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    EmberTextField(
+                    ShellInput(
                         value = mModel,
                         onValueChange = { mModel = it },
-                        label = { Text("模型（留空跟随全局）") },
+                        label = "模型（留空跟随全局）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mContext,
                         onValueChange = { mContext = it.filter { c -> c.isDigit() } },
-                        label = { Text("上下文上限（tokens）") },
+                        label = "上下文上限（tokens）",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mMaxTokens,
                         onValueChange = { mMaxTokens = it.filter { c -> c.isDigit() } },
-                        label = { Text("最大回复 tokens") },
+                        label = "最大回复 tokens",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mTemp,
                         onValueChange = { mTemp = it },
-                        label = { Text("温度 temperature") },
+                        label = "温度 temperature",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mTopP,
                         onValueChange = { mTopP = it },
-                        label = { Text("Top P") },
+                        label = "Top P",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mPres,
                         onValueChange = { mPres = it },
-                        label = { Text("存在惩罚 presence_penalty") },
+                        label = "存在惩罚 presence_penalty",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    EmberTextField(
+                    ShellInput(
                         value = mFreq,
                         onValueChange = { mFreq = it },
-                        label = { Text("频率惩罚 frequency_penalty") },
+                        label = "频率惩罚 frequency_penalty",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1096,10 +1097,10 @@ fun CharacterDetailScreen(
             title = { Text("主题配方") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    EmberTextField(
+                    ShellInput(
                         value = tSeed,
                         onValueChange = { tSeed = it },
-                        label = { Text("seed 色（#RRGGBB，留空用角色卡取色）") },
+                        label = "seed 色（#RRGGBB，留空用角色卡取色）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -1436,39 +1437,39 @@ fun WorldEntryEditorSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = keys,
                 onValueChange = { keys = it },
-                label = { Text("触发词（逗号分隔）") },
+                label = "触发词（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            EmberTextField(
+            ShellInput(
                 value = keySecondary,
                 onValueChange = { keySecondary = it },
-                label = { Text("次要触发词 keysecondary（逗号分隔）") },
+                label = "次要触发词 keysecondary（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text("内容") },
+                label = "内容",
                 minLines = 4,
                 maxLines = 12,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = comment,
                 onValueChange = { comment = it },
-                label = { Text("备注（仅作者可见）") },
+                label = "备注（仅作者可见）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = order,
                 onValueChange = { order = it.filter { c -> c.isDigit() } },
-                label = { Text("插入顺序") },
+                label = "插入顺序",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1484,10 +1485,10 @@ fun WorldEntryEditorSheet(
                     FilterChip(selected = position == v, onClick = { position = v }, label = { Text(label) })
                 }
             }
-            EmberTextField(
+            ShellInput(
                 value = depth,
                 onValueChange = { depth = it.filter { c -> c.isDigit() } },
-                label = { Text("深度（at_depth 时生效）") },
+                label = "深度（at_depth 时生效）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1497,18 +1498,18 @@ fun WorldEntryEditorSheet(
                     FilterChip(selected = role == v, onClick = { role = v }, label = { Text(label) })
                 }
             }
-            EmberTextField(
+            ShellInput(
                 value = selectiveLogic,
                 onValueChange = { selectiveLogic = it.filter { c -> c.isDigit() } },
-                label = { Text("选择逻辑 selectiveLogic（0=AND_ANY 1=AND_ALL）") },
+                label = "选择逻辑 selectiveLogic（0=AND_ANY 1=AND_ALL）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = scanDepth,
                 onValueChange = { scanDepth = it.filter { c -> c.isDigit() } },
-                label = { Text("扫描深度 scanDepth（空=默认）") },
+                label = "扫描深度 scanDepth（空=默认）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1523,107 +1524,107 @@ fun WorldEntryEditorSheet(
             SwitchRow("匹配作者备注", matchCreatorNotes) { matchCreatorNotes = it }
             SwitchRow("禁止递归 preventRecursion", preventRecursion) { preventRecursion = it }
             SwitchRow("排除递归 excludeRecursion", excludeRecursion) { excludeRecursion = it }
-            EmberTextField(
+            ShellInput(
                 value = delayUntilRecursion,
                 onValueChange = { delayUntilRecursion = it.filter { c -> c.isDigit() } },
-                label = { Text("延迟到递归 delayUntilRecursion") },
+                label = "延迟到递归 delayUntilRecursion",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             SwitchRow("按概率触发 useProbability", useProbability) { useProbability = it }
-            EmberTextField(
+            ShellInput(
                 value = probability,
                 onValueChange = { probability = it.filter { c -> c.isDigit() } },
-                label = { Text("概率 %（1-100）") },
+                label = "概率 %（1-100）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             SwitchRow("不计入预算 ignoreBudget", ignoreBudget) { ignoreBudget = it }
-            EmberTextField(
+            ShellInput(
                 value = triggers,
                 onValueChange = { triggers = it },
-                label = { Text("生成类型触发 triggers（逗号分隔）") },
+                label = "生成类型触发 triggers（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = outletName,
                 onValueChange = { outletName = it },
-                label = { Text("出口名 outletName（{{outlet::key}}）") },
+                label = "出口名 outletName（{{outlet::key}}）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = sticky,
                 onValueChange = { sticky = it.filter { c -> c.isDigit() } },
-                label = { Text("sticky（回合数，空=关闭）") },
+                label = "sticky（回合数，空=关闭）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = cooldown,
                 onValueChange = { cooldown = it.filter { c -> c.isDigit() } },
-                label = { Text("cooldown（回合数，空=关闭）") },
+                label = "cooldown（回合数，空=关闭）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = delay,
                 onValueChange = { delay = it.filter { c -> c.isDigit() } },
-                label = { Text("delay（回合数，空=关闭）") },
+                label = "delay（回合数，空=关闭）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = group,
                 onValueChange = { group = it },
-                label = { Text("分组 group（同组互斥/加权）") },
+                label = "分组 group（同组互斥/加权）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = groupWeight,
                 onValueChange = { groupWeight = it.filter { c -> c.isDigit() } },
-                label = { Text("组权重 groupWeight") },
+                label = "组权重 groupWeight",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             SwitchRow("组内优先 groupOverride", groupOverride) { groupOverride = it }
             SwitchRow("使用组评分 useGroupScoring", useGroupScoring) { useGroupScoring = it }
-            EmberTextField(
+            ShellInput(
                 value = filterNames,
                 onValueChange = { filterNames = it },
-                label = { Text("角色过滤 names（逗号分隔）") },
+                label = "角色过滤 names（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = filterTags,
                 onValueChange = { filterTags = it },
-                label = { Text("角色过滤 tags（逗号分隔）") },
+                label = "角色过滤 tags（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             SwitchRow("角色过滤取反 isExclude", filterExclude) { filterExclude = it }
             SwitchRow("向量化 vectorized（RAG）", vectorized) { vectorized = it }
             SwitchRow("addMemo", addMemo) { addMemo = it }
-            EmberTextField(
+            ShellInput(
                 value = automationId,
                 onValueChange = { automationId = it },
-                label = { Text("automationId（快捷回复自动执行）") },
+                label = "automationId（快捷回复自动执行）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = displayIndex,
                 onValueChange = { displayIndex = it.filter { c -> c.isDigit() } },
-                label = { Text("编辑器排序 displayIndex（空=自动）") },
+                label = "编辑器排序 displayIndex（空=自动）",
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1802,32 +1803,32 @@ private fun RegexEditorSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = scriptName,
                 onValueChange = { scriptName = it },
-                label = { Text("名称") },
+                label = "名称",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            EmberTextField(
+            ShellInput(
                 value = findRegex,
                 onValueChange = { findRegex = it },
-                label = { Text("匹配式（支持 /pat/flags）") },
+                label = "匹配式（支持 /pat/flags）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = replaceString,
                 onValueChange = { replaceString = it },
-                label = { Text("替换为（支持 $1 / $<name> / {{match}}）") },
+                label = "替换为（支持 $1 / $<name> / {{match}}）",
                 minLines = 2,
                 maxLines = 5,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            EmberTextField(
+            ShellInput(
                 value = trimStrings,
                 onValueChange = { trimStrings = it },
-                label = { Text("裁剪串（逗号分隔）") },
+                label = "裁剪串（逗号分隔）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -1853,18 +1854,18 @@ private fun RegexEditorSheet(
             SwitchRow("仅提示词", promptOnly) { promptOnly = it }
             SwitchRow("编辑消息时也执行", runOnEdit) { runOnEdit = it }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                EmberTextField(
+                ShellInput(
                     value = minDepth,
                     onValueChange = { minDepth = it.filter { c -> c.isDigit() || c == '-' } },
-                    label = { Text("最小深度") },
+                    label = "最小深度",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
-                EmberTextField(
+                ShellInput(
                     value = maxDepth,
                     onValueChange = { maxDepth = it.filter { c -> c.isDigit() || c == '-' } },
-                    label = { Text("最大深度") },
+                    label = "最大深度",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),

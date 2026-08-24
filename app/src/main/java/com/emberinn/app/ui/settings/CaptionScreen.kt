@@ -1,7 +1,6 @@
 package com.emberinn.app.ui.settings
 
 import com.emberinn.app.ui.design.components.EmberSwitch
-import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,25 +65,25 @@ fun CaptionScreen(onBack: () -> Unit) {
                     FilterChip(selected = s.source == "horde", onClick = { s = s.copy(source = "horde"); save() }, label = { Text("Horde") })
                 }
                 if (s.source != "multimodal") {
-                    EmberTextField(
+                    ShellInput(
                         value = s.sourceUrl,
                         onValueChange = { s = s.copy(sourceUrl = it); save() },
-                        label = { Text("服务基址（sourceUrl，如 https://my-sillytavern.local）") },
+                        label = "服务基址（sourceUrl，如 https://my-sillytavern.local）",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     )
                 }
-                EmberTextField(
+                ShellInput(
                     value = s.prompt,
                     onValueChange = { s = s.copy(prompt = it); save() },
-                    label = { Text("描述提示词（prompt）") },
+                    label = "描述提示词（prompt）",
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
-                EmberTextField(
+                ShellInput(
                     value = s.template,
                     onValueChange = { s = s.copy(template = it); save() },
-                    label = { Text("消息模板（template；缺 {{caption}} 自动补）") },
+                    label = "消息模板（template；缺 {{caption}} 自动补）",
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )

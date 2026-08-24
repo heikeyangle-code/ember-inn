@@ -37,9 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.data.ChatRepository
-import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.engine.prompt.ContextSettings
 import com.emberinn.engine.prompt.InstructSettings
@@ -527,13 +527,13 @@ fun PresetsScreen(onBack: () -> Unit) {
             }
             var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
             Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkVariant, modifier = Modifier.padding(top = 6.dp))
-            EmberTextField(
+            ShellInput(
                 value = afBehavior.userPromptBias,
                 onValueChange = {
                     afBehavior = afBehavior.copy(userPromptBias = it)
                     BehaviorPrefs.save(context, afBehavior)
                 },
-                label = { Text("回复前缀（会拼在生成回复前）") },
+                label = "回复前缀（会拼在生成回复前）",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             )
@@ -672,10 +672,10 @@ fun PresetsScreen(onBack: () -> Unit) {
             onDismissRequest = { saveAsType = null },
             title = { Text("保存当前设置为预设") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = saveAsName,
                     onValueChange = { saveAsName = it },
-                    label = { Text("预设名") },
+                    label = "预设名",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -758,10 +758,10 @@ fun PresetsScreen(onBack: () -> Unit) {
             onDismissRequest = { renameTarget = null },
             title = { Text("重命名预设") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = renameName,
                     onValueChange = { renameName = it },
-                    label = { Text("新名字") },
+                    label = "新名字",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
