@@ -364,3 +364,36 @@ fun RegexScreen(onBack: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun RegexRow(
+    name: String,
+    find: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
+            Text(name.ifBlank { "（未命名）" }, color = c.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(find.ifBlank { "（空匹配式）" }, color = c.inkMute, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            FaIcons.Pencil, contentDescription = "编辑", tint = c.inkMute,
+            modifier = Modifier.size(17.dp).clickable(onClick = onClick).padding(2.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Icon(
+            FaIcons.TrashCan, contentDescription = "删除", tint = c.danger,
+            modifier = Modifier.size(17.dp).clickable(onClick = onDelete).padding(2.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        EmberSwitch(checked = enabled, onChange = onToggle)
+    }
+}
