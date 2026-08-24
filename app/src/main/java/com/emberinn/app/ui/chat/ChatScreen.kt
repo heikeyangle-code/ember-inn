@@ -1076,6 +1076,7 @@ fun ChatScreen(
         }
     }
 
+    var modelBannerDismissed by remember { mutableStateOf(false) }
     val sky = rememberSky()
     val density = LocalDensity.current
     // 整页壳 C2：行级外观偏好退役；布局/气泡/密度由官方主题 CSS 接管。
@@ -1130,8 +1131,11 @@ fun ChatScreen(
                 .imePadding()
                 .padding(top = maxOf(topBarPad, 64.dp)),
         ) {
-            if (!providerConfigured) {
-                UnconfiguredBanner(onOpenSettings = onOpenSettings)
+            if (!providerConfigured && !modelBannerDismissed) {
+                UnconfiguredBanner(
+                    onOpenSettings = onOpenSettings,
+                    onDismiss = { modelBannerDismissed = true },
+                )
             }
 
             // 整页壳 C2/C3：官方 #sheld/#chat/#form_sheld 全量接管消息区 + 输入区；
@@ -3253,65 +3257,29 @@ private fun RoleAvatar(avatarPath: String?, name: String, accent: Color, size: I
 }
 
 @Composable
-private fun UnconfiguredBanner(onOpenSettings: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+private fun UnconfiguredBanner(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    val c = com.emberinn.app.ui.design.EmberTheme.colors
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = c.accentBg,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "还没配置模型",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-                Text(
-                    text = "配好后就能开始对话",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
-                )
+                Text("还没配置模型", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = c.ink)
+                Text("点此选择模型后开始对话", style = MaterialTheme.typography.bodySmall, color = c.inkSoft)
             }
-            TextButton(onClick = onOpenSettings) {
-                Text("先选一个模型")
-            }
+            TextButton(onClick = onOpenSettings) { Text("去配置", color = c.accent) }
+            TextButton(onClick = onDismiss) { Text("知道了", color = c.inkSoft) }
         }
     }
 }
 
-/** 官方 script.js systemUserName：只有这个名字的系统消息按系统消息格式化（Note 评论等按普通消息）。 */
-private const val SYSTEM_USER_NAME = "SillyTavern System"
-
-/** 内核站内源 origin（appassets.androidplatform.net，与 KernelProtocol.KERNEL_URL 同域） */
-private const val KERNEL_ORIGIN = "https://appassets.androidplatform.net"
-
-/**
- * 内核页头像 URL：仅当路径位于已暴露的站内根时可解析——
- * 角色 avatars → /avatars/<file>；persona-avatars → /pavatars/<file>。
- * 其余路径返回 null，内核模板按官方缺省头像渲染。
- */
-internal fun kernelAvatarUrlOf(path: String?): String? {
-    val f = path?.let { File(it) } ?: return null
-    val prefix = when (f.parentFile?.name) {
-        "avatars" -> "/avatars/"
-        "persona-avatars" -> "/pavatars/"
-        "media" -> com.emberinn.app.renderer.KernelWebViewFactory.MEDIA_PREFIX
-        else -> return null
-    }
-    return "$KERNEL_ORIGIN$prefix${f.name}"
-}
-
-/**
- * 合并后的上下文胶囊：圆环进度 + token/上限 + 百分比（绿→黄→橙→红分级）｜世界书命中数，
- * 两端同一胶囊。数据实时取自引擎 `onPrepared`（wiResult.activated + result.counts/maxContextTokens），
- * 非 UI 模拟值。点击上下文区开预算分解；点击世界书命中区开命中面板。
- */
 @Composable
 private fun ContextCapsule(
     used: Int,
