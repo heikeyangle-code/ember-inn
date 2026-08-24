@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,7 +55,7 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                         Text(
                             "对齐官方 power_user：折叠连续换行（collapse_newlines）、消息示例分隔符（context.example_separator，默认 ***）、标签转义与 Markdown 修复。",
                             style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -111,7 +112,7 @@ private fun RenderSwitchRow(label: String, hint: String, checked: Boolean, onCha
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
         }
         EmberSwitch(checked = checked, onChange = onChange)
     }

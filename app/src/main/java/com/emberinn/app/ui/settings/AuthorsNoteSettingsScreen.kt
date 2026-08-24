@@ -111,7 +111,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                         Text(
                             if (note.useChara) "启用 · ${note.prompt.take(24)}" else "未启用",
                             style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                         )
                     }
                     IconButton(onClick = {

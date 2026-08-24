@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -110,7 +111,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                             Text(
                                 "从相册导入背景图；模糊/遮罩由主题控制。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkVariant,
+                                color = EmberTheme.colors.inkMute,
                             )
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 TextButton(onClick = {
@@ -132,7 +133,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                             Text(
                                 "classic=样式表默认；其余四档与官方 backgrounds.css 类同名。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkVariant,
+                                color = EmberTheme.colors.inkMute,
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -204,7 +205,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                             Text(
                                 "暂无背景图。首次进入会自动导入内置官方背景库。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkVariant,
+                                color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.padding(14.dp),
                             )
                         }

@@ -79,7 +79,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                     Text(
                         "对齐官方 expressions 扩展：精灵按角色存放在 expressions/{角色名}/，AI 消息正文自动分类选图。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                 }
                 item {

@@ -168,7 +168,7 @@ private fun ProfileChip(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = if (active) EmberTheme.colors.accentContainer else EmberTheme.colors.surfaceVariant,
+        color = if (active) EmberTheme.colors.surface else EmberTheme.colors.surfaceVariant,
         modifier = Modifier.clickable(onClick = onSwitch),
     ) {
         Row(
@@ -188,7 +188,7 @@ private fun ProfileChip(
                 Icon(
                     FaIcons.XMark,
                     contentDescription = "删除连接",
-                    tint = EmberTheme.colors.inkVariant,
+                    tint = EmberTheme.colors.inkMute,
                     modifier = Modifier.size(14.dp),
                 )
             }
@@ -233,7 +233,7 @@ private fun ProviderCard(
                     Surface(
                         shape = RoundedCornerShape(999.dp),
                         color = if (configured) {
-                            EmberTheme.colors.accentContainer
+                            EmberTheme.colors.surface
                         } else {
                             EmberTheme.colors.surfaceVariant
                         },
@@ -242,9 +242,9 @@ private fun ProviderCard(
                             if (configured) "已配置" else "未配置",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (configured) {
-                                EmberTheme.colors.inkContainer
+                                EmberTheme.colors.ink
                             } else {
-                                EmberTheme.colors.inkVariant
+                                EmberTheme.colors.inkMute
                             },
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                         )
@@ -253,13 +253,13 @@ private fun ProviderCard(
                 Text(
                     spec.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkMute, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -347,7 +347,7 @@ fun ProviderDetailScreen(
                     Text(
                         spec.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -438,12 +438,12 @@ fun ProviderDetailScreen(
                     Text(
                         selectedModel.ifBlank { "未选择" },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.width(4.dp))
-            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkVariant, modifier = Modifier.size(20.dp))
+            Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkMute, modifier = Modifier.size(20.dp))
                 }
             }
             }
@@ -674,7 +674,7 @@ fun ProviderDetailScreen(
                         Text(
                             "文本或 [token ids]；数值 -100 ~ 100（官方 openai_logit_bias 模板）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                         )
                         Spacer(Modifier.size(8.dp))
                         LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
@@ -804,7 +804,7 @@ fun ProviderDetailScreen(
                 }
             }
             Text("提示词模板（Prompts）", style = MaterialTheme.typography.labelLarge, color = EmberTheme.colors.accent, modifier = Modifier.padding(top = 10.dp))
-            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkVariant)
+            Text("官方 main/nsfw/jailbreak 快捷编辑（PromptManager serviceSettings.prompts）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute)
             PromptQuickEdit(context, "main", "Main Prompt")
             PromptQuickEdit(context, "nsfw", "Auxiliary Prompt")
             PromptQuickEdit(context, "jailbreak", "Post-History Instructions")
@@ -1265,7 +1265,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                if (isSel) EmberTheme.colors.accentContainer.copy(alpha = 0.45f) else Color.Transparent,
+                                if (isSel) EmberTheme.colors.surface.copy(alpha = 0.45f) else Color.Transparent,
                             )
                             .clickable {
                                 vm.selectModel(modelId)
@@ -1338,7 +1338,7 @@ private fun TopBar(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

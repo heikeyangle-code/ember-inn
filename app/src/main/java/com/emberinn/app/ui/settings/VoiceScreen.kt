@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.data.TtsBackendRegistry
 import com.emberinn.app.data.TtsReader
 import com.emberinn.app.ui.design.components.EmberSwitch
@@ -124,7 +125,7 @@ fun VoiceScreen(onBack: () -> Unit) {
             Text(
                 "对齐官方 TTS 设置；官方 1.18 无语音输入（STT）。在线语音提供商在 P3 引擎层接入，本机引擎可直接试听。",
                 style = MaterialTheme.typography.bodySmall,
-                color = EmberTheme.colors.inkVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
             )
 
@@ -142,7 +143,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             "聊天自动朗读将在后续版本接入；启用后本页试听可用",
                             style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                         )
                     }
                     EmberSwitch(checked = enabled, onChange = { enabled = it; save() })
@@ -170,7 +171,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             tts.value?.defaultEngine?.substringAfterLast('.') ?: "Android 系统 TTS",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -204,7 +205,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                             Text(
                                 "%.2f".format(rate) + (if (rate == 1.0f) " · 正常" else ""),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = EmberTheme.colors.inkVariant,
+                                color = EmberTheme.colors.inkMute,
                             )
                         }
                         EmberSlider(
@@ -216,7 +217,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                         Text(
                             "0.5 慢速 — 2.0 快速（Android 系统支持范围，1.0 为正常）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = EmberTheme.colors.inkVariant,
+                            color = EmberTheme.colors.inkMute,
                         )
                     }
                     Button(
@@ -245,7 +246,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                     Text(
                         "对照官方 TTS 扩展 27 个后端；选择后聊天朗读将走该后端（系统 TTS 仅用于本页试听）",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     ProviderPickerRow(
@@ -332,7 +333,7 @@ fun VoiceScreen(onBack: () -> Unit) {
                     Text(
                         "字段对齐官方 TTS 扩展；聊天自动朗读在 P3 接入，以下配置先持久化",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     ToggleRow("自动朗读回复", autoGeneration) { autoGeneration = it; save() }
@@ -384,12 +385,12 @@ private fun VoicePickerRow(
         Text(
             current.ifBlank { "跟随系统默认" },
             style = MaterialTheme.typography.bodyMedium,
-            color = EmberTheme.colors.inkVariant,
+            color = EmberTheme.colors.inkMute,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkVariant)
+        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkMute)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("跟随系统默认") },
@@ -436,12 +437,12 @@ private fun ProviderPickerRow(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = EmberTheme.colors.inkVariant,
+            color = EmberTheme.colors.inkMute,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
-        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkVariant)
+        Text("›", style = MaterialTheme.typography.titleMedium, color = EmberTheme.colors.inkMute)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (id, name) ->
                 DropdownMenuItem(

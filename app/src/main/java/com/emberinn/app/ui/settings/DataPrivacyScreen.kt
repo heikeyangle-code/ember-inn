@@ -133,7 +133,7 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant)
+                            Text("设置快照", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute)
                         }
                         TextButton(onClick = { confirmRestoreName = name }) { Text("恢复") }
                         IconButton(onClick = {
@@ -265,7 +265,7 @@ private fun DataRow(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                 )
             }
             trailing?.let {

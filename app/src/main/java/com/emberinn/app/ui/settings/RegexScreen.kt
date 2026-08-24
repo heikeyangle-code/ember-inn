@@ -97,7 +97,7 @@ fun RegexScreen(onBack: () -> Unit) {
             Text(
                 "对齐官方 regex 扩展 GLOBAL 分桶：先跑全局、再跑该卡正则（该卡在角色详情页编辑）；仅影响发送内容，不落盘改写。",
                 style = MaterialTheme.typography.bodySmall,
-                color = EmberTheme.colors.inkVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -109,7 +109,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     Text(
                         "关闭后所有位点不应用正则（官方 disabledExtensions.regex）。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                 }
                 EmberSwitch(
@@ -159,7 +159,7 @@ fun RegexScreen(onBack: () -> Unit) {
                                 Text(
                                     script.findRegex.ifBlank { "（空匹配式）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -207,7 +207,7 @@ fun RegexScreen(onBack: () -> Unit) {
             Text(
                 "对齐官方 preset 扩展：脚本存于预设的 regex_scripts 扩展字段；App 用命名预设集模拟，允许列表按官方 preset_allowed_regex[api]（App 固定 openai）。",
                 style = MaterialTheme.typography.bodySmall,
-                color = EmberTheme.colors.inkVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -286,7 +286,7 @@ fun RegexScreen(onBack: () -> Unit) {
                                 Text(
                                     script.findRegex.ifBlank { "（空匹配式）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )

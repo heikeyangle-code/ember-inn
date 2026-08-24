@@ -94,7 +94,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             Text(
                 "字段对齐官方 Quick Reply 扩展：目录多预设（data/default-user/quick-replies/*.json）。槽位 = 斜杠链 mes + label + 启用。",
                 style = MaterialTheme.typography.bodySmall,
-                color = EmberTheme.colors.inkVariant,
+                color = EmberTheme.colors.inkMute,
                 modifier = Modifier.padding(top = 4.dp),
             )
             FlowRow(
@@ -173,7 +173,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                                 Text(
                                     if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = EmberTheme.colors.inkVariant,
+                                    color = EmberTheme.colors.inkMute,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )

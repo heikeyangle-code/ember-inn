@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -180,7 +181,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                             Text(
                                 "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkVariant,
+                                color = EmberTheme.colors.inkMute,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
@@ -218,7 +219,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     }
                 }
                 if (order.isEmpty()) {
-                    item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkVariant) }
+                    item { Text("未自定义顺序，使用官方默认顺序。", style = MaterialTheme.typography.bodySmall, color = EmberTheme.colors.inkMute) }
                 }
                 importMessage?.let {
                     item { Text(it, style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.danger) }
@@ -571,7 +572,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Text(
                         "该提示项在最近一次总装中没有消息。先发送一条消息或使用聊天菜单的“提示词预览（dryRun）”后，这里才会列出内容（官方 PromptManager.messages 同语义）。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkVariant,
+                        color = EmberTheme.colors.inkMute,
                     )
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
@@ -661,7 +662,7 @@ private fun PromptRow(
                 Text(
                     item.content.ifBlank { "（空内容）" },
                     style = MaterialTheme.typography.labelSmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

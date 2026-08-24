@@ -526,7 +526,7 @@ fun PresetsScreen(onBack: () -> Unit) {
                 )
             }
             var afBehavior by remember { mutableStateOf(BehaviorPrefs.load(context)) }
-            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkVariant, modifier = Modifier.padding(top = 6.dp))
+            Text("开始回复前缀（start_reply_with / user_prompt_bias，官方 Advanced Formatting）", style = MaterialTheme.typography.labelSmall, color = EmberTheme.colors.inkMute, modifier = Modifier.padding(top = 6.dp))
             ShellInput(
                 value = afBehavior.userPromptBias,
                 onValueChange = {

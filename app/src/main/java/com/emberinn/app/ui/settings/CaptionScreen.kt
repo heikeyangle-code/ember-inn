@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmberSwitch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +45,7 @@ fun CaptionScreen(onBack: () -> Unit) {
                 Text(
                     "对齐官方 caption 扩展：添加图片后，聊天输入区点“图片描述”生成描述并发送（sendCaptionedMessage 语义）。multimodal 用当前模型；local/extras/horde 走 sourceUrl 代理端点。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Row(

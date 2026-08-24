@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.design
 
+import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp

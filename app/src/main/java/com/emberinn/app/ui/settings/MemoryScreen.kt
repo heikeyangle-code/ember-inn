@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                 Text(
                     "字段对齐官方 memory 扩展（settings.html）。总结源当前支持 main（当前模型）；extras/webllm 未接。聊天 ⋮ 菜单可立即总结。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 ToggleRow("冻结记忆（memoryFrozen）", s.memoryFrozen) { s = s.copy(memoryFrozen = it); save() }
@@ -112,7 +113,7 @@ fun MemoryScreen(onBack: () -> Unit) {
                 Text(
                     "DEFAULT=官方 generateQuietPrompt（当前上下文+quiet 提示）；RAW=官方 getRawSummaryPrompt + generateRaw。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmberTheme.colors.inkVariant,
+                    color = EmberTheme.colors.inkMute,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Spacer(Modifier.height(16.dp))
