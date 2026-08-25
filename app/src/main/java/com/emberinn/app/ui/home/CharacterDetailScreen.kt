@@ -220,33 +220,34 @@ fun CharacterDetailScreen(
         )
         Column(modifier = Modifier.fillMaxSize()) {
             // 顶栏：玻璃 + 边缘高光，返回在左上角，statusBarsPadding 避让状态栏 + 再留 12dp（不贴最高处）
-            Surface(
-                color = EmberTheme.colors.surface.copy(alpha = 0.16f),
-                shadowElevation = 1.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .emberGlass(sky = sky, atTop = false),
-            ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+                    .statusBarsPadding()
+                    .padding(start = 6.dp, end = 10.dp, top = 12.dp, bottom = 8.dp),
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(FaIcons.ArrowLeft, contentDescription = "返回")
-                }
+                Icon(
+                    FaIcons.ChevronLeft,
+                    contentDescription = "返回",
+                    tint = EmberTheme.colors.inkMute,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clickable(onClick = onBack)
+                        .padding(3.dp),
+                )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         fields.name.ifBlank { record.name },
-                        style = MaterialTheme.typography.titleLarge,
+                        color = EmberTheme.colors.ink,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         if (dirty) "有未保存的修改" else "角色详情与编辑",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
                         color = if (dirty) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                     )
                 }
@@ -290,13 +291,45 @@ fun CharacterDetailScreen(
                     }
                 }
             }
-            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 168.dp),
             ) {
-                // 头部：大头像 + 名字 + 描述 + 统计
+                // 幕布（§4.4）：立绘头图向下渐隐入页面底，头像环压缝居中
+                item {
+                    val heroPath = record.backgroundPath ?: record.avatarPath
+                    androidx.compose.foundation.layout.BoxWithConstraints(
+                        modifier = Modifier.fillMaxWidth().height(190.dp),
+                    ) {
+                        if (heroPath != null && File(heroPath).exists()) {
+                            AsyncImage(
+                                model = File(heroPath),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.matchParentSize(),
+                            )
+                        } else if (record.avatarPath != null && File(record.avatarPath).exists()) {
+                            AsyncImage(
+                                model = File(record.avatarPath),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.matchParentSize(),
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, EmberTheme.colors.bg),
+                                        startY = 60f,
+                                    ),
+                                ),
+                        )
+                    }
+                }
+                // 头部信息（原大头像行改为小环+文字，紧接幕布）
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         if (record.avatarPath != null && File(record.avatarPath).exists()) {
