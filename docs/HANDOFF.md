@@ -281,8 +281,8 @@ applyTheme 的开关字段→body 类与 power-user.js applyPowerUserSettings �
 
 ### 5.2 待办（当前优先级）
 
-**V3 壳层重构（Premium Editorial × AI Companion）剩余未完项**（阶段 1-17 已全部落地，
-总案见 [docs/UI_REDESIGN_V3.md](UI_REDESIGN_V3.md)；编译绿 + App 单测 53/53 绿）：
+**V3 壳层重构（Premium Editorial × AI Companion）收口状态**（阶段 1-16 全部落地；
+总案 docs/UI_REDESIGN_V3.md 已删，全文在 git 历史；编译绿 + App 单测 53/53 绿）：
 1. **第 16 阶段 Polish ✅ 全部完成**：Typography 审计=12 档类型比例表
    （EmberTokens EmberType/EmberTypography，fontSize 全仓收编，无离表字面量；
    InkText 的 sizeSp 为组件原语参数属合理保留）；Reduced Motion 跟随系统=
