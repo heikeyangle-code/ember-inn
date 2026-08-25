@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.components
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -36,7 +37,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -292,12 +292,7 @@ fun EmberInputIcon(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmberBottomSheet(
-    onDismissRequest: () -> Unit,
-    sheetState: SheetState = rememberModalBottomSheetState(),
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+fun ShellSheet(onDismiss = : () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,

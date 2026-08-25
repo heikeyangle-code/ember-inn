@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
-import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberTextField
 import com.emberinn.engine.prompt.PromptCollection
@@ -432,7 +432,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
             "swipe" to "Swipe", "regenerate" to "Regenerate", "quiet" to "Quiet",
         )
         val resettable = promptId in setOf("main", "nsfw", "jailbreak", "enhanceDefinitions")
-        EmberBottomSheet(onDismissRequest = { showEdit = false }) {
+        ShellSheet(onDismiss = { showEdit = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -558,7 +558,7 @@ fun PromptManagerScreen(onBack: () -> Unit) {
         val msgs = remember(inspected) {
             PromptAssemblyCache.lastMessages?.filter { it.identifier == inspected.identifier } ?: emptyList()
         }
-        EmberBottomSheet(onDismissRequest = { inspectTarget = null }) {
+        ShellSheet(onDismiss = { inspectTarget = null }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

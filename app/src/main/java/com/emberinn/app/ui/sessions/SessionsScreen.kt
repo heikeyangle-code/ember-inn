@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.sessions
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberMenuRow as SheetRow
 import com.emberinn.app.ui.components.EmberGlassFab
@@ -49,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,7 +78,6 @@ import coil3.compose.AsyncImage
 import com.emberinn.app.data.CharacterRecord
 import com.emberinn.app.data.SessionRecord
 import com.skydoves.cloudy.sky
-import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.engine.group.GroupGenerationMode
 import java.io.File
 import java.time.Instant
@@ -310,7 +309,7 @@ fun SessionsScreen(
     }
 
     menuSession?.let { session ->
-        EmberBottomSheet(onDismissRequest = { menuSession = null }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { menuSession = null }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     session.name,
@@ -477,7 +476,7 @@ private fun NewChatSheet(
     onGroup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(modifier = Modifier.padding(bottom = 28.dp)) {
             Text(
                 text = "新建对话",

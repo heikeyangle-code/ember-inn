@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.settings
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.emberinn.app.ui.design.components.EmptyState
@@ -76,7 +77,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.emberinn.app.ui.components.ProviderIcon
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.engine.provider.ConnectionProfile
@@ -618,7 +618,7 @@ fun ProviderDetailScreen(
             if (biasEditor) {
                 val presetName = sampler.biasPresetSelected
                 val entries = sampler.biasPresets[presetName] ?: emptyList()
-                EmberBottomSheet(onDismissRequest = { biasEditor = false }) {
+                ShellSheet(onDismiss = { biasEditor = false }) {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                         Text(
                             "编辑 bias 预设：$presetName",
@@ -1131,7 +1131,7 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
         }
     }
 
-    EmberBottomSheet(onDismissRequest = onDismiss) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
         ) {

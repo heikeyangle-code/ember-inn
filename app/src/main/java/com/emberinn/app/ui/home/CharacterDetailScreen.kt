@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.home
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.emberShadow
 import com.emberinn.app.ui.components.emberGlass
@@ -51,7 +52,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,7 +88,6 @@ import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.components.EmberTextField
-import com.emberinn.app.ui.components.EmberBottomSheet
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 import com.emberinn.app.ui.components.EmberSlider
@@ -1432,7 +1431,7 @@ fun WorldEntryEditorSheet(
     var automationId by remember(initial) { mutableStateOf(initial.automationId) }
     var displayIndex by remember(initial) { mutableStateOf(initial.displayIndex?.toString() ?: "") }
 
-    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1798,7 +1797,7 @@ private fun RegexEditorSheet(
         6 to "推理",
     )
 
-    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

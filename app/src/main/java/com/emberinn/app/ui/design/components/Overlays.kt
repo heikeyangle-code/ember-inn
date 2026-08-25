@@ -1,5 +1,6 @@
 package com.emberinn.app.ui.design.components
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -38,12 +39,7 @@ enum class SheetRowTone { Neutral, Danger }
  * 自绘实现，不依赖 M3 experimental API。
  */
 @Composable
-fun EmberBottomSheet(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-    title: String? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+fun ShellSheet(onDismiss: () -> Unit, title: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val c = EmberTheme.colors
     val s = EmberTheme.shapes
     val ms = if (EmberTheme.reducedMotion) EmberTheme.motion.reducedMs else EmberTheme.motion.sheetMs

@@ -2,6 +2,7 @@
 
 package com.emberinn.app.ui.chat
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import android.app.DownloadManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -70,7 +71,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -130,7 +130,6 @@ import com.emberinn.app.renderer.RenderKernel
 import com.emberinn.app.renderer.StApiShimInstaller
 import com.emberinn.app.renderer.TavernHelperBridge
 import com.emberinn.app.ui.chat.surface.ChatKernelShell
-import com.emberinn.app.ui.components.EmberBottomSheet
 import com.emberinn.app.ui.components.EmberMenuRow as MenuRow
 import com.emberinn.app.ui.components.EmberPrimaryButton
 import com.emberinn.app.ui.components.EmberSlider
@@ -547,7 +546,7 @@ fun ChatScreen(
 
     // 附件与输入工具：官方输入区没有独立“快捷工具盘”，统一由附件面板提供来源 + 图像生成/图片描述
     if (showAttachOptions) {
-        EmberBottomSheet(onDismissRequest = { showAttachOptions = false }) {
+        ShellSheet(onDismiss = { showAttachOptions = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1454,7 +1453,7 @@ fun ChatScreen(
         )
     }
     if (worldPanel) {
-        EmberBottomSheet(onDismissRequest = { worldPanel = false }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { worldPanel = false }) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                 Text("世界书命中", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.size(4.dp))
@@ -1520,7 +1519,7 @@ fun ChatScreen(
     if (contextDetail) {
         val usage = contextUsage
         if (usage != null) {
-            EmberBottomSheet(onDismissRequest = { contextDetail = false }, sheetState = rememberModalBottomSheetState()) {
+            ShellSheet(onDismiss = { contextDetail = false }) {
                 Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                     Text("上下文占用", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.size(12.dp))
@@ -1558,7 +1557,7 @@ fun ChatScreen(
             val isRealSystem = isSystemMsg && msgName == SYSTEM_USER_NAME
             val swipeCount = vm.swipeCountOf(el)
             val mediaOfMsg = mediaOf(el)
-            EmberBottomSheet(onDismissRequest = { menuMessageIndex = null }, sheetState = rememberModalBottomSheetState()) {
+            ShellSheet(onDismiss = { menuMessageIndex = null }) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         if (isUserMsg) "我的消息" else msgName.ifBlank { currentName },
@@ -1779,7 +1778,7 @@ fun ChatScreen(
     if (showMore) {
         // 官方 option_back_to_main：仅分支会话（metadata.main_chat）显示
         val parentSession = remember { vm.parentSession() }
-        EmberBottomSheet(onDismissRequest = { showMore = false }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { showMore = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "会话菜单",
@@ -1961,7 +1960,7 @@ fun ChatScreen(
         val entries = remember(showPastChats, pastChatsQuery, messages, pastChatsRevision) {
             vm.pastChats(pastChatsQuery)
         }
-        EmberBottomSheet(onDismissRequest = { showPastChats = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ShellSheet(onDismiss = { showPastChats = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -2319,7 +2318,7 @@ fun ChatScreen(
     }
 
     if (showPersonaPicker) {
-        EmberBottomSheet(onDismissRequest = { showPersonaPicker = false }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { showPersonaPicker = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "人设",
@@ -2725,7 +2724,7 @@ fun ChatScreen(
     }
 
     if (showBookmarksSheet) {
-        EmberBottomSheet(onDismissRequest = { showBookmarksSheet = false }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { showBookmarksSheet = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "书签",
@@ -2764,7 +2763,7 @@ fun ChatScreen(
     }
 
     if (showDataBank) {
-        EmberBottomSheet(onDismissRequest = { showDataBank = false }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { showDataBank = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     "数据银行（向量检索）",
@@ -2846,7 +2845,7 @@ fun ChatScreen(
         // 官方 itemized-prompts.js promptItemize：按消息索引显示该次总装的分节明细。
         val entry = vm.itemizationFor(index)
         val prev = vm.itemizations().lastOrNull { it.messageIndex < index }
-        EmberBottomSheet(onDismissRequest = { tokenStatsIndex = null }, sheetState = rememberModalBottomSheetState()) {
+        ShellSheet(onDismiss = { tokenStatsIndex = null }) {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                 var showRaw by remember { mutableStateOf(false) }
                 var showDiff by remember { mutableStateOf(false) }
@@ -3059,7 +3058,7 @@ fun ChatScreen(
         val variants = vm.swipeVariantsOf(index)
         if (variants.isNotEmpty() && currentEl != null) {
             val currentSwipe = vm.currentSwipeOf(currentEl)
-            EmberBottomSheet(onDismissRequest = { swipePickerIndex = null }, sheetState = rememberModalBottomSheetState()) {
+            ShellSheet(onDismiss = { swipePickerIndex = null }) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
                         "回复变体（${currentSwipe + 1}/${variants.size}）",
@@ -3459,7 +3458,7 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
             ).filter { it.second.isNotBlank() }
         }.getOrDefault(emptyList())
     }
-    EmberBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp).fillMaxWidth(),
         ) {
@@ -4349,7 +4348,7 @@ private fun CfgScaleSheet(
     var separator by remember { mutableStateOf(chat0.promptSeparator.orEmpty()) }
     var groupCharOverride by remember { mutableStateOf(chat0.groupchatIndividualChars) }
 
-    EmberBottomSheet(onDismissRequest = onDismiss) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -4474,7 +4473,7 @@ private fun LogprobsSheet(
     onDismiss: () -> Unit,
 ) {
     var selected by remember(logprobs) { mutableStateOf<Int?>(null) }
-    EmberBottomSheet(onDismissRequest = onDismiss) {
+    ShellSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.GroupLabel
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.components.EmberToasts
@@ -234,7 +235,7 @@ fun AppearanceScreen(
     val manageTarget = manageSheetFor
     if (manageTarget != null) {
         val meta = themes.firstOrNull { it.name == manageTarget }
-        EmberBottomSheet(visible = true, onDismiss = { manageSheetFor = null }, title = manageTarget) {
+        ShellSheet(onDismiss = { manageSheetFor = null }, title = manageTarget) {
             SheetRow(
                 label = "导出 JSON",
                 icon = FaIcons.Download,
