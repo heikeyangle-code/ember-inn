@@ -327,7 +327,8 @@ fun HeroCard(
 
 /**
  * 海报砖（§4.3）：原始纵横比 + 下缘悬浮名牌（名牌垫页底实底再半透，文字永远可读）。
- * ghost=true 时是「＋」导入幽灵位；onLongClick 供长按菜单（置顶/导出/删除）。
+ * ghost=true 时是「＋」导入幽灵位；onLongClick 供长按菜单（置顶/导出/删除）；
+ * subtitle=官方 aux_field 副标题（卡内字段为空则不传，官方同）。
  */
 @Composable
 fun PosterTile(
@@ -338,6 +339,7 @@ fun PosterTile(
     onLongClick: (() -> Unit)? = null,
     ghost: Boolean = false,
     width: Dp? = null,
+    subtitle: String? = null,
 ) {
     val c = EmberTheme.colors
     val base = if (width != null) Modifier.width(width).height(width / aspect) else Modifier.fillMaxWidth().heightIn(min = 1.dp).aspectRatio(aspect)
@@ -369,14 +371,24 @@ fun PosterTile(
                     .clip(RoundedCornerShape(9.dp))
                     .background(c.bg.copy(alpha = 0.78f)),
             ) {
-                Text(
-                    name,
-                    color = c.ink,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                )
+                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)) {
+                    Text(
+                        name,
+                        color = c.ink,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            subtitle,
+                            color = c.inkMute,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }

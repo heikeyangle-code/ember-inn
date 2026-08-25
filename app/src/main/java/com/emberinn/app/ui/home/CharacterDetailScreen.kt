@@ -250,7 +250,7 @@ fun CharacterDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        if (dirty) "有未保存的修改" else "角色详情与编辑",
+                        if (dirty) "有未保存的修改" else "角色编辑器",
                         fontSize = 11.sp,
                         color = if (dirty) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                     )

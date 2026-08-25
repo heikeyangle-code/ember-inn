@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,10 +59,12 @@ import com.emberinn.app.ui.design.components.GroupLabel
 import com.emberinn.app.ui.design.components.PosterTile
 import com.emberinn.app.ui.design.components.SearchField
 import com.emberinn.app.ui.design.components.ShellActionButton
+import com.emberinn.app.ui.design.components.ShellChip
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.components.ShellSheet
 import com.emberinn.app.ui.design.components.SheetRow
 import com.emberinn.app.ui.icons.FaIcons
+import com.emberinn.app.ui.settings.BehaviorPrefs
 import com.emberinn.engine.card.CardFormat
 
 /**
@@ -89,14 +92,41 @@ fun CharactersScreen(
     var urlDraft by rememberSaveable { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<CharacterRecord?>(null) }
     var worldHit by remember { mutableStateOf<WorldInfoHit?>(null) }
+    // 筛选 / 排序（§4.3 海报墙+筛选）：收藏轨道、标签轨道、官方 11 档书架排序
+    var onlyFavorites by rememberSaveable { mutableStateOf(false) }
+    var tagFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    // 官方 power_user.sort_field + sort_order（power-user.js 默认 name/asc），跨会话持久化
+    val behavior = remember { BehaviorPrefs.load(context) }
+    var sortField by rememberSaveable { mutableStateOf(behavior.sortField) }
+    var sortOrder by rememberSaveable { mutableStateOf(behavior.sortOrder) }
+    var showSortSheet by remember { mutableStateOf(false) }
     val searchResults = remember(query) { vm.search(query) }
 
     // 每次进入书架/从设置返回都刷新（导入、删除后列表不过期）
     LaunchedEffect(Unit) { vm.refresh() }
 
-    val filtered = remember(characters, query) {
-        if (query.isBlank()) characters
+    // 卡字段索引：列表变更时一次解析（标签轨道 + aux_field 副标题共用，避免重复 parse rawJson）
+    val fieldsOf = remember(characters) { characters.associate { it.id to vm.readCharacterFields(it) } }
+    val tagsOf = remember(fieldsOf) {
+        fieldsOf.mapValues { (_, f) -> f.tags.split(',').mapNotNull { t -> t.trim().takeIf(String::isNotEmpty) } }
+    }
+    val topTags = remember(tagsOf) {
+        tagsOf.values.flatten().groupingBy { it }.eachCount().entries
+            .sortedByDescending { it.value }
+            .map { it.key }
+            .take(10)
+    }
+    // 官方排序数据源：最近聊天/会话数 + 卡体量/创建时间（列表变更时一次计算）
+    val activity = remember(characters) { vm.characterActivity() }
+    val meta = remember(characters) { vm.characterMeta() }
+    val currentSort = remember(sortField, sortOrder) { SORT_OPTIONS.firstOrNull { it.field == sortField && it.order == sortOrder } }
+
+    val filtered = remember(characters, query, onlyFavorites, tagFilter, sortField, sortOrder, activity, meta) {
+        var list = if (query.isBlank()) characters
         else characters.filter { it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }
+        if (onlyFavorites) list = list.filter { it.pinned }
+        if (tagFilter != null) list = list.filter { tagsOf[it.id]?.contains(tagFilter) == true }
+        sortCharacters(list, sortField, sortOrder, activity, meta)
     }
 
     LaunchedEffect(message) {
@@ -143,6 +173,39 @@ fun CharactersScreen(
                 placeholder = "搜索角色 / 会话 / 世界书 / 设置",
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
+            // 筛选轨道：收藏 / 标签 / 排序（无搜索时展示；有筛选时保持可见以便清除）
+            if (query.isBlank() && characters.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                    ) {
+                        ShellChip(label = "收藏", selected = onlyFavorites, onClick = { onlyFavorites = !onlyFavorites })
+                        // 官方 power_user.show_tag_filters：标签筛选轨道开关（本 App 默认开）
+                        if (behavior.showTagFilters) topTags.forEach { tag ->
+                            ShellChip(
+                                label = tag,
+                                selected = tagFilter == tag,
+                                onClick = { tagFilter = if (tagFilter == tag) null else tag },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    // 排序入口：chip 即当前值摘要（官方 11 档，点击弹层切换）
+                    ShellChip(
+                        label = "排序 · ${currentSort?.short ?: "默认"}",
+                        selected = true,
+                        onClick = { showSortSheet = true },
+                    )
+                }
+            }
             if (query.isNotBlank()) {
                 SearchResultsList(
                     results = searchResults,
@@ -176,6 +239,11 @@ fun CharactersScreen(
                             aspect = aspect,
                             onClick = { EmberHaptics.select(haptic); onOpenDetail(record) },
                             onLongClick = { menuRecord = record },
+                            // 官方 power_user.aux_field 副标题：character_version / creator，卡内为空不显示
+                            subtitle = when (behavior.auxField) {
+                                "creator" -> fieldsOf[record.id]?.creator
+                                else -> fieldsOf[record.id]?.characterVersion
+                            }?.takeIf { it.isNotBlank() },
                         )
                     }
                     item(key = "import-ghost") {
@@ -218,6 +286,27 @@ fun CharactersScreen(
                 showImportSheet = false
                 urlDraft = ""
                 showUrlImport = true
+            }
+        }
+    }
+
+    // 官方 11 档书架排序弹层（选择即存 BehaviorPrefs，跨会话生效）
+    if (showSortSheet) {
+        ShellSheet(onDismiss = { showSortSheet = false }, title = "书架排序") {
+            SORT_OPTIONS.forEach { opt ->
+                SortOptionRow(
+                    label = opt.label,
+                    selected = sortField == opt.field && sortOrder == opt.order,
+                    onClick = {
+                        sortField = opt.field
+                        sortOrder = opt.order
+                        val cur = BehaviorPrefs.load(context)
+                        if (cur.sortField != opt.field || cur.sortOrder != opt.order) {
+                            BehaviorPrefs.save(context, cur.copy(sortField = opt.field, sortOrder = opt.order))
+                        }
+                        showSortSheet = false
+                    },
+                )
             }
         }
     }
@@ -374,6 +463,78 @@ private fun EmptyLibrary(onImport: () -> Unit, onDirectChat: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ShellActionButton(label = "导入角色卡") { onImport() }
             ShellActionButton(label = "直接开聊") { onDirectChat() }
+        }
+    }
+}
+
+
+/** 官方 11 档书架排序选项（index.html #character_sort_order 选项表 + power-user.js sortEntitiesList 语义）。 */
+private data class SortOption(val field: String, val order: String, val label: String, val short: String)
+
+private val SORT_OPTIONS = listOf(
+    SortOption("name", "asc", "名称 A → Z", "A-Z"),
+    SortOption("name", "desc", "名称 Z → A", "Z-A"),
+    SortOption("create_date", "desc", "最新创建", "最新创建"),
+    SortOption("create_date", "asc", "最旧创建", "最旧创建"),
+    SortOption("fav", "desc", "收藏优先", "收藏"),
+    SortOption("date_last_chat", "desc", "最近聊天", "最近聊天"),
+    SortOption("chat_size", "desc", "会话最多", "会话最多"),
+    SortOption("chat_size", "asc", "会话最少", "会话最少"),
+    SortOption("data_size", "desc", "Token 最多", "Token 最多"),
+    SortOption("data_size", "asc", "Token 最少", "Token 最少"),
+    SortOption("name", "random", "随机", "随机"),
+)
+
+/**
+ * 官方排序语义 1:1：name 走名称比较；create_date / fav / date_last_chat / chat_size / data_size
+ * 按官方 compareFunc（random 直接洗牌，fav 为 boolean 规则=收藏在前）。
+ * 平局保持 store 顺序（置顶/最近导入在前），与官方稳定排序行为一致。
+ */
+private fun sortCharacters(
+    list: List<CharacterRecord>,
+    field: String,
+    order: String,
+    activity: Map<String, Pair<Long, Int>>,
+    meta: Map<String, Pair<Int, Long>>,
+): List<CharacterRecord> = when {
+    order == "random" -> list.shuffled()
+    field == "name" ->
+        if (order == "desc") list.sortedByDescending { it.name.lowercase() }
+        else list.sortedBy { it.name.lowercase() }
+    field == "create_date" ->
+        if (order == "desc") list.sortedByDescending { meta[it.id]?.second ?: 0L }
+        else list.sortedBy { meta[it.id]?.second ?: 0L }
+    field == "fav" -> list.sortedByDescending { it.pinned }
+    field == "date_last_chat" -> list.sortedByDescending { activity[it.id]?.first ?: 0L }
+    field == "chat_size" ->
+        if (order == "desc") list.sortedByDescending { activity[it.id]?.second ?: 0 }
+        else list.sortedBy { activity[it.id]?.second ?: 0 }
+    field == "data_size" ->
+        if (order == "desc") list.sortedByDescending { meta[it.id]?.first ?: 0 }
+        else list.sortedBy { meta[it.id]?.first ?: 0 }
+    else -> list
+}
+
+/** 排序选项行：当前项强调色 + 对勾，无图标噪音（Power Space 单选范式）。 */
+@Composable
+private fun SortOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    val c = EmberTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        Text(
+            label,
+            color = if (selected) c.accent else c.ink,
+            fontSize = 15.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Icon(FaIcons.Check, contentDescription = "当前排序", tint = c.accent, modifier = Modifier.size(14.dp))
         }
     }
 }

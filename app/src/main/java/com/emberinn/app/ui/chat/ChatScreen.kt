@@ -52,6 +52,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -378,6 +379,22 @@ fun ChatScreen(
     // ------------------------------------------------------------------------
 
     var input by rememberSaveable { mutableStateOf("") }
+    // 官方 restore_user_input：输入框草稿全局保存/恢复（RossAscends-mods.js saveUserInput/
+    // restoreUserInput 同构——保存随输入防抖落盘、不受开关门控；恢复仅冷启动一次、
+    // 受 power_user.restore_user_input 门控；单键全局，不分角色/会话）。
+    LaunchedEffect(Unit) {
+        if (input.isEmpty() && BehaviorPrefs.load(context).restoreUserInput) {
+            input = BehaviorPrefs.loadUserInputDraft(context)
+        }
+    }
+    LaunchedEffect(input) {
+        kotlinx.coroutines.delay(400) // 官方 debounce(saveUserInput) 语义
+        BehaviorPrefs.saveUserInputDraft(context, input)
+    }
+    // 离开聊天页即落一次盘：防抖窗口内的最后输入不丢
+    DisposableEffect(Unit) {
+        onDispose { BehaviorPrefs.saveUserInputDraft(context, input) }
+    }
     // 思考卡展开状态：流式/生成完是同一个卡，点开状态跨阶段保持，不重建
     var reasoningExpanded by rememberSaveable { mutableStateOf(false) }
     // 思考卡默认折叠；每次流式开始强制收起（展开+每 tick 全量渲染是滑动卡顿主因）
@@ -402,6 +419,8 @@ fun ChatScreen(
     var pendingExportJsonl by remember { mutableStateOf<Pair<String, String>?>(null) } // id to name
     var contextDetail by remember { mutableStateOf(false) }
     var worldPanel by remember { mutableStateOf(false) }
+    // 角色速览（顶栏身份区点击）：角色 Hero + 描述 + 故事操作 + 写作工具入口
+    var showQuickProfile by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showConvertGroupConfirm by remember { mutableStateOf(false) }
     var showLogprobsSheet by remember { mutableStateOf(false) }
@@ -1308,7 +1327,15 @@ fun ChatScreen(
                             "mes_media_delete" -> value?.toIntOrNull()?.let { vm.deleteMedia(index, it) }
                             // ---- 边界3 官方编辑模式（messageEdit/messageEditDone 桥接）----
                             "mes_edit_save" -> vm.editMessage(index, value.orEmpty())
-                            "mes_edit_delete" -> vm.deleteMessage(index)
+                            // 官方 .mes_edit_delete（script.js:11922）：confirm_message_delete 开 →
+                            // 删前弹确认（deleteMessage askConfirmation）；关=直接删
+                            "mes_edit_delete" -> {
+                                if (BehaviorPrefs.load(context).confirmMessageDelete) {
+                                    deleteTargetIndex = MsgTarget(index, el)
+                                } else {
+                                    vm.deleteMessage(index)
+                                }
+                            }
                             // mes_edit_move：value = JSON {delta, draft}——先存草稿再移位（原子，见 VM 注释）
                             "mes_edit_move" -> runCatching {
                                 val obj = KernelProtocol.json.parseToJsonElement(value.orEmpty()).jsonObject
@@ -1394,15 +1421,15 @@ fun ChatScreen(
         }
 
         // 沉浸顶栏（2026-08-25 用户定稿）：常驻不消失（原 followBottom 驱动的淡出会整条蒸发）、
-        // 无底线、底部渐隐融入内容——不再是方块条
+        // 无底线、底部渐隐融入内容——不再是方块条。
+        // v5：点击角色身份区 → 角色速览；More → 会话菜单（作者注释/人设入口已收进两者，不丢功能）
         ChatTopBar(
             name = currentName,
             avatarPath = vm.avatarPath,
             accent = accent,
             onBack = onBack,
             onMenu = { showMore = true },
-            onPersona = { showPersonaPicker = true },
-            onAuthorsNote = { openAuthorsNote() },
+            onCharacterTap = { showQuickProfile = true },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
@@ -1543,32 +1570,25 @@ fun ChatScreen(
     }
 
     if (contextDetail) {
-        val usage = contextUsage
-        if (usage != null) {
-            ShellSheet(onDismiss = { contextDetail = false }) {
-                Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-                    Text("上下文占用", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.size(12.dp))
-                    val (used, max) = usage
-                    val pct = if (max <= 0) 0 else (used * 100 / max)
-                    val gradeText = when {
-                        pct >= 90 -> "红色：快满了，建议提高上限或精简提示"
-                        pct >= 75 -> "橙色：偏紧，长回复可能被裁剪"
-                        pct >= 50 -> "黄色：过半，留意后续消息长度"
-                        else -> "绿色：空间充足"
-                    }
-                    Text("已用：${formatTokens(used)}", style = MaterialTheme.typography.bodyMedium)
-                    Text("上限：${formatTokens(max)}", style = MaterialTheme.typography.bodyMedium)
-                    Text("占比：$pct%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        gradeText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = EmberTheme.colors.inkMute,
-                    )
-                }
-            }
-        }
+        // Conversation Context（会话上下文速览）：角色 / 人设 / 世界 / 生成配置 / 占用
+        // 一屏看全当前聊天生效的环境，高频项（人设/世界）可直接跳转切换
+        ConversationContextSheet(
+            vm = vm,
+            accent = accent,
+            contextUsage = contextUsage,
+            worldHits = worldHits,
+            activePersona = activePersona,
+            onDismiss = { contextDetail = false },
+            onOpenPersona = {
+                contextDetail = false
+                showPersonaPicker = true
+            },
+            onOpenWorldHits = {
+                contextDetail = false
+                worldPanel = true
+            },
+            onOpenSettings = onOpenSettings,
+        )
     }
 
     menuMessageIndex?.let { target ->
@@ -1799,11 +1819,40 @@ fun ChatScreen(
         if (showCharacterInfo) {
             CharacterInfoSheet(character = character, onDismiss = { showCharacterInfo = false })
         }
+        if (showQuickProfile) {
+            QuickProfileSheet(
+                character = character,
+                accent = accent,
+                onDismiss = { showQuickProfile = false },
+                onStartNewChat = {
+                    showQuickProfile = false
+                    vm.startNewChat()?.let(onSwitchSession)
+                },
+                onOpenPastChats = {
+                    showQuickProfile = false
+                    showPastChats = true
+                },
+                onOpenPersona = {
+                    showQuickProfile = false
+                    showPersonaPicker = true
+                },
+                onOpenAuthorsNote = {
+                    showQuickProfile = false
+                    openAuthorsNote()
+                },
+                onOpenCharacterInfo = {
+                    showQuickProfile = false
+                    showCharacterInfo = true
+                },
+            )
+        }
     }
 
     if (showMore) {
         // 官方 option_back_to_main：仅分支会话（metadata.main_chat）显示
         val parentSession = remember { vm.parentSession() }
+        // 上下文摘要行数据（角色/人设/模型/占用）——点击进入会话上下文速览
+        val contextFacts = remember { vm.chatContextFacts() }
         ShellSheet(onDismiss = { showMore = false }) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
@@ -1813,6 +1862,23 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
+                // ── 会话上下文速览（角色/人设/世界/生成配置/占用）──
+                MenuSectionLabel("当前上下文")
+                MenuRow(
+                    FaIcons.ShareNodes,
+                    "上下文速览",
+                    subtitle = listOfNotNull(
+                        vm.character?.name ?: vm.group?.name,
+                        activePersona?.name?.takeIf { it.isNotBlank() } ?: "无人设",
+                        contextFacts.model.takeIf { it != "—" },
+                        contextUsage?.let { "占用 ${formatTokens(it.first)}/${formatTokens(it.second)}" },
+                    ).joinToString(" · "),
+                    showChevron = true,
+                    onClick = {
+                        showMore = false
+                        contextDetail = true
+                    },
+                )
                 // ── 官方 #options 顶部组：作者注释 / CFG / logprobs ──
                 MenuSectionLabel("写作工具（官方 options）")
                 MenuRow(FaIcons.FileLines, "作者注释") {
@@ -3267,12 +3333,13 @@ private fun ChatTopBar(
     accent: Color,
     onBack: () -> Unit,
     onMenu: () -> Unit,
-    onPersona: () -> Unit = {},
-    onAuthorsNote: () -> Unit = {},
+    onCharacterTap: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // 顶栏定稿 v4（2026-08-25）：全透明+底部微渐隐；名字保留；聊天内容进入顶栏区渐隐消失；
-    // 图标轻量化(16dp/34dp 触点)
+    // 顶栏定稿 v5（2026-08-25）：全透明+底部微渐隐；名字保留；聊天内容进入顶栏区渐隐消失；
+    // 图标轻量化(16dp/34dp 触点)。
+    // v5 变化（Chat Shell 外围重构）：角色身份区（头像+名字）整体可点 → 角色速览（Quick Profile）；
+    // 作者注释/人设两个 icon 收进速览与会话菜单（入口不丢，顶栏只留一个 More，遵循「极简、不塞按钮」）。
     val E = EmberTheme.colors
     Box(modifier = modifier.fillMaxWidth()) {
         // 内容渐隐幕：聊天文字滚入顶栏区时淡出（盖在内核页上、栏之下）
@@ -3297,22 +3364,25 @@ private fun ChatTopBar(
                 Icon(FaIcons.ArrowLeft, contentDescription = "返回", tint = E.ink, modifier = Modifier.size(16.dp))
             }
             Spacer(Modifier.size(4.dp))
-            RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 28)
-            Spacer(Modifier.size(8.dp))
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = E.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onAuthorsNote, modifier = Modifier.size(34.dp)) {
-                Icon(FaIcons.FileLines, contentDescription = "作者注释", tint = E.ink, modifier = Modifier.size(16.dp))
-            }
-            IconButton(onClick = onPersona, modifier = Modifier.size(34.dp)) {
-                Icon(FaIcons.User, contentDescription = "人设", tint = E.ink, modifier = Modifier.size(16.dp))
+            // 角色身份区：点击 → 角色速览（头像大图/描述/故事操作/写作工具入口）
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onCharacterTap)
+                    .padding(horizontal = 2.dp, vertical = 2.dp),
+            ) {
+                RoleAvatar(avatarPath = avatarPath, name = name, accent = accent, size = 28)
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = E.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             IconButton(onClick = onMenu, modifier = Modifier.size(34.dp)) {
                 Icon(FaIcons.Bars, contentDescription = "更多", tint = E.ink, modifier = Modifier.size(16.dp))
@@ -3496,6 +3566,288 @@ private fun CharacterInfoSheet(character: com.emberinn.app.data.CharacterRecord,
             if (fields.isEmpty()) {
                 Text("该卡暂无可用字段", color = EmberTheme.colors.inkMute)
             }
+        }
+    }
+}
+
+/**
+ * Conversation Context（会话上下文速览）：
+ * 当前角色 / 当前人设 / 世界书 / 生成配置 / 上下文占用一屏看全。
+ * 定位是「查看 + 快速切换」，不是第二套设置——高频项（人设/世界）可跳转，其余只读展示。
+ */
+@Composable
+private fun ConversationContextSheet(
+    vm: ChatViewModel,
+    accent: Color,
+    contextUsage: Pair<Int, Int>?,
+    worldHits: List<ChatViewModel.WorldHitView>,
+    activePersona: com.emberinn.app.data.Persona?,
+    onDismiss: () -> Unit,
+    onOpenPersona: () -> Unit,
+    onOpenWorldHits: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val E = EmberTheme.colors
+    val character = vm.character
+    val group = vm.group
+    val facts = remember { vm.chatContextFacts() }
+    val externalWorlds = remember { vm.externalWorlds() }
+    val personaLore = remember { activePersona?.lorebook?.takeIf { it.isNotBlank() } }
+    ShellSheet(onDismiss = onDismiss) {
+        Column(modifier = Modifier.padding(bottom = 28.dp)) {
+            Text(
+                "会话上下文",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+            Text(
+                "当前聊天正在使用的环境",
+                style = MaterialTheme.typography.bodySmall,
+                color = E.inkMute,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            Spacer(Modifier.size(6.dp))
+            HorizontalDivider()
+            // ── 身份：角色（或群聊） ──
+            MenuSectionLabel("身份")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            ) {
+                if (group != null) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(accent.copy(alpha = 0.14f)),
+                    ) {
+                        Icon(FaIcons.Users, contentDescription = null, tint = accent, modifier = Modifier.size(17.dp))
+                    }
+                } else {
+                    RoleAvatar(avatarPath = character?.avatarPath, name = character?.name ?: "", accent = accent, size = 38)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        group?.name ?: character?.name ?: "未关联角色",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    val tagline = character?.description?.lineSequence()?.firstOrNull { it.isNotBlank() }
+                    if (tagline != null) {
+                        Text(
+                            tagline,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = E.inkMute,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+            // ── 人设：可跳转切换 ──
+            MenuSectionLabel("人设")
+            MenuRow(
+                FaIcons.User,
+                "当前人设",
+                subtitle = listOfNotNull(
+                    activePersona?.name?.takeIf { it.isNotBlank() } ?: "未设置",
+                    personaLore?.let { "关联世界：$it" },
+                ).joinToString(" · "),
+                showChevron = true,
+                onClick = onOpenPersona,
+            )
+            // ── 世界书：命中可查看 ──
+            MenuSectionLabel("世界书")
+            MenuRow(
+                FaIcons.BookOpen,
+                "世界书命中",
+                subtitle = if (worldHits.isEmpty()) {
+                    if (externalWorlds.isEmpty()) "本会话暂无生效世界" else "外置世界 ${externalWorlds.size} 个，尚未命中条目"
+                } else {
+                    "命中 ${worldHits.size} 条（常驻/关键词/向量/概率）"
+                },
+                showChevron = true,
+                onClick = onOpenWorldHits,
+            )
+            // ── 生成配置：只读展示，切换走设置 ──
+            MenuSectionLabel("生成配置")
+            MenuRow(
+                FaIcons.WandMagicSparkles,
+                facts.providerName,
+                subtitle = "模型 ${facts.model} · 采样 ${facts.samplerPreset}",
+                showChevron = true,
+                onClick = onOpenSettings,
+            )
+            // ── 上下文占用：圆环 + 明细 + 分级提示 ──
+            MenuSectionLabel("上下文占用")
+            if (contextUsage == null) {
+                Text(
+                    "本会话还没有生成记录，发送一次后显示占用",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = E.inkMute,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                )
+            } else {
+                val (used, max) = contextUsage
+                val ratio = if (max <= 0) 0f else used.toFloat() / max
+                val pct = (ratio * 100).toInt()
+                val grade = when {
+                    ratio >= 0.90f -> E.danger
+                    ratio >= 0.75f -> Color(0xFFEF6C00)
+                    ratio >= 0.50f -> Color(0xFFF9A825)
+                    else -> Color(0xFF2E7D32)
+                }
+                val gradeText = when {
+                    ratio >= 0.90f -> "快满了，建议提高上限或精简提示"
+                    ratio >= 0.75f -> "偏紧，长回复可能被裁剪"
+                    ratio >= 0.50f -> "过半，留意后续消息长度"
+                    else -> "空间充足"
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                ) {
+                    CircularProgressIndicator(
+                        progress = { ratio.coerceIn(0f, 1f) },
+                        modifier = Modifier.size(40.dp),
+                        strokeWidth = 4.dp,
+                        color = grade,
+                        trackColor = E.line.copy(alpha = 0.4f),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                "$pct%",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = grade,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "${formatTokens(used)} / ${formatTokens(max)} tokens",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = E.inkMute,
+                                modifier = Modifier.padding(bottom = 1.dp),
+                            )
+                        }
+                        Text(
+                            gradeText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = E.inkMute,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 角色速览（Quick Profile）：顶栏身份区点击打开。
+ * 大头像 + 名字 + 描述摘要 + 故事操作（新聊天/聊天文件）+ 写作工具（人设/作者注释/角色详情）。
+ * 顶栏 v5 收纳的入口全部在此接回，功能不丢失。
+ */
+@Composable
+private fun QuickProfileSheet(
+    character: com.emberinn.app.data.CharacterRecord,
+    accent: Color,
+    onDismiss: () -> Unit,
+    onStartNewChat: () -> Unit,
+    onOpenPastChats: () -> Unit,
+    onOpenPersona: () -> Unit,
+    onOpenAuthorsNote: () -> Unit,
+    onOpenCharacterInfo: () -> Unit,
+) {
+    val E = EmberTheme.colors
+    // tags：官方 data.tags（展示层字段，存在才显示）
+    val tags = remember(character.rawJson) {
+        runCatching {
+            val root = kotlinx.serialization.json.Json.parseToJsonElement(character.rawJson).jsonObject
+            val data = root["data"]?.jsonObject ?: root
+            (data["tags"] as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+                ?.filter { it.isNotBlank() }
+                .orEmpty()
+        }.getOrDefault(emptyList())
+    }
+    val description = character.description.lineSequence().firstOrNull { it.isNotBlank() } ?: ""
+    ShellSheet(onDismiss = onDismiss) {
+        Column(modifier = Modifier.padding(bottom = 28.dp)) {
+            // ── Hero：大头像 + 名字 + 描述首行 ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            ) {
+                RoleAvatar(avatarPath = character.avatarPath, name = character.name, accent = accent, size = 64)
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        character.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (description.isNotBlank()) {
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = E.inkMute,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+            }
+            if (tags.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .horizontalScroll(rememberScrollState()),
+                ) {
+                    tags.take(8).forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(accent.copy(alpha = 0.12f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accent,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.size(6.dp))
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            // ── 故事：主操作（开始新故事）+ 聊天文件 ──
+            MenuSectionLabel("故事")
+            MenuRow(
+                FaIcons.Comments,
+                "开始新故事",
+                subtitle = "旧故事保留在会话列表",
+                showChevron = true,
+                iconTint = accent,
+                iconContainer = accent.copy(alpha = 0.12f),
+                onClick = onStartNewChat,
+            )
+            MenuRow(FaIcons.AddressBook, "管理故事文件", showChevron = true, onClick = onOpenPastChats)
+            // ── 写作工具：顶栏收纳入口接回 ──
+            MenuSectionLabel("写作工具")
+            MenuRow(FaIcons.User, "人设", subtitle = "切换 / 编辑我的身份", showChevron = true, onClick = onOpenPersona)
+            MenuRow(FaIcons.FileLines, "作者注释", subtitle = "本会话注入的固定指令", showChevron = true, onClick = onOpenAuthorsNote)
+            MenuRow(FaIcons.CircleInfo, "角色详情", subtitle = "描述 / 性格 / 场景 / 开场白全字段", showChevron = true, onClick = onOpenCharacterInfo)
         }
     }
 }

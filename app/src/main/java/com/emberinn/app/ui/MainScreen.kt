@@ -69,6 +69,8 @@ fun MainScreen() {
     var openSessionId by rememberSaveable { mutableStateOf(if (initialLastSession) AppearancePrefs.lastSessionId(context) else null) }
     var openName by rememberSaveable { mutableStateOf("") }
     var openDetailId by rememberSaveable { mutableStateOf<String?>(null) }
+    // 角色主页 → 编辑器（Power Space）：Character≠编辑器，主页承担视觉，编辑器承担深度
+    var editingCharacter by rememberSaveable { mutableStateOf(false) }
     var settingsDeepLink by rememberSaveable { mutableStateOf<String?>(null) }
     var showGlobalSearch by rememberSaveable { mutableStateOf(false) }
     val homeVm: HomeViewModel = viewModel()
@@ -120,16 +122,33 @@ fun MainScreen() {
     if (detailId != null) {
         val detailRecord = homeVm.characters.value.firstOrNull { it.id == detailId }
         if (detailRecord != null) {
-            com.emberinn.app.ui.home.CharacterDetailScreen(
-                record = detailRecord,
-                vm = homeVm,
-                onBack = { openDetailId = null },
-                onOpenChat = { session ->
-                    openDetailId = null
-                    openSession(session.id)
-                    openName = session.name
-                },
-            )
+            if (editingCharacter) {
+                // 编辑器（Power Space）：返回角色主页而不是退出层级
+                com.emberinn.app.ui.home.CharacterDetailScreen(
+                    record = detailRecord,
+                    vm = homeVm,
+                    onBack = { editingCharacter = false },
+                    onOpenChat = { session ->
+                        editingCharacter = false
+                        openDetailId = null
+                        openSession(session.id)
+                        openName = session.name
+                    },
+                )
+            } else {
+                // 角色主页（Companion Space）：幕布英雄 + 故事轨道 + 身份区
+                com.emberinn.app.ui.home.CharacterHomeScreen(
+                    record = detailRecord,
+                    vm = homeVm,
+                    onBack = { openDetailId = null },
+                    onOpenChat = { session ->
+                        openDetailId = null
+                        openSession(session.id)
+                        openName = session.name
+                    },
+                    onEdit = { editingCharacter = true },
+                )
+            }
             return
         }
         // 角色已被删除：退回首页
@@ -162,7 +181,7 @@ fun MainScreen() {
                             selectedDest = 3
                             if (route != null) settingsDeepLink = route
                         },
-                        onOpenDetail = { record -> openDetailId = record.id },
+                        onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
                         settingsDeepLink = settingsDeepLink,
                         onSettingsDeepLinkConsumed = { settingsDeepLink = null },
                         onSelectDestination = { selectedDest = it },
@@ -222,7 +241,7 @@ fun MainScreen() {
                     selectedDest = 3
                     if (route != null) settingsDeepLink = route
                 },
-                onOpenDetail = { record -> openDetailId = record.id },
+                onOpenDetail = { record -> openDetailId = record.id; editingCharacter = false },
                 settingsDeepLink = settingsDeepLink,
                 onSettingsDeepLinkConsumed = { settingsDeepLink = null },
                 onSelectDestination = { selectedDest = it },
@@ -249,6 +268,7 @@ fun MainScreen() {
                         r.characters.forEach { ch ->
                             add(com.emberinn.app.ui.design.components.SearchEntry(ch.name, "角色卡", FaIcons.Mask, "角色") {
                                 openDetailId = ch.id
+                                editingCharacter = false
                             })
                         }
                         r.sessions.forEach { se ->

@@ -26,6 +26,8 @@ data class SessionRecord(
     val name: String,
     val updatedAt: Long = System.currentTimeMillis(),
     val pinned: Boolean = false,
+    /** 官方 archive_chats：归档的故事（列表默认隐藏，可在「已归档」筛选中查看/恢复）。 */
+    val archived: Boolean = false,
     /** 群聊会话：groupId 非空时 characterId 为空，成员来自 GroupStore。 */
     val groupId: String? = null,
 )
@@ -74,7 +76,7 @@ class ChatStore(private val context: Context) {
     private val chatsDir: File get() = File(context.filesDir, "chats").apply { mkdirs() }
 
     fun findByCharacter(characterId: String?): SessionRecord? =
-        list().firstOrNull { it.characterId == characterId }
+        list().firstOrNull { it.characterId == characterId && !it.archived }
 
     fun get(id: String): SessionRecord? = list().firstOrNull { it.id == id }
 
@@ -88,7 +90,7 @@ class ChatStore(private val context: Context) {
         loaded
     }
 
-    fun recent(limit: Int): List<SessionRecord> = list().take(limit)
+    fun recent(limit: Int): List<SessionRecord> = list().filterNot { it.archived }.take(limit)
 
     fun upsert(record: SessionRecord) {
         atomicWrite(File(sessionsDir, "${record.id}.json"), json.encodeToString(SessionRecord.serializer(), record))

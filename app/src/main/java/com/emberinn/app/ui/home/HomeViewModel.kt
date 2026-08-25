@@ -103,14 +103,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun lastMessage(sessionId: String): String? = sessionPreviewCache[sessionId]
 
-    /** 全局搜索（大小写不敏感）：角色名/描述、会话名/最后消息、世界书条目、设置项。 */
+    /** 全域搜索（大小写不敏感）：角色名/描述、会话名/最后消息、世界书条目、设置项。
+     *  fuzzy=官方 power_user.fuzzy_search（默认关）：开启后走加权模糊匹配并按得分排序
+     *  （fuse.js 语义近似：名称命中远重于描述命中）。 */
     fun search(query: String): SearchResults {
         val q = query.trim()
         if (q.isEmpty()) return SearchResults()
+        val fuzzy = com.emberinn.app.ui.settings.BehaviorPrefs.load(getApplication()).fuzzySearch
         val characters = store.list()
         return SearchResults(
-            characters = characters.filter {
-                it.name.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
+            characters = if (fuzzy) {
+                characters.mapNotNull { c ->
+                    val f = readCharacterFields(c)
+                    listOf(
+                        20.0 to c.name,
+                        10.0 to f.tags,
+                        3.0 to c.description,
+                        3.0 to f.mesExample,
+                        2.0 to f.scenario,
+                        2.0 to f.personality,
+                        2.0 to f.firstMes,
+                        2.0 to f.creatorNotes,
+                        1.0 to f.creator,
+                        1.0 to f.alternateGreetings.joinToString("\n"),
+                    ).mapNotNull { (w, text) -> fuzzyScore(text, q, w) }.minOrNull()?.let { c to it }
+                }.sortedBy { it.second }.map { it.first }
+            } else {
+                characters.filter {
+                    it.name.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
+                }
             },
             sessions = chatStore.list().filter { session ->
                 session.name.contains(q, ignoreCase = true) ||
@@ -121,6 +142,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 it.label.contains(q, ignoreCase = true) || it.description.contains(q, ignoreCase = true)
             },
         )
+    }
+
+    /** 模糊得分（越低越优）：子序列匹配 + 跳跃惩罚/字段权重（官方 fuse.js threshold 0.2 语义近似）。 */
+    private fun fuzzyScore(haystack: String, needle: String, weight: Double): Double? {
+        if (needle.isEmpty()) return null
+        val h = haystack.lowercase()
+        val n = needle.lowercase()
+        var hi = 0
+        var gaps = 0
+        for (ch in n) {
+            val idx = h.indexOf(ch, hi)
+            if (idx < 0) return null
+            gaps += idx - hi
+            hi = idx + 1
+        }
+        val dispersion = gaps.toDouble() / h.length.coerceAtLeast(1)
+        return dispersion / weight
     }
 
     private fun worldBookHits(character: CharacterRecord, query: String): List<WorldInfoHit> = runCatching {
@@ -335,6 +373,48 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun openOrResume(characterId: String?, name: String): SessionRecord {
         chatStore.findByCharacter(characterId)?.let { refresh(); return it }
         return newSession(characterId, name)
+    }
+
+    /** 角色主页故事轨道：该角色的全部会话（Character≠Conversation，一角色多故事；归档故事隐藏）。 */
+    fun sessionsForCharacter(characterId: String): List<SessionRecord> =
+        chatStore.list().filter { it.characterId == characterId && !it.archived }.sortedByDescending { it.updatedAt }
+
+    /** 书架排序数据源（官方 sort_field=date_last_chat / chat_size）：
+     *  characterId → (最近聊天时间戳, 会话数)；归档故事不计。 */
+    fun characterActivity(): Map<String, Pair<Long, Int>> =
+        chatStore.list()
+            .filterNot { it.archived }
+            .filterNotNullCharacterId()
+            .groupBy { it.characterId!! }
+            .mapValues { (_, sessions) -> Pair(sessions.maxOf { it.updatedAt }, sessions.size) }
+
+    private fun List<SessionRecord>.filterNotNullCharacterId(): List<SessionRecord> = filter { !it.characterId.isNullOrBlank() }
+
+    /** 书架排序数据源（官方 sort_field=data_size / create_date，src/endpoints/characters.js
+     *  processCharacter + calculateDataSize）：一次解析 rawJson。
+     *  data_size = card data 对象各字段值长度和（官方口径的卡内容体量代理）；
+     *  create_date 取卡内值（ISO 8601 / 毫秒数均兼容），缺失退化为本地导入时间（官方同：回退文件 ctime）。 */
+    fun characterMeta(): Map<String, Pair<Int, Long>> =
+        characters.value.associate { r ->
+            r.id to runCatching {
+                val root = json.parseToJsonElement(r.rawJson).jsonObject
+                val data = root["data"]?.jsonObject ?: root
+                val dataSize = data.values.sumOf { it.toString().length }
+                val createDate = parseCardDate(data["create_date"]?.jsonPrimitive?.contentOrNull) ?: r.importedAt
+                dataSize to createDate
+            }.getOrDefault(r.rawJson.length to r.importedAt)
+        }
+
+    /** 卡内 create_date → 毫秒：兼容标准 ISO、非补位月日时分秒（moment 宽容格式）、纯毫秒三种写法。 */
+    private fun parseCardDate(raw: String?): Long? {
+        val s = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        s.toLongOrNull()?.let { return it }
+        runCatching { return java.time.Instant.parse(s).toEpochMilli() }
+        return runCatching {
+            java.text.SimpleDateFormat("yyyy-M-d'T'H:m:s.SSS'Z'", java.util.Locale.ROOT)
+                .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                .parse(s)?.time
+        }.getOrNull()
     }
 
     /** 新建空白会话（README：每个角色可开多个会话，UUID 会话 id）。 */

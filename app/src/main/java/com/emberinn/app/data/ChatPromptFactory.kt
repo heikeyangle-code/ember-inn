@@ -280,6 +280,10 @@ class ChatPromptFactory {
         pinExamples: Boolean = false,
         /** 官方 power_user.strip_examples（完全移除示例对话）。 */
         stripExamples: Boolean = false,
+        /** 官方 power_user.prefer_character_prompt / prefer_character_jailbreak（默认开）：
+         *  卡内 system_prompt / post_history_instructions 覆盖全局；关=忽略卡内覆盖。 */
+        preferCharacterPrompt: Boolean = true,
+        preferCharacterJailbreak: Boolean = true,
         /** 会话级变量存储（官方聊天级 local variables）：ChatRepository 每会话一份，setvar 跨消息保留。 */
         localVariables: VariableStore = EmptyVariableStore,
     ): Prepared {
@@ -806,9 +810,11 @@ class ChatPromptFactory {
                 maxTokens = maxTokens,
                 tokenCounter = tokenCounter,
                 type = type,
-                // 官方 script.js generate：systemPromptOverride = 角色 system_prompt（元数据优先），jailbreak 同理
-                systemPromptOverride = fields.system,
-                jailbreakPromptOverride = fields.jailbreak,
+                // 官方 script.js generate：systemPromptOverride = 角色 system_prompt（元数据优先），jailbreak 同理；
+                // power_user.prefer_character_prompt / prefer_character_jailbreak 关闭时忽略卡内覆盖
+                // （引擎侧空串=不覆盖，applyPromptOverride isEmpty 早退）
+                systemPromptOverride = if (preferCharacterPrompt) fields.system else "",
+                jailbreakPromptOverride = if (preferCharacterJailbreak) fields.jailbreak else "",
                 bias = promptBias,
                 chatCompletionSource = chatCompletionSource,
                 canUseTools = canUseTools,

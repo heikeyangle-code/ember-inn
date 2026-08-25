@@ -1209,6 +1209,26 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         ).joinToString("\n")
     }
 
+    /** Conversation Context 摘要（上下文速览弹层）：当前生成链路真值，UI 直读不缓存。 */
+    data class ChatContextFacts(
+        val providerName: String,
+        val model: String,
+        val samplerPreset: String,
+    )
+
+    /** 上下文速览数据源：连接档案 / 模型 / 采样预设（与 kernelEngineFacts 同源同值）。 */
+    fun chatContextFacts(): ChatContextFacts {
+        val profile = runCatching { chatRepository.profile() }.getOrNull()
+        val preset = runCatching {
+            com.emberinn.app.ui.settings.PresetPrefsStore.load(getApplication()).samplerPreset
+        }.getOrDefault("")
+        return ChatContextFacts(
+            providerName = profile?.name.orEmpty().ifBlank { "未配置" },
+            model = profile?.model.orEmpty().ifBlank { "—" },
+            samplerPreset = preset.ifBlank { "默认" },
+        )
+    }
+
     /** 内核体检·引擎生效全景：各子系统当前实际状态（诊断专用，全部读真值不读缓存壳）。 */
     fun kernelEngineFacts(): String {
         val profile = runCatching { chatRepository.profile() }.getOrNull()
@@ -3782,7 +3802,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 userPromptBias = behavior.userPromptBias,
                 pinExamples = behavior.pinExamples,
                 stripExamples = behavior.stripExamples,
+                preferCharacterPrompt = behavior.preferCharacterPrompt,
+                preferCharacterJailbreak = behavior.preferCharacterJailbreak,
                 namesAsStopStrings = behavior.namesAsStopStrings,
+                customStoppingStrings = behavior.customStoppingStrings,
+                customStoppingStringsMacro = behavior.customStoppingStringsMacro,
                 externalWorlds = externalWorlds,
                 linkedWorld = linkedWorld,
                 chatMetadataWorld = chatMetaWorld,
@@ -4028,6 +4052,11 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 selectedGroup = group != null,
                 namesAsStopStrings = behavior.namesAsStopStrings,
                 env = MacroEnv(user = currentUserName, char = currentCharName),
+                custom = CustomStoppingConfig(
+                    rawJson = behavior.customStoppingStrings,
+                    macro = behavior.customStoppingStringsMacro,
+                    substitute = { s -> MacroEngine.substitute(s, MacroEnv(user = currentUserName, char = currentCharName)) },
+                ),
             ),
         )
         return CleanUpMessageEngine.clean(

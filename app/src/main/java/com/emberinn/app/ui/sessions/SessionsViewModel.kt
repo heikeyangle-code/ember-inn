@@ -89,6 +89,20 @@ class SessionsViewModel(application: Application) : AndroidViewModel(application
         refresh()
     }
 
+    /** 官方 /rename 与 /rename-chat：重命名会话（故事名）。 */
+    fun rename(record: SessionRecord, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        chatStore.renameSession(record.id, trimmed)
+        refresh()
+    }
+
+    /** 官方 archive_chats：归档/恢复故事（归档后列表默认隐藏）。 */
+    fun setArchived(record: SessionRecord, archived: Boolean) {
+        chatStore.upsert(record.copy(archived = archived))
+        refresh()
+    }
+
     fun delete(record: SessionRecord) {
         chatStore.delete(record.id)
         // 群聊会话删除后，若没有其他会话引用该群组则清理孤儿 GroupRecord

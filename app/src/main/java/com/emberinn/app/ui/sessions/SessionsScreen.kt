@@ -104,6 +104,10 @@ fun SessionsScreen(
     var groupStrategy by rememberSaveable { mutableStateOf("natural") }
     var menuSession by remember { mutableStateOf<SessionRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<SessionRecord?>(null) }
+    var renameTarget by remember { mutableStateOf<SessionRecord?>(null) }
+    var renameDraft by remember { mutableStateOf("") }
+    var search by rememberSaveable { mutableStateOf("") }
+    var showArchived by rememberSaveable { mutableStateOf(false) }
 
     // 每次进入聊天 Tab / 从聊天页返回都刷新（时间、置顶、最后消息预览）
     LaunchedEffect(Unit) { vm.refresh() }
@@ -136,6 +140,16 @@ fun SessionsScreen(
         }
     }
 
+    // 搜索 + 归档筛选：默认隐藏归档故事（官方 archive_chats），可切换查看/恢复
+    val visibleSessions = remember(sessions, search, showArchived) {
+        sessions
+            .filter { if (showArchived) true else !it.archived }
+            .filter { s ->
+                search.isBlank() || s.name.contains(search.trim(), true) ||
+                    (vm.previewOf(s.id)?.contains(search.trim(), true) == true)
+            }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -150,17 +164,44 @@ fun SessionsScreen(
                     color = EmberTheme.colors.ink,
                     letterSpacing = 1.sp,
                 )
+                if (sessions.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    ) {
+                        ShellInput(
+                            value = search,
+                            onValueChange = { search = it },
+                            label = "搜索故事 / 消息",
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        if (sessions.any { it.archived }) {
+                            ShellChip("已归档", selected = showArchived) { showArchived = !showArchived }
+                        }
+                    }
+                }
             }
 
-            if (sessions.isEmpty()) {
-                EmptySessions(onNew = { showNewSheet = true })
+            if (visibleSessions.isEmpty()) {
+                if (sessions.isEmpty()) {
+                    EmptySessions(onNew = { showNewSheet = true })
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            if (showArchived) "没有已归档的故事" else "没有匹配「${search.trim()}」的故事",
+                            color = EmberTheme.colors.lineStrong,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(sessions, key = { it.id }) { session ->
+                    items(visibleSessions, key = { it.id }) { session ->
                         SessionRow(
                             session = session,
                             character = characters.firstOrNull { it.id == session.characterId },
@@ -320,6 +361,12 @@ fun SessionsScreen(
                 SheetRow(FaIcons.Star, if (session.pinned) "取消置顶" else "置顶") {
                     vm.togglePin(session); menuSession = null
                 }
+                SheetRow(FaIcons.Pencil, "重命名") {
+                    renameTarget = session; renameDraft = session.name; menuSession = null
+                }
+                SheetRow(FaIcons.BoxArchive, if (session.archived) "恢复故事" else "归档故事", subtitle = if (session.archived) "回到对话列表" else "从列表隐藏，可随时恢复") {
+                    vm.setArchived(session, !session.archived); menuSession = null
+                }
                 SheetRow(FaIcons.FileExport, "导出聊天（JSONL）") {
                     exportLauncher.launch("${session.name}-${timeStamp(session.updatedAt)}.jsonl")
                 }
@@ -344,6 +391,31 @@ fun SessionsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+            },
+        )
+    }
+
+    renameTarget?.let { session ->
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("重命名会话") },
+            text = {
+                ShellInput(
+                    value = renameDraft,
+                    onValueChange = { renameDraft = it },
+                    label = "故事名",
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.rename(session, renameDraft)
+                    renameTarget = null
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) { Text("取消") }
             },
         )
     }
@@ -385,6 +457,15 @@ private fun SessionRow(
                         FaIcons.Star,
                         contentDescription = "置顶",
                         tint = c.accent,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+                if (session.archived) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        FaIcons.BoxArchive,
+                        contentDescription = "已归档",
+                        tint = c.inkMute,
                         modifier = Modifier.size(12.dp),
                     )
                 }

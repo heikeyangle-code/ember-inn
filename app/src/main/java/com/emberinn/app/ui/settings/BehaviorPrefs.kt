@@ -52,6 +52,38 @@ data class BehaviorSettings(
     /** 官方 power_user.markdown_escape_strings（默认 ''）：非 Markdown 字符串（dinkus 分隔符），
      *  逗号分隔，行首命中则跳过 Markdown 解析（showdown-exclusion 扩展） */
     val markdownEscapeStrings: String = "",
+    /** 官方 power_user.sort_field + sort_order（书架排序，power-user.js 默认 name/asc）：
+     *  field ∈ name/create_date/fav/date_last_chat/chat_size/data_size；order ∈ asc/desc/random。 */
+    val sortField: String = "name",
+    val sortOrder: String = "asc",
+    /** 官方 power_user.persona_sort_order（默认 asc）：人设列表按显示名 A-Z / Z-A（personas.js sortPersonas）。 */
+    val personaSortOrder: String = "asc",
+    /** 官方 power_user.fuzzy_search（默认关）：搜索启用模糊匹配（fuse.js 语义近似：
+     *  加权字段 + 得分排序），关=普通子串匹配。 */
+    val fuzzySearch: Boolean = false,
+    /** 官方 power_user.show_tag_filters（官方默认关）：书架顶部显示标签筛选轨道；
+     *  本 App 书架以标签轨道为核心浏览方式，故默认开。 */
+    val showTagFilters: Boolean = true,
+    /** 官方 power_user.aux_field（默认 character_version）：书架角色名下副标题字段，
+     *  ∈ character_version / creator；卡内字段为空则不显示（官方同）。 */
+    val auxField: String = "character_version",
+    /** 官方 power_user.prefer_character_prompt（默认开）：角色卡 system_prompt 覆盖全局系统提示；
+     *  关=忽略卡内覆盖，始终用全局（instruct-macros.js/openai.js 同语义）。 */
+    val preferCharacterPrompt: Boolean = true,
+    /** 官方 power_user.prefer_character_jailbreak（默认开）：角色卡 post_history_instructions 覆盖全局。 */
+    val preferCharacterJailbreak: Boolean = true,
+    /** 官方 power_user.confirm_message_delete（默认开）：删除消息前弹确认（script.js
+     *  .mes_edit_delete → deleteMessage askConfirmation）；关=编辑区删除钮直接删。 */
+    val confirmMessageDelete: Boolean = true,
+    /** 官方 power_user.restore_user_input（默认开）：重启后恢复输入框未发送草稿
+     *  （RossAscends-mods.js restoreUserInput/saveUserInput，localStorage 单键全局口径：
+     *  保存不受开关门控，仅恢复受门控）。 */
+    val restoreUserInput: Boolean = true,
+    /** 官方 power_user.custom_stopping_strings（默认 ''）：JSON 数组文本，生成时并入 API stop
+     *  （power-user.js getCustomStoppingStrings：解析→过滤空串→可选宏替换）。 */
+    val customStoppingStrings: String = "",
+    /** 官方 power_user.custom_stopping_strings_macro（默认开）：停止串先过宏替换。 */
+    val customStoppingStringsMacro: Boolean = true,
 )
 
 object BehaviorPrefs {
@@ -112,6 +144,18 @@ object BehaviorPrefs {
             streamingFps = p.getInt("streaming_fps", 30).coerceIn(5, 100),
             spoilerFreeMode = p.getBoolean("spoiler_free_mode", false),
             markdownEscapeStrings = p.getString("markdown_escape_strings", "") ?: "",
+            sortField = p.getString("sort_field", "name") ?: "name",
+            sortOrder = p.getString("sort_order", "asc") ?: "asc",
+            personaSortOrder = p.getString("persona_sort_order", "asc") ?: "asc",
+            fuzzySearch = p.getBoolean("fuzzy_search", false),
+            showTagFilters = p.getBoolean("show_tag_filters", true),
+            auxField = p.getString("aux_field", "character_version") ?: "character_version",
+            preferCharacterPrompt = p.getBoolean("prefer_character_prompt", true),
+            preferCharacterJailbreak = p.getBoolean("prefer_character_jailbreak", true),
+            confirmMessageDelete = p.getBoolean("confirm_message_delete", true),
+            restoreUserInput = p.getBoolean("restore_user_input", true),
+            customStoppingStrings = p.getString("custom_stopping_strings", "") ?: "",
+            customStoppingStringsMacro = p.getBoolean("custom_stopping_strings_macro", true),
         )
     }
 
@@ -148,7 +192,31 @@ object BehaviorPrefs {
             .putInt("streaming_fps", s.streamingFps)
             .putBoolean("spoiler_free_mode", s.spoilerFreeMode)
             .putString("markdown_escape_strings", s.markdownEscapeStrings)
+            .putString("sort_field", s.sortField)
+            .putString("sort_order", s.sortOrder)
+            .putString("persona_sort_order", s.personaSortOrder)
+            .putBoolean("fuzzy_search", s.fuzzySearch)
+            .putBoolean("show_tag_filters", s.showTagFilters)
+            .putString("aux_field", s.auxField)
+            .putBoolean("prefer_character_prompt", s.preferCharacterPrompt)
+            .putBoolean("prefer_character_jailbreak", s.preferCharacterJailbreak)
+            .putBoolean("confirm_message_delete", s.confirmMessageDelete)
+            .putBoolean("restore_user_input", s.restoreUserInput)
+            .putString("custom_stopping_strings", s.customStoppingStrings)
+            .putBoolean("custom_stopping_strings_macro", s.customStoppingStringsMacro)
             .apply()
         revision.value += 1
+    }
+
+    /** 官方输入草稿（RossAscends-mods.js getUserInputKey：localStorage 单键全局，不分角色/会话）。
+     *  独立读写不走 save()：不打断 revision 总线，不触发内核配置重发。 */
+    fun loadUserInputDraft(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+            .getString("user_input_draft", "") ?: ""
+
+    fun saveUserInputDraft(context: Context, draft: String) {
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+            .putString("user_input_draft", draft)
+            .apply()
     }
 }

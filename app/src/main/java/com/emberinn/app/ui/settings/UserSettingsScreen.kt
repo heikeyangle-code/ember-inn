@@ -119,6 +119,20 @@ fun UserSettingsScreen(
                             hint = "names_as_stop_strings（默认开）",
                             checked = behavior.namesAsStopStrings,
                         ) { saveBehavior(behavior.copy(namesAsStopStrings = it)) }
+                        ShellInput(
+                            value = behavior.customStoppingStrings,
+                            onValueChange = { saveBehavior(behavior.copy(customStoppingStrings = it)) },
+                            label = "自定义停止串（JSON 数组）",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        UserSwitchRow(
+                            label = "停止串宏替换",
+                            hint = "custom_stopping_strings_macro：停止串支持 {{user}}/{{char}} 等宏（默认开）",
+                            checked = behavior.customStoppingStringsMacro,
+                        ) { saveBehavior(behavior.copy(customStoppingStringsMacro = it)) }
                         UserSwitchRow(
                             label = "消息 token 计数",
                             hint = "message_token_count_enabled：消息气泡显示 token 数（默认关）",
@@ -172,6 +186,11 @@ fun UserSettingsScreen(
                             hint = "spoiler_free_mode：角色编辑页隐藏描述/开场白，点击可临时查看（默认关）",
                             checked = behavior.spoilerFreeMode,
                         ) { saveBehavior(behavior.copy(spoilerFreeMode = it)) }
+                        UserSwitchRow(
+                            label = "删除消息前确认",
+                            hint = "confirm_message_delete：消息编辑区删除钮弹确认再删；关=直接删除（默认开）",
+                            checked = behavior.confirmMessageDelete,
+                        ) { saveBehavior(behavior.copy(confirmMessageDelete = it)) }
                         ShellInput(
                             value = behavior.chatTruncation.toString(),
                             onValueChange = { v ->
@@ -198,6 +217,40 @@ fun UserSettingsScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                         )
+                    }
+                }
+                item {
+                    Column {
+                        // 官方 User Settings → Character Handling 分组（index.html UI-Customization）
+                        GroupLabel("角色列表")
+                        UserSwitchRow(
+                            label = "模糊搜索",
+                            hint = "fuzzy_search：书架搜索按全部字段模糊匹配并按相关度排序，而非仅名称子串（默认关）",
+                            checked = behavior.fuzzySearch,
+                        ) { saveBehavior(behavior.copy(fuzzySearch = it)) }
+                        UserSwitchRow(
+                            label = "显示标签筛选",
+                            hint = "show_tag_filters：书架顶部标签筛选轨道（官方默认关；本 App 以标签轨道为核心浏览方式，默认开）",
+                            checked = behavior.showTagFilters,
+                        ) { saveBehavior(behavior.copy(showTagFilters = it)) }
+                        UserCycleRow(
+                            label = "书架副标题",
+                            hint = "aux_field：角色名下副标题取卡内哪个字段（卡内为空则不显示，默认角色版本）",
+                            entries = listOf("角色版本", "创作者"),
+                            index = if (behavior.auxField == "creator") 1 else 0,
+                        ) { idx ->
+                            saveBehavior(behavior.copy(auxField = if (idx == 1) "creator" else "character_version"))
+                        }
+                        UserSwitchRow(
+                            label = "优先用卡内系统提示",
+                            hint = "prefer_character_prompt：角色卡含 System Prompt 覆盖时用卡内的；关=始终用全局系统提示（默认开）",
+                            checked = behavior.preferCharacterPrompt,
+                        ) { saveBehavior(behavior.copy(preferCharacterPrompt = it)) }
+                        UserSwitchRow(
+                            label = "优先用卡内后指令",
+                            hint = "prefer_character_jailbreak：角色卡含 Post-History Instructions 覆盖时用卡内的（默认开）",
+                            checked = behavior.preferCharacterJailbreak,
+                        ) { saveBehavior(behavior.copy(preferCharacterJailbreak = it)) }
                     }
                 }
                 item {
@@ -302,12 +355,17 @@ fun UserSettingsScreen(
                         GroupLabel("启动与恢复")
                         UserSwitchRow(
                             label = "启动进入上次聊天",
-                            hint = "开启后启动直接回到上次会话（默认关）",
+                            hint = "auto_load_chat：开启后启动直接回到上次会话（默认关）",
                             checked = openLastChat,
                         ) {
                             openLastChat = it
                             AppearancePrefs.saveOpenLastChat(context, it)
                         }
+                        UserSwitchRow(
+                            label = "恢复未发送草稿",
+                            hint = "restore_user_input：重启 App 后恢复输入框中未发送的内容（默认开）",
+                            checked = behavior.restoreUserInput,
+                        ) { saveBehavior(behavior.copy(restoreUserInput = it)) }
                     }
                 }
                 item {

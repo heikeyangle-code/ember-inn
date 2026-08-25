@@ -351,7 +351,13 @@ class ChatRepository(private val context: Context) {
         userPromptBias: String = "",
         pinExamples: Boolean = false,
         stripExamples: Boolean = false,
+        /** 官方 power_user.prefer_character_prompt / prefer_character_jailbreak（默认开）。 */
+        preferCharacterPrompt: Boolean = true,
+        preferCharacterJailbreak: Boolean = true,
         namesAsStopStrings: Boolean = true,
+        /** 官方 power_user.custom_stopping_strings（JSON 数组文本）+ _macro 宏替换开关。 */
+        customStoppingStrings: String = "",
+        customStoppingStringsMacro: Boolean = true,
         externalWorlds: Map<String, List<com.emberinn.engine.worldinfo.WorldInfoEntry>> = emptyMap(),
         linkedWorld: String? = null,
         chatMetadataWorld: String? = null,
@@ -500,6 +506,8 @@ class ChatRepository(private val context: Context) {
             userPromptBias = userPromptBias,
             pinExamples = pinExamples,
             stripExamples = stripExamples,
+            preferCharacterPrompt = preferCharacterPrompt,
+            preferCharacterJailbreak = preferCharacterJailbreak,
             externalWorlds = externalWorlds,
             linkedWorld = linkedWorld,
             chatMetadataWorld = chatMetadataWorld,
@@ -587,6 +595,12 @@ class ChatRepository(private val context: Context) {
                 selectedGroup = stopGroupMemberNames.isNotEmpty(),
                 namesAsStopStrings = namesAsStopStrings,
                 env = MacroEnv(user = userName, char = charName),
+                // 官方 getCustomStoppingStrings：permanent（JSON 数组→可选宏替换）+ ephemeral；此处为用户持久项
+                custom = CustomStoppingConfig(
+                    rawJson = customStoppingStrings,
+                    macro = customStoppingStringsMacro,
+                    substitute = { s -> com.emberinn.engine.macros.MacroEngine.substitute(s, MacroEnv(user = userName, char = charName)) },
+                ),
             ),
         )
         // 官方 createGenerationParameters：bias_preset_selected 在 logitBiasSources 且预设非空时计算 logit_bias
