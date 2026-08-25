@@ -8,6 +8,9 @@ data class BehaviorSettings(
     val showUserPromptBias: Boolean = true,
     /** 官方 power_user.allow_name2_display（默认关）：显示时保留 AI 消息正文里的“角色名:”前缀，默认剥掉。 */
     val allowName2Display: Boolean = false,
+    /** 官方 power_user.allow_name1_display（默认关）：冒充结果保留“用户名:”前缀；
+     *  关=冒充收尾剥用户名前缀 + 普通生成以“用户名:”开头的错误名字裁剪（script.js trimNames/trimWrongNames） */
+    val allowName1Display: Boolean = false,
     val trimSpaces: Boolean = true,
     val trimSentences: Boolean = false,
     val pinExamples: Boolean = false,
@@ -46,6 +49,9 @@ data class BehaviorSettings(
     val streamingFps: Int = 30,
     /** 官方 power_user.spoiler_free_mode（默认关）：角色编辑面板隐藏描述/开场白防剧透（点击 peek） */
     val spoilerFreeMode: Boolean = false,
+    /** 官方 power_user.markdown_escape_strings（默认 ''）：非 Markdown 字符串（dinkus 分隔符），
+     *  逗号分隔，行首命中则跳过 Markdown 解析（showdown-exclusion 扩展） */
+    val markdownEscapeStrings: String = "",
 )
 
 object BehaviorPrefs {
@@ -79,6 +85,7 @@ object BehaviorPrefs {
             userPromptBias = p.getString("user_prompt_bias", "") ?: "",
             showUserPromptBias = p.getBoolean("show_user_prompt_bias", true),
             allowName2Display = p.getBoolean("allow_name2_display", false),
+            allowName1Display = p.getBoolean("allow_name1_display", false),
             trimSpaces = p.getBoolean("trim_spaces", true),
             trimSentences = p.getBoolean("trim_sentences", false),
             pinExamples = p.getBoolean("pin_examples", false),
@@ -104,6 +111,7 @@ object BehaviorPrefs {
             chatTruncation = p.getInt("chat_truncation", 100).coerceIn(0, 1000),
             streamingFps = p.getInt("streaming_fps", 30).coerceIn(5, 100),
             spoilerFreeMode = p.getBoolean("spoiler_free_mode", false),
+            markdownEscapeStrings = p.getString("markdown_escape_strings", "") ?: "",
         )
     }
 
@@ -113,6 +121,7 @@ object BehaviorPrefs {
             .putString("user_prompt_bias", s.userPromptBias)
             .putBoolean("show_user_prompt_bias", s.showUserPromptBias)
             .putBoolean("allow_name2_display", s.allowName2Display)
+            .putBoolean("allow_name1_display", s.allowName1Display)
             .putBoolean("trim_spaces", s.trimSpaces)
             .putBoolean("trim_sentences", s.trimSentences)
             .putBoolean("pin_examples", s.pinExamples)
@@ -138,6 +147,7 @@ object BehaviorPrefs {
             .putInt("chat_truncation", s.chatTruncation)
             .putInt("streaming_fps", s.streamingFps)
             .putBoolean("spoiler_free_mode", s.spoilerFreeMode)
+            .putString("markdown_escape_strings", s.markdownEscapeStrings)
             .apply()
         revision.value += 1
     }

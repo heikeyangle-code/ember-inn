@@ -92,6 +92,19 @@ fun UserSettingsScreen(
                             checked = behavior.allowName2Display,
                         ) { saveBehavior(behavior.copy(allowName2Display = it)) }
                         UserSwitchRow(
+                            label = "保留用户名前缀",
+                            hint = "allow_name1_display：冒充结果保留“用户名:”前缀；关=剥掉并裁错误名字（默认关）",
+                            checked = behavior.allowName1Display,
+                        ) { saveBehavior(behavior.copy(allowName1Display = it)) }
+                        ShellInput(
+                            value = behavior.markdownEscapeStrings,
+                            onValueChange = { v ->
+                                saveBehavior(behavior.copy(markdownEscapeStrings = v))
+                            },
+                            label = "非 Markdown 字符串（逗号分隔，如 ***,—--;命中行跳过 MD 解析）",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        UserSwitchRow(
                             label = "示例置顶",
                             hint = "pin_examples：对话示例固定在上下文末尾（默认关）",
                             checked = behavior.pinExamples,

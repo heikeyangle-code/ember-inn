@@ -40,15 +40,17 @@
         }
     };
 
-    // 官方 showdown-exclusion.js 原样逻辑；substituteParams 由内核配置注入
+    // 官方 showdown-exclusion.js 原样逻辑；substituteParams 由内核配置注入。
+    // [EmberInn] 空串判定移入 filter：官方"改字符串即重载 processor"，本内核 converter
+    // 只建一次——每次格式化实时读 KernelConfig.markdownEscapeStrings，语义等价即时生效。
     window.markdownExclusionExt = function () {
-        var cfg = window.KernelConfig || {};
-        if (!cfg.markdownEscapeStrings) {
-            return [];
-        }
         return [{
             type: 'lang',
             filter: function (text) {
+                var cfg = window.KernelConfig || {};
+                if (!cfg.markdownEscapeStrings) {
+                    return text;
+                }
                 var escapedExclusions = String(cfg.markdownEscapeStrings)
                     .split(',')
                     .filter(function (element) { return element.length > 0; })

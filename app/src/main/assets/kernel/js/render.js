@@ -274,9 +274,13 @@
      *  同文本（截断/切换/回滚/重进）命中缓存零重算。容量 400 ≈ 4 长聊天楼层量级。 */
     var formatCache = new Map();
     var FORMAT_CACHE_MAX = 400;
+    /** 运行时配置代次：setRuntimeConfig bump → 旧缓存键全不命中（markdown_escape 等
+     *  影响格式化结果的开关变化后，官方"重载 processor"的等价失效语义）。 */
+    var kernelConfigRevision = 0;
 
     function formatCacheKey(mes, opts) {
-        return (opts && opts.isSystem ? 'S' : '') + (opts && opts.isUser ? 'U' : '') +
+        return kernelConfigRevision + ':' +
+            (opts && opts.isSystem ? 'S' : '') + (opts && opts.isUser ? 'U' : '') +
             (opts && opts.chName ? '|' + opts.chName : '') + '|' + mes;
     }
 
@@ -1074,13 +1078,53 @@
     }
 
     /** 运行时配置下发（宿主 BehaviorPrefs 全量同步；新实例随 applyPageSetup 重放）：
-     *  cfg 键与 KernelConfig 运行时段一致，缺省键不动当前值。 */
+     *  cfg 键与 KernelConfig 运行时段一致，缺省键不动当前值。
+     *  变化时：清格式化缓存 + 已挂载消息就地重刷正文（官方"改设置重载 processor/聊天"
+     *  的即时生效语义，避免依赖宿主重发 payloads 的时序）。 */
     function setRuntimeConfig(cfg) {
         if (!cfg) { return; }
-        ['streamFadeIn', 'gestures', 'sendOnEnter', 'quickContinue', 'quickImpersonate', 'autoSaveEdits'].forEach(function (k) {
-            if (k in cfg) { window.KernelConfig[k] = cfg[k]; }
+        var changed = false;
+        ['streamFadeIn', 'gestures', 'sendOnEnter', 'quickContinue', 'quickImpersonate', 'autoSaveEdits', 'markdownEscapeStrings', 'trimSpaces'].forEach(function (k) {
+            if (k in cfg && window.KernelConfig[k] !== cfg[k]) {
+                window.KernelConfig[k] = cfg[k];
+                changed = true;
+            }
         });
+        if (changed) {
+            kernelConfigRevision += 1;
+            formatCache.clear();
+            reformatMountedMessages();
+        }
         syncQuickButtons(); // quick_continue/quick_impersonate 按钮即时联动
+    }
+
+    /** 已挂载消息正文就地重格式化（buildMessageNode 正文段同构 + hljs/复制按钮）。 */
+    function reformatMountedMessages() {
+        Object.keys(messageState).forEach(function (mesid) {
+            var payload = messageState[mesid];
+            if (!payload || payload.mes == null) { return; }
+            var node = document.querySelector('.mes[mesid="' + cssEsc(mesid) + '"]');
+            if (!node) { return; }
+            var mesText = node.querySelector('.mes_text');
+            if (!mesText) { return; }
+            mesText.innerHTML = formatText(payload.mes, {
+                chName: payload.chName,
+                isUser: payload.isUser,
+                isSystem: payload.isSystem,
+            });
+            if (window.hljs) {
+                Array.prototype.forEach.call(mesText.querySelectorAll('pre code'), function (block) {
+                    window.hljs.highlightElement(block);
+                    if (!block.querySelector('.code-copy')) {
+                        var copyButton = document.createElement('i');
+                        copyButton.classList.add('fa-solid', 'fa-copy', 'code-copy', 'interactable');
+                        copyButton.title = 'Copy code';
+                        block.appendChild(copyButton);
+                    }
+                });
+            }
+            reportHeight(mesid, node.scrollHeight);
+        });
     }
 
     // ------------------------------------------------------------------

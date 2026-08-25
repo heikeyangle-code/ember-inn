@@ -136,6 +136,10 @@ data class KernelRuntimeConfig(
     @SerialName("quickImpersonate") val quickImpersonate: Boolean = false,
     /** power_user.auto_save_msg_edits：编辑框失焦自动保存 */
     @SerialName("autoSaveEdits") val autoSaveEdits: Boolean = false,
+    /** power_user.markdown_escape_strings：非 Markdown 字符串（dinkus），行首命中跳过解析 */
+    @SerialName("markdownEscapeStrings") val markdownEscapeStrings: String = "",
+    /** power_user.trim_spaces：编辑框填入原文前是否裁首尾空格（默认开） */
+    @SerialName("trimSpaces") val trimSpaces: Boolean = true,
 ) {
     fun toJsonString(): String = KernelProtocol.json.encodeToString(serializer(), this)
 
@@ -147,6 +151,8 @@ data class KernelRuntimeConfig(
             quickContinue = b.quickContinue,
             quickImpersonate = b.quickImpersonate,
             autoSaveEdits = b.autoSaveEdits,
+            markdownEscapeStrings = b.markdownEscapeStrings,
+            trimSpaces = b.trimSpaces,
         )
     }
 }
