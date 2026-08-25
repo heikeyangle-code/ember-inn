@@ -6,6 +6,7 @@ import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -52,11 +53,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.PromptAssemblyCache
 import com.emberinn.app.data.PromptManagerPrefs
 import com.emberinn.app.ui.components.EmberBottomSheet
@@ -176,16 +179,14 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Surface(shape = RoundedCornerShape(18.dp), color = EmberTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("说明", style = MaterialTheme.typography.titleSmall, color = EmberTheme.colors.accent)
-                            Text(
-                                "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = EmberTheme.colors.inkMute,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        }
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("说明", color = EmberTheme.colors.accent, fontSize = 13.sp)
+                        Text(
+                            "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
+                            color = EmberTheme.colors.inkMute,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                        )
                     }
                 }
                 item {
@@ -228,11 +229,12 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                 order.forEachIndexed { i, entry ->
                     item(key = "order-${entry.identifier}") {
                         val isDragging = draggingOrderId == entry.identifier
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = EmberTheme.colors.surface,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isDragging) EmberTheme.colors.surface2 else androidx.compose.ui.graphics.Color.Transparent)
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .graphicsLayer { translationY = if (isDragging) dragOrderOffset else 0f }
                                 .onSizeChanged { orderHeights[entry.identifier] = it.height }
@@ -272,8 +274,8 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                                     )
                                 },
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                Text("≡", style = MaterialTheme.typography.bodyLarge, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
+                            Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                                Text("≡", color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
                                 Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = EmberTheme.colors.lineStrong, modifier = Modifier.width(24.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(entry.identifier, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
@@ -634,13 +636,13 @@ private fun PromptRow(
     val forceToggle = forceEdit + setOf("main", "chatHistory", "dialogueExamples")
     val editAllowed = item.identifier in forceEdit || !item.marker
     val toggleAllowed = !(item.marker && item.identifier !in forceToggle)
-    Surface(shape = RoundedCornerShape(14.dp), color = EmberTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(enabled = onEdit != null && editAllowed) { onEdit?.invoke() }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
