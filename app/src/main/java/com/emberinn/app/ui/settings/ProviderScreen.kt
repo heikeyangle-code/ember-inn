@@ -510,11 +510,7 @@ fun ProviderDetailScreen(
                     modifier = Modifier.padding(top = 6.dp),
                 ) {
                     listOf("on", "off", "auto").forEach { value ->
-                        FilterChip(
-                            selected = sampler.middleout == value,
-                            onClick = { vm.setMiddleout(value) },
-                            label = { Text(value) },
-                        )
+                        ShellChip(value, selected = sampler.middleout == value) { vm.setMiddleout(value) }
                     }
                 }
                 ShellInput(
@@ -540,21 +536,15 @@ fun ProviderDetailScreen(
             Text("reasoning_effort（推理强度）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("auto", "min", "low", "medium", "high", "max").forEach { value ->
-                    FilterChip(
-                        selected = sampler.reasoningEffort == value,
-                        onClick = { vm.setReasoningEffort(value) },
-                        label = { Text(value) },
-                    )
+                    ShellChip(value, selected = sampler.reasoningEffort == value) { vm.setReasoningEffort(value) }
                 }
             }
             Text("verbosity（详细程度，gpt-5 系）", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("auto", "low", "medium", "high").forEach { value ->
-                    FilterChip(
-                        selected = (sampler.verbosity ?: "auto") == value,
-                        onClick = { vm.setVerbosity(if (value == "auto") "auto" else value) },
-                        label = { Text(value) },
-                    )
+                    ShellChip(value, selected = (sampler.verbosity ?: "auto") == value) {
+                        vm.setVerbosity(if (value == "auto") "auto" else value)
+                    }
                 }
             }
 
