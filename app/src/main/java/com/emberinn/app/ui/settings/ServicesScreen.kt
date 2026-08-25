@@ -536,11 +536,10 @@ private fun StyleSection(
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box {
-                FilterChip(
-                    selected = false,
-                    onClick = { selectorOpen = true },
-                    label = { Text(if (active.isBlank()) "样式库（未选择）" else "样式：$active", maxLines = 1) },
-                )
+                ShellChip(
+                    if (active.isBlank()) "样式库（未选择）" else "样式：$active",
+                    selected = active.isNotBlank(),
+                ) { selectorOpen = true }
                 DropdownMenu(expanded = selectorOpen, onDismissRequest = { selectorOpen = false }) {
                     styles.forEach { s ->
                         DropdownMenuItem(text = { Text(s.name) }, onClick = {
@@ -740,11 +739,9 @@ private fun VectorCard() {
         ServiceNote("引擎（聊天重排 / 世界书强制激活 / 文件分块检索）已 1:1 接线；数据银行文件在聊天 ⋮ 菜单管理。")
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             VECTOR_PROVIDERS.forEach { pv ->
-                FilterChip(
-                    selected = provider == pv.value,
-                    onClick = { provider = pv.value; save() },
-                    label = { Text(pv.label) },
-                )
+                ShellChip(pv.label, selected = provider == pv.value) {
+                    provider = pv.value; save()
+                }
                 Spacer(Modifier.width(8.dp))
             }
         }
