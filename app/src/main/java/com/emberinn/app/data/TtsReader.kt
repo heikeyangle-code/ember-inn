@@ -65,22 +65,18 @@ object TtsReader {
      * 外部后端朗读：调 TtsBackend.generateTts 取字节 → 落盘 → MediaPlayer 播放。
      * 返回是否成功发起（字节取得且 MediaPlayer 开始播放）。
      */
-    suspend fun speakExternal(context: Context, text: String, voiceId: String): Boolean = withContext(Dispatchers.IO) {
-        if (text.isBlank()) return@withContext false
-        val backend = TtsBackendRegistry.current(context) ?: return@withContext false
-        val bytes = runCatching { backend.generateTts(context, text, voiceId) }.getOrNull() ?: return@withContext false
-        if (bytes.isEmpty()) return@withContext false
-        stopExternal()
-        val dir = File(context.cacheDir, "tts").apply { mkdirs() }
-        val file = File(dir, "tts-${System.nanoTime()}.mp3")
-        file.writeBytes(bytes)
-        try {
+    /** 官方 ttsJobQueue 串行语义（tts/index.js:476-535）：上一段 onCompletion 再起下一段。 */
+    private fun playSequence(files: List<File>, idx: Int, rate: Float): Boolean {
+        if (idx >= files.size) return true
+        val file = files[idx]
+        return try {
             val mp = MediaPlayer()
             mp.setDataSource(file.absolutePath)
             mp.setOnCompletionListener {
                 mp.release()
                 file.delete()
                 if (mediaPlayer === mp) mediaPlayer = null
+                if (idx + 1 < files.size) playSequence(files, idx + 1, rate)
             }
             mp.setOnErrorListener { _, _, _ ->
                 mp.release(); file.delete()
@@ -88,13 +84,44 @@ object TtsReader {
                 true
             }
             mp.prepare()
+            // 官方 playback_rate 在 canplay 应用（index.js:361）；此前登记"语速对外部不生效"
+            if (rate > 0f && rate != 1f) {
+                runCatching { mp.playbackParams = mp.playbackParams.setSpeed(rate) }
+            }
             mp.start()
             mediaPlayer = mp
             true
         } catch (e: Exception) {
             file.delete()
-            false
+            playSequence(files, idx + 1, rate) // 单段坏文件跳过继续（官方失败 toastr 后队列续行）
         }
+    }
+
+    /**
+     * 外部后端朗读：调 TtsBackend.generateTts 取字节 → 落盘 → MediaPlayer 播放。
+     * 返回是否成功发起（至少一段取得字节并开始播放）。
+     */
+    suspend fun speakExternal(
+        context: Context,
+        text: String,
+        voiceId: String,
+        rate: Float = 1f,
+        byParagraphs: Boolean = false,
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (text.isBlank()) return@withContext false
+        val backend = TtsBackendRegistry.current(context) ?: return@withContext false
+        stopExternal()
+        val dir = File(context.cacheDir, "tts").apply { mkdirs() }
+        // 分段全部下载完再串行播——原先边下边播且每段先 stop，前一段起播即被下一段杀掉（只剩末段出声）
+        val files = mutableListOf<File>()
+        val segments = if (byParagraphs) text.split('\n').filter { it.isNotBlank() } else listOf(text)
+        for (seg in segments) {
+            val bytes = runCatching { backend.generateTts(context, seg, voiceId) }.getOrNull() ?: continue
+            if (bytes.isEmpty()) continue
+            files.add(File(dir, "tts-${System.nanoTime()}.mp3").apply { writeBytes(bytes) })
+        }
+        if (files.isEmpty()) return@withContext false
+        playSequence(files, 0, rate)
     }
 
     /** 主入口：按 VoicePrefs.ttsProvider 分流（system → Android，其他 → 外部后端）。 */
@@ -109,13 +136,8 @@ object TtsReader {
         return if (provider.isBlank() || provider == "system") {
             speakSystem(context, text, voice, rate, byParagraphs)
         } else {
-            // 外部后端忽略 rate/byParagraphs（后端自身处理；分段朗读由调用方循环调本方法）
-            val segments = if (byParagraphs) text.split('\n').filter { it.isNotBlank() } else listOf(text)
-            var ok = false
-            for (seg in segments) {
-                ok = speakExternal(context, seg, voice) || ok
-            }
-            ok
+            // 外部后端：分段下载+串行播放（narrate_by_paragraphs 才按行拆）；语速经 playbackParams 生效
+            speakExternal(context, text, voice, rate, byParagraphs)
         }
     }
 

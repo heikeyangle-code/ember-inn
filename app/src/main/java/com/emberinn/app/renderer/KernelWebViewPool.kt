@@ -145,7 +145,7 @@ class KernelWebViewPool(
     // 一并 display:none!important，手机上编辑后无确认钮可点（内核点击桥与宿主处理其实早已齐备）。
     // translate/sd/tts：官方 toggle-dependent.css 靠这三个 body 类亮出 翻译/画图/朗读 按钮
     // （官方=装且启用对应扩展才加类）；三功能在 App 为内建常驻，等价"扩展已启用"，恒加。
-    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "translate", "sd", "tts")
+    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "translate", "sd", "tts", "caption")
     @Volatile private var currentStylePackEnabled: Boolean = false
     @Volatile private var currentStylePackHref: String? = null
     @Volatile private var currentStylePackExtensionHref: String? = null

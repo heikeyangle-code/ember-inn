@@ -356,6 +356,8 @@ fun ChatScreen(
                 "translate",
                 "sd",
                 "tts",
+                // 官方 caption 扩展等价类：亮出图片补字幕按钮（功能内建常驻）
+                "caption",
                 ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass,
             ),
         )
@@ -1342,6 +1344,7 @@ fun ChatScreen(
                             "mes_prompt" -> tokenStatsIndex = MsgTarget(index, el)
                             "mes_hide" -> vm.hideMessage(index, true)
                             "mes_unhide" -> vm.hideMessage(index, false)
+                            "mes_img_caption" -> vm.captionExistingMessage(index)
                             "mes_media_gallery", "mes_media_list" -> vm.setMediaDisplay(index)
                             "mes_embed" -> {
                                 embedTargetIndex = MsgTarget(index, el)
