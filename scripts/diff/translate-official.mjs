@@ -52,9 +52,11 @@ function googleEndpoint(target, text) {
     // Google FormBody 的 key
     return { url: `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t`, formQ: text };
 }
+// 官方 src/endpoints/translate.js:183 urlJoin(baseUrl,'auto',lang,text)
+// （baseUrl 默认含 /api/v1；此前误抄客户端实现，fixture 锁了 bug——已按官方逐字改）
 function lingvaUrl(baseUrl, text, target) {
     const u = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-    return `${u}api/v1/${encodeURIComponent(text)}/${target}/auto`;
+    return `${u}auto/${target}/${encodeURIComponent(text)}`;
 }
 function deeplBody(text, target, apiKey) {
     return { auth_key: apiKey, text: [text], target_lang: target };

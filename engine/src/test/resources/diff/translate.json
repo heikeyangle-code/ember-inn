@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T19:35:26.762Z",
+  "generatedAt": "2026-08-25T18:54:04.691Z",
   "source": "translate/index.js translateIncomingMessage / translateIncomingMessageReasoning + 8 provider body contracts",
   "cases": [
     {
@@ -215,7 +215,7 @@
         "text": "hi",
         "target": "zh"
       },
-      "expected": "https://lingva.example/api/v1/hi/zh/auto"
+      "expected": "https://lingva.example/auto/zh/hi"
     },
     {
       "id": 14,
@@ -295,7 +295,7 @@
         "text": "hi there",
         "target": "ja"
       },
-      "expected": "https://lingva.example/api/v1/hi%20there/ja/auto"
+      "expected": "https://lingva.example/auto/ja/hi%20there"
     }
   ]
 }

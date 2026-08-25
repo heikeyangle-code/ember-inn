@@ -29,9 +29,11 @@ object TranslateEngine {
         return "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$lang&dt=t" to "q"
     }
 
+    /** 官方 src/endpoints/translate.js:183：{base}/auto/{target}/{text}，base 自带 /api/v1。 */
     fun lingvaUrl(baseUrl: String, text: String, target: String): String {
         val u = if (baseUrl.endsWith('/')) baseUrl else "$baseUrl/"
-        return u + "api/v1/${java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")}/$target/auto"
+        val enc = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+        return "${u}auto/$target/$enc"
     }
 
     data class DeepLBody(val auth_key: String, val text: List<String>, val target_lang: String)

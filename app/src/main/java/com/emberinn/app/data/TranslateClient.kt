@@ -158,7 +158,7 @@ class TranslateClient {
 
     // ---- Lingva（官方 lingva 扩展：/api/v1/{text}/{target}/auto → translation）----
     private fun lingva(text: String, target: String, url: String): String? {
-        val base = url.ifBlank { "https://lingva.ml" }
+        val base = url.ifBlank { "https://lingva.ml/api/v1" } // 官方 LINGVA_DEFAULT
         val lang = when (target) {
             "zh-CN", "zh-TW" -> "zh"
             "pt-BR", "pt-PT" -> "pt"
