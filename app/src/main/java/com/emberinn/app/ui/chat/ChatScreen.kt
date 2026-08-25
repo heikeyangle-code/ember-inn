@@ -738,8 +738,11 @@ fun ChatScreen(
         val name = nameOf(el, user)
         val formatAsSystem = system && name == SYSTEM_USER_NAME
         val reasoningSrc = if (!user && !system && showThoughtsNow) {
-            (el.jsonObject["extra"] as? JsonObject)?.get("reasoning")
+            // 官方 reasoning.js:343：reasoning_display_text ?? reasoning（推理译文优先显示）
+            (el.jsonObject["extra"] as? JsonObject)?.get("reasoning_display_text")
                 ?.jsonPrimitive?.contentOrNull
+                ?: (el.jsonObject["extra"] as? JsonObject)?.get("reasoning")
+                    ?.jsonPrimitive?.contentOrNull
                 ?: if (index == lastAiIndex) {
                     if (isStreaming) {
                         DisplayPipeline.balanceStreamingDelimiters(

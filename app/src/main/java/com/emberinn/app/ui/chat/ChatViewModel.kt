@@ -812,9 +812,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     private fun translateAutoMode(): String = ServicesPrefs.translateAutoMode(getApplication())
 
     /** 官方 translateIncomingMessage：AI 回复译文写 extra.display_text（原文保留），推理写 extra.reasoning_display_text。 */
-    private fun translateIncoming(index: Int, reasoning: String? = null) {
+    private fun translateIncoming(index: Int, reasoning: String? = null, skipModeGate: Boolean = false) {
         val mode = translateAutoMode()
-        if (mode != "responses" && mode != "both") return
+        if (!skipModeGate && mode != "responses" && mode != "both") return
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index)?.jsonObject ?: return
         val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
@@ -847,20 +847,24 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
-    /** 官方 translateOutgoingMessage：用户消息 mes 换成译文，原文存 extra.display_text。 */
+    /**
+     * 官方 translateOutgoingMessage（translate/index.js:524-538）：
+     * 原文存 extra.display_text（界面仍显示原文），mes 换成 internal_language 译文（发给模型）；
+     * 不做 substituteParams。auto_mode 门控 inputs/both。
+     */
     private fun translateOutgoing(index: Int) {
         val mode = translateAutoMode()
         if (mode != "inputs" && mode != "both") return
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index)?.jsonObject ?: return
-        val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        val original = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val translated = translateClient.translate(
-                getApplication(), text,
-                charName = currentCharName, nameOverride = currentUserName,
+                getApplication(), original,
+                targetLang = ServicesPrefs.translateInternalLanguage(getApplication()),
             ) ?: return@launch
             withContext(Dispatchers.Main) {
-                chatStore.setDisplayText(sessionId, index, displayText = translated, replaceMes = true)
+                chatStore.setDisplayText(sessionId, index, displayText = original, mesText = translated)
                 refreshMessages()
             }
         }
@@ -1015,23 +1019,52 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return text to count
     }
 
-    /** 翻译指定消息（P1-6 执行层；结果放 notice）。 */
+    /**
+     * 官方 onMessageTranslateClick（translate/index.js:671-696）开关语义：
+     * 已译（display_text/reasoning_display_text 任一在）→ 全删切回原文；
+     * 未译 → 正文+推理都按 incoming 语义翻译并落盘（无 auto_mode 门控，与官方一致）。
+     */
     fun translateMessage(index: Int) {
         val msgs = chatStore.messages(sessionId)
         val el = msgs.getOrNull(index)?.jsonObject ?: return
+        val extra = el["extra"] as? JsonObject
+        val hadDisplay = extra?.get("display_text") != null
+        val hadReasoningDisplay = extra?.get("reasoning_display_text") != null
+        if (hadDisplay || hadReasoningDisplay) {
+            chatStore.setDisplayText(sessionId, index, displayText = null, reasoningDisplayText = null)
+            refreshMessages()
+            return
+        }
         val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: return
+        val reasoningRaw = (extra?.get("reasoning") as? JsonPrimitive)?.contentOrNull
         val nameOverride = el["name"]?.jsonPrimitive?.contentOrNull
+        val targetLang = ServicesPrefs.translateTargetLanguage(getApplication())
         viewModelScope.launch(Dispatchers.IO) {
-            val result = translateClient.translate(
+            val translated = translateClient.translate(
                 getApplication(), text,
                 charName = currentCharName, nameOverride = nameOverride,
             )
-            withContext(Dispatchers.Main) {
-                _notice.value = if (result.isNullOrBlank()) {
-                    "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
-                } else {
-                    "译文：$result"
+            val translatedReasoning = if (!reasoningRaw.isNullOrBlank()) {
+                translateClient.translateReasoning(
+                    getApplication(), reasoningRaw, targetLang,
+                    charName = currentCharName, nameOverride = nameOverride,
+                )
+            } else {
+                null
+            }
+            if (translated.isNullOrBlank() && translatedReasoning.isNullOrBlank()) {
+                withContext(Dispatchers.Main) {
+                    _notice.value = "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
                 }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                chatStore.setDisplayText(
+                    sessionId, index,
+                    displayText = translated,
+                    reasoningDisplayText = translatedReasoning,
+                )
+                refreshMessages()
             }
         }
     }
@@ -2793,14 +2826,17 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 官方 messageEditDone：先 MESSAGE_EDITED 后 MESSAGE_UPDATED，同参 messageId（script.js:8345/8371）
         kernelEvents.tryEmit("message_edited" to listOf(index.toString()))
         kernelEvents.tryEmit("message_updated" to listOf(index.toString()))
-        // 官方 translateMessageEdit：auto_mode=none 时清 display_text；否则按消息类型重译
+        // 官方 translateMessageEdit（translate/index.js:625-640）：system 或（none 且已有译文）→清；
+        // 否则 mode 非 none 时一律走 incoming 语义重译（用户消息也只写 display_text，mes 不动）
         val autoMode = translateAutoMode()
-        if (autoMode == "none") {
+        val edited = chatStore.messages(sessionId).getOrNull(index)?.jsonObject
+        val isSystemMsg = edited?.get("is_system")?.jsonPrimitive?.booleanOrNull ?: false
+        val hadDisplay = edited?.let { (it["extra"] as? JsonObject)?.get("display_text") != null } ?: false
+        if (isSystemMsg || (autoMode == "none" && hadDisplay)) {
             chatStore.setDisplayText(sessionId, index, displayText = null, reasoningDisplayText = null)
             refreshMessages()
-        } else {
-            val edited = chatStore.messages(sessionId).getOrNull(index)?.jsonObject ?: return
-            if (isUser(edited)) translateOutgoing(index) else translateIncoming(index)
+        } else if (autoMode != "none") {
+            translateIncoming(index, skipModeGate = true)
         }
         // 官方 memory MESSAGE_UPDATED → onChatEvent
         memoryService.maybeAutoSummarize(sessionId)

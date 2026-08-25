@@ -321,6 +321,7 @@ class ChatStore(private val context: Context) {
         displayText: String?,
         replaceMes: Boolean = false,
         reasoningDisplayText: String? = null,
+        mesText: String? = null,
     ) {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return
@@ -329,7 +330,9 @@ class ChatStore(private val context: Context) {
         if (displayText == null) oldExtra.remove("display_text") else oldExtra["display_text"] = JsonPrimitive(displayText)
         if (reasoningDisplayText == null) oldExtra.remove("reasoning_display_text") else oldExtra["reasoning_display_text"] = JsonPrimitive(reasoningDisplayText)
         var out = JsonObject(el + ("extra" to JsonObject(oldExtra)))
-        if (replaceMes && displayText != null) {
+        if (mesText != null) {
+            out = JsonObject(out + ("mes" to JsonPrimitive(mesText)))
+        } else if (replaceMes && displayText != null) {
             out = JsonObject(out + ("mes" to JsonPrimitive(displayText)))
         }
         list[index] = out

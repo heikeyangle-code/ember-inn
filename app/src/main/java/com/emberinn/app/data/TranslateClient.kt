@@ -46,11 +46,18 @@ class TranslateClient {
         text: String,
         charName: String = "",
         nameOverride: String? = null,
+        targetLang: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext null
-        val prepared = TranslateEngine.substituteParamsNameOverride(text, charName, nameOverride)
+        // 官方出站路径不做 substituteParams（translateOutgoingMessage 无名字上下文）：
+        // 双名皆空时保持原文，避免把 {{char}} 替换成空串
+        val prepared = if (charName.isNotBlank() || nameOverride != null) {
+            TranslateEngine.substituteParamsNameOverride(text, charName, nameOverride)
+        } else {
+            text
+        }
         val provider = ServicesPrefs.translateProvider(context)
-        val target = ServicesPrefs.translateTargetLanguage(context)
+        val target = targetLang ?: ServicesPrefs.translateTargetLanguage(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)
         runCatching { dispatch(prepared, target, provider, apiKey, url) }.getOrNull()

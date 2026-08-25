@@ -31,6 +31,10 @@ object ServicesPrefs {
     fun translateUrl(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_url", "") ?: ""
 
+    /** 官方 extension_settings.translate.internal_language（默认 en）：出站译文的目标语言。 */
+    fun translateInternalLanguage(context: Context): String =
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("translation_internal_language", "en") ?: "en"
+
     // 图像
     fun imageSource(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString("sd_source", "auto") ?: "auto"
