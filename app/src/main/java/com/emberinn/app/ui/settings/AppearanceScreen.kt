@@ -45,7 +45,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,10 +54,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.ExtensionManager
 import com.emberinn.app.data.OfficialThemeManager
-import com.emberinn.app.ui.design.AppearanceBus
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.InkTier
 import com.emberinn.app.ui.design.components.InkText
@@ -69,7 +66,6 @@ import com.emberinn.app.ui.design.components.ChipRow
 import com.emberinn.app.ui.design.components.SheetRow
 import com.emberinn.app.ui.design.components.SheetRowTone
 import com.emberinn.app.ui.icons.FaIcons
-import kotlinx.coroutines.launch
 
 /**
  * 外观（DESIGN_SYSTEM §五）：酒馆官方主题管理 + 显示偏好。
@@ -84,12 +80,6 @@ fun AppearanceScreen(
     val extensions = remember { ExtensionManager.shared(context) }
     val themes by official.themes.collectAsState()
     val currentTheme by official.currentName.collectAsState()
-
-    var radius by remember { mutableStateOf(AppearancePrefs.radius(context)) }
-    var font by remember { mutableStateOf(AppearancePrefs.font(context)) }
-    val fontScope = rememberCoroutineScope()
-    var fontDownloading by remember { mutableStateOf(false) }
-    var fontError by remember { mutableStateOf<String?>(null) }
 
     // 官方主题：导入 / 导出 / 管理（导出、另存、删除收进弹层）
     var manageSheetFor by remember { mutableStateOf<String?>(null) }
@@ -171,71 +161,14 @@ fun AppearanceScreen(
                     }
                 }
 
-                // ---------------- 显示 ----------------
-                item {
-                    SectionTitle("显示")
-                    PreferenceGroup {
-                        GroupLabel("全局圆角")
-                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
-                            listOf("default" to "系统", "square" to "方正", "rounded" to "圆润", "circle" to "浑圆").forEach { (v, label) ->
-                                EmberChip(
-                                    label = label,
-                                    selected = radius == v,
-                                    onClick = { radius = v; AppearancePrefs.save(context, radius, font); AppearanceBus.notifyChanged() },
-                                )
-                            }
-                        }
-                    }
-                }
-                item {
-                    PreferenceGroup {
-                        GroupLabel("全局字体")
-                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
-                            listOf(
-                                "default" to "系统",
-                                "serif" to "衬线",
-                                "noto" to "Noto Sans",
-                            ).forEach { (v, label) ->
-                                val fontReady = when (v) {
-                                    "noto" -> FontManager.notoReady(context)
-                                    else -> true
-                                }
-                                EmberChip(
-                                    label = if (v == "noto" && !fontReady) "$label ↓" else label,
-                                    selected = font == v,
-                                    onClick = {
-                                        when {
-                                            v == "noto" && !fontReady -> {
-                                                font = "noto"
-                                                fontScope.launch {
-                                                    fontDownloading = true
-                                                    val result = FontManager.ensureNoto(context)
-                                                    fontDownloading = false
-                                                    result.onSuccess {
-                                                        AppearancePrefs.save(context, radius, "noto")
-                                                        AppearanceBus.notifyChanged()
-                                                    }.onFailure { e ->
-                                                        font = AppearancePrefs.font(context)
-                                                        fontError = e.message ?: "未知错误"
-                                                    }
-                                                }
-                                            }
-                                            else -> {
-                                                font = v
-                                                AppearancePrefs.save(context, radius, v)
-                                                AppearanceBus.notifyChanged()
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-
                 // ---------------- 官方主题字段微调（=官方 User Settings 面板，写回主题 JSON） ----------------
                 item {
                     ThemeTuneGroup()
+                }
+
+                // ---------------- 扩展（=官方 wand 菜单 Extensions 面板） ----------------
+                item {
+                    ExtensionsSection()
                 }
             }
         }
@@ -323,24 +256,6 @@ fun AppearanceScreen(
         )
     }
 
-    if (fontDownloading) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("下载字体") },
-            text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB），完成后自动应用，请稍候…") },
-            confirmButton = {},
-        )
-    }
-    fontError?.let { err ->
-        AlertDialog(
-            onDismissRequest = { fontError = null },
-            title = { Text("字体下载失败") },
-            text = { Text(err) },
-            confirmButton = {
-                TextButton(onClick = { fontError = null }) { Text("知道了") }
-            },
-        )
-    }
 }
 
 /** 设置分组容器：surface 卡统一包裹。 */
@@ -440,9 +355,14 @@ private fun ThemeTuneGroup() {
     val stylePack = extState.pack
 
     PreferenceGroup {
-        GroupLabel("消息布局与头像")
+        // 官方 index.html AvatarAndChatDisplay 块：chat_display / avatar_style /
+        // media_display / toastr_position 四下拉。3..7 为 Moonlit 扩展注入 options
+        // （官方扩展把 options append 进同一 select；扩展禁用即消失）。
+        GroupLabel("聊天样式（chat_display）")
         ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-            listOf(0 to "平铺", 1 to "气泡", 2 to "文档").forEach { (v, label) ->
+            (listOf(0 to "平铺", 1 to "气泡", 2 to "文档") +
+                if (stylePack.enabled) listOf(3 to "Echo", 4 to "Whisper", 5 to "Hush", 6 to "Ripple", 7 to "Tide") else emptyList()
+                ).forEach { (v, label) ->
                 EmberChip(
                     label = label,
                     selected = numVal("chat_display", 0.0).toInt() == v,
@@ -450,23 +370,8 @@ private fun ThemeTuneGroup() {
                 )
             }
         }
-        // Moonlit Echoes 扩展布局（chat_display 3..7 → echostyle 等 body 类）：
-        // 仅样式包在位时提供入口——CSS 未加载时这些类无样式，选择无意义
-        if (stylePack.enabled) {
-            Spacer(Modifier.height(8.dp))
-            GroupLabel("Moonlit 消息样式（扩展布局）")
-            ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-                listOf(3 to "Echo", 4 to "Whisper", 5 to "Hush", 6 to "Ripple", 7 to "Tide").forEach { (v, label) ->
-                    EmberChip(
-                        label = label,
-                        selected = numVal("chat_display", 0.0).toInt() == v,
-                        onClick = { setInt("chat_display", v) },
-                    )
-                }
-            }
-        }
         Spacer(Modifier.height(8.dp))
-        GroupLabel("头像样式")
+        GroupLabel("头像样式（avatar_style）")
         ChipRow(modifier = Modifier.padding(top = 6.dp)) {
             listOf(0 to "圆形", 1 to "大图", 2 to "方形", 3 to "圆角").forEach { (v, label) ->
                 EmberChip(
@@ -477,7 +382,18 @@ private fun ThemeTuneGroup() {
             }
         }
         Spacer(Modifier.height(8.dp))
-        GroupLabel("提示弹窗位置（toastr_position）")
+        GroupLabel("媒体附件展示（media_display）")
+        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
+            listOf("list" to "列表", "gallery" to "画廊").forEach { (v, label) ->
+                EmberChip(
+                    label = label,
+                    selected = strVal("media_display", "list") == v,
+                    onClick = { setField("media_display", JsonPrimitive(v)) },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        GroupLabel("通知位置（toastr_position）")
         ChipRow(modifier = Modifier.padding(top = 6.dp)) {
             listOf(
                 "toast-top-left" to "左上", "toast-top-center" to "上中", "toast-top-right" to "右上",
@@ -487,17 +403,6 @@ private fun ThemeTuneGroup() {
                     label = label,
                     selected = strVal("toastr_position", "toast-top-center") == v,
                     onClick = { setField("toastr_position", JsonPrimitive(v)) },
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        GroupLabel("媒体附件展示")
-        ChipRow(modifier = Modifier.padding(top = 6.dp)) {
-            listOf("list" to "列表", "gallery" to "画廊").forEach { (v, label) ->
-                EmberChip(
-                    label = label,
-                    selected = strVal("media_display", "list") == v,
-                    onClick = { setField("media_display", JsonPrimitive(v)) },
                 )
             }
         }
@@ -564,11 +469,28 @@ private fun ThemeTuneGroup() {
         SwitchPrefRow("Zen 滑条", "enableZenSliders", boolVal("enableZenSliders", false)) { setBool("enableZenSliders", it) }
         SwitchPrefRow("Lab 模式", "enableLabMode", boolVal("enableLabMode", false)) { setBool("enableLabMode", it) }
         SwitchPrefRow("点击正文进入编辑", "click_to_edit", boolVal("click_to_edit", false)) { setBool("click_to_edit", it) }
+        SwitchPrefRow("头像悬浮放大", "zoomed_avatar_magnification", boolVal("zoomed_avatar_magnification", false)) { setBool("zoomed_avatar_magnification", it) }
+        SwitchPrefRow("标签显示为文件夹", "bogus_folders", boolVal("bogus_folders", false)) { setBool("bogus_folders", it) }
     }
 
     Spacer(Modifier.height(10.dp))
 
     ColorCssGroup(obj)
+}
+
+/**
+ * 扩展大区（官方 wand 菜单 Extensions 面板语义）：扩展列表启停/删除 +
+ * 启用中扩展自带设置区（schema 驱动）。与主题区分离——官方里扩展设置
+ * 就在扩展面板，不挂在主题设置下面。
+ */
+@Composable
+private fun ExtensionsSection() {
+    SectionTitle("扩展")
+    InkText(
+        "官方扩展面板语义：扩展装了即全局生效，与主题无关；此处启停/删除",
+        tier = InkTier.Mute,
+        sizeSp = 12f,
+    )
     ExtensionManageGroup()
     StylePackVarGroup()
 }
@@ -736,12 +658,12 @@ private fun StylePackVarGroup() {
                 } ?: def.defaultStr
                 when (def.type) {
                     "checkbox" -> SwitchPrefRow(
-                        packLabel(def.varId),
+                        def.displayText,
                         def.varId,
                         cur == "true",
                     ) { manager.updateStylePackVar(def.varId, if (it) "true" else "false") }
                     "slider" -> PackSliderRow(
-                        label = packLabel(def.varId),
+                        label = def.displayText,
                         value = cur.toDoubleOrNull() ?: def.defaultStr.toDoubleOrNull() ?: 0.0,
                         min = def.min ?: 0.0,
                         max = def.max ?: 10.0,
@@ -749,7 +671,7 @@ private fun StylePackVarGroup() {
                     ) { v -> manager.updateStylePackVar(def.varId, v) }
                     "select" -> {
                         Text(
-                            packLabel(def.varId),
+                            def.displayText,
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(start = 16.dp, top = 8.dp),
                         )
@@ -765,7 +687,7 @@ private fun StylePackVarGroup() {
                     }
                     "textarea" -> PackTextField(
                         varId = def.varId,
-                        label = packLabel(def.varId),
+                        label = def.displayText,
                         value = cur,
                         singleLine = false,
                     ) { manager.updateStylePackVar(def.varId, it) }
@@ -780,13 +702,13 @@ private fun StylePackVarGroup() {
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(packPreviewColor(cur)),
                         )
-                        PackTextField(varId = def.varId, label = packLabel(def.varId), value = cur) {
+                        PackTextField(varId = def.varId, label = def.displayText, value = cur) {
                             manager.updateStylePackVar(def.varId, it)
                         }
                     }
                     else -> PackTextField(
                         varId = def.varId,
-                        label = packLabel(def.varId),
+                        label = def.displayText,
                         value = cur,
                     ) { manager.updateStylePackVar(def.varId, it) }
                 }
@@ -861,69 +783,6 @@ private fun packPreviewColor(spec: String): androidx.compose.ui.graphics.Color =
     }
 }.getOrDefault(androidx.compose.ui.graphics.Color.Gray)
 
-/** 官方英文标签 → 中文（Moonlit theme-settings 59 项；未知回落英文原文） */
-private fun packLabel(varId: String): String = when (varId) {
-    "customThemeColor" -> "主主题色"
-    "customThemeColor2" -> "次主题色"
-    "customBgColor1" -> "主背景色"
-    "customBgColor2" -> "次背景色"
-    "customTopBarColor" -> "顶栏颜色"
-    "Drawer-iconColor" -> "菜单图标颜色"
-    "sheldBackgroundColor" -> "聊天区背景色"
-    "customScrollbarColor" -> "滚动条颜色"
-    "hideAvatarBorder" -> "隐藏头像边框"
-    "custom-ChatAvatar" -> "聊天区头像尺寸"
-    "mesParagraphSpacingTop" -> "段落上间距"
-    "mesParagraphSpacingBottom" -> "段落下间距"
-    "charNameFontSize" -> "角色名字号"
-    "userNameFontSize" -> "用户名字号"
-    "messageTextFontSize" -> "正文字号"
-    "messageLineHeight" -> "正文行高"
-    "messageTextLetterSpacing" -> "正文字距"
-    "customlastInContext" -> "上下文末尾标记样式"
-    "customCSS-bg-blur" -> "背景模糊强度"
-    "customCSS-bg-opacity" -> "背景图不透明度"
-    "sheldBlurStrength" -> "聊天区模糊强度"
-    "mobileSheldBlurStrength" -> "移动端聊天区模糊强度"
-    "enableThemeColorization" -> "主题色应用到更多 UI"
-    "disableTopMenuAnimation" -> "禁用顶栏菜单动画"
-    "forceFixedMenuHeight" -> "锁定 AI 回复/角色菜单高度"
-    "newMenuMaxHeight" -> "动态调整菜单最大高度"
-    "disableAllBorderRadius" -> "禁用所有圆角"
-    "expandEntryInputWidth" -> "扩展输入框宽度"
-    "compactWorldsLorebooksTopBar" -> "世界书紧凑顶栏"
-    "rawCustomCss" -> "原生自定义 CSS"
-    "customCSS-ChatGradientBlur" -> "聊天区渐变模糊"
-    "showLLMReasoningIcon" -> "推理块显示 LLM 图标"
-    "justifyParagraphText" -> "段落两端对齐"
-    "enableMessageDetails" -> "隐藏附加消息详情"
-    "messageDetailsAnimationDuration" -> "消息详情动画时长"
-    "favoriteSymbol" -> "收藏符号"
-    "favoriteSymbolAnimation" -> "收藏符号动画"
-    "VN-sheld-height" -> "VN 模式聊天区高度"
-    "VN-expression-holder" -> "VN 模式立绘渐变透明"
-    "custom-EchoAvatarWidth" -> "[Echo] 背景头像宽"
-    "custom-EchoAvatarHeight" -> "[Echo] 背景头像高"
-    "custom-EchoAvatarMobileWidth" -> "[Echo] 移动端背景头像宽"
-    "custom-EchoAvatarMobileHeight" -> "[Echo] 移动端背景头像高"
-    "hideEchoUserIllustration" -> "[Echo] 隐藏用户消息插图"
-    "hideMobileEchoBackground" -> "[Echo] 移动端隐藏消息背景"
-    "customWhisperAvatarWidth" -> "[Whisper] 背景头像宽"
-    "customWhisperAvatarAlign" -> "[Whisper] 头像对齐"
-    "customRippleAvatarWidth" -> "[Ripple] 头像宽"
-    "customRippleAvatarMobileWidth" -> "[Ripple] 移动端头像宽"
-    "hideRippleUserAvatar" -> "[Ripple] 隐藏用户头像"
-    "enableMobile-hidden_scrollbar" -> "移动端隐藏滚动条"
-    "enableMobile-send_form" -> "移动端新输入框样式"
-    "inlineMobileMeta" -> "移动端内联名字/时间/图标"
-    "increaseMobileInputSpacing" -> "移动端输入区间距加大"
-    "increaseDesktopInputSpacing" -> "桌面端输入区间距加大"
-    "fixTabletMenuLayout" -> "平板菜单布局修正"
-    "mobileQRsBarHeight" -> "移动端快捷回复栏高度"
-    "moveQRsBelowInputMobile" -> "移动端快捷回复栏下移"
-    "enableMobile-horizontal_hotswap" -> "移动端横向角色卡滚动"
-    else -> varId
-}
 
 /** 颜色十项 + 自定义 CSS：官方主题颜色类字段的调节入口（hex 文本，点应用写回主题）。 */
 @Composable
