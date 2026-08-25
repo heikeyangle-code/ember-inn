@@ -351,19 +351,13 @@ fun ProviderDetailScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
             )
-            EmberTextField(
-                value = apiKey,
-                onValueChange = vm::setApiKey,
-                label = { Text("API Key") },
-                singleLine = true,
-                visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
+            ShellInput(value = apiKey, onValueChange = vm::setApiKey, label = ""API Key"", singleLine = true, visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(), trailing = {
+
                     TextButton(onClick = { keyVisible = !keyVisible }) {
                         Text(if (keyVisible) "隐藏" else "显示")
                     }
-                },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+                
+}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             EmberTextField(
                 value = baseUrl,
                 onValueChange = vm::setBaseUrl,
@@ -667,16 +661,10 @@ fun ProviderDetailScreen(
                                         modifier = Modifier.weight(1f),
                                     )
                                     Spacer(Modifier.width(6.dp))
-                                    EmberTextField(
-                                        value = entry.value.toString(),
-                                        onValueChange = { v ->
+                                    ShellInput(value = entry.value.toString(), onValueChange = { v ->
                                             v.toDoubleOrNull()?.coerceIn(-100.0, 100.0)
                                                 ?.let { vm.updateBiasEntry(presetName, entry.id, value = it) }
-                                        },
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        modifier = Modifier.width(84.dp),
-                                    )
+                                        }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(84.dp))
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = true) }, enabled = index > 0) { Text("↑") }
                                     TextButton(onClick = { vm.moveBiasEntry(presetName, entry.id, up = false) }, enabled = index < entries.lastIndex) { Text("↓") }
                                     TextButton(onClick = { vm.removeBiasEntry(presetName, entry.id) }) { Text("删", color = EmberTheme.colors.danger) }
@@ -1283,26 +1271,12 @@ private fun TopBar(
 
 @Composable
 private fun DecimalRow(label: String, value: String, onChange: (String) -> Unit) {
-    EmberTextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    )
+    ShellInput(value = value, onValueChange = onChange, label = "label", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
 }
 
 @Composable
 private fun IntRow(label: String, value: String, onChange: (String) -> Unit) {
-    EmberTextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    )
+    ShellInput(value = value, onValueChange = onChange, label = "label", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
 }
 
 @Composable
@@ -1358,9 +1332,7 @@ private fun PromptQuickEdit(context: android.content.Context, identifier: String
     var text by remember(identifier) {
         mutableStateOf(existing?.content.orEmpty())
     }
-    EmberTextField(
-        value = text,
-        onValueChange = { new ->
+    ShellInput(value = text, onValueChange = { new ->
             text = new
             val current = com.emberinn.app.data.PromptManagerPrefs.prompts(context)
             val found = current.firstOrNull { it.identifier == identifier }
@@ -1375,9 +1347,5 @@ private fun PromptQuickEdit(context: android.content.Context, identifier: String
                 context,
                 if (found != null) current.map { if (it.identifier == identifier) updated else it } else current + updated,
             )
-        },
-        label = { Text(label) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-    )
+        }, label = "label", singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
 }

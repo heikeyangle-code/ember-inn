@@ -203,6 +203,9 @@ fun ShellInput(
     singleLine: Boolean = true,
     minLines: Int = 1,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
+        androidx.compose.ui.text.input.VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
@@ -225,10 +228,15 @@ fun ShellInput(
                 textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
                 cursorBrush = SolidColor(c.accent),
                 keyboardOptions = keyboardOptions,
+                visualTransformation = visualTransformation,
                 minLines = minLines,
                 maxLines = maxLines,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
             )
+            if (trailing != null) {
+                Spacer(Modifier.width(8.dp))
+                trailing()
+            }
         }
     }
 }
