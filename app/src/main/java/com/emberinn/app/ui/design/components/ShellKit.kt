@@ -412,7 +412,7 @@ fun EmberSwitch(checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean 
     val c = EmberTheme.colors
     val thumbX by animateDpAsState(
         targetValue = if (checked) 22.dp else 2.dp,
-        animationSpec = tween(160),
+        animationSpec = tween(EmberTheme.motion.controlMs),
         label = "emberSwitchThumb",
     )
     Box(
@@ -546,12 +546,13 @@ fun FloatHub(
     onLongPress: (() -> Unit)? = null,
 ) {
     val c = EmberTheme.colors
+    val revealMs = EmberTheme.motion.controlMs
     var open by remember { mutableStateOf(false) }
     Column(modifier = modifier, horizontalAlignment = Alignment.End) {
         AnimatedVisibility(
             visible = open,
-            enter = fadeIn(tween(140)) + expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(180)),
-            exit = fadeOut(tween(110)) + shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(140)),
+            enter = fadeIn(tween(revealMs)) + expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(revealMs)),
+            exit = fadeOut(tween(revealMs)) + shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(revealMs)),
         ) {
             ThemeSurface(ShellFace.Content, corner = 18.dp, hairline = true, modifier = Modifier.padding(bottom = 10.dp)) {
                 Column(Modifier.padding(vertical = 6.dp)) {

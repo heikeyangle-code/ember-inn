@@ -103,6 +103,8 @@ data class EmberMotion(
     val pageMs: Int get() = (320 * scale).toInt().coerceIn(120, 640)
     /** Sheet 弹出 240ms × scale（§七）。 */
     val sheetMs: Int get() = (240 * scale).toInt().coerceIn(100, 480)
+    /** 微交互（开关滑块/悬浮钮展开/折叠组）160ms × scale（§七 动效一致性归档）。 */
+    val controlMs: Int get() = (160 * scale).toInt().coerceIn(80, 320)
     /** 减动画模式统一 80ms fade（§七 无障碍）。 */
     val reducedMs: Int get() = 80
 }

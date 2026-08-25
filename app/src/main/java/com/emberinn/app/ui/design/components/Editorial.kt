@@ -2,6 +2,7 @@ package com.emberinn.app.ui.design.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -364,11 +365,14 @@ fun AccordionGroup(
     content: @Composable () -> Unit,
 ) {
     val c = EmberTheme.colors
+    val motion = EmberTheme.motion
     var expanded by remember { mutableStateOf(initiallyExpanded) }
     val reduced = EmberTheme.reducedMotion
+    // 折叠组动效（§七 归档）：展开/箭头走 controlMs；减动画=瞬时切换 + 80ms fade
+    val revealMs = if (reduced) motion.reducedMs else motion.controlMs
     val arrow by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
-        animationSpec = if (reduced) tween(1) else tween(200),
+        animationSpec = if (reduced) snap() else tween(motion.controlMs),
         label = "accordionArrow",
     )
     Column(modifier = modifier.fillMaxWidth()) {
@@ -401,8 +405,8 @@ fun AccordionGroup(
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = if (reduced) fadeIn(tween(80)) else fadeIn(tween(160)) + expandVertically(tween(200)),
-            exit = if (reduced) fadeOut(tween(80)) else fadeOut(tween(120)) + shrinkVertically(tween(160)),
+            enter = fadeIn(tween(revealMs)) + expandVertically(tween(revealMs)),
+            exit = fadeOut(tween(revealMs)) + shrinkVertically(tween(revealMs)),
         ) {
             Column { content() }
         }

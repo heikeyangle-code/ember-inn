@@ -191,8 +191,8 @@ private fun EmberFadeIn(visible: Boolean, reduced: Boolean, content: @Composable
     }
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(360)) +
-            slideInVertically(initialOffsetY = { it / 14 }, animationSpec = tween(360)),
+        enter = fadeIn(animationSpec = tween(EmberTheme.motion.pageMs)) +
+            slideInVertically(initialOffsetY = { it / 14 }, animationSpec = tween(EmberTheme.motion.pageMs)),
     ) {
         Column { content() }
     }

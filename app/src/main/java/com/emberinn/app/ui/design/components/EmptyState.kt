@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.EmberTheme
 
 /**
@@ -40,6 +39,9 @@ fun EmptyState(
     compact: Boolean = false,
 ) {
     val c = EmberTheme.colors
+    val typo = EmberTheme.typo
+    val titleType = if (compact) typo.subhead else typo.head
+    val bodyType = if (compact) typo.caption else typo.body
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -65,9 +67,9 @@ fun EmptyState(
         Text(
             title,
             color = c.ink,
-            fontSize = if (compact) 15.sp else 17.sp,
+            fontSize = titleType.fontSize,
             fontWeight = FontWeight.SemiBold,
-            lineHeight = if (compact) 21.sp else 24.sp,
+            lineHeight = titleType.lineHeight,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
@@ -75,8 +77,8 @@ fun EmptyState(
         Text(
             body,
             color = c.inkMute,
-            fontSize = if (compact) 12.sp else 14.sp,
-            lineHeight = if (compact) 18.sp else 21.sp,
+            fontSize = bodyType.fontSize,
+            lineHeight = bodyType.lineHeight,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp),
         )

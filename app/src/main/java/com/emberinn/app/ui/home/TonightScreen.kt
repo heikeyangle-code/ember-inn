@@ -213,7 +213,7 @@ private fun HeroStory(
                 Text(
                     character?.name ?: record.name,
                     color = c.ink,
-                    fontSize = if (compact) 15.sp else 17.sp,
+                    fontSize = if (compact) EmberTheme.typo.subhead.fontSize else EmberTheme.typo.head.fontSize,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     modifier = Modifier.weight(1f, fill = false),

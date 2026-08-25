@@ -208,9 +208,16 @@ Meta 11sp + letterSpacing 0.8sp。间距律：页缘 20dp · 组间 28dp · 组�
 - 主题切换 lerp 400ms（审计表最后一项遗留）：`EmberColors.lerpTo` 全套 20 令牌插值，
   MainActivity LaunchedEffect 驱动 animate(0→1)；官方 reduced_motion 或壳层动效减弱档
   自动降为 80ms 近似瞬切。
-- 剩余（未做）：Typography 全局审计（散落 fontSize 统一为类型比例）、
-  动效一致性走查（页面转场/Sheet 弹簧参数统一）、Reduced Motion 系统设置跟随
-  （当前仅官方主题字段 + 壳层档位，未接 Android 系统动画关闭）。
+- Typography 全局审计 ✅：12 档类型比例表（EmberTokens EmberType/EmberTypography）
+  为单一真相源，fontSize 全仓收编无离表字面量；InkText 的 sizeSp 属组件原语参数保留。
+- Reduced Motion 系统跟随 ✅：MainActivity 读 `ANIMATOR_DURATION_SCALE==0`
+  （开发者选项「移除动画」/无障碍关闭动画）并入 reducedMotion 判定
+  （官方 reduced_motion ∪ 壳层减弱档 ∪ 系统动画关闭三根线）。
+- 动效一致性走查 ✅：EmberMotion 四档时长令牌 pageMs(320)/sheetMs(240)/
+  controlMs(160 微交互)/reducedMs(80)；DestContent 目的地切换 AnimatedContent
+  fade+上滑走 pageMs，减动画降级纯 fade；ShellKit 开关滑块/FloatHub 展开、
+  Editorial AccordionGroup、Onboarding 分段入场全部归档。保留值：toastr 250ms
+  （官方对齐）、呼吸光 1600ms、主题 lerp 400/80ms（规格值）。
 
 ## 六、个性化（第 15 阶段，只影响 App Shell）——已由 §六（上文实施记录）覆盖，此为原规划留档
 
@@ -222,7 +229,8 @@ AppearancePrefs 扩展（Chat Theme 独立不受影响）：
 
 ## 七、验收（第 17 阶段）
 
-1. `:app:compileDebugKotlin` 绿 + 内核金测试 5 套件全绿（339 例）
-2. 功能清单核对：2.2 表逐项落地
-3. 视觉验收：三空间各自特性成立（Companion 大图/Chat 沉浸/Power 密度）
-4. 回归：设置深链、全局搜索、导入导出、宽屏双栏全部可用
+1. `:app:compileDebugKotlin` 绿 + 内核金测试 jsdom 四套件 309 例全绿（2026-08-25 本机）；
+   CI assembleDebug + 单测随收尾 push 验证
+2. 功能清单核对：2.2 表逐项落地（第 12 阶段收口）+ 2.2.2 全链路逐字段核销（第 13 阶段）
+3. 视觉验收：三空间各自特性成立（Companion 大图/Chat 沉浸/Power 密度）——真机人工项
+4. 回归：设置深链、全局搜索、导入导出、宽屏双栏——真机人工项

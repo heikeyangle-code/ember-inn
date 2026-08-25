@@ -6,6 +6,12 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -493,25 +499,45 @@ private fun DestContent(
     onSettingsDeepLinkConsumed: () -> Unit,
     onSelectDestination: (Int) -> Unit = {},
 ) {
-    when (selected) {
-        0 -> TonightScreen(
-            vm = homeVm,
-            onOpenChat = onOpenChat,
-            onOpenDetail = onOpenDetail,
-            onGoLibrary = { onSelectDestination(2) },
-        )
-        1 -> com.emberinn.app.ui.sessions.SessionsScreen(
-            onOpenSession = onOpenChat,
-        )
-        2 -> com.emberinn.app.ui.home.CharactersScreen(
-            onOpenChat = onOpenChat,
-            onOpenSettings = onOpenSettings,
-            onOpenDetail = onOpenDetail,
-        )
-        else -> com.emberinn.app.ui.settings.SettingsScreen(
-            deepLink = settingsDeepLink,
-            onDeepLinkConsumed = onSettingsDeepLinkConsumed,
-        )
+    // 页面转场（§七 动效律）：fade + 上滑 8dp 走 motion.pageMs；减动画降级 80ms 纯 fade。
+    // EmberTheme 访问器是 @Composable getter：先读出局部值再进 transitionSpec/content lambda
+    val pageMs = EmberTheme.motion.pageMs
+    val reducedMs = EmberTheme.motion.reducedMs
+    val reduced = EmberTheme.reducedMotion
+    AnimatedContent(
+        targetState = selected,
+        transitionSpec = {
+            if (reduced) {
+                fadeIn(tween(reducedMs)) togetherWith fadeOut(tween(reducedMs))
+            } else {
+                (
+                    fadeIn(tween(pageMs)) +
+                        slideInVertically(tween(pageMs)) { it / 24 }
+                    ) togetherWith fadeOut(tween(pageMs))
+            }
+        },
+        label = "destTransition",
+    ) { dest ->
+        when (dest) {
+            0 -> TonightScreen(
+                vm = homeVm,
+                onOpenChat = onOpenChat,
+                onOpenDetail = onOpenDetail,
+                onGoLibrary = { onSelectDestination(2) },
+            )
+            1 -> com.emberinn.app.ui.sessions.SessionsScreen(
+                onOpenSession = onOpenChat,
+            )
+            2 -> com.emberinn.app.ui.home.CharactersScreen(
+                onOpenChat = onOpenChat,
+                onOpenSettings = onOpenSettings,
+                onOpenDetail = onOpenDetail,
+            )
+            else -> com.emberinn.app.ui.settings.SettingsScreen(
+                deepLink = settingsDeepLink,
+                onDeepLinkConsumed = onSettingsDeepLinkConsumed,
+            )
+        }
     }
 }
 
