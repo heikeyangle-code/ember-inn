@@ -139,15 +139,7 @@ fun SessionsScreen(
         }
     }
 
-    val sky = rememberSky()
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 静态背景层：聊天列表毛玻璃顶栏的静态模糊源（列表滚动不触发整屏重捕）
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .sky(sky)
-                .background(EmberTheme.colors.bg),
-        )
+    Box(modifier = Modifier.fillMaxSize().background(EmberTheme.colors.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
