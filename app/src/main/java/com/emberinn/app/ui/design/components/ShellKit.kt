@@ -196,7 +196,7 @@ fun SearchField(
 fun ShellInput(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
+    label: String? = null,
     modifier: Modifier = Modifier,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions =
         androidx.compose.foundation.text.KeyboardOptions.Default,
@@ -212,8 +212,10 @@ fun ShellInput(
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
     Column(modifier = modifier.padding(vertical = 6.dp)) {
-        Text(label, color = c.inkMute, fontSize = 12.sp)
-        Spacer(Modifier.height(6.dp))
+        if (label != null) {
+            Text(label, color = c.inkMute, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
