@@ -61,12 +61,23 @@ class MainActivity : ComponentActivity() {
             var animatedColors by remember {
                 mutableStateOf(derived.colors)
             }
+            // Reduced Motion 跟随系统（第 16 阶段）：系统动画时长缩放为 0（开发者选项
+            // 「移除动画」/无障碍「关闭动画」）时，壳层全部动效自动降 80ms fade——
+            // 三根判定线：官方主题 reduced_motion 字段 ∪ 壳层动效减弱档 ∪ 系统动画关闭。
+            val systemAnimOff = remember {
+                android.provider.Settings.Global.getFloat(
+                    appContext.contentResolver,
+                    android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                    1f,
+                ) == 0f
+            }
             LaunchedEffect(derived.colors) {
                 val start = animatedColors
                 val end = derived.colors
                 if (start == end) return@LaunchedEffect
                 val reduced = shell.reducedMotion ||
-                    AppearancePrefs.motionLevel(appContext) == "reduced"
+                    AppearancePrefs.motionLevel(appContext) == "reduced" ||
+                    systemAnimOff
                 val durationMs = if (reduced) 80 else 400
                 androidx.compose.animation.core.animate(
                     initialValue = 0f,
@@ -106,7 +117,7 @@ class MainActivity : ComponentActivity() {
                 colors = animatedColors,
                 chat = derived.chat,
                 stageTint = derived.stageTint,
-                reducedMotion = shell.reducedMotion,
+                reducedMotion = shell.reducedMotion || systemAnimOff,
                 blur = derived.blurRadius,
                 fontFamily = fontFamily,
                 radius = radius,

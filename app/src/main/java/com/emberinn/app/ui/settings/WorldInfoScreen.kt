@@ -169,7 +169,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         if (worlds.isEmpty()) "还没有外置世界。新建一个，或导入官方 worlds/*.json。"
                         else "没有匹配「${search.trim()}」的世界。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 4.dp),
                     )
                 }
@@ -194,7 +194,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         Text(
                             "字段对齐官方 World Info 面板；作用于角色卡内嵌世界书的聊天扫描。改动立即保存，下次发送生效。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                         )
                         NumberRow("深度（depth）", settings.depth.toString()) { v ->
@@ -224,7 +224,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         Text(
                             "高级：分组评分、时间效果、角色过滤等字段由角色卡条目自身控制。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, top = 10.dp),
                         )
                     }
@@ -245,7 +245,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                     Text(
                         "官方 world_info_insertion_strategy：条目在世界信息块内的排序依据。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp, top = 8.dp),
                     )
                 }
@@ -277,7 +277,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         Text(
                             "这些角色的卡片通过 data.extensions.world 关联本世界，聊天时自动扫描。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
                         )
                         linked.take(6).forEach { ch ->
@@ -290,9 +290,9 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                                 AvatarCircle(ch.avatarPath?.takeIf { File(it).exists() }, ch.name, 36.dp)
                                 Spacer(Modifier.width(11.dp))
                                 Column {
-                                    Text(ch.name, color = c.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(ch.name, color = c.ink, fontSize = EmberTheme.typo.body.fontSize, fontWeight = FontWeight.Medium)
                                     ch.description.takeIf { it.isNotBlank() }?.let {
-                                        Text(it, color = c.inkMute, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(it, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                             }
@@ -303,7 +303,7 @@ fun WorldInfoScreen(onBack: () -> Unit) {
                         Text(
                             "没有条目。点下方新增，字段与内嵌世界书编辑器完全一致（官方全字段）。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 6.dp),
                         )
                     }
@@ -471,7 +471,7 @@ private fun WorldCard(
             Text(
                 world.displayName,
                 color = c.ink,
-                fontSize = 15.sp,
+                fontSize = EmberTheme.typo.subhead.fontSize,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -480,11 +480,11 @@ private fun WorldCard(
             Text(
                 "${world.entryCount} 条条目${if (isGlobal) " · 全局生效" else ""}",
                 color = c.inkMute,
-                fontSize = 11.sp,
+                fontSize = EmberTheme.typo.meta.fontSize,
             )
         }
         if (isGlobal) {
-            Text("全局", color = c.accent, fontSize = 10.sp, letterSpacing = 0.8.sp, modifier = Modifier.padding(end = 8.dp))
+            Text("全局", color = c.accent, fontSize = EmberTheme.typo.micro.fontSize, letterSpacing = 0.8.sp, modifier = Modifier.padding(end = 8.dp))
         }
         Icon(
             FaIcons.EllipsisVertical,
@@ -519,7 +519,7 @@ private fun WorldEntryRow(
                 Text(
                     draft.keys.ifBlank { draft.comment.ifBlank { "（无触发词）" } },
                     color = c.ink,
-                    fontSize = 14.sp,
+                    fontSize = EmberTheme.typo.body.fontSize,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -527,11 +527,11 @@ private fun WorldEntryRow(
                 )
                 if (!draft.enabled) {
                     Spacer(Modifier.width(8.dp))
-                    Text("禁用", color = c.inkMute, fontSize = 10.sp)
+                    Text("禁用", color = c.inkMute, fontSize = EmberTheme.typo.micro.fontSize)
                 }
                 if (draft.constant) {
                     Spacer(Modifier.width(8.dp))
-                    Text("常量", color = c.accent, fontSize = 10.sp)
+                    Text("常量", color = c.accent, fontSize = EmberTheme.typo.micro.fontSize)
                 }
             }
             if (draft.content.isNotBlank()) {
@@ -539,7 +539,7 @@ private fun WorldEntryRow(
                 Text(
                     draft.content,
                     color = c.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 17.sp,
@@ -581,7 +581,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
-        Text(label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text(label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
         EmberSwitch(checked = checked, onChange = onChange)
     }
 }

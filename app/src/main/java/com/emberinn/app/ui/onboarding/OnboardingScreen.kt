@@ -88,7 +88,7 @@ fun OnboardingScreen(
         Text(
             "跳过",
             color = c.inkMute,
-            fontSize = 13.sp,
+            fontSize = EmberTheme.typo.bodySmall.fontSize,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
@@ -122,7 +122,7 @@ fun OnboardingScreen(
                     Text(
                         "把每次对话，都点成一炉火",
                         color = c.ink,
-                        fontSize = 24.sp,
+                        fontSize = EmberTheme.typo.displaySmall.fontSize,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
@@ -130,7 +130,7 @@ fun OnboardingScreen(
                     Text(
                         "导入 SillyTavern 角色卡，或直接开始一段 AI 对话",
                         color = c.inkMute,
-                        fontSize = 14.sp,
+                        fontSize = EmberTheme.typo.body.fontSize,
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(18.dp))
@@ -159,21 +159,21 @@ fun OnboardingScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(FaIcons.FileImport, contentDescription = null, tint = c.ink, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(9.dp))
-                            Text("导入角色卡", color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text("导入角色卡", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     Spacer(Modifier.height(14.dp))
                     Text(
                         "暂不导入，先和 AI 聊聊",
                         color = c.accent,
-                        fontSize = 14.sp,
+                        fontSize = EmberTheme.typo.body.fontSize,
                         modifier = Modifier.clickable(onClick = onDirectChat).padding(6.dp),
                     )
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(5.dp).clip(CircleShape).background(c.accent.copy(alpha = 0.7f)))
                         Spacer(Modifier.width(7.dp))
-                        Text("数据仅保存在本机 · 无账号 · 无云端", color = c.inkMute, fontSize = 11.sp)
+                        Text("数据仅保存在本机 · 无账号 · 无云端", color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
                     }
                     Spacer(Modifier.height(10.dp))
                 }
@@ -209,7 +209,7 @@ private fun Bubble(text: String, face: ShellFace, alignEnd: Boolean) {
             Text(
                 text,
                 color = EmberTheme.colors.inkMute,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
             )
         }
@@ -229,6 +229,6 @@ private fun SellingPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, 
     ) {
         Icon(icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(12.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = c.inkMute, fontSize = 11.sp)
+        Text(label, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
     }
 }

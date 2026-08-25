@@ -107,7 +107,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     Text(
                         "从相册导入背景图；模糊/遮罩由主题控制。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
                     )
                     ShellActionButton(label = "选择图片…") { importPicker.launch(arrayOf("image/*")) }
@@ -118,7 +118,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                     Text(
                         "classic=样式表默认；其余四档与官方 backgrounds.css 类同名。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -145,15 +145,15 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                             .padding(horizontal = 4.dp, vertical = 9.dp),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(f.name, color = if (active) c.accent else c.ink, fontSize = 15.sp)
+                            Text(f.name, color = if (active) c.accent else c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                         }
                         if (active) {
-                            Text("使用中", color = c.accent, fontSize = 11.sp, modifier = Modifier.padding(end = 10.dp))
+                            Text("使用中", color = c.accent, fontSize = EmberTheme.typo.meta.fontSize, modifier = Modifier.padding(end = 10.dp))
                         }
                         Text(
                             "删除",
                             color = c.danger,
-                            fontSize = 13.sp,
+                            fontSize = EmberTheme.typo.bodySmall.fontSize,
                             modifier = Modifier.clickable {
                                 runCatching { f.delete() }
                                 if (active) {
@@ -171,7 +171,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                         Text(
                             "暂无背景图。首次进入会自动导入内置官方背景库。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                         )
                     }
@@ -182,7 +182,7 @@ fun BackgroundsScreen(onBack: () -> Unit, onAppearanceChanged: () -> Unit = {}) 
                             Text(
                                 "清除全局背景",
                                 color = c.accent,
-                                fontSize = 13.sp,
+                                fontSize = EmberTheme.typo.bodySmall.fontSize,
                                 modifier = Modifier.clickable {
                                     AppearancePrefs.saveGlobalBackground(context, "")
                                     refresh("", fitting)

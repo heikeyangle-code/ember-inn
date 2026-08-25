@@ -244,14 +244,14 @@ fun CharacterDetailScreen(
                     Text(
                         fields.name.ifBlank { record.name },
                         color = EmberTheme.colors.ink,
-                        fontSize = 17.sp,
+                        fontSize = EmberTheme.typo.head.fontSize,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         if (dirty) "有未保存的修改" else "角色编辑器",
-                        fontSize = 11.sp,
+                        fontSize = EmberTheme.typo.meta.fontSize,
                         color = if (dirty) EmberTheme.colors.accent else EmberTheme.colors.inkMute,
                     )
                 }

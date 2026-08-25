@@ -91,15 +91,15 @@ fun TonightScreen(
         if (minimal) {
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(greeting, color = c.ink, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                Text(greeting, color = c.ink, fontSize = EmberTheme.typo.displaySmall.fontSize, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(10.dp))
-                Text(clock, color = c.inkMute, fontSize = 12.sp, letterSpacing = 1.2.sp)
+                Text(clock, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize, letterSpacing = 1.2.sp)
             }
         } else {
             Spacer(Modifier.height(18.dp))
-            Text(clock, color = c.inkMute, fontSize = 13.sp, letterSpacing = 2.sp)
+            Text(clock, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, letterSpacing = 2.sp)
             Spacer(Modifier.height(2.dp))
-            Text(greeting, color = c.ink, fontSize = 32.sp, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp, lineHeight = 40.sp)
+            Text(greeting, color = c.ink, fontSize = EmberTheme.typo.display.fontSize, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp, lineHeight = 40.sp)
         }
 
         // ---- 英雄故事：最近会话（大头像 + 两行预览 + 时间） ----
@@ -172,7 +172,7 @@ fun TonightScreen(
             Text(
                 "还没有对话——从上面的角色开始，或直接开一段新聊天",
                 color = c.inkMute,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 lineHeight = 20.sp,
             )
         }
@@ -225,10 +225,10 @@ private fun HeroStory(
             }
             if (!preview.isNullOrBlank()) {
                 Spacer(Modifier.height(5.dp))
-                Text(preview, color = c.inkMute, fontSize = 13.sp, maxLines = 2, lineHeight = 19.sp)
+                Text(preview, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, maxLines = 2, lineHeight = 19.sp)
             }
             Spacer(Modifier.height(6.dp))
-            Text(timeLabel, color = c.ink.copy(alpha = 0.34f), fontSize = 11.sp, letterSpacing = 0.6.sp)
+            Text(timeLabel, color = c.ink.copy(alpha = 0.34f), fontSize = EmberTheme.typo.meta.fontSize, letterSpacing = 0.6.sp)
         }
     }
 }
@@ -283,7 +283,7 @@ private fun GroupDivider(label: String) {
     Text(
         label.uppercase(),
         color = c.ink.copy(alpha = 0.30f),
-        fontSize = 10.sp,
+        fontSize = EmberTheme.typo.micro.fontSize,
         letterSpacing = 1.8.sp,
         modifier = Modifier.padding(top = 14.dp, bottom = 6.dp, start = 4.dp),
     )

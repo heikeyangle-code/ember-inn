@@ -3,8 +3,11 @@ package com.emberinn.app.ui.design
 import com.emberinn.app.ui.design.EmberTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * EmberDS 设计令牌（docs/DESIGN_SYSTEM.md §四，定稿）。
@@ -103,6 +106,57 @@ data class EmberMotion(
     /** 减动画模式统一 80ms fade（§七 无障碍）。 */
     val reducedMs: Int get() = 80
 }
+
+/** 单档类型：字号 + 行高 + 字重 + 字距（第 16 阶段 Typography 审计单一真相源）。 */
+data class EmberType(
+    val fontSize: TextUnit,
+    val lineHeight: TextUnit,
+    val fontWeight: FontWeight,
+    val letterSpacing: TextUnit = 0.sp,
+)
+
+/**
+ * 壳层类型比例（第 16 阶段，V3 §四排版律）：12 档（含组件库实存值归档）。
+ * display 32/40 Light（页面问候）· displaySmall 24/30 SemiBold（页面题/品牌/标语/紧凑问候）·
+ * heroBig 30/38 Light（英雄卡大题）· hero 26/32 Light（海报名）·
+ * title 18/24 SemiBold（区块题）· head 16/22 SemiBold（空态题/弹层题/编辑器字段题）·
+ * subhead 15/20 Medium（卡片题/行题）· body 14/20（正文）·
+ * bodySmall 13/19（副正文/预览）· caption 12/16（辅助说明）·
+ * meta 11/14 + ls 0.8（时间戳/极弱）· micro 10/13 + ls 0.6（徽标/组别标）。
+ * 业务组件禁止再散写 fontSize/sp；确需新档先在本表登记。
+ */
+data class EmberTypography(
+    val display: EmberType,
+    val displaySmall: EmberType,
+    val heroBig: EmberType,
+    val hero: EmberType,
+    val title: EmberType,
+    val head: EmberType,
+    val subhead: EmberType,
+    val body: EmberType,
+    val bodySmall: EmberType,
+    val caption: EmberType,
+    val meta: EmberType,
+    val micro: EmberType,
+)
+
+val EmberTypographyDefault = EmberTypography(
+    display = EmberType(32.sp, 40.sp, FontWeight.Light, 0.4.sp),
+    displaySmall = EmberType(24.sp, 30.sp, FontWeight.SemiBold),
+    heroBig = EmberType(30.sp, 38.sp, FontWeight.Light, 0.4.sp),
+    hero = EmberType(26.sp, 32.sp, FontWeight.Light, 0.4.sp),
+    title = EmberType(18.sp, 24.sp, FontWeight.SemiBold),
+    head = EmberType(16.sp, 22.sp, FontWeight.SemiBold),
+    subhead = EmberType(15.sp, 20.sp, FontWeight.Medium),
+    body = EmberType(14.sp, 20.sp, FontWeight.Normal),
+    bodySmall = EmberType(13.sp, 19.sp, FontWeight.Normal),
+    caption = EmberType(12.sp, 16.sp, FontWeight.Normal),
+    meta = EmberType(11.sp, 14.sp, FontWeight.Normal, 0.8.sp),
+    micro = EmberType(10.sp, 13.sp, FontWeight.Normal, 0.6.sp),
+)
+
+/** 类型比例经 CompositionLocal 下发（EmberTheme.typo 访问器统一取用）。 */
+val LocalEmberTypography = androidx.compose.runtime.staticCompositionLocalOf { EmberTypographyDefault }
 
 /**
  * 聊天区独立配色（§五 chat.json 十字段）：输入区不跟随全局主题，

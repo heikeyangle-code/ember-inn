@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.ProviderState
 import com.emberinn.app.data.SettingsSnapshotStore
 import java.io.File
@@ -124,13 +123,13 @@ fun DataPrivacyScreen(onBack: () -> Unit) {
                         .padding(start = 4.dp, top = 7.dp, bottom = 7.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(name, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        Text("设置快照", color = c.inkMute, fontSize = 12.sp)
+                        Text(name, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.Medium)
+                        Text("设置快照", color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
                     }
                     Text(
                         "恢复",
                         color = c.accent,
-                        fontSize = 13.sp,
+                        fontSize = EmberTheme.typo.bodySmall.fontSize,
                         modifier = Modifier.clickable { confirmRestoreName = name }.padding(6.dp),
                     )
                     Icon(
@@ -249,12 +248,12 @@ private fun DataRow(
             .padding(horizontal = 4.dp, vertical = 11.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = if (danger) c.danger else c.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(subtitle, color = c.inkMute, fontSize = 12.sp)
+            Text(title, color = if (danger) c.danger else c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.Medium)
+            Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         trailing?.let {
             Spacer(Modifier.width(8.dp))
-            Text(it, color = if (enabled) c.accent else c.inkMute, fontSize = 13.sp)
+            Text(it, color = if (enabled) c.accent else c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize)
         }
     }
 }

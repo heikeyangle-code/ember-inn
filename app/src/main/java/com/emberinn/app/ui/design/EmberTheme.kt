@@ -32,6 +32,9 @@ object EmberTheme {
     val motion: EmberMotion @Composable get() = LocalEmberMotion.current
     val chat: ChatAreaTheme @Composable get() = LocalEmberChatTheme.current
 
+    /** 壳层类型比例（第 16 阶段）：业务组件统一取用，禁止散写 fontSize/sp。 */
+    val typo: EmberTypography @Composable get() = LocalEmberTypography.current
+
     /** 是否暗基底（聊天页渐变遮罩等按此取深浅）。 */
     val isDark: Boolean @Composable get() = LocalEmberDark.current
 
@@ -101,6 +104,7 @@ fun EmberTheme(
         LocalEmberShapes provides shapesForRadius(radius),
         LocalEmberSpacing provides spacingForDensity(density),
         LocalEmberMotion provides motionForLevel(motionLevel),
+        LocalEmberTypography provides EmberTypographyDefault,
         LocalEmberChatTheme provides chat,
         LocalEmberDark provides dark,
         LocalEmberStageTint provides stageTint,

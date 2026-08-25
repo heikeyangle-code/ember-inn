@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.emberinn.app.data.OnboardingPrefs
 import com.emberinn.app.data.SessionRecord
@@ -479,7 +478,7 @@ private fun RailItem(label: String, icon: ImageVector, active: Boolean, onClick:
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
+        Text(label, color = tint, fontSize = EmberTheme.typo.meta.fontSize, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
     }
 }
 

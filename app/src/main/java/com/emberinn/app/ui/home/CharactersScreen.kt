@@ -273,7 +273,7 @@ fun CharactersScreen(
                                 Icon(FaIcons.Plus, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
                             }
                             Spacer(Modifier.width(14.dp))
-                            Text("导入角色卡", color = c.inkMute, fontSize = 15.sp)
+                            Text("导入角色卡", color = c.inkMute, fontSize = EmberTheme.typo.subhead.fontSize)
                         }
                     }
                 }
@@ -383,7 +383,7 @@ fun CharactersScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("下载后自动识别格式并入库。", color = c.inkMute, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                    Text("下载后自动识别格式并入库。", color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize, modifier = Modifier.padding(top = 6.dp))
                 }
             },
             confirmButton = {
@@ -425,9 +425,9 @@ fun CharactersScreen(
     worldHit?.let { hit ->
         ShellSheet(onDismiss = { worldHit = null }, title = "世界书条目 · ${hit.characterName}") {
             Column(Modifier.padding(horizontal = 20.dp)) {
-                Text(hit.key, color = c.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(hit.key, color = c.ink, fontSize = EmberTheme.typo.head.fontSize, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(10.dp))
-                Text(hit.content, color = c.ink, fontSize = 14.sp, modifier = Modifier.fillMaxWidth())
+                Text(hit.content, color = c.ink, fontSize = EmberTheme.typo.body.fontSize, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -482,7 +482,7 @@ private fun SearchResultsList(
             ResultRow(FaIcons.Gear, hit.label, hit.description) { onOpenSettings(hit.route) }
         }
         if (results.characters.isEmpty() && results.sessions.isEmpty() && results.worldInfo.isEmpty() && results.settings.isEmpty()) {
-            Text("没有匹配结果", color = c.inkMute, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp, top = 16.dp))
+            Text("没有匹配结果", color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, modifier = Modifier.padding(start = 4.dp, top = 16.dp))
         }
     }
 }
@@ -500,8 +500,8 @@ private fun ResultRow(icon: ImageVector, title: String, subtitle: String, onClic
         Icon(icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = c.ink, fontSize = 15.sp)
-            Text(subtitle, color = c.inkMute, fontSize = 11.sp, maxLines = 1)
+            Text(title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, maxLines = 1)
         }
         Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(13.dp))
     }
@@ -515,9 +515,9 @@ private fun EmptyLibrary(onImport: () -> Unit, onDirectChat: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
     ) {
-        Text("书架还是空的", color = c.ink, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Text("书架还是空的", color = c.ink, fontSize = EmberTheme.typo.title.fontSize, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
-        Text("导入 SillyTavern 角色卡开始演出", color = c.inkMute, fontSize = 13.sp)
+        Text("导入 SillyTavern 角色卡开始演出", color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize)
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ShellActionButton(label = "导入角色卡") { onImport() }
@@ -588,7 +588,7 @@ private fun SortOptionRow(label: String, selected: Boolean, onClick: () -> Unit)
         Text(
             label,
             color = if (selected) c.accent else c.ink,
-            fontSize = 15.sp,
+            fontSize = EmberTheme.typo.subhead.fontSize,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
@@ -623,7 +623,7 @@ private fun CharacterListRow(
             Text(
                 record.name + if (record.pinned) " ·↑" else "",
                 color = c.ink,
-                fontSize = 15.sp,
+                fontSize = EmberTheme.typo.subhead.fontSize,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
             )
@@ -631,7 +631,7 @@ private fun CharacterListRow(
                 Text(
                     subtitle,
                     color = c.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     maxLines = 1,
                 )
             }
@@ -640,7 +640,7 @@ private fun CharacterListRow(
             Text(
                 "$chatCount 场会话",
                 color = c.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
             )
         }
     }

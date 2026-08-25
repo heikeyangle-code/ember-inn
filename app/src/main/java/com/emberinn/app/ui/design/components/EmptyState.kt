@@ -89,7 +89,7 @@ fun EmptyState(
             Text(
                 secondaryLabel,
                 color = c.accent,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 modifier = Modifier.clickable(onClick = onSecondary),
             )
         }

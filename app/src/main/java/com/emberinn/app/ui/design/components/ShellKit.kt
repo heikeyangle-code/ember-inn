@@ -119,7 +119,7 @@ fun RowLine(
         Text(
             title,
             color = if (muted) c.inkMute else c.ink,
-            fontSize = 15.sp,
+            fontSize = EmberTheme.typo.subhead.fontSize,
             modifier = Modifier.weight(1f),
         )
         if (value != null) {
@@ -127,7 +127,7 @@ fun RowLine(
             Text(
                 value,
                 color = c.inkMute,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 textAlign = TextAlign.End,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -147,7 +147,7 @@ fun GroupLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text.uppercase(),
         color = c.inkMute,
-        fontSize = 11.sp,
+        fontSize = EmberTheme.typo.meta.fontSize,
         letterSpacing = 1.6.sp,
         fontWeight = FontWeight.Medium,
         modifier = modifier.padding(start = 4.dp, top = 24.dp, bottom = 8.dp),
@@ -177,13 +177,13 @@ fun SearchField(
         Spacer(Modifier.width(9.dp))
         Box {
             if (value.isEmpty()) {
-                Text(placeholder, color = c.inkMute, fontSize = 14.sp)
+                Text(placeholder, color = c.inkMute, fontSize = EmberTheme.typo.body.fontSize)
             }
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
-                textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
+                textStyle = TextStyle(color = c.ink, fontSize = EmberTheme.typo.body.fontSize),
                 cursorBrush = SolidColor(c.accent),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -214,7 +214,7 @@ fun ShellInput(
     val shape = RoundedCornerShape(12.dp)
     Column(modifier = modifier.padding(vertical = 6.dp)) {
         if (label != null) {
-            Text(label, color = c.inkMute, fontSize = 12.sp)
+            Text(label, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
             Spacer(Modifier.height(6.dp))
         }
         Row(
@@ -231,7 +231,7 @@ fun ShellInput(
                 onValueChange = onValueChange,
                 singleLine = if (maxLines > 1) false else singleLine,
                 readOnly = readOnly,
-                textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
+                textStyle = TextStyle(color = c.ink, fontSize = EmberTheme.typo.body.fontSize),
                 cursorBrush = SolidColor(c.accent),
                 keyboardOptions = keyboardOptions,
                 visualTransformation = visualTransformation,
@@ -246,7 +246,7 @@ fun ShellInput(
         }
         if (supportingText != null) {
             Spacer(Modifier.height(4.dp))
-            Text(supportingText, color = c.inkMute, fontSize = 11.sp)
+            Text(supportingText, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
         }
     }
 }
@@ -301,14 +301,14 @@ fun HeroCard(
         AvatarCircle(avatarPath, title, 40.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!preview.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(preview, color = c.inkMute, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(preview, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (!caption.isNullOrBlank()) {
                 Spacer(Modifier.height(3.dp))
-                Text(caption, color = c.ink.copy(alpha = 0.34f), fontSize = 11.sp)
+                Text(caption, color = c.ink.copy(alpha = 0.34f), fontSize = EmberTheme.typo.meta.fontSize)
             }
         }
         if (unread > 0) {
@@ -319,7 +319,7 @@ fun HeroCard(
                     .background(c.accentBg)
                     .padding(horizontal = 7.dp, vertical = 2.dp),
             ) {
-                Text(unread.toString(), color = c.accent, fontSize = 11.sp)
+                Text(unread.toString(), color = c.accent, fontSize = EmberTheme.typo.meta.fontSize)
             }
         }
     }
@@ -375,7 +375,7 @@ fun PosterTile(
                     Text(
                         name,
                         color = c.ink,
-                        fontSize = 11.sp,
+                        fontSize = EmberTheme.typo.meta.fontSize,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -383,7 +383,7 @@ fun PosterTile(
                         Text(
                             subtitle,
                             color = c.inkMute,
-                            fontSize = 9.sp,
+                            fontSize = EmberTheme.typo.micro.fontSize,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -452,7 +452,7 @@ fun ShellChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 7.dp),
     ) {
-        Text(label, color = if (selected) c.ink else c.inkMute, fontSize = 12.sp)
+        Text(label, color = if (selected) c.ink else c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
     }
 }
 
@@ -472,7 +472,7 @@ fun ShellActionButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 9.dp),
     ) {
-        Text(label, color = if (enabled) c.ink else c.inkMute, fontSize = 13.sp)
+        Text(label, color = if (enabled) c.ink else c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize)
     }
 }
 
@@ -494,7 +494,7 @@ fun ShellSheet(
                 Text(
                     title,
                     color = c.ink,
-                    fontSize = 16.sp,
+                    fontSize = EmberTheme.typo.head.fontSize,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                 )
@@ -524,8 +524,8 @@ fun SheetRow(
         Icon(icon, contentDescription = null, tint = if (danger) c.danger else c.inkMute, modifier = Modifier.size(17.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = if (danger) c.danger else c.ink, fontSize = 15.sp)
-            if (subtitle != null) Text(subtitle, color = c.inkMute, fontSize = 11.sp)
+            Text(label, color = if (danger) c.danger else c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            if (subtitle != null) Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
         }
     }
 }
@@ -577,7 +577,7 @@ fun FloatHub(
                             Text(
                                 item.label,
                                 color = if (active) c.accent else c.ink,
-                                fontSize = 14.sp,
+                                fontSize = EmberTheme.typo.body.fontSize,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                             )
                         }

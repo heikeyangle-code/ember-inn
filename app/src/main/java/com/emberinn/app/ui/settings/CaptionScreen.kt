@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.components.GroupLabel
 import com.emberinn.app.ui.design.components.ShellChip
 
@@ -47,14 +46,14 @@ fun CaptionScreen(onBack: () -> Unit) {
                 Text(
                     "对齐官方 caption 扩展：添加图片后，聊天输入区点“图片描述”生成描述并发送（sendCaptionedMessage 语义）。multimodal 用当前模型；local/extras/horde 走 sourceUrl 代理端点。",
                     color = c.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                 ) {
-                    Text("启用", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    Text("启用", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.enabled, onChange = { s = s.copy(enabled = it); save() })
                 }
                 GroupLabel("来源")
@@ -94,20 +93,20 @@ fun CaptionScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                 ) {
-                    Text("聊天内显示图片（show_in_chat）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    Text("聊天内显示图片（show_in_chat）", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.showInChat, onChange = { s = s.copy(showInChat = it); save() })
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                 ) {
-                    Text("发送前人工确认（refine_mode）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    Text("发送前人工确认（refine_mode）", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                     EmberSwitch(checked = s.refineMode, onChange = { s = s.copy(refineMode = it); save() })
                 }
                 Text(
                     "refine_mode 当前登记为 UI 开关；App 侧确认弹层未接。prompt_ask（每次询问提示词）暂未接。",
                     color = c.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp),
                 )
                 Spacer(Modifier.height(120.dp))

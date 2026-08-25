@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.components.EmberSwitch
 import com.emberinn.app.ui.design.components.GroupLabel
 
@@ -50,14 +49,14 @@ fun MessageRenderScreen(onBack: () -> Unit) {
                     Text(
                         "对齐官方 power_user：折叠连续换行（collapse_newlines）、消息示例分隔符（context.example_separator，默认 ***）、标签转义与 Markdown 修复。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                     ) {
-                        Text("折叠连续换行", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("折叠连续换行", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(
                             checked = collapse,
                             onChange = {
@@ -106,8 +105,8 @@ private fun RenderSwitchRow(label: String, hint: String, checked: Boolean, onCha
         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = c.ink, fontSize = 15.sp)
-            Text(hint, color = c.inkMute, fontSize = 12.sp)
+            Text(label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(hint, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         EmberSwitch(checked = checked, onChange = onChange)
     }

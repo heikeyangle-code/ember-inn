@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.OfficialThemeManager
+import com.emberinn.app.ui.design.EmberTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -149,7 +150,7 @@ private fun ToastCard(msg: EmberToasts.Msg) {
             Text(
                 text = msg.text,
                 color = Color.White,
-                fontSize = 14.sp,
+                fontSize = EmberTheme.typo.body.fontSize,
                 lineHeight = 19.sp,
             )
         }

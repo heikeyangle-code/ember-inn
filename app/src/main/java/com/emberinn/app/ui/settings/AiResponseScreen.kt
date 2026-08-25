@@ -111,11 +111,11 @@ fun AiResponseScreen(
                         }
                         Spacer(Modifier.width(13.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(spec?.displayName ?: "API 连接", color = c.ink, fontSize = 15.sp)
+                            Text(spec?.displayName ?: "API 连接", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                             Text(
                                 active?.model?.ifBlank { "未选模型" } ?: "未配置",
                                 color = c.inkMute,
-                                fontSize = 12.sp,
+                                fontSize = EmberTheme.typo.caption.fontSize,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -139,7 +139,7 @@ fun AiResponseScreen(
                                 Text(
                                     presetName.ifBlank { "未选择" },
                                     color = c.ink,
-                                    fontSize = 14.sp,
+                                    fontSize = EmberTheme.typo.body.fontSize,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Icon(FaIcons.ChevronDown, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(13.dp))
@@ -197,14 +197,14 @@ fun AiResponseScreen(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("流式输出", color = c.ink, fontSize = 15.sp)
-                                Text("打字机式逐步显示回复", color = c.inkMute, fontSize = 12.sp)
+                                Text("流式输出", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+                                Text("打字机式逐步显示回复", color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
                             }
                             EmberSwitch(checked = sampler.stream, onChange = vm::setStreaming)
                         }
                         ActionTextRow("Prompt Manager（提示词编排）", FaIcons.ListUl, onOpenPromptManager)
                         if (message != null) {
-                            Text(message!!, color = c.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                            Text(message!!, color = c.accent, fontSize = EmberTheme.typo.caption.fontSize, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -220,7 +220,7 @@ fun AiResponseScreen(
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("保存到当前连接", color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("保存到当前连接", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -233,8 +233,8 @@ private fun SamplerSliderRow(label: String, value: Float, range: ClosedFloatingP
     val c = EmberTheme.colors
     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text(String.format("%.2f", value), color = c.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
+            Text(String.format("%.2f", value), color = c.accent, fontSize = EmberTheme.typo.body.fontSize, fontWeight = FontWeight.Medium)
         }
         EmberSlider(
             value = value.coerceIn(range.start, range.endInclusive),
@@ -257,6 +257,6 @@ private fun ActionTextRow(text: String, icon: ImageVector, onClick: () -> Unit) 
     ) {
         Icon(icon, contentDescription = null, tint = c.accent, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(9.dp))
-        Text(text, color = c.accent, fontSize = 13.sp)
+        Text(text, color = c.accent, fontSize = EmberTheme.typo.bodySmall.fontSize)
     }
 }

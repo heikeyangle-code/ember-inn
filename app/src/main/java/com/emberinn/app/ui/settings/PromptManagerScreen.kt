@@ -179,11 +179,11 @@ fun PromptManagerScreen(onBack: () -> Unit) {
             ) {
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text("说明", color = EmberTheme.colors.accent, fontSize = 13.sp)
+                        Text("说明", color = EmberTheme.colors.accent, fontSize = EmberTheme.typo.bodySmall.fontSize)
                         Text(
                             "对齐官方 PromptManager（1.18 global 策略）：顺序决定提示项注入次序，提示项决定内容/角色/位置/深度；全局顺序存 character_id=100000，与官方 preset 互导。提示词预览在聊天会话菜单（dryRun）。",
                             color = EmberTheme.colors.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp, top = 4.dp),
                         )
                     }

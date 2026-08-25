@@ -81,14 +81,14 @@ fun EditorialHeader(
             Text(
                 title,
                 color = c.ink,
-                fontSize = 30.sp,
+                fontSize = EmberTheme.typo.heroBig.fontSize,
                 fontWeight = FontWeight.Light,
                 letterSpacing = 0.4.sp,
                 lineHeight = 38.sp,
             )
             if (subtitle != null) {
                 Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = c.inkMute, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, lineHeight = 18.sp)
             }
         }
         if (trailing != null) trailing()
@@ -111,7 +111,7 @@ fun RailHeader(
         Text(
             title.uppercase(),
             color = c.inkMute,
-            fontSize = 11.sp,
+            fontSize = EmberTheme.typo.meta.fontSize,
             letterSpacing = 1.6.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
@@ -121,7 +121,7 @@ fun RailHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable(onClick = onSeeAll),
             ) {
-                Text("查看全部", color = c.accent, fontSize = 12.sp)
+                Text("查看全部", color = c.accent, fontSize = EmberTheme.typo.caption.fontSize)
                 Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.accent, modifier = Modifier.size(11.dp))
             }
         }
@@ -202,10 +202,10 @@ fun CharacterHeroBlock(
         }
         Column(Modifier.padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(14.dp))
-            Text(name, color = c.ink, fontSize = 26.sp, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp)
+            Text(name, color = c.ink, fontSize = EmberTheme.typo.hero.fontSize, fontWeight = FontWeight.Light, letterSpacing = 0.4.sp)
             if (!subtitle.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = c.inkMute, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (meta != null) { Spacer(Modifier.height(10.dp)); meta() }
             Spacer(Modifier.height(16.dp))
@@ -236,7 +236,7 @@ private fun CharacterHeroAvatar(avatarPath: String?, name: String) {
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(64.dp).clip(CircleShape).background(c.surface2),
         ) {
-            Text(name.take(1), color = c.ink, fontSize = 26.sp, fontWeight = FontWeight.Light)
+            Text(name.take(1), color = c.ink, fontSize = EmberTheme.typo.hero.fontSize, fontWeight = FontWeight.Light)
         }
     }
 }
@@ -258,7 +258,7 @@ fun PrimaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modif
         Text(
             label,
             color = if (enabled) readableOnLabel(c.accent) else c.inkMute,
-            fontSize = 15.sp,
+            fontSize = EmberTheme.typo.subhead.fontSize,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 2.sp,
         )
@@ -301,19 +301,19 @@ fun StoryCard(
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Text(title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (badge != null) {
                     Spacer(Modifier.width(8.dp))
-                    Text(badge, color = c.accent, fontSize = 10.sp, letterSpacing = 0.8.sp)
+                    Text(badge, color = c.accent, fontSize = EmberTheme.typo.micro.fontSize, letterSpacing = 0.8.sp)
                 }
             }
             if (!preview.isNullOrBlank()) {
                 Spacer(Modifier.height(3.dp))
-                Text(preview, color = c.inkMute, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                Text(preview, color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
             }
             if (!caption.isNullOrBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(caption, color = c.ink.copy(alpha = 0.34f), fontSize = 11.sp)
+                Text(caption, color = c.ink.copy(alpha = 0.34f), fontSize = EmberTheme.typo.meta.fontSize)
             }
         }
     }
@@ -342,10 +342,10 @@ fun SettingsTile(
     ) {
         Icon(icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
         Spacer(Modifier.weight(1f))
-        Text(title, color = c.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = c.ink, fontSize = EmberTheme.typo.body.fontSize, fontWeight = FontWeight.Medium)
         if (!value.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(value, color = c.inkMute, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(value, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -383,13 +383,13 @@ fun AccordionGroup(
                 Text(
                     title.uppercase(),
                     color = c.inkMute,
-                    fontSize = 11.sp,
+                    fontSize = EmberTheme.typo.meta.fontSize,
                     letterSpacing = 1.6.sp,
                     fontWeight = FontWeight.Medium,
                 )
                 if (!summary.isNullOrBlank() && !expanded) {
                     Spacer(Modifier.height(3.dp))
-                    Text(summary, color = c.ink.copy(alpha = 0.34f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(summary, color = c.ink.copy(alpha = 0.34f), fontSize = EmberTheme.typo.meta.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             Icon(
@@ -414,9 +414,9 @@ fun AccordionGroup(
 fun MetaRow(label: String, value: String, modifier: Modifier = Modifier) {
     val c = EmberTheme.colors
     Row(modifier = modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-        Text(label, color = c.inkMute, fontSize = 12.sp)
+        Text(label, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         Spacer(Modifier.width(12.dp))
-        Text(value, color = c.ink, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        Text(value, color = c.ink, fontSize = EmberTheme.typo.caption.fontSize, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
     }
 }
 
@@ -436,9 +436,9 @@ fun StatBadges(stats: List<Pair<String, String>>, modifier: Modifier = Modifier)
                     .background(c.surface)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
-                Text(v, color = c.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(v, color = c.ink, fontSize = EmberTheme.typo.caption.fontSize, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(4.dp))
-                Text(k, color = c.inkMute, fontSize = 11.sp)
+                Text(k, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
             }
         }
     }

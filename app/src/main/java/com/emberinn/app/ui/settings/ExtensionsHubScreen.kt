@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.icons.FaIcons
 
@@ -104,11 +103,11 @@ private fun ExtensionRow(entry: ExtensionEntry, isPartial: Boolean) {
         }
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(entry.title, color = c.ink, fontSize = 15.sp)
-            Text(entry.subtitle, color = c.inkMute, fontSize = 12.sp)
+            Text(entry.title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(entry.subtitle, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         if (isPartial) {
-            Text("部分兼容", color = c.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Text("部分兼容", color = c.accent, fontSize = EmberTheme.typo.meta.fontSize, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(8.dp))
         }
         Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(14.dp))

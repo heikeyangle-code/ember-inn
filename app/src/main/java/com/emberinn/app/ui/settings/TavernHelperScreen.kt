@@ -58,13 +58,13 @@ fun TavernHelperScreen(onBack: () -> Unit) {
             ) {
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                            Text("这是什么", color = EmberTheme.colors.accent, fontSize = 13.sp)
+                            Text("这是什么", color = EmberTheme.colors.accent, fontSize = EmberTheme.typo.bodySmall.fontSize)
                             Text(
                                 "兼容酒馆助手(JS-Slash-Runner)生态：消息里的 js/ts 代码块在" +
                                     "同源沙箱 iframe 中运行，可直接调用 getVariables / triggerSlash / " +
                                     "getChatMessages / eventOn 等酒馆助手同名 API。",
                                 color = EmberTheme.colors.inkMute,
-                                fontSize = 12.sp,
+                                fontSize = EmberTheme.typo.caption.fontSize,
                             )
                     }
                 }

@@ -299,7 +299,7 @@ private fun SettingsHome(
     ) {
         item {
             Column {
-                Text("设置", color = EmberTheme.colors.ink, fontSize = 26.sp, fontWeight = FontWeight.Light)
+                Text("设置", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.hero.fontSize, fontWeight = FontWeight.Light)
                 Spacer(Modifier.height(14.dp))
                 com.emberinn.app.ui.design.components.SearchField(
                     value = query,
@@ -335,13 +335,13 @@ private fun SectionRow(section: OfficialSection) {
             Icon(section.icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(16.dp))
         }
         Spacer(Modifier.width(13.dp))
-        Text(section.title, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text(section.title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
         if (!section.value.isNullOrBlank()) {
             Spacer(Modifier.width(10.dp))
             Text(
                 section.value!!,
                 color = c.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -362,11 +362,11 @@ private fun AboutScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         ) {
-            Text("EmberInn", color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Text("EmberInn", color = c.ink, fontSize = EmberTheme.typo.displaySmall.fontSize, fontWeight = FontWeight.SemiBold)
             Text(
                 "SillyTavern 兼容的原生 Android 客户端",
                 color = c.inkMute,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Column(
@@ -381,7 +381,7 @@ private fun AboutScreen(onBack: () -> Unit) {
             Text(
                 "访问开源仓库",
                 color = c.accent,
-                fontSize = 14.sp,
+                fontSize = EmberTheme.typo.body.fontSize,
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .clickable {
@@ -402,9 +402,9 @@ private fun AboutScreen(onBack: () -> Unit) {
 private fun InfoLine(label: String, value: String) {
     val c = EmberTheme.colors
     Row(modifier = Modifier.fillMaxWidth()) {
-        Text(label, color = c.inkMute, fontSize = 14.sp)
+        Text(label, color = c.inkMute, fontSize = EmberTheme.typo.body.fontSize)
         Spacer(Modifier.weight(1f))
-        Text(value, color = c.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(value, color = c.ink, fontSize = EmberTheme.typo.body.fontSize, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -458,9 +458,9 @@ fun SettingsTopBar(
         }
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = c.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = c.ink, fontSize = EmberTheme.typo.title.fontSize, fontWeight = FontWeight.SemiBold)
             if (subtitle != null) {
-                Text(subtitle, color = c.inkMute, fontSize = 12.sp)
+                Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
             }
         }
         trailing?.invoke()

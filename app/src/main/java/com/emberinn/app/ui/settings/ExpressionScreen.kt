@@ -82,14 +82,14 @@ fun ExpressionScreen(onBack: () -> Unit) {
                     Text(
                         "对齐官方 expressions 扩展：精灵按角色存放在 expressions/{角色名}/，AI 消息正文自动分类选图。",
                         color = c.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(start = 4.dp),
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                     ) {
-                        Text("启用", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("启用", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.enabled, onChange = { prefs = prefs.copy(enabled = it); save() })
                     }
                     ShellInput(
@@ -100,11 +100,11 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-                        Text("多立绘随机（allowMultiple）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("多立绘随机（allowMultiple）", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.allowMultiple, onChange = { prefs = prefs.copy(allowMultiple = it); save() })
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-                        Text("避免与上一张重复（rerollIfSame）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("避免与上一张重复（rerollIfSame）", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = prefs.rerollIfSame, onChange = { prefs = prefs.copy(rerollIfSame = it); save() })
                     }
                 }
@@ -135,7 +135,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                     ) {
-                        Text(sprite.label, color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text(sprite.label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         Icon(
                             FaIcons.TrashCan,
                             contentDescription = "删除",
@@ -155,7 +155,7 @@ fun ExpressionScreen(onBack: () -> Unit) {
                         Text(
                             "还没有精灵。文件名即表情标签（如 joy.png / sad-1.png），AI 消息正文会按表情词自动匹配。",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             modifier = Modifier.padding(start = 4.dp),
                         )
                     }

@@ -457,8 +457,8 @@ private fun UserNavRow(title: String, subtitle: String, icon: ImageVector, onCli
         }
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = c.ink, fontSize = 15.sp)
-            Text(subtitle, color = c.inkMute, fontSize = 12.sp)
+            Text(title, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(subtitle, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         Icon(FaIcons.ChevronRight, contentDescription = null, tint = c.ink.copy(alpha = 0.22f), modifier = Modifier.size(14.dp))
     }
@@ -472,8 +472,8 @@ private fun UserSwitchRow(label: String, hint: String, checked: Boolean, onChang
         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = c.ink, fontSize = 15.sp)
-            Text(hint, color = c.inkMute, fontSize = 12.sp)
+            Text(label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(hint, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         Spacer(Modifier.width(10.dp))
         EmberSwitch(checked = checked, onChange = onChange)
@@ -498,8 +498,8 @@ private fun UserCycleRow(
             .padding(vertical = 7.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = c.ink, fontSize = 15.sp)
-            Text(hint, color = c.inkMute, fontSize = 12.sp)
+            Text(label, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
+            Text(hint, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize)
         }
         Spacer(Modifier.width(10.dp))
         Box(
@@ -511,7 +511,7 @@ private fun UserCycleRow(
             Text(
                 entries.getOrElse(index) { entries.firstOrNull() ?: "" },
                 color = c.ink,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
             )
         }
     }

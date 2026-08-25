@@ -33,7 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.data.QuickReplyStore
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmberSwitch
@@ -99,7 +98,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
             Text(
                 "字段对齐官方 Quick Reply 扩展：目录多预设（data/default-user/quick-replies/*.json）。槽位 = 斜杠链 mes + label + 启用。",
                 color = c.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
                 modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             )
             GroupLabel("预设")
@@ -113,7 +112,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                             .clickable { presetMenuExpanded = true }
                             .padding(horizontal = 13.dp, vertical = 11.dp),
                     ) {
-                        Text("当前：$presetName", color = c.ink, fontSize = 14.sp)
+                        Text("当前：$presetName", color = c.ink, fontSize = EmberTheme.typo.body.fontSize)
                         Spacer(Modifier.width(8.dp))
                         Icon(FaIcons.ChevronDown, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(13.dp))
                     }
@@ -136,7 +135,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 }
                 if (store.presets().size > 1) {
                     Spacer(Modifier.width(10.dp))
-                    Text("删除当前", color = c.danger, fontSize = 13.sp, modifier = Modifier.clickable {
+                    Text("删除当前", color = c.danger, fontSize = EmberTheme.typo.bodySmall.fontSize, modifier = Modifier.clickable {
                         store.delete(presetName)
                         val next = store.presets().firstOrNull()?.name ?: "default"
                         switchPreset(next)
@@ -148,7 +147,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                 Text(
                     "还没有快捷回复。点下方按钮新增，例如 /echo 你好 或 /pass 早上好。",
                     color = c.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     modifier = Modifier.padding(start = 4.dp),
                 )
             }
@@ -168,14 +167,14 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         Text(
                             slot.label.ifBlank { "（未命名）" },
                             color = if (slot.label.isBlank()) c.inkMute else c.ink,
-                            fontSize = 15.sp,
+                            fontSize = EmberTheme.typo.subhead.fontSize,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             if (slot.automationId.isNotBlank()) "⚙ ${slot.automationId} · ${slot.mes.ifBlank { "（空）" }}" else slot.mes.ifBlank { "（空）" },
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -286,7 +285,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("启用", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("启用", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftEnabled, onChange = { draftEnabled = it })
                     }
                     ShellInput(
@@ -300,7 +299,7 @@ fun QuickRepliesScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("自动执行期间禁止嵌套自动执行", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("自动执行期间禁止嵌套自动执行", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftPreventAutoExecute, onChange = { draftPreventAutoExecute = it })
                     }
                 }

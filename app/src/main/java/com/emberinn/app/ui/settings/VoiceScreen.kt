@@ -134,10 +134,10 @@ fun VoiceScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("启用朗读", color = EmberTheme.colors.ink, fontSize = 15.sp)
+                    Text("启用朗读", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                     Text(
                         "聊天自动朗读将在后续版本接入；启用后本页试听可用",
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         color = EmberTheme.colors.inkMute,
                     )
                 }

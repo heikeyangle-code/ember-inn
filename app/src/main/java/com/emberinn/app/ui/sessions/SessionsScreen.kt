@@ -159,7 +159,7 @@ fun SessionsScreen(
             ) {
                 Text(
                     text = "对话",
-                    fontSize = 24.sp,
+                    fontSize = EmberTheme.typo.displaySmall.fontSize,
                     fontWeight = FontWeight.Light,
                     color = EmberTheme.colors.ink,
                     letterSpacing = 1.sp,
@@ -191,7 +191,7 @@ fun SessionsScreen(
                         Text(
                             if (showArchived) "没有已归档的故事" else "没有匹配「${search.trim()}」的故事",
                             color = EmberTheme.colors.lineStrong,
-                            fontSize = 13.sp,
+                            fontSize = EmberTheme.typo.bodySmall.fontSize,
                         )
                     }
                 }
@@ -445,7 +445,7 @@ private fun SessionRow(
                 Text(
                     text = session.name,
                     color = c.ink,
-                    fontSize = 15.sp,
+                    fontSize = EmberTheme.typo.subhead.fontSize,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -474,13 +474,13 @@ private fun SessionRow(
             Text(
                 text = preview?.take(80) ?: "还没有消息，点开打个招呼吧",
                 color = c.inkMute,
-                fontSize = 13.sp,
+                fontSize = EmberTheme.typo.bodySmall.fontSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(text = timeLabel(session.updatedAt), color = c.inkMute, fontSize = 11.sp)
+        Text(text = timeLabel(session.updatedAt), color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize)
         Icon(
             FaIcons.EllipsisVertical,
             contentDescription = "更多",

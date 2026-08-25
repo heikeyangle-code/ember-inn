@@ -70,7 +70,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
             ) {
-                Text("允许世界书扫描（allowWIScan）", color = c.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text("允许世界书扫描（allowWIScan）", color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                 EmberSwitch(checked = prefs.allowWIScan, onChange = { prefs = prefs.copy(allowWIScan = it); save() })
             }
             // 官方序③：位置 radio 组（before_char=2 / after_char=0 / depth=1，值随引擎差分锁定口径）
@@ -108,7 +108,7 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
             Text(
                 "按角色名编辑；聊天 ⋮ 作者注释里也可为当前角色设置。",
                 color = c.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
                 modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             )
             prefs.charaNotes.forEach { (name, note) ->
@@ -117,11 +117,11 @@ fun AuthorsNoteSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(name, color = c.ink, fontSize = 15.sp)
+                        Text(name, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                         Text(
                             if (note.useChara) "启用 · ${note.prompt.take(24)}" else "未启用",
                             color = c.inkMute,
-                            fontSize = 12.sp,
+                            fontSize = EmberTheme.typo.caption.fontSize,
                         )
                     }
                     Icon(

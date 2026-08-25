@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.EmberTheme
 
 /**
@@ -47,7 +46,7 @@ fun PrimaryButton(
         Text(
             label,
             color = if (enabled) readableOnLabel(c.accent) else c.inkMute,
-            fontSize = 14.sp,
+            fontSize = EmberTheme.typo.body.fontSize,
             fontWeight = FontWeight.SemiBold,
         )
     }
@@ -76,7 +75,7 @@ fun GhostButton(
         Text(
             label,
             color = if (enabled) c.inkSoft else c.inkSoft2,
-            fontSize = 14.sp,
+            fontSize = EmberTheme.typo.body.fontSize,
             fontWeight = FontWeight.Medium,
         )
     }
@@ -106,7 +105,7 @@ fun DangerButton(
         Text(
             label,
             color = c.danger.copy(alpha = if (enabled) 1f else 0.55f),
-            fontSize = 14.sp,
+            fontSize = EmberTheme.typo.body.fontSize,
             fontWeight = FontWeight.SemiBold,
         )
     }

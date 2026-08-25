@@ -165,7 +165,7 @@ fun CharacterHomeScreen(
                     Text(
                         "还没有故事。点上面的开始对话，写下你们的第一句。",
                         color = c.inkMute,
-                        fontSize = 13.sp,
+                        fontSize = EmberTheme.typo.bodySmall.fontSize,
                         lineHeight = 20.sp,
                     )
                 } else {
@@ -194,22 +194,22 @@ fun CharacterHomeScreen(
                             Text(
                                 fields.description,
                                 color = c.ink.copy(alpha = 0.78f),
-                                fontSize = 14.sp,
+                                fontSize = EmberTheme.typo.body.fontSize,
                                 lineHeight = 22.sp,
                             )
                         }
                     }
                     if (fields.personality.isNotBlank()) {
                         Spacer(Modifier.height(14.dp))
-                        Text("性格", color = c.inkMute, fontSize = 11.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Medium)
+                        Text("性格", color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, letterSpacing = 1.6.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(4.dp))
-                        Text(fields.personality, color = c.ink.copy(alpha = 0.78f), fontSize = 14.sp, lineHeight = 22.sp)
+                        Text(fields.personality, color = c.ink.copy(alpha = 0.78f), fontSize = EmberTheme.typo.body.fontSize, lineHeight = 22.sp)
                     }
                     if (fields.scenario.isNotBlank()) {
                         Spacer(Modifier.height(14.dp))
-                        Text("场景", color = c.inkMute, fontSize = 11.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Medium)
+                        Text("场景", color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, letterSpacing = 1.6.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(4.dp))
-                        Text(fields.scenario, color = c.ink.copy(alpha = 0.78f), fontSize = 14.sp, lineHeight = 22.sp)
+                        Text(fields.scenario, color = c.ink.copy(alpha = 0.78f), fontSize = EmberTheme.typo.body.fontSize, lineHeight = 22.sp)
                     }
                 }
             }
@@ -231,7 +231,7 @@ fun CharacterHomeScreen(
                 Text(
                     listOfNotNull(creator?.let { "作者 $it" }, version?.let { "版本 $it" }).joinToString(" · "),
                     color = c.ink.copy(alpha = 0.34f),
-                    fontSize = 11.sp,
+                    fontSize = EmberTheme.typo.meta.fontSize,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
@@ -331,7 +331,7 @@ private fun GhostAction(label: String, modifier: Modifier = Modifier, onClick: (
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = c.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = c.ink, fontSize = EmberTheme.typo.body.fontSize, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -351,7 +351,7 @@ private fun SpoilerPeek(onPeek: () -> Unit) {
         Text(
             "描述已隐藏（防剧透模式）· 点击显示",
             color = c.inkMute,
-            fontSize = 13.sp,
+            fontSize = EmberTheme.typo.bodySmall.fontSize,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
@@ -366,7 +366,7 @@ private fun TagChip(text: String) {
     Text(
         text,
         color = c.inkMute,
-        fontSize = 12.sp,
+        fontSize = EmberTheme.typo.caption.fontSize,
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(c.surface)

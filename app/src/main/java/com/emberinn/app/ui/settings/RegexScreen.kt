@@ -95,7 +95,7 @@ fun RegexScreen(onBack: () -> Unit) {
             Text(
                 "对齐官方 regex 扩展 GLOBAL 分桶：先跑全局、再跑该卡正则（该卡在角色详情页编辑）；仅影响发送内容，不落盘改写。",
                 color = EmberTheme.colors.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -103,11 +103,11 @@ fun RegexScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("启用正则脚本", color = EmberTheme.colors.ink, fontSize = 15.sp)
+                    Text("启用正则脚本", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize)
                     Text(
                         "关闭后所有位点不应用正则（官方 disabledExtensions.regex）。",
                         color = EmberTheme.colors.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                     )
                 }
                 EmberSwitch(
@@ -122,7 +122,7 @@ fun RegexScreen(onBack: () -> Unit) {
                 Text(
                     "还没有全局正则。可用来统一清理输入输出，例如去掉“*”强调。点下方按钮新增第一条。",
                     color = EmberTheme.colors.inkMute,
-                    fontSize = 12.sp,
+                    fontSize = EmberTheme.typo.caption.fontSize,
                     modifier = Modifier.padding(start = 4.dp, top = 4.dp),
                 )
             }
@@ -161,7 +161,7 @@ fun RegexScreen(onBack: () -> Unit) {
             Text(
                 "对齐官方 preset 扩展：脚本存于预设的 regex_scripts 扩展字段；App 用命名预设集模拟，允许列表按官方 preset_allowed_regex[api]（App 固定 openai）。",
                 color = EmberTheme.colors.inkMute,
-                fontSize = 12.sp,
+                fontSize = EmberTheme.typo.caption.fontSize,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Row(
@@ -204,7 +204,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 ) {
-                    Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    Text("允许此预设集（当前：${activePreset.ifBlank { "（未选择）" }}）", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                     EmberSwitch(
                         checked = activePreset.isNotBlank() && activePreset in presetAllowedOpenAI,
                         onChange = { on ->
@@ -302,7 +302,7 @@ fun RegexScreen(onBack: () -> Unit) {
                     Text(
                         "生效位点",
                         color = EmberTheme.colors.inkMute,
-                        fontSize = 12.sp,
+                        fontSize = EmberTheme.typo.caption.fontSize,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -317,7 +317,7 @@ fun RegexScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        Text("禁用", color = EmberTheme.colors.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text("禁用", color = EmberTheme.colors.ink, fontSize = EmberTheme.typo.subhead.fontSize, modifier = Modifier.weight(1f))
                         EmberSwitch(checked = draftDisabled, onChange = { draftDisabled = it })
                     }
                 }
@@ -380,8 +380,8 @@ private fun RegexRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
     ) {
         Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
-            Text(name.ifBlank { "（未命名）" }, color = c.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(find.ifBlank { "（空匹配式）" }, color = c.inkMute, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name.ifBlank { "（未命名）" }, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(find.ifBlank { "（空匹配式）" }, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
         Icon(

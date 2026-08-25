@@ -776,7 +776,7 @@ private fun ServiceCard(title: String, content: @Composable () -> Unit) {
         Text(
             title.uppercase(),
             color = EmberTheme.colors.inkMute,
-            fontSize = 11.sp,
+            fontSize = EmberTheme.typo.meta.fontSize,
             letterSpacing = 1.6.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(start = 4.dp, top = 24.dp, bottom = 8.dp),

@@ -169,7 +169,7 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
             ) {
                 if (message != null) {
                     item {
-                        Text(message!!, color = c.accent, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                        Text(message!!, color = c.accent, fontSize = EmberTheme.typo.caption.fontSize, modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
                 if (personas.isEmpty()) {
@@ -178,8 +178,8 @@ fun PersonaSettingsScreen(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("还没有人设", color = c.ink, fontSize = 16.sp)
-                            Text("点右上角 + 新建；描述支持 {{char}}/{{user}} 宏", color = c.inkMute, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                            Text("还没有人设", color = c.ink, fontSize = EmberTheme.typo.head.fontSize)
+                            Text("点右上角 + 新建；描述支持 {{char}}/{{user}} 宏", color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -310,7 +310,7 @@ private fun PersonaCard(
                 Text(
                     persona.name.take(1).ifBlank { "?" },
                     color = c.ink,
-                    fontSize = 18.sp,
+                    fontSize = EmberTheme.typo.title.fontSize,
                     fontWeight = FontWeight.Light,
                 )
             }
@@ -318,24 +318,24 @@ private fun PersonaCard(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(persona.name.ifBlank { "未命名" }, color = c.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Text(persona.name.ifBlank { "未命名" }, color = c.ink, fontSize = EmberTheme.typo.subhead.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (isActive) {
                     Spacer(Modifier.width(8.dp))
-                    Text("当前", color = c.accent, fontSize = 10.sp, letterSpacing = 0.8.sp)
+                    Text("当前", color = c.accent, fontSize = EmberTheme.typo.micro.fontSize, letterSpacing = 0.8.sp)
                 }
                 if (isDefault) {
                     Spacer(Modifier.width(8.dp))
-                    Text("默认", color = c.inkMute, fontSize = 10.sp, letterSpacing = 0.8.sp)
+                    Text("默认", color = c.inkMute, fontSize = EmberTheme.typo.micro.fontSize, letterSpacing = 0.8.sp)
                 }
             }
             if (persona.title.isNotBlank()) {
-                Text(persona.title, color = c.accent, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(persona.title, color = c.accent, fontSize = EmberTheme.typo.caption.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (persona.description.isNotBlank()) {
-                Text(persona.description, color = c.inkMute, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 17.sp)
+                Text(persona.description, color = c.inkMute, fontSize = EmberTheme.typo.caption.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 17.sp)
             }
             if (persona.lorebook.isNotBlank()) {
-                Text("世界书：${persona.lorebook}", color = c.ink.copy(alpha = 0.34f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("世界书：${persona.lorebook}", color = c.ink.copy(alpha = 0.34f), fontSize = EmberTheme.typo.micro.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Icon(
@@ -415,7 +415,7 @@ private fun PersonaEditDialog(
                 Box {
                     val dc = EmberTheme.colors
                     Column {
-                        Text("注入位置", fontSize = 12.sp, color = dc.inkMute)
+                        Text("注入位置", fontSize = EmberTheme.typo.caption.fontSize, color = dc.inkMute)
                         Spacer(Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -428,7 +428,7 @@ private fun PersonaEditDialog(
                         ) {
                             Text(
                                 PERSONA_POSITIONS.firstOrNull { it.first == position }?.second ?: "提示词内",
-                                fontSize = 14.sp,
+                                fontSize = EmberTheme.typo.body.fontSize,
                                 color = dc.ink,
                                 modifier = Modifier.weight(1f),
                             )
@@ -453,7 +453,7 @@ private fun PersonaEditDialog(
                 }
                 // 官方 persona 描述角色（role）：system/user/assistant
                 Column {
-                    Text("角色（role）", fontSize = 12.sp, color = EmberTheme.colors.inkMute)
+                    Text("角色（role）", fontSize = EmberTheme.typo.caption.fontSize, color = EmberTheme.colors.inkMute)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to "系统", 1 to "用户", 2 to "助手").forEach { (v, label) ->
@@ -465,7 +465,7 @@ private fun PersonaEditDialog(
                 Box {
                     val dc = EmberTheme.colors
                     Column {
-                        Text("人设世界书（lorebook，参与扫描）", fontSize = 12.sp, color = dc.inkMute)
+                        Text("人设世界书（lorebook，参与扫描）", fontSize = EmberTheme.typo.caption.fontSize, color = dc.inkMute)
                         Spacer(Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -478,7 +478,7 @@ private fun PersonaEditDialog(
                         ) {
                             Text(
                                 worlds.firstOrNull { it.name == lorebook }?.displayName ?: lorebook.ifBlank { "无" },
-                                fontSize = 14.sp,
+                                fontSize = EmberTheme.typo.body.fontSize,
                                 color = dc.ink,
                                 modifier = Modifier.weight(1f),
                             )

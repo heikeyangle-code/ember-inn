@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.emberinn.app.ui.design.EmberTheme
@@ -79,11 +78,11 @@ fun GlobalSearchPanel(
                     Text(
                         "输入以检索全部内容；斜杠命令也可直达",
                         color = c.inkMute,
-                        fontSize = 11.sp,
+                        fontSize = EmberTheme.typo.meta.fontSize,
                         modifier = Modifier.padding(start = 6.dp, top = 10.dp),
                     )
                 } else if (results.isEmpty()) {
-                    Text("没有匹配结果", color = c.inkMute, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp, top = 14.dp))
+                    Text("没有匹配结果", color = c.inkMute, fontSize = EmberTheme.typo.bodySmall.fontSize, modifier = Modifier.padding(start = 6.dp, top = 14.dp))
                 } else {
                     Column(
                         modifier = Modifier
@@ -102,10 +101,10 @@ fun GlobalSearchPanel(
                                 Icon(entry.icon, contentDescription = null, tint = c.inkMute, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(11.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(entry.title, color = c.ink, fontSize = 14.sp)
-                                    Text(entry.subtitle, color = c.inkMute, fontSize = 11.sp, maxLines = 1)
+                                    Text(entry.title, color = c.ink, fontSize = EmberTheme.typo.body.fontSize)
+                                    Text(entry.subtitle, color = c.inkMute, fontSize = EmberTheme.typo.meta.fontSize, maxLines = 1)
                                 }
-                                Text(entry.group, color = c.ink.copy(alpha = 0.30f), fontSize = 10.sp)
+                                Text(entry.group, color = c.ink.copy(alpha = 0.30f), fontSize = EmberTheme.typo.micro.fontSize)
                             }
                         }
                     }
