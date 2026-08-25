@@ -351,6 +351,11 @@ fun ChatScreen(
             officialThemeJson,
             listOfNotNull(
                 "fullchat",
+                // 官方扩展等价类（toggle-dependent.css）：翻译/画图/朗读按钮的显隐开关，
+                // 三功能 App 内建常驻 → 恒亮（系统消息不亮朗读由官方 is_system CSS 管）
+                "translate",
+                "sd",
+                "tts",
                 ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass,
             ),
         )

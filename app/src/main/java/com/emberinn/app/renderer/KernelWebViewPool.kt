@@ -143,7 +143,9 @@ class KernelWebViewPool(
     // 整页壳 C2：fullchat 是页面级状态，必须随主题/崩溃重建一起全量同步。
     // app-host-actions 已废除：其过渡隐藏规则曾把 .mes_edit_buttons（编辑确认✓/取消✗行）
     // 一并 display:none!important，手机上编辑后无确认钮可点（内核点击桥与宿主处理其实早已齐备）。
-    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat")
+    // translate/sd/tts：官方 toggle-dependent.css 靠这三个 body 类亮出 翻译/画图/朗读 按钮
+    // （官方=装且启用对应扩展才加类）；三功能在 App 为内建常驻，等价"扩展已启用"，恒加。
+    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "translate", "sd", "tts")
     @Volatile private var currentStylePackEnabled: Boolean = false
     @Volatile private var currentStylePackHref: String? = null
     @Volatile private var currentStylePackExtensionHref: String? = null
