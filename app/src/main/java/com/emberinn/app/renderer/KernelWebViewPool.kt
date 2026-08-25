@@ -136,13 +136,14 @@ class KernelWebViewPool(
     fun removeLongPressListener(l: (mesid: String) -> Unit) { synchronized(longPressListeners) { longPressListeners.remove(l) } }
 
     // 每页主题状态：新建实例 ready 后自动应用；updateTheme/updateStylePack 广播到全部存活实例。
-    // bodyClasses 为全量同步语义（含 chat_display 布局类 + app-host-actions 宿主接管标记）。
+    // bodyClasses 为全量同步语义（chat_display 布局类；官方消息按钮全部由内核原生呈现）。
     @Volatile private var currentThemeJson: String? = null
     // 运行时开关（BehaviorPrefs → setRuntimeConfig）：同为页面级状态，随 applyPageSetup 重放
     @Volatile private var currentRuntimeConfigJson: String? = null
-    // 整页壳 C2：fullchat 是页面级状态，必须随主题/崩溃重建一起全量同步；
-    // app-host-actions 只保留 reasoning 编辑按钮等宿主未接管项的过渡隐藏。
-    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat", "app-host-actions")
+    // 整页壳 C2：fullchat 是页面级状态，必须随主题/崩溃重建一起全量同步。
+    // app-host-actions 已废除：其过渡隐藏规则曾把 .mes_edit_buttons（编辑确认✓/取消✗行）
+    // 一并 display:none!important，手机上编辑后无确认钮可点（内核点击桥与宿主处理其实早已齐备）。
+    @Volatile private var currentBodyClasses: List<String> = listOf("fullchat")
     @Volatile private var currentStylePackEnabled: Boolean = false
     @Volatile private var currentStylePackHref: String? = null
     @Volatile private var currentStylePackExtensionHref: String? = null

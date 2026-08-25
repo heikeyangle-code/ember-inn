@@ -351,7 +351,6 @@ fun ChatScreen(
             officialThemeJson,
             listOfNotNull(
                 "fullchat",
-                "app-host-actions",
                 ChatDisplayMode.entries.getOrElse(shell.chatDisplay) { ChatDisplayMode.FLAT }.bodyClass,
             ),
         )
