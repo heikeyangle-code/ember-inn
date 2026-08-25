@@ -253,7 +253,6 @@ private fun ProviderCard(
             }
             Icon(FaIcons.ChevronRight, contentDescription = null, tint = EmberTheme.colors.inkMute, modifier = Modifier.size(20.dp))
         }
-    }
 }
 
 /** 提供商详情（参照命理2 ProviderConfigure：名称 / Key / 接口地址 / 开关与模型选择）。 */
