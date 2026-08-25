@@ -139,6 +139,7 @@ import com.emberinn.app.ui.components.edgeSwipeBack
 import com.emberinn.app.ui.components.emberGlass
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.EmptyState
+import com.emberinn.app.ui.design.components.SearchField
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import com.emberinn.app.ui.settings.AppearancePrefs
