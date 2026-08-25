@@ -1,0 +1,560 @@
+{
+  "source": "Moonlit Echoes v3.1.0 theme-settings.js",
+  "settings": [
+    {
+      "type": "color",
+      "varId": "customThemeColor",
+      "displayText": "Primary Theme Color",
+      "default": "rgba(81, 160, 222, 1)",
+      "category": "theme-colors",
+      "description": "The main interface theme color, used for highlights and accents"
+    },
+    {
+      "type": "color",
+      "varId": "customThemeColor2",
+      "displayText": "Secondary Theme Color",
+      "default": "rgba(250, 198, 121, 1)",
+      "category": "theme-colors",
+      "description": "A complementary secondary color, used for special highlights"
+    },
+    {
+      "type": "color",
+      "varId": "customBgColor1",
+      "displayText": "Main Background Color",
+      "default": "rgba(255, 255, 255, 0.1)",
+      "category": "theme-colors",
+      "description": "The primary background color used across various menus and buttons"
+    },
+    {
+      "type": "color",
+      "varId": "customBgColor2",
+      "displayText": "Secondary Background Color",
+      "default": "rgba(255, 255, 255, 0.05)",
+      "category": "theme-colors",
+      "description": "The secondary background color used across various menus and buttons"
+    },
+    {
+      "type": "color",
+      "varId": "customTopBarColor",
+      "displayText": "Top Menu Color",
+      "default": "rgba(23, 23, 23, 0.7)",
+      "category": "theme-colors",
+      "description": "Background color of the top menu (#top-bar)"
+    },
+    {
+      "type": "color",
+      "varId": "Drawer-iconColor",
+      "displayText": "Menu Icon Color",
+      "default": "rgba(255, 255, 255, 0.8)",
+      "category": "theme-colors",
+      "description": "Color of icons in the top menu, sidebar, and dropdown menus"
+    },
+    {
+      "type": "color",
+      "varId": "sheldBackgroundColor",
+      "displayText": "Chat Field Background Color",
+      "default": "rgba(0, 0, 0, 0.2)",
+      "category": "theme-colors",
+      "description": "Background color of the chat field (#sheld)"
+    },
+    {
+      "type": "color",
+      "varId": "customScrollbarColor",
+      "displayText": "Scrollbar Color",
+      "default": "rgba(255, 255, 255, 0.5)",
+      "category": "theme-colors",
+      "description": "The scrollbar color on SillyTavern"
+    },
+    {
+      "type": "checkbox",
+      "varId": "hideAvatarBorder",
+      "displayText": "Hide Avatar Border",
+      "default": false,
+      "category": "chat-style",
+      "description": "Hide the border around character avatars in chat messages",
+      "cssBlock": "\n            #chat .mes .avatar {\n                border: unset !important;\n            }\n        "
+    },
+    {
+      "type": "text",
+      "varId": "custom-ChatAvatar",
+      "displayText": "Chat Field Avatar Size",
+      "default": "40px",
+      "category": "chat-style",
+      "description": "Width and height of character avatars in the chat field"
+    },
+    {
+      "type": "text",
+      "varId": "mesParagraphSpacingTop",
+      "displayText": "Message Paragraph Spacing (Top)",
+      "default": "0.4em",
+      "category": "chat-style",
+      "description": "Sets the spacing above each paragraph in chat messages (e.g. 0.5em, 1em)"
+    },
+    {
+      "type": "text",
+      "varId": "mesParagraphSpacingBottom",
+      "displayText": "Message Paragraph Spacing (Bottom)",
+      "default": "0.6em",
+      "category": "chat-style",
+      "description": "Sets the spacing below each paragraph in chat messages (e.g. 0.5em, 1em)"
+    },
+    {
+      "type": "text",
+      "varId": "charNameFontSize",
+      "displayText": "Character Name Font Size",
+      "default": "inherit",
+      "category": "chat-style",
+      "description": "Font size for character (non-user) name text (e.g. 0.9rem, 1rem)"
+    },
+    {
+      "type": "text",
+      "varId": "userNameFontSize",
+      "displayText": "User Name Font Size",
+      "default": "inherit",
+      "category": "chat-style",
+      "description": "Font size for user name text (e.g. 0.9rem, 1rem)"
+    },
+    {
+      "type": "text",
+      "varId": "messageTextFontSize",
+      "displayText": "Message Text Font Size",
+      "default": "15px",
+      "category": "chat-style",
+      "description": "Font size for message body text (e.g. 0.95rem, 1rem, 1.05rem)"
+    },
+    {
+      "type": "text",
+      "varId": "messageLineHeight",
+      "displayText": "Message Text Line Height",
+      "default": "calc(var(--mainFontSize) + .5rem)",
+      "category": "chat-style",
+      "description": "Line height for message body text (e.g. 1.55em, 1.6em)"
+    },
+    {
+      "type": "text",
+      "varId": "messageTextLetterSpacing",
+      "displayText": "Message Text Letter Spacing",
+      "default": "inherit",
+      "category": "chat-style",
+      "description": "Letter spacing for message body text (e.g. 0em, 0.02em)"
+    },
+    {
+      "type": "text",
+      "varId": "customlastInContext",
+      "displayText": "Maximum Context Marker Style",
+      "default": "1px solid var(--customThemeColor)",
+      "category": "chat-style",
+      "description": "Line style for the maximum context marker"
+    },
+    {
+      "type": "slider",
+      "varId": "customCSS-bg-blur",
+      "displayText": "Background Blur Intensity",
+      "default": "3",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "category": "background-effects",
+      "description": "Adjusts the blur level of the background image"
+    },
+    {
+      "type": "slider",
+      "varId": "customCSS-bg-opacity",
+      "displayText": "Background Image Opacity",
+      "default": "1",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "category": "background-effects",
+      "description": "Adjusts the opacity level of the background image"
+    },
+    {
+      "type": "slider",
+      "varId": "sheldBlurStrength",
+      "displayText": "Chat Field Background Blur Intensity",
+      "default": "5",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "category": "background-effects",
+      "description": "Blur level of the chat field background (#sheld)"
+    },
+    {
+      "type": "slider",
+      "varId": "mobileSheldBlurStrength",
+      "displayText": "Mobile Chat Field Background Blur Intensity",
+      "default": "0",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "category": "background-effects",
+      "description": "Blur level of the chat field background on mobile devices (#sheld)"
+    },
+    {
+      "type": "checkbox",
+      "varId": "enableThemeColorization",
+      "displayText": "Apply Theme Colors to More UI Elements",
+      "default": false,
+      "category": "theme-extras",
+      "description": "Applies theme colors to more parts of the UI for a more personalized look",
+      "cssBlock": "\n            /* Theme Colorization */\n            .drawer-icon,\n            #rightSendForm>div,\n            #leftSendForm>div,\n            .options-content a,\n            .list-group-item,\n            .mes_button {\n                transition: all 0.5s ease !important;\n            }\n            .drawer-icon.openIcon,\n            #rightSendForm>div:hover,\n            #leftSendForm>div:hover,\n            .options-content a:hover,\n            .list-group-item:hover,\n            .mes_button:hover {\n                color: var(--customThemeColor) !important;\n            }\n            #left-nav-panel,\n            #right-nav-panel,\n            .drawer-content,\n            #character_popup,\n            #logprobsViewer,\n            #floatingPrompt,\n            #cfgConfig {\n                border-top: 1px solid color-mix(in srgb, var(--customThemeColor) 50%, transparent) !important;\n            }\n            #left-nav-panel,\n            #right-nav-panel,\n            .drawer-content,\n            #WorldInfo {\n                @media screen and (max-width: 1000px) {\n                    border-bottom: 1px solid color-mix(in srgb, var(--customThemeColor) 50%, transparent);\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "disableTopMenuAnimation",
+      "displayText": "Disable Top Menu Animations",
+      "default": false,
+      "category": "theme-extras",
+      "description": "Disable top menu animation effects for a smoother experience on mobile devices",
+      "cssBlock": "\n        .drawer-content,\n        .fillLeft,\n        .fillRight {\n            transition-property: unset;\n            transition-duration: unset;\n            transition-timing-function: unset;\n            transition-behavior: unset;\n        }\n    "
+    },
+    {
+      "type": "checkbox",
+      "varId": "forceFixedMenuHeight",
+      "displayText": "Lock AI Response & Character Menu Height",
+      "default": true,
+      "category": "theme-extras",
+      "description": "Fix AI config & character menus' height to avoid display issues. Disable if using MovingUI",
+      "cssBlock": "\n            /* Force Fixed Menu Height */\n            .fillLeft,\n            .fillRight,\n            #left-nav-panel,\n            #right-nav-panel {\n                min-height: calc(100dvh - var(--topBarBlockSize)) !important;\n                height: calc(100dvh - var(--topBarBlockSize)) !important;\n                max-height: calc(100dvh - var(--topBarBlockSize)) !important;\n            }\n    "
+    },
+    {
+      "type": "checkbox",
+      "varId": "newMenuMaxHeight",
+      "displayText": "Dynamically Adjust Menu Max Height",
+      "default": false,
+      "category": "theme-extras",
+      "description": "Dynamically adjust the menu's maximum height based on the message input field. May not work on all devices—disable this option if the menu doesn't close properly",
+      "cssBlock": "\n            /* Dynamic Menu Height */\n            .drawer-content {\n                max-height: calc(100dvh - var(--topBarBlockSize) - var(--formSheldHeight) - 5px) !important;\n            }\n            @media screen and (max-width: 1000px) {\n                .drawer-content,\n                .fillLeft, .fillRight,\n                #left-nav-panel, #right-nav-panel {\n                    max-height: calc(100dvh - var(--topBarBlockSize) - var(--formSheldHeight) + 4px) !important;\n                }\n\n                #floatingPrompt,\n                #cfgConfig,\n                #logprobsViewer,\n                #movingDivs > div,\n                #character_popup {\n                    max-height: calc(100dvh - var(--topBarBlockSize)) !important;\n                    padding-bottom: 15px !important;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "disableAllBorderRadius",
+      "displayText": "Disable All Border Radius",
+      "default": false,
+      "category": "theme-extras",
+      "description": "Completely disable all border-radius and outline-radius effects throughout the UI",
+      "cssBlock": "\n            /* Disable Border Radius */\n            :root {\n                --avatar-base-border-radius: 0 !important;\n            }\n            *, *::before, *::after {\n                border-radius: 0 !important;\n                border-top-left-radius: 0 !important;\n                border-top-right-radius: 0 !important;\n                border-bottom-left-radius: 0 !important;\n                border-bottom-right-radius: 0 !important;\n                outline-radius: 0 !important;\n                -moz-outline-radius: 0 !important;\n            }\n            body.whisperstyle #chat .mes::before {\n                border-radius: 0 !important;\n            }\n            body.ripplestyle #chat .mes .mesAvatarWrapper .avatar,\n            body.ripplestyle #chat .mes .mesAvatarWrapper .avatar img,\n            #extensionTopBar,\n            body:has(#extensionConnectionProfiles.visible) #extensionTopBar,\n            #rm_ch_create_block .avatar img {\n                border-radius: 0 !important;\n            }\n            @media screen and (max-width: 1000px) {\n                #send_form {\n                    border-radius: 0 !important;\n                }\n            }\n            svg * {\n                rx: 0 !important;\n                ry: 0 !important;\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "expandEntryInputWidth",
+      "displayText": "Expand Entry Input Width",
+      "default": true,
+      "category": "theme-extras",
+      "description": "Hide the browser’s up/down arrows in number input fields to give more space for typing",
+      "cssBlock": "\n            input[type=number]::-webkit-outer-spin-button,\n            input[type=number]::-webkit-inner-spin-button {\n                -webkit-appearance: none;\n                margin: 0;\n            }\n            input[type=number] {\n                -moz-appearance:textfield;\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "compactWorldsLorebooksTopBar",
+      "displayText": "Compact Worlds/Lorebooks Top Bar",
+      "default": true,
+      "category": "theme-extras",
+      "description": "Make the top fields in Worlds/Lorebooks more compact by reducing header padding and entry spacing",
+      "cssBlock": "\n            .world_entry .inline-drawer-header {\n                padding: 2px 10px;\n            }\n            .wi-card-entry {\n                padding: 2px;\n                margin: 2px;\n            }\n        "
+    },
+    {
+      "type": "textarea",
+      "varId": "rawCustomCss",
+      "displayText": "Raw Custom CSS",
+      "default": "",
+      "category": "raw-css",
+      "description": "Note: This is raw, unfiltered CSS with full support (including @import for custom fonts). Use with caution. Please use the Custom CSS option in User Settings first!!!"
+    },
+    {
+      "type": "select",
+      "varId": "customCSS-ChatGradientBlur",
+      "displayText": "Chat Field Gradient Blur",
+      "default": "linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 2%, rgba(0, 0, 0, 1) 98%, rgba(0, 0, 0, 0) 100%)",
+      "options": [
+        {
+          "label": "Enable",
+          "value": "linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 2%, rgba(0, 0, 0, 1) 98%, rgba(0, 0, 0, 0) 100%)"
+        },
+        {
+          "label": "Disabled",
+          "value": "none"
+        }
+      ],
+      "category": "chat-general",
+      "description": "Applies a transparent gradient effect to the top and bottom of the chat field (#chat)"
+    },
+    {
+      "type": "checkbox",
+      "varId": "showLLMReasoningIcon",
+      "displayText": "Display LLM Icon in Reasoning Block",
+      "default": false,
+      "category": "chat-general",
+      "description": "Shows the LLM icon in the reasoning block header for clearer identification",
+      "cssBlock": "\n            .mes_reasoning_header > .icon-svg {\n                display: block;\n                opacity: 1 !important;\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "justifyParagraphText",
+      "displayText": "Justify Paragraph Text",
+      "default": false,
+      "category": "chat-general",
+      "description": "Aligns paragraph text for Chinese, Japanese, and Korean for better readability; not suitable for English layout",
+      "cssBlock": "\n            .mes_text p {\n                text-align: justify;\n                text-justify: inter-ideograph;\n                }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "enableMessageDetails",
+      "displayText": "Hide Additional Message Details",
+      "default": false,
+      "category": "chat-general",
+      "description": "Message additional details (name, ID, time, token counter, etc.) show only on hover or click",
+      "cssBlock": "\n            .mes .ch_name,\n            .mes .mesIDDisplay,\n            .mes .mes_timer,\n            .mes .tokenCounterDisplay {\n                visibility: hidden !important;\n                opacity: 0 !important;\n                transition: all var(--messageDetailsAnimationDuration) cubic-bezier(0.4, 0, 0.2, 1),\n                            visibility 0s ease var(--messageDetailsAnimationDuration) !important;\n                z-index: 10 !important;\n                pointer-events: auto !important;\n            }\n\n            .mes:hover .ch_name,\n            .mes:hover .mesIDDisplay,\n            .mes:hover .mes_timer,\n            .mes:hover .tokenCounterDisplay,\n            .mes.active-message .ch_name,\n            .mes.active-message .mesIDDisplay,\n            .mes.active-message .mes_timer,\n            .mes.active-message .tokenCounterDisplay {\n                visibility: visible !important;\n                opacity: 1 !important;\n                transition: all var(--messageDetailsAnimationDuration) cubic-bezier(0.4, 0, 0.2, 1),\n                            visibility var(--messageDetailsAnimationDuration) ease !important;\n            }\n\n            .mes .mes_reasoning_details {\n                opacity: 0;\n                max-height: 1px;\n                transform: translateY(-10px);\n                pointer-events: none;\n                transition:\n                    opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),\n                    transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),\n                    max-height 0.3s cubic-bezier(0, 0, 0.2, 1);\n                will-change: opacity, transform;\n            }\n            .mes:hover .mes_reasoning_details,\n            .mes.active-message .mes_reasoning_details {\n                opacity: 1;\n                visibility: visible !important;\n                transform: translateY(0);\n                max-height: 100%;\n                pointer-events: auto;\n            }\n\n            body.flatchat,\n            body.bubblechat,\n            body.ripplestyle {\n                .mes .ch_name,\n                .mes .mesIDDisplay,\n                .mes .mes_timer,\n                .mes .tokenCounterDisplay {\n                    margin-top: -40px;\n                    background: none;\n                }\n\n                .mes:hover .ch_name,\n                .mes:hover .mesIDDisplay,\n                .mes:hover .mes_timer,\n                .mes:hover .tokenCounterDisplay,\n                .mes.active-message .ch_name,\n                .mes.active-message .mesIDDisplay,\n                .mes.active-message .mes_timer,\n                .mes.active-message .tokenCounterDisplay {\n                    margin-top: unset;\n                    background: unset;\n                }\n            }\n\n            body.flatchat,\n            body.bubblechat,\n            body.documentstyle,\n            body.ripplestyle {\n                .mes .ch_name,\n                .mes .mesIDDisplay,\n                .mes .mes_timer,\n                .mes .tokenCounterDisplay {\n                    transform: translateY(-40px);\n                }\n\n                .mes:hover .ch_name,\n                .mes:hover .mesIDDisplay,\n                .mes:hover .mes_timer,\n                .mes:hover .tokenCounterDisplay,\n                .mes.active-message .ch_name,\n                .mes.active-message .mesIDDisplay,\n                .mes.active-message .mes_timer,\n                .mes.active-message .tokenCounterDisplay {\n                    transform: translateY(0);\n                }\n            }\n        "
+    },
+    {
+      "type": "text",
+      "varId": "messageDetailsAnimationDuration",
+      "displayText": "Message Details Animation Duration",
+      "default": "0.8s",
+      "category": "chat-general",
+      "description": "Controls the animation speed for message details appearing/disappearing (e.g. 0.5s, 1.2s)"
+    },
+    {
+      "type": "text",
+      "varId": "favoriteSymbol",
+      "displayText": "Favorite Symbol",
+      "default": "\"♥︎\"",
+      "category": "chat-general",
+      "description": "Sets the symbol displayed before a favorite character in the character management menu"
+    },
+    {
+      "type": "checkbox",
+      "varId": "favoriteSymbolAnimation",
+      "displayText": "Favorite Symbol Animation",
+      "default": true,
+      "category": "chat-general",
+      "description": "Enables the pulsing animation effect for the favorite symbol before character names",
+      "cssBlock": "\n        .character_select.is_fav .ch_name::before,\n        .group_select.is_fav .ch_name::before,\n        .group_member.is_fav .ch_name::before {\n            animation: fadePulse 1s ease-in-out infinite;\n        }\n        @keyframes fadePulse {\n            0%, 100% { opacity: 0.6; }\n            50% { opacity: 1; }\n        }\n    "
+    },
+    {
+      "type": "text",
+      "varId": "VN-sheld-height",
+      "displayText": "Visual Novel Mode Chat Field Height",
+      "default": "40dvh",
+      "category": "visual-novel",
+      "description": "Maximum height of the chat field (#sheld) in Visual Novel mode"
+    },
+    {
+      "type": "select",
+      "varId": "VN-expression-holder",
+      "displayText": "Visual Novel Mode Character Portrait Gradient Transparency",
+      "default": "linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 90%, rgba(0, 0, 0, 0) 100%)",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 90%, rgba(0, 0, 0, 0) 100%)"
+        },
+        {
+          "label": "Disabled",
+          "value": "none"
+        }
+      ],
+      "category": "visual-novel",
+      "description": "Bottom transparency effect for character portraits in Visual Novel mode"
+    },
+    {
+      "type": "text",
+      "varId": "custom-EchoAvatarWidth",
+      "displayText": "[Echo] Message Background Avatar Width",
+      "default": "25%",
+      "category": "chat-echo",
+      "description": "Width of character avatars in the message background for the Echo style"
+    },
+    {
+      "type": "text",
+      "varId": "custom-EchoAvatarHeight",
+      "displayText": "[Echo] Message Background Avatar Height",
+      "default": "300px",
+      "category": "chat-echo",
+      "description": "Height of character avatars in the message background for the Echo style"
+    },
+    {
+      "type": "text",
+      "varId": "custom-EchoAvatarMobileWidth",
+      "displayText": "[Echo] Mobile Message Background Avatar Width",
+      "default": "25%",
+      "category": "chat-echo",
+      "description": "Width of character avatars in the message background for the Echo style on mobile devices"
+    },
+    {
+      "type": "text",
+      "varId": "custom-EchoAvatarMobileHeight",
+      "displayText": "[Echo] Mobile Message Background Avatar Height",
+      "default": "250px",
+      "category": "chat-echo",
+      "description": "Height of character avatars in the message background for the Echo style on mobile devices"
+    },
+    {
+      "type": "checkbox",
+      "varId": "hideEchoUserIllustration",
+      "displayText": "[Echo] Hide User Message Illustration",
+      "default": false,
+      "category": "chat-echo",
+      "description": "Hide user message illustrations in Echo style",
+      "cssBlock": "\n            body.echostyle #chat {\n                .mes[is_user=\"true\"] {\n                    .name_text {\n                            display: inline-block !important;\n                            margin-right: 5px;\n                        }\n                    .mes_text,\n                        .last_mes .mes_text {\n                            padding: 10px 20px !important;\n                            min-height: unset !important;\n                        }\n                    .mes_text::before {\n                        display: none !important;\n                    }\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "hideMobileEchoBackground",
+      "displayText": "[Echo] Hide Message Background on Mobile",
+      "default": false,
+      "category": "chat-echo",
+      "description": "Hide message background illustrations on mobile for the Echo style",
+      "cssBlock": "\n            body.echostyle #chat {\n                @media screen and (max-width: 1000px) {\n                    .mes[is_user=\"true\"],\n                    .mes[is_user=\"false\"] {\n                        .mes_text,\n                        .last_mes .mes_text {\n                            padding: 10px 20px !important;\n                            min-height: unset !important;\n                        }\n                    }\n                    .mes_text::before {\n                        display: none !important;\n                    }\n                }\n\n                .ch_name {\n                    .name_text {\n                        display: inline-block !important;\n                        margin-right: 5px;\n                    }\n                }\n            }\n        "
+    },
+    {
+      "type": "text",
+      "varId": "customWhisperAvatarWidth",
+      "displayText": "[Whisper] Message Background Avatar Width",
+      "default": "50%",
+      "category": "chat-whisper",
+      "description": "Width of character avatars in the message background for the Whisper style"
+    },
+    {
+      "type": "select",
+      "varId": "customWhisperAvatarAlign",
+      "displayText": "[Whisper] Avatar Alignment",
+      "default": "center",
+      "options": [
+        {
+          "label": "Top Aligned",
+          "value": "top"
+        },
+        {
+          "label": "Center Aligned",
+          "value": "center"
+        },
+        {
+          "label": "Bottom Aligned",
+          "value": "bottom"
+        }
+      ],
+      "category": "chat-whisper",
+      "description": "Vertical alignment of character avatars in the message background for the Whisper style"
+    },
+    {
+      "type": "text",
+      "varId": "customRippleAvatarWidth",
+      "displayText": "[Ripple] Message Avatar Width",
+      "default": "180px",
+      "category": "chat-ripple",
+      "description": "Width of character avatars in the message for the Ripple style"
+    },
+    {
+      "type": "text",
+      "varId": "customRippleAvatarMobileWidth",
+      "displayText": "[Ripple] Mobile Message Avatar Width",
+      "default": "100px",
+      "category": "chat-ripple",
+      "description": "Width of character avatars in the message for the mobile Ripple style"
+    },
+    {
+      "type": "checkbox",
+      "varId": "hideRippleUserAvatar",
+      "displayText": "[Ripple] Hide User Avatar",
+      "default": false,
+      "category": "chat-ripple",
+      "description": "Hide user avatars in the message for the Ripple style",
+      "cssBlock": "\n            body.ripplestyle #chat .mes[is_user=\"true\"] {\n                .mesAvatarWrapper {\n                    margin-top: 35px;\n                    top: 35px;\n                }\n                .avatar {\n                    display: none !important;\n                }\n                .mes_timer,\n                .mesIDDisplay,\n                .tokenCounterDisplay {\n                    margin-left: 10px;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "enableMobile-hidden_scrollbar",
+      "displayText": "Enable Mobile Hidden Scrollbar",
+      "default": true,
+      "category": "mobile-global-settings",
+      "description": "Hides scrollbars for a clean mobile interface",
+      "cssBlock": "\n            /* Mobile Hidden Scrollbar */\n            @media screen and (max-width: 1000px) {\n                * {\n                    scrollbar-width: none !important;\n                    -ms-overflow-style: none !important;\n                }\n                *::-webkit-scrollbar {\n                    display: none !important;\n                }\n\n                .scrollableInner,\n                #form_create,\n                #rm_print_characters_block,\n                #extensionSideBar #extensionSideBarContainer {\n                    padding: 0 !important;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "enableMobile-send_form",
+      "displayText": "Enable New Mobile Input Field",
+      "default": true,
+      "category": "mobile-global-settings",
+      "description": "A message input field designed for mobile, providing a wider input box",
+      "cssBlock": "\n            /* Mobile Input Field */\n            @media screen and (max-width: 1000px) {\n                #form_sheld {}\n\n                body:has([data-slide-toggle=\"shown\"]) #send_form  {\n                    border-radius: 0 !important;\n                }\n\n                /* Mobile Chat Input Overall */\n                #send_form {\n                    margin-bottom: 0 !important;\n                    min-height: 100% !important;\n                    padding: 5px 15px;\n                    padding-top: 8px;\n                    border-radius: 15px 15px 0 0 !important;\n                    transition: all 0.5s ease;\n\n                    &:focus-within {\n                        border-top: 1.25px solid var(--customThemeColor) !important;\n                        box-shadow: 0 0 5px var(--customThemeColor);\n                    }\n\n                    &.compact {\n                        #leftSendForm,\n                        #rightSendForm {\n                            display: flex;\n                            align-items: center;\n                            justify-content: center;\n                            flex-wrap: nowrap;\n                            width: unset;\n                        }\n                    }\n                }\n\n                /* Mobile Chat Menu */\n                #nonQRFormItems {\n                    display: grid;\n                    grid-template-columns: 1fr 1fr;\n                    grid-template-rows: auto auto;\n                    grid-template-areas:\n                    \"textarea textarea\"\n                    \"left right\";\n                    gap: 0;\n                    padding: 0;\n\n                    #send_textarea {\n                        grid-area: textarea;\n                        box-sizing: border-box;\n                        width: 100%;\n                        padding: 5px 6px;\n                        margin-top: 3px;\n                    }\n                }\n\n                /* Mobile Left & Right Chat Menu */\n                #leftSendForm,\n                #rightSendForm {\n                    margin: 3px 0;\n                }\n                #leftSendForm {\n                    grid-area: left;\n                    display: flex;\n                    align-items: center;\n                    justify-content: flex-start !important;\n                }\n                #rightSendForm {\n                    grid-area: right;\n                    display: flex;\n                    align-items: center;\n                    justify-content: flex-end !important;\n                }\n\n                #rightSendForm > div,\n                #leftSendForm > div,\n                #nonQRFormItems #options_button {\n                    font-size: 16px;\n                }\n                #nonQRFormItems #options_button {\n                    margin-right: 10px;\n                }\n\n                #leftSendForm>div {\n                    width: var(--bottomFormBlockSize) !important;\n                }\n            }\n    "
+    },
+    {
+      "type": "checkbox",
+      "varId": "inlineMobileMeta",
+      "displayText": "Inline Character, Timestamp & Icons on Mobile",
+      "default": false,
+      "category": "mobile-global-settings",
+      "description": "Show character names, timestamps, and model icons in one line on mobile",
+      "cssBlock": "\n        @media (max-width: 1000px) {\n            body:not(.echostyle) .name_text {\n                width: unset !important;\n            }\n            body.whisperstyle:not(.big-avatars) #chat {\n                .mes {\n                    padding-top: 75px !important;\n                }\n            }\n        }\n    "
+    },
+    {
+      "type": "checkbox",
+      "varId": "increaseMobileInputSpacing",
+      "displayText": "Increase Chat Input Field Spacing on Mobile",
+      "default": false,
+      "category": "mobile-global-settings",
+      "description": "Add extra bottom padding to chat input fields on mobile devices (screen width ≤ 1000px)",
+      "cssBlock": "\n            @media screen and (max-width: 1000px) {\n                #send_form {\n                    padding-bottom: 23px;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "increaseDesktopInputSpacing",
+      "displayText": "Increase Chat Input Field Spacing on Desktop & Tablet",
+      "default": false,
+      "category": "mobile-global-settings",
+      "description": "Add extra bottom margin to chat input fields on larger screens (tablets and desktops)",
+      "cssBlock": "\n            #form_sheld {\n                margin-bottom: 5px;\n\n                @media only screen and (min-width: 1024px) and (-webkit-min-device-pixel-ratio: 2) and (pointer: fine) {\n                    margin-bottom: 22.5px;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "fixTabletMenuLayout",
+      "displayText": "Fix Tablet Menu Layout",
+      "default": false,
+      "category": "mobile-global-settings",
+      "description": "Optimized for tablet users to prevent menu layout issues. Note: Tablet support in SillyTavern is currently limited and may not address all issues",
+      "cssBlock": "\n            .drawer-content {\n                top: -3px !important;\n            }\n            .fillLeft,\n            .fillRight {\n                width: 100dvw !important;\n                min-width: 100dvw !important;\n            }\n        "
+    },
+    {
+      "type": "select",
+      "varId": "mobileQRsBarHeight",
+      "displayText": "Mobile QRs Bar Height",
+      "default": "2",
+      "options": [
+        {
+          "label": "Compact (1 row)",
+          "value": "1"
+        },
+        {
+          "label": "Default (2 rows)",
+          "value": "2"
+        },
+        {
+          "label": "Extended (3 rows)",
+          "value": "3"
+        }
+      ],
+      "category": "mobile-detailed-settings",
+      "description": "Sets the maximum number of visible rows in the QRs bar on mobile devices (supports scrolling)"
+    },
+    {
+      "type": "checkbox",
+      "varId": "moveQRsBelowInputMobile",
+      "displayText": "Move QRs Bar Below Input on Mobile",
+      "default": true,
+      "category": "mobile-detailed-settings",
+      "description": "On mobile devices (screen width ≤ 1000px), move the QRs menu below the chat input to avoid interference from message input",
+      "cssBlock": "\n            /* Mobile QR position adjustment */\n            @media screen and (max-width: 1000px) {\n                #send_form.compact {\n                    flex-direction: column;\n                }\n\n                #file_form {\n                    order: 1 !important;\n                }\n                #nonQRFormItems {\n                    order: 2 !important;\n                }\n                #qr--bar {\n                    order: 3 !important;\n                }\n\n                #leftSendForm {\n                    padding-left: 6px;\n                }\n                #rightSendForm {\n                    padding-right: 6px;\n                }\n            }\n        "
+    },
+    {
+      "type": "checkbox",
+      "varId": "enableMobile-horizontal_hotswap",
+      "displayText": "Enable Horizontal HotSwap Scroll on Mobile",
+      "default": false,
+      "category": "mobile-detailed-settings",
+      "description": "Allows horizontal scrolling for the quick character selection menu (#HotSwapWrapper) on mobile",
+      "cssBlock": "\n            @media screen and (max-width: 1000px) {\n                body.big-avatars #HotSwapWrapper .hotswap.avatars_inline {\n                    max-height: unset;\n                }\n                #HotSwapWrapper:hover .hotswap.avatars_inline {\n                    max-height: unset;\n                    overflow: unset;\n                    transition: unset;\n                }\n                #HotSwapWrapper:not(:hover) .hotswap.avatars_inline {\n                    transition: unset;\n                }\n                .hotswap.avatars_inline {\n                    flex-wrap: nowrap !important;\n                    overflow-x: auto !important;\n                    overflow-y: hidden !important;\n                    padding-right: 30px !important;\n\n                    *:focus {\n                        outline: none;\n                    }\n                }\n            }\n        "
+    }
+  ]
+}

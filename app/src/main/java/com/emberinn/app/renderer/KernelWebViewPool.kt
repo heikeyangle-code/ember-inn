@@ -147,6 +147,7 @@ class KernelWebViewPool(
     @Volatile private var currentStylePackHref: String? = null
     @Volatile private var currentStylePackExtensionHref: String? = null
     @Volatile private var currentStylePackVars: String? = null
+    @Volatile private var currentStylePackCssBlocks: String? = null
 
     /** 主题/布局变更入口（ChatScreen 收集 OfficialThemeManager 流后调用） */
     fun updateTheme(themeJson: String?, bodyClasses: List<String>) {
@@ -166,12 +167,20 @@ class KernelWebViewPool(
         }
     }
 
-    /** 样式包变更入口：enabled/href/extensionHref/varsJson 全量透传内核（vars 为原始 JSON 对象字面量） */
-    fun updateStylePack(enabled: Boolean, href: String?, varsJson: String?, extensionHref: String? = null) {
+    /** 样式包变更入口：enabled/href/extensionHref/varsJson/cssBlocksJson 全量透传内核
+     *  （vars 与 cssBlocks 为原始 JSON 对象字面量） */
+    fun updateStylePack(
+        enabled: Boolean,
+        href: String?,
+        varsJson: String?,
+        extensionHref: String? = null,
+        cssBlocksJson: String? = null,
+    ) {
         currentStylePackEnabled = enabled
         currentStylePackHref = href
         currentStylePackExtensionHref = extensionHref
         currentStylePackVars = varsJson
+        currentStylePackCssBlocks = cssBlocksJson
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
         }
@@ -196,7 +205,7 @@ class KernelWebViewPool(
         currentRuntimeConfigJson?.let(kernel::setRuntimeConfig)
         currentThemeJson?.let(kernel::applyThemeRaw)
         kernel.setBodyClasses(currentBodyClasses)
-        kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref)
+        kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref, currentStylePackCssBlocks)
         kernel.setInputState(currentInputState.generating, currentInputState.swiping)
         currentBackgroundUrl?.let { kernel.setBackground(it, currentBackgroundFitting) }
     }

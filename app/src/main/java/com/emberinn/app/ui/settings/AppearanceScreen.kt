@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -99,7 +101,7 @@ fun AppearanceScreen(
                 val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
                     ?: error("无法读取文件")
                 val name = official.import(text)
-                EmberToasts.show(context, "已导入主题：$name")
+                EmberToasts.show(context, "已导入：$name")
             }.onFailure { e ->
                 EmberToasts.show(context, "导入失败：${e.message}")
             }
@@ -566,6 +568,49 @@ private fun ThemeTuneGroup() {
  * 布尔值开关、颜色/尺寸/时长等字符串文本输入（rgba(...)/%/px/s 原样生效）。
  * 覆盖层 SharedPreferences 存储（与 preset 合并下发），恢复默认一键清空回 preset。
  */
+/** 样式包设置定义（settings-schema.json 单项）：类型化 UI 渲染依据 */
+private data class PackSettingDef(
+    val varId: String,
+    val type: String,
+    val displayText: String,
+    val defaultStr: String,
+    val min: Double? = null,
+    val max: Double? = null,
+    val step: Double? = null,
+    val options: List<Pair<String, String>> = emptyList(),
+    val category: String = "",
+)
+
+/** schema 单项 JSON → 定义（default/布尔/数字统一字符串化，内核 cssBlock 判定同格式） */
+private fun parsePackSettingDef(el: JsonObject): PackSettingDef? {
+    val varId = (el["varId"] as? JsonPrimitive)?.contentOrNull ?: return null
+    val type = (el["type"] as? JsonPrimitive)?.contentOrNull ?: "text"
+    fun str(k: String): String? = (el[k] as? JsonPrimitive)?.let { p ->
+        when {
+            p.isString -> p.content
+            p.booleanOrNull != null -> p.booleanOrNull.toString()
+            else -> p.contentOrNull
+        }
+    }
+    val options = (el["options"] as? JsonArray)?.mapNotNull { o ->
+        val obj = o as? JsonObject ?: return@mapNotNull null
+        val label = (obj["label"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+        val value = str("value") ?: (obj["value"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+        label to value
+    } ?: emptyList()
+    return PackSettingDef(
+        varId = varId,
+        type = type,
+        displayText = (el["displayText"] as? JsonPrimitive)?.contentOrNull ?: varId,
+        defaultStr = str("default") ?: "",
+        min = (el["min"] as? JsonPrimitive)?.doubleOrNull,
+        max = (el["max"] as? JsonPrimitive)?.doubleOrNull,
+        step = (el["step"] as? JsonPrimitive)?.doubleOrNull,
+        options = options,
+        category = (el["category"] as? JsonPrimitive)?.contentOrNull ?: "",
+    )
+}
+
 @Composable
 private fun StylePackVarGroup() {
     val context = LocalContext.current
@@ -576,37 +621,248 @@ private fun StylePackVarGroup() {
         runCatching { Json.parseToJsonElement(stylePack.varsJson ?: "{}").jsonObject }.getOrNull()
     } ?: return
 
+    // schema 驱动类型化 UI（官方扩展 theme-settings.json 定义）；无 schema 的包回落键值编辑
+    val defs = remember(stylePack.schemaJson) {
+        stylePack.schemaJson?.let { sj ->
+            runCatching { Json.parseToJsonElement(sj).jsonObject }
+                .getOrNull()?.get("settings") as? JsonArray
+        }?.mapNotNull { parsePackSettingDef(it as? JsonObject ?: return@mapNotNull null) }
+    }
+
     PreferenceGroup {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            GroupLabel("主题包变量（Moonlit preset，即时生效）")
+            GroupLabel("主题包变量（即时生效）")
             Spacer(Modifier.weight(1f))
             TextButton(onClick = { manager.resetStylePackVars() }) { Text("恢复默认") }
         }
-        vars.forEach { (key, valueEl) ->
-            val value = (valueEl as? JsonPrimitive)?.contentOrNull ?: valueEl.toString()
-            if (value == "true" || value == "false") {
-                SwitchPrefRow(key, "布尔开关（透传 --$key）", value == "true") {
-                    manager.updateStylePackVar(key, if (it) "true" else "false")
+        if (defs == null) {
+            // 通用保底：无 schema 的包按键值对编辑（值仍透传 CSS 变量）
+            vars.forEach { (key, valueEl) ->
+                val value = (valueEl as? JsonPrimitive)?.contentOrNull ?: valueEl.toString()
+                if (value == "true" || value == "false") {
+                    SwitchPrefRow(key, "布尔开关（透传 --$key）", value == "true") {
+                        manager.updateStylePackVar(key, if (it) "true" else "false")
+                    }
+                } else {
+                    PackTextField(varId = key, label = key, value = value) { manager.updateStylePackVar(key, it) }
                 }
-            } else {
-                var draft by remember(key, value) { mutableStateOf(value) }
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    label = { Text(key) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    trailingIcon = {
-                        if (draft != value) {
-                            TextButton(onClick = { manager.updateStylePackVar(key, draft) }) { Text("应用") }
+            }
+            return@PreferenceGroup
+        }
+        // 官方 tabMappings 分组顺序 + 中文组名
+        val categoryOrder = listOf(
+            "theme-colors" to "主题颜色",
+            "chat-style" to "全局消息样式",
+            "background-effects" to "背景效果",
+            "theme-extras" to "主题附加",
+            "raw-css" to "自定义 CSS",
+            "chat-general" to "聊天通用",
+            "visual-novel" to "视觉小说模式",
+            "chat-echo" to "Echo 消息样式",
+            "chat-whisper" to "Whisper 消息样式",
+            "chat-ripple" to "Ripple 消息样式",
+            "mobile-global-settings" to "移动端全局",
+            "mobile-detailed-settings" to "移动端细节",
+        )
+        val grouped = defs.groupBy { it.category }
+        val ordered = categoryOrder.filter { it.first in grouped } +
+            grouped.keys.filter { it !in categoryOrder.map { c -> c.first } }.map { it to it }
+        ordered.forEach { (cat, catLabel) ->
+            Spacer(Modifier.height(10.dp))
+            GroupLabel(catLabel)
+            grouped[cat]?.forEach { def ->
+                val cur = (vars[def.varId] as? JsonPrimitive)?.let { p ->
+                    if (p.isString) p.content else p.toString()
+                } ?: def.defaultStr
+                when (def.type) {
+                    "checkbox" -> SwitchPrefRow(
+                        packLabel(def.varId),
+                        def.varId,
+                        cur == "true",
+                    ) { manager.updateStylePackVar(def.varId, if (it) "true" else "false") }
+                    "slider" -> PackSliderRow(
+                        label = packLabel(def.varId),
+                        value = cur.toDoubleOrNull() ?: def.defaultStr.toDoubleOrNull() ?: 0.0,
+                        min = def.min ?: 0.0,
+                        max = def.max ?: 10.0,
+                        step = def.step ?: 1.0,
+                    ) { v -> manager.updateStylePackVar(def.varId, v) }
+                    "select" -> {
+                        Text(
+                            packLabel(def.varId),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+                        )
+                        ChipRow(modifier = Modifier.padding(top = 4.dp)) {
+                            def.options.forEach { (label, optVal) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = cur == optVal,
+                                    onClick = { manager.updateStylePackVar(def.varId, optVal) },
+                                )
+                            }
                         }
-                    },
-                )
+                    }
+                    "textarea" -> PackTextField(
+                        varId = def.varId,
+                        label = packLabel(def.varId),
+                        value = cur,
+                        singleLine = false,
+                    ) { manager.updateStylePackVar(def.varId, it) }
+                    "color" -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 16.dp, end = 8.dp)
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(packPreviewColor(cur)),
+                        )
+                        PackTextField(varId = def.varId, label = packLabel(def.varId), value = cur) {
+                            manager.updateStylePackVar(def.varId, it)
+                        }
+                    }
+                    else -> PackTextField(
+                        varId = def.varId,
+                        label = packLabel(def.varId),
+                        value = cur,
+                    ) { manager.updateStylePackVar(def.varId, it) }
+                }
             }
         }
     }
+}
+
+/** 单行/多行文本微调：改后出现「应用」按钮（颜色 rgba()/尺寸 px/%/时长 s 原样透传） */
+@Composable
+private fun PackTextField(varId: String, label: String, value: String, singleLine: Boolean = true, onApply: (String) -> Unit) {
+    var draft by remember(varId, value) { mutableStateOf(value) }
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { draft = it },
+        label = { Text(label) },
+        singleLine = singleLine,
+        minLines = if (singleLine) 1 else 3,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        trailingIcon = {
+            if (draft != value) {
+                TextButton(onClick = { onApply(draft) }) { Text("应用") }
+            }
+        },
+    )
+}
+
+/** 滑条微调：数值格式化（整数不带小数点，与官方 default 字面量一致） */
+@Composable
+private fun PackSliderRow(label: String, value: Double, min: Double, max: Double, step: Double, onApply: (String) -> Unit) {
+    var draft by remember(label, value) { mutableStateOf(value.coerceIn(min, max)) }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (step % 1.0 == 0.0) draft.toInt().toString() else draft.toString(),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        Slider(
+            value = draft.toFloat(),
+            onValueChange = { draft = it.toDouble() },
+            onValueChangeFinished = {
+                val v = if (step % 1.0 == 0.0) draft.toInt().toString() else draft.toString()
+                onApply(v)
+            },
+            valueRange = min.toFloat()..max.toFloat(),
+            steps = if (step <= 0) 0 else ((max - min) / step).toInt().coerceAtLeast(1) - 1,
+        )
+    }
+}
+
+/** 颜色预览解析：rgba(...) / #hex → Compose Color；失败回落边框色 */
+private fun packPreviewColor(spec: String): androidx.compose.ui.graphics.Color = runCatching {
+    val s = spec.trim()
+    if (s.startsWith("#")) {
+        androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(s))
+    } else {
+        val m = Regex("rgba?\\(\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*(?:,\\s*([\\d.]+)\\s*)?\\)").find(s)
+        if (m != null) {
+            val (r, g, b, a) = m.destructured
+            androidx.compose.ui.graphics.Color(
+                (r.toFloat() / 255f).coerceIn(0f, 1f),
+                (g.toFloat() / 255f).coerceIn(0f, 1f),
+                (b.toFloat() / 255f).coerceIn(0f, 1f),
+                (a.toFloatOrNull() ?: 1f).coerceIn(0f, 1f),
+            )
+        } else {
+            androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(s))
+        }
+    }
+}.getOrDefault(androidx.compose.ui.graphics.Color.Gray)
+
+/** 官方英文标签 → 中文（Moonlit theme-settings 59 项；未知回落英文原文） */
+private fun packLabel(varId: String): String = when (varId) {
+    "customThemeColor" -> "主主题色"
+    "customThemeColor2" -> "次主题色"
+    "customBgColor1" -> "主背景色"
+    "customBgColor2" -> "次背景色"
+    "customTopBarColor" -> "顶栏颜色"
+    "Drawer-iconColor" -> "菜单图标颜色"
+    "sheldBackgroundColor" -> "聊天区背景色"
+    "customScrollbarColor" -> "滚动条颜色"
+    "hideAvatarBorder" -> "隐藏头像边框"
+    "custom-ChatAvatar" -> "聊天区头像尺寸"
+    "mesParagraphSpacingTop" -> "段落上间距"
+    "mesParagraphSpacingBottom" -> "段落下间距"
+    "charNameFontSize" -> "角色名字号"
+    "userNameFontSize" -> "用户名字号"
+    "messageTextFontSize" -> "正文字号"
+    "messageLineHeight" -> "正文行高"
+    "messageTextLetterSpacing" -> "正文字距"
+    "customlastInContext" -> "上下文末尾标记样式"
+    "customCSS-bg-blur" -> "背景模糊强度"
+    "customCSS-bg-opacity" -> "背景图不透明度"
+    "sheldBlurStrength" -> "聊天区模糊强度"
+    "mobileSheldBlurStrength" -> "移动端聊天区模糊强度"
+    "enableThemeColorization" -> "主题色应用到更多 UI"
+    "disableTopMenuAnimation" -> "禁用顶栏菜单动画"
+    "forceFixedMenuHeight" -> "锁定 AI 回复/角色菜单高度"
+    "newMenuMaxHeight" -> "动态调整菜单最大高度"
+    "disableAllBorderRadius" -> "禁用所有圆角"
+    "expandEntryInputWidth" -> "扩展输入框宽度"
+    "compactWorldsLorebooksTopBar" -> "世界书紧凑顶栏"
+    "rawCustomCss" -> "原生自定义 CSS"
+    "customCSS-ChatGradientBlur" -> "聊天区渐变模糊"
+    "showLLMReasoningIcon" -> "推理块显示 LLM 图标"
+    "justifyParagraphText" -> "段落两端对齐"
+    "enableMessageDetails" -> "隐藏附加消息详情"
+    "messageDetailsAnimationDuration" -> "消息详情动画时长"
+    "favoriteSymbol" -> "收藏符号"
+    "favoriteSymbolAnimation" -> "收藏符号动画"
+    "VN-sheld-height" -> "VN 模式聊天区高度"
+    "VN-expression-holder" -> "VN 模式立绘渐变透明"
+    "custom-EchoAvatarWidth" -> "[Echo] 背景头像宽"
+    "custom-EchoAvatarHeight" -> "[Echo] 背景头像高"
+    "custom-EchoAvatarMobileWidth" -> "[Echo] 移动端背景头像宽"
+    "custom-EchoAvatarMobileHeight" -> "[Echo] 移动端背景头像高"
+    "hideEchoUserIllustration" -> "[Echo] 隐藏用户消息插图"
+    "hideMobileEchoBackground" -> "[Echo] 移动端隐藏消息背景"
+    "customWhisperAvatarWidth" -> "[Whisper] 背景头像宽"
+    "customWhisperAvatarAlign" -> "[Whisper] 头像对齐"
+    "customRippleAvatarWidth" -> "[Ripple] 头像宽"
+    "customRippleAvatarMobileWidth" -> "[Ripple] 移动端头像宽"
+    "hideRippleUserAvatar" -> "[Ripple] 隐藏用户头像"
+    "enableMobile-hidden_scrollbar" -> "移动端隐藏滚动条"
+    "enableMobile-send_form" -> "移动端新输入框样式"
+    "inlineMobileMeta" -> "移动端内联名字/时间/图标"
+    "increaseMobileInputSpacing" -> "移动端输入区间距加大"
+    "increaseDesktopInputSpacing" -> "桌面端输入区间距加大"
+    "fixTabletMenuLayout" -> "平板菜单布局修正"
+    "mobileQRsBarHeight" -> "移动端快捷回复栏高度"
+    "moveQRsBelowInputMobile" -> "移动端快捷回复栏下移"
+    "enableMobile-horizontal_hotswap" -> "移动端横向角色卡滚动"
+    else -> varId
 }
 
 /** 颜色十项 + 自定义 CSS：官方主题颜色类字段的调节入口（hex 文本，点应用写回主题）。 */

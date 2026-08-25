@@ -594,7 +594,20 @@
                 }
             });
         }
-        if (payload.avatarUrl && avatarImg) { avatarImg.src = payload.avatarUrl; }
+        if (payload.avatarUrl && avatarImg) {
+            avatarImg.src = payload.avatarUrl;
+            // Moonlit observers.js initAvatarInjector 移植：头像 URL 写成 .mes 的 CSS 变量
+            // （--mes-avatar-thumb-url/--mes-avatar-original-url/--mes-avatar-url + dataset），
+            // 供 style.css 消息样式（Echo 头像底图等）使用。本内核单一分辨率 →
+            // thumb=original（官方 useOriginalAvatarImages 分辨率切换无对应物，语义等价）。
+            var avatarCssUrl = "url('" + payload.avatarUrl + "')";
+            node.dataset.avatarThumb = payload.avatarUrl;
+            node.dataset.avatarOriginal = payload.avatarUrl;
+            node.dataset.avatar = payload.avatarUrl;
+            node.style.setProperty('--mes-avatar-thumb-url', avatarCssUrl);
+            node.style.setProperty('--mes-avatar-original-url', avatarCssUrl);
+            node.style.setProperty('--mes-avatar-url', avatarCssUrl);
+        }
         var nameEl = node.querySelector('.name_text');
         if (nameEl) { nameEl.textContent = payload.chName || ''; }
         var tsEl = node.querySelector('.timestamp');
@@ -940,21 +953,84 @@
             existing.setAttribute('href', href);
         }
     }
+    /**
+     * 样式包应用：style.css/extension.css 注入 + preset 变量下发。
+     * 变量写入与官方 Moonlit theme-applier.js 逐字一致——<style id="dynamic-theme-styles">
+     * 整体替换写 `--varId: value !important`（官方 applyAllThemeSettings 同构），
+     * 不用 root.style.setProperty（残留旧键：换包/恢复默认后旧变量不清除）。
+     * cssBlocks：checkbox 型设置启用时注入的内嵌 CSS（官方 index.js updateCheckboxStyles
+     * 语义——`<style id="css-block-${varId}">`，值为 true 写入、false 清空）。
+     */
+    var STYLE_PACK_VARS_EL_ID = 'dynamic-theme-styles';
+    function applyStylePackVars(vars) {
+        var el = document.getElementById(STYLE_PACK_VARS_EL_ID);
+        if (!el) {
+            el = document.createElement('style');
+            el.id = STYLE_PACK_VARS_EL_ID;
+            document.head.appendChild(el);
+        }
+        var css = ':root {\n';
+        Object.keys(vars || {}).forEach(function (key) {
+            var name = key.charAt(0) === '-' ? key : '--' + key;
+            css += '  ' + name + ': ' + vars[key] + ' !important;\n';
+        });
+        css += '}';
+        el.textContent = css;
+    }
+
+    function applyStylePackCssBlocks(vars, cssBlocks) {
+        Object.keys(cssBlocks || {}).forEach(function (varId) {
+            var id = 'css-block-' + varId;
+            var el = document.getElementById(id);
+            var enabled = !!(vars && vars[varId] === true || vars && vars[varId] === 'true');
+            if (!enabled) {
+                if (el) { el.textContent = ''; }
+                return;
+            }
+            if (!el) {
+                el = document.createElement('style');
+                el.id = id;
+                document.head.appendChild(el);
+            }
+            el.textContent = cssBlocks[varId];
+        });
+    }
+
+    /**
+     * 官方 index.js applyRawCustomCss：rawCustomCss（raw-css 类 textarea 设置）文本
+     * 原样注入 <style id="moonlit-raw-css">——无过滤（"raw, unfiltered, full control"
+     * 语义，@import 自定义字体等全支持）。官方初始化 + themeSettingChanged(rawCustomCss)
+     * 双入口，我方随 applyStylePack 全量重放同效。theme-applier 同时把它写进 :root
+     * 变量块（官方行为，兼容保留）。包停用时清空——我方样式包随主题生效（非官方
+     * "扩展全局常驻"），避免自定义 CSS 跨主题泄漏。
+     */
+    var STYLE_PACK_RAW_EL_ID = 'moonlit-raw-css';
+    function applyStylePackRawCss(vars) {
+        var el = document.getElementById(STYLE_PACK_RAW_EL_ID);
+        if (!el) {
+            el = document.createElement('style');
+            el.id = STYLE_PACK_RAW_EL_ID;
+            document.head.appendChild(el);
+        }
+        var text = vars && typeof vars.rawCustomCss === 'string' ? vars.rawCustomCss : '';
+        el.textContent = text;
+    }
+
     function applyStylePack(cfg) {
         cfg = cfg || {};
         if (!cfg.enabled || !cfg.href) {
             syncPackLink(STYLE_PACK_LINK_ID, null);
             syncPackLink(STYLE_PACK_EXT_LINK_ID, null);
+            applyStylePackVars({});
+            applyStylePackCssBlocks({}, cfg && cfg.cssBlocks);
+            applyStylePackRawCss(null);
             return;
         }
         syncPackLink(STYLE_PACK_LINK_ID, cfg.href);
         syncPackLink(STYLE_PACK_EXT_LINK_ID, cfg.extensionHref || null);
-        var vars = cfg.vars || {};
-        var root = document.documentElement;
-        Object.keys(vars).forEach(function (key) {
-            var name = key.charAt(0) === '-' ? key : '--' + key;
-            root.style.setProperty(name, String(vars[key]));
-        });
+        applyStylePackVars(cfg.vars || {});
+        applyStylePackCssBlocks(cfg.vars || {}, cfg.cssBlocks);
+        applyStylePackRawCss(cfg.vars || {});
     }
 
     function applyTheme(theme) {
@@ -1322,12 +1398,18 @@
         }, { passive: true });
     }
 
-    /** #form_sheld 高度回报：原生悬浮附件/快捷回复行动态内边距（CSS px ≈ Compose dp） */
+    /** #form_sheld 高度回报：原生悬浮附件/快捷回复行动态内边距（CSS px ≈ Compose dp）。
+     *  同时写 --formSheldHeight CSS 变量（Moonlit observers.js initFormSheldHeightMonitor
+     *  语义：样式包 CSS 按输入区高度布局，如固定菜单高度/视口补偿）。 */
     function reportFormSheldHeight() {
         var sheld = document.getElementById('form_sheld');
         if (sheld && 'ResizeObserver' in window) {
             var reportFormHeight = function () {
                 bridgeSend({ type: 'inputHeight', height: sheld.offsetHeight });
+                var h = sheld.offsetHeight;
+                if (h > 0) {
+                    document.documentElement.style.setProperty('--formSheldHeight', h + 'px');
+                }
             };
             new ResizeObserver(reportFormHeight).observe(sheld);
             requestAnimationFrame(reportFormHeight);

@@ -350,9 +350,15 @@ fun ChatScreen(
             ),
         )
     }
-    // 样式包（第三方整包 CSS + 可选扩展兼容层）：官方主题 enabled=false，内核侧零污染
+    // 样式包（第三方整包 CSS + 可选扩展兼容层 + cssBlocks）：官方主题 enabled=false，内核侧零污染
     LaunchedEffect(stylePack) {
-        kernelPool.updateStylePack(stylePack.enabled, stylePack.href, stylePack.varsJson, stylePack.extensionHref)
+        kernelPool.updateStylePack(
+            stylePack.enabled,
+            stylePack.href,
+            stylePack.varsJson,
+            stylePack.extensionHref,
+            stylePack.cssBlocksJson,
+        )
     }
     // 行为开关下发（BehaviorPrefs → setRuntimeConfig）：首值即推当前配置，
     // 设置页每次保存 bump revision 自动重发（流式渐显/手势/回车发送/quick 按钮/自动保存编辑）
