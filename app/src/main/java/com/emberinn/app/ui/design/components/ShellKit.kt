@@ -206,6 +206,8 @@ fun ShellInput(
     visualTransformation: androidx.compose.ui.text.input.VisualTransformation =
         androidx.compose.ui.text.input.VisualTransformation.None,
     trailing: (@Composable () -> Unit)? = null,
+    isError: Boolean = false,
+    supportingText: String? = null,
 ) {
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
@@ -218,7 +220,7 @@ fun ShellInput(
                 .fillMaxWidth()
                 .clip(shape)
                 .background(c.surfaceSink)
-                .border(1.dp, c.line, shape)
+                .border(1.dp, if (isError) c.danger.copy(alpha = 0.55f) else c.line, shape)
                 .padding(horizontal = 13.dp, vertical = 12.dp),
         ) {
             BasicTextField(
@@ -237,6 +239,10 @@ fun ShellInput(
                 Spacer(Modifier.width(8.dp))
                 trailing()
             }
+        }
+        if (supportingText != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(supportingText, color = c.inkMute, fontSize = 11.sp)
         }
     }
 }

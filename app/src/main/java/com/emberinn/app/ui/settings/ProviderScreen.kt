@@ -358,14 +358,7 @@ fun ProviderDetailScreen(
                     }
                 
 }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            EmberTextField(
-                value = baseUrl,
-                onValueChange = vm::setBaseUrl,
-                label = { Text("接口地址") },
-                singleLine = true,
-                isError = spec.baseUrl.isBlank() && baseUrl.isBlank(),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+            ShellInput(value = baseUrl, onValueChange = vm::setBaseUrl, label = ""接口地址"", singleLine = true, isError = spec.baseUrl.isBlank() && baseUrl.isBlank(), modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             if (spec.regionVariants.isNotEmpty()) {
                 Text(
                     "区域",
@@ -431,15 +424,7 @@ fun ProviderDetailScreen(
                 }
             }
             }
-            EmberTextField(
-                value = maxTokens.toString(),
-                onValueChange = vm::setMaxTokens,
-                label = { Text("最大回复 tokens") },
-                supportingText = { Text("官方默认 300（openai_max_tokens）；思考型模型太小会只思考不出正文") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+            ShellInput(value = maxTokens.toString(), onValueChange = vm::setMaxTokens, label = ""最大回复 tokens"", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().padding(top = 8.dp), supportingText = "官方默认 300（openai_max_tokens）；思考型模型太小会只思考不出正文")
             CollapsibleSection("采样参数（Sampler Settings）", initiallyExpanded = true) {
             var showSamplerPreset by remember { mutableStateOf(false) }
             // 官方选中名持久化在 oai_settings.preset_settings_openai；App 存 PresetPrefs.samplerPreset
@@ -1040,15 +1025,7 @@ fun ProviderDetailScreen(
             }
             }
             CollapsibleSection("上下文与连接测试", initiallyExpanded = true) {
-            EmberTextField(
-                value = contextWindow.toString(),
-                onValueChange = vm::setContextWindow,
-                label = { Text("上下文上限（tokens）") },
-                supportingText = { Text("官方默认 4095（openai_max_context），不随模型自动变化。") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
+            ShellInput(value = contextWindow.toString(), onValueChange = vm::setContextWindow, label = ""上下文上限（tokens）"", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().padding(top = 8.dp), supportingText = "官方默认 4095（openai_max_context），不随模型自动变化。")
             message?.let {
                 Text(
                     it,
