@@ -7,7 +7,9 @@ import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const K = join(ROOT, 'app', 'src', 'main', 'assets', 'kernel');
-const ME = join(ROOT, 'app', 'src', 'main', 'assets', 'themes', 'moonlit-echoes');
+// 扩展包（style.css/schema/preset）与主题 JSON 分居两目录（ExtensionManager 架构）
+const ME = join(ROOT, 'app', 'src', 'main', 'assets', 'extensions', 'moonlit-echoes');
+const MET = join(ROOT, 'app', 'src', 'main', 'assets', 'themes', 'moonlit-echoes');
 
 const dom = new JSDOM(`<!DOCTYPE html><html><body class="light-theme"><style id="custom-style" type="text/css"></style><div id="chat"></div></body></html>`, {
     url: 'https://appassets.androidplatform.net/assets/kernel/kernel.html',
@@ -92,7 +94,7 @@ const root = () => window.document.documentElement;
 }
 
 // ---------- 1. 官方格式主题 JSON 全字段应用 ----------
-const glimmer = JSON.parse(readFileSync(`${ME}/Glimmer.json`, 'utf8'));
+const glimmer = JSON.parse(readFileSync(`${MET}/Glimmer.json`, 'utf8'));
 window.Kernel.applyTheme(glimmer);
 
 t('Glimmer: 主文字色→CSS变量', root().style.getPropertyValue('--SmartThemeBodyColor'), glimmer.main_text_color);
@@ -107,7 +109,7 @@ t('Glimmer: chat_display=1 → bubblechat', body().classList.contains('bubblecha
 t('Glimmer: timestamps 开→无 no-timestamps', body().classList.contains('no-timestamps'), !glimmer.timestamps_enabled);
 
 // ---------- 2. 全量同步语义：换主题后旧类被清除 ----------
-const moonlit = JSON.parse(readFileSync(`${ME}/MoonlitEchoes.json`, 'utf8'));
+const moonlit = JSON.parse(readFileSync(`${MET}/MoonlitEchoes.json`, 'utf8'));
 const flipped = { ...moonlit, chat_display: 2, timestamps_enabled: false, avatar_style: 2 };
 window.Kernel.applyTheme(flipped);
 t('换主题: bubblechat 被清除', body().classList.contains('bubblechat'), false);
@@ -244,8 +246,8 @@ t('chat_display=9 不抛错', unknownThrew, false);
 t('chat_display=9 不加任何布局类', layoutClasses.every(c => !body().classList.contains(c)), true);
 
 // ---------- 6. 样式包 applyStylePack ----------
-const packHref = '../themes/moonlit-echoes/style.css';
-const extHref = '../themes/moonlit-echoes/extension.css';
+const packHref = '../extensions/moonlit-echoes/style.css';
+const extHref = '../extensions/moonlit-echoes/extension.css';
 // 启用：注入 <link id="style-pack-style"> + 扩展兼容层 + 变量写入 documentElement
 window.Kernel.applyStylePack({
     enabled: true, href: packHref, extensionHref: extHref,
@@ -256,8 +258,10 @@ t('样式包: link 注入', !!packLink, true);
 t('样式包: link rel=stylesheet', packLink?.getAttribute('rel'), 'stylesheet');
 t('样式包: link href 正确', packLink?.getAttribute('href'), packHref);
 t('样式包: 扩展层 link 注入', window.document.getElementById('style-pack-extension')?.getAttribute('href'), extHref);
-t('样式包: 无前缀键自动补 --', root().style.getPropertyValue('--customThemeColor'), 'rgba(81, 160, 222, 1)');
-t('样式包: 带前缀键原样写入', root().style.getPropertyValue('--custom-ChatAvatar'), '40px');
+// 官方 theme-applier 语义：变量写入 <style id="dynamic-theme-styles"> 的 :root 块（非 inline style）
+const varsCss = window.document.getElementById('dynamic-theme-styles')?.textContent ?? '';
+t('样式包: 无前缀键自动补 --', varsCss.includes('--customThemeColor: rgba(81, 160, 222, 1) !important;'), true);
+t('样式包: 带前缀键原样写入', varsCss.includes('--custom-ChatAvatar: 40px !important;'), true);
 // href 变更：复用同一 link 节点换地址（主题切换不堆积节点）
 window.Kernel.applyStylePack({ enabled: true, href: '../themes/other/style.css', vars: {} });
 t('样式包: 换主题复用节点换 href', window.document.getElementById('style-pack-style')?.getAttribute('href'), '../themes/other/style.css');

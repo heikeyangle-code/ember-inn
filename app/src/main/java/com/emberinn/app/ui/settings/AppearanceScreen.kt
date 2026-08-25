@@ -40,11 +40,13 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,8 +56,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import com.emberinn.app.data.FontManager
 import com.emberinn.app.data.ExtensionManager
 import com.emberinn.app.data.OfficialThemeManager
+import com.emberinn.app.ui.design.AppearanceBus
 import com.emberinn.app.ui.design.EmberTheme
 import com.emberinn.app.ui.design.components.InkTier
 import com.emberinn.app.ui.design.components.InkText
@@ -70,6 +74,7 @@ import com.emberinn.app.ui.icons.FaIcons
 /**
  * 外观（DESIGN_SYSTEM §五）：酒馆官方主题管理 + 显示偏好。
  * 官方主题=唯一换装来源：字段推导供内核与壳层（ShellTheme），无独立皮肤体系。
+ * 显示偏好（全局圆角/全局字体 Noto 按需下载）为本宿主私有能力。
  */
 @Composable
 fun AppearanceScreen(
@@ -80,6 +85,13 @@ fun AppearanceScreen(
     val extensions = remember { ExtensionManager.shared(context) }
     val themes by official.themes.collectAsState()
     val currentTheme by official.currentName.collectAsState()
+
+    // 显示偏好（本宿主私有能力）：全局圆角 / 全局字体（Noto 按需下载）
+    var radius by remember { mutableStateOf(AppearancePrefs.radius(context)) }
+    var font by remember { mutableStateOf(AppearancePrefs.font(context)) }
+    val fontScope = rememberCoroutineScope()
+    var fontDownloading by remember { mutableStateOf(false) }
+    var fontError by remember { mutableStateOf<String?>(null) }
 
     // 官方主题：导入 / 导出 / 管理（导出、另存、删除收进弹层）
     var manageSheetFor by remember { mutableStateOf<String?>(null) }
@@ -158,6 +170,68 @@ fun AppearanceScreen(
                     ChipRow {
                         EmberChip(label = "导入主题 JSON", selected = false, onClick = { importLauncher.launch(arrayOf("*/*")) })
                         EmberChip(label = "管理当前主题", selected = false, onClick = { manageSheetFor = currentTheme })
+                    }
+                }
+
+                // ---------------- 显示（本宿主私有：全局圆角 / 全局字体） ----------------
+                item {
+                    SectionTitle("显示")
+                    PreferenceGroup {
+                        GroupLabel("全局圆角")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf("default" to "系统", "square" to "方正", "rounded" to "圆润", "circle" to "浑圆").forEach { (v, label) ->
+                                EmberChip(
+                                    label = label,
+                                    selected = radius == v,
+                                    onClick = { radius = v; AppearancePrefs.save(context, radius, font); AppearanceBus.notifyChanged() },
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    PreferenceGroup {
+                        GroupLabel("全局字体")
+                        ChipRow(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                            listOf(
+                                "default" to "系统",
+                                "serif" to "衬线",
+                                "noto" to "Noto Sans",
+                            ).forEach { (v, label) ->
+                                val fontReady = when (v) {
+                                    "noto" -> FontManager.notoReady(context)
+                                    else -> true
+                                }
+                                EmberChip(
+                                    label = if (v == "noto" && !fontReady) "$label ↓" else label,
+                                    selected = font == v,
+                                    onClick = {
+                                        when {
+                                            v == "noto" && !fontReady -> {
+                                                font = "noto"
+                                                fontScope.launch {
+                                                    fontDownloading = true
+                                                    val result = FontManager.ensureNoto(context)
+                                                    fontDownloading = false
+                                                    result.onSuccess {
+                                                        AppearancePrefs.save(context, radius, "noto")
+                                                        AppearanceBus.notifyChanged()
+                                                    }.onFailure { e ->
+                                                        font = AppearancePrefs.font(context)
+                                                        fontError = e.message ?: "未知错误"
+                                                    }
+                                                }
+                                            }
+                                            else -> {
+                                                font = v
+                                                AppearancePrefs.save(context, radius, v)
+                                                AppearanceBus.notifyChanged()
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -256,6 +330,24 @@ fun AppearanceScreen(
         )
     }
 
+    if (fontDownloading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("下载字体") },
+            text = { Text("正在下载字体（Noto Sans 4 面约 2.2MB），完成后自动应用，请稍候…") },
+            confirmButton = {},
+        )
+    }
+    fontError?.let { err ->
+        AlertDialog(
+            onDismissRequest = { fontError = null },
+            title = { Text("字体下载失败") },
+            text = { Text(err) },
+            confirmButton = {
+                TextButton(onClick = { fontError = null }) { Text("知道了") }
+            },
+        )
+    }
 }
 
 /** 设置分组容器：surface 卡统一包裹。 */
