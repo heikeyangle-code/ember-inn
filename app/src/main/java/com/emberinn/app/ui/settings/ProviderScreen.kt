@@ -8,6 +8,8 @@ import com.emberinn.app.ui.design.components.EmptyState
 import com.emberinn.app.ui.components.EmberSkeletonBox
 
 import com.emberinn.app.ui.design.EmberTheme
+import com.emberinn.app.ui.design.components.SearchField
+import com.emberinn.app.ui.design.components.ShellChip
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.icons.FaIcons
 import androidx.compose.foundation.clickable
@@ -113,12 +115,10 @@ fun ProviderListScreen(
             onBack = onBack,
             sky = settingsSky,
         )
-        EmberTextField(
+        SearchField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text("搜索提供商") },
-            leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
-            singleLine = true,
+            placeholder = "搜索提供商",
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         if (profiles.isNotEmpty()) {
@@ -383,11 +383,10 @@ fun ProviderDetailScreen(
                     modifier = Modifier.padding(top = 6.dp),
                 ) {
                     spec.regionVariants.forEach { variant ->
-                        FilterChip(
+                        ShellChip(
+                            variant,
                             selected = region == variant || (region.isBlank() && variant == spec.regionVariants.first()),
-                            onClick = { vm.setRegion(variant) },
-                            label = { Text(variant) },
-                        )
+                        ) { vm.setRegion(variant) }
                     }
                 }
             }
