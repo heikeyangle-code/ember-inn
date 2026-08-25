@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.design.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,10 +21,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.emberinn.app.ui.design.EmberTheme
 
 /**
- * 空态（§6.1 EmptyState）：inkMute 弱化层次，无动画无品牌滤镜。
+ * 空态（§6.1）：inkMute 弱化层次、ShellActionButton 行动粒，无动画无品牌滤镜。
  */
 @Composable
 fun EmptyState(
@@ -53,35 +56,42 @@ fun EmptyState(
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = c.accent.copy(alpha = 0.75f),
+                    tint = c.inkMute,
                     modifier = Modifier.size(if (compact) 18.dp else 24.dp),
                 )
             }
             Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
         }
-        InkText(
+        Text(
             title,
-            tier = InkTier.Primary,
-            sizeSp = if (compact) 15f else 17f,
+            color = c.ink,
+            fontSize = if (compact) 15.sp else 17.sp,
             fontWeight = FontWeight.SemiBold,
-            lineHeightSp = if (compact) 21f else 24f,
+            lineHeight = if (compact) 21.sp else 24.sp,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
         Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
-        InkText(
+        Text(
             body,
-            tier = InkTier.Mute,
-            sizeSp = if (compact) 12f else 14f,
-            lineHeightSp = if (compact) 18f else 21f,
+            color = c.inkMute,
+            fontSize = if (compact) 12.sp else 14.sp,
+            lineHeight = if (compact) 18.sp else 21.sp,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp),
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(20.dp))
-            PrimaryButton(label = actionLabel, onClick = onAction)
+            ShellActionButton(label = actionLabel, onClick = onAction)
         }
         if (secondaryLabel != null && onSecondary != null) {
-            Spacer(Modifier.height(8.dp))
-            GhostButton(label = secondaryLabel, onClick = onSecondary)
+            Spacer(Modifier.height(10.dp))
+            Text(
+                secondaryLabel,
+                color = c.accent,
+                fontSize = 13.sp,
+                modifier = Modifier.clickable(onClick = onSecondary),
+            )
         }
     }
 }
