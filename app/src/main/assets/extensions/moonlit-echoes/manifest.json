@@ -1,0 +1,16 @@
+{
+    "display_name": "Moonlit Echoes Theme",
+    "loading_order": 1,
+    "requires": [],
+    "optional": [],
+    "js": "",
+    "css": "style.css",
+    "author": "Rivelle Days",
+    "version": "3.1.0",
+    "homePage": "https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme",
+    "kernel": {
+        "extension_css": "extension.css",
+        "settings_schema": "settings-schema.json",
+        "presets": ["Glimmer-preset.json"]
+    }
+}

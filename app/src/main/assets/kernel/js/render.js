@@ -1016,6 +1016,29 @@
         el.textContent = text;
     }
 
+    /**
+     * 扩展 JS 注入（官方 extensions.js addExtensionScript 同构）：
+     * <script type="module" async> 挂 body 末尾，id 按扩展目录名防重。
+     * 禁用时移除标签——module 顶层副作用无法内联撤销（官方同样依赖 reload），
+     * 宿主对 js 型扩展的启停需重建内核实例，CSS/变量型则即时生效。
+     */
+    var EXT_JS_EL_PREFIX = 'extension-script-';
+    function syncExtensionScript(packId, src) {
+        if (!packId) { return; }
+        var el = document.getElementById(EXT_JS_EL_PREFIX + packId);
+        if (!src) {
+            if (el) { el.remove(); }
+            return;
+        }
+        if (el) { return; }
+        el = document.createElement('script');
+        el.id = EXT_JS_EL_PREFIX + packId;
+        el.type = 'module';
+        el.async = true;
+        el.src = src;
+        document.body.appendChild(el);
+    }
+
     function applyStylePack(cfg) {
         cfg = cfg || {};
         if (!cfg.enabled || !cfg.href) {
@@ -1024,6 +1047,7 @@
             applyStylePackVars({});
             applyStylePackCssBlocks({}, cfg && cfg.cssBlocks);
             applyStylePackRawCss(null);
+            syncExtensionScript(cfg.packId, null);
             return;
         }
         syncPackLink(STYLE_PACK_LINK_ID, cfg.href);
@@ -1031,6 +1055,7 @@
         applyStylePackVars(cfg.vars || {});
         applyStylePackCssBlocks(cfg.vars || {}, cfg.cssBlocks);
         applyStylePackRawCss(cfg.vars || {});
+        syncExtensionScript(cfg.packId, cfg.js || null);
     }
 
     function applyTheme(theme) {

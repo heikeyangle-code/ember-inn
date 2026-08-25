@@ -38,6 +38,9 @@ object KernelWebViewFactory {
     /** 导入主题包站内源：filesDir/themes → /themefiles/...（第三方整包 style.css 由样式包引用） */
     const val THEME_FILES_PREFIX = "/themefiles/"
 
+    /** 用户安装扩展站内源：filesDir/extensions → /extfiles/...（ExtensionManager 管理的第三方扩展） */
+    const val EXT_FILES_PREFIX = "/extfiles/"
+
     fun createAssetLoader(context: Context): WebViewAssetLoader {
         // 官方推荐模式：只暴露 filesDir 下的 public 子目录（同源页面可读该根下一切文件）
         val publicDir = File(context.filesDir, "public")
@@ -50,6 +53,7 @@ object KernelWebViewFactory {
             .addPathHandler(MEDIA_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "media")))
             .addPathHandler(BACKGROUNDS_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "backgrounds").apply { mkdirs() }))
             .addPathHandler(THEME_FILES_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "themes").apply { mkdirs() }))
+            .addPathHandler(EXT_FILES_PREFIX, WebViewAssetLoader.InternalStoragePathHandler(context, File(context.filesDir, "extensions").apply { mkdirs() }))
             .build()
     }
 

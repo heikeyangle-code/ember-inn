@@ -116,6 +116,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
 import com.emberinn.app.data.DisplayPipeline
+import com.emberinn.app.data.ExtensionManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.data.Persona
 import com.emberinn.app.data.ThemeState
@@ -336,7 +337,9 @@ fun ChatScreen(
     }
     val themeManager = remember { OfficialThemeManager.shared(context) }
     val officialThemeJson by themeManager.currentThemeJson.collectAsState()
-    val stylePack by themeManager.currentStylePack.collectAsState()
+    val extManager = remember { ExtensionManager.shared(context) }
+    val extState by extManager.state.collectAsState()
+    val stylePack = extState.pack
     // chat_display 布局类随主题派生（0..2 官方 + 3..7 Moonlit 扩展顺延）。
     // 全 DOM 行：头像/名字/操作 chrome 全在内核页，原生侧不再挂 embed-shell。
     LaunchedEffect(officialThemeJson) {
@@ -350,7 +353,8 @@ fun ChatScreen(
             ),
         )
     }
-    // 样式包（第三方整包 CSS + 可选扩展兼容层 + cssBlocks）：官方主题 enabled=false，内核侧零污染
+    // 样式包（扩展 manifest 组装：第三方整包 CSS + 可选扩展兼容层 + cssBlocks + js 通道）：
+    // 扩展禁用时 enabled=false，内核侧零污染
     LaunchedEffect(stylePack) {
         kernelPool.updateStylePack(
             stylePack.enabled,
@@ -358,6 +362,8 @@ fun ChatScreen(
             stylePack.varsJson,
             stylePack.extensionHref,
             stylePack.cssBlocksJson,
+            stylePack.id,
+            stylePack.jsUrl,
         )
     }
     // 行为开关下发（BehaviorPrefs → setRuntimeConfig）：首值即推当前配置，

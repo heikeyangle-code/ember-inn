@@ -75,7 +75,7 @@ function kernelApplyStylePackVars(vars) {
 
 // ---- 三场景差分 ----
 const presetFile = JSON.parse(
-    readFileSync(join(root, 'app/src/main/assets/themes/moonlit-echoes/Glimmer-preset.json'), 'utf8'),
+    readFileSync(join(root, 'app/src/main/assets/extensions/moonlit-echoes/Glimmer-preset.json'), 'utf8'),
 );
 const preset = presetFile.settings;
 const overrides = {

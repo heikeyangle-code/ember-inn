@@ -137,14 +137,17 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
 
     /** 样式包（第三方主题整包 CSS）：varsJson 为原始 JSON 对象字面量（键=CSS 变量名）。
      *  extensionHref 可选（上游扩展兼容层 extension.css）；cssBlocksJson 可选
-     *  （checkbox 启用注入的内嵌 CSS，官方 cssBlock 语义）。enabled=false 或 href=null
-     *  时内核侧为无操作——纯官方主题零污染。 */
+     *  （checkbox 启用注入的内嵌 CSS，官方 cssBlock 语义）；jsUrl 可选（扩展 manifest.js，
+     *  内核 <script type="module"> 注入——官方 addExtensionScript 通道）。
+     *  enabled=false 或 href=null 时内核侧为无操作——纯官方主题零污染。 */
     fun applyStylePack(
         enabled: Boolean,
         href: String?,
         varsJson: String?,
         extensionHref: String? = null,
         cssBlocksJson: String? = null,
+        packId: String? = null,
+        jsUrl: String? = null,
     ) {
         val js = buildString {
             append("window.Kernel && window.Kernel.applyStylePack({enabled:")
@@ -157,6 +160,10 @@ class RenderKernel(private val pooled: KernelWebViewPool.PooledWebView) {
             append(varsJson ?: "null")
             append(",cssBlocks:")
             append(cssBlocksJson ?: "null")
+            append(",packId:")
+            append(if (packId != null) jsonEsc(packId) else "null")
+            append(",js:")
+            append(if (jsUrl != null) jsonEsc(jsUrl) else "null")
             append("});")
         }
         eval(js)

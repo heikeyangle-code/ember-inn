@@ -148,6 +148,8 @@ class KernelWebViewPool(
     @Volatile private var currentStylePackExtensionHref: String? = null
     @Volatile private var currentStylePackVars: String? = null
     @Volatile private var currentStylePackCssBlocks: String? = null
+    @Volatile private var currentStylePackId: String? = null
+    @Volatile private var currentStylePackJsUrl: String? = null
 
     /** 主题/布局变更入口（ChatScreen 收集 OfficialThemeManager 流后调用） */
     fun updateTheme(themeJson: String?, bodyClasses: List<String>) {
@@ -167,20 +169,25 @@ class KernelWebViewPool(
         }
     }
 
-    /** 样式包变更入口：enabled/href/extensionHref/varsJson/cssBlocksJson 全量透传内核
-     *  （vars 与 cssBlocks 为原始 JSON 对象字面量） */
+    /** 样式包变更入口：enabled/href/extensionHref/varsJson/cssBlocksJson/jsUrl 全量透传内核
+     *  （vars 与 cssBlocks 为原始 JSON 对象字面量；jsUrl 为扩展 manifest.js 站内源，
+     *  内核以 <script type="module"> 注入——官方 addExtensionScript 通道） */
     fun updateStylePack(
         enabled: Boolean,
         href: String?,
         varsJson: String?,
         extensionHref: String? = null,
         cssBlocksJson: String? = null,
+        packId: String? = null,
+        jsUrl: String? = null,
     ) {
         currentStylePackEnabled = enabled
         currentStylePackHref = href
         currentStylePackExtensionHref = extensionHref
         currentStylePackVars = varsJson
         currentStylePackCssBlocks = cssBlocksJson
+        currentStylePackId = packId
+        currentStylePackJsUrl = jsUrl
         scope.launch(Dispatchers.Main) {
             synchronized(all) { all.toList() }.forEach { applyPageSetup(it) }
         }
@@ -205,7 +212,7 @@ class KernelWebViewPool(
         currentRuntimeConfigJson?.let(kernel::setRuntimeConfig)
         currentThemeJson?.let(kernel::applyThemeRaw)
         kernel.setBodyClasses(currentBodyClasses)
-        kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref, currentStylePackCssBlocks)
+        kernel.applyStylePack(currentStylePackEnabled, currentStylePackHref, currentStylePackVars, currentStylePackExtensionHref, currentStylePackCssBlocks, currentStylePackId, currentStylePackJsUrl)
         kernel.setInputState(currentInputState.generating, currentInputState.swiping)
         currentBackgroundUrl?.let { kernel.setBackground(it, currentBackgroundFitting) }
     }

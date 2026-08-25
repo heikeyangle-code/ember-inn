@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.emberinn.app.data.FontManager
+import com.emberinn.app.data.ExtensionManager
 import com.emberinn.app.data.OfficialThemeManager
 import com.emberinn.app.ui.design.AppearanceBus
 import com.emberinn.app.ui.design.EmberTheme
@@ -80,6 +81,7 @@ fun AppearanceScreen(
 ) {
     val context = LocalContext.current
     val official = remember { OfficialThemeManager.shared(context) }
+    val extensions = remember { ExtensionManager.shared(context) }
     val themes by official.themes.collectAsState()
     val currentTheme by official.currentName.collectAsState()
 
@@ -100,7 +102,13 @@ fun AppearanceScreen(
             runCatching {
                 val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
                     ?: error("无法读取文件")
-                val name = official.import(text)
+                // 官方导入分流（同 ST 两个入口）：扩展预设 JSON → 扩展管理器；主题 JSON → 主题管理器
+                val name = if (extensions.isPresetJson(text)) {
+                    extensions.tryImportPreset(text)
+                        ?: error("没有启用中的样式扩展可挂载预设（先启用 Moonlit Echoes 扩展）")
+                } else {
+                    official.import(text)
+                }
                 EmberToasts.show(context, "已导入：$name")
             }.onFailure { e ->
                 EmberToasts.show(context, "导入失败：${e.message}")
@@ -427,7 +435,9 @@ private fun ThemeTuneGroup() {
 
     val fastUi = boolVal("fast_ui_mode", true)
     val noShadows = boolVal("noShadows", false)
-    val stylePack by manager.currentStylePack.collectAsState()
+    val extManager = remember(context) { ExtensionManager.shared(context) }
+    val extState by extManager.state.collectAsState()
+    val stylePack = extState.pack
 
     PreferenceGroup {
         GroupLabel("消息布局与头像")
@@ -559,6 +569,7 @@ private fun ThemeTuneGroup() {
     Spacer(Modifier.height(10.dp))
 
     ColorCssGroup(obj)
+    ExtensionManageGroup()
     StylePackVarGroup()
 }
 
@@ -611,11 +622,60 @@ private fun parsePackSettingDef(el: JsonObject): PackSettingDef? {
     )
 }
 
+/**
+ * 扩展管理（ST Extensions 面板语义）：内置扩展可启停（官方 system 扩展同规则），
+ * 用户安装的可启停可删除。启停即时生效——CSS/变量型全局注入或撤下（官方
+ * disabledExtensions 语义）；带 js 的扩展停用需重建内核实例（与官方 reload 同构）。
+ */
+@Composable
+private fun ExtensionManageGroup() {
+    val context = LocalContext.current
+    val manager = remember(context) { ExtensionManager.shared(context) }
+    val state by manager.state.collectAsState()
+    if (state.extensions.isEmpty()) return
+    var confirmDelete by remember { mutableStateOf<String?>(null) }
+
+    PreferenceGroup {
+        GroupLabel("扩展")
+        state.extensions.forEach { ext ->
+            SwitchPrefRow(
+                ext.displayName,
+                listOfNotNull(
+                    ext.version.takeIf { it.isNotBlank() }?.let { "v$it" },
+                    ext.author.takeIf { it.isNotBlank() },
+                    if (ext.bundled) "内置" else "已安装",
+                ).joinToString(" · "),
+                ext.enabled,
+            ) { manager.setEnabled(ext.id, it) }
+            if (!ext.bundled) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { confirmDelete = ext.id }) { Text("删除扩展") }
+                }
+            }
+        }
+    }
+    confirmDelete?.let { id ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("删除扩展") },
+            text = { Text("将删除扩展全部文件，此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (manager.delete(id)) EmberToasts.show(context, "已删除扩展")
+                    confirmDelete = null
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("取消") } },
+        )
+    }
+}
+
 @Composable
 private fun StylePackVarGroup() {
     val context = LocalContext.current
-    val manager = remember(context) { OfficialThemeManager.shared(context) }
-    val stylePack by manager.currentStylePack.collectAsState()
+    val manager = remember(context) { ExtensionManager.shared(context) }
+    val state by manager.state.collectAsState()
+    val stylePack = state.pack
     if (!stylePack.enabled) return
     val vars = remember(stylePack.varsJson) {
         runCatching { Json.parseToJsonElement(stylePack.varsJson ?: "{}").jsonObject }.getOrNull()
