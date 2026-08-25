@@ -638,10 +638,10 @@ fun ProviderDetailScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(vertical = 4.dp),
                                 ) {
-                                    EmberTextField(
+                                    ShellInput(
                                         value = entry.text,
                                         onValueChange = { vm.updateBiasEntry(presetName, entry.id, text = it) },
-                                        placeholder = { Text("Text or [token ids]") },
+                                        label = "Text or [token ids]",
                                         singleLine = true,
                                         modifier = Modifier.weight(1f),
                                     )
@@ -1136,12 +1136,10 @@ private fun ModelPickerSheet(vm: ProviderViewModel, onDismiss: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
         ) {
             Text("选择模型", style = MaterialTheme.typography.titleMedium)
-            EmberTextField(
+            SearchField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("搜索模型") },
-                leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
-                singleLine = true,
+                placeholder = "搜索模型",
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).padding(top = 4.dp)) {
