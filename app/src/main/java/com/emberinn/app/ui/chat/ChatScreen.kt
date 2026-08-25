@@ -1380,8 +1380,8 @@ fun ChatScreen(
                                     RenderKernel(pooled).beginEditMessage(mesid)
                                 }
                             }
-                            // 边界3 reasoning 行内编辑（官方 messageReasoning 语义）
-                            "mes_reasoning_add" -> vm.setReasoning(index, "")
+                            // 边界3 reasoning 行内编辑（官方 messageReasoning 语义：
+                            // 确认=MESSAGE_REASONING_EDITED、删除按钮/空值=MESSAGE_REASONING_DELETED，接续处理见 VM）
                             "mes_reasoning_save" -> vm.setReasoning(index, value.orEmpty())
                             "del_checkbox" -> if (deleteMode) {
                                 deleteCheckIndex = index

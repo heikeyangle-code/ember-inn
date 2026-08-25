@@ -311,30 +311,30 @@ class ChatStore(private val context: Context) {
     }
 
     /**
-     * 官方 translate 扩展：AI 回复译文写 extra.display_text（原文不动）；
-     * 用户消息自动翻译时 mes 换译文、原文存 extra.display_text；
-     * 推理译文写 extra.reasoning_display_text。
+     * 只写/只删 extra.reasoning_display_text（官方 translateIncomingMessageReasoning /
+     * removeReasoningDisplayText 的粒度——display_text 不受影响）。null=删键。
      */
-    fun setDisplayText(
-        sessionId: String,
-        index: Int,
-        displayText: String?,
-        replaceMes: Boolean = false,
-        reasoningDisplayText: String? = null,
-        mesText: String? = null,
-    ) {
+    fun setReasoningDisplayText(sessionId: String, index: Int, value: String?) {
         val list = messages(sessionId).toMutableList()
         if (index !in list.indices) return
         val el = list[index].jsonObject
         val oldExtra = (el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
-        if (displayText == null) oldExtra.remove("display_text") else oldExtra["display_text"] = JsonPrimitive(displayText)
-        if (reasoningDisplayText == null) oldExtra.remove("reasoning_display_text") else oldExtra["reasoning_display_text"] = JsonPrimitive(reasoningDisplayText)
-        var out = JsonObject(el + ("extra" to JsonObject(oldExtra)))
-        if (mesText != null) {
-            out = JsonObject(out + ("mes" to JsonPrimitive(mesText)))
-        } else if (replaceMes && displayText != null) {
-            out = JsonObject(out + ("mes" to JsonPrimitive(displayText)))
-        }
+        if (value == null) oldExtra.remove("reasoning_display_text") else oldExtra["reasoning_display_text"] = JsonPrimitive(value)
+        list[index] = JsonObject(el + ("extra" to JsonObject(oldExtra)))
+        save(sessionId, list)
+    }
+
+    /**
+     * 官方 translateOutgoingMessage：extra.display_text=原文、mes=internal_language 译文；
+     * 其余 extra 键（含 reasoning_display_text）不动。
+     */
+    fun setOutgoingTranslation(sessionId: String, index: Int, originalDisplay: String, translatedMes: String) {
+        val list = messages(sessionId).toMutableList()
+        if (index !in list.indices) return
+        val el = list[index].jsonObject
+        val oldExtra = ((el["extra"] as? JsonObject)?.toMutableMap() ?: mutableMapOf())
+        oldExtra["display_text"] = JsonPrimitive(originalDisplay)
+        val out = JsonObject(el + ("extra" to JsonObject(oldExtra)) + ("mes" to JsonPrimitive(translatedMes)))
         list[index] = out
         save(sessionId, list)
     }
