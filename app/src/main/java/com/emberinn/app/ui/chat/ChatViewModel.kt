@@ -2640,7 +2640,7 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         // 方向门控：用户消息按 outgoing（inputs/both），AI 消息按 incoming（responses/both）
         val gated = if (isUserMsg) autoMode == "inputs" || autoMode == "both" else autoMode == "responses" || autoMode == "both"
         if (!gated) return
-        val reasoningRaw = (el["extra"]?.get("reasoning") as? JsonPrimitive)?.contentOrNull
+        val reasoningRaw = ((el["extra"] as? JsonObject)?.get("reasoning") as? JsonPrimitive)?.contentOrNull
         if (reasoningRaw.isNullOrBlank()) return // 官方 translateIncomingMessageReasoning: !message.extra.reasoning → false
         val nameOverride = el["name"]?.jsonPrimitive?.contentOrNull
         val targetLang = ServicesPrefs.translateTargetLanguage(getApplication())
