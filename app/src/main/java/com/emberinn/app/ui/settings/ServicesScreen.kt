@@ -1,6 +1,7 @@
 package com.emberinn.app.ui.settings
 
 
+import com.emberinn.app.ui.design.components.ShellChip
 import com.emberinn.app.ui.design.components.ShellInput
 import com.emberinn.app.ui.design.EmberTheme
 import android.widget.Toast
@@ -362,7 +363,7 @@ private fun ComfyWorkflowSection() {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box {
-                FilterChip(selected = false, onClick = { selectorOpen = true }, label = { Text("Workflow：$active", maxLines = 1) })
+                ShellChip("Workflow：$active", selected = true) { selectorOpen = true }
                 DropdownMenu(expanded = selectorOpen, onDismissRequest = { selectorOpen = false }) {
                     workflows.forEach { w ->
                         DropdownMenuItem(text = { Text(w) }, onClick = {
