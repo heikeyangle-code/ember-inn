@@ -202,23 +202,15 @@ private fun ProviderCard(
     configured: Boolean,
     onClick: () -> Unit,
 ) {
-    Card(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(EmberTheme.colors.surface)
             .clickable(onClick = onClick)
-            .emberShadow(
-                color = EmberTheme.colors.accent.copy(alpha = 0.14f),
-                radius = 10.dp,
-                offset = DpOffset(0.dp, 4.dp),
-                alpha = 0.08f,
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = EmberTheme.colors.surface),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
             ProviderIcon(spec.icon, spec.displayName, modifier = Modifier.size(42.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
