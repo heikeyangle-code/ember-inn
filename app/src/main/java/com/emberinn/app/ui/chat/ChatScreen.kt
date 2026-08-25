@@ -591,10 +591,10 @@ fun ChatScreen(
             onDismissRequest = { showUrlAttachmentDialog = false },
             title = { Text("从 URL 添加附件") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = urlAttachmentDraft,
                     onValueChange = { urlAttachmentDraft = it },
-                    placeholder = { Text("https://…") },
+                    label = "https://…",
                     singleLine = true,
                 )
             },
@@ -1983,12 +1983,10 @@ fun ChatScreen(
                     }
                 }
                 // 官方 #select_chat_search
-                EmberTextField(
+                SearchField(
                     value = pastChatsQuery,
                     onValueChange = { pastChatsQuery = it },
-                    singleLine = true,
-                    placeholder = { Text("搜索聊天文件…") },
-                    leadingIcon = { Icon(FaIcons.MagnifyingGlass, contentDescription = null) },
+                    placeholder = "搜索聊天文件…",
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
                 )
                 LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 420.dp)) {
@@ -2327,11 +2325,10 @@ fun ChatScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 HorizontalDivider()
-                EmberTextField(
+                SearchField(
                     value = personaQuery,
                     onValueChange = { personaQuery = it },
-                    placeholder = { Text("搜索人设") },
-                    singleLine = true,
+                    placeholder = "搜索人设",
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 Row(modifier = Modifier.padding(horizontal = 12.dp)) {
@@ -2816,10 +2813,10 @@ fun ChatScreen(
             onDismissRequest = { showDataBankUrlDialog = false },
             title = { Text("从 URL 添加数据银行文件") },
             text = {
-                EmberTextField(
+                ShellInput(
                     value = dataBankUrlDraft,
                     onValueChange = { dataBankUrlDraft = it },
-                    placeholder = { Text("https://…（文本/markdown）") },
+                    label = "https://…（文本/markdown）",
                     singleLine = true,
                 )
             },
