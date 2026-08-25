@@ -81,6 +81,8 @@ interface SlashMessageActions {
     ): String
     /** /summarize：无文本=总结当前聊天；有文本=按指定 source/prompt 总结（官方 summarizeCallback）。 */
     suspend fun summarize(text: String, source: String?, prompt: String?, quiet: Boolean): String
+    /** /translate：翻译文本；target/provider 缺省用扩展设置（官方 translate 扩展 callback）。 */
+    suspend fun translateText(text: String, target: String?, provider: String?): String
 
     /** /db 子命令附件上下文：返回当前 (characterAvatar, chatFile, charName) 用于 attachments 三源定位。 */
     fun attachmentsContext(): Triple<String, String, String> = Triple("", "", "")
@@ -332,6 +334,19 @@ class AppSlashExecutor(
                     source = inv.namedArgs["source"],
                     prompt = inv.namedArgs["prompt"],
                     quiet = isTrue(inv.namedArgs["quiet"]),
+                )
+            },
+        ),
+        SlashCommandDef(
+            "translate",
+            description = "翻译文本（官方 translate 扩展：target=目标语言代码，provider=提供商；缺省用扩展设置）",
+            rawQuotes = true,
+            callback = { _, _ -> "" },
+            suspendCallback = { inv, _ ->
+                actions.translateText(
+                    inv.unnamedArgs.joinToString(" "),
+                    inv.namedArgs["target"],
+                    inv.namedArgs["provider"],
                 )
             },
         ),

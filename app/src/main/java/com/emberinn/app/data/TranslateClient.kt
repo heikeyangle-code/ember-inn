@@ -50,6 +50,7 @@ class TranslateClient {
         charName: String = "",
         nameOverride: String? = null,
         targetLang: String? = null,
+        providerOverride: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext null
         // 官方出站路径不做 substituteParams（translateOutgoingMessage 无名字上下文）：
@@ -59,7 +60,8 @@ class TranslateClient {
         } else {
             text
         }
-        val provider = ServicesPrefs.translateProvider(context)
+        // 官方 /translate：provider= 未传时用扩展设置（index.js:801）
+        val provider = providerOverride ?: ServicesPrefs.translateProvider(context)
         val target = targetLang ?: ServicesPrefs.translateTargetLanguage(context)
         val apiKey = ServicesPrefs.translateApiKey(context)
         val url = ServicesPrefs.translateUrl(context)

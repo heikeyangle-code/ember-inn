@@ -430,6 +430,7 @@ fun ChatScreen(
     // 角色速览（顶栏身份区点击）：角色 Hero + 描述 + 故事操作 + 写作工具入口
     var showQuickProfile by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showClearTranslationsConfirm by remember { mutableStateOf(false) }
     var showConvertGroupConfirm by remember { mutableStateOf(false) }
     var showLogprobsSheet by remember { mutableStateOf(false) }
     var tokenStatsIndex by remember { mutableStateOf<MsgTarget?>(null) }
@@ -1009,11 +1010,12 @@ fun ChatScreen(
         }
     }
 
-    // 冒充草稿进输入框（官方：冒充结果落到发送框，用户可改可发）
+    // 冒充草稿进输入框（官方：冒充结果落到发送框，用户可改可发；
+    // IMPERSONATE_READY → translate 扩展在 incoming 门控通过时把草稿换成译文）
     LaunchedEffect(impersonated) {
         impersonated?.let {
-            input = it
             vm.consumeImpersonation()
+            vm.maybeTranslateImpersonateDraft(it)
         }
     }
     // 官方 onStartStreaming(script.js:3570)：冒充开始即清空输入框——旧草稿不保留（流式期间显示清洗后的草稿流）
@@ -1999,6 +2001,22 @@ fun ChatScreen(
                     showMore = false
                     deleteMode = true
                     deleteCheckIndex = null
+                }
+                // ── 官方 translate 扩展魔杖项：#translate_chat / #translate_input_message ──
+                MenuSectionLabel("翻译扩展（官方魔杖）")
+                MenuRow(FaIcons.Language, "翻译整聊（Translate Chat）") {
+                    showMore = false
+                    vm.translateChat()
+                }
+                MenuRow(FaIcons.Keyboard, "翻译输入框（Translate Input）") {
+                    showMore = false
+                    vm.translateInputMessage(input) { translated -> input = translated }
+                }
+                // 官方 #translation_clear（扩展设置面板）：作用于当前聊天；设置页拿不到
+                // 当前会话上下文，故入口放聊天作用域（HANDOFF 登记位置偏差）
+                MenuRow(FaIcons.Eraser, "清空译文（Clear Translations）", danger = true) {
+                    showMore = false
+                    showClearTranslationsConfirm = true
                 }
                 // ── App 扩展（官方无此入口，移动端便捷项）──
                 MenuSectionLabel("更多")
@@ -3353,6 +3371,24 @@ fun ChatScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
+            },
+        )
+    }
+
+    // 官方 deleteConfirmation.html：确认后删除全部消息的 display_text/reasoning_display_text
+    if (showClearTranslationsConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearTranslationsConfirm = false },
+            title = { Text("确定要清除吗？") },
+            text = { Text("将移除当前聊天中所有消息的译文（含思考过程译文）。此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearTranslationsConfirm = false
+                    vm.clearAllTranslations {}
+                }) { Text("清除", color = EmberTheme.colors.danger) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearTranslationsConfirm = false }) { Text("取消") }
             },
         )
     }

@@ -45,6 +45,10 @@ class AppSlashExecutorTest {
             calls += "summarize:$source:$prompt:$quiet:$text"
             return "摘要文本"
         }
+        override suspend fun translateText(text: String, target: String?, provider: String?): String {
+            calls += "translate:$target:$provider:$text"
+            return "译文"
+        }
         override fun injectScript(text: String, id: String, position: String, depth: Int, role: String, scan: Boolean, ephemeral: Boolean, filter: String?): String {
             calls += "inject:$id:$position:$depth:$role:$scan:$ephemeral:${filter ?: ""}:$text"
             return "abc12345"
@@ -112,6 +116,20 @@ class AppSlashExecutorTest {
         val a = FakeActions()
         AppSlashExecutor(a).execute("/persona-set mode=lookup 小红 | /persona 小明")
         assertEquals(listOf("persona:lookup:小红", "persona:all:小明"), a.calls)
+    }
+
+    @Test
+    fun `translate forwards text target provider via async executor`() = runBlocking {
+        val a = FakeActions()
+        val out1 = AppSlashExecutor(a).executeAsync("/translate target=zh-CN provider=deeplx Hello world")
+        val out2 = AppSlashExecutor(a).executeAsync("/translate 你好世界")
+        assertEquals("译文", out1)
+        assertEquals("译文", out2)
+        // target/provider 为 null 时由 ChatViewModel 回退扩展设置（官方 index.js:799-803）
+        assertEquals(
+            listOf("translate:zh-CN:deeplx:Hello world", "translate:null:null:你好世界"),
+            a.calls,
+        )
     }
 
     @Test

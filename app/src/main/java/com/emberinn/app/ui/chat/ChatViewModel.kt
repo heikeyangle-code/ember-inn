@@ -594,6 +594,27 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         return chatRepository.rawGenerate(text, substituted, "", s.overrideResponseLength.takeIf { it > 0 }) ?: ""
     }
 
+    /**
+     * 官方 /translate callback（translate/index.js:799-803）：target 不在 languageCodes
+     * 时回退扩展设置；provider 缺省用设置。译文进管道；失败返回空串。
+     */
+    override suspend fun translateText(text: String, target: String?, provider: String?): String {
+        val resolvedTarget = target
+            ?.takeIf { it in com.emberinn.app.ui.settings.TRANSLATE_LANGUAGE_CODES }
+            ?: ServicesPrefs.translateTargetLanguage(getApplication())
+        // 官方 callback 直接调 translate()（非 translateIncomingMessage）：无名字替换
+        val translated = translateClient.translate(
+            getApplication(), text,
+            targetLang = resolvedTarget,
+            providerOverride = provider,
+        )
+        if (translated == null) {
+            _notice.value = "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
+            return ""
+        }
+        return translated
+    }
+
     fun consumeQuickReplyOutput() { _quickReplyOutput.value = null }
 
     /** 官方 quick-reply AutoExecuteHandler.handleWIActivation：世界书命中条目的 automationId 匹配槽位自动执行。 */
@@ -1071,6 +1092,113 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
                 }
                 refreshMessages()
             }
+        }
+    }
+
+    // ---- 整聊翻译 / 清空 / 输入框翻译（官方 wand 菜单与设置面板入口，translate/index.js:552-620）----
+
+    /**
+     * 官方 onTranslateChatClick（index.js:574-597）：逐条先推理后正文按 incoming 语义翻译
+     * （无 auto_mode 门控、不过滤 user/system）；防并发重入。单条失败跳过该键继续
+     * （官方 translate() 内部 catch 后返回 undefined，键被丢弃，循环不断）。
+     */
+    private val translateChatExecuting = java.util.concurrent.atomic.AtomicBoolean(false)
+    fun translateChat() {
+        if (!translateChatExecuting.compareAndSet(false, true)) return
+        val total = chatStore.messages(sessionId).size
+        _notice.value = "（整聊翻译：$total 条消息排队中…）"
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                for (i in 0 until total) {
+                    // 官方 translateIncomingMessage(Reasoning)：isGeneratingSwipe(messageId) 跳过——
+                    // swipe 生成只发生在最后一条，等价于流式生成中跳过末条
+                    if (_isStreaming.value && i == total - 1) continue
+                    val el = chatStore.messages(sessionId).getOrNull(i)?.jsonObject ?: continue
+                    val text = el["mes"]?.jsonPrimitive?.contentOrNull ?: continue
+                    val extra = el["extra"] as? JsonObject
+                    val reasoningRaw = (extra?.get("reasoning") as? JsonPrimitive)?.contentOrNull
+                    val nameOverride = el["name"]?.jsonPrimitive?.contentOrNull
+                    val targetLang = ServicesPrefs.translateTargetLanguage(getApplication())
+                    // 官方顺序：先推理后正文；失败各键互不影响
+                    if (!reasoningRaw.isNullOrBlank()) {
+                        val rdt = translateClient.translateReasoning(
+                            getApplication(), reasoningRaw, targetLang,
+                            charName = currentCharName, nameOverride = nameOverride,
+                        )
+                        if (!rdt.isNullOrBlank()) chatStore.setExtraValue(sessionId, i, "reasoning_display_text", rdt)
+                    }
+                    val dt = translateClient.translate(
+                        getApplication(), text,
+                        charName = currentCharName, nameOverride = nameOverride,
+                    )
+                    if (!dt.isNullOrBlank()) chatStore.setExtraValue(sessionId, i, "display_text", dt)
+                }
+                withContext(Dispatchers.Main) { refreshMessages() }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { _notice.value = "（整聊翻译失败：${e.message}）" }
+            } finally {
+                translateChatExecuting.set(false)
+            }
+        }
+    }
+
+    /** 官方 onTranslationsClearClick（index.js:600-620）：删除全部消息的 display_text/reasoning_display_text。
+     *  确认弹窗由调用方负责（官方 CONFIRM popup 等价）。 */
+    fun clearAllTranslations(onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val total = chatStore.messages(sessionId).size
+            for (i in 0 until total) {
+                chatStore.setExtraValue(sessionId, i, "display_text", null)
+                chatStore.setExtraValue(sessionId, i, "reasoning_display_text", null)
+            }
+            withContext(Dispatchers.Main) {
+                refreshMessages()
+                onDone()
+            }
+        }
+    }
+
+    /**
+     * 官方 onTranslateInputMessageClick（index.js:552-570）：读输入框当前文本，译成
+     * internal_language 后写回输入框；空文本先警告。onResult 在主线程回调（写回输入框）。
+     */
+    fun translateInputMessage(text: String, onResult: (String) -> Unit) {
+        if (text.isBlank()) {
+            _notice.value = "（先输入一条消息再翻译。）"
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val translated = translateClient.translate(
+                getApplication(), text,
+                targetLang = ServicesPrefs.translateInternalLanguage(getApplication()),
+            )
+            withContext(Dispatchers.Main) {
+                if (translated == null) {
+                    _notice.value = "（翻译失败：请检查 设置→服务→翻译 的提供商/Key/接口地址。）"
+                } else {
+                    onResult(translated)
+                }
+            }
+        }
+    }
+
+    /**
+     * 官方 IMPERSONATE_READY → translateImpersonate（index.js:185-190, 771）：incoming 门控
+     * （responses/both）通过时，把冒充结果草稿换成 target_language 译文再进输入框。
+     */
+    fun maybeTranslateImpersonateDraft(draft: String) {
+        val mode = translateAutoMode()
+        if (mode != "responses" && mode != "both") {
+            _inputDraft.value = draft
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val translated = translateClient.translate(
+                getApplication(), draft,
+                charName = currentCharName,
+                targetLang = ServicesPrefs.translateTargetLanguage(getApplication()),
+            )
+            withContext(Dispatchers.Main) { _inputDraft.value = translated ?: draft }
         }
     }
 
@@ -2426,6 +2554,13 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         }
     }
 
+    /** 官方 handleIncomingMessage（translate/index.js:698-702）：MESSAGE_SWIPED 接续——
+     *  incoming 门控通过时重译当前变体正文；生成中跳过（官方 isGeneratingSwipe '...' 等价）。 */
+    private fun translateOnSwiped(index: Int) {
+        if (_isStreaming.value) return
+        translateIncoming(index)
+    }
+
     /** 滑动切回复：左滑 = 上一个变体（对齐官方 swipe_left，越界 wrap 回最后一条）。 */
     fun swipeLeft(index: Int) {
         if (_isStreaming.value) return
@@ -2438,8 +2573,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         val newId = (cur - 1 + count) % count
         chatStore.swipeTo(sessionId, index, newId)
         refreshMessages()
-        // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）
+        // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
         kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
+        translateOnSwiped(index)
     }
 
     /** 滑动切回复：右滑 = 下一个变体；越界时最后一条 AI 生成新变体（对齐官方 overswipe REGENERATE），其余 wrap 回第一条。 */
@@ -2455,16 +2591,19 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
         if (cur + 1 < count) {
             chatStore.swipeTo(sessionId, index, cur + 1)
             refreshMessages()
-            // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）
+            // 官方 swipe_left_right_handler：MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
+            translateOnSwiped(index)
         } else if (index == msgs.lastIndex && !isUser(el)) {
-            // 官方 overswipe REGENERATE：先发 MESSAGE_SWIPED 再触发生成（script.js:10255→10258）
+            // 官方 overswipe REGENERATE：先发 MESSAGE_SWIPED 再触发生成（script.js:10255→10258）；
+            // 译文由生成完成后的 CHARACTER_MESSAGE_RENDERED 接续（官方 isGeneratingSwipe 阻断即时重译）
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
             generateSwipe()
         } else {
             chatStore.swipeTo(sessionId, index, 0)
             refreshMessages()
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
+            translateOnSwiped(index)
         }
     }
 
@@ -2511,8 +2650,9 @@ class ChatViewModel(application: Application, private val sessionId: String) : A
     fun swipeToVariant(index: Int, variant: Int) {
         if (chatStore.swipeTo(sessionId, index, variant)) {
             refreshMessages()
-            // 官方 swipe_left_right_handler：变体跳转同走 MESSAGE_SWIPED(mesId)（script.js:10255）
+            // 官方 swipe_left_right_handler：变体跳转同走 MESSAGE_SWIPED(mesId)（script.js:10255）+ translate 扩展重译
             kernelEvents.tryEmit("message_swiped" to listOf(index.toString()))
+            translateOnSwiped(index)
             // 官方 memory MESSAGE_SWIPED → onChatEvent
             memoryService.maybeAutoSummarize(sessionId)
         }

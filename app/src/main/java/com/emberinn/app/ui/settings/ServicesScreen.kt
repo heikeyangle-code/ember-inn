@@ -187,6 +187,9 @@ private val TARGET_LANGUAGES = listOf(
     DropdownOption("zu", "Zulu"),
 )
 
+/** 官方 languageCodes 值集合（translate/index.js），供 /translate target= 校验 */
+internal val TRANSLATE_LANGUAGE_CODES = TARGET_LANGUAGES.map { it.value }
+
 // 官方 stable-diffusion/index.js 的 sources（取主流自托管 / 云来源）
 private val IMAGE_SOURCES = listOf(
     // 1:1 对照官方 stable-diffusion/settings.html L44-67 顺序
