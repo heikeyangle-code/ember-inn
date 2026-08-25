@@ -455,10 +455,10 @@ fun PromptManagerScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     ShellInput(value = name, onValueChange = { name = it }, label = "名称", singleLine = true, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
-                    EmberTextField(
+                    ShellInput(
                         value = content,
                         onValueChange = { if (!target.marker) content = it },
-                        label = { Text(if (target.marker) "内容（marker：由外部注入，不可编辑）" else "内容（支持 {{user}}/{{char}} 宏）") },
+                        label = if (target.marker) "内容（marker：由外部注入，不可编辑）" else "内容（支持 {{user}}/{{char}} 宏）",
                         readOnly = target.marker,
                         minLines = 3,
                         maxLines = 6,

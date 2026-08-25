@@ -208,6 +208,7 @@ fun ShellInput(
     trailing: (@Composable () -> Unit)? = null,
     isError: Boolean = false,
     supportingText: String? = null,
+    readOnly: Boolean = false,
 ) {
     val c = EmberTheme.colors
     val shape = RoundedCornerShape(12.dp)
@@ -229,6 +230,7 @@ fun ShellInput(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = if (maxLines > 1) false else singleLine,
+                readOnly = readOnly,
                 textStyle = TextStyle(color = c.ink, fontSize = 14.sp),
                 cursorBrush = SolidColor(c.accent),
                 keyboardOptions = keyboardOptions,

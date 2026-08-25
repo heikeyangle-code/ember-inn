@@ -808,14 +808,7 @@ fun CharacterDetailScreen(
             title = { Text("编辑深度提示") },
             text = {
                 Column {
-                    EmberTextField(
-                        value = prompt,
-                        onValueChange = { prompt = it },
-                        placeholder = { Text("（空）") },
-                        minLines = 3,
-                        maxLines = 8,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    ShellInput(value = prompt, onValueChange = { prompt = it }, minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(), label = "（空）")
                     ShellInput(
                         value = depth,
                         onValueChange = { depth = it.filter { c -> c.isDigit() } },
@@ -859,14 +852,7 @@ fun CharacterDetailScreen(
             onDismissRequest = { editingGreetingIdx = null },
             title = { Text(if (isNew) "新增开场白" else "编辑开场白") },
             text = {
-                EmberTextField(
-                    value = greetingDraft,
-                    onValueChange = { greetingDraft = it },
-                    minLines = 3,
-                    maxLines = 10,
-                    placeholder = { Text("角色说的第一句话") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ShellInput(value = greetingDraft, onValueChange = { greetingDraft = it }, minLines = 3, maxLines = 10, modifier = Modifier.fillMaxWidth(), label = "角色说的第一句话")
             },
             confirmButton = {
                 TextButton(onClick = {

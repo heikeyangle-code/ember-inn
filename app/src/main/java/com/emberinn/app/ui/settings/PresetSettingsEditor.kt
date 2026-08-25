@@ -119,10 +119,10 @@ fun AppliedPresetEditor(
 
 @Composable
 private fun EditText(label: String, value: String, onChange: (String) -> Unit) {
-    EmberTextField(
+    ShellInput(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        label = label,
         singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
     )
@@ -130,10 +130,10 @@ private fun EditText(label: String, value: String, onChange: (String) -> Unit) {
 
 @Composable
 private fun EditMulti(label: String, value: String, onChange: (String) -> Unit) {
-    EmberTextField(
+    ShellInput(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        label = label,
         minLines = 2,
         maxLines = 5,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
